@@ -1,6 +1,6 @@
 {
   "name": "@croco/utils-next-font-pretendard",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "commonjs",
   "files": ["src", "PretendardVariable.woff2"],
   "main": "./src/index.js",
@@ -29,5 +29,8 @@
   "devDependencies": {
     "@croco/eslint-config": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

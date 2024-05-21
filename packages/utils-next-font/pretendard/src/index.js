@@ -8,6 +8,6 @@ function _interopDefault(e) {
 
 var r__default = /*#__PURE__*/ _interopDefault(r);
 
-const a = r__default.default({ src: '../PretendardVariable.woff2', display: 'swap' });
+const a = r__default.default({ src: '../PretendardVariable.woff2', display: 'swap', weight: "45 920"});
 
 exports.pretendardFont = a;
