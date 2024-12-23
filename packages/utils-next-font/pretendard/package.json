@@ -1,9 +1,9 @@
 {
   "name": "@croco/utils-next-font-pretendard",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "commonjs",
   "files": ["dist", "PretendardVariable.woff2"],
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "import": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -11,24 +11,25 @@
     ".": {
       "require": {
         "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+        "default": "./dist/index.cjs"
       },
       "import": {
-        "types": "./dist/index.d.mts",
+        "types": "./dist/index.d.ts",
         "default": "./dist/index.mjs"
       }
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --minify",
+    "build": "rollup -c rollup.config.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint **/*.ts*"
   },
   "peerDependencies": {
-    "next": "^14.0.0 || ^15.0.0"
+    "next": "^15.0.0"
   },
   "devDependencies": {
-    "tsup": "8.3.5",
+    "rollup": "4.29.1",
+    "@rollup/plugin-typescript": "12.1.2",
     "next": "15.1.2",
     "@croco/eslint-config": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*"
