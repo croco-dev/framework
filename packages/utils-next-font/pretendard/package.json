@@ -30,7 +30,8 @@
   "devDependencies": {
     "rollup": "4.29.1",
     "@rollup/plugin-typescript": "12.1.2",
-    "next": "15.1.2",
+    "next": "15.5.4",
+    "react": "19.1.1",
     "@croco/eslint-config": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*"
   },
