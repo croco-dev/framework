@@ -2,24 +2,24 @@ import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateLambdaHandler, handlers } from '@as-integrations/aws-lambda';
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { buildSchema } from 'type-graphql';
-import { AuthChecker, NonEmptyArray } from 'type-graphql';
+import type { AuthChecker, NonEmptyArray } from 'type-graphql';
 import { Container } from 'typedi';
 
 type ResolverClass = new (...args: unknown[]) => unknown;
 
-interface ApolloServerConfig {
+interface ApolloServerConfig<ApolloContext extends object> {
   resolvers: NonEmptyArray<ResolverClass>;
-  authChecker?: AuthChecker<Record<string, unknown>>;
+authChecker?: AuthChecker<ApolloContext>;
   context?: ({
     event,
     context,
   }: {
     event: APIGatewayProxyEventV2;
     context: Context;
-  }) => Promise<Record<string, unknown>>;
+  }) => Promise<ApolloContext>;
 }
 
-export function createApolloServer(config: ApolloServerConfig): APIGatewayProxyHandlerV2 {
+export function createApolloServer<Context extends object>(config: ApolloServerConfig<Context>): APIGatewayProxyHandlerV2 {
   let cachedHandler: APIGatewayProxyHandlerV2 | null = null;
 
   return async (event, context, callback) => {
@@ -46,6 +46,6 @@ export function createApolloServer(config: ApolloServerConfig): APIGatewayProxyH
       );
     }
 
-    return (cachedHandler as APIGatewayProxyHandlerV2)(event, context, callback) as Promise<APIGatewayProxyResultV2>;
+    return cachedHandler(event, context, callback) as Promise<APIGatewayProxyResultV2>;
   };
 }
