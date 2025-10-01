@@ -1,0 +1,4 @@
+{
+  "extends": "@croco/eslint-config",
+  "root": true
+}

@@ -33,6 +33,31 @@ importers:
         specifier: 5.3.3
         version: 5.3.3
 
+  packages/events-core:
+    devDependencies:
+      '@croco/eslint-config':
+        specifier: workspace:*
+        version: link:../shared/utils-eslint-config
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+
+  packages/events-inmemory:
+    dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+    devDependencies:
+      '@croco/eslint-config':
+        specifier: workspace:*
+        version: link:../shared/utils-eslint-config
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      typedi:
+        specifier: 0.10.0
+        version: 0.10.0
+
   packages/shared/utils-eslint-config:
     devDependencies:
       '@typescript-eslint/eslint-plugin':
@@ -106,9 +131,6 @@ importers:
       type-graphql:
         specifier: 2.0.0-rc.2
         version: 2.0.0-rc.2(class-validator@0.14.2)(graphql-scalars@1.24.2(graphql@16.11.0))(graphql@16.11.0)
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
     devDependencies:
       '@croco/eslint-config':
         specifier: workspace:*
@@ -122,6 +144,9 @@ importers:
       '@types/express':
         specifier: 4.17.21
         version: 4.17.21
+      typedi:
+        specifier: 0.10.0
+        version: 0.10.0
 
   packages/utils-structure/react:
     devDependencies:
