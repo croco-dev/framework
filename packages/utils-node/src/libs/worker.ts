@@ -7,7 +7,7 @@ import { WorkerConfig } from './types';
 /**
  * SQS-based worker bootstrap utility (provider-agnostic)
  */
-export class Worker<TData = unknown, TResult = unknown> {
+export class Worker {
   private static config: WorkerConfig | null = null;
   private static isInitialized = false;
 
@@ -83,6 +83,7 @@ export class Worker<TData = unknown, TResult = unknown> {
             try {
               const { job, data } = JSON.parse(record.body) as { job: string; data: TD };
               await config.onJobError(job, data, error as Error);
+              // eslint-disable-next-line no-empty
             } catch {}
           }
           throw error;

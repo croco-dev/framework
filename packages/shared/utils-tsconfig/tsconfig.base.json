@@ -1,29 +1,29 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Base",
   "compileOnSave": false,
   "compilerOptions": {
     "composite": false,
     "declaration": true,
     "declarationMap": true,
+    "downlevelIteration": true,
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
     "esModuleInterop": true,
+    "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
-    "inlineSources": false,
     "importHelpers": false,
+    "inlineSources": false,
     "isolatedModules": true,
     "moduleResolution": "node",
     "noEmit": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "preserveWatchOutput": true,
-    "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "strict": true,
-    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
     "sourceMap": true,
-    "downlevelIteration": true
+    "strict": true,
+    "strictPropertyInitialization": false
   },
-  "exclude": ["node_modules", "tmp"]
+  "display": "Base",
+  "exclude": ["node_modules", "tmp", "template"]
 }

@@ -1,4 +1,0 @@
-{
-  "extends": "@slackbase/eslint-config",
-  "root": true
-}

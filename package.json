@@ -3,20 +3,20 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev",
-    "lint": "turbo lint",
     "deploy": "turbo deploy",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "dev": "turbo dev",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "lint": "turbo lint"
   },
   "devDependencies": {
-    "@types/node": "20.11.5",
-    "tsup": "8.0.1",
-    "typescript": "5.3.3",
-    "eslint": "8.56.0",
     "@croco/eslint-config": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*",
-    "prettier": "3.1.1",
-    "turbo": "latest"
+    "@swc/core": "1.13.5",
+    "@types/node": "20.11.5",
+    "eslint": "9.36.0",
+    "tsup": "8.0.1",
+    "turbo": "latest",
+    "typescript": "5.9.3"
   },
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "engines": {

@@ -6,9 +6,9 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "typecheck": "tsc --noEmit",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
     "lint": "eslint **/*.ts*",
-    "deploy": "pnpm run build && pnpm publish --no-git-checks"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@apollo/server": "4.12.2",

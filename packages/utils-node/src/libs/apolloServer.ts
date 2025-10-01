@@ -1,25 +1,20 @@
 import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateLambdaHandler, handlers } from '@as-integrations/aws-lambda';
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
-import { buildSchema } from 'type-graphql';
-import type { AuthChecker, NonEmptyArray } from 'type-graphql';
+import { buildSchema, AuthChecker, NonEmptyArray } from 'type-graphql';
 import { Container } from 'typedi';
 
 type ResolverClass = new (...args: unknown[]) => unknown;
 
 interface ApolloServerConfig<ApolloContext extends object> {
   resolvers: NonEmptyArray<ResolverClass>;
-authChecker?: AuthChecker<ApolloContext>;
-  context?: ({
-    event,
-    context,
-  }: {
-    event: APIGatewayProxyEventV2;
-    context: Context;
-  }) => Promise<ApolloContext>;
+  authChecker?: AuthChecker<ApolloContext>;
+  context?: ({ event, context }: { event: APIGatewayProxyEventV2; context: Context }) => Promise<ApolloContext>;
 }
 
-export function createApolloServer<Context extends object>(config: ApolloServerConfig<Context>): APIGatewayProxyHandlerV2 {
+export function createApolloServer<Context extends object>(
+  config: ApolloServerConfig<Context>
+): APIGatewayProxyHandlerV2 {
   let cachedHandler: APIGatewayProxyHandlerV2 | null = null;
 
   return async (event, context, callback) => {
@@ -32,18 +27,14 @@ export function createApolloServer<Context extends object>(config: ApolloServerC
 
       const server = new ApolloServer({ schema });
 
-      cachedHandler = startServerAndCreateLambdaHandler(
-        server,
-        handlers.createAPIGatewayProxyEventV2RequestHandler(),
-        {
-          context: async ({ event, context }) => {
-            if (config.context) {
-              return config.context({ event, context });
-            }
-            return {};
-          },
-        }
-      );
+      cachedHandler = startServerAndCreateLambdaHandler(server, handlers.createAPIGatewayProxyEventV2RequestHandler(), {
+        context: async ({ event, context }) => {
+          if (config.context) {
+            return config.context({ event, context });
+          }
+          return {};
+        },
+      });
     }
 
     return cachedHandler(event, context, callback) as Promise<APIGatewayProxyResultV2>;
