@@ -1,0 +1,10 @@
+{
+  "extends": "@croco/utils-tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "node",
+    "target": "es2022"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
