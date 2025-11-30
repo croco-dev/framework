@@ -42,5 +42,6 @@ export const handler = createApolloServer({
   resolvers,
   authChecker,
   context: async ({ event, context }) => ({ /* ... */ }),
+  containerSetup: [configureDatabase, configureMongoDB],
 });
 ```
