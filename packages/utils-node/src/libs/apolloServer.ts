@@ -25,40 +25,51 @@ export function createApolloServer<Context extends object>(
   config: ApolloServerConfig<Context>
 ): APIGatewayProxyHandlerV2 {
   let cachedHandler: APIGatewayProxyHandlerV2 | null = null;
+  let initializationPromise: Promise<void> | null = null;
 
   return async (event, context, callback) => {
     if (!cachedHandler) {
-      ensureReflectMetadata();
+      if (!initializationPromise) {
+        initializationPromise = (async () => {
+          ensureReflectMetadata();
 
-      try {
-        if (config.containerSetup) {
-          for (const setup of config.containerSetup) {
-            await setup();
+          try {
+            if (config.containerSetup) {
+              for (const setup of config.containerSetup) {
+                await setup();
+              }
+            }
+          } catch (error) {
+            initializationPromise = null;
+            throw new ContainerInitializationError('Failed to initialize TypeDI container', error);
           }
-        }
-      } catch (error) {
-        throw new ContainerInitializationError('Failed to initialize TypeDI container', error);
+
+          const schema = await buildSchema({
+            resolvers: config.resolvers,
+            authChecker: config.authChecker,
+            container: Container,
+            ...config.schemaOptions,
+          });
+
+          const server = new ApolloServer({ schema });
+
+          cachedHandler = startServerAndCreateLambdaHandler(
+            server,
+            handlers.createAPIGatewayProxyEventV2RequestHandler(),
+            {
+              context: async ({ event, context }) => {
+                if (config.context) {
+                  return config.context({ event, context });
+                }
+                return {};
+              },
+            }
+          );
+        })();
       }
-
-      const schema = await buildSchema({
-        resolvers: config.resolvers,
-        authChecker: config.authChecker,
-        container: Container,
-        ...config.schemaOptions,
-      });
-
-      const server = new ApolloServer({ schema });
-
-      cachedHandler = startServerAndCreateLambdaHandler(server, handlers.createAPIGatewayProxyEventV2RequestHandler(), {
-        context: async ({ event, context }) => {
-          if (config.context) {
-            return config.context({ event, context });
-          }
-          return {};
-        },
-      });
+      await initializationPromise;
     }
 
-    return cachedHandler(event, context, callback) as Promise<APIGatewayProxyResultV2>;
+    return cachedHandler!(event, context, callback) as Promise<APIGatewayProxyResultV2>;
   };
 }
