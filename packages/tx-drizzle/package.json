@@ -1,0 +1,48 @@
+{
+  "name": "@croco/tx-drizzle",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "eslint **/*.ts*",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/tx-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@croco/eslint-config": "workspace:*",
+    "@croco/utils-tsconfig": "workspace:*",
+    "drizzle-orm": "0.44.2"
+  },
+  "peerDependencies": {
+    "drizzle-orm": ">=0.30.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "files": [
+      "dist"
+    ],
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.mjs",
+    "module": "./dist/index.mjs",
+    "exports": {
+      ".": {
+        "require": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "import": {
+          "types": "./dist/index.d.mts",
+          "default": "./dist/index.mjs"
+        }
+      }
+    }
+  }
+}
+
+
