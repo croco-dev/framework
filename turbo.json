@@ -3,20 +3,26 @@
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "build": {
-      "cache": false,
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
+    "deploy": {
+      "cache": false
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "deploy": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "test": {
+      "cache": true,
+      "dependsOn": ["^test"]
+    },
+    "typecheck": {
+      "cache": true,
+      "dependsOn": ["^typecheck"]
     }
   }
 }

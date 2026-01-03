@@ -1,0 +1,34 @@
+pre-commit:
+  parallel: true
+  stage_fixed: true
+  commands:
+    ts:
+      glob: "*.ts"
+      run: pnpm eslint --fix --quiet {staged_files}
+    tsx:
+      glob: "*.tsx"
+      run: pnpm eslint --fix --quiet {staged_files}
+    jsx:
+      glob: "*.jsx"
+      run: pnpm eslint --fix --quiet {staged_files}
+    js:
+      glob: "*.js"
+      run: pnpm eslint --fix --quiet {staged_files}
+    mdx:
+      glob: "*.mdx"
+      run: pnpm eslint --fix --quiet {staged_files}
+    json:
+      glob: "*.json"
+      run: pnpm eslint --fix --quiet {staged_files}
+
+pre-push:
+  commands:
+    test:
+      run: pnpm test
+    typecheck:
+      run: pnpm typecheck
+
+post-merge:
+  commands:
+    install:
+      run: pnpm install

@@ -1,4 +1,5 @@
 {
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
   "eslint.workingDirectories": [
     {
       "mode": "auto"
