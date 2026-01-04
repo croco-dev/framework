@@ -61,6 +61,22 @@ importers:
         specifier: 0.10.0
         version: 0.10.0
 
+  packages/framework-context:
+    dependencies:
+      reflect-metadata:
+        specifier: 0.2.2
+        version: 0.2.2
+      typedi:
+        specifier: 0.10.0
+        version: 0.10.0
+    devDependencies:
+      '@croco/eslint-config':
+        specifier: workspace:*
+        version: link:../shared/utils-eslint-config
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+
   packages/problems-core:
     devDependencies:
       '@croco/eslint-config':

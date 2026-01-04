@@ -5,6 +5,3 @@ export interface TxAdapter<TClient, TOptions = unknown> {
 
   supportsSavepoint(): boolean;
 }
-
-
-

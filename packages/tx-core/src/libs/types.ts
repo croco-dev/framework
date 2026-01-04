@@ -8,5 +8,3 @@ export interface TxRunOptions<TOptions = unknown> {
 export interface TxManagerConfig {
   defaultNesting?: NestingStrategy;
 }
-
-
