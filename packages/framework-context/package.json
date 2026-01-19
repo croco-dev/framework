@@ -1,5 +1,5 @@
 {
-  "name": "@croco/tx-core",
+  "name": "@croco/framework-context",
   "version": "0.0.1",
   "type": "commonjs",
   "main": "./src/index.ts",
@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/framework-context": "workspace:*"
+    "reflect-metadata": "0.2.2",
+    "typedi": "0.10.0"
   },
   "devDependencies": {
     "@croco/eslint-config": "workspace:*",

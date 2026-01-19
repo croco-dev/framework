@@ -18,6 +18,7 @@
     "@vitest/coverage-v8": "4.0.16",
     "eslint": "9.39.2",
     "lefthook": "2.0.13",
+    "tsup": "8.5.1",
     "turbo": "latest",
     "typescript": "5.9.3",
     "vitest": "4.0.16"

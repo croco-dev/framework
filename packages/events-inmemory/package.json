@@ -12,14 +12,11 @@
   },
   "devDependencies": {
     "@croco/eslint-config": "workspace:*",
-    "@croco/utils-tsconfig": "workspace:*",
-    "typedi": "0.10.0"
+    "@croco/utils-tsconfig": "workspace:*"
   },
   "dependencies": {
-    "@croco/events-core": "workspace:*"
-  },
-  "peerDependencies": {
-    "typedi": "0.10.0"
+    "@croco/events-core": "workspace:*",
+    "@croco/framework-context": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

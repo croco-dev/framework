@@ -1,5 +1,5 @@
 import { EventBus, EventSubscription, DomainEvent, EventHandlerClass } from '@croco/events-core';
-import { Container } from 'typedi';
+import { Container } from '@croco/framework-context';
 
 export class InMemoryEventBus implements EventBus {
   private readonly handlers: Map<string, Set<EventHandlerClass>> = new Map();

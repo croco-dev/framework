@@ -1,11 +1,11 @@
 # @croco/tx-core
 
-AsyncLocalStorage 기반 트랜잭션 컨텍스트 관리(UoW) 및 TypeDI 연동 `@Transactional` 데코레이터를 제공합니다.
+AsyncLocalStorage 기반 트랜잭션 컨텍스트 관리(UoW)를 제공합니다.
 
 ## 설치
 
 ```bash
-pnpm add @croco/tx-core typedi
+pnpm add @croco/tx-core
 ```
 
 ## 사용법
@@ -30,11 +30,11 @@ const adapter: TxAdapter<MyClient, MyOptions> = {
 };
 ```
 
-### 2. TxManager 등록 (TypeDI)
+### 2. TxManager 등록
 
 ```ts
 import 'reflect-metadata';
-import { Container } from 'typedi';
+import { Container } from '@croco/framework-context';
 import { TxManager } from '@croco/tx-core';
 import { createDrizzleTxAdapter } from '@croco/tx-drizzle';
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -46,43 +46,26 @@ const txManager = new TxManager(adapter, { defaultNesting: 'join' });
 Container.set(TxManager, txManager);
 ```
 
-### 3. @Transactional 데코레이터 사용
-
-메서드 데코레이터:
+### 3. Service에서 사용
 
 ```ts
-import { Service } from 'typedi';
-import { Transactional } from '@croco/tx-core';
+import { Component, Container } from '@croco/framework-context';
+import { TxManager } from '@croco/tx-core';
 
-@Service()
+@Component()
 class UserService {
-  @Transactional()
   async createUser(name: string) {
-    // 트랜잭션 내에서 실행됨
+    const txManager = Container.get(TxManager);
+    return txManager.run(async () => {
+      // 트랜잭션 내에서 실행됨
+    });
   }
 
-  @Transactional({ nesting: 'savepoint' })
   async updateUser(id: string, name: string) {
-    // 중첩 호출 시 savepoint 생성
-  }
-}
-```
-
-클래스 데코레이터:
-
-```ts
-import { Service } from 'typedi';
-import { Transactional } from '@croco/tx-core';
-
-@Transactional()
-@Service()
-class OrderService {
-  async createOrder() {
-    // 트랜잭션 내에서 실행됨
-  }
-
-  async cancelOrder() {
-    // 트랜잭션 내에서 실행됨
+    const txManager = Container.get(TxManager);
+    return txManager.run(async () => {
+      // 중첩 호출 시 savepoint 생성
+    }, { nesting: 'savepoint' });
   }
 }
 ```
@@ -90,10 +73,10 @@ class OrderService {
 ### 4. Repository에서 현재 트랜잭션 클라이언트 사용
 
 ```ts
-import { Service } from 'typedi';
+import { Component } from '@croco/framework-context';
 import { TxManager } from '@croco/tx-core';
 
-@Service()
+@Component()
 class UserRepository {
   constructor(
     private readonly db: DrizzleDb,
@@ -134,13 +117,6 @@ interface TxRunOptions<TOptions> {
 }
 ```
 
-### @Transactional(options?)
+## Dependencies
 
-TypeDI Container에서 `TxManager`를 resolve하여 메서드/클래스를 트랜잭션으로 감쌉니다.
-
-## Peer Dependencies
-
-- `typedi` ^0.10.0
-
-
-
+- `@croco/framework-context` - DI 컨테이너 및 컴포넌트 관리
