@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import 'reflect-metadata';
 import { Component, Container, Context, MetadataStorage } from '../index';
-import { getComponentScope } from './decorators/Component';
+import { getComponentScope } from '../libs/decorators/Component';
 
 class SimpleService {
   getValue(): string {
