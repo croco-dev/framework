@@ -1,4 +1,4 @@
-## @croco/utils-node
+## @croco/utils-node (Deprecated)
 
 Shared Node utilities for Croco services.
 

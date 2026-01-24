@@ -1,6 +1,6 @@
 # CROCO FRAMEWORK - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-04
+**Generated:** 2026-01-24
 **Project:** Opinionated Node.js framework (AWS Lambda + API Gateway v2 first-class)
 
 ## OVERVIEW
@@ -11,23 +11,25 @@ Croco is a 4-layer architecture framework (Contexts/Protocols/Transports/Integra
 croco/
 ├── packages/              # pnpm workspace monorepo
 │   ├── events-core/       # DDD event system
-│   ├── tx-core/          # Transaction management  
-│   ├── framework-context/ # Context + DI + Metadata
+│   ├── events-inmemory/   # In-memory event bus
+│   ├── tx-core/          # Transaction management
+│   ├── tx-drizzle/       # Drizzle ORM adapter
 │   ├── problems-core/     # RFC 7807 error handling
-│   └── utils-*/         # Shared utilities
+│   ├── framework-context/ # Context + DI + Metadata
+│   ├── utils-node/       # Node utilities (Dreprecated)
+│   ├── gid-core/         # Global ID generator
+│   └── esbuild-plugin/   # Build plugin
 ├── shared/               # Internal configs (@croco/*)
 └── template/             # Package template
 ```
 
 ## WHERE TO LOOK
-
 | Task | Location | Notes |
 |------|----------|-------|
 | Core events | `packages/events-core/src/libs/` | EventBus, DomainEvent, AggregateRoot |
 | Transactions | `packages/tx-core/src/libs/` | AsyncLocalStorage-based UoW |
 | Context management | `packages/framework-context/src/libs/` | Request scoping, DI, metadata |
 | Error handling | `packages/problems-core/src/libs/` | ProblemDetails RFC 7807 |
-| Node utilities | `packages/utils-node/src/libs/` | Apollo, server, worker setup |
 | ESLint config | `packages/shared/utils-eslint-config/src/configs/` | Base + React configs |
 | TS configs | `packages/shared/utils-tsconfig/` | base.node, react, next |
 
@@ -49,15 +51,22 @@ packages/{name}/
 └── eslint.config.mjs   # Extends @croco/eslint-config
 ```
 
-### Import Style
+### Import Ordering
 ```typescript
-// Internal: Use @croco/* workspace dependencies
+// 1. Internal (@croco/*)
 import { EventBus } from '@croco/events-core';
+// 2. External (npm)
+import { Container } from 'typedi';
+// 3. Builtin (Node.js)
+import { AsyncLocalStorage } from 'async_hooks';
+// 4. Relative
+import { MyClass } from './libs/MyClass';
+```
 
-// Within package: Explicit named exports
+### Export Style
+```typescript
 export { ClassName } from './libs/FileName';
 export type { InterfaceName } from './libs/FileName';
-
 // NEVER: export * patterns (except utils)
 ```
 
@@ -68,8 +77,13 @@ export type { InterfaceName } from './libs/FileName';
 
 ### Code Style
 - **Prettier**: `singleQuote: true`, `printWidth: 120`, `trailingComma: 'es5'`
-- **Imports**: Grouped as internal/external/builtin, `@*` treated as internal
 - **Type imports**: Prefer `import type` over `import` where possible
+
+### Naming Conventions
+- **Classes/Interfaces**: PascalCase (`EventBus`, `IRepository`)
+- **Functions/variables**: camelCase (`handleEvent`, `totalCount`)
+- **Constants/enums**: PascalCase for enums, SCREAMING_SNAKE_CASE for static (`UserRole`, `MAX_RETRIES`)
+- **Files**: PascalCase.ts (`EventBus.ts`)
 
 ## ANTI-PATTERNS (FORBIDDEN)
 
@@ -82,65 +96,53 @@ export type { InterfaceName } from './libs/FileName';
 ## UNIQUE STYLES
 
 ### Error Handling
-- Use **RFC 7807 ProblemDetails** via `@croco/problems-core`
-- All errors extend `Problem` abstract class with category metadata
-- Automatic HTTP status mapping based on `ProblemCategory`
+Use **RFC 7807 ProblemDetails** via `@croco/problems-core`. All errors extend `Problem` abstract class with category metadata. Automatic HTTP status mapping based on `ProblemCategory`.
 
 ### Context Management
-- **AsyncLocalStorage** for request scoping (no thread-local storage)
-- DI container uses **TypeDI** with request-scoped services
-- Context must be initialized via `Context.withRequest()`
+**AsyncLocalStorage** for request scoping (no thread-local storage). DI container uses **TypeDI** with request-scoped services. Context must be initialized via `Context.withRequest()`.
 
 ### Event Architecture
-- **Domain Events**: Extend `DomainEvent`, use `AggregateRoot.addDomainEvent()`
-- **Handlers**: Use `@RegisterEventHandler(EventClass)` decorator
-- **Async publishing**: All event handlers are async
+**Domain Events**: Extend `DomainEvent`, use `AggregateRoot.addDomainEvent()`. Handlers: Use `@RegisterEventHandler(EventClass)` decorator. Async publishing: All event handlers are async.
 
 ## COMMANDS
 
 ### Development
 ```bash
-# Install all dependencies
 pnpm install
-
-# Run specific package commands
 pnpm --filter @croco/events-core build
 pnpm --filter @croco/framework-context lint
-
-# Full monorepo commands
 pnpm build          # Build all packages in dependency order
 pnpm test           # Run all tests (Vitest)
 pnpm lint           # ESLint all packages
 pnpm typecheck      # TypeScript check all packages
 ```
 
-### Individual Operations
+### Single Test Execution
 ```bash
-# Single package build
-cd packages/events-core && pnpm build
+npx vitest run packages/{package-name}/src/{path}.test.ts
+npx vitest packages/{package-name}/src/{path}.test.ts  # watch mode
+pnpm --filter @croco/{package-name} test
 
-# Single package lint
-cd packages/framework-context && pnpm lint
-
-# Single package typecheck
-cd packages/tx-core && pnpm typecheck
+# gid-core special commands
+pnpm --filter @croco/gid-core test         # vitest run
+pnpm --filter @croco/gid-core test:watch   # vitest (watch)
 ```
 
 ### Deployment
 ```bash
-# Deploy single package
 pnpm --filter @croco/events-core deploy
-
-# Deploy with 2FA
 pnpm deploy --otp <code>
 ```
 
-## TESTING
+## VITEST CONFIG
 
 - **Framework**: Vitest v4.0.16 with coverage (@vitest/coverage-v8)
+- **Environment**: Node.js
+- **Globals**: true (describe/it/expect without import)
+- **Timeout**: 10 seconds
+- **Excludes**: packages/utils-*, node_modules, dist
 - **Files**: `*.test.ts` or `*.spec.ts` in any `src/` directory
 - **Structure**: Library-focused (consumers test usage, not internal implementation)
-- **Status**: Infrastructure ready, tests not yet written
 
 ## GIT HOOKS
 

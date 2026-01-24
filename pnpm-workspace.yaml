@@ -1,5 +1,11 @@
 packages:
   - packages/**/*
 
+ignoredBuiltDependencies:
+  - '@apollo/protobufjs'
+
 onlyBuiltDependencies:
+  - esbuild
+  - lefthook
   - sharp
+  - unrs-resolver

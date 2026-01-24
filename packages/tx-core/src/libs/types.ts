@@ -8,3 +8,16 @@ export interface TxRunOptions<TOptions = unknown> {
 export interface TxManagerConfig {
   defaultNesting?: NestingStrategy;
 }
+
+export type Propagation = 'REQUIRED' | 'REQUIRES_NEW' | 'MANDATORY' | 'NEVER';
+
+export type TxManagerKey = string | symbol;
+
+export const DEFAULT_TX_MANAGER_KEY: unique symbol = Symbol.for('@croco/tx-core/defaultTxManager');
+
+export interface TransactionalOptions<TOptions = unknown> {
+  propagation?: Propagation;
+  managerKey?: TxManagerKey;
+  nesting?: NestingStrategy;
+  options?: TOptions;
+}

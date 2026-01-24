@@ -54,4 +54,12 @@ export class TxManager<TClient, TOptions = unknown> {
   isInTransaction(): boolean {
     return this.als.getStore() !== undefined;
   }
+
+  /**
+   * Suspend current transaction context and run function outside of it.
+   * Used for REQUIRES_NEW propagation to ensure clean transaction state.
+   */
+  async suspend<T>(fn: () => Promise<T>): Promise<T> {
+    return this.als.run(undefined as unknown as TxContext<TClient>, fn);
+  }
 }
