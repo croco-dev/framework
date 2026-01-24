@@ -1,5 +1,4 @@
-import { FC } from 'react';
-import { createElement, memo } from 'react';
+import { createElement, type FC, memo } from 'react';
 
 type HookType<HookProps, HookResult> = (props: HookProps) => HookResult;
 
@@ -16,7 +15,7 @@ export function bind<HookProps extends Record<string, unknown>, HookResult exten
 
   const MemoizedViewComponent = memo(ViewComponent) as unknown as FC<HookResult>;
 
-  const Component = memo<HookProps>(props =>
+  const Component = memo<HookProps>((props) =>
     createElement(MemoizedViewComponent as FC<HookResult>, useHook(props))
   ) as unknown as FC<HookProps> & {
     ViewComponent: FC<HookResult>;

@@ -1,8 +1,8 @@
 import { Container } from '../Container';
-import { ComponentOptions, Scope, Constructor } from '../types';
+import type { ComponentOptions, Constructor, Scope } from '../types';
 
 export function Component(options?: ComponentOptions): (target: Constructor) => void {
-  return function (target: Constructor): void {
+  return (target: Constructor): void => {
     const scope: Scope = options?.scope ?? 'singleton';
     Container.register(target, scope);
   };

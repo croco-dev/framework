@@ -1,4 +1,4 @@
-import { ProblemCategory } from './ProblemCategory';
+import type { ProblemCategory } from './ProblemCategory';
 
 export abstract class Problem extends Error {
   public readonly code: string;

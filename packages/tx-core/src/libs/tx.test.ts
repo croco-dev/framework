@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TxManager, TxAdapter } from '../index';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { type TxAdapter, TxManager } from '../index';
 
 function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAdapter<{ id: string }> {
   return {
-    transaction: vi.fn(async fn => {
+    transaction: vi.fn(async (fn) => {
       const client = { id: 'tx-client' };
       return fn(client);
     }),

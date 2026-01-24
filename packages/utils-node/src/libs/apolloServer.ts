@@ -1,7 +1,7 @@
 import { ApolloServer } from '@apollo/server';
-import { startServerAndCreateLambdaHandler, handlers } from '@as-integrations/aws-lambda';
-import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
-import { buildSchema, AuthChecker, NonEmptyArray, BuildSchemaOptions } from 'type-graphql';
+import { handlers, startServerAndCreateLambdaHandler } from '@as-integrations/aws-lambda';
+import type { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
+import { type AuthChecker, type BuildSchemaOptions, buildSchema, type NonEmptyArray } from 'type-graphql';
 import { Container } from 'typedi';
 import { BootstrapError, ContainerInitializationError } from './errors';
 
@@ -70,6 +70,6 @@ export function createApolloServer<Context extends object>(
       await initializationPromise;
     }
 
-    return cachedHandler!(event, context, callback) as Promise<APIGatewayProxyResultV2>;
+    return cachedHandler?.(event, context, callback) as Promise<APIGatewayProxyResultV2>;
   };
 }

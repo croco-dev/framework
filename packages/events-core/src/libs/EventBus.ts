@@ -1,5 +1,5 @@
-import { DomainEvent } from './DomainEvent';
-import { EventHandlerClass } from './EventHandler';
+import type { DomainEvent } from './DomainEvent';
+import type { EventHandlerClass } from './EventHandler';
 
 export interface EventSubscription {
   eventName: string;

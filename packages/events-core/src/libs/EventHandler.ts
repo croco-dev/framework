@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { DomainEvent } from './DomainEvent';
+import type { DomainEvent } from './DomainEvent';
 import { EventBusConfig } from './EventBusConfig';
 
 export interface EventHandler<T extends DomainEvent = DomainEvent> {
@@ -9,11 +8,11 @@ export interface EventHandler<T extends DomainEvent = DomainEvent> {
 export type EventHandlerClass<T extends DomainEvent = DomainEvent> = new (...args: any) => EventHandler<T>;
 
 export function RegisterEventHandler(eventClass: new (...args: any) => DomainEvent) {
-  return function <T extends EventHandlerClass>(constructor: T) {
+  return <T extends EventHandlerClass>(f: T) => {
     EventBusConfig.getInstance().subscribe({
       eventName: eventClass.name,
-      handlerClass: constructor,
+      handlerClass: f,
     });
-    return constructor;
+    return f;
   };
 }

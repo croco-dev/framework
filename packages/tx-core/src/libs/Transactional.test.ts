@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  TxManager,
-  TxAdapter,
-  TxManagerRegistry,
   Transactional,
+  type TxAdapter,
+  TxManager,
   TxManagerNotRegisteredError,
+  TxManagerRegistry,
   TxPropagationError,
 } from '../index';
 
 function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAdapter<{ id: string }> {
   return {
-    transaction: vi.fn(async fn => {
+    transaction: vi.fn(async (fn) => {
       const client = { id: 'tx-client' };
       return fn(client);
     }),

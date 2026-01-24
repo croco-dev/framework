@@ -1,5 +1,5 @@
-import { TxAdapter } from '@croco/tx-core';
-import { describe, it, expect, vi } from 'vitest';
+import type { TxAdapter } from '@croco/tx-core';
+import { describe, expect, it, vi } from 'vitest';
 import { createDrizzleTxAdapter } from '../index';
 
 interface MockTx {
@@ -33,7 +33,7 @@ describe('DrizzleTxAdapter', () => {
       const db = createMockDrizzleDb();
       const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
 
-      const result = await adapter.transaction(async tx => {
+      const result = await adapter.transaction(async (tx) => {
         expect(tx.id).toBe('drizzle-tx');
         return 'result';
       });
@@ -69,7 +69,7 @@ describe('DrizzleTxAdapter', () => {
       const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
 
       const client: MockTx = { id: 'existing-tx' };
-      const result = await adapter.savepoint(client, async tx => {
+      const result = await adapter.savepoint(client, async (tx) => {
         expect(tx.id).toBe('existing-tx');
         return 'savepoint-result';
       });

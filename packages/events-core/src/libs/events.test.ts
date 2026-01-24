@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { DomainEvent, AggregateRoot, EventBusConfig, EventHandler, RegisterEventHandler } from '../index';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { AggregateRoot, DomainEvent, EventBusConfig, type EventHandler, RegisterEventHandler } from '../index';
 
 class TestEvent extends DomainEvent {
   constructor(public readonly data: string) {
@@ -146,7 +146,7 @@ describe('EventBusConfig', () => {
     config.setEventBus(mockEventBus);
     await config.start({ handlers: [StartTestHandler] });
 
-    const anotherEventSubscription = subscriptions.find(s => s.eventName === 'AnotherTestEvent');
+    const anotherEventSubscription = subscriptions.find((s) => s.eventName === 'AnotherTestEvent');
     expect(anotherEventSubscription).toBeDefined();
   });
 });

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import 'reflect-metadata';
-import { Container, Context, MetadataStorage, Component } from '../index';
+import { Component, Container, Context, MetadataStorage } from '../index';
 import { getComponentScope } from './decorators/Component';
 
 class SimpleService {
@@ -132,7 +132,7 @@ describe('Context', () => {
     await Context.run(ctx, async () => {
       const createdAt = Context.getCreatedAt();
       expect(typeof createdAt).toBe('number');
-      expect(createdAt!).toBeGreaterThanOrEqual(before);
+      expect(createdAt).toBeGreaterThanOrEqual(before);
     });
   });
 });

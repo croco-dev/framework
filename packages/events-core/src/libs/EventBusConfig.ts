@@ -1,5 +1,5 @@
-import { EventBus, EventSubscription } from './EventBus';
-import { EventHandlerClass } from './EventHandler';
+import type { EventBus, EventSubscription } from './EventBus';
+import type { EventHandlerClass } from './EventHandler';
 
 export class EventBusConfig {
   private static INSTANCE: EventBusConfig;

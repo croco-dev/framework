@@ -1,6 +1,6 @@
-import { DomainEvent, EventHandler, EventSubscription } from '@croco/events-core';
+import { DomainEvent, type EventHandler, type EventSubscription } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { InMemoryEventBus } from '../index';
 
 class TestEvent extends DomainEvent {

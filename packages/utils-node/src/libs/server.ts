@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import express, { Application } from 'express';
+import express, { type Application } from 'express';
 import { useContainer, useExpressServer } from 'routing-controllers';
 import { Container } from 'typedi';
 import { BootstrapError, ContainerInitializationError } from './errors';
-import { BootstrapConfig, ServerConfig } from './types';
+import type { BootstrapConfig, ServerConfig } from './types';
 
 /**
  * TypeDI-based Node server bootstrap utility
@@ -60,35 +60,35 @@ export class Bootstrap {
   }
 
   static async bootstrap(config: BootstrapConfig): Promise<Application> {
-    if (this.isInitialized) {
+    if (Bootstrap.isInitialized) {
       throw new BootstrapError('Bootstrap has already been initialized');
     }
 
     try {
-      this.ensureReflectMetadata();
-      this.config = config;
-      await this.initializeContainer(config);
-      this.app = await this.initializeApp(config);
-      this.app.disable('x-powered-by');
+      Bootstrap.ensureReflectMetadata();
+      Bootstrap.config = config;
+      await Bootstrap.initializeContainer(config);
+      Bootstrap.app = await Bootstrap.initializeApp(config);
+      Bootstrap.app.disable('x-powered-by');
 
       if (config.onBootstrap) {
-        await config.onBootstrap(this.app, Container);
+        await config.onBootstrap(Bootstrap.app, Container);
       }
 
-      this.isInitialized = true;
-      return this.app;
+      Bootstrap.isInitialized = true;
+      return Bootstrap.app;
     } catch (error) {
       throw new BootstrapError('Failed to bootstrap application', error);
     }
   }
 
   static async start(serverConfig: ServerConfig = {}): Promise<void> {
-    if (!this.app) {
+    if (!Bootstrap.app) {
       throw new BootstrapError('Application not bootstrapped. Call bootstrap() first.');
     }
 
     const port = serverConfig.port || process.env.PORT || 3000;
-    const server = this.app.listen(port, () => {
+    const server = Bootstrap.app.listen(port, () => {
       console.log(`🚀 Server is running on port ${port}`);
       console.log(`🔗 Health check: http://localhost:${port}/health`);
     });
@@ -98,8 +98,8 @@ export class Bootstrap {
       server.close(() => {
         console.log('✅ HTTP server closed');
       });
-      if (this.config?.onShutdown) {
-        await this.config.onShutdown();
+      if (Bootstrap.config?.onShutdown) {
+        await Bootstrap.config.onShutdown();
       }
       process.exit(0);
     };
@@ -109,16 +109,16 @@ export class Bootstrap {
   }
 
   static getApp(): Application {
-    if (!this.app) {
+    if (!Bootstrap.app) {
       throw new BootstrapError('Application not bootstrapped');
     }
-    return this.app;
+    return Bootstrap.app;
   }
 
   static reset() {
-    this.app = null;
-    this.config = null;
-    this.isInitialized = false;
+    Bootstrap.app = null;
+    Bootstrap.config = null;
+    Bootstrap.isInitialized = false;
     Container.reset();
   }
 }

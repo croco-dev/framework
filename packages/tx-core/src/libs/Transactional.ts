@@ -1,6 +1,6 @@
 import { TxPropagationError } from './errors';
 import { TxManagerRegistry } from './TxManagerRegistry';
-import { TransactionalOptions, Propagation } from './types';
+import type { Propagation, TransactionalOptions } from './types';
 
 type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
 
@@ -10,11 +10,11 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
   const nesting = options?.nesting;
   const txOptions = options?.options;
 
-  return function (
+  return (
     _target: object,
     _propertyKey: string | symbol,
     descriptor: PropertyDescriptor
-  ): PropertyDescriptor | void {
+  ): PropertyDescriptor | undefined => {
     const originalMethod = descriptor.value as AsyncMethod;
 
     if (typeof originalMethod !== 'function') {

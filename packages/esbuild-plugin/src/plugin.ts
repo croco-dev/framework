@@ -1,6 +1,6 @@
-import * as esbuild from 'esbuild';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import type * as esbuild from 'esbuild';
 import { ComponentScanner } from './scanner';
 
 const REFLECT_METADATA_IMPORT = "import 'reflect-metadata';\n";
@@ -56,11 +56,11 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
         if (scanDirs && scanDirs.length > 0) {
           const baseDir = entryPointPaths.length > 0 ? path.dirname(entryPointPaths[0]) : process.cwd();
           const scanResults = scanner.scan(baseDir);
-          const componentFiles = scanResults.filter(r => r.hasComponent);
+          const componentFiles = scanResults.filter((r) => r.hasComponent);
 
-          const importStatements = componentFiles.map(result => {
+          const importStatements = componentFiles.map((result) => {
             const relativePath = path.relative(baseDir, result.filePath);
-            const importPath = './' + relativePath.replace(/\.tsx?$/, '');
+            const importPath = `./${relativePath.replace(/\.tsx?$/, '')}`;
             return `import '${importPath}';`;
           });
 
@@ -89,7 +89,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
         }
 
         const originalContent = fs.readFileSync(args.path, 'utf-8');
-        const finalContents = prependContents.join('\n\n') + '\n\n' + originalContent;
+        const finalContents = `${prependContents.join('\n\n')}\n\n${originalContent}`;
 
         return {
           contents: finalContents,

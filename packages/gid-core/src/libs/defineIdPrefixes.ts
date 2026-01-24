@@ -1,4 +1,4 @@
-import { IdPrefix, PrefixedId } from './IdPrefix';
+import { IdPrefix, type PrefixedId } from './IdPrefix';
 
 type Values<T> = T[keyof T];
 

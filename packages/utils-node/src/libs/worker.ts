@@ -1,8 +1,8 @@
 import 'reflect-metadata';
-import { SQSEvent } from 'aws-lambda';
+import type { SQSEvent } from 'aws-lambda';
 import { Container } from 'typedi';
 import { BootstrapError, ContainerInitializationError } from './errors';
-import { WorkerConfig } from './types';
+import type { WorkerConfig } from './types';
 
 /**
  * SQS-based worker bootstrap utility (provider-agnostic)
@@ -31,7 +31,7 @@ export class Worker {
   }
 
   static async bootstrap<TD = unknown, TR = unknown>(config: WorkerConfig<TD, TR>): Promise<void> {
-    if (this.isInitialized) {
+    if (Worker.isInitialized) {
       throw new BootstrapError('Worker has already been initialized');
     }
 
@@ -40,13 +40,13 @@ export class Worker {
     }
 
     try {
-      this.ensureReflectMetadata();
-      this.config = config as unknown as WorkerConfig;
-      await this.initializeContainer(config);
+      Worker.ensureReflectMetadata();
+      Worker.config = config as unknown as WorkerConfig;
+      await Worker.initializeContainer(config);
       if (config.onWorkerBootstrap) {
         await config.onWorkerBootstrap(Container);
       }
-      this.isInitialized = true;
+      Worker.isInitialized = true;
     } catch (error) {
       throw new BootstrapError('Failed to bootstrap worker', error);
     }
@@ -55,14 +55,14 @@ export class Worker {
   static async processEvent<TD = unknown, TR = unknown>(
     event: SQSEvent
   ): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
-    if (!this.isInitialized) {
+    if (!Worker.isInitialized) {
       throw new BootstrapError('Worker not initialized. Call bootstrap() first.');
     }
 
-    const config = this.config as unknown as WorkerConfig<TD, TR>;
+    const config = Worker.config as unknown as WorkerConfig<TD, TR>;
 
     const results = await Promise.allSettled(
-      event.Records.map(async record => {
+      event.Records.map(async (record) => {
         try {
           const { job, data } = JSON.parse(record.body) as { job: string; data: TD };
 
@@ -104,8 +104,8 @@ export class Worker {
   }
 
   static reset() {
-    this.config = null;
-    this.isInitialized = false;
+    Worker.config = null;
+    Worker.isInitialized = false;
     Container.reset();
   }
 }

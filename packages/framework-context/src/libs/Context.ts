@@ -1,5 +1,5 @@
-import { AsyncLocalStorage } from 'async_hooks';
-import { RequestContext } from './types';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { RequestContext } from './types';
 
 interface ContextData {
   context: RequestContext;
@@ -16,25 +16,25 @@ export class Context {
       context,
       createdAt: Date.now(),
     };
-    return this.STORAGE.run(data, fn);
+    return Context.STORAGE.run(data, fn);
   }
 
   static get(): RequestContext | null {
-    const data = this.STORAGE.getStore();
+    const data = Context.STORAGE.getStore();
     return data?.context ?? null;
   }
 
   static getRequestId(): string | null {
-    const context = this.get();
+    const context = Context.get();
     return context?.requestId ?? null;
   }
 
   static isActive(): boolean {
-    return this.STORAGE.getStore() !== undefined;
+    return Context.STORAGE.getStore() !== undefined;
   }
 
   static getCreatedAt(): number | null {
-    const data = this.STORAGE.getStore();
+    const data = Context.STORAGE.getStore();
     return data?.createdAt ?? null;
   }
 }

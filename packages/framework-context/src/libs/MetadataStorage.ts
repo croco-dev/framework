@@ -21,7 +21,7 @@ class MetadataStorageImpl {
 
   define<T>(key: MetadataKey, target: MetadataTarget, value: T, propertyKey?: string | symbol): void {
     const existing = this.storage.findIndex(
-      entry => entry.key === key && entry.target === target && entry.propertyKey === propertyKey
+      (entry) => entry.key === key && entry.target === target && entry.propertyKey === propertyKey
     );
 
     if (existing !== -1) {
@@ -32,28 +32,28 @@ class MetadataStorageImpl {
   }
 
   get<T>(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): T | undefined {
-    const entry = this.storage.find(e => e.key === key && e.target === target && e.propertyKey === propertyKey);
+    const entry = this.storage.find((e) => e.key === key && e.target === target && e.propertyKey === propertyKey);
     return entry?.value as T | undefined;
   }
 
   getAll<T>(key: MetadataKey): Array<{ target: MetadataTarget; propertyKey?: string | symbol; value: T }> {
     return this.storage
-      .filter(entry => entry.key === key)
+      .filter((entry) => entry.key === key)
       .map(({ target, propertyKey, value }) => ({ target, propertyKey, value: value as T }));
   }
 
   getAllForTarget<T>(key: MetadataKey, target: MetadataTarget): Array<{ propertyKey?: string | symbol; value: T }> {
     return this.storage
-      .filter(entry => entry.key === key && entry.target === target)
+      .filter((entry) => entry.key === key && entry.target === target)
       .map(({ propertyKey, value }) => ({ propertyKey, value: value as T }));
   }
 
   has(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): boolean {
-    return this.storage.some(e => e.key === key && e.target === target && e.propertyKey === propertyKey);
+    return this.storage.some((e) => e.key === key && e.target === target && e.propertyKey === propertyKey);
   }
 
   delete(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): boolean {
-    const index = this.storage.findIndex(e => e.key === key && e.target === target && e.propertyKey === propertyKey);
+    const index = this.storage.findIndex((e) => e.key === key && e.target === target && e.propertyKey === propertyKey);
     if (index !== -1) {
       this.storage.splice(index, 1);
       return true;

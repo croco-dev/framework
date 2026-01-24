@@ -1,6 +1,6 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as ts from 'typescript';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export interface ScanResult {
   filePath: string;
@@ -39,7 +39,7 @@ export class ComponentScanner {
 
   scan(baseDir: string = process.cwd()): ScanResult[] {
     const results: ScanResult[] = [];
-    const absoluteDirs = this.options.scanDirs.map(dir => (path.isAbsolute(dir) ? dir : path.resolve(baseDir, dir)));
+    const absoluteDirs = this.options.scanDirs.map((dir) => (path.isAbsolute(dir) ? dir : path.resolve(baseDir, dir)));
 
     for (const dir of absoluteDirs) {
       const files = this.findTypeScriptFiles(dir);
@@ -123,7 +123,7 @@ export class ComponentScanner {
 
   private isExcluded(filePath: string): boolean {
     const relativePath = path.relative(process.cwd(), filePath);
-    return this.options.exclude.some(pattern => this.matchPattern(pattern, relativePath));
+    return this.options.exclude.some((pattern) => this.matchPattern(pattern, relativePath));
   }
 
   private matchPattern(pattern: string, filePath: string): boolean {
@@ -140,10 +140,10 @@ export class ComponentScanner {
       .replace(/\?/g, '[^/]');
 
     if (!regexStr.startsWith('^')) {
-      regexStr = '^' + regexStr;
+      regexStr = `^${regexStr}`;
     }
     if (!regexStr.endsWith('$')) {
-      regexStr = regexStr + '$';
+      regexStr = `${regexStr}$`;
     }
 
     return new RegExp(regexStr);

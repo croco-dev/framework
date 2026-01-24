@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-import { Application } from 'express';
-import { Container } from 'typedi';
+import type { Application } from 'express';
+import type { Container } from 'typedi';
 
 export interface BootstrapConfig {
   configureApp?: (app: Application) => void | Promise<void>;
@@ -17,7 +17,9 @@ export interface ServerConfig {
   port?: number;
 }
 
-export type JobConstructor<TData = unknown, TResult = unknown> = new (...args: unknown[]) => {
+export type JobConstructor<TData = unknown, TResult = unknown> = new (
+  ...args: unknown[]
+) => {
   execute: (data: TData) => Promise<TResult> | TResult;
 };
 

@@ -1,5 +1,5 @@
-import { TxAdapter } from '@croco/tx-core';
-import { DrizzleDb, DrizzleTx, InferTxClient, InferTxOptions } from './types';
+import type { TxAdapter } from '@croco/tx-core';
+import type { DrizzleDb, DrizzleTx, InferTxClient, InferTxOptions } from './types';
 
 export function createDrizzleTxAdapter<TDb extends DrizzleDb>(
   db: TDb
@@ -27,5 +27,3 @@ export function createDrizzleTxAdapter<TDb extends DrizzleDb>(
     },
   };
 }
-
-

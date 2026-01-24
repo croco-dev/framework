@@ -1,6 +1,6 @@
-import { AsyncLocalStorage } from 'async_hooks';
-import { TxAdapter } from './TxAdapter';
-import { NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { TxAdapter } from './TxAdapter';
+import type { NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
 
 interface TxContext<TClient> {
   client: TClient;
@@ -24,7 +24,7 @@ export class TxManager<TClient, TOptions = unknown> {
     const currentContext = this.als.getStore();
 
     if (!currentContext) {
-      return this.adapter.transaction(async client => {
+      return this.adapter.transaction(async (client) => {
         return this.als.run({ client }, fn);
       }, options);
     }
@@ -39,7 +39,7 @@ export class TxManager<TClient, TOptions = unknown> {
 
     return this.adapter.savepoint(
       currentContext.client,
-      async nestedClient => {
+      async (nestedClient) => {
         return this.als.run({ client: nestedClient }, fn);
       },
       options

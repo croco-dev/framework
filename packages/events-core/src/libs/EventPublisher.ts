@@ -1,4 +1,4 @@
-import { DomainEvent } from './DomainEvent';
+import type { DomainEvent } from './DomainEvent';
 import { EventBusConfig } from './EventBusConfig';
 
 export class EventPublisher {

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as fs from 'fs';
-import { ComponentScanner, scanForComponents, CrocoPluginOptions } from './scanner';
+import * as fs from 'node:fs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ComponentScanner, type CrocoPluginOptions, scanForComponents } from './scanner';
 
 vi.mock('fs');
 

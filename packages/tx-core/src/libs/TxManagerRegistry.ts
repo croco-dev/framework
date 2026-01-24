@@ -1,6 +1,6 @@
 import { TxManagerNotRegisteredError } from './errors';
-import { TxManager } from './TxManager';
-import { TxManagerKey, DEFAULT_TX_MANAGER_KEY } from './types';
+import type { TxManager } from './TxManager';
+import { DEFAULT_TX_MANAGER_KEY, type TxManagerKey } from './types';
 
 type TxManagerInstance = TxManager<unknown, unknown>;
 

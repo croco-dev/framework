@@ -1,8 +1,8 @@
-import { Container as TypeDIContainer, Service } from 'typedi';
+import { Service, Container as TypeDIContainer } from 'typedi';
 import 'reflect-metadata';
 import { Context } from './Context';
 import { MetadataStorage } from './MetadataStorage';
-import { Scope, Constructor } from './types';
+import type { Constructor, Scope } from './types';
 
 const COMPONENT_METADATA_KEY = Symbol('component:metadata');
 
@@ -10,7 +10,7 @@ const REQUEST_SCOPED_CACHE = new Map<string, unknown>();
 
 export class Container {
   static get<T>(token: Constructor<T>): T {
-    const metadata = this.getComponentMetadata(token);
+    const metadata = Container.getComponentMetadata(token);
 
     if (!metadata) {
       return TypeDIContainer.get(token);
@@ -21,10 +21,10 @@ export class Container {
         return TypeDIContainer.get(token);
 
       case 'transient':
-        return this.createTransientInstance(token);
+        return Container.createTransientInstance(token);
 
       case 'request':
-        return this.getRequestScoped(token);
+        return Container.getRequestScoped(token);
 
       default:
         return TypeDIContainer.get(token);
@@ -32,7 +32,7 @@ export class Container {
   }
 
   static getMany<T>(tokens: Constructor<T>[]): T[] {
-    return tokens.map(token => this.get(token));
+    return tokens.map((token) => Container.get(token));
   }
 
   static set<T>(token: Constructor<T>, instance: T): T {
@@ -59,7 +59,7 @@ export class Container {
 
   private static createTransientInstance<T>(token: Constructor<T>): T {
     const paramTypes = Reflect.getMetadata('design:paramtypes', token) || [];
-    const dependencies = paramTypes.map((paramType: Constructor) => this.get(paramType));
+    const dependencies = paramTypes.map((paramType: Constructor) => Container.get(paramType));
     return new token(...dependencies);
   }
 
@@ -72,7 +72,7 @@ export class Container {
       return cached as T;
     }
 
-    const instance = this.createTransientInstance(token);
+    const instance = Container.createTransientInstance(token);
     REQUEST_SCOPED_CACHE.set(cacheKey, instance);
     return instance;
   }

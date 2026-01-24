@@ -1,4 +1,4 @@
-import { EventBus, EventSubscription, DomainEvent, EventHandlerClass } from '@croco/events-core';
+import type { DomainEvent, EventBus, EventHandlerClass, EventSubscription } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 
 export class InMemoryEventBus implements EventBus {
@@ -9,7 +9,7 @@ export class InMemoryEventBus implements EventBus {
     const handlerClasses = this.handlers.get(eventName) ?? new Set();
 
     await Promise.allSettled(
-      Array.from(handlerClasses).map(async handlerClass => {
+      Array.from(handlerClasses).map(async (handlerClass) => {
         try {
           const handlerInstance = Container.get(handlerClass);
           await handlerInstance.handle(event);
@@ -25,7 +25,10 @@ export class InMemoryEventBus implements EventBus {
       this.handlers.set(subscription.eventName, new Set());
     }
 
-    const handlers = this.handlers.get(subscription.eventName)!;
+    const handlers = this.handlers.get(subscription.eventName);
+    if (!handlers) {
+      throw new Error(`No handler set found for event: ${subscription.eventName}`);
+    }
     handlers.add(subscription.handlerClass);
   }
 
