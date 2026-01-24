@@ -3,20 +3,20 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
+    "check": "biome check .",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format": "biome format --write .",
     "lint": "turbo lint",
     "prepare": "lefthook install",
     "test": "turbo test",
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {
-    "@croco/eslint-config": "workspace:*",
+    "@biomejs/biome": "2.3.12",
     "@croco/utils-tsconfig": "workspace:*",
     "@types/node": "^22",
     "@vitest/coverage-v8": "4.0.16",
-    "eslint": "9.39.2",
     "lefthook": "2.0.13",
     "tsup": "8.5.1",
     "turbo": "latest",
