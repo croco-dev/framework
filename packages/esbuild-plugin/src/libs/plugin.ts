@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type * as esbuild from 'esbuild';
-import { ComponentScanner } from './scanner';
+import { ComponentScanner } from './ComponentScanner';
 
 const REFLECT_METADATA_IMPORT = "import 'reflect-metadata';\n";
 
