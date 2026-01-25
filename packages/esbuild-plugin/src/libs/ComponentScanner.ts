@@ -83,6 +83,33 @@ export class ComponentScanner {
     this.cache.delete(absolutePath);
   }
 
+  rescanFile(filePath: string): ScanResult {
+    this.invalidateCache(filePath);
+    return this.scanFile(filePath);
+  }
+
+  incrementalScan(changedFiles: string[], baseDir: string): ScanResult[] {
+    const results: ScanResult[] = [];
+
+    for (const file of changedFiles) {
+      this.invalidateCache(file);
+    }
+
+    const absoluteDirs = this.options.scanDirs.map((dir) => (path.isAbsolute(dir) ? dir : path.resolve(baseDir, dir)));
+
+    for (const dir of absoluteDirs) {
+      const files = this.findTypeScriptFiles(dir);
+      for (const filePath of files) {
+        const result = this.scanFile(filePath);
+        if (result.hasComponent) {
+          results.push(result);
+        }
+      }
+    }
+
+    return results;
+  }
+
   private findTypeScriptFiles(dir: string): string[] {
     if (!fs.existsSync(dir)) {
       return [];

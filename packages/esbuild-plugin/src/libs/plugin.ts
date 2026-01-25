@@ -13,9 +13,27 @@ export interface CrocoPluginConfig {
     decorators?: string[];
     cache?: boolean;
   };
+  watch?: {
+    optimize?: boolean;
+    debounce?: number;
+  };
 }
 
-function normalizeConfig(config: CrocoPluginConfig | undefined): Required<CrocoPluginConfig> {
+export interface NormalizedCrocoPluginConfig {
+  reflectMetadata: boolean;
+  scan: {
+    dirs: string[];
+    exclude: string[];
+    decorators: string[];
+    cache: boolean;
+  };
+  watch: {
+    optimize: boolean;
+    debounce: number;
+  };
+}
+
+function normalizeConfig(config: CrocoPluginConfig | undefined): NormalizedCrocoPluginConfig {
   return {
     reflectMetadata: config?.reflectMetadata ?? true,
     scan: {
@@ -23,6 +41,10 @@ function normalizeConfig(config: CrocoPluginConfig | undefined): Required<CrocoP
       exclude: config?.scan?.exclude ?? ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**'],
       decorators: config?.scan?.decorators ?? ['Component'],
       cache: config?.scan?.cache ?? true,
+    },
+    watch: {
+      optimize: config?.watch?.optimize ?? true,
+      debounce: config?.watch?.debounce ?? 0,
     },
   };
 }
@@ -42,12 +64,23 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
 
   let entryPointPaths: string[] = [];
   let autoImportContent = '';
+  let isFirstBuild = true;
 
   return {
     name: 'croco-plugin',
     setup(build: esbuild.PluginBuild) {
+      const isWatchMode = Boolean(build.initialOptions.metafile);
+
       build.onStart(() => {
-        scanner.clearCache();
+        if (normalizedConfig.watch.optimize && isWatchMode) {
+          if (isFirstBuild) {
+            scanner.clearCache();
+            isFirstBuild = false;
+          }
+        } else {
+          scanner.clearCache();
+        }
+
         const rawEntryPoints = build.initialOptions.entryPoints;
         const entryPoints = Array.isArray(rawEntryPoints) ? rawEntryPoints : [];
         entryPointPaths = entryPoints.map((ep: string | { in: string; out: string }) => resolveEntryPointPath(ep));
@@ -95,6 +128,12 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
           contents: finalContents,
           loader: 'ts',
         };
+      });
+
+      build.onEnd((result) => {
+        if (normalizedConfig.watch.optimize && isWatchMode && result.errors.length === 0) {
+          isFirstBuild = false;
+        }
       });
     },
   };
