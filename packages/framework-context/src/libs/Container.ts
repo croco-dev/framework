@@ -6,8 +6,6 @@ import type { Constructor, Scope } from './types';
 
 const COMPONENT_METADATA_KEY = Symbol('component:metadata');
 
-const REQUEST_SCOPED_CACHE = new Map<string, unknown>();
-
 export class Container {
   static get<T>(token: Constructor<T>): T {
     const metadata = Container.getComponentMetadata(token);
@@ -46,7 +44,6 @@ export class Container {
 
   static reset(): void {
     TypeDIContainer.reset();
-    REQUEST_SCOPED_CACHE.clear();
   }
 
   static register<T>(token: Constructor<T>, scope: Scope): void {
@@ -64,16 +61,22 @@ export class Container {
   }
 
   private static getRequestScoped<T>(token: Constructor<T>): T {
-    const requestId = Context.getRequestId() ?? 'root';
-    const cacheKey = `${requestId}:${token.name}`;
+    const cache = Context.getCache();
 
-    const cached = REQUEST_SCOPED_CACHE.get(cacheKey);
+    if (!cache) {
+      console.warn('[Container] getRequestScoped called outside Context.run(). Returning transient instance.');
+      return Container.createTransientInstance(token);
+    }
+
+    const key = token.name;
+
+    const cached = cache.get(key);
     if (cached !== undefined) {
       return cached as T;
     }
 
     const instance = Container.createTransientInstance(token);
-    REQUEST_SCOPED_CACHE.set(cacheKey, instance);
+    cache.set(key, instance);
     return instance;
   }
 }

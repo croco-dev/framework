@@ -4,6 +4,7 @@ import type { RequestContext } from './types';
 interface ContextData {
   context: RequestContext;
   createdAt: number;
+  scopedCache: Map<string, unknown>;
 }
 
 const contextStorage = new AsyncLocalStorage<ContextData>();
@@ -15,6 +16,7 @@ export class Context {
     const data: ContextData = {
       context,
       createdAt: Date.now(),
+      scopedCache: new Map(),
     };
     return Context.STORAGE.run(data, fn);
   }
@@ -36,5 +38,9 @@ export class Context {
   static getCreatedAt(): number | null {
     const data = Context.STORAGE.getStore();
     return data?.createdAt ?? null;
+  }
+
+  static getCache(): Map<string, unknown> | undefined {
+    return Context.STORAGE.getStore()?.scopedCache;
   }
 }
