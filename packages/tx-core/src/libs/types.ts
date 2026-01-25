@@ -11,6 +11,8 @@ export interface TxManagerConfig {
 
 export type Propagation = 'REQUIRED' | 'REQUIRES_NEW' | 'MANDATORY' | 'NEVER';
 
+export type AfterCommitHook = () => void | Promise<void>;
+
 export type TxManagerKey = string | symbol;
 
 export const DEFAULT_TX_MANAGER_KEY: unique symbol = Symbol.for('@croco/tx-core/defaultTxManager');

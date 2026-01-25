@@ -4,6 +4,7 @@ export type { TxAdapter } from './libs/TxAdapter';
 export { TxManager } from './libs/TxManager';
 export { TxManagerRegistry } from './libs/TxManagerRegistry';
 export type {
+  AfterCommitHook,
   NestingStrategy,
   Propagation,
   TransactionalOptions,

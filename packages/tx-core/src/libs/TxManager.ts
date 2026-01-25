@@ -1,9 +1,11 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { TxAdapter } from './TxAdapter';
-import type { NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
+import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
 
 interface TxContext<TClient> {
   client: TClient;
+  afterCommitHooks: AfterCommitHook[];
+  isRoot: boolean;
 }
 
 export class TxManager<TClient, TOptions = unknown> {
@@ -24,9 +26,20 @@ export class TxManager<TClient, TOptions = unknown> {
     const currentContext = this.als.getStore();
 
     if (!currentContext) {
-      return this.adapter.transaction(async (client) => {
-        return this.als.run({ client }, fn);
+      const context: TxContext<TClient> = {
+        client: null as unknown as TClient,
+        afterCommitHooks: [],
+        isRoot: true,
+      };
+
+      const result = await this.adapter.transaction(async (client) => {
+        context.client = client;
+        return this.als.run(context, fn);
       }, options);
+
+      await this.executeAfterCommitHooks(context.afterCommitHooks);
+
+      return result;
     }
 
     if (nesting === 'join') {
@@ -37,10 +50,17 @@ export class TxManager<TClient, TOptions = unknown> {
       return fn();
     }
 
+    const nestedContext: TxContext<TClient> = {
+      client: currentContext.client,
+      afterCommitHooks: currentContext.afterCommitHooks,
+      isRoot: false,
+    };
+
     return this.adapter.savepoint(
       currentContext.client,
       async (nestedClient) => {
-        return this.als.run({ client: nestedClient }, fn);
+        nestedContext.client = nestedClient;
+        return this.als.run(nestedContext, fn);
       },
       options
     );
@@ -53,6 +73,24 @@ export class TxManager<TClient, TOptions = unknown> {
 
   isInTransaction(): boolean {
     return this.als.getStore() !== undefined;
+  }
+
+  onAfterCommit(hook: AfterCommitHook): void {
+    const context = this.als.getStore();
+    if (!context) {
+      throw new Error('onAfterCommit must be called within a transaction');
+    }
+    context.afterCommitHooks.push(hook);
+  }
+
+  private async executeAfterCommitHooks(hooks: AfterCommitHook[]): Promise<void> {
+    for (const hook of hooks) {
+      try {
+        await hook();
+      } catch (error) {
+        console.error('[TxManager] AfterCommit hook failed:', error);
+      }
+    }
   }
 
   /**
