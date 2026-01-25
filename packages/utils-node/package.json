@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
-    "lint": "eslint **/*.ts*",
+    "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -21,7 +21,6 @@
     "type-graphql": "2.0.0-rc.2"
   },
   "devDependencies": {
-    "@croco/eslint-config": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*",
     "@types/aws-lambda": "8.10.150",
     "@types/express": "4.17.21",

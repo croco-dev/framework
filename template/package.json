@@ -5,12 +5,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "lint": "eslint **/*.ts*",
+    "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {},
   "devDependencies": {
-    "@croco/eslint-config": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*"
   }
 }
