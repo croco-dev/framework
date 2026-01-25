@@ -146,7 +146,10 @@ class ActionHandler {
 | `@croco/tx-core` | ✅ 구현 | 트랜잭션 관리 코어 (`AsyncLocalStorage` 기반) |
 | `@croco/tx-drizzle` | ✅ 구현 | Drizzle ORM용 트랜잭션 어댑터 |
 | `@croco/problems-core` | ✅ 구현 | RFC 7807 표준 에러 처리 |
-| `framework-context` | 🚧 계획 | 공통 Context 인터페이스, DI 컨테이너, 메타데이터 저장소 |
+| `@croco/framework-context` | ✅ 구현 | 공통 Context 인터페이스, DI 컨테이너, 메타데이터 저장소 |
+| `@croco/gid-core` | ✅ 구현 | Type-safe prefixed ID generation using ULID |
+| `@croco/esbuild-plugin` | ✅ 구현 | esbuild 빌드 플러그인 |
+| `@croco/utils-node` | ⚠️ Deprecated | Node.js 유틸리티 (더 이상 사용하지 않음) |
 | `protocols-*` | 🚧 계획 | REST/GraphQL/gRPC 인터페이스 정의 |
 | `transports-*` | 🚧 계획 | Hono 기반 Lambda 어댑터 및 WebSocket |
 | `integrations-*` | 🚧 계획 | 외부 시스템 통합 (Slack 등) |
@@ -159,10 +162,38 @@ class ActionHandler {
 
 | 패키지 | 주요 파일 |
 | :--- | :--- |
+| `events-core` | `DomainEvent.ts`, `EventBus.ts`, `AggregateRoot.ts` |
+| `events-inmemory` | `InMemoryEventBus.ts` |
+| `tx-core` | `TransactionContext.ts`, `UnitOfWork.ts` |
+| `tx-drizzle` | `DrizzleTransactionAdapter.ts` |
+| `problems-core` | `Problem.ts`, `ProblemDetails.ts`, `ProblemCategory.ts` |
 | `framework-context` | `Context.ts`, `Container.ts`, `MetadataStorage.ts` |
-| `transports-http` | `HonoAdapter.ts`, `LambdaHandler.ts`, `registerRoutes.ts` |
-| `protocols-graphql` | `buildSchema.ts`, `createYoga.ts` (w/ `transports-websocket`) |
-| `integrations-slack` | `BoltAdapter.ts`, `decorators/` |
+| `gid-core` | `GID.ts`, `PrefixRegistry.ts` |
+| `esbuild-plugin` | `CrocoPlugin.ts` |
+
+---
+
+## 🛠 개발 환경
+
+### 코드 품질 도구
+- **Biome**: 린팅 및 포맷팅 (`quoteStyle: 'single'`, `lineWidth: 120`)
+- **TypeScript**: 엄격 모드 + 데코레이터 지원
+- **Vitest**: 테스트 프레임워크
+
+### 주요 명령어
+```bash
+pnpm install          # 의존성 설치
+pnpm build            # 모든 패키지 빌드
+pnpm lint             # Biome 린트 검사
+pnpm check            # Biome 전체 검사 (lint + format)
+pnpm format           # Biome 포맷팅
+pnpm test             # 테스트 실행
+pnpm typecheck        # TypeScript 타입 검사
+```
+
+### Git Hooks (Lefthook)
+- **Pre-commit**: Biome 자동 수정
+- **Pre-push**: 테스트 및 타입 검사
 
 ---
 
