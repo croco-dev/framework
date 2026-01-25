@@ -38,3 +38,7 @@ yarn-error.log*
 *.pem
 
 .idea
+
+.cursor/plans
+.claude/settings.local.json
+.sisyphus
