@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AggregateRoot, DomainEvent, EventBusConfig, type EventHandler, RegisterEventHandler } from '../index';
+import {
+  AggregateRoot,
+  DefaultHandlerResolver,
+  DomainEvent,
+  EventBusConfig,
+  type EventHandler,
+  type EventHandlerClass,
+  type HandlerResolver,
+  RegisterEventHandler,
+} from '../index';
 
 class TestEvent extends DomainEvent {
   constructor(public readonly data: string) {
@@ -150,3 +159,93 @@ describe('EventBusConfig', () => {
     expect(anotherEventSubscription).toBeDefined();
   });
 });
+
+describe('HandlerResolver', () => {
+  beforeEach(() => {
+    const config = EventBusConfig.getInstance();
+    config.getEventBus()?.clear();
+  });
+
+  describe('DefaultHandlerResolver', () => {
+    it('should create handler instance using new operator', () => {
+      const resolver = new DefaultHandlerResolver();
+      const handlerInstance = resolver.resolve(ResolverTestHandler);
+
+      expect(handlerInstance).toBeInstanceOf(ResolverTestHandler);
+    });
+
+    it('should create new instance each time resolve is called', () => {
+      const resolver = new DefaultHandlerResolver();
+      const instance1 = resolver.resolve(ResolverTestHandler);
+      const instance2 = resolver.resolve(ResolverTestHandler);
+
+      expect(instance1).not.toBe(instance2);
+    });
+
+    it('should handle events correctly', async () => {
+      const resolver = new DefaultHandlerResolver();
+      const handler = resolver.resolve(ResolverTestHandler);
+      const event = new TestEvent('test-data');
+
+      await expect(handler.handle(event)).resolves.not.toThrow();
+    });
+  });
+
+  describe('CustomHandlerResolver', () => {
+    it('should use custom resolver when provided', async () => {
+      let resolveCount = 0;
+
+      class CustomResolver implements HandlerResolver {
+        resolve<T extends DomainEvent>(handlerClass: EventHandlerClass<T>): EventHandler<T> {
+          resolveCount++;
+          return new handlerClass();
+        }
+      }
+
+      const subscriptions: { handler?: EventHandler<DomainEvent> }[] = [];
+      const mockEventBus = {
+        publish: async () => {},
+        subscribe: (sub: { handler?: EventHandler<DomainEvent> }) => {
+          subscriptions.push(sub);
+        },
+        unsubscribe: () => {},
+        clear: () => {},
+      };
+
+      const config = EventBusConfig.getInstance();
+      config.setEventBus(mockEventBus);
+      config.subscribe({ eventName: 'TestEvent', handlerClass: ResolverTestHandler });
+      await config.start({ handlers: [], resolver: new CustomResolver() });
+
+      const resolverTestHandlerSubscription = subscriptions.find((sub) => sub.handler instanceof ResolverTestHandler);
+      expect(resolverTestHandlerSubscription).toBeDefined();
+      expect(resolveCount).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should use DefaultHandlerResolver when no resolver provided', async () => {
+      const subscriptions: { handler?: EventHandler<DomainEvent> }[] = [];
+      const mockEventBus = {
+        publish: async () => {},
+        subscribe: (sub: { handler?: EventHandler<DomainEvent> }) => {
+          subscriptions.push(sub);
+        },
+        unsubscribe: () => {},
+        clear: () => {},
+      };
+
+      const config = EventBusConfig.getInstance();
+      config.setEventBus(mockEventBus);
+      config.subscribe({ eventName: 'TestEvent', handlerClass: ResolverTestHandler });
+      await config.start({ handlers: [] });
+
+      const resolverTestHandlerSubscription = subscriptions.find((sub) => sub.handler instanceof ResolverTestHandler);
+      expect(resolverTestHandlerSubscription).toBeDefined();
+    });
+  });
+});
+
+class ResolverTestHandler implements EventHandler<TestEvent> {
+  async handle(event: TestEvent): Promise<void> {
+    console.log(`ResolverTestHandler received: ${event.data}`);
+  }
+}
