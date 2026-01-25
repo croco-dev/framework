@@ -1,6 +1,14 @@
 export type { BackoffDependencies, BackoffOptions, BackoffPolicy } from './libs/BackoffPolicy';
 export { ExponentialBackoff, FixedBackoff, NoBackoff } from './libs/BackoffPolicy';
-export { RetryExhaustedException } from './libs/errors';
+export type { CircuitBreakerOptions } from './libs/CircuitBreaker';
+export { CircuitBreaker } from './libs/CircuitBreaker';
+export { CircuitBreakerRetryTemplate } from './libs/CircuitBreakerRetryTemplate';
+export {
+  type CircuitBreakerStateStore,
+  CircuitState,
+  InMemoryCircuitBreakerStateStore,
+} from './libs/CircuitBreakerState';
+export { CircuitBreakerOpenException, RetryExhaustedException } from './libs/errors';
 export type { LambdaContext, TimeoutGuardOptions } from './libs/LambdaTimeoutGuard';
 export {
   getLambdaContext,
