@@ -30,7 +30,6 @@ croco/
 | Transactions | `packages/tx-core/src/libs/` | AsyncLocalStorage-based UoW |
 | Context management | `packages/framework-context/src/libs/` | Request scoping, DI, metadata |
 | Error handling | `packages/problems-core/src/libs/` | ProblemDetails RFC 7807 |
-| ESLint config | `packages/shared/utils-eslint-config/src/configs/` | Base + React configs |
 | TS configs | `packages/shared/utils-tsconfig/` | base.node, react, next |
 
 ## CONVENTIONS
@@ -47,8 +46,7 @@ packages/{name}/
 │   ├── libs/          # Core implementation files
 │   └── index.ts       # Explicit named exports
 ├── package.json       # Standard scripts: build, deploy, lint, typecheck
-├── tsconfig.json      # Extends @croco/utils-tsconfig
-└── eslint.config.mjs   # Extends @croco/eslint-config
+└── tsconfig.json      # Extends @croco/utils-tsconfig
 ```
 
 ### Import Ordering
@@ -76,7 +74,7 @@ export type { InterfaceName } from './libs/FileName';
 - **Reflect-metadata required** for all packages
 
 ### Code Style
-- **Prettier**: `singleQuote: true`, `printWidth: 120`, `trailingComma: 'es5'`
+- **Biome**: `quoteStyle: 'single'`, `lineWidth: 120`, `trailingCommas: 'es5'`
 - **Type imports**: Prefer `import type` over `import` where possible
 
 ### Naming Conventions
@@ -113,7 +111,7 @@ pnpm --filter @croco/events-core build
 pnpm --filter @croco/framework-context lint
 pnpm build          # Build all packages in dependency order
 pnpm test           # Run all tests (Vitest)
-pnpm lint           # ESLint all packages
+pnpm lint           # Biome lint all packages
 pnpm typecheck      # TypeScript check all packages
 ```
 
@@ -146,7 +144,7 @@ pnpm deploy --otp <code>
 
 ## GIT HOOKS
 
-- **Pre-commit**: Auto-fix ESLint on .ts/.tsx/.jsx/.js/.mdx/.json files
+- **Pre-commit**: Auto-fix with Biome on .ts/.tsx/.js/.jsx/.json files
 - **Pre-push**: Run test and typecheck
 - **Post-merge**: Auto-run `pnpm install`
 
