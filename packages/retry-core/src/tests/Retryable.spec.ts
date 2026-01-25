@@ -1,0 +1,85 @@
+import { describe, expect, it } from 'vitest';
+import { NoBackoff } from '../libs/BackoffPolicy';
+import { Retryable } from '../libs/Retryable';
+
+describe('@Retryable', () => {
+  it('retries method and succeeds', async () => {
+    let attempts = 0;
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 3,
+        backoffPolicy: new NoBackoff(),
+      })
+      async doWork(): Promise<string> {
+        attempts++;
+        if (attempts < 3) throw new Error('fail');
+        return 'success';
+      }
+    }
+
+    const service = new TestService();
+    const result = await service.doWork();
+
+    expect(result).toBe('success');
+    expect(attempts).toBe(3);
+  });
+
+  it('preserves this context', async () => {
+    class TestService {
+      private value = 'hello';
+
+      @Retryable({
+        maxAttempts: 2,
+        backoffPolicy: new NoBackoff(),
+      })
+      async getValue(): Promise<string> {
+        return this.value;
+      }
+    }
+
+    const service = new TestService();
+    const result = await service.getValue();
+
+    expect(result).toBe('hello');
+  });
+
+  it('calls recover method on exhaustion', async () => {
+    class TestService {
+      @Retryable({
+        maxAttempts: 2,
+        backoffPolicy: new NoBackoff(),
+        recover: 'handleError',
+      })
+      async doWork(): Promise<string> {
+        throw new Error('always fails');
+      }
+
+      async handleError(error: Error, ..._args: unknown[]): Promise<string> {
+        return `recovered: ${error.message}`;
+      }
+    }
+
+    const service = new TestService();
+    const result = await service.doWork();
+
+    expect(result).toBe('recovered: always fails');
+  });
+
+  it('passes arguments to original method', async () => {
+    class TestService {
+      @Retryable({
+        maxAttempts: 2,
+        backoffPolicy: new NoBackoff(),
+      })
+      async add(a: number, b: number): Promise<number> {
+        return a + b;
+      }
+    }
+
+    const service = new TestService();
+    const result = await service.add(2, 3);
+
+    expect(result).toBe(5);
+  });
+});

@@ -1,0 +1,151 @@
+/**
+ * Configuration for backoff behavior.
+ */
+export interface BackoffOptions {
+  /** Initial delay in milliseconds (default: 1000) */
+  delay?: number;
+
+  /** Multiplier for exponential backoff (default: 2) */
+  multiplier?: number;
+
+  /** Maximum delay cap in milliseconds (default: 30000) */
+  maxDelay?: number;
+
+  /** Enable Full Jitter randomization (default: true) */
+  jitter?: boolean;
+}
+
+/**
+ * Backoff policy interface.
+ */
+export interface BackoffPolicy {
+  /** Calculate delay for the given attempt (0-based) */
+  getDelay(attempt: number): number;
+
+  /** Wait for the calculated delay */
+  wait(attempt: number): Promise<void>;
+
+  /** Reset internal state if any */
+  reset(): void;
+}
+
+/**
+ * Dependency injection for testability.
+ */
+export interface BackoffDependencies {
+  /** Sleep function (default: setTimeout-based) */
+  sleep?: (ms: number) => Promise<void>;
+
+  /** Random function (default: Math.random) */
+  random?: () => number;
+}
+
+const DEFAULT_DELAY = 1000;
+const DEFAULT_MULTIPLIER = 2;
+const DEFAULT_MAX_DELAY = 30000;
+
+/**
+ * Exponential backoff with Full Jitter.
+ *
+ * Implements AWS-recommended pattern to prevent Thundering Herd:
+ * cap = min(maxDelay, delay * multiplier^attempt)
+ * sleep = random(0, cap)
+ *
+ * @see https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
+ */
+export class ExponentialBackoff implements BackoffPolicy {
+  private readonly delay: number;
+  private readonly multiplier: number;
+  private readonly maxDelay: number;
+  private readonly jitter: boolean;
+  private readonly sleep: (ms: number) => Promise<void>;
+  private readonly random: () => number;
+
+  constructor(options: BackoffOptions = {}, deps: BackoffDependencies = {}) {
+    this.delay = options.delay ?? DEFAULT_DELAY;
+    this.multiplier = options.multiplier ?? DEFAULT_MULTIPLIER;
+    this.maxDelay = options.maxDelay ?? DEFAULT_MAX_DELAY;
+    this.jitter = options.jitter ?? true;
+
+    // Dependency injection for testing
+    this.sleep = deps.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+    this.random = deps.random ?? Math.random;
+  }
+
+  /**
+   * Calculate delay for attempt (0-based index).
+   *
+   * Without jitter: min(maxDelay, delay * multiplier^attempt)
+   * With jitter: random(0, cap) - Full Jitter
+   */
+  getDelay(attempt: number): number {
+    const exponentialDelay = this.delay * this.multiplier ** attempt;
+    const cappedDelay = Math.min(this.maxDelay, exponentialDelay);
+
+    if (this.jitter) {
+      // Full Jitter: uniform random in [0, cap]
+      return Math.floor(this.random() * cappedDelay);
+    }
+
+    return cappedDelay;
+  }
+
+  /**
+   * Wait for the calculated delay.
+   */
+  async wait(attempt: number): Promise<void> {
+    const delayMs = this.getDelay(attempt);
+    if (delayMs > 0) {
+      await this.sleep(delayMs);
+    }
+  }
+
+  /**
+   * Reset (no-op for stateless implementation).
+   */
+  reset(): void {
+    // Stateless - nothing to reset
+  }
+}
+
+/**
+ * Fixed delay backoff (no exponential growth).
+ */
+export class FixedBackoff implements BackoffPolicy {
+  private readonly delayMs: number;
+  private readonly sleep: (ms: number) => Promise<void>;
+
+  constructor(delayMs: number = DEFAULT_DELAY, deps: BackoffDependencies = {}) {
+    this.delayMs = delayMs;
+    this.sleep = deps.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  }
+
+  getDelay(_attempt: number): number {
+    return this.delayMs;
+  }
+
+  async wait(_attempt: number): Promise<void> {
+    await this.sleep(this.delayMs);
+  }
+
+  reset(): void {
+    // Stateless
+  }
+}
+
+/**
+ * No delay backoff (for testing or immediate retry scenarios).
+ */
+export class NoBackoff implements BackoffPolicy {
+  getDelay(_attempt: number): number {
+    return 0;
+  }
+
+  async wait(_attempt: number): Promise<void> {
+    // No delay
+  }
+
+  reset(): void {
+    // Nothing to reset
+  }
+}
