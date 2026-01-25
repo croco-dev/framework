@@ -1,9 +1,10 @@
 import type { DomainEvent } from './DomainEvent';
-import type { EventHandlerClass } from './EventHandler';
+import type { EventHandler, EventHandlerClass } from './EventHandler';
 
 export interface EventSubscription {
   eventName: string;
   handlerClass: EventHandlerClass;
+  handler?: EventHandler;
 }
 
 export interface EventBus {

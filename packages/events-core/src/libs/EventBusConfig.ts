@@ -1,5 +1,12 @@
 import type { EventBus, EventSubscription } from './EventBus';
 import type { EventHandlerClass } from './EventHandler';
+import type { HandlerResolver } from './HandlerResolver';
+import { DefaultHandlerResolver } from './HandlerResolver';
+
+export interface EventBusStartOptions {
+  handlers: EventHandlerClass[];
+  resolver?: HandlerResolver;
+}
 
 export class EventBusConfig {
   private static INSTANCE: EventBusConfig;
@@ -28,14 +35,19 @@ export class EventBusConfig {
     this.subscriptions.add(subscription);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async start(_: { handlers: EventHandlerClass[] }): Promise<void> {
+  public async start(options: EventBusStartOptions): Promise<void> {
     if (!this.eventBus) {
       throw new Error('EventBus is not set');
     }
 
+    const resolver = options.resolver ?? new DefaultHandlerResolver();
+
     for (const subscription of this.subscriptions) {
-      this.eventBus.subscribe(subscription);
+      const handler = resolver.resolve(subscription.handlerClass);
+      this.eventBus.subscribe({
+        ...subscription,
+        handler,
+      });
     }
   }
 }

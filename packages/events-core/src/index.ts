@@ -5,3 +5,8 @@ export { EventBusConfig } from './libs/EventBusConfig';
 export type { EventHandler, EventHandlerClass } from './libs/EventHandler';
 export { RegisterEventHandler } from './libs/EventHandler';
 export { EventPublisher } from './libs/EventPublisher';
+export { EventRegistry, globalEventRegistry, RegisterEvent } from './libs/EventRegistry';
+export type { EventSerializer, SerializedEvent } from './libs/EventSerializer';
+export { DefaultEventSerializer } from './libs/EventSerializer';
+export type { HandlerResolver } from './libs/HandlerResolver';
+export { DefaultHandlerResolver } from './libs/HandlerResolver';
