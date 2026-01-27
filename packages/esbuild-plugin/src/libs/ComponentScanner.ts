@@ -5,6 +5,7 @@ import * as ts from 'typescript';
 export interface ScanResult {
   filePath: string;
   hasComponent: boolean;
+  decorators: string[];
 }
 
 export interface CrocoPluginOptions {
@@ -18,11 +19,12 @@ interface ScanCache {
   filePath: string;
   mtime: number;
   hasComponent: boolean;
+  decorators: string[];
 }
 
 const DEFAULT_SCAN_DIRS = ['src'];
 const DEFAULT_EXCLUDE = ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**'];
-const DEFAULT_DECORATORS = ['Component'];
+const DEFAULT_DECORATORS = ['Component', 'Controller'];
 
 export class ComponentScanner {
   private cache: Map<string, ScanCache> = new Map();
@@ -61,17 +63,18 @@ export class ComponentScanner {
     if (this.options.cache) {
       const cached = this.cache.get(absolutePath);
       if (cached && cached.mtime === mtime) {
-        return { filePath: absolutePath, hasComponent: cached.hasComponent };
+        return { filePath: absolutePath, hasComponent: cached.hasComponent, decorators: cached.decorators };
       }
     }
 
-    const hasComponent = this.hasComponentDecorator(absolutePath);
+    const decorators = this.getDecorators(absolutePath);
+    const hasComponent = decorators.length > 0;
 
     if (this.options.cache) {
-      this.cache.set(absolutePath, { filePath: absolutePath, mtime, hasComponent });
+      this.cache.set(absolutePath, { filePath: absolutePath, mtime, hasComponent, decorators });
     }
 
-    return { filePath: absolutePath, hasComponent };
+    return { filePath: absolutePath, hasComponent, decorators };
   }
 
   clearCache(): void {
@@ -176,27 +179,27 @@ export class ComponentScanner {
     return new RegExp(regexStr);
   }
 
-  private hasComponentDecorator(filePath: string): boolean {
+  private getDecorators(filePath: string): string[] {
     try {
       const sourceCode = fs.readFileSync(filePath, 'utf-8');
       const sourceFile = ts.createSourceFile(filePath, sourceCode, ts.ScriptTarget.Latest, true);
 
-      let hasComponent = false;
+      const decorators: string[] = [];
 
       const visitNode = (node: ts.Node) => {
         if (ts.isDecorator(node)) {
           const decoratorName = this.getDecoratorName(node);
           if (this.options.decorators.includes(decoratorName)) {
-            hasComponent = true;
+            decorators.push(decoratorName);
           }
         }
         ts.forEachChild(node, visitNode);
       };
 
       ts.forEachChild(sourceFile, visitNode);
-      return hasComponent;
+      return decorators;
     } catch {
-      return false;
+      return [];
     }
   }
 

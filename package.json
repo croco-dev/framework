@@ -12,6 +12,9 @@
     "test": "turbo test",
     "typecheck": "turbo typecheck"
   },
+  "dependencies": {
+    "vitest": "4.0.16"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.3.12",
     "@croco/utils-tsconfig": "workspace:*",
@@ -20,8 +23,7 @@
     "lefthook": "2.0.13",
     "tsup": "8.5.1",
     "turbo": "latest",
-    "typescript": "5.9.3",
-    "vitest": "4.0.16"
+    "typescript": "5.9.3"
   },
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "engines": {

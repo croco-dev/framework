@@ -277,10 +277,6 @@ describe('crocoPlugin', () => {
           outputFiles: [],
           metafile: undefined,
           mangleCache: undefined,
-          stop: undefined,
-          rebuild: undefined,
-          serve: undefined,
-          context: undefined,
         });
       }
 
@@ -337,6 +333,130 @@ describe('crocoPlugin', () => {
       }
 
       expect(mockBuildContext.onStart).toHaveBeenCalled();
+    });
+  });
+
+  describe('generateRegistry', () => {
+    const REGISTRY_DIR = path.join(TEMP_DIR, '.croco');
+
+    beforeEach(() => {
+      if (!fs.existsSync(REGISTRY_DIR)) {
+        fs.mkdirSync(REGISTRY_DIR, { recursive: true });
+      }
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(REGISTRY_DIR)) {
+        fs.rmSync(REGISTRY_DIR, { recursive: true, force: true });
+      }
+    });
+
+    it('should generate registry.gen.ts with controllers and components', () => {
+      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+      fs.writeFileSync(entryFilePath, "console.log('hello');");
+
+      const controllerFilePath = path.join(TEMP_DIR, 'UserController.ts');
+      fs.writeFileSync(controllerFilePath, '@Controller()\nexport class UserController { id: string; }');
+
+      const componentFilePath = path.join(TEMP_DIR, 'MyComponent.ts');
+      fs.writeFileSync(componentFilePath, '@Component()\nexport class MyComponent { name: string; }');
+
+      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
+
+      const plugin = crocoPlugin({
+        scan: {
+          dirs: [TEMP_DIR],
+          decorators: ['Component', 'Controller'],
+        },
+        generateRegistry: {
+          enabled: true,
+          outDir: REGISTRY_DIR,
+          outFile: 'registry.gen.ts',
+        },
+      });
+
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      if (onStartCallback) {
+        onStartCallback();
+      }
+
+      const registryPath = path.join(REGISTRY_DIR, 'registry.gen.ts');
+      expect(fs.existsSync(registryPath)).toBe(true);
+
+      const registryContent = fs.readFileSync(registryPath, 'utf-8');
+      expect(registryContent).toContain('// AUTO-GENERATED - DO NOT EDIT');
+      expect(registryContent).toContain("import { UserController } from '../UserController';");
+      expect(registryContent).toContain("import { MyComponent } from '../MyComponent';");
+      expect(registryContent).toContain('export const controllers = [UserController] as const;');
+      expect(registryContent).toContain('export const components = [MyComponent] as const;');
+      expect(registryContent).toContain('export type Controllers = typeof controllers;');
+      expect(registryContent).toContain('export type Components = typeof components;');
+    });
+
+    it('should use default outDir and outFile when not specified', () => {
+      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+      fs.writeFileSync(entryFilePath, "console.log('hello');");
+
+      const controllerFilePath = path.join(TEMP_DIR, 'UserController.ts');
+      fs.writeFileSync(controllerFilePath, '@Controller()\nexport class UserController { id: string; }');
+
+      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
+
+      const plugin = crocoPlugin({
+        scan: {
+          dirs: [TEMP_DIR],
+          decorators: ['Controller'],
+        },
+        generateRegistry: {
+          enabled: true,
+        },
+      });
+
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      if (onStartCallback) {
+        onStartCallback();
+      }
+
+      const defaultRegistryPath = path.join(process.cwd(), '.croco', 'registry.gen.ts');
+      expect(fs.existsSync(defaultRegistryPath)).toBe(true);
+
+      if (fs.existsSync(defaultRegistryPath)) {
+        fs.rmSync(defaultRegistryPath, { force: true });
+      }
+    });
+
+    it('should not generate registry when disabled', () => {
+      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+      fs.writeFileSync(entryFilePath, "console.log('hello');");
+
+      const controllerFilePath = path.join(TEMP_DIR, 'UserController.ts');
+      fs.writeFileSync(controllerFilePath, '@Controller()\nexport class UserController { id: string; }');
+
+      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
+
+      const plugin = crocoPlugin({
+        scan: {
+          dirs: [TEMP_DIR],
+          decorators: ['Controller'],
+        },
+        generateRegistry: {
+          enabled: false,
+        },
+      });
+
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      if (onStartCallback) {
+        onStartCallback();
+      }
+
+      const registryPath = path.join(REGISTRY_DIR, 'registry.gen.ts');
+      expect(fs.existsSync(registryPath)).toBe(false);
     });
   });
 });

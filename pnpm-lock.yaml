@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
     devDependencies:
       '@biomejs/biome':
         specifier: 2.3.12
@@ -32,9 +36,6 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
-      vitest:
-        specifier: 4.0.16
-        version: 4.0.16(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
 
   packages/esbuild-plugin:
     devDependencies:
@@ -96,6 +97,19 @@ importers:
         specifier: workspace:*
         version: link:../shared/utils-tsconfig
 
+  packages/protocols-rest:
+    dependencies:
+      reflect-metadata:
+        specifier: 0.2.2
+        version: 0.2.2
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
+
   packages/retry-core:
     dependencies:
       '@croco/problems-core':
@@ -110,6 +124,37 @@ importers:
         version: 4.0.16(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
 
   packages/shared/utils-tsconfig: {}
+
+  packages/transports-http:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../protocols-rest
+      hono:
+        specifier: ^4.0.0
+        version: 4.11.5
+      reflect-metadata:
+        specifier: 0.2.2
+        version: 0.2.2
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      '@hono/node-server':
+        specifier: ^1.0.0
+        version: 1.19.9(hono@4.11.5)
+      '@types/aws-lambda':
+        specifier: ^8.10.0
+        version: 8.10.150
 
   packages/tx-core:
     dependencies:
@@ -698,6 +743,12 @@ packages:
 
   '@hapi/bourne@3.0.0':
     resolution: {integrity: sha512-Waj1cwPXJDucOib4a3bAISsKJVb15MKi9IvmTI/7ssVEm6sywXGjVJDhl6/umt1pK1ZS7PacXU3A1PmFKHEZ2w==}
+
+  '@hono/node-server@1.19.9':
+    resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
 
   '@img/colour@1.0.0':
     resolution: {integrity: sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw==}
@@ -1705,6 +1756,10 @@ packages:
   hasown@2.0.2:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
+
+  hono@4.11.5:
+    resolution: {integrity: sha512-WemPi9/WfyMwZs+ZUXdiwcCh9Y+m7L+8vki9MzDw3jJ+W9Lc+12HGsd368Qc1vZi1xwW8BWMMsnK5efYKPdt4g==}
+    engines: {node: '>=16.9.0'}
 
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
@@ -3005,6 +3060,10 @@ snapshots:
   '@hapi/bourne@3.0.0':
     optional: true
 
+  '@hono/node-server@1.19.9(hono@4.11.5)':
+    dependencies:
+      hono: 4.11.5
+
   '@img/colour@1.0.0':
     optional: true
 
@@ -3914,6 +3973,8 @@ snapshots:
   hasown@2.0.2:
     dependencies:
       function-bind: 1.1.2
+
+  hono@4.11.5: {}
 
   html-escaper@2.0.2: {}
 

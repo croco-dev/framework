@@ -17,6 +17,11 @@ export interface CrocoPluginConfig {
     optimize?: boolean;
     debounce?: number;
   };
+  generateRegistry?: {
+    enabled: boolean;
+    outDir?: string;
+    outFile?: string;
+  };
 }
 
 export interface NormalizedCrocoPluginConfig {
@@ -30,6 +35,11 @@ export interface NormalizedCrocoPluginConfig {
   watch: {
     optimize: boolean;
     debounce: number;
+  };
+  generateRegistry: {
+    enabled: boolean;
+    outDir: string;
+    outFile: string;
   };
 }
 
@@ -46,7 +56,47 @@ function normalizeConfig(config: CrocoPluginConfig | undefined): NormalizedCroco
       optimize: config?.watch?.optimize ?? true,
       debounce: config?.watch?.debounce ?? 0,
     },
+    generateRegistry: {
+      enabled: config?.generateRegistry?.enabled ?? false,
+      outDir: config?.generateRegistry?.outDir ?? '.croco',
+      outFile: config?.generateRegistry?.outFile ?? 'registry.gen.ts',
+    },
   };
+}
+
+function generateRegistryContent(
+  controllers: { filePath: string; decorators: string[] }[],
+  components: { filePath: string; decorators: string[] }[],
+  baseDir: string
+): string {
+  const lines = ['// AUTO-GENERATED - DO NOT EDIT', ''];
+
+  const controllerFiles = controllers.filter((c) => c.decorators.includes('Controller'));
+  const componentFiles = components.filter((c) => c.decorators.includes('Component'));
+
+  const allFiles = [...controllerFiles, ...componentFiles];
+  const uniqueFiles = Array.from(new Map(allFiles.map((f) => [f.filePath, f])).values());
+
+  for (const file of uniqueFiles) {
+    const relativePath = path.relative(baseDir, file.filePath).replace(/\.ts$/, '').replace(/\\/g, '/');
+    const className = path.basename(file.filePath, '.ts');
+    lines.push(`import { ${className} } from '${relativePath}';`);
+  }
+
+  lines.push('');
+
+  const controllerNames = controllerFiles.map((c) => path.basename(c.filePath, '.ts'));
+  const componentNames = componentFiles
+    .filter((c) => !controllerFiles.some((ctrl) => ctrl.filePath === c.filePath))
+    .map((c) => path.basename(c.filePath, '.ts'));
+
+  lines.push(`export const controllers = [${controllerNames.join(', ')}] as const;`);
+  lines.push(`export const components = [${componentNames.join(', ')}] as const;`);
+  lines.push('');
+  lines.push('export type Controllers = typeof controllers;');
+  lines.push('export type Components = typeof components;');
+
+  return lines.join('\n');
 }
 
 function resolveEntryPointPath(ep: string | { in: string; out: string }): string {
@@ -98,6 +148,25 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
           });
 
           autoImportContent = `// @croco/auto-import\n${importStatements.join('\n')}\n`;
+
+          if (normalizedConfig.generateRegistry.enabled) {
+            const controllers = scanResults.filter((r) => r.decorators.includes('Controller'));
+            const components = scanResults.filter((r) => r.decorators.includes('Component'));
+
+            const outPath = path.join(
+              normalizedConfig.generateRegistry.outDir,
+              normalizedConfig.generateRegistry.outFile
+            );
+            const registryDir = path.dirname(path.resolve(outPath));
+            const content = generateRegistryContent(controllers, components, registryDir);
+
+            const outDir = path.dirname(outPath);
+            if (!fs.existsSync(outDir)) {
+              fs.mkdirSync(outDir, { recursive: true });
+            }
+
+            fs.writeFileSync(outPath, content);
+          }
         }
       });
 

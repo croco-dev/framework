@@ -1,5 +1,5 @@
 {
-  "name": "@croco/esbuild-plugin",
+  "name": "@croco/protocols-rest",
   "version": "0.0.1",
   "type": "commonjs",
   "main": "./src/index.ts",
@@ -8,16 +8,22 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
     "lint": "biome check .",
-    "typecheck": "npx tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "reflect-metadata": "0.2.2"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*",
-    "esbuild": "^0.20.2",
-    "typescript": "^5.0.0"
+    "vitest": "4.0.16"
   },
-  "peerDependencies": {
-    "esbuild": ">=0.17.0",
-    "typescript": ">=5.0.0"
+  "vitest": {
+    "include": [
+      "src/**/*.test.ts",
+      "src/**/*.spec.ts"
+    ]
   },
   "publishConfig": {
     "access": "public",
