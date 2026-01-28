@@ -24,7 +24,7 @@ interface ScanCache {
 
 const DEFAULT_SCAN_DIRS = ['src'];
 const DEFAULT_EXCLUDE = ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**'];
-const DEFAULT_DECORATORS = ['Component', 'Controller'];
+const DEFAULT_DECORATORS = ['Component', 'Controller', 'GraphQLResolver'];
 
 export class ComponentScanner {
   private cache: Map<string, ScanCache> = new Map();
