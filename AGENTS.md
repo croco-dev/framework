@@ -53,7 +53,7 @@ Biome 자동 정렬 순서:
 - Constants: SCREAMING_SNAKE_CASE (REST_CONTROLLER_KEY)
 - Functions/methods: camelCase
 - Files: 클래스는 PascalCase (Component.ts), 유틸리티는 camelCase
-- Test files: 동일한 이름 + .test.ts 또는 .spec.ts (Container.test.ts)
+- Test files: `src/tests/[ClassName].spec.ts` (필수 규칙)
 
 ## Decorator Pattern
 
@@ -150,9 +150,8 @@ packages/[name]/
 │   ├── index.ts          # Barrel exports
 │   ├── libs/             # 구현
 │   │   ├── ClassName.ts
-│   │   ├── ClassName.test.ts
 │   │   └── decorators/   # 데코레이터가 있을 경우
-│   └── tests/            # 대체 테스트 위치 (*.spec.ts)
+│   └── tests/            # 테스트 파일 (*.spec.ts)
 ├── package.json
 └── tsconfig.json
 ```
