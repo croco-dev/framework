@@ -1,0 +1,52 @@
+{
+  "name": "@croco/transports-graphql",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "graphql-yoga": "^5.10.1",
+    "@croco/protocols-graphql": "workspace:*",
+    "@croco/framework-context": "workspace:*"
+  },
+  "devDependencies": {
+    "@croco/utils-tsconfig": "workspace:*",
+    "vitest": "4.0.16"
+  },
+  "vitest": {
+    "include": [
+      "src/**/*.test.ts",
+      "src/**/*.spec.ts"
+    ]
+  },
+  "publishConfig": {
+    "access": "public",
+    "files": [
+      "dist"
+    ],
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.mjs",
+    "module": "./dist/index.mjs",
+    "exports": {
+      ".": {
+        "require": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "import": {
+          "types": "./dist/index.d.mts",
+          "default": "./dist/index.mjs"
+        }
+      }
+    }
+  }
+}
