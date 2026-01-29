@@ -1,5 +1,3 @@
-import type { HttpContext } from '../types';
-
-export interface Guard {
-  canActivate(context: HttpContext): boolean | Promise<boolean>;
+export interface Guard<TContext = unknown> {
+  canActivate(context: TContext): boolean | Promise<boolean>;
 }
