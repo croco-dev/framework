@@ -13,11 +13,15 @@ export type {
   CrocoHttpContext,
   CrocoRequest,
   CrocoResponse,
+  FilterProvider,
+  GuardProvider,
+  InterceptorProvider,
   LambdaContext,
   LambdaEvent,
   LambdaHandler,
   LambdaResponse,
   MiddlewareFunction,
+  PipeProvider,
 } from './libs/types';
 
 export { CrocoApp, createApp, ErrorHandler, HttpExecutionContext, ParamResolver, PipelineRunner, RouteCompiler };

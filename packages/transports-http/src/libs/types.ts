@@ -1,13 +1,18 @@
 import type { Constructor } from '@croco/protocols-rest';
 import type { Context as HonoContext } from 'hono';
 
+export type GuardProvider<T = unknown> = Constructor<T> | T;
+export type InterceptorProvider<T = unknown> = Constructor<T> | T;
+export type FilterProvider<T = unknown> = Constructor<T> | T;
+export type PipeProvider<T = unknown> = Constructor<T> | T;
+
 export interface AppConfig {
   controllers: Constructor[];
   middlewares?: MiddlewareFunction[];
-  globalFilters?: Constructor[];
-  globalGuards?: Constructor[];
-  globalInterceptors?: Constructor[];
-  globalPipes?: Constructor[];
+  globalFilters?: FilterProvider[];
+  globalGuards?: GuardProvider[];
+  globalInterceptors?: InterceptorProvider[];
+  globalPipes?: PipeProvider[];
 }
 
 export type MiddlewareFunction = (ctx: CrocoHttpContext, next: () => Promise<void>) => Promise<void> | void;

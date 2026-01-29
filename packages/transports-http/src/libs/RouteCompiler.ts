@@ -15,13 +15,31 @@ import {
 import { HttpExecutionContext } from './HttpExecutionContext';
 import { ParamResolver } from './ParamResolver';
 import { PipelineRunner } from './PipelineRunner';
-import type { CompiledRoute, CrocoHttpContext } from './types';
+import type {
+  CompiledRoute,
+  CrocoHttpContext,
+  FilterProvider,
+  GuardProvider,
+  InterceptorProvider,
+  PipeProvider,
+} from './types';
 
 export interface CompileOptions {
   container?: { get<T>(type: Constructor<T>): T };
-  globalGuards?: Constructor[];
-  globalInterceptors?: Constructor[];
-  globalFilters?: Constructor[];
+  globalGuards?: GuardProvider[];
+  globalInterceptors?: InterceptorProvider[];
+  globalFilters?: FilterProvider[];
+  globalPipes?: PipeProvider[];
+}
+
+function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<T>(type: Constructor<T>): T }): T {
+  // If it's already an instance (not a constructor function)
+  if (typeof provider !== 'function') {
+    return provider;
+  }
+  // If it's a constructor, instantiate it
+  const Ctor = provider as Constructor<T>;
+  return container?.get(Ctor) ?? new Ctor();
 }
 
 export class RouteCompiler {
@@ -60,32 +78,42 @@ export class RouteCompiler {
     const handler = async (ctx: CrocoHttpContext): Promise<unknown> => {
       const instance = options.container
         ? options.container.get(controller)
-        : new (controller as new (...args: any[]) => any)();
+        : new (controller as new (...args: unknown[]) => unknown)();
 
       const execContext = new HttpExecutionContext(ctx, controller, routeMeta.methodName);
 
-      const guardConstructors = [...(options.globalGuards || []), ...getGuards(controller, routeMeta.methodName)];
-      const interceptorConstructors = [
-        ...(options.globalInterceptors || []),
-        ...getInterceptors(controller, routeMeta.methodName),
-      ];
-      const filterConstructors = [...(options.globalFilters || []), ...getFilters(controller, routeMeta.methodName)];
+      const globalGuards = (options.globalGuards || []) as GuardProvider<Guard<ExecutionContext>>[];
+      const globalInterceptors = (options.globalInterceptors || []) as InterceptorProvider<
+        Interceptor<ExecutionContext>
+      >[];
+      const globalFilters = (options.globalFilters || []) as FilterProvider<
+        ExceptionFilter<unknown, HttpExecutionContext>
+      >[];
 
-      const guards = guardConstructors.map((G) =>
-        options.container ? options.container.get(G) : new G()
-      ) as Guard<ExecutionContext>[];
+      const routeGuards = getGuards(controller, routeMeta.methodName);
+      const routeInterceptors = getInterceptors(controller, routeMeta.methodName);
+      const routeFilters = getFilters(controller, routeMeta.methodName);
 
-      const interceptors = interceptorConstructors.map((I) =>
-        options.container ? options.container.get(I) : new I()
-      ) as Interceptor<ExecutionContext>[];
+      const guards = [
+        ...globalGuards.map((g) => instantiateProvider(g, options.container)),
+        ...routeGuards,
+      ] as Guard<ExecutionContext>[];
 
-      const filters = filterConstructors.map((F) =>
-        options.container ? options.container.get(F) : new F()
-      ) as ExceptionFilter<unknown, HttpExecutionContext>[];
+      const interceptors = [
+        ...globalInterceptors.map((i) => instantiateProvider(i, options.container)),
+        ...routeInterceptors,
+      ] as Interceptor<ExecutionContext>[];
+
+      const filters = [
+        ...globalFilters.map((f) => instantiateProvider(f, options.container)),
+        ...routeFilters,
+      ] as ExceptionFilter<unknown, HttpExecutionContext>[];
 
       const controllerHandler = async (): Promise<unknown> => {
         const args = await this.paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
-        const method = (instance as any)[routeMeta.methodName];
+        const method = (instance as Record<PropertyKey, unknown>)[routeMeta.methodName] as (
+          ...args: unknown[]
+        ) => unknown;
         if (typeof method !== 'function') {
           throw new Error(`Method ${String(routeMeta.methodName)} not found on ${controller.name}`);
         }

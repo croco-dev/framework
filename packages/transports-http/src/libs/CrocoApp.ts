@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Context as FrameworkContext } from '@croco/framework-context';
-import { Hono } from 'hono';
+import { Hono, type Context as HonoContext } from 'hono';
 import { ErrorHandler } from './ErrorHandler';
 import { HttpContext } from './HttpContext';
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
@@ -20,7 +20,13 @@ export class CrocoApp {
     if (this.booted) return;
 
     const compiler = new RouteCompiler();
-    this.routes = compiler.compile(this.config.controllers, options);
+    this.routes = compiler.compile(this.config.controllers, {
+      ...options,
+      globalGuards: this.config.globalGuards,
+      globalInterceptors: this.config.globalInterceptors,
+      globalFilters: this.config.globalFilters,
+      globalPipes: this.config.globalPipes,
+    });
 
     for (const route of this.routes) {
       this.registerRoute(route);
@@ -32,7 +38,7 @@ export class CrocoApp {
   private registerRoute(route: CompiledRoute): void {
     const method = route.method.toLowerCase();
 
-    const honoHandler = async (c: any) => {
+    const honoHandler = async (c: HonoContext) => {
       const ctx = new HttpContext(c);
 
       return FrameworkContext.run({ requestId: randomUUID() }, async () => {

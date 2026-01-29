@@ -5,6 +5,7 @@ export const REST_GUARDS_KEY = Symbol('croco:rest:guards');
 export const REST_PIPES_KEY = Symbol('croco:rest:pipes');
 export const REST_INTERCEPTORS_KEY = Symbol('croco:rest:interceptors');
 export const REST_FILTERS_KEY = Symbol('croco:rest:filters');
+export const REST_ROLES_KEY = Symbol('croco:rest:roles');
 
 export enum HttpMethod {
   GET = 'GET',
