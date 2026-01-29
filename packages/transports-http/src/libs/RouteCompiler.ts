@@ -1,19 +1,32 @@
 import {
   type Constructor,
   type ControllerMetadata,
+  type ExceptionFilter,
+  type ExecutionContext,
+  type Guard,
   getControllerMeta,
+  getFilters,
+  getGuards,
+  getInterceptors,
   getRouteMeta,
+  type Interceptor,
   type RouteMetadata,
 } from '@croco/protocols-rest';
+import { HttpExecutionContext } from './HttpExecutionContext';
 import { ParamResolver } from './ParamResolver';
+import { PipelineRunner } from './PipelineRunner';
 import type { CompiledRoute, CrocoHttpContext } from './types';
 
 export interface CompileOptions {
   container?: { get<T>(type: Constructor<T>): T };
+  globalGuards?: Constructor[];
+  globalInterceptors?: Constructor[];
+  globalFilters?: Constructor[];
 }
 
 export class RouteCompiler {
   private paramResolver = new ParamResolver();
+  private pipelineRunner = new PipelineRunner();
 
   compile(controllers: Constructor[], options: CompileOptions = {}): CompiledRoute[] {
     const routes: CompiledRoute[] = [];
@@ -26,12 +39,9 @@ export class RouteCompiler {
       }
 
       const routesMeta = getRouteMeta(controller);
-      const instance = options.container
-        ? options.container.get(controller)
-        : new (controller as new (...args: any[]) => any)();
 
       for (const routeMeta of routesMeta) {
-        const compiledRoute = this.compileRoute(controller, controllerMeta, routeMeta, instance);
+        const compiledRoute = this.compileRoute(controller, controllerMeta, routeMeta, options);
         routes.push(compiledRoute);
       }
     }
@@ -43,26 +53,57 @@ export class RouteCompiler {
     controller: Constructor,
     controllerMeta: ControllerMetadata,
     routeMeta: RouteMetadata,
-    instance: unknown
+    options: CompileOptions
   ): CompiledRoute {
     const fullPath = this.joinPaths(controllerMeta.path, routeMeta.path);
 
     const handler = async (ctx: CrocoHttpContext): Promise<unknown> => {
-      const args = await this.paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
-      const method = (instance as any)[routeMeta.methodName];
+      const instance = options.container
+        ? options.container.get(controller)
+        : new (controller as new (...args: any[]) => any)();
 
-      if (typeof method !== 'function') {
-        throw new Error(`Method ${String(routeMeta.methodName)} not found on ${controller.name}`);
-      }
+      const execContext = new HttpExecutionContext(ctx, controller, routeMeta.methodName);
 
-      return method.apply(instance, args);
+      const guardConstructors = [...(options.globalGuards || []), ...getGuards(controller, routeMeta.methodName)];
+      const interceptorConstructors = [
+        ...(options.globalInterceptors || []),
+        ...getInterceptors(controller, routeMeta.methodName),
+      ];
+      const filterConstructors = [...(options.globalFilters || []), ...getFilters(controller, routeMeta.methodName)];
+
+      const guards = guardConstructors.map((G) =>
+        options.container ? options.container.get(G) : new G()
+      ) as Guard<ExecutionContext>[];
+
+      const interceptors = interceptorConstructors.map((I) =>
+        options.container ? options.container.get(I) : new I()
+      ) as Interceptor<ExecutionContext>[];
+
+      const filters = filterConstructors.map((F) =>
+        options.container ? options.container.get(F) : new F()
+      ) as ExceptionFilter<unknown, HttpExecutionContext>[];
+
+      const controllerHandler = async (): Promise<unknown> => {
+        const args = await this.paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
+        const method = (instance as any)[routeMeta.methodName];
+        if (typeof method !== 'function') {
+          throw new Error(`Method ${String(routeMeta.methodName)} not found on ${controller.name}`);
+        }
+        return method.apply(instance, args);
+      };
+
+      return this.pipelineRunner.run(execContext, controllerHandler, {
+        guards,
+        interceptors,
+        filters,
+      });
     };
 
     return {
       method: routeMeta.method,
       path: fullPath || '/',
       handler,
-      controllerInstance: instance,
+      controllerInstance: undefined,
       methodName: routeMeta.methodName,
     };
   }

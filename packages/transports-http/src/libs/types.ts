@@ -45,7 +45,7 @@ export interface CompiledRoute {
   method: string;
   path: string;
   handler: (ctx: CrocoHttpContext) => Promise<unknown>;
-  controllerInstance: unknown;
+  controllerInstance?: unknown;
   methodName: string | symbol;
 }
 

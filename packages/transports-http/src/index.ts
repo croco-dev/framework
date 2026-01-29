@@ -1,8 +1,9 @@
 import { CrocoApp, createApp } from './libs/CrocoApp';
 import { ErrorHandler } from './libs/ErrorHandler';
-import { HttpContext } from './libs/HttpContext';
+import { HttpExecutionContext } from './libs/HttpExecutionContext';
 import { ParamResolver } from './libs/ParamResolver';
-import { type CompileOptions, RouteCompiler } from './libs/RouteCompiler';
+import { PipelineRunner } from './libs/PipelineRunner';
+import { RouteCompiler } from './libs/RouteCompiler';
 
 export { toLambdaHandler } from './libs/adapters/LambdaAdapter';
 export { startServer } from './libs/adapters/NodeAdapter';
@@ -19,5 +20,6 @@ export type {
   MiddlewareFunction,
 } from './libs/types';
 
-export { CrocoApp, createApp, HttpContext, RouteCompiler, ParamResolver, ErrorHandler };
-export type { CompileOptions };
+export { CrocoApp, createApp, ErrorHandler, HttpExecutionContext, ParamResolver, PipelineRunner, RouteCompiler };
+export type { PipelineConfig } from './libs/PipelineRunner';
+export type { CompileOptions } from './libs/RouteCompiler';
