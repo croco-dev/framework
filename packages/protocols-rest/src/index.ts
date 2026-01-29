@@ -15,6 +15,7 @@ export { UseFilters, UseGuards, UseInterceptors, UsePipes } from './libs/decorat
 export { Body, Ctx, Header, Param, Query, Raw } from './libs/decorators/Params';
 export type { CallHandler } from './libs/interfaces/CallHandler';
 export type { ExceptionFilter } from './libs/interfaces/ExceptionFilter';
+export type { ExecutionContext } from './libs/interfaces/ExecutionContext';
 export type { Guard } from './libs/interfaces/Guard';
 export type { Interceptor } from './libs/interfaces/Interceptor';
 export type { ArgumentMetadata, PipeTransform } from './libs/interfaces/PipeTransform';
