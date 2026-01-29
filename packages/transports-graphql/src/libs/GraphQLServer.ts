@@ -34,14 +34,11 @@ export class GraphQLServer {
       graphqlEndpoint,
       cors,
       plugins,
-      context: async () => {
-        const requestId = randomUUID();
-        return FrameworkContext.run({ requestId }, async () => {
-          if (typeof context === 'function') {
-            return await context(new Request('https://internal'));
-          }
-          return context || {};
-        });
+      context: async ({ request }) => {
+        if (typeof context === 'function') {
+          return await context(request);
+        }
+        return context || {};
       },
     });
 
@@ -54,7 +51,11 @@ export class GraphQLServer {
     if (!this.yogaHandler) {
       throw new Error('Server not initialized. Call initialize() first.');
     }
-    return this.yogaHandler;
+    const yoga = this.yogaHandler;
+    return async (request: Request) => {
+      const requestId = randomUUID();
+      return FrameworkContext.run({ requestId }, () => yoga(request));
+    };
   }
 
   async start(port: number): Promise<void> {
@@ -82,7 +83,8 @@ export class GraphQLServer {
         return;
       }
 
-      const response = await this.yogaHandler(request);
+      const yoga = this.yogaHandler;
+      const response = await FrameworkContext.run({ requestId: randomUUID() }, () => yoga(request));
 
       res.statusCode = response.status;
       response.headers.forEach((value: string, key: string) => {
