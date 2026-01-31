@@ -7,20 +7,20 @@ describe('CrocoApp', () => {
   @Controller('/api')
   class TestController {
     @Get('/hello')
-      hello() {
-        return { message: 'Hello, World!' };
-      }
-
-      @Get('/users/:id')
-      getUser(@Param('id') id: string) {
-        return { id, name: 'Test User' };
-      }
-
-      @Post('/users')
-      createUser(@Body() body: unknown) {
-        return { created: true, data: body };
-      }
+    hello() {
+      return { message: 'Hello, World!' };
     }
+
+    @Get('/users/:id')
+    getUser(@Param('id') id: string) {
+      return { id, name: 'Test User' };
+    }
+
+    @Post('/users')
+    createUser(@Body() body: unknown) {
+      return { created: true, data: body };
+    }
+  }
 
   it('should handle GET request', async () => {
     const app = createApp({ controllers: [TestController] });
@@ -50,7 +50,7 @@ describe('CrocoApp', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'New User' }),
-      }),
+      })
     );
 
     expect(response.status).toBe(200);
