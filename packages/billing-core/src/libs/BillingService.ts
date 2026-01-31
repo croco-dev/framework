@@ -1,0 +1,129 @@
+import type { EventPublisher } from '@croco/events-core';
+import type { Subscription, SubscriptionStatus } from '../types';
+import type { BillingGateway, CreateCheckoutParams } from './BillingGateway';
+import type { BillingStore } from './BillingStore';
+import { SubscriptionCanceledEvent } from './events/SubscriptionCanceledEvent';
+
+export type BillingServiceDependencies = {
+  store: BillingStore;
+  gateway: BillingGateway;
+  eventPublisher?: EventPublisher;
+};
+
+/**
+ * Billing service for subscription management.
+ * Orchestrates store and gateway operations.
+ */
+export class BillingService {
+  private readonly store: BillingStore;
+  private readonly gateway: BillingGateway;
+  private readonly eventPublisher?: EventPublisher;
+
+  constructor(deps: BillingServiceDependencies) {
+    this.store = deps.store;
+    this.gateway = deps.gateway;
+    this.eventPublisher = deps.eventPublisher;
+  }
+
+  /**
+   * Check if a tenant has an active subscription.
+   */
+  async hasActiveSubscription(tenantId: string): Promise<boolean> {
+    const subscription = await this.store.findSubscription(tenantId);
+    if (!subscription) return false;
+    return subscription.status === 'active' || subscription.status === 'trialing';
+  }
+
+  /**
+   * Get subscription status for a tenant.
+   */
+  async getSubscriptionStatus(tenantId: string): Promise<SubscriptionStatus | null> {
+    const subscription = await this.store.findSubscription(tenantId);
+    return subscription?.status ?? null;
+  }
+
+  /**
+   * Get full subscription details.
+   */
+  async getSubscription(tenantId: string): Promise<Subscription | null> {
+    return this.store.findSubscription(tenantId);
+  }
+
+  /**
+   * Create a checkout session for a tenant.
+   */
+  async createCheckout(params: CreateCheckoutParams): Promise<{ checkoutUrl: string }> {
+    const account = await this.store.findAccountByTenantId(params.billingAccountId);
+    let externalCustomerId: string;
+
+    if (account) {
+      externalCustomerId = account.externalCustomerId;
+    } else {
+      externalCustomerId = await this.gateway.ensureCustomer(params.billingAccountId, params.email);
+      await this.store.saveAccount({
+        id: params.billingAccountId,
+        externalCustomerId,
+        email: params.email,
+        createdAt: new Date(),
+      });
+    }
+
+    const result = await this.gateway.createCheckout(params);
+    return { checkoutUrl: result.checkoutUrl };
+  }
+
+  /**
+   * Cancel a subscription (at period end by default).
+   */
+  async cancelSubscription(tenantId: string, immediate = false): Promise<void> {
+    const subscription = await this.store.findSubscription(tenantId);
+    if (!subscription) {
+      throw new Error(`No subscription found for tenant ${tenantId}`);
+    }
+
+    await this.gateway.cancelSubscription(subscription.externalSubscriptionId, immediate);
+
+    await this.store.saveSubscription({
+      ...subscription,
+      cancelAtPeriodEnd: !immediate,
+      status: immediate ? 'canceled' : subscription.status,
+      lastSyncedAt: new Date(),
+    });
+
+    if (this.eventPublisher) {
+      await this.eventPublisher.publish(
+        new SubscriptionCanceledEvent(tenantId, subscription.externalSubscriptionId, !immediate)
+      );
+    }
+  }
+
+  /**
+   * Resume a canceled subscription.
+   */
+  async resumeSubscription(tenantId: string): Promise<void> {
+    const subscription = await this.store.findSubscription(tenantId);
+    if (!subscription) {
+      throw new Error(`No subscription found for tenant ${tenantId}`);
+    }
+
+    await this.gateway.resumeSubscription(subscription.externalSubscriptionId);
+
+    await this.store.saveSubscription({
+      ...subscription,
+      cancelAtPeriodEnd: false,
+      lastSyncedAt: new Date(),
+    });
+  }
+
+  /**
+   * Get customer portal URL.
+   */
+  async getCustomerPortalUrl(tenantId: string): Promise<string> {
+    const account = await this.store.findAccountByTenantId(tenantId);
+    if (!account) {
+      throw new Error(`No billing account found for tenant ${tenantId}`);
+    }
+
+    return this.gateway.getCustomerPortalUrl(account.externalCustomerId);
+  }
+}
