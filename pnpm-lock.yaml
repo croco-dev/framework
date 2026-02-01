@@ -166,6 +166,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -192,6 +195,9 @@ importers:
 
   packages/framework-context:
     dependencies:
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2
@@ -287,6 +293,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -523,6 +532,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
       '@croco/protocols-graphql':
         specifier: workspace:*
         version: link:../protocols-graphql
@@ -542,6 +554,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -573,6 +588,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -580,6 +598,12 @@ importers:
 
   packages/tx-drizzle:
     dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
       '@croco/tx-core':
         specifier: workspace:*
         version: link:../tx-core
@@ -5905,6 +5929,14 @@ snapshots:
     optionalDependencies:
       vite: 7.3.0(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
 
+  '@vitest/mocker@4.0.16(vite@7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1))':
+    dependencies:
+      '@vitest/spy': 4.0.16
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   '@vitest/pretty-format@2.1.9':
     dependencies:
       tinyrainbow: 1.2.0
@@ -7706,7 +7738,7 @@ snapshots:
   vitest@4.0.16(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1):
     dependencies:
       '@vitest/expect': 4.0.16
-      '@vitest/mocker': 4.0.16(vite@7.3.0(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1))
+      '@vitest/mocker': 4.0.16(vite@7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1))
       '@vitest/pretty-format': 4.0.16
       '@vitest/runner': 4.0.16
       '@vitest/snapshot': 4.0.16
