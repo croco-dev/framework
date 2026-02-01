@@ -1,19 +1,25 @@
 import { randomUUID } from 'node:crypto';
-import { Context as FrameworkContext } from '@croco/framework-context';
+import { Container, Context as FrameworkContext } from '@croco/framework-context';
+import type { Logger } from '@croco/framework-logger';
 import { Hono, type Context as HonoContext } from 'hono';
-import { ErrorHandler } from './ErrorHandler';
+import type { ErrorHandler } from './ErrorHandler';
 import { HttpContext } from './HttpContext';
+
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
 import type { AppConfig, CompiledRoute, LambdaContext, LambdaEvent, LambdaHandler, MiddlewareFunction } from './types';
 
 export class CrocoApp {
   private hono: Hono;
   private routes: CompiledRoute[] = [];
-  private errorHandler = new ErrorHandler();
+  private errorHandler: ErrorHandler;
   private booted = false;
+  private logger: Logger;
 
   constructor(private config: AppConfig) {
     this.hono = new Hono();
+    // Resolve dependencies manually since CrocoApp is the entry point
+    this.logger = Container.get(Logger);
+    this.errorHandler = Container.get(ErrorHandler);
   }
 
   private boot(options: CompileOptions = {}): void {
@@ -170,7 +176,7 @@ export class CrocoApp {
         port,
       },
       () => {
-        console.log(`Server running on http://localhost:${port}`);
+        this.logger.info(`Server running on http://localhost:${port}`);
         callback?.();
       }
     );

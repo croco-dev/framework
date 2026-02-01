@@ -1,7 +1,12 @@
+import { Component } from '@croco/framework-context';
+import type { Logger } from '@croco/framework-logger';
 import { Problem, ProblemCategoryMapper, type ProblemDetails } from '@croco/problems-core';
 import type { CrocoHttpContext } from './types';
 
+@Component()
 export class ErrorHandler {
+  constructor(private readonly logger: Logger) {}
+
   handleError(error: unknown, ctx: CrocoHttpContext): Response {
     if (error instanceof Problem) {
       return this.handleProblem(error, ctx);
@@ -38,7 +43,7 @@ export class ErrorHandler {
   }
 
   private handleGenericError(error: Error, ctx: CrocoHttpContext): Response {
-    console.error('Unhandled error:', error);
+    this.logger.error('Unhandled error:', error);
 
     return ctx.jsonResponse(
       {

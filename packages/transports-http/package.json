@@ -13,9 +13,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@croco/protocols-rest": "workspace:*",
-    "@croco/problems-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/framework-logger": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
     "hono": "^4.0.0",
     "reflect-metadata": "0.2.2",
     "vitest": "4.0.16"

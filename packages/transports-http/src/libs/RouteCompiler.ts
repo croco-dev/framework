@@ -1,3 +1,5 @@
+import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import {
   type Constructor,
   type ControllerMetadata,
@@ -45,6 +47,7 @@ function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<
 export class RouteCompiler {
   private paramResolver = new ParamResolver();
   private pipelineRunner = new PipelineRunner();
+  private logger = Container.get(Logger);
 
   compile(controllers: Constructor[], options: CompileOptions = {}): CompiledRoute[] {
     const routes: CompiledRoute[] = [];
@@ -52,7 +55,7 @@ export class RouteCompiler {
     for (const controller of controllers) {
       const controllerMeta = getControllerMeta(controller);
       if (!controllerMeta) {
-        console.warn(`[RouteCompiler] ${controller.name} is not decorated with @Controller`);
+        this.logger.warn(`[RouteCompiler] ${controller.name} is not decorated with @Controller`);
         continue;
       }
 
