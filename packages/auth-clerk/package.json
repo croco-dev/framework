@@ -1,0 +1,35 @@
+{
+  "name": "@croco/auth-clerk",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clerk/backend": "^1.0.0",
+    "@croco/auth-core": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/tenant-core": "workspace:*",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
