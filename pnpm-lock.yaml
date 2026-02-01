@@ -171,6 +171,25 @@ importers:
         specifier: workspace:*
         version: link:../shared/utils-tsconfig
 
+  packages/framework-config:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@t3-oss/env-core':
+        specifier: 0.13.10
+        version: 0.13.10(typescript@5.9.3)(zod@4.3.6)
+      typedi:
+        specifier: 0.10.0
+        version: 0.10.0
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+
   packages/framework-context:
     dependencies:
       reflect-metadata:
@@ -441,6 +460,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.709.0
         version: 3.980.0
+      '@croco/framework-config':
+        specifier: workspace:*
+        version: link:../framework-config
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -2116,6 +2138,23 @@ packages:
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
+
+  '@t3-oss/env-core@0.13.10':
+    resolution: {integrity: sha512-NNFfdlJ+HmPHkLi2HKy7nwuat9SIYOxei9K10lO2YlcSObDILY7mHZNSHsieIM3A0/5OOzw/P/b+yLvPdaG52g==}
+    peerDependencies:
+      arktype: ^2.1.0
+      typescript: '>=5.0.0'
+      valibot: ^1.0.0-beta.7 || ^1.0.0
+      zod: ^3.24.0 || ^4.0.0
+    peerDependenciesMeta:
+      arktype:
+        optional: true
+      typescript:
+        optional: true
+      valibot:
+        optional: true
+      zod:
+        optional: true
 
   '@types/aws-lambda@8.10.150':
     resolution: {integrity: sha512-AX+AbjH/rH5ezX1fbK8onC/a+HyQHo7QGmvoxAE42n22OsciAxvZoZNEr22tbXs8WfP1nIsBjKDpgPm3HjOZbA==}
@@ -5596,6 +5635,11 @@ snapshots:
   '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
+
+  '@t3-oss/env-core@0.13.10(typescript@5.9.3)(zod@4.3.6)':
+    optionalDependencies:
+      typescript: 5.9.3
+      zod: 4.3.6
 
   '@types/aws-lambda@8.10.150': {}
 

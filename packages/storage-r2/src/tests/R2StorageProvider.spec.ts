@@ -1,19 +1,28 @@
+import type { ConfigService } from '@croco/framework-config';
 import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { R2StorageProvider } from '../libs/R2StorageProvider';
 
 describe('R2StorageProvider', () => {
   let provider!: R2StorageProvider;
+  let configService!: ConfigService;
 
   beforeEach(() => {
     Container.reset();
 
-    process.env.R2_ACCOUNT_ID = 'test-account-id';
-    process.env.R2_ACCESS_KEY_ID = 'test-access-key';
-    process.env.R2_SECRET_ACCESS_KEY = 'test-secret-key';
-    process.env.R2_BUCKET = 'test-bucket';
+    configService = {
+      get: vi.fn((key: string) => {
+        const envs: Record<string, string> = {
+          R2_ACCOUNT_ID: 'test-account-id',
+          R2_ACCESS_KEY_ID: 'test-access-key',
+          R2_SECRET_ACCESS_KEY: 'test-secret-key',
+          R2_BUCKET: 'test-bucket',
+        };
+        return envs[key];
+      }),
+    } as unknown as ConfigService;
 
-    provider = new R2StorageProvider();
+    provider = new R2StorageProvider(configService);
   });
 
   describe('getPublicUrl', () => {
@@ -23,8 +32,14 @@ describe('R2StorageProvider', () => {
     });
 
     it('should return custom public URL when publicUrlBase is set', () => {
-      process.env.R2_PUBLIC_URL_BASE = 'https://cdn.example.com';
-      const customProvider = new R2StorageProvider();
+      (configService.get as any).mockImplementation((key: string) => {
+        if (key === 'R2_PUBLIC_URL_BASE') return 'https://cdn.example.com';
+        if (key === 'R2_BUCKET') return 'test-bucket';
+        return 'test-value';
+      });
+
+      // Re-instantiate with updated config behavior
+      const customProvider = new R2StorageProvider(configService);
       const url = customProvider.getPublicUrl('test/file.txt');
       expect(url).toBe('https://cdn.example.com/test/file.txt');
     });

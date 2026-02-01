@@ -1,6 +1,7 @@
 import type { Readable } from 'node:stream';
 import { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import type { ConfigService } from '@croco/framework-config';
 import { Component } from '@croco/framework-context';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from '@croco/storage-core';
 import type { R2Options } from './types';
@@ -15,13 +16,13 @@ export class R2StorageProvider implements StorageProvider {
   private readonly client: S3Client;
   private readonly options: R2Options;
 
-  constructor() {
+  constructor(private readonly config: ConfigService) {
     this.options = {
-      accountId: process.env.R2_ACCOUNT_ID ?? '',
-      accessKeyId: process.env.R2_ACCESS_KEY_ID ?? '',
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? '',
-      bucket: process.env.R2_BUCKET ?? '',
-      publicUrlBase: process.env.R2_PUBLIC_URL_BASE,
+      accountId: this.config.get('R2_ACCOUNT_ID') ?? '',
+      accessKeyId: this.config.get('R2_ACCESS_KEY_ID') ?? '',
+      secretAccessKey: this.config.get('R2_SECRET_ACCESS_KEY') ?? '',
+      bucket: this.config.get('R2_BUCKET') ?? '',
+      publicUrlBase: this.config.get('R2_PUBLIC_URL_BASE'),
     };
 
     this.client = new S3Client({
