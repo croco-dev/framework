@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { Context as FrameworkContext } from '@croco/framework-context';
+import { Container, Context as FrameworkContext } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import { createYoga } from 'graphql-yoga';
 import { SchemaCompiler } from './SchemaCompiler';
 import type { GraphQLServerOptions } from './types';
@@ -102,9 +103,16 @@ export class GraphQLServer {
         if (error) {
           reject(error);
         } else {
-          console.log(
-            `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || '/graphql'}`
-          );
+          try {
+            const logger = Container.get(Logger);
+            logger.info(
+              `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || '/graphql'}`
+            );
+          } catch {
+            console.log(
+              `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || '/graphql'}`
+            );
+          }
           resolve();
         }
       });
