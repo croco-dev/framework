@@ -1,4 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import type { TxAdapter } from './TxAdapter';
 import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
 
@@ -88,7 +90,12 @@ export class TxManager<TClient, TOptions = unknown> {
       try {
         await hook();
       } catch (error) {
-        console.error('[TxManager] AfterCommit hook failed:', error);
+        try {
+          const logger = Container.get(Logger);
+          logger.error('[TxManager] AfterCommit hook failed:', error as Error);
+        } catch {
+          console.error('[TxManager] AfterCommit hook failed:', error);
+        }
       }
     }
   }

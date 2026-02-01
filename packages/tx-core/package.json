@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/framework-context": "workspace:*"
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-logger": "workspace:*"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*"
