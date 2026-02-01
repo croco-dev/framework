@@ -3,6 +3,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { ConfigService } from '@croco/framework-config';
 import { Component } from '@croco/framework-context';
+import type { Logger } from '@croco/framework-logger';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from '@croco/storage-core';
 import type { R2Options } from './types';
 
@@ -16,7 +17,10 @@ export class R2StorageProvider implements StorageProvider {
   private readonly client: S3Client;
   private readonly options: R2Options;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly logger: Logger
+  ) {
     this.options = {
       accountId: this.config.get('R2_ACCOUNT_ID') ?? '',
       accessKeyId: this.config.get('R2_ACCESS_KEY_ID') ?? '',
@@ -114,8 +118,10 @@ export class R2StorageProvider implements StorageProvider {
     try {
       await this.client.send(command);
     } catch (error) {
-      console.warn(`[R2StorageProvider] Failed to delete key '${key}':`, error);
+      this.logger.warn(`[R2StorageProvider] Failed to delete key '${key}':`, { error });
     }
+  }
+
   }
 
   async exists(key: string): Promise<boolean> {

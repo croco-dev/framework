@@ -15,6 +15,7 @@
     "@aws-sdk/s3-request-presigner": "^3.709.0",
     "@croco/framework-config": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/framework-logger": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/storage-core": "workspace:*"
   },
