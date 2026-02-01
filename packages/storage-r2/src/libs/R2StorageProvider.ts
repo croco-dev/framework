@@ -122,8 +122,6 @@ export class R2StorageProvider implements StorageProvider {
     }
   }
 
-  }
-
   async exists(key: string): Promise<boolean> {
     const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
 
