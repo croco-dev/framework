@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import type { MeteringService } from '../MeteringService';
 
 export const METERED_METADATA_KEY = Symbol('meter:metered');
@@ -92,7 +94,12 @@ export function Metered(options: MeteredOptions): MethodDecorator {
           });
         } catch (error) {
           // 계량 실패해도 원본 결과는 반환 (fail-safe)
-          console.error(`Metering failed for ${String(propertyKey)}:`, error);
+          try {
+            const logger = Container.get(Logger);
+            logger.error(`Metering failed for ${String(propertyKey)}:`, error as Error);
+          } catch {
+            console.error(`Metering failed for ${String(propertyKey)}:`, error);
+          }
         }
       }
 
