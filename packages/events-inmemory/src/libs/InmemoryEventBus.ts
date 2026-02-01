@@ -1,5 +1,6 @@
 import type { DomainEvent, EventBus, EventHandlerClass, EventSubscription } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 
 export class InMemoryEventBus implements EventBus {
   private readonly handlers: Map<string, Set<EventHandlerClass>> = new Map();
@@ -14,7 +15,12 @@ export class InMemoryEventBus implements EventBus {
           const handlerInstance = Container.get(handlerClass);
           await handlerInstance.handle(event);
         } catch (error) {
-          console.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, error);
+          try {
+            const logger = Container.get(Logger);
+            logger.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, error as Error);
+          } catch {
+            console.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, error);
+          }
         }
       })
     );

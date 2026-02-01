@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@croco/events-core": "workspace:*",
-    "@croco/framework-context": "workspace:*"
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-logger": "workspace:*"
   },
   "publishConfig": {
     "access": "public",
