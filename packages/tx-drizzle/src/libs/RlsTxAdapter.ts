@@ -1,3 +1,5 @@
+import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import type { TxAdapter } from '@croco/tx-core';
 import { sql } from 'drizzle-orm';
 import { createDrizzleTxAdapter } from './DrizzleTxAdapter';
@@ -28,6 +30,14 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
   const baseAdapter = createDrizzleTxAdapter(db);
   const configKey = options.configKey ?? 'app.current_tenant';
 
+  // Try to resolve logger, fallback to null if not available
+  let logger: Logger | null = null;
+  try {
+    logger = Container.get(Logger);
+  } catch {
+    // Logger might not be registered
+  }
+
   return {
     async transaction<T>(fn: (client: InferTxClient<TDb>) => Promise<T>, txOptions?: InferTxOptions<TDb>): Promise<T> {
       return baseAdapter.transaction(async (tx) => {
@@ -35,14 +45,14 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
 
         if (tenantId) {
           if (options.debug) {
-            console.log(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
+            logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
           }
 
           // Drizzle transaction client usually has .execute
           if (typeof (tx as any).execute === 'function') {
             await (tx as any).execute(sql`SET LOCAL ${sql.raw(configKey)} = ${tenantId}`);
           } else {
-            console.warn('[RlsTxAdapter] Transaction client does not support .execute(), skipping RLS setup');
+            logger?.warn('[RlsTxAdapter] Transaction client does not support .execute(), skipping RLS setup');
           }
         }
 
