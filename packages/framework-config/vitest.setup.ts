@@ -1,0 +1,9 @@
+process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.NODE_ENV = 'development';
+process.env.LOG_LEVEL = 'info';
+process.env.R2_ACCOUNT_ID = 'test-account';
+process.env.R2_ACCESS_KEY_ID = 'test-key';
+process.env.R2_SECRET_ACCESS_KEY = 'test-secret';
+process.env.R2_BUCKET = 'test-bucket';
+process.env.R2_PUBLIC_URL_BASE = 'https://test.r2.dev';

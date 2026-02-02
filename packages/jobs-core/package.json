@@ -18,8 +18,7 @@
     "@croco/retry-core": "workspace:*"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
-    "vitest": "^4.0.0"
+    "@croco/utils-tsconfig": "workspace:*"
   },
   "publishConfig": {
     "main": "./dist/index.js",

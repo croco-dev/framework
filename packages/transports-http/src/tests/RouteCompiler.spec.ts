@@ -1,9 +1,21 @@
 import 'reflect-metadata';
+import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import { Controller, Get, Param, Post } from '@croco/protocols-rest';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { RouteCompiler } from '../libs/RouteCompiler';
 
 describe('RouteCompiler', () => {
+  beforeEach(() => {
+    Container.reset();
+    Container.set(Logger, {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    } as unknown as Logger);
+  });
+
   it('should compile routes from controller', () => {
     @Controller('/users')
     class UserController {

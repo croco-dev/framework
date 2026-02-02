@@ -19,18 +19,12 @@
     "type-graphql": "^2.0.0-rc.2"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
-    "vitest": "4.0.16"
+    "@croco/utils-tsconfig": "workspace:*"
   },
   "peerDependencies": {
     "typedi": "*"
   },
-  "vitest": {
-    "include": [
-      "src/**/*.test.ts",
-      "src/**/*.spec.ts"
-    ]
-  },
+
   "publishConfig": {
     "access": "public",
     "files": [

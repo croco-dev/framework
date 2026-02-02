@@ -185,4 +185,155 @@ describe('CircuitBreaker', () => {
     expect(await breaker1.getState()).toBe(CircuitState.OPEN);
     expect(await breaker2.getState()).toBe(CircuitState.OPEN);
   });
+
+  describe('상태 전환 임계값 경계값', () => {
+    it('실패 횟수가 정확히 threshold일 때 OPEN으로 전환되어야 한다', async () => {
+      const breaker = createBreaker({ failureThreshold: 3 });
+      const fn = vi.fn().mockRejectedValue(new Error('fail'));
+
+      await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+      expect(await breaker.getFailureCount()).toBe(1);
+
+      await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+      expect(await breaker.getFailureCount()).toBe(2);
+
+      await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      expect(await breaker.getState()).toBe(CircuitState.OPEN);
+      expect(await breaker.getFailureCount()).toBe(3);
+    });
+
+    it('threshold-1 실패에서는 CLOSED를 유지해야 한다', async () => {
+      const breaker = createBreaker({ failureThreshold: 5 });
+      const fn = vi.fn().mockRejectedValue(new Error('fail'));
+
+      for (let i = 0; i < 4; i++) {
+        await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      }
+
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+      expect(await breaker.getFailureCount()).toBe(4);
+    });
+
+    it('성공 시 failureCount가 초기화되어야 한다', async () => {
+      const breaker = createBreaker({ failureThreshold: 3 });
+      const failFn = vi.fn().mockRejectedValue(new Error('fail'));
+      const successFn = vi.fn().mockResolvedValue('success');
+
+      await expect(breaker.execute(failFn)).rejects.toThrow('fail');
+      await expect(breaker.execute(failFn)).rejects.toThrow('fail');
+      expect(await breaker.getFailureCount()).toBe(2);
+
+      await breaker.execute(successFn);
+      expect(await breaker.getFailureCount()).toBe(0);
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+    });
+  });
+
+  describe('저장소 예외 처리', () => {
+    it('getState 실패 시 에러를 전파해야 한다', async () => {
+      const mockStore = {
+        getState: vi.fn().mockRejectedValue(new Error('Store unavailable')),
+        setState: vi.fn(),
+        getFailureCount: vi.fn(),
+        incrementFailureCount: vi.fn(),
+        resetFailureCount: vi.fn(),
+        getLastFailureTime: vi.fn(),
+        setLastFailureTime: vi.fn(),
+      };
+
+      const breaker = new CircuitBreaker({
+        circuitId: 'test-circuit',
+        stateStore: mockStore,
+      });
+
+      await expect(breaker.getState()).rejects.toThrow('Store unavailable');
+    });
+
+    it('setState 실패 시 에러를 전파해야 한다', async () => {
+      const mockStore = {
+        getState: vi.fn().mockResolvedValue(CircuitState.CLOSED),
+        setState: vi.fn().mockRejectedValue(new Error('Store write failed')),
+        getFailureCount: vi.fn().mockResolvedValue(0),
+        incrementFailureCount: vi.fn().mockResolvedValue(1),
+        resetFailureCount: vi.fn(),
+        getLastFailureTime: vi.fn().mockResolvedValue(null),
+        setLastFailureTime: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const breaker = new CircuitBreaker({
+        circuitId: 'test-circuit',
+        failureThreshold: 1,
+        stateStore: mockStore,
+      });
+
+      const fn = vi.fn().mockRejectedValue(new Error('fail'));
+
+      await expect(breaker.execute(fn)).rejects.toThrow('Store write failed');
+    });
+  });
+
+  describe('시간 기반 상태 전환 (fake timers)', () => {
+    it('openDuration 경과 후 HALF_OPEN으로 전환되어야 한다', async () => {
+      vi.useFakeTimers();
+      const breaker = createBreaker({ failureThreshold: 1, openDuration: 100 });
+      const fn = vi.fn().mockRejectedValue(new Error('fail'));
+
+      await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      expect(await breaker.getState()).toBe(CircuitState.OPEN);
+
+      vi.advanceTimersByTime(100);
+
+      expect(await breaker.getState()).toBe(CircuitState.OPEN);
+
+      fn.mockResolvedValue('success');
+      const result = await breaker.execute(fn);
+
+      expect(result).toBe('success');
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+
+      vi.useRealTimers();
+    });
+
+    it('openDuration 미만에서는 OPEN을 유지해야 한다', async () => {
+      vi.useFakeTimers();
+      const breaker = createBreaker({ failureThreshold: 1, openDuration: 100 });
+      const fn = vi.fn().mockRejectedValue(new Error('fail'));
+
+      await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      expect(await breaker.getState()).toBe(CircuitState.OPEN);
+
+      vi.advanceTimersByTime(50);
+
+      expect(await breaker.getState()).toBe(CircuitState.OPEN);
+
+      vi.useRealTimers();
+    });
+
+    it('HALF_OPEN에서 성공 후 CLOSED로 전환되고 실패 카운트가 초기화되어야 한다', async () => {
+      vi.useFakeTimers();
+      const breaker = createBreaker({ failureThreshold: 2, openDuration: 50 });
+      const fn = vi.fn();
+
+      fn.mockRejectedValueOnce(new Error('fail'));
+      await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      expect(await breaker.getFailureCount()).toBe(1);
+
+      fn.mockRejectedValueOnce(new Error('fail'));
+      await expect(breaker.execute(fn)).rejects.toThrow('fail');
+      expect(await breaker.getState()).toBe(CircuitState.OPEN);
+      expect(await breaker.getFailureCount()).toBe(2);
+
+      vi.advanceTimersByTime(60);
+
+      fn.mockResolvedValue('success');
+      await breaker.execute(fn);
+
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+      expect(await breaker.getFailureCount()).toBe(0);
+
+      vi.useRealTimers();
+    });
+  });
 });

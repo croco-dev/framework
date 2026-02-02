@@ -159,7 +159,7 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
         contentType: resource.format,
         lastModified: new Date(resource.created_at),
         etag: resource.etag,
-        metadata: resource.context ? this.parseContext(resource.context as Record<string, string>) : undefined,
+        metadata: resource.context ? this.parseContext(resource.context) : undefined,
       };
     } catch {
       throw new FileNotFoundProblem(key);
@@ -296,8 +296,11 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
       .join('|');
   }
 
-  private parseContext(context: Record<string, string>): Record<string, string> {
-    return context;
+  private parseContext(context: Record<string, any>): Record<string, string> {
+    if (context && typeof context === 'object' && 'custom' in context) {
+      return context.custom as Record<string, string>;
+    }
+    return context as Record<string, string>;
   }
 
   private validateKey(key: string): void {

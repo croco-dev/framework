@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Container, Context as FrameworkContext } from '@croco/framework-context';
-import type { Logger } from '@croco/framework-logger';
+import { Logger } from '@croco/framework-logger';
 import { Hono, type Context as HonoContext } from 'hono';
-import type { ErrorHandler } from './ErrorHandler';
+import { ErrorHandler } from './ErrorHandler';
 import { HttpContext } from './HttpContext';
 
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';

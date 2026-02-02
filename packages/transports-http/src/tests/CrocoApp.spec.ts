@@ -1,9 +1,24 @@
 import 'reflect-metadata';
+import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import { Body, Controller, Get, Param, Post } from '@croco/protocols-rest';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
+import { ErrorHandler } from '../libs/ErrorHandler';
 
 describe('CrocoApp', () => {
+  beforeEach(() => {
+    Container.reset();
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    } as unknown as Logger;
+    Container.set(Logger, logger);
+    Container.set(ErrorHandler, new ErrorHandler(logger));
+  });
+
   @Controller('/api')
   class TestController {
     @Get('/hello')

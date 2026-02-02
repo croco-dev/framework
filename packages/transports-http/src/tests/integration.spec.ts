@@ -1,8 +1,11 @@
 import 'reflect-metadata';
+import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import type { Guard, HttpContext } from '@croco/protocols-rest';
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@croco/protocols-rest';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
+import { ErrorHandler } from '../libs/ErrorHandler';
 
 class AuthGuard implements Guard {
   canActivate(context: HttpContext): boolean {
@@ -55,7 +58,21 @@ class UserController {
 }
 
 describe('Transport Integration', () => {
-  const app = createApp({ controllers: [UserController] });
+  let app: CrocoApp;
+
+  beforeEach(() => {
+    Container.reset();
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    } as unknown as Logger;
+    Container.set(Logger, logger);
+    Container.set(ErrorHandler, new ErrorHandler(logger));
+
+    app = createApp({ controllers: [UserController] });
+  });
 
   describe('CRUD Operations', () => {
     it('GET /api/users - should list all users', async () => {
