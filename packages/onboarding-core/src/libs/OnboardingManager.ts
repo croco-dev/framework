@@ -16,9 +16,9 @@ export class OnboardingManager {
     this.definitions.set(definition.id, definition);
   }
 
-  async getStatus(_onboardingId: string): Promise<OnboardingState> {
+  async getStatus(onboardingId: string): Promise<OnboardingState> {
     const { tenantId, userId } = this.getContext();
-    const state = await this.store.getState(tenantId, userId);
+    const state = await this.store.getState(tenantId, userId, onboardingId);
 
     if (!state) {
       return { steps: {}, isCompleted: false };
@@ -38,7 +38,7 @@ export class OnboardingManager {
     }
 
     const { tenantId, userId } = this.getContext();
-    let state = await this.store.getState(tenantId, userId);
+    let state = await this.store.getState(tenantId, userId, onboardingId);
 
     if (!state) {
       state = { steps: {}, isCompleted: false };
@@ -70,7 +70,7 @@ export class OnboardingManager {
       });
     }
 
-    await this.store.saveState(tenantId, userId, state);
+    await this.store.saveState(tenantId, userId, onboardingId, state);
 
     // Track step completion
     this.analytics.capture('onboarding_step_completed', {

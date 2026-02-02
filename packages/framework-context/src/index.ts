@@ -1,4 +1,4 @@
-export { Token } from 'typedi';
+export { Inject, Token } from 'typedi';
 export { Container } from './libs/Container';
 export { Context } from './libs/Context';
 export { Component } from './libs/decorators/Component';
