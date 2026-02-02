@@ -61,9 +61,9 @@ describe('EventPublisher', () => {
     });
 
     it('should handle async event bus publish', async () => {
-      let resolvePublish!: (value: void) => void;
+      let resolvePublish!: () => void;
       const asyncMockEventBus = {
-        async publish(event: DomainEvent): Promise<void> {
+        async publish(_event: DomainEvent): Promise<void> {
           return new Promise((resolve) => {
             resolvePublish = resolve;
           });
@@ -141,7 +141,7 @@ describe('EventPublisher', () => {
     it('should stop publishing on first error', async () => {
       let callCount = 0;
       const failingEventBus = {
-        async publish(event: DomainEvent): Promise<void> {
+        async publish(_event: DomainEvent): Promise<void> {
           callCount++;
           if (callCount === 2) {
             throw new Error('Failed on second event');
