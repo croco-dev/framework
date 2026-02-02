@@ -4,12 +4,6 @@
 export type Scope = 'singleton' | 'request' | 'transient';
 
 /**
- * Token for dependency injection
- * Can be a class constructor or a unique identifier
- */
-export type Token<T = any> = Constructor<T> | string | symbol;
-
-/**
  * Generic constructor type
  */
 export type Constructor<T = any> = new (...args: any[]) => T;
@@ -30,10 +24,21 @@ export interface ComponentMetadata {
 }
 
 /**
+ * User information in request context
+ */
+export type UserContext = {
+  id: string;
+  email?: string;
+  [key: string]: unknown;
+};
+
+/**
  * Request context data
  */
 export interface RequestContext {
   requestId: string;
+  user?: UserContext;
+  tenantId?: string;
 }
 
 /**

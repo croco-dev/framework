@@ -1,3 +1,4 @@
+export { Token } from 'typedi';
 export { Container } from './libs/Container';
 export { Context } from './libs/Context';
 export { Component } from './libs/decorators/Component';
@@ -11,5 +12,4 @@ export type {
   Middleware,
   RequestContext,
   Scope,
-  Token,
 } from './libs/types';

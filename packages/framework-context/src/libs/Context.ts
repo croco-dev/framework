@@ -31,6 +31,16 @@ export class Context {
     return context?.requestId ?? null;
   }
 
+  static getCurrentUser(): RequestContext['user'] | null {
+    const context = Context.get();
+    return context?.user ?? null;
+  }
+
+  static getTenantId(): string | null {
+    const context = Context.get();
+    return context?.tenantId ?? null;
+  }
+
   static isActive(): boolean {
     return Context.STORAGE.getStore() !== undefined;
   }
