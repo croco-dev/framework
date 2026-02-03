@@ -61,15 +61,12 @@ importers:
       '@croco/analytics-core':
         specifier: workspace:*
         version: link:../analytics-core
-      '@croco/features-core':
-        specifier: workspace:*
-        version: link:../features-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
-      posthog-node:
-        specifier: ^4.0.1
-        version: 4.18.0
+      '@croco/integrations-posthog':
+        specifier: workspace:*
+        version: link:../integrations-posthog
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
@@ -262,6 +259,31 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@25.2.0)
 
+  packages/features-posthog:
+    dependencies:
+      '@croco/features-core':
+        specifier: workspace:*
+        version: link:../features-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/integrations-posthog':
+        specifier: workspace:*
+        version: link:../integrations-posthog
+    devDependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@25.2.0)
+
   packages/framework-config:
     dependencies:
       '@croco/framework-context':
@@ -325,6 +347,28 @@ importers:
       '@croco/utils-tsconfig':
         specifier: workspace:*
         version: link:../shared/utils-tsconfig
+
+  packages/integrations-posthog:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      posthog-node:
+        specifier: ^4.0.0
+        version: 4.18.0
+    devDependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@25.2.0)
 
   packages/jobs-core:
     dependencies:

@@ -1,10 +1,10 @@
 import { AnalyticsManager } from '@croco/analytics-core';
 import { Component, Context } from '@croco/framework-context';
-import type { PostHogClientWrapper } from './PostHogClientWrapper';
+import type { PostHogClient } from '@croco/integrations-posthog';
 
 @Component()
 export class PostHogAnalyticsManager extends AnalyticsManager {
-  constructor(private readonly posthogWrapper: PostHogClientWrapper) {
+  constructor(private readonly posthogClient: PostHogClient) {
     super();
   }
 
@@ -12,7 +12,7 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     const distinctId = this.getDistinctId(properties);
     const groups = this.getGroups(properties);
 
-    this.posthogWrapper.client.capture({
+    this.posthogClient.getClient().capture({
       distinctId,
       event,
       properties,
@@ -21,14 +21,14 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 
   identify(distinctId: string, properties?: Record<string, unknown>): void {
-    this.posthogWrapper.client.identify({
+    this.posthogClient.getClient().identify({
       distinctId,
       properties,
     });
   }
 
   group(groupType: string, groupKey: string, properties?: Record<string, unknown>): void {
-    this.posthogWrapper.client.group({
+    this.posthogClient.getClient().groupIdentify({
       groupType,
       groupKey,
       properties,

@@ -1,5 +1,5 @@
 {
-  "name": "@croco/analytics-posthog",
+  "name": "@croco/features-posthog",
   "version": "0.0.1",
   "type": "commonjs",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
-    "@croco/analytics-core": "workspace:*",
+    "@croco/features-core": "workspace:*",
     "@croco/integrations-posthog": "workspace:*"
   },
   "devDependencies": {

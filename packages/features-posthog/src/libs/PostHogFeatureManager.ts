@@ -1,46 +1,44 @@
 import { FeatureManager } from '@croco/features-core';
 import { Component, Context } from '@croco/framework-context';
-import type { PostHogClientWrapper } from './PostHogClientWrapper';
+import type { PostHogClient } from '@croco/integrations-posthog';
 
 @Component()
 export class PostHogFeatureManager extends FeatureManager {
-  constructor(private readonly posthogWrapper: PostHogClientWrapper) {
+  constructor(private readonly posthogClient: PostHogClient) {
     super();
   }
 
-  async isEnabled(key: string, context?: Record<string, unknown>): Promise<boolean> {
+  async isEnabled(flag: string, context?: Record<string, unknown>): Promise<boolean> {
     const distinctId = this.getDistinctId(context);
     const groups = this.getGroups(context);
 
-    // If API key is missing, default to false (safe fallback)
-    if (this.posthogWrapper.client.getFeatureFlag === undefined) return false;
-
-    const result = await this.posthogWrapper.client.isFeatureEnabled(key, distinctId, {
-      groups,
-      personProperties: context,
+    const isEnabled = await this.posthogClient.getClient().isFeatureEnabled(flag, distinctId, {
+      groups: groups as any,
+      personProperties: context as any,
     });
 
-    return result === true;
+    return isEnabled === true;
   }
 
-  async getVariant(key: string, context?: Record<string, unknown>): Promise<string | boolean | number | object> {
+  async getVariant(flag: string, context?: Record<string, unknown>): Promise<string | boolean | object> {
     const distinctId = this.getDistinctId(context);
     const groups = this.getGroups(context);
 
-    if (this.posthogWrapper.client.getFeatureFlag === undefined) return false;
-
-    const result = await this.posthogWrapper.client.getFeatureFlag(key, distinctId, {
-      groups,
-      personProperties: context,
+    const variant = await this.posthogClient.getClient().getFeatureFlag(flag, distinctId, {
+      groups: groups as any,
+      personProperties: context as any,
     });
 
-    return result ?? false;
+    if (variant === undefined || variant === null) {
+      return false;
+    }
+
+    return variant;
   }
 
   private getDistinctId(context?: Record<string, unknown>): string {
     if (context?.userId) return String(context.userId);
 
-    // Auto-inject from AsyncLocalStorage
     const user = Context.getCurrentUser();
     if (user?.id) return user.id;
 
