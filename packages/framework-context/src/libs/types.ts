@@ -6,6 +6,7 @@ export type Scope = 'singleton' | 'request' | 'transient';
 /**
  * Generic constructor type
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constructor requires any for arguments
 export type Constructor<T = any> = new (...args: any[]) => T;
 
 /**
@@ -39,6 +40,7 @@ export interface RequestContext {
   requestId: string;
   user?: UserContext;
   tenantId?: string;
+  traceId?: string;
 }
 
 /**

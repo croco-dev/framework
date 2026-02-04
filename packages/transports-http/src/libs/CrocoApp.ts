@@ -4,9 +4,23 @@ import { Logger } from '@croco/framework-logger';
 import { Hono, type Context as HonoContext } from 'hono';
 import { ErrorHandler } from './ErrorHandler';
 import { HttpContext } from './HttpContext';
+import { telemetryMiddleware } from './middleware/telemetry';
 
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
 import type { AppConfig, CompiledRoute, LambdaContext, LambdaEvent, LambdaHandler, MiddlewareFunction } from './types';
+
+function parseTraceIdFromHeader(traceparent: string | null | undefined): string | null {
+  if (!traceparent) {
+    return null;
+  }
+
+  const parts = traceparent.split('-');
+  if (parts.length >= 2) {
+    return parts[1];
+  }
+
+  return null;
+}
 
 export class CrocoApp {
   private hono: Hono;
@@ -47,11 +61,16 @@ export class CrocoApp {
     const honoHandler = async (c: HonoContext) => {
       const ctx = new HttpContext(c);
 
-      return FrameworkContext.run({ requestId: randomUUID() }, async () => {
+      const traceparent = ctx.header('traceparent');
+      const traceId = parseTraceIdFromHeader(traceparent) || undefined;
+
+      const telemetry = telemetryMiddleware(route.path);
+
+      const middlewares = [telemetry, ...(this.config.middlewares ?? [])];
+
+      return FrameworkContext.run({ requestId: randomUUID(), traceId }, async () => {
         try {
-          if (this.config.middlewares?.length) {
-            await this.executeMiddlewares(ctx, this.config.middlewares);
-          }
+          await this.executeMiddlewares(ctx, middlewares);
 
           const result = await route.handler(ctx);
 

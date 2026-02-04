@@ -135,6 +135,33 @@ describe('Context', () => {
       expect(createdAt).toBeGreaterThanOrEqual(before);
     });
   });
+
+  it('should return null for traceId when no active span and no traceId in context', async () => {
+    const ctx = { requestId: 'test-123' };
+
+    await Context.run(ctx, async () => {
+      const traceId = Context.getActiveTraceId();
+      expect(traceId).toBeNull();
+    });
+  });
+
+  it('should return traceId from RequestContext when no active span', async () => {
+    const ctx = { requestId: 'test-456', traceId: 'propagated-trace-123' };
+
+    await Context.run(ctx, async () => {
+      const traceId = Context.getActiveTraceId();
+      expect(traceId).toBe('propagated-trace-123');
+    });
+  });
+
+  it('should return null for spanId when no active span', async () => {
+    const ctx = { requestId: 'test-789' };
+
+    await Context.run(ctx, async () => {
+      const spanId = Context.getActiveSpanId();
+      expect(spanId).toBeNull();
+    });
+  });
 });
 
 describe('MetadataStorage', () => {

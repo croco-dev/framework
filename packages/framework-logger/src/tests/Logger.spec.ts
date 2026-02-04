@@ -1,8 +1,28 @@
 import type { ConfigService } from '@croco/framework-config';
 import { Context } from '@croco/framework-context';
-import pino from 'pino';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '../Logger';
+
+// Mock pino module first, before importing it
+vi.mock('pino', () => {
+  const mockLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(function (this: unknown, bindings: unknown) {
+      return this;
+    }),
+  };
+  return {
+    default: vi.fn(() => mockLogger),
+    Logger: vi.fn(),
+  };
+});
+
+// Import pino after mock - this gets the mocked version
+import pino from 'pino';
 
 describe('Logger', () => {
   let logger: Logger;
