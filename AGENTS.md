@@ -162,9 +162,113 @@ packages/[name]/
 - pre-push: `pnpm test && pnpm typecheck`
 - post-merge: `pnpm install`
 
+## Telemetry & Tracing
+
+Croco는 OpenTelemetry 표준을 기반으로 한 분산 추적(Distributed Tracing)을 제공합니다.
+
+### 패키지 구조
+
+```
+@croco/telemetry-api      # 애플리케이션에서 사용하는 API (@Trace, withSpan)
+@croco/telemetry-sdk-node  # SDK 초기화 및 설정 (OpenTelemetry SDK 래핑)
+```
+
+### API vs SDK 분리
+
+- **telemetry-api**: 애플리케이션 코드에서 사용
+  - `@Trace` 데코레이터: 메서드 자동 추적
+  - `withSpan`: 함수 실행 감싸기
+  - `recordError`, `recordEvent`: Span에 이벤트/에러 기록
+  - `getActiveTraceInfo`: 현재 Trace 컨텍스트 정보
+
+- **telemetry-sdk-node**: 애플리케이션 시작 시 초기화
+  - `TelemetryRuntime.init()`: OpenTelemetry SDK 초기화
+  - `lambdaPreset`: Lambda 환경 최적화 설정
+  - `ProbabilitySampler`: 샘플링 비율 제어
+
+### 사용 패턴
+
+```typescript
+// 1. 애플리케이션 시작 시 SDK 초기화 (전역 스코프)
+import { TelemetryRuntime, lambdaPreset } from '@croco/telemetry-sdk-node';
+
+const telemetry = TelemetryRuntime.getInstance();
+await telemetry.init(lambdaPreset({
+  serviceName: 'my-service',
+  probability: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+}));
+
+// 2. 서비스 클래스에서 @Trace 데코레이터 사용
+import { Trace } from '@croco/telemetry-api';
+
+@Service()
+class OrderService {
+  @Trace({ name: 'order.create' })
+  async createOrder(dto: CreateOrderDto): Promise<Order> {
+    // 자동으로 추적됨
+    return this.repository.save(dto);
+  }
+}
+
+// 3. Lambda 핸들러에서 forceFlush (데이터 전송 보장)
+export const handler = async (event: any) => {
+  try {
+    return await processEvent(event);
+  } finally {
+    await telemetry.forceFlush();
+  }
+};
+```
+
+### Lambda 환경 주의사항
+
+**⚠️ `AWS_LAMBDA_EXEC_WRAPPER`를 사용하지 마세요**
+
+OpenTelemetry 공식 문서와 달리, Croco에서는 Exec Wrapper 방식을 사용하지 않습니다. 대신 다음 방식을 사용하세요:
+
+1. 핸들러 파일 상단에서 전역 스코프로 `TelemetryRuntime.init()` 호출
+2. 핸들러 반환 전에 `forceFlush()` 호출
+
+이유:
+- Layer 의존성 제거
+- 콜드 스타트 최적화
+- 초기화 타이밍 직접 제어
+
+### OTLP 전용
+
+Croco는 **OTLP(OpenTelemetry Protocol)만 지원**합니다. X-Ray와 통합하려면 ADOT Collector를 사이드카로 실행해야 합니다:
+
+```yaml
+# collector.yaml (ADOT Collector)
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  awsxray:
+    region: ap-northeast-2
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [awsxray]
+```
+
+### 샘플링 전략
+
+| 환경 | 확률 | 설명 |
+|------|------|------|
+| development | 1.0 (100%) | 모든 요청 추적 |
+| staging | 0.5 ~ 1.0 | 50~100% 추적 |
+| production | 0.01 ~ 0.1 | 1~10% 추적 (비용 절감) |
+
 ## Architecture Notes
 
 - 4-계층: Framework → Protocols → Transports → Integrations
 - DI: typedi + 커스텀 Container 래퍼
 - AsyncLocalStorage: request-scoped context
 - 이벤트 기반 아키텍처 (events-core + events-inmemory)
+- 분산 추적: OpenTelemetry OTLP 기반 (@croco/telemetry-api + @croco/telemetry-sdk-node)
