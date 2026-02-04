@@ -1,0 +1,51 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { TelemetryRuntime } from '../runtime';
+
+describe('TelemetryRuntime', () => {
+  let runtime!: TelemetryRuntime;
+
+  beforeEach(() => {
+    runtime = TelemetryRuntime.getInstance();
+  });
+
+  it('should return singleton instance', () => {
+    const instance1 = TelemetryRuntime.getInstance();
+    const instance2 = TelemetryRuntime.getInstance();
+    expect(instance1).toBe(instance2);
+  });
+
+  it('should return null config before initialization', () => {
+    expect(runtime.getConfig()).toBeNull();
+  });
+
+  it('should initialize with valid config', async () => {
+    await runtime.init({
+      serviceName: 'test-service',
+      enabled: false,
+    });
+
+    expect(runtime.isInitialized()).toBe(false);
+  });
+
+  it('should store config after initialization', async () => {
+    const config = {
+      serviceName: 'test-service',
+      serviceVersion: '1.0.0',
+    };
+
+    await runtime.init({ ...config, enabled: false });
+    const storedConfig = runtime.getConfig();
+    expect(storedConfig).toEqual({
+      ...config,
+      enabled: false,
+    });
+  });
+
+  it('should handle forceFlush without error', async () => {
+    await runtime.forceFlush();
+  });
+
+  it('should handle shutdown without error', async () => {
+    await runtime.shutdown();
+  });
+});
