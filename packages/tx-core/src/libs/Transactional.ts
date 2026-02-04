@@ -1,3 +1,4 @@
+import { recordEvent, withSpan } from '@croco/telemetry-api';
 import { TxPropagationError } from './errors';
 import { TxManagerRegistry } from './TxManagerRegistry';
 import type { Propagation, TransactionalOptions } from './types';
@@ -12,7 +13,7 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
 
   return (
     _target: object,
-    _propertyKey: string | symbol,
+    propertyKey: string | symbol,
     descriptor: PropertyDescriptor
   ): PropertyDescriptor | undefined => {
     const originalMethod = descriptor.value as AsyncMethod;
@@ -24,34 +25,77 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const txManager = TxManagerRegistry.get(managerKey);
       const isInTx = txManager.isInTransaction();
+      const methodName = String(propertyKey);
 
-      switch (propagation) {
-        case 'REQUIRED':
-          return txManager.run(() => originalMethod.apply(this, args), {
-            nesting: nesting ?? 'join',
-            options: txOptions,
+      const executeInTransaction = async (): Promise<unknown> => {
+        switch (propagation) {
+          case 'REQUIRED':
+            return txManager.run(() => originalMethod.apply(this, args), {
+              nesting: nesting ?? 'join',
+              options: txOptions,
+            });
+
+          case 'REQUIRES_NEW':
+            return txManager.suspend(() =>
+              txManager.run(() => originalMethod.apply(this, args), { nesting: 'join', options: txOptions })
+            );
+
+          case 'MANDATORY':
+            if (!isInTx) {
+              throw new TxPropagationError('MANDATORY propagation requires an existing transaction');
+            }
+            return originalMethod.apply(this, args);
+
+          case 'NEVER':
+            if (isInTx) {
+              throw new TxPropagationError('NEVER propagation does not allow existing transaction');
+            }
+            return originalMethod.apply(this, args);
+
+          default:
+            throw new TxPropagationError(`Unknown propagation: ${propagation}`);
+        }
+      };
+
+      // MANDATORY and NEVER don't create transactions, so skip telemetry
+      if (propagation === 'MANDATORY' || propagation === 'NEVER') {
+        return executeInTransaction();
+      }
+
+      return withSpan(
+        async () => {
+          recordEvent('tx.begin', {
+            'tx.propagation': propagation,
+            'tx.method': methodName,
           });
 
-        case 'REQUIRES_NEW':
-          return txManager.suspend(() =>
-            txManager.run(() => originalMethod.apply(this, args), { nesting: 'join', options: txOptions })
-          );
+          try {
+            const result = await executeInTransaction();
 
-        case 'MANDATORY':
-          if (!isInTx) {
-            throw new TxPropagationError('MANDATORY propagation requires an existing transaction');
+            recordEvent('tx.commit', {
+              'tx.propagation': propagation,
+              'tx.method': methodName,
+            });
+
+            return result;
+          } catch (error) {
+            recordEvent('tx.rollback', {
+              'tx.propagation': propagation,
+              'tx.method': methodName,
+              'tx.error': error instanceof Error ? error.message : String(error),
+            });
+
+            throw error;
           }
-          return originalMethod.apply(this, args);
-
-        case 'NEVER':
-          if (isInTx) {
-            throw new TxPropagationError('NEVER propagation does not allow existing transaction');
-          }
-          return originalMethod.apply(this, args);
-
-        default:
-          throw new TxPropagationError(`Unknown propagation: ${propagation}`);
-      }
+        },
+        {
+          name: `tx:${methodName}`,
+          attributes: {
+            'tx.propagation': propagation,
+            'tx.method': methodName,
+          },
+        }
+      );
     };
 
     return descriptor;

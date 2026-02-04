@@ -60,7 +60,7 @@ export class DefaultEventSerializer implements EventSerializer {
 
   private extractPayload(event: DomainEvent): Record<string, unknown> {
     const result: Record<string, unknown> = {};
-    const reservedKeys = new Set(['eventName', 'timestamp']);
+    const reservedKeys = new Set(['eventName', 'timestamp', 'metadata']);
 
     for (const key in event) {
       if (!reservedKeys.has(key)) {
@@ -71,6 +71,7 @@ export class DefaultEventSerializer implements EventSerializer {
     return result;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Constructor arguments need any
   private reconstructEvent<T extends DomainEvent>(EventClass: new (...args: any[]) => T, data: SerializedEvent): T {
     const values = Object.values(data.payload);
 

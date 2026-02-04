@@ -1,4 +1,5 @@
 export { AggregateRoot } from './libs/AggregateRoot';
+export type { DomainEventMetadata } from './libs/DomainEvent';
 export { DomainEvent } from './libs/DomainEvent';
 export type { EventBus, EventSubscription } from './libs/EventBus';
 export { EventBusConfig } from './libs/EventBusConfig';

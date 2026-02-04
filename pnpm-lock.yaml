@@ -281,6 +281,10 @@ importers:
         version: 5.9.3
 
   packages/events-core:
+    dependencies:
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -297,6 +301,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -769,6 +776,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -998,6 +1008,9 @@ importers:
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../protocols-rest
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.0
       hono:
         specifier: ^4.0.0
         version: 4.11.5
@@ -1026,6 +1039,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -8439,6 +8455,14 @@ snapshots:
     optionalDependencies:
       vite: 7.3.0(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
 
+  '@vitest/mocker@4.0.16(vite@7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1))':
+    dependencies:
+      '@vitest/spy': 4.0.16
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   '@vitest/pretty-format@2.1.9':
     dependencies:
       tinyrainbow: 1.2.0
@@ -10505,7 +10529,7 @@ snapshots:
   vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1):
     dependencies:
       '@vitest/expect': 4.0.16
-      '@vitest/mocker': 4.0.16(vite@7.3.0(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1))
+      '@vitest/mocker': 4.0.16(vite@7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1))
       '@vitest/pretty-format': 4.0.16
       '@vitest/runner': 4.0.16
       '@vitest/snapshot': 4.0.16

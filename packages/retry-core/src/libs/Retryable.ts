@@ -1,3 +1,4 @@
+import { recordEvent, withSpan } from '@croco/telemetry-api';
 import { type BackoffOptions, type BackoffPolicy, ExponentialBackoff } from './BackoffPolicy';
 import { RetryExhaustedException } from './errors/RetryExhaustedException';
 import { findRecoverMethod } from './Recover';
@@ -57,65 +58,104 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
     const methodName = String(propertyKey);
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      const context = new RetryContext(methodName, args, maxAttempts);
+      return await withSpan(
+        async (span) => {
+          const context = new RetryContext(methodName, args, maxAttempts);
 
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        context.incrementAttempt();
+          // Set span attributes
+          span.setAttribute('retry.max_attempts', maxAttempts);
+          span.setAttribute('retry.method_name', methodName);
+          span.setAttribute('retry.policy', retryPolicy.constructor.name);
 
-        try {
-          const result = await originalMethod.apply(this, args);
-          return result;
-        } catch (error) {
-          const err = error instanceof Error ? error : new Error(String(error));
-          context.setLastError(err);
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            context.incrementAttempt();
 
-          const shouldRetry = retryPolicy.shouldRetry(err, attempt, maxAttempts);
+            try {
+              const result = await originalMethod.apply(this, args);
 
-          if (!shouldRetry && attempt < maxAttempts) {
-            throw err;
+              // Record success event
+              recordEvent('retry.success', {
+                'retry.attempt': attempt,
+                'retry.method_name': methodName,
+              });
+
+              return result;
+            } catch (error) {
+              const err = error instanceof Error ? error : new Error(String(error));
+              context.setLastError(err);
+
+              const shouldRetry = retryPolicy.shouldRetry(err, attempt, maxAttempts);
+
+              // Record attempt failed event
+              recordEvent('retry.attempt_failed', {
+                'retry.attempt': attempt,
+                'retry.method_name': methodName,
+                'retry.error_type': err.name,
+                'retry.error_message': err.message,
+                'retry.will_retry': shouldRetry && attempt < maxAttempts,
+              });
+
+              if (!shouldRetry && attempt < maxAttempts) {
+                throw err;
+              }
+
+              if (attempt < maxAttempts && shouldRetry) {
+                await backoffPolicy.wait(attempt - 1);
+              }
+            }
           }
 
-          if (attempt < maxAttempts && shouldRetry) {
-            await backoffPolicy.wait(attempt - 1);
+          // All attempts exhausted
+          context.setExhausted();
+
+          // Record exhausted event
+          recordEvent('retry.exhausted', {
+            'retry.max_attempts': maxAttempts,
+            'retry.method_name': methodName,
+            'retry.final_error': context.lastError?.name,
+          });
+
+          // Try recovery method if specified
+          if (options.recover) {
+            const recoverMethod = (this as Record<string, unknown>)[options.recover];
+            if (typeof recoverMethod === 'function') {
+              return await recoverMethod.call(this, context.lastError, ...args);
+            }
           }
-        }
-      }
 
-      // All attempts exhausted
-      context.setExhausted();
-
-      // Try recovery method if specified
-      if (options.recover) {
-        const recoverMethod = (this as Record<string, unknown>)[options.recover];
-        if (typeof recoverMethod === 'function') {
-          return await recoverMethod.call(this, context.lastError, ...args);
-        }
-      }
-
-      // Try @Recover decorated method if no explicit recover option
-      if (!options.recover && context.lastError) {
-        const recoverMeta = findRecoverMethod(Object.getPrototypeOf(this), context.lastError);
-        if (recoverMeta) {
-          const recoverMethod = (this as Record<string, unknown>)[recoverMeta.methodName];
-          if (typeof recoverMethod === 'function') {
-            return await recoverMethod.call(this, context.lastError, ...args);
+          // Try @Recover decorated method if no explicit recover option
+          if (!options.recover && context.lastError) {
+            const recoverMeta = findRecoverMethod(Object.getPrototypeOf(this), context.lastError);
+            if (recoverMeta) {
+              const recoverMethod = (this as Record<string, unknown>)[recoverMeta.methodName];
+              if (typeof recoverMethod === 'function') {
+                return await recoverMethod.call(this, context.lastError, ...args);
+              }
+            }
           }
+
+          // Re-throw last error or wrap
+          if (wrapExhausted) {
+            throw RetryExhaustedException.fromContext(methodName, maxAttempts, context.lastError);
+          }
+
+          throw (
+            context.lastError ??
+            new RetryExhaustedException(
+              `Retry exhausted after ${maxAttempts} attempts for '${methodName}'`,
+              null,
+              maxAttempts,
+              methodName
+            )
+          );
+        },
+        {
+          name: `retry:${methodName}`,
+          attributes: {
+            'retry.max_attempts': maxAttempts,
+            'retry.method_name': methodName,
+          },
         }
-      }
-
-      // Re-throw last error or wrap
-      if (wrapExhausted) {
-        throw RetryExhaustedException.fromContext(methodName, maxAttempts, context.lastError);
-      }
-
-      throw (
-        context.lastError ??
-        new RetryExhaustedException(
-          `Retry exhausted after ${maxAttempts} attempts for '${methodName}'`,
-          null,
-          maxAttempts,
-          methodName
-        )
       );
     };
 

@@ -14,6 +14,9 @@
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*"
   },
+  "dependencies": {
+    "@croco/telemetry-api": "workspace:*"
+  },
   "publishConfig": {
     "access": "public",
     "files": [
