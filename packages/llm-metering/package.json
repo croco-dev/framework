@@ -14,13 +14,17 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@croco/events-core": "workspace:*",
     "@croco/llm-core": "workspace:*",
     "@croco/metering-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*"
   },
   "peerDependencies": {
+    "@croco/events-core": "workspace:*",
     "@croco/llm-core": "workspace:*",
     "@croco/metering-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*"
   },
   "devDependencies": {

@@ -500,12 +500,18 @@ importers:
 
   packages/llm-metering:
     dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
       '@croco/llm-core':
         specifier: workspace:*
         version: link:../llm-core
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
