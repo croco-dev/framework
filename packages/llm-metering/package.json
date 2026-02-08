@@ -18,7 +18,8 @@
     "@croco/llm-core": "workspace:*",
     "@croco/metering-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
-    "@croco/telemetry-api": "workspace:*"
+    "@croco/telemetry-api": "workspace:*",
+    "@croco/framework-context": "workspace:*"
   },
   "peerDependencies": {
     "@croco/events-core": "workspace:*",
