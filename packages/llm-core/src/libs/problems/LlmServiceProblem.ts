@@ -43,3 +43,21 @@ export class EmbeddingError extends Problem {
     super(EmbeddingError.CODE, ProblemCategory.InternalServerError, detail);
   }
 }
+
+export class LlmStructuredOutputProblem extends Problem {
+  static readonly CODE = 'STRUCTURED_OUTPUT_ERROR';
+
+  constructor(message: string, cause?: Error) {
+    const detail = cause ? `${message}: ${cause.message}` : message;
+    super(LlmStructuredOutputProblem.CODE, ProblemCategory.InternalServerError, detail);
+  }
+}
+
+export class LlmToolExecutionProblem extends Problem {
+  static readonly CODE = 'TOOL_EXECUTION_ERROR';
+
+  constructor(message: string, cause?: Error) {
+    const detail = cause ? `${message}: ${cause.message}` : message;
+    super(LlmToolExecutionProblem.CODE, ProblemCategory.InternalServerError, detail);
+  }
+}

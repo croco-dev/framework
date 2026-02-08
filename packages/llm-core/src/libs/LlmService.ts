@@ -8,10 +8,13 @@ import type {
   EmbedManyResult,
   EmbedParams,
   EmbedResult,
+  GenerateObjectParams,
   GenerateParams,
   GenerateResult,
   StreamChunk,
   StreamParams,
+  ToolCallParams,
+  ToolCallResult,
 } from './types';
 
 export class LlmService {
@@ -64,6 +67,26 @@ export class LlmService {
       const model = params.model ?? 'default';
       const llmModel = await this.registry.getModel(model);
       return await llmModel.embedMany(params);
+    } catch (error) {
+      throw LlmServiceProblem.fromError(error);
+    }
+  }
+
+  async generateObject<T>(params: GenerateObjectParams<T>): Promise<T> {
+    try {
+      const modelId = params.modelId ?? 'default';
+      const model = await this.registry.getModel(modelId);
+      return await model.generateObject(params);
+    } catch (error) {
+      throw LlmServiceProblem.fromError(error);
+    }
+  }
+
+  async callTool(params: ToolCallParams): Promise<ToolCallResult> {
+    try {
+      const modelId = params.modelId ?? 'default';
+      const model = await this.registry.getModel(modelId);
+      return await model.callTool(params);
     } catch (error) {
       throw LlmServiceProblem.fromError(error);
     }

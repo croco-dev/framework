@@ -120,6 +120,11 @@ export type ToolDefinition = {
  */
 export type ToolCallParams = {
   /**
+   * 모델 ID
+   */
+  modelId?: string;
+
+  /**
    * 사용 가능한 툴 목록
    */
   tools: ToolDefinition[];

@@ -8,6 +8,8 @@ export {
   EmbeddingError,
   GenerationError,
   LlmServiceProblem,
+  LlmStructuredOutputProblem,
+  LlmToolExecutionProblem,
   ModelNotFoundError,
 } from './libs/problems/LlmServiceProblem';
 

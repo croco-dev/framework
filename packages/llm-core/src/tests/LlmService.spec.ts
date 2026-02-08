@@ -193,4 +193,144 @@ describe('LlmService', () => {
       expect(result.embeddings).toEqual([]);
     });
   });
+
+  describe('generateObject', () => {
+    beforeEach(() => {
+      registry.registerProvider(
+        'object-model',
+        () =>
+          new InMemoryLlmModel('object-model', {
+            'Parse user': '{"name":"John","age":30}',
+            'Invalid JSON': 'not a json',
+          })
+      );
+    });
+
+    it('should parse JSON response', async () => {
+      const result = await service.generateObject({
+        prompt: 'Parse user',
+        modelId: 'object-model',
+        schema: {},
+      });
+
+      expect(result).toEqual({ name: 'John', age: 30 });
+    });
+
+    it('should use default model when modelId is not provided', async () => {
+      registry.registerProvider(
+        'default',
+        () => new InMemoryLlmModel('default', { 'Default object': '{"key":"value"}' })
+      );
+
+      const result = await service.generateObject({
+        prompt: 'Default object',
+        schema: {},
+      });
+
+      expect(result).toEqual({ key: 'value' });
+    });
+
+    it('should throw error when JSON is invalid', async () => {
+      await expect(
+        service.generateObject({
+          prompt: 'Invalid JSON',
+          modelId: 'object-model',
+          schema: {},
+        })
+      ).rejects.toThrow();
+    });
+
+    it('should throw LlmServiceProblem when model is not found', async () => {
+      await expect(
+        service.generateObject({
+          prompt: 'Test',
+          modelId: 'non-existent',
+          schema: {},
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('callTool', () => {
+    beforeEach(() => {
+      registry.registerProvider(
+        'tool-model',
+        () =>
+          new InMemoryLlmModel('tool-model', {
+            'Call weather': 'getWeather:{"city":"Seoul"}',
+            'Multiple tools': 'search:{"query":"test"}|calculate:{"a":1,"b":2}',
+            'No tools': 'No tools needed',
+          })
+      );
+    });
+
+    it('should execute single tool', async () => {
+      const result = await service.callTool({
+        prompt: 'Call weather',
+        modelId: 'tool-model',
+        tools: [
+          {
+            name: 'getWeather',
+            description: 'Get weather',
+            parameters: { type: 'object', properties: { city: { type: 'string' } } },
+          },
+        ],
+      });
+
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0]?.name).toBe('getWeather');
+      expect(result.toolCalls[0]?.arguments).toEqual({ city: 'Seoul' });
+      expect(result.usage.totalTokens).toBeGreaterThan(0);
+    });
+
+    it('should execute multiple tools', async () => {
+      const result = await service.callTool({
+        prompt: 'Multiple tools',
+        modelId: 'tool-model',
+        tools: [
+          { name: 'search', description: 'Search', parameters: { type: 'object' } },
+          { name: 'calculate', description: 'Calculate', parameters: { type: 'object' } },
+        ],
+      });
+
+      expect(result.toolCalls).toHaveLength(2);
+      expect(result.toolCalls[0]?.name).toBe('search');
+      expect(result.toolCalls[1]?.name).toBe('calculate');
+    });
+
+    it('should handle no tools called', async () => {
+      const result = await service.callTool({
+        prompt: 'No tools',
+        modelId: 'tool-model',
+        tools: [{ name: 'test', description: 'Test', parameters: { type: 'object' } }],
+      });
+
+      expect(result.toolCalls).toEqual([]);
+    });
+
+    it('should use default model when modelId is not provided', async () => {
+      registry.registerProvider(
+        'default',
+        () => new InMemoryLlmModel('default', { 'Default tool': 'defaultAction:{"param":"value"}' })
+      );
+
+      const result = await service.callTool({
+        prompt: 'Default tool',
+        tools: [{ name: 'defaultAction', description: 'Action', parameters: { type: 'object' } }],
+      });
+
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0]?.name).toBe('defaultAction');
+    });
+
+    it('should throw LlmServiceProblem when model is not found', async () => {
+      await expect(
+        service.callTool({
+          prompt: 'Test',
+          modelId: 'non-existent',
+          tools: [],
+        })
+      ).rejects.toThrow();
+    });
+  });
 });
