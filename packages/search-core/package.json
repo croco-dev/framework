@@ -1,0 +1,32 @@
+{
+  "name": "@croco/search-core",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./ko": {
+      "types": "./dist/ko/index.d.ts",
+      "import": "./dist/ko/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/ko/index.ts --format esm --dts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@croco/events-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "tsup": "8.5.1",
+    "vitest": "4.0.16"
+  }
+}
