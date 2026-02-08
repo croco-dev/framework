@@ -3,6 +3,11 @@
  */
 export type GenerateParams = {
   /**
+   * 모델 ID
+   */
+  modelId?: string;
+
+  /**
    * 사용자 프롬프트
    */
   prompt: string;
@@ -54,9 +59,11 @@ export type GenerateResult = {
 };
 
 /**
- * 스트리밍 파라미터 (GenerateParams와 동일)
+ * 스트리밍 파라미터
  */
-export type StreamParams = GenerateParams;
+export type StreamParams = Omit<GenerateParams, 'modelId'> & {
+  modelId?: string;
+};
 
 /**
  * 스트리밍 청크
