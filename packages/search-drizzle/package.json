@@ -1,0 +1,30 @@
+{
+  "name": "@croco/search-drizzle",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@croco/search-core": "workspace:*",
+    "@croco/framework-context": "workspace:*"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "drizzle-orm": "catalog:",
+    "typescript": "5.9.3",
+    "tsup": "8.5.1",
+    "vitest": "4.0.16",
+    "@types/node": "^22"
+  }
+}

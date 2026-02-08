@@ -9,3 +9,6 @@ onlyBuiltDependencies:
   - lefthook
   - sharp
   - unrs-resolver
+
+catalog:
+  drizzle-orm: ^0.44.2

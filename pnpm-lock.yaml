@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    drizzle-orm:
+      specifier: ^0.44.2
+      version: 0.44.2
+
 importers:
 
   .:
@@ -81,33 +87,8 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@25.2.0)
 
-  packages/audit-core:
-    dependencies:
-      '@croco/events-core':
-        specifier: workspace:*
-        version: link:../events-core
-      '@croco/framework-context':
-        specifier: workspace:*
-        version: link:../framework-context
-      reflect-metadata:
-        specifier: 0.2.2
-        version: 0.2.2
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
-    devDependencies:
-      '@croco/utils-tsconfig':
-        specifier: workspace:*
-        version: link:../shared/utils-tsconfig
-      vitest:
-        specifier: 4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
-
   packages/audit-drizzle:
     dependencies:
-      '@croco/audit-core':
-        specifier: workspace:*
-        version: link:../audit-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -727,50 +708,6 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.2.0)
 
-  packages/rebac-core:
-    dependencies:
-      '@croco/framework-context':
-        specifier: workspace:*
-        version: link:../framework-context
-      '@croco/problems-core':
-        specifier: workspace:*
-        version: link:../problems-core
-      '@croco/protocols-rest':
-        specifier: workspace:*
-        version: link:../protocols-rest
-    devDependencies:
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.2.0)
-
-  packages/rebac-drizzle:
-    dependencies:
-      '@croco/framework-context':
-        specifier: workspace:*
-        version: link:../framework-context
-      '@croco/rebac-core':
-        specifier: workspace:*
-        version: link:../rebac-core
-    devDependencies:
-      '@croco/utils-tsconfig':
-        specifier: workspace:*
-        version: link:../shared/utils-tsconfig
-      drizzle-orm:
-        specifier: 0.44.2
-        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(kysely@0.28.11)
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.2.0)
-
   packages/retry-core:
     dependencies:
       '@croco/problems-core':
@@ -786,6 +723,81 @@ importers:
       vitest:
         specifier: ^4.0.0
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
+  packages/search-core:
+    dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
+  packages/search-drizzle:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/search-core':
+        specifier: workspace:*
+        version: link:../search-core
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.3
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(kysely@0.28.11)
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
+
+  packages/search-meilisearch:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/search-core':
+        specifier: workspace:*
+        version: link:../search-core
+      meilisearch:
+        specifier: ^0.44.0
+        version: 0.44.1
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.3
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
 
   packages/shared/utils-tsconfig: {}
 
@@ -864,59 +876,6 @@ importers:
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.3
-
-  packages/teams-core:
-    dependencies:
-      '@croco/events-core':
-        specifier: workspace:*
-        version: link:../events-core
-      '@croco/framework-context':
-        specifier: workspace:*
-        version: link:../framework-context
-      '@croco/gid-core':
-        specifier: workspace:*
-        version: link:../gid-core
-      '@croco/problems-core':
-        specifier: workspace:*
-        version: link:../problems-core
-      '@croco/rebac-core':
-        specifier: workspace:*
-        version: link:../rebac-core
-      '@croco/tenant-core':
-        specifier: workspace:*
-        version: link:../tenant-core
-    devDependencies:
-      '@croco/utils-tsconfig':
-        specifier: workspace:*
-        version: link:../shared/utils-tsconfig
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.2.0)
-
-  packages/teams-drizzle:
-    dependencies:
-      '@croco/events-core':
-        specifier: workspace:*
-        version: link:../events-core
-      '@croco/framework-context':
-        specifier: workspace:*
-        version: link:../framework-context
-      '@croco/rebac-core':
-        specifier: workspace:*
-        version: link:../rebac-core
-      '@croco/teams-core':
-        specifier: workspace:*
-        version: link:../teams-core
-    devDependencies:
-      '@croco/utils-tsconfig':
-        specifier: workspace:*
-        version: link:../shared/utils-tsconfig
-      drizzle-orm:
-        specifier: 0.44.2
-        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(kysely@0.28.11)
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.2.0)
 
   packages/telemetry-api:
     dependencies:
@@ -4704,6 +4663,9 @@ packages:
   media-typer@0.3.0:
     resolution: {integrity: sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==}
     engines: {node: '>= 0.6'}
+
+  meilisearch@0.44.1:
+    resolution: {integrity: sha512-ZTZYBmomtRwjaWbvU8U8ct04g/YnrNOlvchogJOPgHcQIQBfjdbAvMJ8mLhuZEzpioYXIT6Cv+FcE150pc2+nw==}
 
   merge-descriptors@1.0.3:
     resolution: {integrity: sha512-gaNvAS7TZ897/rVaZ0nMtAyxNyi/pdbjbAwUpFQpN70GqnVfOiXpeUUMKRBmzXaSQ8DdTX4/0ms62r2K+hE6mQ==}
@@ -9562,6 +9524,8 @@ snapshots:
   math-intrinsics@1.1.0: {}
 
   media-typer@0.3.0: {}
+
+  meilisearch@0.44.1: {}
 
   merge-descriptors@1.0.3: {}
 
