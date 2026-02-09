@@ -39,6 +39,11 @@ export type Period = {
 export type Percentage = number;
 
 /**
+ * MRR movement type classification.
+ */
+export type MRRMovementType = 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation';
+
+/**
  * Monthly Recurring Revenue (MRR) movement breakdown.
  *
  * @formula Net MRR = New + Expansion - Contraction - Churned + Reactivation
@@ -124,4 +129,21 @@ export type CustomerMetrics = {
   ltv: Money | null;
   /** Average Revenue Per Account */
   arpa: Money;
+};
+
+/**
+ * Metrics snapshot for a specific date.
+ *
+ * Represents the aggregated MRR state at a point in time,
+ * used for historical analysis and trend calculation.
+ */
+export type MetricsSnapshot = {
+  /** Snapshot date */
+  date: Date;
+  /** Total Monthly Recurring Revenue */
+  totalMRR: Money;
+  /** Number of active customers contributing to MRR */
+  activeCustomers: number;
+  /** Optional: MRR movement breakdown for this period */
+  movement?: MRRMovement;
 };
