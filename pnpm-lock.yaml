@@ -51,6 +51,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../protocols-rest
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
