@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_PERMISSIONS_KEY } from '../libs/constants';
 import { PermissionGuard } from '../libs/guards/PermissionGuard';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
+import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { ForbiddenProblem } from '../libs/problems/AuthProblems';
 import type { RbacEngine } from '../libs/rbac/RbacEngine';
 
@@ -13,11 +14,23 @@ describe('PermissionGuard', () => {
 
   const mockUser = { id: 'user-1' } as AuthUser;
 
-  const createMockContext = (target: any, handlerName: string, user?: AuthUser) => {
-    const request = {
+  const createMockContext = (
+    target: any,
+    handlerName: string,
+    user?: AuthUser,
+    principal?: ApiKeyPrincipal | AuthUser
+  ) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const request: any = {
       headers: new Headers(),
-      user,
-    } as unknown as Request;
+    };
+
+    if (user) {
+      request.user = user;
+    }
+    if (principal) {
+      request.principal = principal;
+    }
 
     return {
       getRequest: () => request,
@@ -88,5 +101,91 @@ describe('PermissionGuard', () => {
     });
 
     expect(() => permissionGuard.canActivate(context)).toThrow(ForbiddenProblem);
+  });
+
+  describe('with ApiKeyPrincipal', () => {
+    const mockApiKeyPrincipal: ApiKeyPrincipal = {
+      type: 'apikey',
+      id: 'key-1',
+      keyId: 'key-id-1',
+      name: 'Test API Key',
+      keyStart: 'sk_test_...',
+      permissions: ['api:read', 'api:write'],
+    };
+
+    it('should return true when ApiKeyPrincipal has all required permissions', () => {
+      class TestController {
+        apiMethod() {}
+      }
+      Reflect.defineMetadata(AUTH_PERMISSIONS_KEY, ['api:read'], TestController.prototype, 'apiMethod');
+
+      const context = createMockContext(TestController.prototype, 'apiMethod', undefined, mockApiKeyPrincipal);
+
+      expect(permissionGuard.canActivate(context)).toBe(true);
+    });
+
+    it('should throw ForbiddenProblem when ApiKeyPrincipal misses a permission', () => {
+      class TestController {
+        apiMethod() {}
+      }
+      Reflect.defineMetadata(AUTH_PERMISSIONS_KEY, ['api:delete'], TestController.prototype, 'apiMethod');
+
+      const context = createMockContext(TestController.prototype, 'apiMethod', undefined, mockApiKeyPrincipal);
+
+      expect(() => permissionGuard.canActivate(context)).toThrow(ForbiddenProblem);
+    });
+
+    it('should not call RbacEngine for ApiKeyPrincipal', () => {
+      class TestController {
+        apiMethod() {}
+      }
+      Reflect.defineMetadata(AUTH_PERMISSIONS_KEY, ['api:read'], TestController.prototype, 'apiMethod');
+
+      const context = createMockContext(TestController.prototype, 'apiMethod', undefined, mockApiKeyPrincipal);
+      const hasPermissionSpy = vi.spyOn(mockRbacEngine, 'hasPermission');
+
+      permissionGuard.canActivate(context);
+
+      expect(hasPermissionSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('principal fallback', () => {
+    const mockUserPrincipal: AuthUser = {
+      id: 'user-1',
+      email: 'test@example.com',
+      roles: ['admin'],
+      permissions: ['user:read'],
+    };
+
+    it('should use principal when both principal and user exist', () => {
+      class TestController {
+        protectedMethod() {}
+      }
+      Reflect.defineMetadata(AUTH_PERMISSIONS_KEY, ['user:read'], TestController.prototype, 'protectedMethod');
+
+      const context = createMockContext(TestController.prototype, 'protectedMethod', mockUser, mockUserPrincipal);
+
+      vi.spyOn(mockRbacEngine, 'hasPermission').mockReturnValue(true);
+
+      permissionGuard.canActivate(context);
+
+      expect(mockRbacEngine.hasPermission).toHaveBeenCalledWith(mockUserPrincipal, 'user:read');
+    });
+
+    it('should fall back to user when principal does not exist', () => {
+      class TestController {
+        protectedMethod() {}
+      }
+      Reflect.defineMetadata(AUTH_PERMISSIONS_KEY, ['user:read'], TestController.prototype, 'protectedMethod');
+
+      const context = createMockContext(TestController.prototype, 'protectedMethod', mockUser);
+
+      vi.spyOn(mockRbacEngine, 'hasPermission').mockReturnValue(true);
+
+      permissionGuard.canActivate(context);
+
+      expect(mockRbacEngine.hasPermission).toHaveBeenCalledWith(mockUser, 'user:read');
+    });
   });
 });
