@@ -152,7 +152,7 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
                     accuracy: usage.accuracy,
                   },
                   idempotencyKey,
-                  metadata: { ...additionalMetadata, operationType: 'generate' },
+                  metadata: { ...additionalMetadata, operationType: 'generate', modelId },
                 });
               }
               // EmbedResult 타입: tokens (또는 embedding 존재)

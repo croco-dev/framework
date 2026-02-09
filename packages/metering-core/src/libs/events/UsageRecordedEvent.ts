@@ -6,8 +6,11 @@ export class UsageRecordedEvent extends DomainEvent {
     public readonly meterId: string,
     public readonly value: number,
     public readonly idempotencyKey: string,
-    public readonly metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>
   ) {
     super();
+    if (metadata) {
+      this.metadata = { ...this.metadata, ...metadata };
+    }
   }
 }
