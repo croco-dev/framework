@@ -33,3 +33,14 @@ export type ProcessedWebhook = {
   eventType: string;
   processedAt: Date;
 };
+
+export type PlanInterval = 'month' | 'year';
+
+export type Plan = {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  interval: PlanInterval;
+  intervalCount: number;
+};
