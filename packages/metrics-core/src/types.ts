@@ -105,6 +105,25 @@ export type CCResult = {
 };
 
 /**
+ * Comparison result for carrying capacity simulation (what-if analysis).
+ *
+ * Compares baseline CC with simulated CC after applying changes
+ * (e.g., churn rate reduction, inflow increase).
+ */
+export type CCComparisonResult = {
+  /** Baseline carrying capacity before simulation */
+  baseline: CCResult;
+  /** Simulated carrying capacity after applying changes */
+  simulated: CCResult;
+  /** Capacity change (simulated - baseline) */
+  capacityDelta: number;
+  /** Headroom change (simulated - baseline) */
+  headroomDelta: number;
+  /** Headroom percent change (simulated - baseline) */
+  headroomPercentDelta: Percentage;
+};
+
+/**
  * Growth metrics tracking business expansion and sustainability.
  *
  * @formula Quick Ratio = (New MRR + Expansion MRR) / (Churned MRR + Contraction MRR)

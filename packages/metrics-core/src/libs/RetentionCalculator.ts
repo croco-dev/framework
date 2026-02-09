@@ -1,0 +1,104 @@
+import type { MRRMovement, Percentage } from '../types';
+
+/**
+ * Calculator for customer and revenue retention metrics.
+ *
+ * Measures how well a business retains its customers and revenue:
+ * - Logo Churn: Customer loss rate
+ * - Revenue Churn: Revenue loss rate
+ * - GRR (Gross Revenue Retention): Retention excluding expansion (≤100%)
+ * - NRR (Net Revenue Retention): Retention including expansion (>100% possible)
+ */
+export class RetentionCalculator {
+  /**
+   * Calculate churn rate for a period.
+   *
+   * @param startingMRR - MRR at the start of the period
+   * @param movement - MRR movement data for the period
+   * @param type - 'logo' for customer churn or 'revenue' for revenue churn
+   * @returns Churn rate as percentage (0-100), or null if starting MRR is zero
+   */
+  async calculateChurn(
+    startingMRR: number,
+    movement: MRRMovement,
+    type: 'logo' | 'revenue'
+  ): Promise<Percentage | null> {
+    if (startingMRR === 0) {
+      return null;
+    }
+
+    if (type === 'revenue') {
+      return (movement.churned.amount / startingMRR) * 100;
+    }
+
+    throw new Error('Logo churn calculation requires customer count data. Use revenue churn instead.');
+  }
+
+  /**
+   * Calculate Gross Revenue Retention (GRR) for a period.
+   *
+   * Formula: (Starting MRR - Churned MRR - Contraction MRR) / Starting MRR
+   *
+   * @param startingMRR - MRR at the start of the period
+   * @param movement - MRR movement data for the period
+   * @returns GRR as percentage (0-100), or null if starting MRR is zero
+   */
+  async calculateGRR(startingMRR: number, movement: MRRMovement): Promise<Percentage | null> {
+    if (startingMRR === 0) {
+      return null;
+    }
+
+    const retainedMRR = startingMRR - movement.churned.amount - movement.contraction.amount;
+    const grr = (retainedMRR / startingMRR) * 100;
+
+    return Math.min(grr, 100);
+  }
+
+  /**
+   * Calculate Net Revenue Retention (NRR) for a period.
+   *
+   * Formula: (Starting MRR + Expansion MRR - Churned MRR - Contraction MRR) / Starting MRR
+   *
+   * @param startingMRR - MRR at the start of the period
+   * @param movement - MRR movement data for the period
+   * @returns NRR as percentage (can be >100%), or null if starting MRR is zero
+   */
+  async calculateNRR(startingMRR: number, movement: MRRMovement): Promise<Percentage | null> {
+    if (startingMRR === 0) {
+      return null;
+    }
+
+    const endingMRR = startingMRR + movement.expansion.amount - movement.churned.amount - movement.contraction.amount;
+    const nrr = (endingMRR / startingMRR) * 100;
+
+    return nrr;
+  }
+
+  /**
+   * Calculate all retention metrics at once.
+   *
+   * @param startingMRR - MRR at the start of the period
+   * @param movement - MRR movement data for the period
+   * @returns Complete retention metrics
+   */
+  async calculateRetention(
+    startingMRR: number,
+    movement: MRRMovement
+  ): Promise<{
+    grr: Percentage | null;
+    nrr: Percentage | null;
+    logoChurn: Percentage | null;
+    revenueChurn: Percentage | null;
+  }> {
+    const grr = await this.calculateGRR(startingMRR, movement);
+    const nrr = await this.calculateNRR(startingMRR, movement);
+    const revenueChurn = await this.calculateChurn(startingMRR, movement, 'revenue');
+
+    return {
+      grr,
+      nrr,
+      logoChurn: null,
+      revenueChurn,
+    };
+  }
+}
