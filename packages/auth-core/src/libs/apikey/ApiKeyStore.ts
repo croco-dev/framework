@@ -2,6 +2,7 @@ import { Token } from '@croco/framework-context';
 import type { ApiKey } from '../interfaces/ApiKey';
 
 export interface ApiKeyStore {
+  findById(id: string): Promise<ApiKey | null>;
   findByShortToken(shortToken: string): Promise<ApiKey | null>;
   save(key: Omit<ApiKey, 'id' | 'createdAt'>): Promise<ApiKey>;
   updateLastUsed(id: string): Promise<void>;

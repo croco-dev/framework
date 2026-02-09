@@ -238,6 +238,9 @@ importers:
 
   packages/auth-core:
     dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
