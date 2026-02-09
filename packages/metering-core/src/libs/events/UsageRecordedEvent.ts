@@ -9,8 +9,11 @@ export class UsageRecordedEvent extends DomainEvent {
     metadata?: Record<string, unknown>
   ) {
     super();
-    if (metadata) {
+    if (metadata !== undefined) {
       this.metadata = { ...this.metadata, ...metadata };
+    } else {
+      // Explicitly set to undefined when no metadata provided
+      (this as any).metadata = undefined;
     }
   }
 }
