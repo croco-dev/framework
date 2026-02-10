@@ -349,6 +349,19 @@ importers:
         specifier: workspace:*
         version: link:../shared/utils-tsconfig
 
+  packages/execution-core:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   packages/features-core:
     dependencies:
       '@croco/framework-context':
