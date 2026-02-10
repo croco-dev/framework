@@ -40,7 +40,7 @@ describe('@AiMetered decorator', () => {
         tenantId = 'tenant-123';
 
         @AiMetered()
-        async generateText(prompt: string) {
+        async generateText(_prompt: string) {
           // Simulate LlmService.generate() response
           return {
             text: 'Hello, world!',
@@ -96,7 +96,7 @@ describe('@AiMetered decorator', () => {
         @AiMetered({
           idempotencyKeyExtractor: (args) => args[0] as string,
         })
-        async generate(id: string, text: string) {
+        async generate(_id: string, text: string) {
           return {
             text,
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
@@ -118,12 +118,12 @@ describe('@AiMetered decorator', () => {
     it('should use custom metadataExtractor', async () => {
       class TestService {
         @AiMetered({
-          metadataExtractor: (args, result) => ({
+          metadataExtractor: (args, _result) => ({
             customField: 'custom-value',
             prompt: args[0],
           }),
         })
-        async generate(prompt: string) {
+        async generate(_prompt: string) {
           return {
             text: 'Response',
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
@@ -150,7 +150,7 @@ describe('@AiMetered decorator', () => {
     it('should record embedding usage for embed results', async () => {
       class TestService {
         @AiMetered()
-        async embed(text: string) {
+        async embed(_text: string) {
           return {
             embedding: [0.1, 0.2, 0.3],
             usage: {

@@ -44,7 +44,7 @@ export class ClerkTenantMapper implements TenantMappingProvider, TenantResolver<
 
   private async resolveByRequest(request: Request): Promise<string | null> {
     const authUser = (request as unknown as { user?: AuthUser }).user;
-    const orgId = authUser?.metadata?.['orgId'];
+    const orgId = authUser?.metadata?.orgId;
 
     if (typeof orgId === 'string') {
       return this.resolveByOrgId(orgId);

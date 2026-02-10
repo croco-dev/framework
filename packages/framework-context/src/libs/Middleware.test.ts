@@ -5,13 +5,13 @@ describe('MiddlewareChain', () => {
     it('should execute middleware in onion pattern', async () => {
       const executionOrder: string[] = [];
 
-      const middleware1: Middleware = async (ctx, next) => {
+      const middleware1: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware1-before');
         await next();
         executionOrder.push('middleware1-after');
       };
 
-      const middleware2: Middleware = async (ctx, next) => {
+      const middleware2: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware2-before');
         await next();
         executionOrder.push('middleware2-after');
@@ -38,7 +38,7 @@ describe('MiddlewareChain', () => {
     it('should execute single middleware correctly', async () => {
       const executionOrder: string[] = [];
 
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware-before');
         await next();
         executionOrder.push('middleware-after');
@@ -73,19 +73,19 @@ describe('MiddlewareChain', () => {
     it('should handle nested middleware calls', async () => {
       const executionOrder: string[] = [];
 
-      const middleware1: Middleware = async (ctx, next) => {
+      const middleware1: Middleware = async (_ctx, next) => {
         executionOrder.push('m1-before');
         await next();
         executionOrder.push('m1-after');
       };
 
-      const middleware2: Middleware = async (ctx, next) => {
+      const middleware2: Middleware = async (_ctx, next) => {
         executionOrder.push('m2-before');
         await next();
         executionOrder.push('m2-after');
       };
 
-      const middleware3: Middleware = async (ctx, next) => {
+      const middleware3: Middleware = async (_ctx, next) => {
         executionOrder.push('m3-before');
         await next();
         executionOrder.push('m3-after');
@@ -119,7 +119,7 @@ describe('MiddlewareChain', () => {
 
   describe('Error handling', () => {
     it('should propagate errors from handler', async () => {
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         await next();
       };
 
@@ -135,7 +135,7 @@ describe('MiddlewareChain', () => {
     });
 
     it('should propagate errors from middleware', async () => {
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, _next) => {
         throw new Error('Middleware error');
       };
 
@@ -150,11 +150,11 @@ describe('MiddlewareChain', () => {
     });
 
     it('should propagate errors from middleware before handler', async () => {
-      const middleware1: Middleware = async (ctx, next) => {
+      const middleware1: Middleware = async (_ctx, _next) => {
         throw new Error('Middleware1 error');
       };
 
-      const middleware2: Middleware = async (ctx, next) => {
+      const middleware2: Middleware = async (_ctx, next) => {
         await next();
       };
 
@@ -169,7 +169,7 @@ describe('MiddlewareChain', () => {
     });
 
     it('should catch errors in onRequestError hook', async () => {
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         await next();
       };
 
@@ -177,7 +177,7 @@ describe('MiddlewareChain', () => {
       const errorLog: Error[] = [];
       const testError = new Error('Test error');
       const hooks: LifecycleHooks = {
-        onRequestError: (ctx, error) => {
+        onRequestError: (_ctx, error) => {
           errorLog.push(error);
         },
       };
@@ -197,14 +197,14 @@ describe('MiddlewareChain', () => {
     it('should call onRequestStart before middleware chain', async () => {
       const executionOrder: string[] = [];
 
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware');
         await next();
       };
 
       const context = { requestId: 'test-start-hook' };
       const hooks: LifecycleHooks = {
-        onRequestStart: (ctx) => {
+        onRequestStart: (_ctx) => {
           executionOrder.push('onRequestStart');
         },
       };
@@ -220,7 +220,7 @@ describe('MiddlewareChain', () => {
     it('should call onRequestEnd after successful execution', async () => {
       const executionOrder: string[] = [];
 
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware');
         await next();
       };
@@ -228,7 +228,7 @@ describe('MiddlewareChain', () => {
       const context = { requestId: 'test-end-hook' };
       const resultLog: unknown[] = [];
       const hooks: LifecycleHooks = {
-        onRequestEnd: (ctx, result) => {
+        onRequestEnd: (_ctx, result) => {
           executionOrder.push('onRequestEnd');
           resultLog.push(result);
         },
@@ -247,7 +247,7 @@ describe('MiddlewareChain', () => {
     it('should call onRequestError when error occurs', async () => {
       const executionOrder: string[] = [];
 
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware');
         await next();
       };
@@ -256,7 +256,7 @@ describe('MiddlewareChain', () => {
       const errorLog: Error[] = [];
       const testError = new Error('Hook test error');
       const hooks: LifecycleHooks = {
-        onRequestError: (ctx, error) => {
+        onRequestError: (_ctx, error) => {
           executionOrder.push('onRequestError');
           errorLog.push(error);
         },
@@ -277,7 +277,7 @@ describe('MiddlewareChain', () => {
     it('should call onRequestError on middleware error', async () => {
       const executionOrder: string[] = [];
 
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, _next) => {
         executionOrder.push('middleware');
         throw new Error('Middleware hook error');
       };
@@ -285,7 +285,7 @@ describe('MiddlewareChain', () => {
       const context = { requestId: 'test-mid-error-hook' };
       const errorLog: Error[] = [];
       const hooks: LifecycleHooks = {
-        onRequestError: (ctx, error) => {
+        onRequestError: (_ctx, error) => {
           executionOrder.push('onRequestError');
           errorLog.push(error);
         },
@@ -306,7 +306,7 @@ describe('MiddlewareChain', () => {
     it('should call complete lifecycle: start -> middlewares -> end', async () => {
       const executionOrder: string[] = [];
 
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware');
         await next();
       };
@@ -332,7 +332,7 @@ describe('MiddlewareChain', () => {
     it('should call complete lifecycle on error: start -> middlewares -> error', async () => {
       const executionOrder: string[] = [];
 
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         executionOrder.push('middleware');
         await next();
       };
@@ -379,7 +379,7 @@ describe('MiddlewareChain', () => {
     });
 
     it('should have active context inside handler', async () => {
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         await next();
       };
 
@@ -396,7 +396,7 @@ describe('MiddlewareChain', () => {
     });
 
     it('should have active context in hooks', async () => {
-      const middleware: Middleware = async (ctx, next) => {
+      const middleware: Middleware = async (_ctx, next) => {
         await next();
       };
 

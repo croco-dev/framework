@@ -40,7 +40,7 @@ describe('LlmModel', () => {
     async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
       const words = `Response to: ${params.prompt}`.split(' ');
       for (const word of words) {
-        yield { delta: word + ' ' };
+        yield { delta: `${word} ` };
       }
       yield {
         delta: '',
@@ -73,7 +73,7 @@ describe('LlmModel', () => {
       };
     }
 
-    async embed(params: EmbedParams): Promise<EmbedResult> {
+    async embed(_params: EmbedParams): Promise<EmbedResult> {
       return {
         embedding: Array.from({ length: 1536 }, () => Math.random()),
         usage: {

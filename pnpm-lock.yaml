@@ -264,6 +264,22 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@25.2.0)
 
+  packages/batch-core:
+    dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   packages/billing-core:
     dependencies:
       '@croco/events-core':
@@ -361,6 +377,19 @@ importers:
       vitest:
         specifier: ^4.0.0
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
+  packages/execution-drizzle:
+    dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      drizzle-orm:
+        specifier: 0.44.2
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.11)
 
   packages/features-core:
     dependencies:
@@ -1036,6 +1065,25 @@ importers:
         specifier: ^22.10.5
         version: 22.19.3
 
+  packages/tasks-core:
+    dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   packages/telemetry-api:
     dependencies:
       '@opentelemetry/api':
@@ -1148,6 +1196,25 @@ importers:
       '@types/aws-lambda':
         specifier: ^8.10.0
         version: 8.10.150
+
+  packages/triggers-core:
+    dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
 
   packages/tx-core:
     dependencies:
@@ -5325,6 +5392,9 @@ packages:
   real-require@0.2.0:
     resolution: {integrity: sha512-57frrGM/OCTLqLOAh0mhVA9VBMHd+9U7Zb2THMGdBUoZVOtGbJzjxsYGDJ3A9AYYCP4hn6y1TVbaOfzWtm5GFg==}
     engines: {node: '>= 12.13.0'}
+
+  reflect-metadata@0.1.14:
+    resolution: {integrity: sha512-ZhYeb6nRaXCfhnndflDK8qI6ZQ/YcWZCISRAWICW9XYqMUwjZM9Z0DveWX/ABN01oxSHwVxKQmxeYZSsm0jh5A==}
 
   reflect-metadata@0.2.2:
     resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
@@ -10382,6 +10452,8 @@ snapshots:
   readdirp@4.1.2: {}
 
   real-require@0.2.0: {}
+
+  reflect-metadata@0.1.14: {}
 
   reflect-metadata@0.2.2: {}
 

@@ -34,7 +34,7 @@ type Guard<T> = {
 
 class MockPermissionGuard implements Guard<ExecutionContext> {
   constructor(
-    private rbacEngine: RbacEngine,
+    _rbacEngine: RbacEngine,
     private shouldPass: boolean
   ) {}
 

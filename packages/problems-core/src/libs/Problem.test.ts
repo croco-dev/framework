@@ -53,11 +53,7 @@ describe('Problem', () => {
   });
 
   it('should preserve backward compatibility with subclasses', () => {
-    class CustomProblem extends Problem {
-      constructor(code: string, category: ProblemCategory, detail?: string) {
-        super(code, category, detail);
-      }
-    }
+    class CustomProblem extends Problem {}
 
     const problem = new CustomProblem('CUSTOM_ERROR', ProblemCategory.BadRequest, 'Custom message');
     expect(problem.status).toBe(400);

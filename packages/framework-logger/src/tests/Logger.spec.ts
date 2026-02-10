@@ -11,7 +11,7 @@ vi.mock('pino', () => {
     warn: vi.fn(),
     error: vi.fn(),
     fatal: vi.fn(),
-    child: vi.fn(function (this: unknown, bindings: unknown) {
+    child: vi.fn(function (this: unknown, _bindings: unknown) {
       return this;
     }),
   };

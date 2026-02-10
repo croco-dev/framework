@@ -7,10 +7,6 @@ vi.mock('@upstash/ratelimit', () => {
   const slidingWindowMock = vi.fn();
 
   class MockRatelimit {
-    constructor(_: unknown) {
-      // Mock constructor
-    }
-
     limit = vi.fn().mockResolvedValue({
       success: true,
       limit: 100,
