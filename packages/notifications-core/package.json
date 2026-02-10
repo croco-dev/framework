@@ -19,8 +19,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/execution-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
-    "@croco/jobs-core": "workspace:*",
+    "@croco/tasks-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/events-core": "workspace:*"
   },

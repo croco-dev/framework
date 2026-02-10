@@ -1,3 +1,3 @@
 export * from './libs/NotificationService';
-export * from './libs/SendNotificationJob';
+export * from './libs/SendNotificationTask';
 export * from './libs/types';

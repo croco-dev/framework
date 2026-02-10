@@ -1,5 +1,5 @@
 import { Component } from '@croco/framework-context';
-import type { JobDispatcher } from '@croco/jobs-core';
+import type { TaskRunner } from '@croco/tasks-core';
 import type { NotificationChannel, NotificationJobPayload, NotificationPayload, NotificationProvider } from './types';
 
 @Component()
@@ -7,7 +7,7 @@ export class NotificationService {
   private providers = new Map<string, NotificationProvider>();
   private defaultProviders = new Map<NotificationChannel, string>();
 
-  constructor(private jobDispatcher: JobDispatcher) {}
+  constructor(private taskRunner: TaskRunner) {}
 
   registerProvider(provider: NotificationProvider, isDefault = false) {
     this.providers.set(provider.getName(), provider);
@@ -35,6 +35,6 @@ export class NotificationService {
       providerName: targetProviderName,
     };
 
-    await this.jobDispatcher.dispatch('send-notification', jobPayload);
+    await this.taskRunner.execute('send-notification', jobPayload);
   }
 }

@@ -732,15 +732,18 @@ importers:
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
-      '@croco/jobs-core':
-        specifier: workspace:*
-        version: link:../jobs-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/tasks-core':
+        specifier: workspace:*
+        version: link:../tasks-core
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2

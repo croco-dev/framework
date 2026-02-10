@@ -1,20 +1,19 @@
-import { Job, type JobHandler } from '@croco/jobs-core';
+import { Component } from '@croco/framework-context';
+import { Task } from '@croco/tasks-core';
 import type { NotificationJobPayload, NotificationProvider } from './types';
 
-@Job('send-notification', {
-  retryPolicy: {
-    maxAttempts: 3,
-    // backoff is not supported in current version of jobs-core based on inspection
-    // assuming default backoff or configured globally
-  },
-})
-export class SendNotificationJob implements JobHandler<NotificationJobPayload> {
+@Component()
+export class SendNotificationTask {
   private providers = new Map<string, NotificationProvider>();
 
   registerProvider(provider: NotificationProvider) {
     this.providers.set(provider.getName(), provider);
   }
 
+  @Task({
+    name: 'send-notification',
+    maxAttempts: 3,
+  })
   async handle(payload: NotificationJobPayload): Promise<void> {
     const { providerName, ...notificationPayload } = payload;
 
