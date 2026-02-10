@@ -280,6 +280,28 @@ importers:
         specifier: ^4.0.0
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
 
+  packages/batch-qstash:
+    dependencies:
+      '@croco/batch-core':
+        specifier: workspace:*
+        version: link:../batch-core
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@upstash/qstash':
+        specifier: ^2.0.0
+        version: 2.9.0
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   packages/billing-core:
     dependencies:
       '@croco/events-core':
@@ -1084,6 +1106,25 @@ importers:
         specifier: ^4.0.0
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
 
+  packages/tasks-qstash:
+    dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@croco/tasks-core':
+        specifier: workspace:*
+        version: link:../tasks-core
+      '@upstash/qstash':
+        specifier: ^2.0.0
+        version: 2.9.0
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   packages/telemetry-api:
     dependencies:
       '@opentelemetry/api':
@@ -1208,6 +1249,28 @@ importers:
       reflect-metadata:
         specifier: ^0.1.13
         version: 0.1.14
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
+  packages/triggers-qstash:
+    dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/triggers-core':
+        specifier: workspace:*
+        version: link:../triggers-core
+      '@upstash/qstash':
+        specifier: ^2.9.0
+        version: 2.9.0
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*

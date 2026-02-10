@@ -1,0 +1,362 @@
+import type { ExecutionManager } from '@croco/execution-core';
+import type { Receiver } from '@upstash/qstash';
+import { Container as TypeDIContainer } from 'typedi';
+
+/**
+ * Configuration options for QStashTriggerHandler.
+ */
+export type QStashTriggerHandlerOptions = {
+  /**
+   * QStash receiver instance for verifying webhook signatures.
+   */
+  readonly receiver: Receiver;
+
+  /**
+   * Execution manager for dispatching executions.
+   */
+  readonly executionManager: ExecutionManager;
+
+  /**
+   * Optional service resolver for getting target instances.
+   * If not provided, uses Container.get().
+   */
+  readonly serviceResolver?: (className: string) => unknown;
+};
+
+/**
+ * Webhook request payload from QStash.
+ */
+export type QStashWebhookPayload = {
+  /**
+   * Schedule ID that triggered this webhook.
+   */
+  readonly scheduleId: string;
+
+  /**
+   * Target class name to execute.
+   */
+  readonly className: string;
+
+  /**
+   * Target method name to execute.
+   */
+  readonly methodName: string;
+
+  /**
+   * Cron expression for this schedule.
+   */
+  readonly cronExpression: string;
+
+  /**
+   * Timestamp when the webhook was triggered.
+   */
+  readonly timestamp: string;
+
+  /**
+   * Additional options from the @Cron decorator.
+   */
+  readonly options?: {
+    readonly name?: string;
+    readonly description?: string;
+    readonly enabled?: boolean;
+    readonly timezone?: string;
+  };
+};
+
+/**
+ * Result of handling a QStash webhook.
+ */
+export type HandleResult = {
+  /**
+   * Whether the webhook was handled successfully.
+   */
+  readonly success: boolean;
+
+  /**
+   * Execution ID if an execution was created.
+   */
+  readonly executionId?: string;
+
+  /**
+   * Error message if handling failed.
+   */
+  readonly error?: string;
+
+  /**
+   * HTTP status code to return.
+   */
+  readonly statusCode: number;
+
+  /**
+   * Response body.
+   */
+  readonly body: unknown;
+};
+
+/**
+ * QStashTriggerHandler handles incoming webhooks from QStash.
+ *
+ * This handler:
+ * - Verifies the QStash signature to ensure the request is authentic
+ * - Parses the payload to identify the target class and method
+ * - Resolves the target instance from the DI container
+ * - Creates an execution via ExecutionManager
+ * - Dispatches the execution to the target method
+ *
+ * Usage with Hono (for Lambda):
+ * ```typescript
+ * import { Hono } from 'hono';
+ * import { receiver } from './qstash-config';
+ * import { executionManager } from './execution-config';
+ * import { QStashTriggerHandler } from '@croco/triggers-qstash';
+ *
+ * const app = new Hono();
+ * const handler = new QStashTriggerHandler({ receiver, executionManager });
+ *
+ * app.post('/webhooks/qstash', async (c) => {
+ *   const body = await c.req.text();
+ *   const signature = c.req.header('Upstash-Signature');
+ *
+ *   const result = await handler.handle(body, signature);
+ *   return c.json(result.body, result.statusCode);
+ * });
+ * ```
+ */
+export class QStashTriggerHandler {
+  private readonly receiver: Receiver;
+  private readonly executionManager: ExecutionManager;
+  private readonly serviceResolver: (className: string) => unknown;
+
+  constructor(options: QStashTriggerHandlerOptions) {
+    this.receiver = options.receiver;
+    this.executionManager = options.executionManager;
+    this.serviceResolver =
+      options.serviceResolver ??
+      ((className: string) => {
+        return TypeDIContainer.get(className);
+      });
+  }
+
+  /**
+   * Handle an incoming QStash webhook request.
+   *
+   * @param body Raw request body as string
+   * @param signature QStash signature from 'Upstash-Signature' header
+   * @returns Handle result with status and response data
+   */
+  async handle(body: string, signature?: string): Promise<HandleResult> {
+    // Verify signature
+    const isValid = await this.verifySignature(body, signature);
+    if (!isValid) {
+      return {
+        success: false,
+        statusCode: 401,
+        body: { error: 'Invalid signature' },
+      };
+    }
+
+    // Parse payload
+    let payload: QStashWebhookPayload;
+    try {
+      payload = JSON.parse(body) as QStashWebhookPayload;
+    } catch {
+      return {
+        success: false,
+        statusCode: 400,
+        body: { error: 'Invalid JSON payload' },
+      };
+    }
+
+    // Validate payload
+    const validationError = this.validatePayload(payload);
+    if (validationError) {
+      return {
+        success: false,
+        statusCode: 400,
+        body: { error: validationError },
+      };
+    }
+
+    // Resolve target instance and execute
+    try {
+      const result = await this.dispatchExecution(payload);
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        statusCode: 500,
+        body: { error: 'Execution failed', details: errorMessage },
+      };
+    }
+  }
+
+  /**
+   * Verify the QStash signature.
+   */
+  private async verifySignature(body: string, signature?: string): Promise<boolean> {
+    if (!signature) {
+      return false;
+    }
+
+    try {
+      await this.receiver.verify({
+        signature,
+        body,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Validate the webhook payload.
+   */
+  private validatePayload(payload: QStashWebhookPayload): string | undefined {
+    if (!payload.scheduleId) {
+      return 'Missing scheduleId';
+    }
+    if (!payload.className) {
+      return 'Missing className';
+    }
+    if (!payload.methodName) {
+      return 'Missing methodName';
+    }
+    if (!payload.cronExpression) {
+      return 'Missing cronExpression';
+    }
+    return undefined;
+  }
+
+  /**
+   * Dispatch execution to the target method.
+   */
+  private async dispatchExecution(payload: QStashWebhookPayload): Promise<HandleResult> {
+    const { className, methodName, scheduleId, options } = payload;
+
+    // Resolve target instance
+    const target = this.resolveTarget(className);
+    if (!target) {
+      return {
+        success: false,
+        statusCode: 404,
+        body: { error: `Target class not found: ${className}` },
+      };
+    }
+
+    // Verify method exists
+    const method = (target as Record<string, unknown>)[methodName];
+    if (typeof method !== 'function') {
+      return {
+        success: false,
+        statusCode: 400,
+        body: { error: `Method not found: ${className}.${String(methodName)}` },
+      };
+    }
+
+    // Create execution
+    const execution = await this.executionManager.create({
+      type: 'cron',
+      payload: {
+        scheduleId,
+        className,
+        methodName,
+        cronExpression: payload.cronExpression,
+        timestamp: payload.timestamp,
+      },
+      metadata: {
+        scheduleId,
+        triggerType: 'cron',
+        options: options ?? {},
+      },
+    });
+
+    // Start execution
+    await this.executionManager.start(execution.id);
+
+    // Execute method
+    try {
+      const result = await (method as () => unknown).call(target);
+
+      // Complete execution
+      await this.executionManager.complete(execution.id, result);
+
+      return {
+        success: true,
+        executionId: execution.id,
+        statusCode: 200,
+        body: {
+          executionId: execution.id,
+          result,
+        },
+      };
+    } catch (error) {
+      // Fail execution
+      await this.executionManager.fail(execution.id, {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        retryable: this.isRetryableError(error),
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Resolve target instance from class name.
+   */
+  private resolveTarget(className: string): unknown {
+    try {
+      return this.serviceResolver(className);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Determine if an error is retryable.
+   */
+  private isRetryableError(error: unknown): boolean {
+    if (error instanceof Error) {
+      // Network errors, timeouts are retryable
+      if (
+        error.message.includes('ECONNREFUSED') ||
+        error.message.includes('ETIMEDOUT') ||
+        error.message.includes('timeout')
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Create a Lambda handler wrapper for easy integration.
+   *
+   * Usage:
+   * ```typescript
+   * export const handler = createLambdaHandler({
+   *   receiver: myReceiver,
+   *   executionManager: myExecutionManager,
+   * });
+   * ```
+   */
+  static createLambdaHandler(
+    options: QStashTriggerHandlerOptions
+  ): (event: { body?: string; headers?: Record<string, string> }) => Promise<{ statusCode: number; body: string }> {
+    const handler = new QStashTriggerHandler(options);
+
+    return async (event) => {
+      const body = event.body ?? '';
+      const signature = event.headers?.['Upstash-Signature'];
+
+      const result = await handler.handle(body, signature);
+
+      return {
+        statusCode: result.statusCode,
+        body: JSON.stringify(result.body),
+      };
+    };
+  }
+}

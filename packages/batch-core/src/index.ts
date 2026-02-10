@@ -1,5 +1,6 @@
 export * from './libs/ChunkExecutor';
 export * from './libs/interfaces/ItemProcessor';
+export type { Checkpointable } from './libs/interfaces/ItemReader';
 export * from './libs/interfaces/ItemReader';
 export * from './libs/interfaces/ItemWriter';
 export * from './libs/JobBuilder';
