@@ -7,7 +7,7 @@ title: "createApp"
 
 > **createApp**(`config`): [`CrocoApp`](/api/transports-http/src/classes/crocoapp/)
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:210](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/CrocoApp.ts#L210)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:210](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/CrocoApp.ts#L210)
 
 ## Parameters
 

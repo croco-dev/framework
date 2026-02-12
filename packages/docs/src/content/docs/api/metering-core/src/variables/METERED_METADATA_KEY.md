@@ -7,4 +7,4 @@ title: "METERED_METADATA_KEY"
 
 > `const` **METERED\_METADATA\_KEY**: *typeof* `METERED_METADATA_KEY`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:6](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/decorators/Metered.ts#L6)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:6](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/decorators/Metered.ts#L6)

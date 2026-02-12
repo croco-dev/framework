@@ -5,7 +5,7 @@ prev: false
 title: "MeterRepository"
 ---
 
-Defined in: [packages/metering-core/src/libs/MeterRepository.ts:10](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/MeterRepository.ts#L10)
+Defined in: [packages/metering-core/src/libs/MeterRepository.ts:10](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/MeterRepository.ts#L10)
 
 Meter 정의 및 Usage 데이터를 DB에 저장하는 인터페이스
 
@@ -20,7 +20,7 @@ metering-core는 이 인터페이스만 의존
 
 > **findAll**(): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)[]\>
 
-Defined in: [packages/metering-core/src/libs/MeterRepository.ts:24](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/MeterRepository.ts#L24)
+Defined in: [packages/metering-core/src/libs/MeterRepository.ts:24](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/MeterRepository.ts#L24)
 
 앱 시작 시 모든 meter 로딩
 
@@ -34,7 +34,7 @@ Defined in: [packages/metering-core/src/libs/MeterRepository.ts:24](https://gith
 
 > **findByMeterIdAndTenant**(`meterId`, `tenantId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/) \| `null`\>
 
-Defined in: [packages/metering-core/src/libs/MeterRepository.ts:14](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/MeterRepository.ts#L14)
+Defined in: [packages/metering-core/src/libs/MeterRepository.ts:14](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/MeterRepository.ts#L14)
 
 Meter 정의 조회 (tenantId + meterId로 검색)
 
@@ -58,7 +58,7 @@ Meter 정의 조회 (tenantId + meterId로 검색)
 
 > **findByTenant**(`tenantId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)[]\>
 
-Defined in: [packages/metering-core/src/libs/MeterRepository.ts:29](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/MeterRepository.ts#L29)
+Defined in: [packages/metering-core/src/libs/MeterRepository.ts:29](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/MeterRepository.ts#L29)
 
 테넌트별 meter 조회
 
@@ -78,7 +78,7 @@ Defined in: [packages/metering-core/src/libs/MeterRepository.ts:29](https://gith
 
 > **save**(`meter`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)\>
 
-Defined in: [packages/metering-core/src/libs/MeterRepository.ts:19](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/MeterRepository.ts#L19)
+Defined in: [packages/metering-core/src/libs/MeterRepository.ts:19](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/MeterRepository.ts#L19)
 
 Meter 정의 등록 (정적 + 동적 모두 사용)
 
@@ -98,7 +98,7 @@ Meter 정의 등록 (정적 + 동적 모두 사용)
 
 > **saveUsageRecords**(`records`): `Promise`\<`void`\>
 
-Defined in: [packages/metering-core/src/libs/MeterRepository.ts:34](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/MeterRepository.ts#L34)
+Defined in: [packages/metering-core/src/libs/MeterRepository.ts:34](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/MeterRepository.ts#L34)
 
 배치 저장용 - Usage 레코드들을 DB에 영구 저장
 

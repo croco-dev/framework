@@ -7,7 +7,7 @@ title: "setLambdaContext"
 
 > **setLambdaContext**(`context`): `void`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:26](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L26)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:26](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L26)
 
 Set the Lambda context for timeout checking.
 Call this at the start of your Lambda handler.

@@ -7,7 +7,7 @@ title: "ToolCallParams"
 
 > **ToolCallParams** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:121](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/llm-core/src/libs/types.ts#L121)
+Defined in: [packages/llm-core/src/libs/types.ts:121](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/types.ts#L121)
 
 툴 호출 파라미터
 
@@ -17,7 +17,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:121](https://github.com/croco-d
 
 > `optional` **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:125](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/llm-core/src/libs/types.ts#L125)
+Defined in: [packages/llm-core/src/libs/types.ts:125](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/types.ts#L125)
 
 모델 ID
 
@@ -27,7 +27,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:125](https://github.com/croco-d
 
 > **prompt**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:135](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/llm-core/src/libs/types.ts#L135)
+Defined in: [packages/llm-core/src/libs/types.ts:135](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/types.ts#L135)
 
 사용자 프롬프트
 
@@ -37,7 +37,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:135](https://github.com/croco-d
 
 > `optional` **systemPrompt**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:140](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/llm-core/src/libs/types.ts#L140)
+Defined in: [packages/llm-core/src/libs/types.ts:140](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/types.ts#L140)
 
 시스템 프롬프트
 
@@ -47,6 +47,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:140](https://github.com/croco-d
 
 > **tools**: [`ToolDefinition`](/api/llm-core/src/type-aliases/tooldefinition/)[]
 
-Defined in: [packages/llm-core/src/libs/types.ts:130](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/llm-core/src/libs/types.ts#L130)
+Defined in: [packages/llm-core/src/libs/types.ts:130](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/types.ts#L130)
 
 사용 가능한 툴 목록

@@ -7,7 +7,7 @@ title: "Meter"
 
 > **Meter**(`options`): `ClassDecorator`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:35](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/decorators/Meter.ts#L35)
+Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:35](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/decorators/Meter.ts#L35)
 
 ## Parameters
 

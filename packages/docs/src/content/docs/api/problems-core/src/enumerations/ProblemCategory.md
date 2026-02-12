@@ -5,7 +5,7 @@ prev: false
 title: "ProblemCategory"
 ---
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:1](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L1)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:1](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L1)
 
 ## Enumeration Members
 
@@ -13,7 +13,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:1](https://githu
 
 > **BadRequest**: `"BadRequest"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:2](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L2)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:2](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L2)
 
 ***
 
@@ -21,7 +21,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:2](https://githu
 
 > **BusinessRuleViolation**: `"BusinessRuleViolation"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:9](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L9)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:9](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L9)
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:9](https://githu
 
 > **Conflict**: `"Conflict"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:6](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L6)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:6](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L6)
 
 ***
 
@@ -37,7 +37,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:6](https://githu
 
 > **Forbidden**: `"Forbidden"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:4](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L4)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:4](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L4)
 
 ***
 
@@ -45,7 +45,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:4](https://githu
 
 > **Gone**: `"Gone"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:7](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L7)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:7](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L7)
 
 ***
 
@@ -53,7 +53,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:7](https://githu
 
 > **InternalServerError**: `"InternalServerError"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:11](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L11)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:11](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L11)
 
 ***
 
@@ -61,7 +61,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:11](https://gith
 
 > **NotFound**: `"NotFound"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:5](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L5)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:5](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L5)
 
 ***
 
@@ -69,7 +69,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:5](https://githu
 
 > **NotImplemented**: `"NotImplemented"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:12](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L12)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:12](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L12)
 
 ***
 
@@ -77,7 +77,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:12](https://gith
 
 > **TooManyRequests**: `"TooManyRequests"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:10](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L10)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:10](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L10)
 
 ***
 
@@ -85,7 +85,7 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:10](https://gith
 
 > **Unauthorized**: `"Unauthorized"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:3](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L3)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:3](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L3)
 
 ***
 
@@ -93,4 +93,4 @@ Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:3](https://githu
 
 > **ValidationError**: `"ValidationError"`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:8](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/ProblemCategory.ts#L8)
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:8](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/ProblemCategory.ts#L8)

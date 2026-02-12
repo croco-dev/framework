@@ -7,7 +7,7 @@ title: "UsageQueryOptions"
 
 > **UsageQueryOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/types.ts:56](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/types.ts#L56)
+Defined in: [packages/metering-core/src/libs/types.ts:56](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/types.ts#L56)
 
 Usage 조회 옵션
 
@@ -17,7 +17,7 @@ Usage 조회 옵션
 
 > `optional` **endDate**: `Date`
 
-Defined in: [packages/metering-core/src/libs/types.ts:61](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/types.ts#L61)
+Defined in: [packages/metering-core/src/libs/types.ts:61](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/types.ts#L61)
 
 ***
 
@@ -25,7 +25,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:61](https://github.com/cro
 
 > **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:58](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/types.ts#L58)
+Defined in: [packages/metering-core/src/libs/types.ts:58](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/types.ts#L58)
 
 ***
 
@@ -33,7 +33,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:58](https://github.com/cro
 
 > **period**: [`AggregationPeriod`](/api/metering-core/src/type-aliases/aggregationperiod/)
 
-Defined in: [packages/metering-core/src/libs/types.ts:59](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/types.ts#L59)
+Defined in: [packages/metering-core/src/libs/types.ts:59](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/types.ts#L59)
 
 ***
 
@@ -41,7 +41,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:59](https://github.com/cro
 
 > `optional` **startDate**: `Date`
 
-Defined in: [packages/metering-core/src/libs/types.ts:60](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/types.ts#L60)
+Defined in: [packages/metering-core/src/libs/types.ts:60](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/types.ts#L60)
 
 ***
 
@@ -49,4 +49,4 @@ Defined in: [packages/metering-core/src/libs/types.ts:60](https://github.com/cro
 
 > **tenantId**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:57](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/types.ts#L57)
+Defined in: [packages/metering-core/src/libs/types.ts:57](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/metering-core/src/libs/types.ts#L57)

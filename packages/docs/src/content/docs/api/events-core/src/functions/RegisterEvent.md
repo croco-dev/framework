@@ -7,7 +7,7 @@ title: "RegisterEvent"
 
 > **RegisterEvent**(`registry?`): \<`T`\>(`target`) => `EventClass`\<`T`\>
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:65](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventRegistry.ts#L65)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:65](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/events-core/src/libs/EventRegistry.ts#L65)
 
 이벤트 클래스를 레지스트리에 자동 등록하는 데코레이터 팩토리
 
