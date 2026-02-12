@@ -7,7 +7,7 @@ title: "RateLimit"
 
 > **RateLimit**(`options?`): `MethodDecorator`
 
-Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:38](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L38)
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:38](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L38)
 
 Method decorator that applies rate limiting to an endpoint.
 Automatically registers RateLimitGuard - no need for @UseGuards(RateLimitGuard).

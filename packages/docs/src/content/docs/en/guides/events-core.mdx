@@ -1,0 +1,99 @@
+---
+title: Domain Events
+description: Event-driven architecture support for Croco framework
+---
+
+## Installation
+
+```bash
+pnpm add @croco/events-core @croco/events-inmemory
+```
+
+## Features
+
+- **DomainEvent**: Base class for all events
+- **EventBus**: Interface for publishing and subscribing to events
+- **@EventHandler**: Decorator for registering event listeners
+- **In-Memory Implementation**: Simple local event bus for testing or single-process apps
+- **AggregateRoot**: Helper class for managing domain events within aggregates
+
+## Usage
+
+### Defining Events
+
+Create a class that extends `DomainEvent`.
+
+```typescript
+import { DomainEvent } from '@croco/events-core';
+
+export class UserCreatedEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super();
+  }
+}
+```
+
+### Aggregate Root Pattern
+
+Use `AggregateRoot` to collect events and publish them transactionally.
+
+```typescript
+import { AggregateRoot } from '@croco/events-core';
+
+class User extends AggregateRoot {
+  create(id: string) {
+    // Business logic
+    this.addDomainEvent(new UserCreatedEvent(id));
+  }
+}
+
+const user = new User();
+user.create('user-123');
+
+// Retrieve pending events
+const events = user.getDomainEvents();
+user.clearDomainEvents();
+```
+
+### Event Handlers
+
+Register handlers using the `@RegisterEventHandler` decorator.
+
+```typescript
+import { EventHandler, RegisterEventHandler } from '@croco/events-core';
+
+@RegisterEventHandler(UserCreatedEvent)
+class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
+  async handle(event: UserCreatedEvent): Promise<void> {
+    console.log(`User created: ${event.userId}`);
+  }
+}
+```
+
+### Configuration
+
+Configure the global `EventBus` instance.
+
+```typescript
+import { EventBusConfig } from '@croco/events-core';
+import { InMemoryEventBus } from '@croco/events-inmemory';
+
+const config = EventBusConfig.getInstance();
+config.setEventBus(new InMemoryEventBus());
+
+// Register handlers
+await config.start({ handlers: [UserCreatedHandler] });
+```
+
+### Publishing Events
+
+Use `EventPublisher` to dispatch events to the configured bus.
+
+```typescript
+import { EventPublisher } from '@croco/events-core';
+
+const publisher = new EventPublisher();
+
+await publisher.publish(new UserCreatedEvent('user-123'));
+await publisher.publishMany([event1, event2]);
+```

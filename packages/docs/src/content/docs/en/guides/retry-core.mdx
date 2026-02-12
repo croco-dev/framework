@@ -1,0 +1,113 @@
+---
+title: Retry & Circuit Breaker
+description: Resilient HTTP requests and operation retries with Circuit Breaker pattern
+---
+
+## Installation
+
+```bash
+pnpm add @croco/retry-core
+```
+
+## Features
+
+- **@Retryable Decorator**: Automatically retry failed methods
+- **Circuit Breaker**: Prevent cascading failures with state management (Open/Closed/Half-Open)
+- **Backoff Strategies**: Exponential, Fixed, NoBackoff policies
+- **Lambda Support**: Time-aware retries (stop before timeout)
+- **Monitoring**: Integration with OpenTelemetry for tracing and metrics
+
+## Usage
+
+### Using the Decorator
+
+The `@Retryable` decorator is the easiest way to add retry logic to your methods.
+
+```typescript
+import { Retryable, ExponentialBackoff } from '@croco/retry-core';
+
+class Service {
+  @Retryable({ 
+    maxAttempts: 3, 
+    backoff: { delay: 1000, multiplier: 2 },
+    recover: 'fallback' // Optional recovery method name
+  })
+  async fetchData(): Promise<Data> {
+    return await this.api.get('/data');
+  }
+
+  // Optional recovery method
+  async fallback(error: Error): Promise<Data> {
+    console.warn('All retries failed', error);
+    return { cached: true };
+  }
+}
+```
+
+### Using RetryTemplate
+
+For programmatic control, use `RetryTemplate`.
+
+```typescript
+import { RetryTemplate } from '@croco/retry-core';
+
+const template = new RetryTemplate({ 
+  maxAttempts: 3,
+  backoff: { delay: 500 }
+});
+
+const result = await template.execute(
+  async (ctx) => {
+    // Risky operation
+    return await riskyOperation();
+  },
+  async (ctx) => {
+    // Recovery callback (optional)
+    return 'fallback-value';
+  }
+);
+```
+
+### Circuit Breaker Configuration
+
+Combine circuit breaker pattern with retries to prevent system overload.
+
+```typescript
+import { CircuitBreakerRetryTemplate } from '@croco/retry-core';
+
+const template = new CircuitBreakerRetryTemplate(
+  new CircuitBreaker({ 
+    circuitId: 'api-service',
+    failureThreshold: 5,
+    resetTimeout: 30000 
+  }),
+  new RetryTemplate({ maxAttempts: 3 })
+);
+
+try {
+  const result = await template.execute(async () => {
+    return await externalService.call();
+  });
+} catch (error) {
+  // Handle CircuitBreakerOpenException or RetryExhaustedException
+}
+```
+
+### Lambda Timeout Protection
+
+Automatically stop retrying before AWS Lambda times out.
+
+```typescript
+import { LambdaTimeoutGuard } from '@croco/retry-core';
+
+export const handler = async (event, context) => {
+  // Set context globally for the request scope
+  setLambdaContext(context);
+  
+  const guard = new LambdaTimeoutGuard({ buffer: 500 }); // 500ms buffer
+  
+  if (!guard.hasTimeForRetry()) {
+    // Stop retrying
+  }
+};
+```

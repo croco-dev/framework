@@ -5,7 +5,7 @@ prev: false
 title: "ApiKeyRevokedProblem"
 ---
 
-Defined in: [packages/auth-core/src/libs/problems/AuthProblems.ts:21](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/auth-core/src/libs/problems/AuthProblems.ts#L21)
+Defined in: [packages/auth-core/src/libs/problems/AuthProblems.ts:21](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/problems/AuthProblems.ts#L21)
 
 ## Extends
 
@@ -17,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/problems/AuthProblems.ts:21](https://gi
 
 > **new ApiKeyRevokedProblem**(`detail?`): `ApiKeyRevokedProblem`
 
-Defined in: [packages/auth-core/src/libs/problems/AuthProblems.ts:22](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/auth-core/src/libs/problems/AuthProblems.ts#L22)
+Defined in: [packages/auth-core/src/libs/problems/AuthProblems.ts:22](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/problems/AuthProblems.ts#L22)
 
 #### Parameters
 
@@ -39,7 +39,7 @@ Defined in: [packages/auth-core/src/libs/problems/AuthProblems.ts:22](https://gi
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L22)
+Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L22)
 
 #### Inherited from
 
@@ -63,7 +63,7 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L21)
+Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L21)
 
 #### Inherited from
 
@@ -75,7 +75,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/c
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L23)
+Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L23)
 
 #### Inherited from
 
@@ -87,7 +87,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/c
 
 > `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L26)
 
 #### Inherited from
 
@@ -99,7 +99,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/c
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L25)
 
 #### Inherited from
 
@@ -147,7 +147,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L24)
 
 #### Inherited from
 
@@ -183,7 +183,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L50)
+Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L50)
 
 ##### Returns
 
@@ -201,7 +201,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L46)
+Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L46)
 
 ##### Returns
 
@@ -217,7 +217,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L54)
+Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L54)
 
 #### Returns
 

@@ -5,7 +5,7 @@ prev: false
 title: "AuthGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:7](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/auth-core/src/libs/guards/AuthGuard.ts#L7)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:7](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/AuthGuard.ts#L7)
 
 ## Implements
 
@@ -17,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:7](https://github.c
 
 > **new AuthGuard**(`authProvider`): `AuthGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:8](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/auth-core/src/libs/guards/AuthGuard.ts#L8)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:8](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/AuthGuard.ts#L8)
 
 #### Parameters
 
@@ -35,7 +35,7 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:8](https://github.c
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:10](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/auth-core/src/libs/guards/AuthGuard.ts#L10)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:10](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/AuthGuard.ts#L10)
 
 #### Parameters
 

@@ -5,7 +5,7 @@ prev: false
 title: "AppConfig"
 ---
 
-Defined in: [packages/transports-http/src/libs/types.ts:9](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/types.ts#L9)
+Defined in: [packages/transports-http/src/libs/types.ts:9](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/transports-http/src/libs/types.ts#L9)
 
 ## Properties
 
@@ -13,7 +13,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:9](https://github.com/cr
 
 > **controllers**: `Constructor`[]
 
-Defined in: [packages/transports-http/src/libs/types.ts:10](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/types.ts#L10)
+Defined in: [packages/transports-http/src/libs/types.ts:10](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/transports-http/src/libs/types.ts#L10)
 
 ***
 
@@ -21,7 +21,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:10](https://github.com/c
 
 > `optional` **globalFilters**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/types.ts:12](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/types.ts#L12)
+Defined in: [packages/transports-http/src/libs/types.ts:12](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/transports-http/src/libs/types.ts#L12)
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:12](https://github.com/c
 
 > `optional` **globalGuards**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/types.ts:13](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/types.ts#L13)
+Defined in: [packages/transports-http/src/libs/types.ts:13](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/transports-http/src/libs/types.ts#L13)
 
 ***
 
@@ -37,7 +37,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:13](https://github.com/c
 
 > `optional` **globalInterceptors**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/types.ts:14](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/types.ts#L14)
+Defined in: [packages/transports-http/src/libs/types.ts:14](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/transports-http/src/libs/types.ts#L14)
 
 ***
 
@@ -45,7 +45,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:14](https://github.com/c
 
 > `optional` **globalPipes**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/types.ts:15](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/types.ts#L15)
+Defined in: [packages/transports-http/src/libs/types.ts:15](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/transports-http/src/libs/types.ts#L15)
 
 ***
 
@@ -53,4 +53,4 @@ Defined in: [packages/transports-http/src/libs/types.ts:15](https://github.com/c
 
 > `optional` **middlewares**: [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)[]
 
-Defined in: [packages/transports-http/src/libs/types.ts:11](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/transports-http/src/libs/types.ts#L11)
+Defined in: [packages/transports-http/src/libs/types.ts:11](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/transports-http/src/libs/types.ts#L11)

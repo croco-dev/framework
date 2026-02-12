@@ -5,7 +5,7 @@ prev: false
 title: "RequestContext"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:39](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/framework-context/src/libs/types.ts#L39)
+Defined in: [packages/framework-context/src/libs/types.ts:39](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/framework-context/src/libs/types.ts#L39)
 
 Request context data
 
@@ -15,7 +15,7 @@ Request context data
 
 > **requestId**: `string`
 
-Defined in: [packages/framework-context/src/libs/types.ts:40](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/framework-context/src/libs/types.ts#L40)
+Defined in: [packages/framework-context/src/libs/types.ts:40](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/framework-context/src/libs/types.ts#L40)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/framework-context/src/libs/types.ts:40](https://github.com
 
 > `optional` **tenantId**: `string`
 
-Defined in: [packages/framework-context/src/libs/types.ts:42](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/framework-context/src/libs/types.ts#L42)
+Defined in: [packages/framework-context/src/libs/types.ts:42](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/framework-context/src/libs/types.ts#L42)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/framework-context/src/libs/types.ts:42](https://github.com
 
 > `optional` **traceId**: `string`
 
-Defined in: [packages/framework-context/src/libs/types.ts:43](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/framework-context/src/libs/types.ts#L43)
+Defined in: [packages/framework-context/src/libs/types.ts:43](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/framework-context/src/libs/types.ts#L43)
 
 ***
 
@@ -39,4 +39,4 @@ Defined in: [packages/framework-context/src/libs/types.ts:43](https://github.com
 
 > `optional` **user**: `UserContext`
 
-Defined in: [packages/framework-context/src/libs/types.ts:41](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/framework-context/src/libs/types.ts#L41)
+Defined in: [packages/framework-context/src/libs/types.ts:41](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/framework-context/src/libs/types.ts#L41)

@@ -7,7 +7,7 @@ title: "MetricsConfig"
 
 > **MetricsConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:25](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/telemetry-sdk-node/src/config.ts#L25)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:25](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/config.ts#L25)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:25](https://github.com/cr
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:26](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/telemetry-sdk-node/src/config.ts#L26)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:26](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/config.ts#L26)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:26](https://github.com/cr
 
 > `optional` **exporterHeaders**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:28](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/telemetry-sdk-node/src/config.ts#L28)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:28](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/config.ts#L28)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:28](https://github.com/cr
 
 > `optional` **exporterUrl**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:27](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/telemetry-sdk-node/src/config.ts#L27)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:27](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/config.ts#L27)
 
 ***
 
@@ -39,7 +39,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:27](https://github.com/cr
 
 > `optional` **exportIntervalMillis**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:29](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/telemetry-sdk-node/src/config.ts#L29)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:29](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/config.ts#L29)
 
 ***
 
@@ -47,4 +47,4 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:29](https://github.com/cr
 
 > `optional` **exportTimeoutMillis**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:30](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/telemetry-sdk-node/src/config.ts#L30)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:30](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/config.ts#L30)

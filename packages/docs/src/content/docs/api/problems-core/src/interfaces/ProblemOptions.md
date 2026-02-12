@@ -5,7 +5,7 @@ prev: false
 title: "ProblemOptions"
 ---
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:4](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L4)
+Defined in: [packages/problems-core/src/libs/Problem.ts:4](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L4)
 
 ## Properties
 
@@ -13,7 +13,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:4](https://github.com/cr
 
 > `optional` **extensions**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:7](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L7)
+Defined in: [packages/problems-core/src/libs/Problem.ts:7](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L7)
 
 ***
 
@@ -21,7 +21,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:7](https://github.com/cr
 
 > `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:6](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L6)
+Defined in: [packages/problems-core/src/libs/Problem.ts:6](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L6)
 
 ***
 
@@ -29,4 +29,4 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:6](https://github.com/cr
 
 > `optional` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:5](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L5)
+Defined in: [packages/problems-core/src/libs/Problem.ts:5](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L5)

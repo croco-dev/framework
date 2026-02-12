@@ -5,7 +5,7 @@ prev: false
 title: "GenerationError"
 ---
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:29](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L29)
+Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:29](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L29)
 
 ## Extends
 
@@ -17,7 +17,7 @@ Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:29](https:
 
 > **new GenerationError**(`message`, `cause?`): `GenerationError`
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:32](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L32)
+Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:32](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L32)
 
 #### Parameters
 
@@ -43,7 +43,7 @@ Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:32](https:
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L22)
+Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L22)
 
 #### Inherited from
 
@@ -67,7 +67,7 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L21)
+Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L21)
 
 #### Inherited from
 
@@ -79,7 +79,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/c
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L23)
+Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L23)
 
 #### Inherited from
 
@@ -91,7 +91,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/c
 
 > `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L26)
 
 #### Inherited from
 
@@ -103,7 +103,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/c
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L25)
 
 #### Inherited from
 
@@ -151,7 +151,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L24)
 
 #### Inherited from
 
@@ -163,7 +163,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 
 > `readonly` `static` **CODE**: `"GENERATION_ERROR"` = `'GENERATION_ERROR'`
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:30](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L30)
+Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:30](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L30)
 
 ***
 
@@ -195,7 +195,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L50)
+Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L50)
 
 ##### Returns
 
@@ -213,7 +213,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L46)
+Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L46)
 
 ##### Returns
 
@@ -229,7 +229,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/bb21af4df68d72ef2fe52956bb5c72347d9133c7/packages/problems-core/src/libs/Problem.ts#L54)
+Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/problems-core/src/libs/Problem.ts#L54)
 
 #### Returns
 
