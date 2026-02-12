@@ -1,0 +1,96 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "ProblemCategory"
+---
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:1](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L1)
+
+## Enumeration Members
+
+### BadRequest
+
+> **BadRequest**: `"BadRequest"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:2](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L2)
+
+***
+
+### BusinessRuleViolation
+
+> **BusinessRuleViolation**: `"BusinessRuleViolation"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:9](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L9)
+
+***
+
+### Conflict
+
+> **Conflict**: `"Conflict"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:6](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L6)
+
+***
+
+### Forbidden
+
+> **Forbidden**: `"Forbidden"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:4](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L4)
+
+***
+
+### Gone
+
+> **Gone**: `"Gone"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:7](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L7)
+
+***
+
+### InternalServerError
+
+> **InternalServerError**: `"InternalServerError"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:11](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L11)
+
+***
+
+### NotFound
+
+> **NotFound**: `"NotFound"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:5](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L5)
+
+***
+
+### NotImplemented
+
+> **NotImplemented**: `"NotImplemented"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:12](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L12)
+
+***
+
+### TooManyRequests
+
+> **TooManyRequests**: `"TooManyRequests"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:10](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L10)
+
+***
+
+### Unauthorized
+
+> **Unauthorized**: `"Unauthorized"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:3](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L3)
+
+***
+
+### ValidationError
+
+> **ValidationError**: `"ValidationError"`
+
+Defined in: [packages/problems-core/src/libs/ProblemCategory.ts:8](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategory.ts#L8)

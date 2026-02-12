@@ -1,0 +1,16 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "getMeteringService"
+---
+
+> **getMeteringService**(): [`MeteringService`](/api/metering-core/src/classes/meteringservice/) \| `null`
+
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:35](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/metering-core/src/libs/decorators/Metered.ts#L35)
+
+MeteringService 인스턴스 조회
+
+## Returns
+
+[`MeteringService`](/api/metering-core/src/classes/meteringservice/) \| `null`
