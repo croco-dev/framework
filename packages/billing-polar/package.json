@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@croco/billing-core": "workspace:*",
-    "@croco/events-core": "0.0.2",
+    "@croco/events-core": "workspace:*",
     "@polar-sh/sdk": "^0.32.2"
   },
   "devDependencies": {

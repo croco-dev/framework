@@ -4,19 +4,23 @@
   "scripts": {
     "build": "turbo build",
     "check": "biome check .",
+    "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
     "format": "biome format --write .",
     "lint": "turbo lint",
     "prepare": "lefthook install",
+    "release": "pnpm build && changeset publish",
     "test": "turbo test",
-    "typecheck": "turbo typecheck"
+    "typecheck": "turbo typecheck",
+    "version-packages": "changeset version"
   },
   "dependencies": {
     "vitest": "4.0.16"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.12",
+    "@changesets/cli": "2.29.8",
     "@croco/utils-tsconfig": "workspace:*",
     "@types/node": "^22",
     "@vitest/coverage-v8": "4.0.16",
