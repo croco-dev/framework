@@ -7,6 +7,6 @@ title: "DEFAULT_RETRYABLE_CATEGORIES"
 
 > `const` **DEFAULT\_RETRYABLE\_CATEGORIES**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:35](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/RetryPolicy.ts#L35)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:35](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/RetryPolicy.ts#L35)
 
 Default retryable categories (transient errors)

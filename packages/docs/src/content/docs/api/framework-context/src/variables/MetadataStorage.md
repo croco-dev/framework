@@ -7,4 +7,4 @@ title: "MetadataStorage"
 
 > `const` **MetadataStorage**: `MetadataStorageImpl`
 
-Defined in: [packages/framework-context/src/libs/MetadataStorage.ts:69](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/MetadataStorage.ts#L69)
+Defined in: [packages/framework-context/src/libs/MetadataStorage.ts:69](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/framework-context/src/libs/MetadataStorage.ts#L69)

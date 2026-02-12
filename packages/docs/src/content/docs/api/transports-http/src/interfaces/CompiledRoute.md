@@ -5,7 +5,7 @@ prev: false
 title: "CompiledRoute"
 ---
 
-Defined in: [packages/transports-http/src/libs/types.ts:49](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L49)
+Defined in: [packages/transports-http/src/libs/types.ts:49](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L49)
 
 ## Properties
 
@@ -13,7 +13,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:49](https://github.com/c
 
 > `optional` **controllerInstance**: `unknown`
 
-Defined in: [packages/transports-http/src/libs/types.ts:53](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L53)
+Defined in: [packages/transports-http/src/libs/types.ts:53](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L53)
 
 ***
 
@@ -21,7 +21,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:53](https://github.com/c
 
 > **handler**: (`ctx`) => `Promise`\<`unknown`\>
 
-Defined in: [packages/transports-http/src/libs/types.ts:52](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L52)
+Defined in: [packages/transports-http/src/libs/types.ts:52](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L52)
 
 #### Parameters
 
@@ -39,7 +39,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:52](https://github.com/c
 
 > **method**: `string`
 
-Defined in: [packages/transports-http/src/libs/types.ts:50](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L50)
+Defined in: [packages/transports-http/src/libs/types.ts:50](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L50)
 
 ***
 
@@ -47,7 +47,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:50](https://github.com/c
 
 > **methodName**: `string` \| `symbol`
 
-Defined in: [packages/transports-http/src/libs/types.ts:54](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L54)
+Defined in: [packages/transports-http/src/libs/types.ts:54](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L54)
 
 ***
 
@@ -55,4 +55,4 @@ Defined in: [packages/transports-http/src/libs/types.ts:54](https://github.com/c
 
 > **path**: `string`
 
-Defined in: [packages/transports-http/src/libs/types.ts:51](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L51)
+Defined in: [packages/transports-http/src/libs/types.ts:51](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L51)

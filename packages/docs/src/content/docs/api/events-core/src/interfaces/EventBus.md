@@ -5,7 +5,7 @@ prev: false
 title: "EventBus"
 ---
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventBus.ts#L10)
+Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventBus.ts#L10)
 
 ## Methods
 
@@ -13,7 +13,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/cr
 
 > **clear**(): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventBus.ts#L14)
+Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventBus.ts#L14)
 
 #### Returns
 
@@ -25,7 +25,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/cr
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventBus.ts#L11)
+Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventBus.ts#L11)
 
 #### Parameters
 
@@ -43,7 +43,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/cr
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventBus.ts#L12)
+Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventBus.ts#L12)
 
 #### Parameters
 
@@ -61,7 +61,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/cr
 
 > **unsubscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:13](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventBus.ts#L13)
+Defined in: [packages/events-core/src/libs/EventBus.ts:13](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventBus.ts#L13)
 
 #### Parameters
 

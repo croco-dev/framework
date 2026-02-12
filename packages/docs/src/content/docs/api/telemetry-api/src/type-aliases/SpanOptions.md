@@ -7,7 +7,7 @@ title: "SpanOptions"
 
 > **SpanOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L4)
+Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L4)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco
 
 > `optional` **attributes**: `Attributes`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L6)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:5](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L5)
+Defined in: [packages/telemetry-api/src/libs/span.ts:5](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L5)

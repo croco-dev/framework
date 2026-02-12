@@ -5,7 +5,7 @@ prev: false
 title: "EventPublisher"
 ---
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventPublisher.ts#L4)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:4](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventPublisher.ts#L4)
 
 ## Constructors
 
@@ -23,7 +23,7 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:4](https://github.c
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:9](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventPublisher.ts#L9)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:9](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventPublisher.ts#L9)
 
 #### Parameters
 
@@ -41,7 +41,7 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:9](https://github.c
 
 > **publishMany**(`events`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:13](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventPublisher.ts#L13)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:13](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/EventPublisher.ts#L13)
 
 #### Parameters
 

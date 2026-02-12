@@ -7,6 +7,6 @@ title: "UsageAccuracy"
 
 > **UsageAccuracy** = `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`
 
-Defined in: [packages/llm-core/src/libs/types.ts:269](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/llm-core/src/libs/types.ts#L269)
+Defined in: [packages/llm-core/src/libs/types.ts:269](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/llm-core/src/libs/types.ts#L269)
 
 토큰 사용량 정확도

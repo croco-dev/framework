@@ -7,7 +7,7 @@ title: "RoleDefinition"
 
 > **RoleDefinition** = `object`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:1](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/rbac/Role.ts#L1)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:1](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/rbac/Role.ts#L1)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:1](https://github.com/croc
 
 > `optional` **inherits**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/rbac/Role.ts#L4)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:4](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/rbac/Role.ts#L4)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:4](https://github.com/croc
 
 > **name**: `string`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:2](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/rbac/Role.ts#L2)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:2](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/rbac/Role.ts#L2)
 
 ***
 
@@ -31,4 +31,4 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:2](https://github.com/croc
 
 > **permissions**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:3](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/rbac/Role.ts#L3)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:3](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/rbac/Role.ts#L3)

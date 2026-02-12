@@ -7,7 +7,7 @@ title: "LogsConfig"
 
 > **LogsConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:33](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/config.ts#L33)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:33](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-sdk-node/src/config.ts#L33)
 
 ## Properties
 
@@ -15,4 +15,4 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:33](https://github.com/cr
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:34](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/config.ts#L34)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:34](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-sdk-node/src/config.ts#L34)

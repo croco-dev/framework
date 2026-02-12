@@ -7,7 +7,7 @@ title: "FilterProvider"
 
 > **FilterProvider**\<`T`\> = `Constructor`\<`T`\> \| `T`
 
-Defined in: [packages/transports-http/src/libs/types.ts:6](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L6)
+Defined in: [packages/transports-http/src/libs/types.ts:6](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L6)
 
 ## Type Parameters
 

@@ -5,7 +5,7 @@ prev: false
 title: "ComponentOptions"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:15](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L15)
+Defined in: [packages/framework-context/src/libs/types.ts:15](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/framework-context/src/libs/types.ts#L15)
 
 Component options for
 
@@ -19,4 +19,4 @@ decorator
 
 > `optional` **scope**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
 
-Defined in: [packages/framework-context/src/libs/types.ts:16](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L16)
+Defined in: [packages/framework-context/src/libs/types.ts:16](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/framework-context/src/libs/types.ts#L16)

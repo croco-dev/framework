@@ -7,7 +7,7 @@ title: "ApiKeyRateLimit"
 
 > **ApiKeyRateLimit** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:1](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKey.ts#L1)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:1](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKey.ts#L1)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:1](https://github.
 
 > **duration**: `number`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:3](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKey.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:3](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKey.ts#L3)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:3](https://github.
 
 > **limit**: `number`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:2](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKey.ts#L2)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:2](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKey.ts#L2)

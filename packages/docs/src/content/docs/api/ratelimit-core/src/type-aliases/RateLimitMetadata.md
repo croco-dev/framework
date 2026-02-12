@@ -7,7 +7,7 @@ title: "RateLimitMetadata"
 
 > **RateLimitMetadata** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:15](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L15)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:15](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L15)
 
 Rate limit metadata stored by
 
@@ -21,7 +21,7 @@ decorator.
 
 > `optional` **customKey**: (`context`) => `string`
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:17](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L17)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:17](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L17)
 
 #### Parameters
 
@@ -39,4 +39,4 @@ Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:17](https
 
 > **policy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:16](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L16)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:16](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L16)

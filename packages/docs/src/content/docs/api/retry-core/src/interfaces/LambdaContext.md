@@ -5,7 +5,7 @@ prev: false
 title: "LambdaContext"
 ---
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L4)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:4](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L4)
 
 AWS Lambda context interface (minimal).
 
@@ -15,7 +15,7 @@ AWS Lambda context interface (minimal).
 
 > **getRemainingTimeInMillis**(): `number`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:5](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L5)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:5](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L5)
 
 #### Returns
 

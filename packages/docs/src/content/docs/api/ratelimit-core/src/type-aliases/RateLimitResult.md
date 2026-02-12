@@ -7,7 +7,7 @@ title: "RateLimitResult"
 
 > **RateLimitResult** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:18](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L18)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:18](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/types.ts#L18)
 
 Result of a rate limit check
 
@@ -17,7 +17,7 @@ Result of a rate limit check
 
 > **limit**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:22](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L22)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:22](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/types.ts#L22)
 
 Maximum requests allowed in the window
 
@@ -27,7 +27,7 @@ Maximum requests allowed in the window
 
 > **remaining**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:24](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L24)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:24](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/types.ts#L24)
 
 Remaining requests in current window
 
@@ -37,7 +37,7 @@ Remaining requests in current window
 
 > **resetAtMs**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:26](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L26)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:26](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/types.ts#L26)
 
 Unix epoch ms when the window resets
 
@@ -47,6 +47,6 @@ Unix epoch ms when the window resets
 
 > **success**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:20](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L20)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:20](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/ratelimit-core/src/libs/types.ts#L20)
 
 Whether the request is allowed

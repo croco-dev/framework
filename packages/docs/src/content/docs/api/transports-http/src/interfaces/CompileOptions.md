@@ -5,7 +5,7 @@ prev: false
 title: "CompileOptions"
 ---
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:29](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/RouteCompiler.ts#L29)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:29](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/RouteCompiler.ts#L29)
 
 ## Properties
 
@@ -13,7 +13,7 @@ Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:29](https://gith
 
 > `optional` **container**: `object`
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:30](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/RouteCompiler.ts#L30)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:30](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/RouteCompiler.ts#L30)
 
 #### get()
 
@@ -41,7 +41,7 @@ Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:30](https://gith
 
 > `optional` **globalFilters**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:33](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/RouteCompiler.ts#L33)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:33](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/RouteCompiler.ts#L33)
 
 ***
 
@@ -49,7 +49,7 @@ Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:33](https://gith
 
 > `optional` **globalGuards**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:31](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/RouteCompiler.ts#L31)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:31](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/RouteCompiler.ts#L31)
 
 ***
 
@@ -57,7 +57,7 @@ Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:31](https://gith
 
 > `optional` **globalInterceptors**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:32](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/RouteCompiler.ts#L32)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:32](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/RouteCompiler.ts#L32)
 
 ***
 
@@ -65,4 +65,4 @@ Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:32](https://gith
 
 > `optional` **globalPipes**: `unknown`[]
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:34](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/RouteCompiler.ts#L34)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:34](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/RouteCompiler.ts#L34)

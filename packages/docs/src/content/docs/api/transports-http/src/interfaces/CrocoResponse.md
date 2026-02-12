@@ -5,7 +5,7 @@ prev: false
 title: "CrocoResponse"
 ---
 
-Defined in: [packages/transports-http/src/libs/types.ts:44](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L44)
+Defined in: [packages/transports-http/src/libs/types.ts:44](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L44)
 
 ## Properties
 
@@ -13,7 +13,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:44](https://github.com/c
 
 > **headers**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/transports-http/src/libs/types.ts:46](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L46)
+Defined in: [packages/transports-http/src/libs/types.ts:46](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L46)
 
 ***
 
@@ -21,4 +21,4 @@ Defined in: [packages/transports-http/src/libs/types.ts:46](https://github.com/c
 
 > **status**: `number`
 
-Defined in: [packages/transports-http/src/libs/types.ts:45](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/types.ts#L45)
+Defined in: [packages/transports-http/src/libs/types.ts:45](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/transports-http/src/libs/types.ts#L45)

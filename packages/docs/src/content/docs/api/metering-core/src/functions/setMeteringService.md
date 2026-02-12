@@ -7,7 +7,7 @@ title: "setMeteringService"
 
 > **setMeteringService**(`service`): `void`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:28](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/decorators/Metered.ts#L28)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:28](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/decorators/Metered.ts#L28)
 
 MeteringService 인스턴스 설정 (앱 부트스트랩에서 호출)
 

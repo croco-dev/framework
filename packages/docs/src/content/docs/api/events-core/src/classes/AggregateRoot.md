@@ -5,7 +5,7 @@ prev: false
 title: "AggregateRoot"
 ---
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:3](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/AggregateRoot.ts#L3)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:3](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/AggregateRoot.ts#L3)
 
 ## Constructors
 
@@ -23,7 +23,7 @@ Defined in: [packages/events-core/src/libs/AggregateRoot.ts:3](https://github.co
 
 > **clearDomainEvents**(): `void`
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:14](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/AggregateRoot.ts#L14)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:14](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/AggregateRoot.ts#L14)
 
 #### Returns
 
@@ -35,7 +35,7 @@ Defined in: [packages/events-core/src/libs/AggregateRoot.ts:14](https://github.c
 
 > **getDomainEvents**(): readonly [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/AggregateRoot.ts#L10)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:10](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/AggregateRoot.ts#L10)
 
 #### Returns
 
@@ -47,7 +47,7 @@ readonly [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
 > **hasDomainEvents**(): `boolean`
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:18](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/AggregateRoot.ts#L18)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:18](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/AggregateRoot.ts#L18)
 
 #### Returns
 

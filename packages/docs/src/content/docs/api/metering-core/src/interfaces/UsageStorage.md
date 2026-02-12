@@ -5,7 +5,7 @@ prev: false
 title: "UsageStorage"
 ---
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageStorage.ts#L10)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:10](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageStorage.ts#L10)
 
 Redis 기반 실시간 Usage 저장소 인터페이스
 
@@ -20,7 +20,7 @@ Redis 기반 실시간 Usage 저장소 인터페이스
 
 > **fetchUsageRecords**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)[]\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:32](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageStorage.ts#L32)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:32](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageStorage.ts#L32)
 
 Usage 데이터 조회 (배치 저장용)
 Redis에서 특정 기간의 usage records 조회
@@ -41,7 +41,7 @@ Redis에서 특정 기간의 usage records 조회
 
 > **getUsage**(`options`): `Promise`\<`number`\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:20](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageStorage.ts#L20)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:20](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageStorage.ts#L20)
 
 Usage 조회 (특정 기간 합산)
 
@@ -61,7 +61,7 @@ Usage 조회 (특정 기간 합산)
 
 > **isIdempotent**(`tenantId`, `meterId`, `idempotencyKey`, `ttlSeconds`): `Promise`\<`boolean`\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:26](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageStorage.ts#L26)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:26](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageStorage.ts#L26)
 
 Idempotency 체크 (SET NX 기반)
 
@@ -95,7 +95,7 @@ true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
 > **record**(`usage`): `Promise`\<`void`\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:15](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageStorage.ts#L15)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:15](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageStorage.ts#L15)
 
 Usage 기록 (즉시 flush)
 Redis Sorted Set에 저장

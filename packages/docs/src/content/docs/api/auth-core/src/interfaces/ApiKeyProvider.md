@@ -5,7 +5,7 @@ prev: false
 title: "ApiKeyProvider"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts:3](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts:3](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts#L3)
 
 ## Type Parameters
 
@@ -19,7 +19,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts:3](https:/
 
 > **authenticate**(`request`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/) \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts#L4)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts:4](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKeyProvider.ts#L4)
 
 #### Parameters
 

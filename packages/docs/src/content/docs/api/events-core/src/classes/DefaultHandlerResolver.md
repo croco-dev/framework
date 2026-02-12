@@ -5,7 +5,7 @@ prev: false
 title: "DefaultHandlerResolver"
 ---
 
-Defined in: [packages/events-core/src/libs/HandlerResolver.ts:17](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/HandlerResolver.ts#L17)
+Defined in: [packages/events-core/src/libs/HandlerResolver.ts:17](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/HandlerResolver.ts#L17)
 
 기본 핸들러 리졸버
 new 연산자로 직접 핸들러 인스턴스를 생성합니다.
@@ -31,7 +31,7 @@ new 연산자로 직접 핸들러 인스턴스를 생성합니다.
 
 > **resolve**\<`T`\>(`handlerClass`): [`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<`T`\>
 
-Defined in: [packages/events-core/src/libs/HandlerResolver.ts:18](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/HandlerResolver.ts#L18)
+Defined in: [packages/events-core/src/libs/HandlerResolver.ts:18](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/events-core/src/libs/HandlerResolver.ts#L18)
 
 #### Type Parameters
 

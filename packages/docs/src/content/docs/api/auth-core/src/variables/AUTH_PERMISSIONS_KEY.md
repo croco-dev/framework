@@ -7,4 +7,4 @@ title: "AUTH_PERMISSIONS_KEY"
 
 > `const` **AUTH\_PERMISSIONS\_KEY**: `"auth:permissions"` = `'auth:permissions'`
 
-Defined in: [packages/auth-core/src/libs/constants.ts:2](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/constants.ts#L2)
+Defined in: [packages/auth-core/src/libs/constants.ts:2](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/constants.ts#L2)

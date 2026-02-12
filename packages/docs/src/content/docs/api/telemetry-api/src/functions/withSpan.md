@@ -7,7 +7,7 @@ title: "withSpan"
 
 > **withSpan**\<`T`\>(`fn`, `options?`): `Promise`\<`T`\>
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:22](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L22)
+Defined in: [packages/telemetry-api/src/libs/span.ts:22](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L22)
 
 함수 실행을 Span으로 감싸고 자동으로 추적합니다.
 

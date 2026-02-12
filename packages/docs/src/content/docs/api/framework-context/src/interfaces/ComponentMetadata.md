@@ -5,7 +5,7 @@ prev: false
 title: "ComponentMetadata"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:22](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L22)
+Defined in: [packages/framework-context/src/libs/types.ts:22](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/framework-context/src/libs/types.ts#L22)
 
 Internal component metadata
 
@@ -15,7 +15,7 @@ Internal component metadata
 
 > **scope**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
 
-Defined in: [packages/framework-context/src/libs/types.ts:23](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L23)
+Defined in: [packages/framework-context/src/libs/types.ts:23](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/framework-context/src/libs/types.ts#L23)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/framework-context/src/libs/types.ts:23](https://github.com
 
 > **target**: [`Constructor`](/api/framework-context/src/type-aliases/constructor/)
 
-Defined in: [packages/framework-context/src/libs/types.ts:24](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L24)
+Defined in: [packages/framework-context/src/libs/types.ts:24](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/framework-context/src/libs/types.ts#L24)

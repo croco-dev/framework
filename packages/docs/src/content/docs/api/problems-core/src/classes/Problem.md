@@ -5,7 +5,7 @@ prev: false
 title: "Problem"
 ---
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:20](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L20)
+Defined in: [packages/problems-core/src/libs/Problem.ts:20](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L20)
 
 ## Extends
 
@@ -40,7 +40,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:20](https://github.com/c
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L22)
+Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L22)
 
 ***
 
@@ -60,7 +60,7 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L21)
+Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L21)
 
 ***
 
@@ -68,7 +68,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/c
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L23)
+Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L23)
 
 ***
 
@@ -76,7 +76,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/c
 
 > `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L26)
 
 ***
 
@@ -84,7 +84,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/c
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L25)
 
 ***
 
@@ -128,7 +128,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L24)
 
 ***
 
@@ -160,7 +160,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L50)
+Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L50)
 
 ##### Returns
 
@@ -174,7 +174,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L46)
+Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L46)
 
 ##### Returns
 
@@ -186,7 +186,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/Problem.ts#L54)
+Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/problems-core/src/libs/Problem.ts#L54)
 
 #### Returns
 

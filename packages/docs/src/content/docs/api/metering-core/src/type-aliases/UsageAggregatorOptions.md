@@ -7,7 +7,7 @@ title: "UsageAggregatorOptions"
 
 > **UsageAggregatorOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:5](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageAggregator.ts#L5)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:5](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageAggregator.ts#L5)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:5](https://githu
 
 > **meterRepository**: [`MeterRepository`](/api/metering-core/src/interfaces/meterrepository/)
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:7](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageAggregator.ts#L7)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:7](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageAggregator.ts#L7)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:7](https://githu
 
 > **usageStorage**: [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/)
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:6](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/UsageAggregator.ts#L6)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:6](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/UsageAggregator.ts#L6)

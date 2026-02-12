@@ -5,7 +5,7 @@ prev: false
 title: "TenantMappingProvider"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:1](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L1)
+Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:1](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L1)
 
 ## Methods
 
@@ -13,7 +13,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:1](https://
 
 > **register**(`externalOrgId`, `tenantId`): `Promise`\<`void`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:3](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:3](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L3)
 
 #### Parameters
 
@@ -35,7 +35,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:3](https://
 
 > **remove**(`externalOrgId`): `Promise`\<`void`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L4)
+Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:4](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L4)
 
 #### Parameters
 
@@ -53,7 +53,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:4](https://
 
 > **resolve**(`externalOrgId`): `Promise`\<`string` \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:2](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L2)
+Defined in: [packages/auth-core/src/libs/interfaces/TenantMapping.ts:2](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/TenantMapping.ts#L2)
 
 #### Parameters
 

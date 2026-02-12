@@ -7,7 +7,7 @@ title: "CreateApiKeyResult"
 
 > **CreateApiKeyResult** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:34](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKey.ts#L34)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:34](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKey.ts#L34)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:34](https://github
 
 > **id**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:36](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKey.ts#L36)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:36](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKey.ts#L36)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:36](https://github
 
 > **key**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:35](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKey.ts#L35)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:35](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKey.ts#L35)
 
 ***
 
@@ -31,4 +31,4 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:35](https://github
 
 > **keyStart**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:37](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/ApiKey.ts#L37)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:37](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/auth-core/src/libs/interfaces/ApiKey.ts#L37)

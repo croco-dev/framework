@@ -5,7 +5,7 @@ prev: false
 title: "LambdaTimeoutGuard"
 ---
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:90](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L90)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:90](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L90)
 
 Create a timeout-aware wrapper for retry operations.
 Throws if not enough time remains.
@@ -16,7 +16,7 @@ Throws if not enough time remains.
 
 > **new LambdaTimeoutGuard**(`options?`): `LambdaTimeoutGuard`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:94](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L94)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:94](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L94)
 
 #### Parameters
 
@@ -34,7 +34,7 @@ Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:94](https://gith
 
 > **checkTimeout**(`nextDelayMs`): `void`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:104](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L104)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:104](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L104)
 
 Check if retry should continue.
 
@@ -60,7 +60,7 @@ Error if not enough time
 
 > **getRemainingTimeMs**(): `number`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:119](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L119)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:119](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L119)
 
 Get remaining time in milliseconds.
 

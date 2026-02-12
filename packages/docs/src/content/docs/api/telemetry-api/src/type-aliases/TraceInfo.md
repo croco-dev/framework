@@ -7,7 +7,7 @@ title: "TraceInfo"
 
 > **TraceInfo** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:9](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L9)
+Defined in: [packages/telemetry-api/src/libs/span.ts:9](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L9)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:9](https://github.com/croco
 
 > `optional` **isValid**: `boolean`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:13](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L13)
+Defined in: [packages/telemetry-api/src/libs/span.ts:13](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L13)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:13](https://github.com/croc
 
 > `optional` **spanId**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:11](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L11)
+Defined in: [packages/telemetry-api/src/libs/span.ts:11](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L11)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:11](https://github.com/croc
 
 > `optional` **traceFlags**: `number`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:12](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L12)
+Defined in: [packages/telemetry-api/src/libs/span.ts:12](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L12)
 
 ***
 
@@ -39,4 +39,4 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:12](https://github.com/croc
 
 > `optional` **traceId**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/span.ts#L10)
+Defined in: [packages/telemetry-api/src/libs/span.ts:10](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/telemetry-api/src/libs/span.ts#L10)

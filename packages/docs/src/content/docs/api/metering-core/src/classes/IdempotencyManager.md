@@ -5,7 +5,7 @@ prev: false
 title: "IdempotencyManager"
 ---
 
-Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:13](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/IdempotencyManager.ts#L13)
+Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:13](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/IdempotencyManager.ts#L13)
 
 Idempotency 관리자
 
@@ -21,7 +21,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 > **new IdempotencyManager**(`redis`, `ttlSeconds?`): `IdempotencyManager`
 
-Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:17](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/IdempotencyManager.ts#L17)
+Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:17](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/IdempotencyManager.ts#L17)
 
 #### Parameters
 
@@ -43,7 +43,7 @@ Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:17](https://g
 
 > **checkAndMark**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`boolean`\>
 
-Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:33](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/IdempotencyManager.ts#L33)
+Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:33](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/IdempotencyManager.ts#L33)
 
 중복 체크 및 키 등록
 
@@ -73,7 +73,7 @@ true: 새 요청 (처리 가능), false: 중복 (이미 처리됨)
 
 > **checkAndMarkOrThrow**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`void`\>
 
-Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:43](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/IdempotencyManager.ts#L43)
+Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:43](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/IdempotencyManager.ts#L43)
 
 중복 체크 - Problem throw 버전
 
@@ -105,7 +105,7 @@ DuplicateRecordProblem 중복 시
 
 > **ensureIdempotencyKey**(`providedKey?`): `string`
 
-Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:25](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/metering-core/src/libs/IdempotencyManager.ts#L25)
+Defined in: [packages/metering-core/src/libs/IdempotencyManager.ts:25](https://github.com/croco-dev/shared/blob/59966731a6b54d48b10479bc8fd9da97089758ba/packages/metering-core/src/libs/IdempotencyManager.ts#L25)
 
 Idempotency key 확보 (없으면 생성)
 
