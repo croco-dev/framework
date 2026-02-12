@@ -1,6 +1,6 @@
 {
   "name": "@croco/telemetry-sdk-node",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -26,9 +26,6 @@
   },
   "publishConfig": {
     "access": "public",
-    "files": [
-      "dist"
-    ],
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "import": "./dist/index.mjs",
@@ -45,5 +42,8 @@
         }
       }
     }
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "@croco/llm-metering",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "exports": {
     ".": {
@@ -32,5 +32,11 @@
     "typescript": "5.9.3",
     "tsup": "8.5.1",
     "vitest": "4.0.16"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ]
 }

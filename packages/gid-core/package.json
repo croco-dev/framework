@@ -1,6 +1,6 @@
 {
   "name": "@croco/gid-core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Type-safe prefixed ID generation using ULID",
   "type": "commonjs",
   "main": "./src/index.ts",
@@ -21,9 +21,6 @@
   },
   "publishConfig": {
     "access": "public",
-    "files": [
-      "dist"
-    ],
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "import": "./dist/index.mjs",
@@ -40,5 +37,8 @@
         }
       }
     }
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "@croco/transports-graphql",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -21,12 +21,8 @@
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*"
   },
-
   "publishConfig": {
     "access": "public",
-    "files": [
-      "dist"
-    ],
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "import": "./dist/index.mjs",
@@ -43,5 +39,8 @@
         }
       }
     }
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }
