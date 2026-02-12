@@ -5,7 +5,7 @@ prev: false
 title: "TelemetryRuntime"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:8](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-sdk-node/src/runtime.ts#L8)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:8](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/runtime.ts#L8)
 
 ## Methods
 
@@ -13,7 +13,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:8](https://github.com/cr
 
 > **forceFlush**(): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:75](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-sdk-node/src/runtime.ts#L75)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:75](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/runtime.ts#L75)
 
 #### Returns
 
@@ -25,7 +25,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:75](https://github.com/c
 
 > **getConfig**(): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:102](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-sdk-node/src/runtime.ts#L102)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:102](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/runtime.ts#L102)
 
 #### Returns
 
@@ -37,7 +37,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:102](https://github.com/
 
 > **init**(`config`): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:24](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-sdk-node/src/runtime.ts#L24)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:24](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/runtime.ts#L24)
 
 #### Parameters
 
@@ -55,7 +55,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:24](https://github.com/c
 
 > **isInitialized**(): `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:98](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-sdk-node/src/runtime.ts#L98)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:98](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/runtime.ts#L98)
 
 #### Returns
 
@@ -67,7 +67,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:98](https://github.com/c
 
 > **shutdown**(): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:85](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-sdk-node/src/runtime.ts#L85)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:85](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/runtime.ts#L85)
 
 #### Returns
 
@@ -79,7 +79,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:85](https://github.com/c
 
 > `static` **getInstance**(): `TelemetryRuntime`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:17](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-sdk-node/src/runtime.ts#L17)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:17](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-sdk-node/src/runtime.ts#L17)
 
 #### Returns
 

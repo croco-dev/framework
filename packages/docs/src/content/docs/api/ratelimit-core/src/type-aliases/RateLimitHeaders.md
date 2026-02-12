@@ -7,7 +7,7 @@ title: "RateLimitHeaders"
 
 > **RateLimitHeaders** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:42](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L42)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:42](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L42)
 
 Response headers for rate limiting.
 
@@ -17,7 +17,7 @@ Response headers for rate limiting.
 
 > `optional` **Retry-After**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:46](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L46)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:46](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L46)
 
 ***
 
@@ -25,7 +25,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > **X-RateLimit-Limit**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:43](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L43)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:43](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L43)
 
 ***
 
@@ -33,7 +33,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > **X-RateLimit-Remaining**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:44](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L44)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:44](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L44)
 
 ***
 
@@ -41,4 +41,4 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > **X-RateLimit-Reset**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:45](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L45)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:45](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L45)

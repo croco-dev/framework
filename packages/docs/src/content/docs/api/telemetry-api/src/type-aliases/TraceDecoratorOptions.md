@@ -7,7 +7,7 @@ title: "TraceDecoratorOptions"
 
 > **TraceDecoratorOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:5](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-api/src/libs/decorators/Trace.ts#L5)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:5](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/decorators/Trace.ts#L5)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:5](https://gith
 
 > `optional` **attributes**: `Attributes`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:7](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-api/src/libs/decorators/Trace.ts#L7)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:7](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/decorators/Trace.ts#L7)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:7](https://gith
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:6](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/telemetry-api/src/libs/decorators/Trace.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:6](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/telemetry-api/src/libs/decorators/Trace.ts#L6)

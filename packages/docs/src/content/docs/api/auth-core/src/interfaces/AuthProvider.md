@@ -5,7 +5,7 @@ prev: false
 title: "AuthProvider"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:3](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:3](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L3)
 
 ## Type Parameters
 
@@ -19,7 +19,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:3](https://g
 
 > **authenticate**(`request`): `Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/) \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:4](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L4)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L4)
 
 #### Parameters
 

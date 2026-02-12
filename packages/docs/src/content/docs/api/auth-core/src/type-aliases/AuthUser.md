@@ -7,7 +7,7 @@ title: "AuthUser"
 
 > **AuthUser** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:1](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthUser.ts#L1)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:1](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthUser.ts#L1)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:1](https://githu
 
 > `optional` **email**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:3](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthUser.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:3](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthUser.ts#L3)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:3](https://githu
 
 > **id**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:2](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthUser.ts#L2)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:2](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthUser.ts#L2)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:2](https://githu
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:6](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthUser.ts#L6)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:6](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthUser.ts#L6)
 
 ***
 
@@ -39,7 +39,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:6](https://githu
 
 > **permissions**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:5](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthUser.ts#L5)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:5](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthUser.ts#L5)
 
 ***
 
@@ -47,4 +47,4 @@ Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:5](https://githu
 
 > **roles**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:4](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/interfaces/AuthUser.ts#L4)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthUser.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/interfaces/AuthUser.ts#L4)

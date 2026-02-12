@@ -5,7 +5,7 @@ prev: false
 title: "RateLimiter"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:9](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/RateLimiter.ts#L9)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:9](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/RateLimiter.ts#L9)
 
 Core rate limiter service.
 Orchestrates key building, store access, and error handling.
@@ -16,7 +16,7 @@ Orchestrates key building, store access, and error handling.
 
 > **new RateLimiter**(`store`, `keyBuilder`, `options?`): `RateLimiter`
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:15](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/RateLimiter.ts#L15)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:15](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/RateLimiter.ts#L15)
 
 #### Parameters
 
@@ -42,7 +42,7 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:15](https://github.
 
 > **check**(`context`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:32](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/RateLimiter.ts#L32)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:32](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/RateLimiter.ts#L32)
 
 Check rate limit for the given context and policy.
 
@@ -72,7 +72,7 @@ Rate limit result
 
 > **checkWithKey**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:48](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/RateLimiter.ts#L48)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:48](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/RateLimiter.ts#L48)
 
 Check rate limit with a pre-built key (for middleware use).
 

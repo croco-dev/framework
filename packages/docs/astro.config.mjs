@@ -9,6 +9,17 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Croco Framework Documentation',
+      defaultLocale: 'en',
+      locales: {
+        en: {
+          label: 'English',
+          lang: 'en',
+        },
+        ko: {
+          label: '한국어',
+          lang: 'ko',
+        },
+      },
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/yourusername/croco' }],
       plugins: [
         starlightTypeDoc({

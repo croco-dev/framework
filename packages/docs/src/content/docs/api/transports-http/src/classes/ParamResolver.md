@@ -5,7 +5,7 @@ prev: false
 title: "ParamResolver"
 ---
 
-Defined in: [packages/transports-http/src/libs/ParamResolver.ts:4](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/transports-http/src/libs/ParamResolver.ts#L4)
+Defined in: [packages/transports-http/src/libs/ParamResolver.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/ParamResolver.ts#L4)
 
 ## Constructors
 
@@ -23,7 +23,7 @@ Defined in: [packages/transports-http/src/libs/ParamResolver.ts:4](https://githu
 
 > **resolveParams**(`ctx`, `controller`, `methodName`): `Promise`\<`unknown`[]\>
 
-Defined in: [packages/transports-http/src/libs/ParamResolver.ts:5](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/transports-http/src/libs/ParamResolver.ts#L5)
+Defined in: [packages/transports-http/src/libs/ParamResolver.ts:5](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/transports-http/src/libs/ParamResolver.ts#L5)
 
 #### Parameters
 

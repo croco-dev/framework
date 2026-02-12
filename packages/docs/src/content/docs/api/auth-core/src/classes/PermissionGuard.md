@@ -5,7 +5,7 @@ prev: false
 title: "PermissionGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:13](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/guards/PermissionGuard.ts#L13)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:13](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/guards/PermissionGuard.ts#L13)
 
 ## Implements
 
@@ -17,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:13](https://g
 
 > **new PermissionGuard**(`rbacEngine`): `PermissionGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:14](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/guards/PermissionGuard.ts#L14)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:14](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/guards/PermissionGuard.ts#L14)
 
 #### Parameters
 
@@ -35,7 +35,7 @@ Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:14](https://g
 
 > **canActivate**(`context`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:16](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/auth-core/src/libs/guards/PermissionGuard.ts#L16)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:16](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/auth-core/src/libs/guards/PermissionGuard.ts#L16)
 
 #### Parameters
 

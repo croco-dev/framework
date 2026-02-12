@@ -5,7 +5,7 @@ prev: false
 title: "DomainEvent"
 ---
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:7](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/DomainEvent.ts#L7)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:7](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/DomainEvent.ts#L7)
 
 ## Extended by
 
@@ -22,7 +22,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:7](https://github.com/
 
 > **new DomainEvent**(): `DomainEvent`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/DomainEvent.ts#L12)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/DomainEvent.ts#L12)
 
 #### Returns
 
@@ -34,7 +34,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:8](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/DomainEvent.ts#L8)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:8](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/DomainEvent.ts#L8)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:8](https://github.com/
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:10](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/DomainEvent.ts#L10)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/DomainEvent.ts#L10)
 
 ***
 
@@ -50,4 +50,4 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:10](https://github.com
 
 > `readonly` **timestamp**: `Date`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:9](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/DomainEvent.ts#L9)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:9](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/DomainEvent.ts#L9)

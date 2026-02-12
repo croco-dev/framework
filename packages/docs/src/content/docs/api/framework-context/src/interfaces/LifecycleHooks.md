@@ -5,7 +5,7 @@ prev: false
 title: "LifecycleHooks"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:100](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/framework-context/src/libs/types.ts#L100)
+Defined in: [packages/framework-context/src/libs/types.ts:100](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L100)
 
 Lifecycle hooks for request scope
 
@@ -21,7 +21,7 @@ Lifecycle hooks for request scope
 
 > `optional` **onRequestEnd**: (`ctx`, `result?`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:109](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/framework-context/src/libs/types.ts#L109)
+Defined in: [packages/framework-context/src/libs/types.ts:109](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L109)
 
 Called when request ends successfully, after middleware chain
 
@@ -45,7 +45,7 @@ Called when request ends successfully, after middleware chain
 
 > `optional` **onRequestError**: (`ctx`, `error`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:114](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/framework-context/src/libs/types.ts#L114)
+Defined in: [packages/framework-context/src/libs/types.ts:114](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L114)
 
 Called when request encounters an error
 
@@ -69,7 +69,7 @@ Called when request encounters an error
 
 > `optional` **onRequestStart**: (`ctx`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:104](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/framework-context/src/libs/types.ts#L104)
+Defined in: [packages/framework-context/src/libs/types.ts:104](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L104)
 
 Called when request starts, before middleware chain
 

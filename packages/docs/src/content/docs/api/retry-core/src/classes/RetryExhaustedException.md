@@ -5,7 +5,7 @@ prev: false
 title: "RetryExhaustedException"
 ---
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:8](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L8)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:8](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L8)
 
 Error thrown when all retry attempts are exhausted.
 
@@ -23,7 +23,7 @@ only when explicitly configured with wrapExhausted: true.
 
 > **new RetryExhaustedException**(`message`, `lastError?`, `attempts?`, `methodName?`): `RetryExhaustedException`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:11](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L11)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:11](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L11)
 
 #### Parameters
 
@@ -57,7 +57,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:11](
 
 > `readonly` **attempts**: `number` = `0`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:14](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L14)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:14](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L14)
 
 ***
 
@@ -77,7 +77,7 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 > `readonly` **lastError**: `Error` \| `null` = `null`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:13](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L13)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:13](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L13)
 
 ***
 
@@ -97,7 +97,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 > `readonly` `optional` **methodName**: `string`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:15](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L15)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:15](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L15)
 
 ***
 
@@ -105,7 +105,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:15](
 
 > `readonly` **name**: `"RetryExhaustedException"` = `'RetryExhaustedException'`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:9](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L9)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:9](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L9)
 
 #### Overrides
 
@@ -151,7 +151,7 @@ not capture any frames.
 
 > **getOriginalError**(): `Error`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:40](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L40)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:40](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L40)
 
 Get the original error for re-throwing.
 Returns this exception if no original error exists.
@@ -236,7 +236,7 @@ a();
 
 > `static` **fromContext**(`methodName`, `attempts`, `lastError`): `RetryExhaustedException`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:31](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L31)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedException.ts:31](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/errors/RetryExhaustedException.ts#L31)
 
 Create from retry context.
 

@@ -7,7 +7,7 @@ title: "ProblemFactory"
 
 > `const` **ProblemFactory**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:10](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemFactory.ts#L10)
+Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/ProblemFactory.ts#L10)
 
 ## Type Declaration
 

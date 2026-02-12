@@ -7,7 +7,7 @@ title: "ProblemCategoryMapper"
 
 > `const` **ProblemCategoryMapper**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:31](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L31)
+Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:31](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L31)
 
 ## Type Declaration
 

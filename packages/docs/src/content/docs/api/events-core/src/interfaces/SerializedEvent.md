@@ -5,7 +5,7 @@ prev: false
 title: "SerializedEvent"
 ---
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:7](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/EventSerializer.ts#L7)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:7](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventSerializer.ts#L7)
 
 직렬화된 이벤트 데이터 구조
 
@@ -15,7 +15,7 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:7](https://github.
 
 > `optional` **aggregateId**: `string`
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:11](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/EventSerializer.ts#L11)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:11](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventSerializer.ts#L11)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:11](https://github
 
 > **eventId**: `string`
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:9](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/EventSerializer.ts#L9)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:9](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventSerializer.ts#L9)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:9](https://github.
 
 > **eventType**: `string`
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:8](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/EventSerializer.ts#L8)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:8](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventSerializer.ts#L8)
 
 ***
 
@@ -39,7 +39,7 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:8](https://github.
 
 > **occurredAt**: `string`
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:10](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/EventSerializer.ts#L10)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventSerializer.ts#L10)
 
 ***
 
@@ -47,4 +47,4 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:10](https://github
 
 > **payload**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:12](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/events-core/src/libs/EventSerializer.ts#L12)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:12](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/events-core/src/libs/EventSerializer.ts#L12)

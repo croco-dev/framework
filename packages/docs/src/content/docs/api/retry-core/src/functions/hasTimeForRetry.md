@@ -7,7 +7,7 @@ title: "hasTimeForRetry"
 
 > **hasTimeForRetry**(`nextDelayMs`, `options?`): `boolean`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:76](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L76)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:76](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L76)
 
 Check if there's enough time for another retry attempt.
 

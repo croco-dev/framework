@@ -5,7 +5,7 @@ prev: false
 title: "RetryTemplate"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:50](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/RetryTemplate.ts#L50)
+Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:50](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/RetryTemplate.ts#L50)
 
 Programmatic retry template.
 
@@ -25,7 +25,7 @@ const result = await template.execute(
 
 > **new RetryTemplate**(`options?`): `RetryTemplate`
 
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:57](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/RetryTemplate.ts#L57)
+Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:57](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/RetryTemplate.ts#L57)
 
 #### Parameters
 
@@ -43,7 +43,7 @@ Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:57](https://github.co
 
 > **execute**\<`T`\>(`callback`, `recovery?`): `Promise`\<`T`\>
 
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:83](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/retry-core/src/libs/RetryTemplate.ts#L83)
+Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:83](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/retry-core/src/libs/RetryTemplate.ts#L83)
 
 Execute operation with retry logic.
 

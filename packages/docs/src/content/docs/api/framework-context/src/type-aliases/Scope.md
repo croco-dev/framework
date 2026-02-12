@@ -7,6 +7,6 @@ title: "Scope"
 
 > **Scope** = `"singleton"` \| `"request"` \| `"transient"`
 
-Defined in: [packages/framework-context/src/libs/types.ts:4](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/framework-context/src/libs/types.ts#L4)
+Defined in: [packages/framework-context/src/libs/types.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/framework-context/src/libs/types.ts#L4)
 
 Component scope types

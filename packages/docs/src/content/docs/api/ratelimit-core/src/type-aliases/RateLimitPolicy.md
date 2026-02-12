@@ -7,7 +7,7 @@ title: "RateLimitPolicy"
 
 > **RateLimitPolicy** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:4](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/types.ts#L4)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:4](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L4)
 
 Rate limit policy configuration
 
@@ -17,7 +17,7 @@ Rate limit policy configuration
 
 > `optional` **algorithm**: `"sliding"`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:12](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/types.ts#L12)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:12](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L12)
 
 Algorithm type (reserved for future use)
 
@@ -27,7 +27,7 @@ Algorithm type (reserved for future use)
 
 > **limit**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:8](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/types.ts#L8)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:8](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L8)
 
 Maximum number of requests allowed
 
@@ -37,7 +37,7 @@ Maximum number of requests allowed
 
 > **name**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:6](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/types.ts#L6)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:6](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L6)
 
 Policy identifier (used as key segment)
 
@@ -47,6 +47,6 @@ Policy identifier (used as key segment)
 
 > **windowMs**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:10](https://github.com/croco-dev/shared/blob/6c740cec42c19b94e53a518f632803f284903537/packages/ratelimit-core/src/libs/types.ts#L10)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:10](https://github.com/croco-dev/shared/blob/7b5dfb630d061e74d83e139728e0f55e1dfd9dd0/packages/ratelimit-core/src/libs/types.ts#L10)
 
 Time window in milliseconds
