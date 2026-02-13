@@ -7,6 +7,8 @@
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
+    "docs:build": "turbo run docs:build",
+    "docs:dev": "turbo run docs:dev",
     "format": "biome format --write .",
     "lint": "turbo lint",
     "prepare": "lefthook install",
