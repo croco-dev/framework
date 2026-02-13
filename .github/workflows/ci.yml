@@ -49,6 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
+      api-source: ${{ steps.filter.outputs.api-source }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -57,6 +58,21 @@ jobs:
           filters: |
             docs:
               - 'packages/docs/**'
+            api-source:
+              - 'packages/framework-context/src/**'
+              - 'packages/retry-core/src/**'
+              - 'packages/problems-core/src/**'
+              - 'packages/events-core/src/**'
+              - 'packages/events-inmemory/src/**'
+              - 'packages/auth-core/src/**'
+              - 'packages/ratelimit-core/src/**'
+              - 'packages/metering-core/src/**'
+              - 'packages/transports-http/src/**'
+              - 'packages/telemetry-api/src/**'
+              - 'packages/telemetry-sdk-node/src/**'
+              - 'packages/llm-core/src/**'
+              - 'packages/docs/astro.config.mjs'
+              - 'packages/docs/tsconfig.typedoc.json'
 
   docs-build:
     needs: changes
