@@ -7,7 +7,7 @@ title: "ToolDefinition"
 
 > **ToolDefinition** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:101](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/types.ts#L101)
+Defined in: [packages/llm-core/src/libs/types.ts:101](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/types.ts#L101)
 
 툴 정의
 
@@ -17,7 +17,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:101](https://github.com/croco-d
 
 > **description**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:110](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/types.ts#L110)
+Defined in: [packages/llm-core/src/libs/types.ts:110](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/types.ts#L110)
 
 툴 설명
 
@@ -27,7 +27,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:110](https://github.com/croco-d
 
 > **name**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:105](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/types.ts#L105)
+Defined in: [packages/llm-core/src/libs/types.ts:105](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/types.ts#L105)
 
 툴 이름
 
@@ -37,6 +37,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:105](https://github.com/croco-d
 
 > **parameters**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/llm-core/src/libs/types.ts:115](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/types.ts#L115)
+Defined in: [packages/llm-core/src/libs/types.ts:115](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/types.ts#L115)
 
 파라미터 스키마

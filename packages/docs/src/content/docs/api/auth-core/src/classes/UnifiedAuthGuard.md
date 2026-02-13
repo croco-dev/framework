@@ -5,7 +5,7 @@ prev: false
 title: "UnifiedAuthGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:8](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L8)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:8](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L8)
 
 ## Implements
 
@@ -17,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:8](https://g
 
 > **new UnifiedAuthGuard**(`authProvider`, `apiKeyProvider`): `UnifiedAuthGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:9](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L9)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:9](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L9)
 
 #### Parameters
 
@@ -39,7 +39,7 @@ Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:9](https://g
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:14](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L14)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:14](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L14)
 
 #### Parameters
 

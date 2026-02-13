@@ -7,7 +7,7 @@ title: "ToolCallResult"
 
 > **ToolCallResult** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:146](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/types.ts#L146)
+Defined in: [packages/llm-core/src/libs/types.ts:146](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/types.ts#L146)
 
 툴 호출 결과
 
@@ -17,7 +17,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:146](https://github.com/croco-d
 
 > **toolCalls**: `object`[]
 
-Defined in: [packages/llm-core/src/libs/types.ts:150](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/types.ts#L150)
+Defined in: [packages/llm-core/src/libs/types.ts:150](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/types.ts#L150)
 
 툴 호출 목록
 
@@ -35,6 +35,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:150](https://github.com/croco-d
 
 > **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-Defined in: [packages/llm-core/src/libs/types.ts:158](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/types.ts#L158)
+Defined in: [packages/llm-core/src/libs/types.ts:158](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/types.ts#L158)
 
 토큰 사용량

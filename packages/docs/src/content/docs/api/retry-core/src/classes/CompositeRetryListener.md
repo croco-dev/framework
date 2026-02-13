@@ -5,7 +5,7 @@ prev: false
 title: "CompositeRetryListener"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:33](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L33)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:33](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L33)
 
 Composite listener that delegates to multiple listeners.
 
@@ -19,7 +19,7 @@ Composite listener that delegates to multiple listeners.
 
 > **new CompositeRetryListener**(`listeners`): `CompositeRetryListener`
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:34](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L34)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:34](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L34)
 
 #### Parameters
 
@@ -37,7 +37,7 @@ Defined in: [packages/retry-core/src/libs/RetryListener.ts:34](https://github.co
 
 > **onError**(`context`, `error`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:46](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L46)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:46](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L46)
 
 Called after each failed attempt (before backoff).
 
@@ -65,7 +65,7 @@ Called after each failed attempt (before backoff).
 
 > **onExhausted**(`context`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:62](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L62)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:62](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L62)
 
 Called when all retry attempts are exhausted.
 
@@ -89,7 +89,7 @@ Called when all retry attempts are exhausted.
 
 > **onStart**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:36](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L36)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:36](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L36)
 
 Called before the first attempt.
 Return false to veto the retry operation.
@@ -114,7 +114,7 @@ Return false to veto the retry operation.
 
 > **onSuccess**(`context`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:54](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L54)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:54](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L54)
 
 Called after a successful attempt.
 

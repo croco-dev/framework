@@ -5,7 +5,7 @@ prev: false
 title: "EventHandler"
 ---
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:4](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventHandler.ts#L4)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:4](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventHandler.ts#L4)
 
 ## Type Parameters
 
@@ -19,7 +19,7 @@ Defined in: [packages/events-core/src/libs/EventHandler.ts:4](https://github.com
 
 > **handle**(`event`): `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:5](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventHandler.ts#L5)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:5](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventHandler.ts#L5)
 
 #### Parameters
 

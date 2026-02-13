@@ -5,7 +5,7 @@ prev: false
 title: "RetryListener"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:7](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L7)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:7](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L7)
 
 Listener interface for retry lifecycle events.
 Implement this to add logging, metrics, or custom behavior.
@@ -16,7 +16,7 @@ Implement this to add logging, metrics, or custom behavior.
 
 > `optional` **onError**(`context`, `error`): `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:17](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L17)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:17](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L17)
 
 Called after each failed attempt (before backoff).
 
@@ -40,7 +40,7 @@ Called after each failed attempt (before backoff).
 
 > `optional` **onExhausted**(`context`): `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:27](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L27)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:27](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L27)
 
 Called when all retry attempts are exhausted.
 
@@ -60,7 +60,7 @@ Called when all retry attempts are exhausted.
 
 > `optional` **onStart**(`context`): `boolean` \| `Promise`\<`boolean`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:12](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L12)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:12](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L12)
 
 Called before the first attempt.
 Return false to veto the retry operation.
@@ -81,7 +81,7 @@ Return false to veto the retry operation.
 
 > `optional` **onSuccess**(`context`): `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/RetryListener.ts:22](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryListener.ts#L22)
+Defined in: [packages/retry-core/src/libs/RetryListener.ts:22](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryListener.ts#L22)
 
 Called after a successful attempt.
 

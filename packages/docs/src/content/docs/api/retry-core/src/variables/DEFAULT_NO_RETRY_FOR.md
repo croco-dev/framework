@@ -7,7 +7,7 @@ title: "DEFAULT_NO_RETRY_FOR"
 
 > `const` **DEFAULT\_NO\_RETRY\_FOR**: (`message?`) => `Error`[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:41](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/RetryPolicy.ts#L41)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:41](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryPolicy.ts#L41)
 
 Default non-retryable error types (programmer errors)
 

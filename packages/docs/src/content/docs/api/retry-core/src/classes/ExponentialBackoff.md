@@ -5,7 +5,7 @@ prev: false
 title: "ExponentialBackoff"
 ---
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:56](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/BackoffPolicy.ts#L56)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:56](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/BackoffPolicy.ts#L56)
 
 Exponential backoff with Full Jitter.
 
@@ -27,7 +27,7 @@ https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
 
 > **new ExponentialBackoff**(`options?`, `deps?`): `ExponentialBackoff`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:64](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/BackoffPolicy.ts#L64)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:64](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/BackoffPolicy.ts#L64)
 
 #### Parameters
 
@@ -49,7 +49,7 @@ Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:64](https://github.co
 
 > **getDelay**(`attempt`): `number`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:81](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/BackoffPolicy.ts#L81)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:81](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/BackoffPolicy.ts#L81)
 
 Calculate delay for attempt (0-based index).
 
@@ -76,7 +76,7 @@ With jitter: random(0, cap) - Full Jitter
 
 > **reset**(): `void`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:106](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/BackoffPolicy.ts#L106)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:106](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/BackoffPolicy.ts#L106)
 
 Reset (no-op for stateless implementation).
 
@@ -94,7 +94,7 @@ Reset (no-op for stateless implementation).
 
 > **wait**(`attempt`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:96](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/retry-core/src/libs/BackoffPolicy.ts#L96)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:96](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/BackoffPolicy.ts#L96)
 
 Wait for the calculated delay.
 

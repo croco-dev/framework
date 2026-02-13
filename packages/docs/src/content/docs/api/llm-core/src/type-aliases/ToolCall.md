@@ -7,7 +7,7 @@ title: "ToolCall"
 
 > **ToolCall** = `object`
 
-Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:4](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/events/LlmToolCalledEvent.ts#L4)
+Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:4](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/events/LlmToolCalledEvent.ts#L4)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:4](https://
 
 > **arguments**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:6](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/events/LlmToolCalledEvent.ts#L6)
+Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:6](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/events/LlmToolCalledEvent.ts#L6)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:6](https://
 
 > **name**: `string`
 
-Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:5](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/llm-core/src/libs/events/LlmToolCalledEvent.ts#L5)
+Defined in: [packages/llm-core/src/libs/events/LlmToolCalledEvent.ts:5](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/events/LlmToolCalledEvent.ts#L5)

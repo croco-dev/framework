@@ -5,7 +5,7 @@ prev: false
 title: "EventRegistry"
 ---
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:9](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventRegistry.ts#L9)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:9](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventRegistry.ts#L9)
 
 이벤트 타입 레지스트리
 역직렬화를 위해 이벤트 클래스를 등록하고 조회합니다.
@@ -26,7 +26,7 @@ Defined in: [packages/events-core/src/libs/EventRegistry.ts:9](https://github.co
 
 > **clear**(): `void`
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:51](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventRegistry.ts#L51)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:51](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventRegistry.ts#L51)
 
 레지스트리를 초기화합니다.
 
@@ -40,7 +40,7 @@ Defined in: [packages/events-core/src/libs/EventRegistry.ts:51](https://github.c
 
 > **get**\<`T`\>(`eventType`): `EventClass`\<`T`\> \| `undefined`
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:27](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventRegistry.ts#L27)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:27](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventRegistry.ts#L27)
 
 이벤트 타입 이름으로 등록된 클래스를 조회합니다.
 
@@ -70,7 +70,7 @@ Defined in: [packages/events-core/src/libs/EventRegistry.ts:27](https://github.c
 
 > **getRegisteredTypes**(): `string`[]
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:44](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventRegistry.ts#L44)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:44](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventRegistry.ts#L44)
 
 등록된 모든 이벤트 타입 이름을 반환합니다.
 
@@ -86,7 +86,7 @@ Defined in: [packages/events-core/src/libs/EventRegistry.ts:44](https://github.c
 
 > **has**(`eventType`): `boolean`
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:36](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventRegistry.ts#L36)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:36](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventRegistry.ts#L36)
 
 이벤트 타입이 등록되어 있는지 확인합니다.
 
@@ -110,7 +110,7 @@ Defined in: [packages/events-core/src/libs/EventRegistry.ts:36](https://github.c
 
 > **register**\<`T`\>(`eventClass`): `this`
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:17](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventRegistry.ts#L17)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:17](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventRegistry.ts#L17)
 
 이벤트 클래스를 등록합니다.
 

@@ -5,7 +5,7 @@ prev: false
 title: "RateLimitKeyBuilder"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:19](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts#L19)
+Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:19](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts#L19)
 
 Builds rate limit keys from context using configurable segments.
 
@@ -23,7 +23,7 @@ const key = builder.build(context, 'api-default');
 
 > **new RateLimitKeyBuilder**(`segments`): `RateLimitKeyBuilder`
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:22](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts#L22)
+Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:22](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts#L22)
 
 #### Parameters
 
@@ -41,7 +41,7 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:22](https:/
 
 > **build**(`context`, `policyName`): `string`
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:35](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts#L35)
+Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:35](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts#L35)
 
 Build a rate limit key from context.
 

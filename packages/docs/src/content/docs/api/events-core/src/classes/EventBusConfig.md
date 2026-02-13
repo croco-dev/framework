@@ -5,7 +5,7 @@ prev: false
 title: "EventBusConfig"
 ---
 
-Defined in: [packages/events-core/src/libs/EventBusConfig.ts:11](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventBusConfig.ts#L11)
+Defined in: [packages/events-core/src/libs/EventBusConfig.ts:11](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventBusConfig.ts#L11)
 
 ## Methods
 
@@ -13,7 +13,7 @@ Defined in: [packages/events-core/src/libs/EventBusConfig.ts:11](https://github.
 
 > **getEventBus**(): [`EventBus`](/api/events-core/src/interfaces/eventbus/)
 
-Defined in: [packages/events-core/src/libs/EventBusConfig.ts:26](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventBusConfig.ts#L26)
+Defined in: [packages/events-core/src/libs/EventBusConfig.ts:26](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventBusConfig.ts#L26)
 
 #### Returns
 
@@ -25,7 +25,7 @@ Defined in: [packages/events-core/src/libs/EventBusConfig.ts:26](https://github.
 
 > **setEventBus**(`eventBus`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBusConfig.ts:30](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventBusConfig.ts#L30)
+Defined in: [packages/events-core/src/libs/EventBusConfig.ts:30](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventBusConfig.ts#L30)
 
 #### Parameters
 
@@ -43,7 +43,7 @@ Defined in: [packages/events-core/src/libs/EventBusConfig.ts:30](https://github.
 
 > **start**(`options`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventBusConfig.ts:38](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventBusConfig.ts#L38)
+Defined in: [packages/events-core/src/libs/EventBusConfig.ts:38](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventBusConfig.ts#L38)
 
 #### Parameters
 
@@ -61,7 +61,7 @@ Defined in: [packages/events-core/src/libs/EventBusConfig.ts:38](https://github.
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBusConfig.ts:34](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventBusConfig.ts#L34)
+Defined in: [packages/events-core/src/libs/EventBusConfig.ts:34](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventBusConfig.ts#L34)
 
 #### Parameters
 
@@ -79,7 +79,7 @@ Defined in: [packages/events-core/src/libs/EventBusConfig.ts:34](https://github.
 
 > `static` **getInstance**(): `EventBusConfig`
 
-Defined in: [packages/events-core/src/libs/EventBusConfig.ts:18](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/events-core/src/libs/EventBusConfig.ts#L18)
+Defined in: [packages/events-core/src/libs/EventBusConfig.ts:18](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/EventBusConfig.ts#L18)
 
 #### Returns
 

@@ -5,7 +5,7 @@ prev: false
 title: "ApiKeyGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:6](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L6)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:6](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L6)
 
 ## Implements
 
@@ -17,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:6](https://github
 
 > **new ApiKeyGuard**(`apiKeyProvider`): `ApiKeyGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:7](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L7)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:7](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L7)
 
 #### Parameters
 
@@ -35,7 +35,7 @@ Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:7](https://github
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:9](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L9)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:9](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L9)
 
 #### Parameters
 

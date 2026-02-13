@@ -5,7 +5,7 @@ prev: false
 title: "ProbabilitySampler"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:8](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L8)
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:8](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L8)
 
 ## Implements
 
@@ -17,7 +17,7 @@ Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts
 
 > **new ProbabilitySampler**(`options`): `ProbabilitySampler`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:12](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L12)
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:12](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L12)
 
 #### Parameters
 
@@ -35,7 +35,7 @@ Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts
 
 > **shouldSample**(`context`, `traceId`, `_spanName`, `_spanKind`, `_attributes`, `_links`): `SamplingResult`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:20](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L20)
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:20](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L20)
 
 Checks whether span needs to be created and tracked.
 
@@ -87,7 +87,7 @@ a SamplingResult.
 
 > **toString**(): `string`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:52](https://github.com/croco-dev/shared/blob/eef1ef7ed8202cdfed44941cf281f5eb00e77492/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L52)
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:52](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L52)
 
 Returns the sampler name or short description with the configuration.
 
