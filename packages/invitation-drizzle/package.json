@@ -1,5 +1,5 @@
 {
-  "name": "@croco/invitation-core",
+  "name": "@croco/invitation-drizzle",
   "version": "0.1.0",
   "type": "commonjs",
   "main": "./dist/index.js",
@@ -15,16 +15,16 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "test": "vitest run",
     "vitest": "vitest",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*",
-    "@croco/events-core": "workspace:*",
-    "@croco/membership-core": "workspace:*",
-    "@croco/notifications-core": "workspace:*"
+    "@croco/invitation-core": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
+    "drizzle-orm": "^0.44.2"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

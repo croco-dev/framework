@@ -47,8 +47,18 @@ describe('DrizzleMembershipStore', () => {
     };
 
     store = new DrizzleMembershipStore(
-      mockDb as unknown as DrizzleDb,
-      mockTxManager as unknown as TxManager<DrizzleDb>
+      mockDb as unknown as DrizzleDb & {
+        select: (...args: unknown[]) => unknown;
+        insert: (...args: unknown[]) => unknown;
+        delete: (...args: unknown[]) => unknown;
+      },
+      mockTxManager as unknown as TxManager<
+        DrizzleDb & {
+          select: (...args: unknown[]) => unknown;
+          insert: (...args: unknown[]) => unknown;
+          delete: (...args: unknown[]) => unknown;
+        }
+      >
     );
   });
 

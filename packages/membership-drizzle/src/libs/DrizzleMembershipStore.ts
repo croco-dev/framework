@@ -10,10 +10,17 @@ import type { DrizzleDb } from '@croco/tx-drizzle';
 import { and, count, eq } from 'drizzle-orm';
 import { memberships } from './schema';
 
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
+type DrizzleSelectFn = (...args: unknown[]) => any;
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
+type DrizzleInsertFn = (...args: unknown[]) => any;
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
+type DrizzleDeleteFn = (...args: unknown[]) => any;
+
 type DrizzleMembershipClient = DrizzleDb & {
-  select: (...args: unknown[]) => any;
-  insert: (...args: unknown[]) => any;
-  delete: (...args: unknown[]) => any;
+  select: DrizzleSelectFn;
+  insert: DrizzleInsertFn;
+  delete: DrizzleDeleteFn;
 };
 
 export const DRIZZLE_TOKEN = new Token<DrizzleMembershipClient>('DRIZZLE_TOKEN');

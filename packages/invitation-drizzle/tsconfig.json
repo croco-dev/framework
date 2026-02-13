@@ -1,0 +1,14 @@
+{
+  "extends": "@croco/utils-tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/invitation-core": ["../invitation-core/src/index.ts"],
+      "@croco/tx-core": ["../tx-core/src/index.ts"],
+      "@croco/tx-drizzle": ["../tx-drizzle/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
