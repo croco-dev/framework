@@ -74,9 +74,35 @@ jobs:
               - 'packages/docs/astro.config.mjs'
               - 'packages/docs/tsconfig.typedoc.json'
 
+  docs-sync-check:
+    needs: [validate, changes]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.api-source == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build docs and check for drift
+        run: |
+          pnpm turbo run docs:build --force
+          if ! git diff --exit-code -- packages/docs/src/content/docs/api/; then
+            echo "::error::API docs are out of sync. Run 'pnpm docs:build' locally and commit the changes."
+            exit 1
+          fi
+
   docs-build:
     needs: changes
-    if: ${{ needs.changes.outputs.docs == 'true' }}
+    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.api-source == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -106,7 +132,7 @@ jobs:
 
   docs-links:
     needs: [changes, docs-build]
-    if: ${{ needs.changes.outputs.docs == 'true' }}
+    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.api-source == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
