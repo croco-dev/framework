@@ -146,6 +146,28 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@25.2.0)
 
+  packages/audit-core:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../protocols-rest
+    devDependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@25.2.0)
+
   packages/audit-drizzle:
     dependencies:
       '@croco/framework-context':
@@ -580,6 +602,68 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@25.2.0)
 
+  packages/invitation-core:
+    dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/membership-core':
+        specifier: workspace:*
+        version: link:../membership-core
+      '@croco/notifications-core':
+        specifier: workspace:*
+        version: link:../notifications-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@25.2.0)
+
+  packages/invitation-drizzle:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/invitation-core':
+        specifier: workspace:*
+        version: link:../invitation-core
+      '@croco/tx-core':
+        specifier: workspace:*
+        version: link:../tx-core
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.11)
+    devDependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@25.2.0)
+
   packages/llm-core:
     dependencies:
       '@croco/events-core':
@@ -641,6 +725,62 @@ importers:
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
+  packages/membership-core:
+    dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@25.2.0)
+
+  packages/membership-drizzle:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/membership-core':
+        specifier: workspace:*
+        version: link:../membership-core
+      '@croco/tx-core':
+        specifier: workspace:*
+        version: link:../tx-core
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.11)
+    devDependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@25.2.0)
 
   packages/metering-core:
     dependencies:
@@ -11211,6 +11351,14 @@ snapshots:
     optionalDependencies:
       vite: 7.3.0(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1)
 
+  '@vitest/mocker@4.0.16(vite@7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1))':
+    dependencies:
+      '@vitest/spy': 4.0.16
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
+
   '@vitest/pretty-format@2.1.9':
     dependencies:
       tinyrainbow: 1.2.0
@@ -15214,7 +15362,7 @@ snapshots:
   vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1):
     dependencies:
       '@vitest/expect': 4.0.16
-      '@vitest/mocker': 4.0.16(vite@7.3.0(@types/node@22.19.3)(jiti@2.6.1)(yaml@2.8.1))
+      '@vitest/mocker': 4.0.16(vite@7.3.0(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1))
       '@vitest/pretty-format': 4.0.16
       '@vitest/runner': 4.0.16
       '@vitest/snapshot': 4.0.16

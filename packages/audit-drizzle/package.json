@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/audit-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
