@@ -25,6 +25,12 @@ export { InvalidMeterProblem } from './libs/problems/InvalidMeterProblem';
 // Problems
 export { QuotaExceededProblem } from './libs/problems/QuotaExceededProblem';
 export { RedisProblem } from './libs/problems/RedisProblem';
+export type {
+  QuotaCheckAndRecordOptions,
+  QuotaCheckAndRecordResult,
+  QuotaManagerOptions,
+} from './libs/QuotaManager';
+export { QuotaManager } from './libs/QuotaManager';
 export type { RedisClient } from './libs/RedisClient';
 export { RedisUsageStorage } from './libs/RedisUsageStorage';
 // Types (always last)
@@ -40,4 +46,4 @@ export type {
 } from './libs/types';
 export type { UsageAggregatorOptions } from './libs/UsageAggregator';
 export { UsageAggregator } from './libs/UsageAggregator';
-export type { UsageStorage } from './libs/UsageStorage';
+export type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from './libs/UsageStorage';

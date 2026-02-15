@@ -136,6 +136,49 @@ describe('MeteringService', () => {
       );
     });
 
+    it('BUG-11 동시 할당량 소진에서 정확한 임계값 도달', async () => {
+      const meter = createMeter({ quota: 10, allowOverQuota: false });
+      let consumedUsage = 0;
+
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
+      vi.mocked(mockStorage.getUsage).mockImplementation(async () => {
+        await Promise.resolve();
+        return consumedUsage;
+      });
+      vi.mocked(mockStorage.record).mockImplementation(async (usage) => {
+        consumedUsage += usage.value;
+      });
+
+      const first = service.record({
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 4,
+        idempotencyKey: 'bug-11-first',
+      });
+      const second = service.record({
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 4,
+        idempotencyKey: 'bug-11-second',
+      });
+      const third = service.record({
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 4,
+        idempotencyKey: 'bug-11-third',
+      });
+
+      const settled = await Promise.allSettled([first, second, third]);
+      const successCount = settled.filter((result) => result.status === 'fulfilled').length;
+      const failedResults = settled.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+
+      expect(successCount).toBe(2);
+      expect(failedResults).toHaveLength(1);
+      expect(failedResults[0].reason).toBeInstanceOf(QuotaExceededProblem);
+      expect(consumedUsage).toBe(8);
+      expect(mockStorage.record).toHaveBeenCalledTimes(2);
+    });
+
     it('should allow over quota when allowOverQuota is true', async () => {
       const meter = createMeter({ quota: 100, allowOverQuota: true });
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);

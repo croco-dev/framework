@@ -1,5 +1,19 @@
 import type { UsageQueryOptions, UsageRecord } from './types';
 
+export type AtomicQuotaCheckOptions = {
+  tenantId: string;
+  meterId: string;
+  value: number;
+  quota: number;
+  allowOverQuota: boolean;
+  usageRecord: UsageRecord;
+};
+
+export type AtomicQuotaCheckResult = {
+  exceeded: boolean;
+  newUsage: number;
+};
+
 /**
  * Redis 기반 실시간 Usage 저장소 인터페이스
  *
@@ -30,4 +44,6 @@ export interface UsageStorage {
    * Redis에서 특정 기간의 usage records 조회
    */
   fetchUsageRecords(options: UsageQueryOptions): Promise<UsageRecord[]>;
+
+  checkAndRecordWithinQuota?(options: AtomicQuotaCheckOptions): Promise<AtomicQuotaCheckResult>;
 }

@@ -4,7 +4,7 @@ import { QuotaExceededEvent } from './events/QuotaExceededEvent';
 import { UsageRecordedEvent } from './events/UsageRecordedEvent';
 import type { IdempotencyManager } from './IdempotencyManager';
 import type { MeterRegistry } from './MeterRegistry';
-import { QuotaExceededProblem } from './problems/QuotaExceededProblem';
+import { QuotaManager } from './QuotaManager';
 import type { RecordOptions, UsageQueryOptions, UsageRecord } from './types';
 import type { UsageStorage } from './UsageStorage';
 
@@ -28,12 +28,14 @@ export class MeteringService {
   private readonly usageStorage: UsageStorage;
   private readonly idempotencyManager: IdempotencyManager;
   private readonly eventBus?: EventBus;
+  private readonly quotaManager: QuotaManager;
 
   constructor(options: MeteringServiceOptions) {
     this.meterRegistry = options.meterRegistry;
     this.usageStorage = options.usageStorage;
     this.idempotencyManager = options.idempotencyManager;
     this.eventBus = options.eventBus;
+    this.quotaManager = new QuotaManager({ usageStorage: options.usageStorage });
   }
 
   /**
@@ -53,30 +55,6 @@ export class MeteringService {
     const idempotencyKey = this.idempotencyManager.ensureIdempotencyKey(options.idempotencyKey);
     await this.idempotencyManager.checkAndMarkOrThrow(tenantId, meterId, idempotencyKey);
 
-    // 3. Quota 체크 (quota가 설정된 경우만)
-    if (meter.quota !== undefined) {
-      const currentUsage = await this.usageStorage.getUsage({
-        tenantId,
-        meterId,
-        period: 'billing_cycle',
-      });
-
-      const newUsage = currentUsage + value;
-
-      if (newUsage > meter.quota) {
-        // QuotaExceeded 이벤트 발행
-        if (this.eventBus) {
-          await this.eventBus.publish(new QuotaExceededEvent(tenantId, meterId, newUsage, meter.quota));
-        }
-
-        // allowOverQuota가 false면 throw
-        if (!meter.allowOverQuota) {
-          throw new QuotaExceededProblem(meterId, newUsage, meter.quota);
-        }
-      }
-    }
-
-    // 4. Usage 기록
     const usageRecord: UsageRecord = {
       id: ulid(),
       tenantId,
@@ -87,7 +65,34 @@ export class MeteringService {
       metadata,
     };
 
-    await this.usageStorage.record(usageRecord);
+    if (meter.quota !== undefined) {
+      const allowOverQuota = meter.allowOverQuota ?? false;
+      const quotaResult = await this.quotaManager.checkAndRecord({
+        tenantId,
+        meterId,
+        value,
+        quota: meter.quota,
+        allowOverQuota,
+        usageRecord,
+      });
+
+      if (quotaResult.exceeded) {
+        // QuotaExceeded 이벤트 발행
+        if (this.eventBus) {
+          await this.eventBus.publish(new QuotaExceededEvent(tenantId, meterId, quotaResult.newUsage, meter.quota));
+        }
+      }
+
+      this.quotaManager.validateOrThrow({
+        meterId,
+        quota: meter.quota,
+        allowOverQuota,
+        exceeded: quotaResult.exceeded,
+        newUsage: quotaResult.newUsage,
+      });
+    } else {
+      await this.usageStorage.record(usageRecord);
+    }
 
     // 5. UsageRecorded 이벤트 발행
     if (this.eventBus) {
