@@ -72,6 +72,21 @@ export interface CircuitBreakerStateStore {
    * @param time 타임스탬프 (ms)
    */
   setLastFailureTime(circuitId: string, time: number): Promise<void>;
+
+  withCircuitLock?<T>(circuitId: string, operation: () => Promise<T>): Promise<T>;
+
+  incrementFailureAndCheck?(
+    circuitId: string,
+    failureThreshold: number
+  ): Promise<{ failureCount: number; shouldOpen: boolean }>;
+
+  getHalfOpenActiveCount?(circuitId: string): Promise<number>;
+
+  setHalfOpenActiveCount?(circuitId: string, count: number): Promise<void>;
+
+  getHalfOpenSuccessCount?(circuitId: string): Promise<number>;
+
+  setHalfOpenSuccessCount?(circuitId: string, count: number): Promise<void>;
 }
 
 /**
@@ -85,6 +100,9 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
   private readonly states = new Map<string, CircuitState>();
   private readonly failures = new Map<string, number>();
   private readonly lastFailures = new Map<string, number>();
+  private readonly halfOpenActiveCounts = new Map<string, number>();
+  private readonly halfOpenSuccessCounts = new Map<string, number>();
+  private readonly locks = new Map<string, Promise<void>>();
 
   async getState(circuitId: string): Promise<CircuitState> {
     return this.states.get(circuitId) ?? CircuitState.CLOSED;
@@ -92,6 +110,8 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
 
   async setState(circuitId: string, state: CircuitState): Promise<void> {
     this.states.set(circuitId, state);
+    this.halfOpenActiveCounts.set(circuitId, 0);
+    this.halfOpenSuccessCounts.set(circuitId, 0);
   }
 
   async getFailureCount(circuitId: string): Promise<number> {
@@ -103,6 +123,17 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
     const next = current + 1;
     this.failures.set(circuitId, next);
     return next;
+  }
+
+  async incrementFailureAndCheck(
+    circuitId: string,
+    failureThreshold: number
+  ): Promise<{ failureCount: number; shouldOpen: boolean }> {
+    const failureCount = await this.incrementFailureCount(circuitId);
+    return {
+      failureCount,
+      shouldOpen: failureCount >= failureThreshold,
+    };
   }
 
   async resetFailureCount(circuitId: string): Promise<void> {
@@ -118,6 +149,45 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
     this.lastFailures.set(circuitId, time);
   }
 
+  async getHalfOpenActiveCount(circuitId: string): Promise<number> {
+    return this.halfOpenActiveCounts.get(circuitId) ?? 0;
+  }
+
+  async setHalfOpenActiveCount(circuitId: string, count: number): Promise<void> {
+    this.halfOpenActiveCounts.set(circuitId, Math.max(0, count));
+  }
+
+  async getHalfOpenSuccessCount(circuitId: string): Promise<number> {
+    return this.halfOpenSuccessCounts.get(circuitId) ?? 0;
+  }
+
+  async setHalfOpenSuccessCount(circuitId: string, count: number): Promise<void> {
+    this.halfOpenSuccessCounts.set(circuitId, Math.max(0, count));
+  }
+
+  async withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T> {
+    const previousLock = this.locks.get(circuitId) ?? Promise.resolve();
+    let releaseCurrentLock!: () => void;
+
+    const currentLock = new Promise<void>((resolve) => {
+      releaseCurrentLock = resolve;
+    });
+
+    this.locks.set(circuitId, currentLock);
+
+    await previousLock;
+
+    try {
+      return await operation();
+    } finally {
+      releaseCurrentLock();
+
+      if (this.locks.get(circuitId) === currentLock) {
+        this.locks.delete(circuitId);
+      }
+    }
+  }
+
   /**
    * 특정 회로의 모든 상태를 초기화합니다.
    *
@@ -127,6 +197,9 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
     this.states.delete(circuitId);
     this.failures.delete(circuitId);
     this.lastFailures.delete(circuitId);
+    this.halfOpenActiveCounts.delete(circuitId);
+    this.halfOpenSuccessCounts.delete(circuitId);
+    this.locks.delete(circuitId);
   }
 
   /**
@@ -136,5 +209,8 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
     this.states.clear();
     this.failures.clear();
     this.lastFailures.clear();
+    this.halfOpenActiveCounts.clear();
+    this.halfOpenSuccessCounts.clear();
+    this.locks.clear();
   }
 }

@@ -78,6 +78,9 @@ export class CircuitBreaker {
   private readonly halfOpenRequests: number;
   private readonly stateStore: CircuitBreakerStateStore;
   private readonly fallback?: <T>() => T | Promise<T>;
+  private localHalfOpenActiveCount = 0;
+  private localHalfOpenSuccessCount = 0;
+  private localLock: Promise<void> = Promise.resolve();
 
   constructor(options: CircuitBreakerOptions) {
     this.circuitId = options.circuitId;
@@ -113,58 +116,228 @@ export class CircuitBreaker {
   }
 
   private async handleOpen<T>(fn: () => Promise<T>): Promise<T> {
-    const lastFailureTime = await this.stateStore.getLastFailureTime(this.circuitId);
+    const transition = await this.withCircuitLock(async () => {
+      const currentState = await this.stateStore.getState(this.circuitId);
 
-    if (lastFailureTime !== null) {
+      if (currentState === CircuitState.CLOSED) {
+        return CircuitState.CLOSED;
+      }
+
+      if (currentState === CircuitState.HALF_OPEN) {
+        return CircuitState.HALF_OPEN;
+      }
+
+      const lastFailureTime = await this.stateStore.getLastFailureTime(this.circuitId);
+      if (lastFailureTime === null) {
+        return CircuitState.OPEN;
+      }
+
       const now = Date.now();
       const timeSinceFailure = now - lastFailureTime;
 
-      if (timeSinceFailure >= this.openDuration) {
-        await this.stateStore.setState(this.circuitId, CircuitState.HALF_OPEN);
-        return this.execute(fn);
+      if (timeSinceFailure < this.openDuration) {
+        return CircuitState.OPEN;
       }
+
+      await this.setCircuitState(CircuitState.HALF_OPEN);
+      return CircuitState.HALF_OPEN;
+    });
+
+    if (transition === CircuitState.CLOSED) {
+      return this.handleClosed(fn);
     }
 
-    if (this.fallback) {
-      return this.fallback<T>();
+    if (transition === CircuitState.HALF_OPEN) {
+      return this.handleHalfOpen(fn);
     }
 
-    throw new CircuitBreakerOpenException(this.circuitId);
+    return this.rejectOpenCircuit<T>();
   }
 
   private async handleHalfOpen<T>(fn: () => Promise<T>): Promise<T> {
+    const canExecute = await this.tryAcquireHalfOpenSlot();
+    if (!canExecute) {
+      throw new CircuitBreakerOpenException(this.circuitId);
+    }
+
     try {
       const result = await fn();
 
-      await this.stateStore.resetFailureCount(this.circuitId);
-      await this.stateStore.setState(this.circuitId, CircuitState.CLOSED);
+      await this.markHalfOpenSuccess();
 
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
-      await this.stateStore.setState(this.circuitId, CircuitState.OPEN);
+      await this.markHalfOpenFailure();
 
       throw err;
     }
   }
 
   private async handleClosed<T>(fn: () => Promise<T>): Promise<T> {
-    try {
-      const result = await fn();
-      await this.stateStore.resetFailureCount(this.circuitId);
-      return result;
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      const failureCount = await this.stateStore.incrementFailureCount(this.circuitId);
-
-      if (failureCount >= this.failureThreshold) {
-        await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
-        await this.stateStore.setState(this.circuitId, CircuitState.OPEN);
+    // BUG-13: 상태 조회→실행→실패 카운트 증가를 동일 임계영역에서 처리해 OPEN 전이를 원자적으로 보장한다.
+    return this.withCircuitLock(async () => {
+      const state = await this.stateStore.getState(this.circuitId);
+      if (state !== CircuitState.CLOSED) {
+        return this.rejectOpenCircuit<T>();
       }
 
-      throw err;
+      try {
+        const result = await fn();
+        await this.stateStore.resetFailureCount(this.circuitId);
+        return result;
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        const { shouldOpen } = await this.incrementFailureAndCheck();
+
+        if (shouldOpen) {
+          await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
+          await this.setCircuitState(CircuitState.OPEN);
+        }
+
+        throw err;
+      }
+    });
+  }
+
+  private async incrementFailureAndCheck(): Promise<{ failureCount: number; shouldOpen: boolean }> {
+    const incrementFailureAndCheck = this.stateStore.incrementFailureAndCheck;
+    if (incrementFailureAndCheck) {
+      return incrementFailureAndCheck.call(this.stateStore, this.circuitId, this.failureThreshold);
     }
+
+    const failureCount = await this.stateStore.incrementFailureCount(this.circuitId);
+    return {
+      failureCount,
+      shouldOpen: failureCount >= this.failureThreshold,
+    };
+  }
+
+  private async withCircuitLock<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.stateStore.withCircuitLock) {
+      return this.stateStore.withCircuitLock(this.circuitId, operation);
+    }
+
+    const previousLock = this.localLock;
+    let releaseLock!: () => void;
+    this.localLock = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+
+    await previousLock;
+
+    try {
+      return await operation();
+    } finally {
+      releaseLock();
+    }
+  }
+
+  private async tryAcquireHalfOpenSlot(): Promise<boolean> {
+    return this.withCircuitLock(async () => {
+      const state = await this.stateStore.getState(this.circuitId);
+      if (state !== CircuitState.HALF_OPEN) {
+        return false;
+      }
+
+      const activeCount = await this.getHalfOpenActiveCount();
+      if (activeCount >= this.halfOpenRequests) {
+        return false;
+      }
+
+      await this.setHalfOpenActiveCount(activeCount + 1);
+      return true;
+    });
+  }
+
+  private async markHalfOpenSuccess(): Promise<void> {
+    await this.withCircuitLock(async () => {
+      const state = await this.stateStore.getState(this.circuitId);
+      if (state !== CircuitState.HALF_OPEN) {
+        return;
+      }
+
+      const activeCount = await this.getHalfOpenActiveCount();
+      const nextActiveCount = Math.max(0, activeCount - 1);
+      await this.setHalfOpenActiveCount(nextActiveCount);
+
+      const successCount = await this.getHalfOpenSuccessCount();
+      const nextSuccessCount = successCount + 1;
+      await this.setHalfOpenSuccessCount(nextSuccessCount);
+
+      if (nextSuccessCount >= this.halfOpenRequests) {
+        await this.stateStore.resetFailureCount(this.circuitId);
+        await this.setCircuitState(CircuitState.CLOSED);
+      }
+    });
+  }
+
+  private async markHalfOpenFailure(): Promise<void> {
+    await this.withCircuitLock(async () => {
+      const state = await this.stateStore.getState(this.circuitId);
+      if (state !== CircuitState.HALF_OPEN) {
+        return;
+      }
+
+      await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
+      await this.setCircuitState(CircuitState.OPEN);
+    });
+  }
+
+  private async setCircuitState(state: CircuitState): Promise<void> {
+    await this.stateStore.setState(this.circuitId, state);
+    this.localHalfOpenActiveCount = 0;
+    this.localHalfOpenSuccessCount = 0;
+  }
+
+  private async getHalfOpenActiveCount(): Promise<number> {
+    const getHalfOpenActiveCount = this.stateStore.getHalfOpenActiveCount;
+    if (getHalfOpenActiveCount) {
+      return getHalfOpenActiveCount.call(this.stateStore, this.circuitId);
+    }
+
+    return this.localHalfOpenActiveCount;
+  }
+
+  private async setHalfOpenActiveCount(count: number): Promise<void> {
+    const nextCount = Math.max(0, count);
+    const setHalfOpenActiveCount = this.stateStore.setHalfOpenActiveCount;
+
+    if (setHalfOpenActiveCount) {
+      await setHalfOpenActiveCount.call(this.stateStore, this.circuitId, nextCount);
+      return;
+    }
+
+    this.localHalfOpenActiveCount = nextCount;
+  }
+
+  private async getHalfOpenSuccessCount(): Promise<number> {
+    const getHalfOpenSuccessCount = this.stateStore.getHalfOpenSuccessCount;
+    if (getHalfOpenSuccessCount) {
+      return getHalfOpenSuccessCount.call(this.stateStore, this.circuitId);
+    }
+
+    return this.localHalfOpenSuccessCount;
+  }
+
+  private async setHalfOpenSuccessCount(count: number): Promise<void> {
+    const nextCount = Math.max(0, count);
+    const setHalfOpenSuccessCount = this.stateStore.setHalfOpenSuccessCount;
+
+    if (setHalfOpenSuccessCount) {
+      await setHalfOpenSuccessCount.call(this.stateStore, this.circuitId, nextCount);
+      return;
+    }
+
+    this.localHalfOpenSuccessCount = nextCount;
+  }
+
+  private async rejectOpenCircuit<T>(): Promise<T> {
+    if (this.fallback) {
+      return this.fallback<T>();
+    }
+
+    throw new CircuitBreakerOpenException(this.circuitId);
   }
 
   /**
@@ -174,7 +347,7 @@ export class CircuitBreaker {
    */
   async forceOpen(): Promise<void> {
     await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
-    await this.stateStore.setState(this.circuitId, CircuitState.OPEN);
+    await this.setCircuitState(CircuitState.OPEN);
   }
 
   /**
@@ -184,7 +357,7 @@ export class CircuitBreaker {
    */
   async forceClose(): Promise<void> {
     await this.stateStore.resetFailureCount(this.circuitId);
-    await this.stateStore.setState(this.circuitId, CircuitState.CLOSED);
+    await this.setCircuitState(CircuitState.CLOSED);
   }
 
   /**

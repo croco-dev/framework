@@ -231,6 +231,91 @@ describe('CircuitBreaker', () => {
     });
   });
 
+  describe('동시성 버그 회귀', () => {
+    it('BUG-12 HALF_OPEN 상태에서 동시 요청 수 제한', async () => {
+      const stateStore = new InMemoryCircuitBreakerStateStore();
+      const breaker = createBreaker({
+        stateStore,
+        halfOpenRequests: 2,
+      });
+
+      await stateStore.setState('test-circuit', CircuitState.HALF_OPEN);
+
+      let resolveFirst!: (value: string) => void;
+      let resolveSecond!: (value: string) => void;
+
+      const firstWork = new Promise<string>((resolve) => {
+        resolveFirst = resolve;
+      });
+      const secondWork = new Promise<string>((resolve) => {
+        resolveSecond = resolve;
+      });
+
+      const fn = vi
+        .fn<() => Promise<string>>()
+        .mockImplementation(async () => Promise.reject(new Error('BUG-12 unexpected-third-execution')))
+        .mockImplementationOnce(async () => firstWork)
+        .mockImplementationOnce(async () => secondWork);
+
+      const first = breaker.execute(fn);
+      const second = breaker.execute(fn);
+      const third = breaker.execute(fn);
+
+      await expect(third).rejects.toThrow(CircuitBreakerOpenException);
+      expect(fn).toHaveBeenCalledTimes(2);
+
+      resolveFirst('first-success');
+      resolveSecond('second-success');
+
+      await expect(first).resolves.toBe('first-success');
+      await expect(second).resolves.toBe('second-success');
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+    });
+
+    it('BUG-13 동시 실패 시 정확한 임계값에서 OPEN 전이', async () => {
+      const breaker = createBreaker({ failureThreshold: 3 });
+
+      let rejectFirst!: (reason?: unknown) => void;
+      let rejectSecond!: (reason?: unknown) => void;
+      let rejectThird!: (reason?: unknown) => void;
+
+      const firstWork = new Promise<never>((_resolve, reject) => {
+        rejectFirst = reject;
+      });
+      const secondWork = new Promise<never>((_resolve, reject) => {
+        rejectSecond = reject;
+      });
+      const thirdWork = new Promise<never>((_resolve, reject) => {
+        rejectThird = reject;
+      });
+
+      const fn = vi
+        .fn<() => Promise<string>>()
+        .mockImplementation(async () => Promise.reject(new Error('BUG-13 unexpected-fourth-execution')))
+        .mockImplementationOnce(async () => firstWork)
+        .mockImplementationOnce(async () => secondWork)
+        .mockImplementationOnce(async () => thirdWork);
+
+      const first = breaker.execute(fn);
+      const second = breaker.execute(fn);
+      const third = breaker.execute(fn);
+      const fourth = breaker.execute(fn);
+
+      rejectFirst(new Error('BUG-13 fail-1'));
+      rejectSecond(new Error('BUG-13 fail-2'));
+      rejectThird(new Error('BUG-13 fail-3'));
+
+      await expect(first).rejects.toThrow('BUG-13 fail-1');
+      await expect(second).rejects.toThrow('BUG-13 fail-2');
+      await expect(third).rejects.toThrow('BUG-13 fail-3');
+      await expect(fourth).rejects.toThrow(CircuitBreakerOpenException);
+
+      expect(fn).toHaveBeenCalledTimes(3);
+      expect(await breaker.getFailureCount()).toBe(3);
+      expect(await breaker.getState()).toBe(CircuitState.OPEN);
+    });
+  });
+
   describe('저장소 예외 처리', () => {
     it('getState 실패 시 에러를 전파해야 한다', async () => {
       const mockStore = {
