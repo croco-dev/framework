@@ -4,6 +4,7 @@ import { Logger } from '@croco/framework-logger';
 import type { Guard, HttpContext } from '@croco/protocols-rest';
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { CrocoApp } from '../libs/CrocoApp';
 import { createApp } from '../libs/CrocoApp';
 import { ErrorHandler } from '../libs/ErrorHandler';
 

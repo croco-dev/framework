@@ -1,3 +1,4 @@
+import { Container } from '@croco/framework-context';
 import { ProblemFactory } from '@croco/problems-core';
 import type { CallHandler, ExceptionFilter, ExecutionContext, Guard, Interceptor } from '@croco/protocols-rest';
 import { ErrorHandler } from './ErrorHandler';
@@ -10,7 +11,7 @@ export interface PipelineConfig {
 }
 
 export class PipelineRunner {
-  private readonly errorHandler = new ErrorHandler();
+  private readonly errorHandler = Container.get(ErrorHandler);
 
   async run(
     execContext: HttpExecutionContext,
@@ -62,10 +63,16 @@ export class PipelineRunner {
     context: HttpExecutionContext,
     filters: ExceptionFilter<unknown, HttpExecutionContext>[]
   ): unknown {
-    if (filters.length > 0) {
-      return filters[0].catch(error, context);
+    let nextError = error;
+
+    for (const filter of filters) {
+      try {
+        return filter.catch(nextError, context);
+      } catch (caughtError) {
+        nextError = caughtError;
+      }
     }
 
-    return this.errorHandler.handleError(error, context.getHttpContext());
+    return this.errorHandler.handleError(nextError, context.getHttpContext());
   }
 }

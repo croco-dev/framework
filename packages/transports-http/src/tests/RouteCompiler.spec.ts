@@ -1,19 +1,74 @@
 import 'reflect-metadata';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
-import { Controller, Get, Param, Post } from '@croco/protocols-rest';
-import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  type Constructor,
+  Controller,
+  type ExceptionFilter,
+  type ExceptionFilterConstructor,
+  Get,
+  type Guard,
+  type GuardConstructor,
+  type Interceptor,
+  type InterceptorConstructor,
+  Param,
+  Post,
+  UseFilters,
+  UseGuards,
+  UseInterceptors,
+} from '@croco/protocols-rest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ErrorHandler } from '../libs/ErrorHandler';
 import { RouteCompiler } from '../libs/RouteCompiler';
+import type { CrocoHttpContext } from '../libs/types';
+
+function createMockHttpContext(): CrocoHttpContext {
+  const request = new Request('http://localhost/secured/resource');
+
+  return {
+    req: {
+      method: 'GET',
+      url: request.url,
+      path: '/secured/resource',
+      params: {},
+      query: {},
+      headers: {},
+    },
+    res: {
+      status: 200,
+      headers: {},
+    },
+    raw: {
+      req: {
+        raw: request,
+      },
+    } as CrocoHttpContext['raw'],
+    param: vi.fn(),
+    query: vi.fn(),
+    header: vi.fn(),
+    json: vi.fn(),
+    set: vi.fn(),
+    get: vi.fn(),
+    text: vi.fn().mockImplementation((body: string, status: number = 200) => new Response(body, { status })),
+    jsonResponse: vi
+      .fn()
+      .mockImplementation((body: unknown, status: number = 200) => new Response(JSON.stringify(body), { status })),
+    redirect: vi.fn().mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
+  };
+}
 
 describe('RouteCompiler', () => {
   beforeEach(() => {
     Container.reset();
-    Container.set(Logger, {
+    const logger = {
       info: () => {},
       warn: () => {},
       error: () => {},
       debug: () => {},
-    } as unknown as Logger);
+    } as unknown as Logger;
+
+    Container.set(Logger, logger);
+    Container.set(ErrorHandler, new ErrorHandler(logger));
   });
 
   it('should compile routes from controller', () => {
@@ -55,5 +110,95 @@ describe('RouteCompiler', () => {
     const routes = compiler.compile([NotAController]);
 
     expect(routes).toHaveLength(0);
+  });
+
+  it('BUG-03 라우트 레벨 가드가 DI로 인스턴스화', async () => {
+    class GuardDependency {
+      readonly allowed = true;
+    }
+
+    class RouteLevelGuard implements Guard {
+      constructor(private readonly dependency: GuardDependency) {}
+
+      canActivate() {
+        return this.dependency.allowed;
+      }
+    }
+
+    class RouteLevelInterceptor implements Interceptor {
+      constructor(private readonly dependency: GuardDependency) {}
+
+      async intercept(_context: unknown, next: { handle(): Promise<unknown> }) {
+        if (!this.dependency.allowed) {
+          throw new TypeError('interceptor dependency missing');
+        }
+        return next.handle();
+      }
+    }
+
+    class RouteLevelFilter implements ExceptionFilter {
+      constructor(private readonly dependency: GuardDependency) {}
+
+      catch(exception: unknown) {
+        if (!this.dependency.allowed) {
+          throw exception;
+        }
+        return exception;
+      }
+    }
+
+    const RouteLevelGuardCtor = RouteLevelGuard as unknown as GuardConstructor;
+    const RouteLevelInterceptorCtor = RouteLevelInterceptor as unknown as InterceptorConstructor;
+    const RouteLevelFilterCtor = RouteLevelFilter as unknown as ExceptionFilterConstructor;
+
+    @Controller('/secured')
+    class SecuredController {
+      @Get('/resource')
+      @UseFilters(RouteLevelFilterCtor)
+      @UseInterceptors(RouteLevelInterceptorCtor)
+      @UseGuards(RouteLevelGuardCtor)
+      getResource() {
+        return { ok: true };
+      }
+    }
+
+    const dependency = new GuardDependency();
+    const requestedTypes: Constructor[] = [];
+    const container = {
+      get<T>(type: Constructor<T>): T {
+        requestedTypes.push(type as Constructor);
+
+        if (type === SecuredController) {
+          return new SecuredController() as T;
+        }
+
+        if (type === RouteLevelGuard) {
+          return new RouteLevelGuard(dependency) as T;
+        }
+
+        if (type === RouteLevelInterceptor) {
+          return new RouteLevelInterceptor(dependency) as T;
+        }
+
+        if (type === RouteLevelFilter) {
+          return new RouteLevelFilter(dependency) as T;
+        }
+
+        return dependency as T;
+      },
+    };
+
+    const compiler = new RouteCompiler();
+    const [route] = compiler.compile([SecuredController], {
+      container,
+    });
+
+    const result = await route.handler(createMockHttpContext());
+
+    expect(result).toEqual({ ok: true });
+    expect(requestedTypes).toContain(SecuredController);
+    expect(requestedTypes).toContain(RouteLevelGuard);
+    expect(requestedTypes).toContain(RouteLevelInterceptor);
+    expect(requestedTypes).toContain(RouteLevelFilter);
   });
 });

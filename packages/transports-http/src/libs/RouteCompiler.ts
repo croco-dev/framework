@@ -99,17 +99,17 @@ export class RouteCompiler {
 
       const guards = [
         ...globalGuards.map((g) => instantiateProvider(g, options.container)),
-        ...routeGuards,
+        ...routeGuards.map((g) => instantiateProvider(g, options.container)),
       ] as Guard<ExecutionContext>[];
 
       const interceptors = [
         ...globalInterceptors.map((i) => instantiateProvider(i, options.container)),
-        ...routeInterceptors,
+        ...routeInterceptors.map((i) => instantiateProvider(i, options.container)),
       ] as Interceptor<ExecutionContext>[];
 
       const filters = [
         ...globalFilters.map((f) => instantiateProvider(f, options.container)),
-        ...routeFilters,
+        ...routeFilters.map((f) => instantiateProvider(f, options.container)),
       ] as ExceptionFilter<unknown, HttpExecutionContext>[];
 
       const controllerHandler = async (): Promise<unknown> => {
