@@ -11,5 +11,11 @@ export type { LlmCostRecord, LlmMeteringServiceOptions, LlmUsageEvent } from './
 export { LlmMeteringService } from './libs/LlmMeteringService';
 export { PricingTable } from './libs/PricingTable';
 export { LlmCostLimitExceededProblem, LlmQuotaExceededProblem } from './libs/problems/LlmMeteringProblems';
+export {
+  createMeteredAsyncIterable,
+  extractUsageFromChunk,
+  isAsyncIterable,
+  type UsageWithModelInfo,
+} from './libs/streamMetering';
 export type { LlmCostBudget, LlmEmbeddingUsageRecord, LlmUsageRecord, ModelPricing, UsageAccuracy } from './libs/types';
 export { COMPLETION_TOKENS, COST_USD, EMBEDDING_TOKENS, PROMPT_TOKENS } from './libs/types';

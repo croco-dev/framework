@@ -144,6 +144,61 @@ describe('@AiMetered decorator', () => {
         })
       );
     });
+
+    it('BUG-07 스트림 결과의 토큰 사용량 기록', async () => {
+      class TestService {
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield { delta: 'Hello ' };
+          yield {
+            delta: 'world',
+            usage: {
+              promptTokens: 11,
+              completionTokens: 12,
+              totalTokens: 23,
+              accuracy: 'EXACT' as const,
+            },
+          };
+        }
+      }
+
+      const service = new TestService();
+      const stream = await Promise.resolve(service.stream());
+      const chunks: string[] = [];
+
+      for await (const chunk of stream) {
+        chunks.push(chunk.delta);
+      }
+
+      expect(chunks.join('')).toBe('Hello world');
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: 'llm.prompt_tokens',
+          value: 11,
+          metadata: expect.objectContaining({
+            operationType: 'stream',
+          }),
+        })
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: 'llm.completion_tokens',
+          value: 12,
+        })
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: 'llm.cost_usd',
+          metadata: expect.objectContaining({
+            operationType: 'stream',
+          }),
+        })
+      );
+    });
   });
 
   describe('embed/embedMany methods', () => {

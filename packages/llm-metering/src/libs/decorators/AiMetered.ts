@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import type { LlmMeteringService } from '../LlmMeteringService';
+import { createMeteredAsyncIterable, isAsyncIterable } from '../streamMetering';
 
 export const AI_METERED_METADATA_KEY = Symbol('llm-meter:ai-metered');
 
@@ -109,82 +110,101 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
 
       // LlmMeteringService가 설정되어 있으면 기록
       const service = getLlmMeteringService();
-      if (service) {
-        try {
-          // tenantId 추출 (옵션 또는 this.tenantId)
-          const tenantId = metadata.tenantId ?? (this as { tenantId?: string }).tenantId ?? 'default';
+      if (!service) {
+        return result;
+      }
 
-          // idempotencyKey 추출
-          const idempotencyKey = metadata.idempotencyKeyExtractor?.(args) ?? `${String(propertyKey)}:${Date.now()}`;
+      const tenantId = metadata.tenantId ?? (this as { tenantId?: string }).tenantId ?? 'default';
+      const idempotencyKey = metadata.idempotencyKeyExtractor?.(args) ?? `${String(propertyKey)}:${Date.now()}`;
+      const additionalMetadata = metadata.metadataExtractor?.(args, result);
 
-          // 추가 메타데이터 추출
-          const additionalMetadata = metadata.metadataExtractor?.(args, result);
+      if (isAsyncIterable(result)) {
+        return createMeteredAsyncIterable(result, {
+          onComplete: async (usageInfo) => {
+            if (!usageInfo) {
+              return;
+            }
 
-          // GenerateResult 타입 감지 (usage 필드 확인)
-          if (result && typeof result === 'object' && 'usage' in result) {
-            const usageData = (result as { usage: unknown }).usage;
+            try {
+              await service.recordUsage({
+                tenantId,
+                modelId: usageInfo.modelId,
+                provider: usageInfo.provider,
+                usage: usageInfo.usage,
+                idempotencyKey,
+                metadata: { ...additionalMetadata, operationType: 'stream', modelId: usageInfo.modelId },
+              });
+            } catch (error) {
+              // Fail-safe: metering 실패해도 원본 결과는 반환
+              console.error(`AiMetered failed for ${String(propertyKey)}:`, error);
+            }
+          },
+        });
+      }
 
-            if (usageData && typeof usageData === 'object') {
-              // LlmUsage 타입: promptTokens + completionTokens
-              if ('promptTokens' in usageData && 'completionTokens' in usageData) {
-                const usage = usageData as {
-                  promptTokens: number;
-                  completionTokens: number;
-                  totalTokens: number;
-                  accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN';
-                };
+      try {
+        // GenerateResult 타입 감지 (usage 필드 확인)
+        if (result && typeof result === 'object' && 'usage' in result) {
+          const usageData = (result as { usage: unknown }).usage;
 
-                // metadata에서 modelId, provider 추출
-                const resultMetadata =
-                  (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
-                const modelId = resultMetadata.modelId ?? 'unknown';
-                const provider = resultMetadata.provider ?? 'unknown';
+          if (usageData && typeof usageData === 'object') {
+            // LlmUsage 타입: promptTokens + completionTokens
+            if ('promptTokens' in usageData && 'completionTokens' in usageData) {
+              const usage = usageData as {
+                promptTokens: number;
+                completionTokens: number;
+                totalTokens: number;
+                accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN';
+              };
 
-                // recordUsage 호출
-                await service.recordUsage({
-                  tenantId,
-                  modelId,
-                  provider,
-                  usage: {
-                    promptTokens: usage.promptTokens,
-                    completionTokens: usage.completionTokens,
-                    totalTokens: usage.totalTokens,
-                    accuracy: usage.accuracy,
-                  },
-                  idempotencyKey,
-                  metadata: { ...additionalMetadata, operationType: 'generate', modelId },
-                });
-              }
-              // EmbedResult 타입: tokens (또는 embedding 존재)
-              else if ('tokens' in usageData || 'embedding' in result) {
-                const tokens = 'tokens' in usageData ? (usageData as { tokens: number }).tokens : 0;
-                const accuracy =
-                  'accuracy' in usageData
-                    ? (usageData as { accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN' }).accuracy
-                    : undefined;
+              // metadata에서 modelId, provider 추출
+              const resultMetadata = (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
+              const modelId = resultMetadata.modelId ?? 'unknown';
+              const provider = resultMetadata.provider ?? 'unknown';
 
-                // metadata에서 modelId, provider 추출
-                const resultMetadata =
-                  (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
-                const modelId = resultMetadata.modelId ?? 'unknown';
-                const provider = resultMetadata.provider ?? 'unknown';
+              // recordUsage 호출
+              await service.recordUsage({
+                tenantId,
+                modelId,
+                provider,
+                usage: {
+                  promptTokens: usage.promptTokens,
+                  completionTokens: usage.completionTokens,
+                  totalTokens: usage.totalTokens,
+                  accuracy: usage.accuracy,
+                },
+                idempotencyKey,
+                metadata: { ...additionalMetadata, operationType: 'generate', modelId },
+              });
+            }
+            // EmbedResult 타입: tokens (또는 embedding 존재)
+            else if ('tokens' in usageData || 'embedding' in result) {
+              const tokens = 'tokens' in usageData ? (usageData as { tokens: number }).tokens : 0;
+              const accuracy =
+                'accuracy' in usageData
+                  ? (usageData as { accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN' }).accuracy
+                  : undefined;
 
-                // recordEmbeddingUsage 호출
-                await service.recordEmbeddingUsage({
-                  tenantId,
-                  modelId,
-                  provider,
-                  embeddingTokens: tokens,
-                  idempotencyKey,
-                  accuracy,
-                });
-              }
+              // metadata에서 modelId, provider 추출
+              const resultMetadata = (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
+              const modelId = resultMetadata.modelId ?? 'unknown';
+              const provider = resultMetadata.provider ?? 'unknown';
+
+              // recordEmbeddingUsage 호출
+              await service.recordEmbeddingUsage({
+                tenantId,
+                modelId,
+                provider,
+                embeddingTokens: tokens,
+                idempotencyKey,
+                accuracy,
+              });
             }
           }
-        } catch (error) {
-          // Fail-safe: metering 실패해도 원본 결과는 반환
-          console.error(`AiMetered failed for ${String(propertyKey)}:`, error);
         }
+      } catch (error) {
+        // Fail-safe: metering 실패해도 원본 결과는 반환
+        console.error(`AiMetered failed for ${String(propertyKey)}:`, error);
       }
 
       return result;
