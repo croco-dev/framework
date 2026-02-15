@@ -1,6 +1,10 @@
 import type { ExecutionManager } from '@croco/execution-core';
+import type { Constructor } from '@croco/framework-context';
+import { triggerRegistry } from '@croco/triggers-core';
 import type { Receiver } from '@upstash/qstash';
 import { Container as TypeDIContainer } from 'typedi';
+
+type ServiceResolver = (targetClass: Constructor) => unknown;
 
 /**
  * Configuration options for QStashTriggerHandler.
@@ -18,9 +22,9 @@ export type QStashTriggerHandlerOptions = {
 
   /**
    * Optional service resolver for getting target instances.
-   * If not provided, uses Container.get().
+   * If not provided, uses TypeDI Container.get() with class constructor.
    */
-  readonly serviceResolver?: (className: string) => unknown;
+  readonly serviceResolver?: ServiceResolver;
 };
 
 /**
@@ -125,15 +129,15 @@ export type HandleResult = {
 export class QStashTriggerHandler {
   private readonly receiver: Receiver;
   private readonly executionManager: ExecutionManager;
-  private readonly serviceResolver: (className: string) => unknown;
+  private readonly serviceResolver: ServiceResolver;
 
   constructor(options: QStashTriggerHandlerOptions) {
     this.receiver = options.receiver;
     this.executionManager = options.executionManager;
     this.serviceResolver =
       options.serviceResolver ??
-      ((className: string) => {
-        return TypeDIContainer.get(className);
+      ((targetClass: Constructor) => {
+        return TypeDIContainer.get(targetClass);
       });
   }
 
@@ -307,11 +311,41 @@ export class QStashTriggerHandler {
    * Resolve target instance from class name.
    */
   private resolveTarget(className: string): unknown {
+    const targetClass = this.resolveTargetClass(className);
+    if (!targetClass) {
+      return undefined;
+    }
+
     try {
-      return this.serviceResolver(className);
+      return this.serviceResolver(targetClass);
     } catch {
       return undefined;
     }
+  }
+
+  private resolveTargetClass(className: string): Constructor | undefined {
+    const allTriggers = triggerRegistry.getAllTriggers();
+
+    for (const target of allTriggers.keys()) {
+      const targetClass = this.getTargetClass(target);
+      if (targetClass?.name === className) {
+        return targetClass;
+      }
+    }
+
+    return undefined;
+  }
+
+  private getTargetClass(target: object): Constructor | undefined {
+    if (typeof target === 'function') {
+      return target as Constructor;
+    }
+
+    if (typeof target.constructor === 'function') {
+      return target.constructor as unknown as Constructor;
+    }
+
+    return undefined;
   }
 
   /**
