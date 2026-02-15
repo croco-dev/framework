@@ -149,6 +149,27 @@ describe('LlmService', () => {
 
       expect(chunks.length).toBe(0);
     });
+
+    it('BUG-06 stream 완료 시 LlmStreamCompletedEvent 발행', async () => {
+      for await (const _chunk of service.stream({
+        prompt: 'Stream test',
+        modelId: 'stream-model',
+      })) {
+      }
+
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: 'LlmStreamCompletedEvent',
+          type: 'llm.stream_completed',
+          modelId: 'stream-model',
+          usage: expect.objectContaining({
+            promptTokens: expect.any(Number),
+            completionTokens: expect.any(Number),
+            totalTokens: expect.any(Number),
+          }),
+        })
+      );
+    });
   });
 
   describe('embed', () => {
