@@ -54,22 +54,41 @@ export class BillingService {
    */
   async createCheckout(params: CreateCheckoutParams): Promise<{ checkoutUrl: string }> {
     const account = await this.store.findAccountByTenantId(params.billingAccountId);
-    let externalCustomerId: string;
 
     if (account) {
-      externalCustomerId = account.externalCustomerId;
-    } else {
-      externalCustomerId = await this.gateway.ensureCustomer(params.billingAccountId, params.email);
-      await this.store.saveAccount({
-        id: params.billingAccountId,
-        externalCustomerId,
-        email: params.email,
-        createdAt: new Date(),
-      });
+      const result = await this.gateway.createCheckout(params);
+      return { checkoutUrl: result.checkoutUrl };
     }
 
-    const result = await this.gateway.createCheckout(params);
-    return { checkoutUrl: result.checkoutUrl };
+    return this.createCheckoutWithAccountTransaction(params);
+  }
+
+  private async createCheckoutWithAccountTransaction(params: CreateCheckoutParams): Promise<{ checkoutUrl: string }> {
+    const externalCustomerId = await this.gateway.ensureCustomer(params.billingAccountId, params.email);
+    const accountDraft = {
+      id: params.billingAccountId,
+      externalCustomerId,
+      email: params.email,
+      createdAt: new Date(),
+    };
+
+    try {
+      const result = await this.gateway.createCheckout(params);
+      await this.store.saveAccount(accountDraft);
+      return { checkoutUrl: result.checkoutUrl };
+    } catch (error) {
+      throw this.createCheckoutError(params.billingAccountId, error);
+    }
+  }
+
+  private createCheckoutError(billingAccountId: string, error: unknown): Error {
+    if (error instanceof Error) {
+      const checkoutError = new Error(`Failed to create checkout for tenant ${billingAccountId}: ${error.message}`);
+      Object.assign(checkoutError, { cause: error });
+      return checkoutError;
+    }
+
+    return new Error(`Failed to create checkout for tenant ${billingAccountId}: unknown error`);
   }
 
   /**

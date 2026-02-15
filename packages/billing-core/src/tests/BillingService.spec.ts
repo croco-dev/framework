@@ -1,3 +1,4 @@
+import type { EventPublisher } from '@croco/events-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BillingGateway, CheckoutResult } from '../libs/BillingGateway';
 import { BillingService } from '../libs/BillingService';
@@ -226,6 +227,26 @@ describe('BillingService', () => {
       expect(mockGateway.createCheckout).toHaveBeenCalledWith(params);
       expect(result).toEqual({ checkoutUrl: 'https://checkout.example.com/abc123' });
     });
+
+    it('BUG-09 should rollback created account when checkout creation fails', async () => {
+      const params = {
+        billingAccountId: 'tenant-bug-09',
+        email: 'bug09@example.com',
+        productId: 'product-1',
+        successUrl: 'https://example.com/success',
+        cancelUrl: 'https://example.com/cancel',
+      };
+
+      vi.mocked(mockGateway.ensureCustomer).mockResolvedValue('ext-cust-bug-09');
+      vi.mocked(mockGateway.createCheckout).mockRejectedValue(new Error('payment failed'));
+
+      await expect(service.createCheckout(params)).rejects.toThrow(
+        'Failed to create checkout for tenant tenant-bug-09: payment failed'
+      );
+
+      const account = await store.findAccountByTenantId('tenant-bug-09');
+      expect(account).toBeNull();
+    });
   });
 
   describe('cancelSubscription', () => {
@@ -288,7 +309,7 @@ describe('BillingService', () => {
       const serviceWithPublisher = new BillingService({
         store,
         gateway: mockGateway,
-        eventPublisher: mockEventPublisher as any,
+        eventPublisher: mockEventPublisher as unknown as EventPublisher,
       });
 
       const subscription: Subscription = {
