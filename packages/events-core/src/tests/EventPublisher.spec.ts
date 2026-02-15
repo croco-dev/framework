@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
@@ -138,13 +138,16 @@ describe('EventPublisher', () => {
       expect(order).toEqual(['first', 'second', 'third']);
     });
 
-    it('should stop publishing on first error', async () => {
-      let callCount = 0;
-      const failingEventBus = {
-        async publish(_event: DomainEvent): Promise<void> {
-          callCount++;
-          if (callCount === 2) {
-            throw new Error('Failed on second event');
+    it('BUG-05 하나 실패해도 나머지 이벤트를 발행하고 실패 정보를 로깅해야 한다', async () => {
+      const failure = new Error('Failed on second event');
+      const publishOrder: string[] = [];
+      const partialFailureEventBus = {
+        async publish(event: DomainEvent): Promise<void> {
+          const data = (event as TestEvent).data;
+          publishOrder.push(data);
+
+          if (data === 'second') {
+            throw failure;
           }
         },
         subscribe(): void {},
@@ -152,12 +155,16 @@ describe('EventPublisher', () => {
         clear(): void {},
       } satisfies EventBus;
 
-      config.setEventBus(failingEventBus);
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      config.setEventBus(partialFailureEventBus);
 
       const events = [new TestEvent('first'), new TestEvent('second'), new TestEvent('third')];
 
-      await expect(publisher.publishMany(events)).rejects.toThrow('Failed on second event');
-      expect(callCount).toBe(2);
+      await expect(publisher.publishMany(events)).resolves.toBeUndefined();
+      expect(publishOrder).toEqual(['first', 'second', 'third']);
+      expect(errorSpy).toHaveBeenCalledWith('[EventPublisher] Failed to publish event: TestEvent', failure);
+
+      errorSpy.mockRestore();
     });
 
     it('should handle single event array', async () => {

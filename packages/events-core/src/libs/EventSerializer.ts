@@ -71,10 +71,32 @@ export class DefaultEventSerializer implements EventSerializer {
     return result;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Constructor arguments need any
-  private reconstructEvent<T extends DomainEvent>(EventClass: new (...args: any[]) => T, data: SerializedEvent): T {
-    const values = Object.values(data.payload);
+  private reconstructEvent<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, data: SerializedEvent): T {
+    const constructorParameterNames = this.getConstructorParameterNames(EventClass);
+    if (constructorParameterNames.length === 0) {
+      return new EventClass(...Object.values(data.payload));
+    }
 
-    return new EventClass(...values);
+    const args = constructorParameterNames.map((parameterName) => data.payload[parameterName]);
+    return new EventClass(...args);
+  }
+
+  private getConstructorParameterNames<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T): string[] {
+    const constructorSource = EventClass.toString();
+    const constructorMatch = constructorSource.match(/constructor\s*\(([^)]*)\)/);
+    if (!constructorMatch) {
+      return [];
+    }
+
+    return constructorMatch[1]
+      .split(',')
+      .map((parameter) => parameter.trim())
+      .filter(Boolean)
+      .map((parameter) =>
+        parameter
+          .replace(/=.*$/, '')
+          .replace(/^\.\.\./, '')
+          .trim()
+      );
   }
 }

@@ -21,6 +21,16 @@ class TestEventWithAggregate extends DomainEvent {
   }
 }
 
+class ThreeFieldEvent extends DomainEvent {
+  constructor(
+    public readonly a: string,
+    public readonly b: number,
+    public readonly c: boolean
+  ) {
+    super();
+  }
+}
+
 @RegisterEvent()
 class RegisteredEvent extends DomainEvent {
   constructor(public readonly data: string) {
@@ -149,6 +159,7 @@ describe('DefaultEventSerializer', () => {
     beforeEach(() => {
       registry.register(TestEvent);
       registry.register(TestEventWithAggregate);
+      registry.register(ThreeFieldEvent);
     });
 
     it('should preserve event data through serialize/deserialize', () => {
@@ -167,6 +178,26 @@ describe('DefaultEventSerializer', () => {
 
       expect(deserialized.value).toBe(original.value);
       expect(deserialized.aggregateId).toBe(original.aggregateId);
+    });
+
+    it('BUG-04 필드 3개 이상 이벤트의 직렬화 라운드트립에서 생성자 인자 순서를 보장해야 한다', () => {
+      const original = new ThreeFieldEvent('alpha', 7, true);
+      const serialized = serializer.serialize(original);
+
+      const reorderedPayload = {
+        c: serialized.payload.c,
+        a: serialized.payload.a,
+        b: serialized.payload.b,
+      };
+
+      const deserialized = serializer.deserialize<ThreeFieldEvent>({
+        ...serialized,
+        payload: reorderedPayload,
+      });
+
+      expect(deserialized.a).toBe(original.a);
+      expect(deserialized.b).toBe(original.b);
+      expect(deserialized.c).toBe(original.c);
     });
   });
 
