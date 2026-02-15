@@ -1,17 +1,23 @@
+import type { ItemReader } from '@croco/batch-core';
 import { Step } from '@croco/batch-core';
-import type { ItemReader } from '@croco/batch-core/libs/interfaces/ItemReader';
 import type { ExecutionManager } from '@croco/execution-core';
+import type { Client } from '@upstash/qstash';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QStashChunkExecutor } from '../libs/QStashChunkExecutor';
 
 describe('QStashChunkExecutor', () => {
+  let startMock: ReturnType<typeof vi.fn>;
   let executionManager: ExecutionManager;
-  let qstashClient: any;
+  let qstashClient: {
+    publishJSON: ReturnType<typeof vi.fn>;
+  };
   let executor: QStashChunkExecutor;
 
   beforeEach(() => {
+    startMock = vi.fn().mockResolvedValue({ id: 'exec-1', checkpoints: {} });
+
     executionManager = {
-      start: vi.fn().mockResolvedValue({ id: 'exec-1', checkpoints: {} }),
+      start: startMock,
       checkpoint: vi.fn().mockResolvedValue({}),
       complete: vi.fn().mockResolvedValue({}),
       fail: vi.fn().mockResolvedValue({}),
@@ -23,19 +29,14 @@ describe('QStashChunkExecutor', () => {
     };
 
     executor = new QStashChunkExecutor(executionManager, {
-      qstashClient,
+      qstashClient: qstashClient as unknown as Client,
       webhookUrl: 'https://example.com/webhook',
     });
   });
 
   it('should process a single chunk and complete when no more items', async () => {
     const reader = {
-      read: vi
-        .fn()
-        .mockResolvedValueOnce(1)
-        .mockResolvedValueOnce(2)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null),
+      read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(2).mockResolvedValueOnce(null),
     };
     const writer = {
       write: vi.fn().mockResolvedValue(undefined),
@@ -51,7 +52,7 @@ describe('QStashChunkExecutor', () => {
     const result = await executor.executeChunk('exec-1', step);
 
     expect(executionManager.start).toHaveBeenCalledWith('exec-1');
-    expect(reader.read).toHaveBeenCalledTimes(4);
+    expect(reader.read).toHaveBeenCalledTimes(3);
     expect(writer.write).toHaveBeenCalledWith([1, 2]);
     expect(executionManager.complete).toHaveBeenCalledWith('exec-1', { processedCount: 2 });
     expect(qstashClient.publishJSON).not.toHaveBeenCalled();
@@ -89,11 +90,96 @@ describe('QStashChunkExecutor', () => {
         stepName: 'test-step',
       },
       headers: {
-        'Idempotency-Key': 'chunk:exec-1:test-step.cursor',
+        'Idempotency-Key': 'chunk:exec-1:test-step:no-checkpoint',
       },
     });
     expect(executionManager.complete).not.toHaveBeenCalled();
     expect(result).toEqual({ hasMore: true, processedCount: 2 });
+  });
+
+  it('BUG-14 청크 경계 아이템이 유실되지 않음', async () => {
+    const sourceItems = [1, 2, 3, 4, 5, 6, 7];
+    let cursor = 0;
+
+    const reader = {
+      read: vi.fn().mockImplementation(async () => {
+        if (cursor >= sourceItems.length) {
+          return null;
+        }
+
+        const item = sourceItems[cursor];
+        cursor += 1;
+        return item;
+      }),
+    };
+
+    const writtenChunks: number[][] = [];
+    const writer = {
+      write: vi.fn().mockImplementation(async (items: number[]) => {
+        writtenChunks.push([...items]);
+      }),
+    };
+
+    const step = new Step<number, number>({
+      name: 'bug-14-step',
+      reader,
+      writer,
+      chunkSize: 3,
+    });
+
+    const firstChunk = await executor.executeChunk('exec-1', step);
+    const secondChunk = await executor.executeChunk('exec-1', step);
+    const thirdChunk = await executor.executeChunk('exec-1', step);
+
+    expect(firstChunk).toEqual({ hasMore: true, processedCount: 3 });
+    expect(secondChunk).toEqual({ hasMore: true, processedCount: 3 });
+    expect(thirdChunk).toEqual({ hasMore: false, processedCount: 1 });
+
+    expect(writtenChunks).toEqual([[1, 2, 3], [4, 5, 6], [7]]);
+    expect(writtenChunks[1]).toContain(4);
+  });
+
+  it('BUG-15 서로 다른 청크의 멱등성 키가 고유', async () => {
+    const sourceItems = [1, 2, 3, 4, 5, 6, 7];
+    let cursor = 0;
+
+    const reader = {
+      read: vi.fn().mockImplementation(async () => {
+        if (cursor >= sourceItems.length) {
+          return null;
+        }
+
+        const item = sourceItems[cursor];
+        cursor += 1;
+        return item;
+      }),
+      getCheckpoint: vi.fn().mockImplementation(() => ({ cursor })),
+      restoreCheckpoint: vi.fn().mockImplementation((checkpoint: unknown) => {
+        const checkpointData = checkpoint as { cursor: number };
+        cursor = checkpointData.cursor;
+      }),
+    };
+
+    const writer = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const step = new Step<number, number>({
+      name: 'bug-15-step',
+      reader: reader as unknown as ItemReader<number>,
+      writer,
+      chunkSize: 3,
+    });
+
+    await executor.executeChunk('exec-1', step);
+    await executor.executeChunk('exec-1', step);
+
+    expect(qstashClient.publishJSON).toHaveBeenCalledTimes(2);
+    const [firstPublish, secondPublish] = qstashClient.publishJSON.mock.calls;
+    const firstIdempotencyKey = firstPublish[0].headers['Idempotency-Key'];
+    const secondIdempotencyKey = secondPublish[0].headers['Idempotency-Key'];
+
+    expect(firstIdempotencyKey).not.toBe(secondIdempotencyKey);
   });
 
   it('should restore checkpoint from execution', async () => {
@@ -103,7 +189,7 @@ describe('QStashChunkExecutor', () => {
       restoreCheckpoint: vi.fn(),
     };
 
-    (executionManager.start as any).mockResolvedValue({
+    startMock.mockResolvedValue({
       id: 'exec-1',
       checkpoints: { 'test-step.cursor': { offset: 5 } },
     });
