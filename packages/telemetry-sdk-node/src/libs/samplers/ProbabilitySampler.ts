@@ -36,10 +36,8 @@ class ProbabilitySampler implements Sampler {
       }
     }
 
-    const buffer = Buffer.alloc(8);
-    buffer.writeUInt32BE(0, 0);
-    buffer.writeUInt32BE(parseInt(traceId.slice(16, 32), 16), 4);
-    const lowerLong = buffer.readBigUInt64BE(0);
+    // BigInt로 64비트 정밀도 보장: parseInt는 MAX_SAFE_INTEGER 초과 시 정밀도 손실
+    const lowerLong = BigInt(`0x${traceId.slice(16, 32)}`);
     const scaledLowerLong = lowerLong & BigInt(0xffffffff);
 
     if (scaledLowerLong < BigInt(this.threshold)) {
