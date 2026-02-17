@@ -45,5 +45,11 @@ export interface UsageStorage {
    */
   fetchUsageRecords(options: UsageQueryOptions): Promise<UsageRecord[]>;
 
+  /**
+   * Usage 데이터 삭제 (배치 저장 후)
+   * 저장이 성공한 경우에만 호출되어야 함
+   */
+  deleteUsageRecords?(options: UsageQueryOptions, records: UsageRecord[]): Promise<void>;
+
   checkAndRecordWithinQuota?(options: AtomicQuotaCheckOptions): Promise<AtomicQuotaCheckResult>;
 }

@@ -53,6 +53,8 @@ export class UsageAggregator {
     // DB에 배치 저장
     await this.meterRepository.saveUsageRecords(records);
 
+    await this.usageStorage.deleteUsageRecords?.(options, records);
+
     return { recordsFlushed: records.length };
   }
 

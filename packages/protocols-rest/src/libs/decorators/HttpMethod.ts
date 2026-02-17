@@ -7,7 +7,10 @@ function createMethodDecorator(method: HttpMethodEnum) {
     return (target: Object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
       const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
-      const routes: RouteMetadata[] = Reflect.getMetadata(REST_ROUTES_KEY, target.constructor) || [];
+      const existingRoutes: RouteMetadata[] =
+        Reflect.getOwnMetadata(REST_ROUTES_KEY, target.constructor) ??
+        Reflect.getMetadata(REST_ROUTES_KEY, target.constructor) ??
+        [];
 
       const routeMetadata: RouteMetadata = {
         method,
@@ -15,8 +18,7 @@ function createMethodDecorator(method: HttpMethodEnum) {
         methodName: propertyKey,
       };
 
-      routes.push(routeMetadata);
-      Reflect.defineMetadata(REST_ROUTES_KEY, routes, target.constructor);
+      Reflect.defineMetadata(REST_ROUTES_KEY, [...existingRoutes, routeMetadata], target.constructor);
 
       return descriptor;
     };

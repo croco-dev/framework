@@ -36,4 +36,44 @@ describe('HttpMethod decorators', () => {
     const routes = getRouteMeta(ItemController);
     expect(routes).toHaveLength(3);
   });
+
+  it('should inherit parent routes without mutating parent metadata', () => {
+    @Controller('/base')
+    class BaseController {
+      @Get('/base')
+      base() {}
+    }
+
+    @Controller('/child')
+    class ChildController extends BaseController {
+      @Get('/child')
+      child() {}
+    }
+
+    const baseRoutes = getRouteMeta(BaseController);
+    const childRoutes = getRouteMeta(ChildController);
+
+    expect(baseRoutes).toHaveLength(1);
+    expect(baseRoutes[0]).toMatchObject({
+      method: HttpMethod.GET,
+      path: '/base',
+      methodName: 'base',
+    });
+
+    expect(childRoutes).toHaveLength(2);
+    expect(childRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          method: HttpMethod.GET,
+          path: '/base',
+          methodName: 'base',
+        }),
+        expect.objectContaining({
+          method: HttpMethod.GET,
+          path: '/child',
+          methodName: 'child',
+        }),
+      ])
+    );
+  });
 });

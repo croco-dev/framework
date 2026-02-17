@@ -67,6 +67,50 @@ describe('UsageAggregator', () => {
       expect(mockRepository.saveUsageRecords).toHaveBeenCalledWith(records);
     });
 
+    it('should delete records from storage only after successful save', async () => {
+      const records = [createUsageRecord({ id: 'usage-1', value: 5 }), createUsageRecord({ id: 'usage-2', value: 3 })];
+      const callOrder: Array<'fetch' | 'save' | 'delete'> = [];
+
+      vi.mocked(mockStorage.fetchUsageRecords).mockImplementation(async () => {
+        callOrder.push('fetch');
+        return records;
+      });
+
+      vi.mocked(mockRepository.saveUsageRecords).mockImplementation(async () => {
+        callOrder.push('save');
+      });
+
+      const deleteUsageRecords = vi.fn().mockImplementation(async () => {
+        callOrder.push('delete');
+      });
+      mockStorage.deleteUsageRecords = deleteUsageRecords;
+
+      await aggregator.flushUsageToDB('tenant-1', 'api_calls');
+
+      expect(deleteUsageRecords).toHaveBeenCalledWith(
+        {
+          tenantId: 'tenant-1',
+          meterId: 'api_calls',
+          period: 'billing_cycle',
+        },
+        records
+      );
+      expect(callOrder).toEqual(['fetch', 'save', 'delete']);
+    });
+
+    it('should keep records in storage when save fails', async () => {
+      const records = [createUsageRecord({ id: 'usage-1', value: 5 })];
+      vi.mocked(mockStorage.fetchUsageRecords).mockResolvedValue(records);
+
+      const deleteUsageRecords = vi.fn().mockResolvedValue(undefined);
+      mockStorage.deleteUsageRecords = deleteUsageRecords;
+
+      vi.mocked(mockRepository.saveUsageRecords).mockRejectedValue(new Error('DB save failed'));
+
+      await expect(aggregator.flushUsageToDB('tenant-1', 'api_calls')).rejects.toThrow('DB save failed');
+      expect(deleteUsageRecords).not.toHaveBeenCalled();
+    });
+
     it('should return 0 when no records to flush', async () => {
       vi.mocked(mockStorage.fetchUsageRecords).mockResolvedValue([]);
 
