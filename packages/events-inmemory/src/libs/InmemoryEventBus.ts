@@ -90,9 +90,10 @@ export class InMemoryEventBus implements EventBus {
   private createEventWithTraceContext(event: DomainEvent, traceContext: TraceInfo): DomainEvent {
     const eventCopy = Object.create(Object.getPrototypeOf(event)) as DomainEvent;
     Object.assign(eventCopy, event);
+    const traceContextCopy = { ...traceContext };
     eventCopy.metadata = {
       ...event.metadata,
-      traceContext,
+      traceContext: traceContextCopy,
     };
 
     return eventCopy;

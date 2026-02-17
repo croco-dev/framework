@@ -29,6 +29,18 @@ export class ErrorHandler {
 
   private handleProblem(problem: Problem, ctx: CrocoHttpContext): Response {
     const status = ProblemCategoryMapper.toHttpStatus(problem.category);
+    const reservedFields = new Set(['type', 'title', 'status', 'code', 'detail', 'instance']);
+
+    const safeExtensions = Object.entries(problem.extensions ?? {}).reduce(
+      (acc, [key, value]) => {
+        if (!reservedFields.has(key)) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
+
     const body: ProblemDetails = {
       type: problem.type,
       title: problem.title,
@@ -36,7 +48,7 @@ export class ErrorHandler {
       code: problem.code,
       detail: problem.detail,
       instance: ctx.req.url,
-      ...problem.extensions,
+      ...safeExtensions,
     };
 
     return ctx.jsonResponse(body, status);

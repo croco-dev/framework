@@ -10,6 +10,12 @@ class TestBusinessProblem extends Problem {
   }
 }
 
+class TestSystemProblem extends Problem {
+  constructor(detail = 'System problem') {
+    super('TEST_SYSTEM_PROBLEM', ProblemCategory.InternalServerError, detail);
+  }
+}
+
 describe('AccessEngine', () => {
   let accessEngine: AccessEngine;
   let mockProvider: AccessProvider;
@@ -82,6 +88,18 @@ describe('AccessEngine', () => {
       const result = await accessEngine.check(request);
 
       expect(result.allowed).toBe(false);
+    });
+
+    it('should re-throw on provider system problem', async () => {
+      const request: CheckRequest = {
+        tenantId: 'tenant-1',
+        subject: 'user-1',
+        relation: 'viewer',
+        object: 'document-1',
+      };
+      vi.mocked(mockProvider.check).mockRejectedValue(new TestSystemProblem('DB connection failed'));
+
+      await expect(accessEngine.check(request)).rejects.toThrow(TestSystemProblem);
     });
 
     it('should re-throw on provider system exception', async () => {

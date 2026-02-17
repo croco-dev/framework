@@ -1,4 +1,4 @@
-import { Problem } from '@croco/problems-core';
+import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { AccessProvider } from './interfaces/AccessProvider.js';
 import type { CheckRequest, CheckResult, GrantRequest, ListRequest, RevokeRequest } from './types.js';
 
@@ -9,12 +9,16 @@ export class AccessEngine {
     try {
       return await this.provider.check(request);
     } catch (error) {
-      if (!(error instanceof Problem)) {
+      if (!this.isBusinessProblem(error)) {
         throw error;
       }
 
       return { allowed: false };
     }
+  }
+
+  private isBusinessProblem(error: unknown): error is Problem {
+    return error instanceof Problem && error.category === ProblemCategory.BusinessRuleViolation;
   }
 
   async grant(request: GrantRequest): Promise<void> {
