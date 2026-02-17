@@ -1,4 +1,5 @@
 import type { DomainEvent, EventBus, EventHandlerClass, EventSubscription } from '@croco/events-core';
+import { EventSubscriptionIndex } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import type { TraceInfo } from '@croco/telemetry-api';
@@ -6,7 +7,7 @@ import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
 import { type Span, SpanStatusCode } from '@opentelemetry/api';
 
 export class InMemoryEventBus implements EventBus {
-  private readonly handlers: Map<string, Set<EventHandlerClass>> = new Map();
+  private readonly index = new EventSubscriptionIndex<EventHandlerClass>();
   private readonly tracer = getTracer();
 
   async publish(event: DomainEvent): Promise<void> {
@@ -16,7 +17,7 @@ export class InMemoryEventBus implements EventBus {
     const activeTraceInfo = getActiveTraceInfo();
     const eventWithTraceContext = this.createEventWithTraceContext(event, activeTraceInfo);
 
-    const handlerClasses = this.handlers.get(eventName) ?? new Set();
+    const handlerClasses = this.index.match(eventName);
 
     // PRODUCER: Create publish span
     await this.tracer.startActiveSpan(
@@ -108,25 +109,14 @@ export class InMemoryEventBus implements EventBus {
   }
 
   subscribe(subscription: EventSubscription): void {
-    if (!this.handlers.has(subscription.eventName)) {
-      this.handlers.set(subscription.eventName, new Set());
-    }
-
-    const handlers = this.handlers.get(subscription.eventName);
-    if (!handlers) {
-      throw new Error(`No handler set found for event: ${subscription.eventName}`);
-    }
-    handlers.add(subscription.handlerClass);
+    this.index.add(subscription.eventName, subscription.handlerClass);
   }
 
   unsubscribe(subscription: EventSubscription): void {
-    const handlers = this.handlers.get(subscription.eventName);
-    if (handlers) {
-      handlers.delete(subscription.handlerClass);
-    }
+    this.index.delete(subscription.eventName, subscription.handlerClass);
   }
 
   clear(): void {
-    this.handlers.clear();
+    this.index.clear();
   }
 }
