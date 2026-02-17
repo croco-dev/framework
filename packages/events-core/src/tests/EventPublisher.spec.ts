@@ -117,25 +117,32 @@ describe('EventPublisher', () => {
       expect(mockEventBus.publishedEvents).toHaveLength(0);
     });
 
-    it('should publish events sequentially (not in parallel)', async () => {
-      const order: string[] = [];
-      const sequentialEventBus = {
+    it('should preserve event order regardless of per-event latency', async () => {
+      const completionOrder: string[] = [];
+      const delayByEventData: Record<string, number> = {
+        first: 30,
+        second: 10,
+        third: 0,
+      };
+
+      const latencyEventBus = {
         async publish(event: DomainEvent): Promise<void> {
-          order.push((event as TestEvent).data);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          const data = (event as TestEvent).data;
+          await new Promise((resolve) => setTimeout(resolve, delayByEventData[data] ?? 0));
+          completionOrder.push(data);
         },
         subscribe(): void {},
         unsubscribe(): void {},
         clear(): void {},
       } satisfies EventBus;
 
-      config.setEventBus(sequentialEventBus);
+      config.setEventBus(latencyEventBus);
 
       const events = [new TestEvent('first'), new TestEvent('second'), new TestEvent('third')];
 
       await publisher.publishMany(events);
 
-      expect(order).toEqual(['first', 'second', 'third']);
+      expect(completionOrder).toEqual(['first', 'second', 'third']);
     });
 
     it('BUG-05 하나 실패해도 나머지 이벤트를 발행하고 실패 정보를 로깅해야 한다', async () => {

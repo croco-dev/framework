@@ -11,8 +11,9 @@ export class EventPublisher {
   }
 
   async publishMany(events: DomainEvent[]): Promise<void> {
-    const publishResults = await Promise.allSettled(events.map(async (event) => this.publishEventSafely(event)));
-    this.logUnexpectedSettlementErrors(publishResults);
+    for (const event of events) {
+      await this.publishEventSafely(event);
+    }
   }
 
   private async publishEventSafely(event: DomainEvent): Promise<void> {
@@ -20,14 +21,6 @@ export class EventPublisher {
       await this.eventBus.publish(event);
     } catch (error) {
       console.error(`[EventPublisher] Failed to publish event: ${event.eventName}`, error);
-    }
-  }
-
-  private logUnexpectedSettlementErrors(results: PromiseSettledResult<void>[]): void {
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error('[EventPublisher] Unexpected publishMany settlement rejection', result.reason);
-      }
     }
   }
 }
