@@ -11,7 +11,7 @@ interface TxContext<TClient> {
 }
 
 export class TxManager<TClient, TOptions = unknown> {
-  private readonly als = new AsyncLocalStorage<TxContext<TClient>>();
+  private readonly als = new AsyncLocalStorage<TxContext<TClient> | null>();
   private readonly defaultNesting: NestingStrategy;
 
   constructor(
@@ -28,18 +28,19 @@ export class TxManager<TClient, TOptions = unknown> {
     const currentContext = this.als.getStore();
 
     if (!currentContext) {
-      const context: TxContext<TClient> = {
-        client: null as unknown as TClient,
-        afterCommitHooks: [],
-        isRoot: true,
-      };
+      const rootAfterCommitHooks: AfterCommitHook[] = [];
 
       const result = await this.adapter.transaction(async (client) => {
-        context.client = client;
+        const context: TxContext<TClient> = {
+          client,
+          afterCommitHooks: rootAfterCommitHooks,
+          isRoot: true,
+        };
+
         return this.als.run(context, fn);
       }, options);
 
-      await this.executeAfterCommitHooks(context.afterCommitHooks);
+      await this.executeAfterCommitHooks(rootAfterCommitHooks);
 
       return result;
     }
@@ -54,11 +55,11 @@ export class TxManager<TClient, TOptions = unknown> {
 
     const nestedContext: TxContext<TClient> = {
       client: currentContext.client,
-      afterCommitHooks: currentContext.afterCommitHooks,
+      afterCommitHooks: [],
       isRoot: false,
     };
 
-    return this.adapter.savepoint(
+    const result = await this.adapter.savepoint(
       currentContext.client,
       async (nestedClient) => {
         nestedContext.client = nestedClient;
@@ -66,6 +67,10 @@ export class TxManager<TClient, TOptions = unknown> {
       },
       options
     );
+
+    currentContext.afterCommitHooks.push(...nestedContext.afterCommitHooks);
+
+    return result;
   }
 
   getClient(): TClient | null {
@@ -74,7 +79,7 @@ export class TxManager<TClient, TOptions = unknown> {
   }
 
   isInTransaction(): boolean {
-    return this.als.getStore() !== undefined;
+    return this.als.getStore() != null;
   }
 
   onAfterCommit(hook: AfterCommitHook): void {
@@ -105,6 +110,6 @@ export class TxManager<TClient, TOptions = unknown> {
    * Used for REQUIRES_NEW propagation to ensure clean transaction state.
    */
   async suspend<T>(fn: () => Promise<T>): Promise<T> {
-    return this.als.run(undefined as unknown as TxContext<TClient>, fn);
+    return this.als.run(null, fn);
   }
 }

@@ -120,6 +120,41 @@ describe('TxManager', () => {
       expect(noSavepointAdapter.transaction).toHaveBeenCalledTimes(1);
       expect(noSavepointAdapter.savepoint).not.toHaveBeenCalled();
     });
+
+    it('should discard savepoint hooks when savepoint rolls back', async () => {
+      const savepointAdapter = createMockAdapter({ supportsSavepoint: true });
+      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: 'savepoint' });
+      const rolledBackHook = vi.fn();
+
+      await savepointTxManager.run(async () => {
+        await expect(
+          savepointTxManager.run(async () => {
+            savepointTxManager.onAfterCommit(rolledBackHook);
+            throw new Error('savepoint rollback');
+          })
+        ).rejects.toThrow('savepoint rollback');
+      });
+
+      expect(rolledBackHook).not.toHaveBeenCalled();
+    });
+
+    it('should execute savepoint hooks after root commit when savepoint succeeds', async () => {
+      const savepointAdapter = createMockAdapter({ supportsSavepoint: true });
+      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: 'savepoint' });
+      const rootHook = vi.fn();
+      const savepointHook = vi.fn();
+
+      await savepointTxManager.run(async () => {
+        savepointTxManager.onAfterCommit(rootHook);
+
+        await savepointTxManager.run(async () => {
+          savepointTxManager.onAfterCommit(savepointHook);
+        });
+      });
+
+      expect(rootHook).toHaveBeenCalledTimes(1);
+      expect(savepointHook).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('run with options', () => {
