@@ -1,6 +1,6 @@
-import type { Attributes } from '@opentelemetry/api';
-import type { SpanOptions } from '../span.js';
+import { type Attributes, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 import { recordError } from '../span.js';
+import { getTracer } from '../tracer.js';
 
 export type TraceDecoratorOptions = {
   name?: string;
@@ -12,30 +12,32 @@ export function Trace(options: TraceDecoratorOptions = {}): MethodDecorator {
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      const { withSpan } = await import('../span.js');
-      const spanOptions: SpanOptions = {
-        name: options.name ?? String(propertyKey),
-        attributes: options.attributes ?? {},
-      };
+      const span = getTracer().startSpan(options.name ?? String(propertyKey));
+      const spanAttributes = options.attributes ?? {};
+      const spanContext = trace.setSpan(context.active(), span);
 
-      return await withSpan(async (span) => {
+      for (const [key, value] of Object.entries(spanAttributes)) {
+        span.setAttribute(key, value as Parameters<Span['setAttribute']>[1]);
+      }
+
+      return await context.with(spanContext, async () => {
         try {
           const result = await originalMethod.apply(this, args);
+          span.setStatus({ code: SpanStatusCode.OK });
           return result;
         } catch (error) {
           recordError(error, span);
           throw error;
+        } finally {
+          span.end();
         }
-      }, spanOptions);
+      });
     };
 
     return descriptor;
   };
 }
 
-/**
- * 메서드의 Trace 옵션을 가져옵니다 (내부용).
- */
 export function getTraceOptions(_target: unknown, _propertyKey: string | symbol): TraceDecoratorOptions | undefined {
   return undefined;
 }
