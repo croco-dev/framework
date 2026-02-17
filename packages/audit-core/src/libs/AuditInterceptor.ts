@@ -129,8 +129,6 @@ export class AuditInterceptor implements Interceptor<ExecutionContext> {
     const http = toHttpMetadata(context);
     const existingMetadata = Reflect.getMetadata(AUDIT_METADATA_KEY, target, handler) as AuditableMetadata | undefined;
 
-    Reflect.defineMetadata(AUDIT_METADATA_KEY, mergeMetadata(existingMetadata, http), target, handler);
-
     if (existingMetadata) {
       return next.handle();
     }
@@ -151,9 +149,7 @@ export class AuditInterceptor implements Interceptor<ExecutionContext> {
           result,
         },
         diff: null,
-        metadata: {
-          http,
-        },
+        metadata: mergeMetadata(existingMetadata, http),
       });
 
       return result;
@@ -168,9 +164,7 @@ export class AuditInterceptor implements Interceptor<ExecutionContext> {
           error: error instanceof Error ? error.message : String(error),
         },
         diff: null,
-        metadata: {
-          http,
-        },
+        metadata: mergeMetadata(existingMetadata, http),
       });
 
       throw error;

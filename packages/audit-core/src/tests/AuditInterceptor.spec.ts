@@ -168,17 +168,9 @@ describe('AuditInterceptor', () => {
 
     expect(result).toEqual({ created: true });
     expect(createSpy).not.toHaveBeenCalled();
-    expect(metadata).toEqual(
-      expect.objectContaining({
-        source: 'decorator',
-        http: {
-          method: 'POST',
-          path: '/projects',
-          ip: '198.51.100.20',
-          body: { name: 'new-project' },
-        },
-      })
-    );
+    expect(metadata).toEqual({
+      source: 'decorator',
+    });
   });
 
   it('should work standalone without @Auditable metadata', async () => {
