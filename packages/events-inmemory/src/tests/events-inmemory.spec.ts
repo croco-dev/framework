@@ -1,6 +1,6 @@
 import { DomainEvent, type EventHandler, type EventSubscription } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryEventBus } from '../index';
 
 class TestEvent extends DomainEvent {
@@ -112,6 +112,59 @@ describe('InMemoryEventBus', () => {
       const event = new TestEvent('test');
       await expect(eventBus.publish(event)).resolves.toBeUndefined();
       expect(successHandler.handledEvents).toHaveLength(1);
+    });
+
+    it('should not mutate original event metadata when publishing same event twice', async () => {
+      Container.set(TestHandler, testHandler);
+      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: TestHandler });
+
+      const event = new TestEvent('immutable');
+      const originalMetadata = event.metadata;
+
+      await eventBus.publish(event);
+      await eventBus.publish(event);
+
+      expect(event.metadata).toEqual({});
+      expect(event.metadata).toBe(originalMetadata);
+    });
+
+    it('should pass Error object to recordException', async () => {
+      const failHandler = new FailingHandler();
+      Container.set(FailingHandler, failHandler);
+      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailingHandler });
+
+      const publishSpan = {
+        setStatus: vi.fn(),
+        recordException: vi.fn(),
+        end: vi.fn(),
+      };
+      const handleSpan = {
+        setStatus: vi.fn(),
+        recordException: vi.fn(),
+        end: vi.fn(),
+      };
+
+      const mockTracer = {
+        startActiveSpan: vi.fn(
+          async (
+            name: string,
+            _options: { attributes: Record<string, unknown> },
+            callback: (span: typeof publishSpan) => Promise<void>
+          ) => {
+            const span = name.startsWith('event.publish:') ? publishSpan : handleSpan;
+            await callback(span);
+          }
+        ),
+      };
+
+      Object.defineProperty(eventBus, 'tracer', {
+        value: mockTracer,
+      });
+
+      await eventBus.publish(new TestEvent('record-error'));
+
+      expect(handleSpan.recordException).toHaveBeenCalledTimes(1);
+      expect(handleSpan.recordException.mock.calls[0][0]).toBeInstanceOf(Error);
     });
   });
 

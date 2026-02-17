@@ -1,8 +1,9 @@
 import type { DomainEvent, EventBus, EventHandlerClass, EventSubscription } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
+import type { TraceInfo } from '@croco/telemetry-api';
 import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
-import type { Span } from '@opentelemetry/api';
+import { type Span, SpanStatusCode } from '@opentelemetry/api';
 
 export class InMemoryEventBus implements EventBus {
   private readonly handlers: Map<string, Set<EventHandlerClass>> = new Map();
@@ -13,7 +14,7 @@ export class InMemoryEventBus implements EventBus {
 
     // PRODUCER: Capture active trace context and inject into event metadata
     const activeTraceInfo = getActiveTraceInfo();
-    event.metadata.traceContext = activeTraceInfo;
+    const eventWithTraceContext = this.createEventWithTraceContext(event, activeTraceInfo);
 
     const handlerClasses = this.handlers.get(eventName) ?? new Set();
 
@@ -48,20 +49,21 @@ export class InMemoryEventBus implements EventBus {
                 async (handleSpan: Span) => {
                   try {
                     const handlerInstance = Container.get(handlerClass);
-                    await handlerInstance.handle(event);
-                    handleSpan.setStatus({ code: 1 });
+                    await handlerInstance.handle(eventWithTraceContext);
+                    handleSpan.setStatus({ code: SpanStatusCode.OK });
                   } catch (error) {
-                    handleSpan.recordException(error instanceof Error ? error.message : String(error));
+                    const normalizedError = this.normalizeError(error);
+                    handleSpan.recordException(normalizedError);
                     handleSpan.setStatus({
-                      code: 2,
-                      message: error instanceof Error ? error.message : String(error),
+                      code: SpanStatusCode.ERROR,
+                      message: normalizedError.message,
                     });
 
                     try {
                       const logger = Container.get(Logger);
-                      logger.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, error as Error);
+                      logger.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, normalizedError);
                     } catch {
-                      console.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, error);
+                      console.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, normalizedError);
                     }
                   } finally {
                     handleSpan.end();
@@ -70,18 +72,38 @@ export class InMemoryEventBus implements EventBus {
               );
             })
           );
-          publishSpan.setStatus({ code: 1 });
+          publishSpan.setStatus({ code: SpanStatusCode.OK });
         } catch (error) {
-          publishSpan.recordException(error instanceof Error ? error.message : String(error));
+          const normalizedError = this.normalizeError(error);
+          publishSpan.recordException(normalizedError);
           publishSpan.setStatus({
-            code: 2,
-            message: error instanceof Error ? error.message : String(error),
+            code: SpanStatusCode.ERROR,
+            message: normalizedError.message,
           });
         } finally {
           publishSpan.end();
         }
       }
     );
+  }
+
+  private createEventWithTraceContext(event: DomainEvent, traceContext: TraceInfo): DomainEvent {
+    const eventCopy = Object.create(Object.getPrototypeOf(event)) as DomainEvent;
+    Object.assign(eventCopy, event);
+    eventCopy.metadata = {
+      ...event.metadata,
+      traceContext,
+    };
+
+    return eventCopy;
+  }
+
+  private normalizeError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    return new Error(String(error));
   }
 
   subscribe(subscription: EventSubscription): void {
