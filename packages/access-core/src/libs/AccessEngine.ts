@@ -1,3 +1,4 @@
+import { Problem } from '@croco/problems-core';
 import type { AccessProvider } from './interfaces/AccessProvider.js';
 import type { CheckRequest, CheckResult, GrantRequest, ListRequest, RevokeRequest } from './types.js';
 
@@ -7,7 +8,11 @@ export class AccessEngine {
   async check(request: CheckRequest): Promise<CheckResult> {
     try {
       return await this.provider.check(request);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof Problem)) {
+        throw error;
+      }
+
       return { allowed: false };
     }
   }

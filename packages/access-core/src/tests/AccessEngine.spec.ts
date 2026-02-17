@@ -1,7 +1,14 @@
+import { Problem, ProblemCategory } from '@croco/problems-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccessEngine } from '../libs/AccessEngine';
 import type { AccessProvider } from '../libs/interfaces/AccessProvider';
 import type { CheckRequest, GrantRequest, ListRequest, RelationTuple, RevokeRequest } from '../libs/types';
+
+class TestBusinessProblem extends Problem {
+  constructor(detail = 'Business problem') {
+    super('TEST_BUSINESS_PROBLEM', ProblemCategory.BusinessRuleViolation, detail);
+  }
+}
 
 describe('AccessEngine', () => {
   let accessEngine: AccessEngine;
@@ -63,18 +70,30 @@ describe('AccessEngine', () => {
       expect(mockProvider.check).toHaveBeenCalledWith(request);
     });
 
-    it('should deny on provider exception (fail-closed)', async () => {
+    it('should deny on provider business problem (fail-closed)', async () => {
       const request: CheckRequest = {
         tenantId: 'tenant-1',
         subject: 'user-1',
         relation: 'viewer',
         object: 'document-1',
       };
-      vi.mocked(mockProvider.check).mockRejectedValue(new Error('Provider error'));
+      vi.mocked(mockProvider.check).mockRejectedValue(new TestBusinessProblem('Provider business error'));
 
       const result = await accessEngine.check(request);
 
       expect(result.allowed).toBe(false);
+    });
+
+    it('should re-throw on provider system exception', async () => {
+      const request: CheckRequest = {
+        tenantId: 'tenant-1',
+        subject: 'user-1',
+        relation: 'viewer',
+        object: 'document-1',
+      };
+      vi.mocked(mockProvider.check).mockRejectedValue(new TypeError('Cannot read properties of undefined'));
+
+      await expect(accessEngine.check(request)).rejects.toThrow(TypeError);
     });
   });
 
