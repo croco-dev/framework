@@ -121,7 +121,7 @@ describe('CrocoApp', () => {
   it('should preserve binary body through lambda request/response', async () => {
     const app = createApp({ controllers: [LambdaController] });
     const handler = app.lambdaHandler();
-    const binaryBody = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe, 0x00, 0x7f, 0x80]);
+    const binaryBody = Buffer.from([0xc3, 0x28, 0xff, 0xfe, 0x00, 0x61, 0x80]);
 
     const response = await handler(
       {

@@ -20,20 +20,52 @@ function parseTraceIdFromHeader(traceparent: string | null | undefined): TraceCo
     return null;
   }
 
-  const parts = traceparent.split('-');
-  if (parts.length >= 4) {
-    return {
-      traceId: parts[1],
-      spanId: parts[2],
-      traceFlags: parts[3],
-    };
+  const parts = traceparent.trim().split('-');
+  if (parts.length !== 4) {
+    return null;
   }
 
-  return null;
+  const [version, traceId, spanId, traceFlags] = parts;
+  const isValidTraceparent =
+    /^[\da-f]{2}$/i.test(version) &&
+    /^[\da-f]{32}$/i.test(traceId) &&
+    !/^0{32}$/i.test(traceId) &&
+    /^[\da-f]{16}$/i.test(spanId) &&
+    !/^0{16}$/i.test(spanId) &&
+    /^[\da-f]{2}$/i.test(traceFlags);
+
+  if (!isValidTraceparent) {
+    return null;
+  }
+
+  return {
+    traceId,
+    spanId,
+    traceFlags,
+  };
 }
 
 function isBinaryContentType(contentType: string): boolean {
-  return contentType.startsWith('image/') || contentType.startsWith('application/octet-stream');
+  const mimeType = contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+
+  if (mimeType === '') {
+    return false;
+  }
+
+  if (mimeType.startsWith('text/')) {
+    return false;
+  }
+
+  if (
+    mimeType.includes('json') ||
+    mimeType.includes('xml') ||
+    mimeType.includes('javascript') ||
+    mimeType === 'application/x-www-form-urlencoded'
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 export class CrocoApp {

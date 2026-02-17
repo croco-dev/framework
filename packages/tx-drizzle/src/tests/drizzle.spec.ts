@@ -108,10 +108,13 @@ describe('RlsTxAdapter', () => {
         getTenantId: vi.fn((): string | null => null),
       };
       const adapter = createRlsTxAdapter(db, tenantProvider);
+      const runQuery = vi.fn(async () => 'result');
 
-      await expect(adapter.transaction(async () => 'result')).rejects.toThrow('Tenant context is required');
+      await expect(adapter.transaction(runQuery)).rejects.toThrow('Tenant context is required');
       expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
+      expect(db.transaction).not.toHaveBeenCalled();
       expect(db.execute).not.toHaveBeenCalled();
+      expect(runQuery).not.toHaveBeenCalled();
     });
 
     it('should set RLS when tenant id exists', async () => {
@@ -120,12 +123,18 @@ describe('RlsTxAdapter', () => {
         getTenantId: vi.fn((): string | null => 'tenant-123'),
       };
       const adapter = createRlsTxAdapter(db, tenantProvider);
+      const runQuery = vi.fn(async (tx: MockRlsTx) => {
+        expect(tx.id).toBe('drizzle-rls-tx');
+        return 'result';
+      });
 
-      const result = await adapter.transaction(async () => 'result');
+      const result = await adapter.transaction(runQuery);
 
       expect(result).toBe('result');
       expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
+      expect(db.transaction).toHaveBeenCalledTimes(1);
       expect(db.execute).toHaveBeenCalledTimes(1);
+      expect(runQuery).toHaveBeenCalledTimes(1);
     });
   });
 });

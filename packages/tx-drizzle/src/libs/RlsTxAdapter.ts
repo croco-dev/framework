@@ -35,6 +35,16 @@ function supportsExecute(client: unknown): client is ExecutableTransactionClient
   return typeof executableClient.execute === 'function';
 }
 
+function getTenantIdOrThrow(tenantProvider: RlsTenantProvider): string {
+  const tenantId = tenantProvider.getTenantId();
+
+  if (!tenantId) {
+    throw new Error('Tenant context is required');
+  }
+
+  return tenantId;
+}
+
 export function createRlsTxAdapter<TDb extends DrizzleDb>(
   db: TDb,
   tenantProvider: RlsTenantProvider,
@@ -53,12 +63,9 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
 
   return {
     async transaction<T>(fn: (client: InferTxClient<TDb>) => Promise<T>, txOptions?: InferTxOptions<TDb>): Promise<T> {
-      return baseAdapter.transaction(async (tx) => {
-        const tenantId = tenantProvider.getTenantId();
-        if (!tenantId) {
-          throw new Error('Tenant context is required');
-        }
+      const tenantId = getTenantIdOrThrow(tenantProvider);
 
+      return baseAdapter.transaction(async (tx) => {
         if (options.debug) {
           logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
         }

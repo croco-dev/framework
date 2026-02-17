@@ -133,6 +133,37 @@ describe('PolarWebhookHandler', () => {
       expect(mockEventPublisher.publish).toHaveBeenCalledTimes(1);
       expect(mockStore.markWebhookProcessed).toHaveBeenCalledTimes(1);
     });
+
+    it('markWebhookProcessed에서 중복 충돌이 나면 이미 처리된 이벤트로 간주하고 스킵', async () => {
+      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
+      vi.mocked(mockStore.markWebhookProcessed).mockRejectedValue(
+        new Error('duplicate key value violates unique constraint "processed_webhooks_event_id_key"')
+      );
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+
+      const eventData = {
+        id: 'evt-dup-conflict',
+        type: 'subscription.created',
+        data: {
+          id: 'sub-dup-conflict',
+          customer: { externalId: 'tenant-dup-conflict', metadata: {} },
+          product: { id: 'plan-pro' },
+          status: 'active',
+          currentPeriodEnd: '2026-02-01T00:00:00Z',
+          cancelAtPeriodEnd: false,
+        },
+      };
+
+      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+
+      const result = await handler.handle(JSON.stringify(eventData), { 'webhook-id': 'evt-dup-conflict' });
+
+      expect(result.success).toBe(true);
+      expect(result.eventId).toBe('evt-dup-conflict');
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publish).not.toHaveBeenCalled();
+      expect(mockStore.markWebhookProcessed).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('subscription 이벤트 처리', () => {
@@ -174,19 +205,19 @@ describe('PolarWebhookHandler', () => {
       });
     });
 
-    it('should throw error if currentPeriodEnd is missing', async () => {
+    it('subscription.canceled에서 currentPeriodEnd가 null이면 실패 처리', async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
 
       const eventData = {
         id: 'evt-null-period',
-        type: 'subscription.created',
+        type: 'subscription.canceled',
         data: {
           id: 'sub-null-period',
           customer: { externalId: 'tenant-123', metadata: {} },
           product: { id: 'plan-pro' },
-          status: 'active',
+          status: 'canceled',
           currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
+          cancelAtPeriodEnd: true,
         },
       };
 
@@ -197,7 +228,6 @@ describe('PolarWebhookHandler', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('currentPeriodEnd is required');
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
-      expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
     });
 
     it('should throw error for unknown status', async () => {
