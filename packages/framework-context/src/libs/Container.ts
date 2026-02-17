@@ -39,7 +39,7 @@ export class Container {
   }
 
   static remove(token: Constructor): void {
-    TypeDIContainer.reset(token as unknown as string);
+    TypeDIContainer.remove(token);
   }
 
   static reset(): void {
@@ -61,14 +61,14 @@ export class Container {
   }
 
   private static getRequestScoped<T>(token: Constructor<T>): T {
-    const cache = Context.getCache();
+    const cache = Context.getCache() as Map<unknown, unknown> | undefined;
 
     if (!cache) {
       console.warn('[Container] getRequestScoped called outside Context.run(). Returning transient instance.');
       return Container.createTransientInstance(token);
     }
 
-    const key = token.name;
+    const key = token;
 
     const cached = cache.get(key);
     if (cached !== undefined) {

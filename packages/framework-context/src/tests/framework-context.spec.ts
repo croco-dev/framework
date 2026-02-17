@@ -81,6 +81,30 @@ describe('Container', () => {
 
       expect(true).toBe(true);
     });
+
+    it('should keep request-scoped instances separate for same class names', () => {
+      const UserServiceA = class UserService {
+        readonly source = 'A';
+      };
+      const UserServiceB = class UserService {
+        readonly source = 'B';
+      };
+
+      Container.register(UserServiceA, 'request');
+      Container.register(UserServiceB, 'request');
+
+      let serviceA!: InstanceType<typeof UserServiceA>;
+      let serviceB!: InstanceType<typeof UserServiceB>;
+
+      Context.run({ requestId: 'request-collision' }, () => {
+        serviceA = Container.get(UserServiceA);
+        serviceB = Container.get(UserServiceB);
+      });
+
+      expect(serviceA).not.toBe(serviceB);
+      expect(serviceA).toBeInstanceOf(UserServiceA);
+      expect(serviceB).toBeInstanceOf(UserServiceB);
+    });
   });
 });
 
