@@ -61,6 +61,11 @@ describe('PipelineRunner', () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
   });
 
+  it('BUG-03 Container 초기화 전 PipelineRunner 생성 가능', () => {
+    Container.reset();
+    expect(() => new PipelineRunner()).not.toThrow();
+  });
+
   it('BUG-01 다중 ExceptionFilter 중 매칭 필터 실행', async () => {
     const runner = new PipelineRunner();
     const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');

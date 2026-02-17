@@ -11,7 +11,9 @@ export interface PipelineConfig {
 }
 
 export class PipelineRunner {
-  private readonly errorHandler = Container.get(ErrorHandler);
+  private get errorHandler() {
+    return Container.get(ErrorHandler);
+  }
 
   async run(
     execContext: HttpExecutionContext,
