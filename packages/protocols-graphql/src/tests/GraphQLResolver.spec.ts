@@ -27,6 +27,21 @@ describe('MetadataReader.getAllResolvers', () => {
     expect(resolvers).toContain(FirstResolver);
     expect(resolvers).toContain(SecondResolver);
   });
+
+  it('should not leak resolver list mutation across consumers (e.g. multiple servers)', () => {
+    @GraphQLResolver()
+    class ResolverA {}
+
+    const serverAResolvers = getAllResolvers();
+
+    class NotRegisteredResolver {}
+
+    serverAResolvers.push(NotRegisteredResolver);
+
+    const serverBResolvers = getAllResolvers();
+    expect(serverBResolvers).toContain(ResolverA);
+    expect(serverBResolvers).not.toContain(NotRegisteredResolver);
+  });
 });
 
 describe('GraphQLResolver decorator', () => {
