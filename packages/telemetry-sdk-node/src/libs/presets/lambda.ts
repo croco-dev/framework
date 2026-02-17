@@ -10,7 +10,12 @@ type LambdaPresetOptions = {
 };
 
 function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
-  const environment = process.env.NODE_ENV ?? process.env.ENVIRONMENT ?? 'development';
+  const configuredEnvironment = process.env.NODE_ENV ?? process.env.ENVIRONMENT;
+  const isLambdaEnvironment =
+    process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
+    process.env.AWS_EXECUTION_ENV?.includes('AWS_Lambda') === true;
+
+  const environment = configuredEnvironment ?? (isLambdaEnvironment ? 'production' : 'development');
   const isDevelopment = environment === 'development';
 
   const probability = options.probability ?? (isDevelopment ? 1.0 : 0.1);

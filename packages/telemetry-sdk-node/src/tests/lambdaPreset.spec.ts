@@ -7,6 +7,9 @@ describe('lambdaPreset', () => {
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv };
+
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+    delete process.env.AWS_EXECUTION_ENV;
   });
 
   it('should create config with required fields', () => {
@@ -79,6 +82,30 @@ describe('lambdaPreset', () => {
     });
 
     expect(config.environment).toBe('staging');
+  });
+
+  it('should default environment to production in AWS Lambda (AWS_LAMBDA_FUNCTION_NAME)', () => {
+    delete process.env.NODE_ENV;
+    delete process.env.ENVIRONMENT;
+    process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function';
+
+    const config = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    expect(config.environment).toBe('production');
+  });
+
+  it('should default environment to production in AWS Lambda (AWS_EXECUTION_ENV)', () => {
+    delete process.env.NODE_ENV;
+    delete process.env.ENVIRONMENT;
+    process.env.AWS_EXECUTION_ENV = 'AWS_Lambda_nodejs20.x';
+
+    const config = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    expect(config.environment).toBe('production');
   });
 
   it('should include resource attributes', () => {
