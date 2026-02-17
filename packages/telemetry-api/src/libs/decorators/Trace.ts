@@ -1,5 +1,4 @@
 import { type Attributes, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
-import { recordError } from '../span.js';
 import { getTracer } from '../tracer.js';
 
 export type TraceDecoratorOptions = {
@@ -26,7 +25,10 @@ export function Trace(options: TraceDecoratorOptions = {}): MethodDecorator {
           span.setStatus({ code: SpanStatusCode.OK });
           return result;
         } catch (error) {
-          recordError(error, span);
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
           throw error;
         } finally {
           span.end();

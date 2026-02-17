@@ -144,3 +144,29 @@ describe('getTracer', () => {
     expect(tracer).toBeDefined();
   });
 });
+
+describe('@Trace + withSpan error recording', () => {
+  it('should not record error twice when @Trace wraps withSpan', async () => {
+    class TestService {
+      @Trace({ name: 'outer-operation' })
+      async methodWithInnerSpan(): Promise<void> {
+        await withSpan(
+          async () => {
+            throw new Error('Test error');
+          },
+          { name: 'inner-operation' }
+        );
+      }
+    }
+
+    const service = new TestService();
+
+    try {
+      await service.methodWithInnerSpan();
+      expect.fail('Should have thrown an error');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe('Test error');
+    }
+  });
+});
