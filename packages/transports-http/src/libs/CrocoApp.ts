@@ -9,17 +9,31 @@ import { telemetryMiddleware } from './middleware/telemetry';
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
 import type { AppConfig, CompiledRoute, LambdaContext, LambdaEvent, LambdaHandler, MiddlewareFunction } from './types';
 
-function parseTraceIdFromHeader(traceparent: string | null | undefined): string | null {
+type TraceContextHeader = {
+  traceId: string;
+  spanId: string;
+  traceFlags: string;
+};
+
+function parseTraceIdFromHeader(traceparent: string | null | undefined): TraceContextHeader | null {
   if (!traceparent) {
     return null;
   }
 
   const parts = traceparent.split('-');
-  if (parts.length >= 2) {
-    return parts[1];
+  if (parts.length >= 4) {
+    return {
+      traceId: parts[1],
+      spanId: parts[2],
+      traceFlags: parts[3],
+    };
   }
 
   return null;
+}
+
+function isBinaryContentType(contentType: string): boolean {
+  return contentType.startsWith('image/') || contentType.startsWith('application/octet-stream');
 }
 
 export class CrocoApp {
@@ -62,13 +76,19 @@ export class CrocoApp {
       const ctx = new HttpContext(c);
 
       const traceparent = ctx.header('traceparent');
-      const traceId = parseTraceIdFromHeader(traceparent) || undefined;
+      const traceContext = parseTraceIdFromHeader(traceparent);
+      const requestContext = {
+        requestId: randomUUID(),
+        traceId: traceContext?.traceId,
+        spanId: traceContext?.spanId,
+        traceFlags: traceContext?.traceFlags,
+      };
 
       const telemetry = telemetryMiddleware(route.path);
 
       const middlewares = [telemetry, ...(this.config.middlewares ?? [])];
 
-      return FrameworkContext.run({ requestId: randomUUID(), traceId }, async () => {
+      return FrameworkContext.run(requestContext, async () => {
         try {
           await this.executeMiddlewares(ctx, middlewares);
 
@@ -150,7 +170,7 @@ export class CrocoApp {
 
       let body: BodyInit | null = null;
       if (event.body) {
-        body = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf-8') : event.body;
+        body = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : event.body;
       }
 
       const request = new Request(url, {
@@ -164,7 +184,11 @@ export class CrocoApp {
         lambdaContext,
       });
 
-      const responseBody = await response.text();
+      const contentType = response.headers.get('content-type') || '';
+      const isBinary = isBinaryContentType(contentType);
+      const responseBody = isBinary
+        ? Buffer.from(await response.arrayBuffer()).toString('base64')
+        : await response.text();
       const responseHeaders: Record<string, string> = {};
       response.headers.forEach((value, key) => {
         responseHeaders[key] = value;
@@ -174,7 +198,7 @@ export class CrocoApp {
         statusCode: response.status,
         headers: responseHeaders,
         body: responseBody,
-        isBase64Encoded: false,
+        isBase64Encoded: isBinary,
       };
     };
   }
