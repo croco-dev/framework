@@ -2,10 +2,11 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { GraphQLResolver } from '../libs/decorators';
 import { getAllResolvers, getResolverMetadata, isResolver } from '../libs/metadata/MetadataReader';
+import { resolverRegistry } from '../libs/metadata/ResolverRegistry';
 
 describe('MetadataReader.getAllResolvers', () => {
   beforeEach(() => {
-    Reflect.deleteMetadata(Symbol('graphql:resolvers'), Reflect);
+    resolverRegistry.clear();
   });
 
   it('should return empty array when no resolvers registered', () => {
@@ -30,7 +31,7 @@ describe('MetadataReader.getAllResolvers', () => {
 
 describe('GraphQLResolver decorator', () => {
   beforeEach(() => {
-    Reflect.deleteMetadata(Symbol('graphql:resolvers'), Reflect);
+    resolverRegistry.clear();
   });
 
   it('should define resolver metadata with target', () => {
@@ -54,7 +55,7 @@ describe('GraphQLResolver decorator', () => {
 
 describe('MetadataReader.isResolver', () => {
   beforeEach(() => {
-    Reflect.deleteMetadata(Symbol('graphql:resolvers'), Reflect);
+    resolverRegistry.clear();
   });
 
   it('should return true for classes decorated with @GraphQLResolver', () => {
