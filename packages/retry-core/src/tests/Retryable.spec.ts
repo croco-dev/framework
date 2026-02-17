@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NoBackoff } from '../libs/BackoffPolicy';
 import { Retryable } from '../libs/Retryable';
+import type { RetryPolicy } from '../libs/RetryPolicy';
 
 describe('@Retryable', () => {
   it('retries method and succeeds', async () => {
@@ -81,5 +82,42 @@ describe('@Retryable', () => {
     const result = await service.add(2, 3);
 
     expect(result).toBe(5);
+  });
+
+  it('throws original non-retryable error when it occurs on last attempt', async () => {
+    class RetryableError extends Error {}
+    class NonRetryableError extends Error {}
+
+    const nonRetryableError = new NonRetryableError('non-retryable on last attempt');
+    const retryPolicy: RetryPolicy = {
+      shouldRetry(error: unknown): boolean {
+        return error instanceof RetryableError;
+      },
+    };
+
+    let attempts = 0;
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 3,
+        wrapExhausted: true,
+        backoffPolicy: new NoBackoff(),
+        retryPolicy,
+      })
+      async doWork(): Promise<void> {
+        attempts++;
+
+        if (attempts < 3) {
+          throw new RetryableError('retryable');
+        }
+
+        throw nonRetryableError;
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.doWork()).rejects.toBe(nonRetryableError);
+    expect(attempts).toBe(3);
   });
 });

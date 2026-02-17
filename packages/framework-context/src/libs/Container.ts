@@ -38,7 +38,7 @@ export class Container {
     return instance;
   }
 
-  static remove(token: Constructor): void {
+  static remove<T>(token: Constructor<T>): void {
     TypeDIContainer.remove(token);
   }
 
@@ -61,22 +61,20 @@ export class Container {
   }
 
   private static getRequestScoped<T>(token: Constructor<T>): T {
-    const cache = Context.getCache() as Map<unknown, unknown> | undefined;
+    const cache = Context.getCache() as Map<Constructor, unknown> | undefined;
 
     if (!cache) {
       console.warn('[Container] getRequestScoped called outside Context.run(). Returning transient instance.');
       return Container.createTransientInstance(token);
     }
 
-    const key = token;
-
-    const cached = cache.get(key);
+    const cached = cache.get(token);
     if (cached !== undefined) {
       return cached as T;
     }
 
     const instance = Container.createTransientInstance(token);
-    cache.set(key, instance);
+    cache.set(token, instance);
     return instance;
   }
 }

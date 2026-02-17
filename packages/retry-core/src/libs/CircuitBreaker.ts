@@ -78,6 +78,7 @@ export class CircuitBreaker {
   private readonly halfOpenRequests: number;
   private readonly stateStore: CircuitBreakerStateStore;
   private readonly fallback?: <T>() => T | Promise<T>;
+  private localClosedActiveCount = 0;
   private localHalfOpenActiveCount = 0;
   private localHalfOpenSuccessCount = 0;
   private localLock: Promise<void> = Promise.resolve();
@@ -175,28 +176,73 @@ export class CircuitBreaker {
   }
 
   private async handleClosed<T>(fn: () => Promise<T>): Promise<T> {
-    // BUG-13: 상태 조회→실행→실패 카운트 증가를 동일 임계영역에서 처리해 OPEN 전이를 원자적으로 보장한다.
+    const canExecute = await this.tryAcquireClosedExecution();
+    if (!canExecute) {
+      return this.rejectOpenCircuit<T>();
+    }
+
+    try {
+      const result = await fn();
+      await this.recordClosedSuccess();
+      return result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      await this.recordClosedFailure();
+      throw err;
+    }
+  }
+
+  private async tryAcquireClosedExecution(): Promise<boolean> {
     return this.withCircuitLock(async () => {
       const state = await this.stateStore.getState(this.circuitId);
       if (state !== CircuitState.CLOSED) {
-        return this.rejectOpenCircuit<T>();
+        return false;
       }
 
-      try {
-        const result = await fn();
-        await this.stateStore.resetFailureCount(this.circuitId);
-        return result;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        const { shouldOpen } = await this.incrementFailureAndCheck();
-
-        if (shouldOpen) {
-          await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
-          await this.setCircuitState(CircuitState.OPEN);
-        }
-
-        throw err;
+      const failureCount = await this.stateStore.getFailureCount(this.circuitId);
+      const projectedFailureCount = failureCount + this.localClosedActiveCount;
+      if (projectedFailureCount >= this.failureThreshold) {
+        return false;
       }
+
+      this.localClosedActiveCount += 1;
+      return true;
+    });
+  }
+
+  private releaseClosedExecutionSlot(): void {
+    this.localClosedActiveCount = Math.max(0, this.localClosedActiveCount - 1);
+  }
+
+  private async recordClosedSuccess(): Promise<void> {
+    await this.withCircuitLock(async () => {
+      this.releaseClosedExecutionSlot();
+
+      const state = await this.stateStore.getState(this.circuitId);
+      if (state !== CircuitState.CLOSED) {
+        return;
+      }
+
+      await this.stateStore.resetFailureCount(this.circuitId);
+    });
+  }
+
+  private async recordClosedFailure(): Promise<void> {
+    await this.withCircuitLock(async () => {
+      this.releaseClosedExecutionSlot();
+
+      const state = await this.stateStore.getState(this.circuitId);
+      if (state !== CircuitState.CLOSED) {
+        return;
+      }
+
+      const { shouldOpen } = await this.incrementFailureAndCheck();
+      if (!shouldOpen) {
+        return;
+      }
+
+      await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
+      await this.setCircuitState(CircuitState.OPEN);
     });
   }
 

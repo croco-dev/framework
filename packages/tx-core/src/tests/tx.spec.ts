@@ -110,6 +110,7 @@ describe('TxManager', () => {
     it('should fall back to join if savepoint not supported', async () => {
       const noSavepointAdapter = createMockAdapter({ supportsSavepoint: false });
       const noSavepointTxManager = new TxManager(noSavepointAdapter, { defaultNesting: 'savepoint' });
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       await noSavepointTxManager.run(async () => {
         await noSavepointTxManager.run(async () => {
@@ -119,6 +120,11 @@ describe('TxManager', () => {
 
       expect(noSavepointAdapter.transaction).toHaveBeenCalledTimes(1);
       expect(noSavepointAdapter.savepoint).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[TxManager] Savepoint nesting requested but adapter does not support savepoint. Falling back to join.'
+      );
+
+      consoleWarnSpy.mockRestore();
     });
 
     it('should discard savepoint hooks when savepoint rolls back', async () => {
@@ -133,6 +139,36 @@ describe('TxManager', () => {
             throw new Error('savepoint rollback');
           })
         ).rejects.toThrow('savepoint rollback');
+      });
+
+      expect(rolledBackHook).not.toHaveBeenCalled();
+    });
+
+    it('should discard savepoint hooks when adapter swallows rollback error', async () => {
+      const savepointAdapter: TxAdapter<{ id: string }> = {
+        transaction: vi.fn(async (fn) => {
+          const client = { id: 'tx-client' };
+          return fn(client);
+        }),
+        savepoint: vi.fn(async (client, fn) => {
+          try {
+            return await fn(client);
+          } catch {
+            return 'rolled-back';
+          }
+        }),
+        supportsSavepoint: () => true,
+      };
+      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: 'savepoint' });
+      const rolledBackHook = vi.fn();
+
+      await savepointTxManager.run(async () => {
+        const nestedResult = await savepointTxManager.run(async () => {
+          savepointTxManager.onAfterCommit(rolledBackHook);
+          throw new Error('savepoint rollback');
+        });
+
+        expect(nestedResult).toBe('rolled-back');
       });
 
       expect(rolledBackHook).not.toHaveBeenCalled();

@@ -75,6 +75,19 @@ describe('Container', () => {
     });
   });
 
+  describe('remove', () => {
+    it('should remove a registered class token from container', () => {
+      const service = new SimpleService();
+      Container.set(SimpleService, service);
+
+      expect(Container.get(SimpleService)).toBe(service);
+
+      Container.remove(SimpleService);
+
+      expect(() => Container.get(SimpleService)).toThrow();
+    });
+  });
+
   describe('scopes', () => {
     it('should register component with scope', () => {
       Container.register(SimpleService, 'transient');
@@ -89,6 +102,9 @@ describe('Container', () => {
       const UserServiceB = class UserService {
         readonly source = 'B';
       };
+
+      expect(UserServiceA.name).toBe('UserService');
+      expect(UserServiceB.name).toBe('UserService');
 
       Container.register(UserServiceA, 'request');
       Container.register(UserServiceB, 'request');

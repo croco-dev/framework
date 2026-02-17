@@ -232,6 +232,28 @@ describe('CircuitBreaker', () => {
   });
 
   describe('동시성 버그 회귀', () => {
+    it('CLOSED 상태에서 동시 요청은 직렬화되지 않고 병렬로 처리되어야 한다', async () => {
+      const breaker = createBreaker({ failureThreshold: 10 });
+      const fn = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return 'ok';
+      });
+
+      const startedAt = Date.now();
+      const results = await Promise.all([
+        breaker.execute(fn),
+        breaker.execute(fn),
+        breaker.execute(fn),
+        breaker.execute(fn),
+        breaker.execute(fn),
+      ]);
+      const elapsed = Date.now() - startedAt;
+
+      expect(results).toEqual(['ok', 'ok', 'ok', 'ok', 'ok']);
+      expect(fn).toHaveBeenCalledTimes(5);
+      expect(elapsed).toBeLessThan(200);
+    });
+
     it('BUG-12 HALF_OPEN 상태에서 동시 요청 수 제한', async () => {
       const stateStore = new InMemoryCircuitBreakerStateStore();
       const breaker = createBreaker({
@@ -313,6 +335,44 @@ describe('CircuitBreaker', () => {
       expect(fn).toHaveBeenCalledTimes(3);
       expect(await breaker.getFailureCount()).toBe(3);
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
+    });
+
+    it('halfOpen 카운터 확장 API가 없으면 인스턴스 로컬 카운터를 사용한다', async () => {
+      const fallbackOnlyStore = {
+        getState: vi.fn().mockResolvedValue(CircuitState.HALF_OPEN),
+        setState: vi.fn().mockResolvedValue(undefined),
+        getFailureCount: vi.fn().mockResolvedValue(0),
+        incrementFailureCount: vi.fn().mockResolvedValue(1),
+        resetFailureCount: vi.fn().mockResolvedValue(undefined),
+        getLastFailureTime: vi.fn().mockResolvedValue(null),
+        setLastFailureTime: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const breaker = createBreaker({
+        stateStore: fallbackOnlyStore,
+        halfOpenRequests: 1,
+      });
+
+      let resolveFirst!: (value: string) => void;
+      const firstWork = new Promise<string>((resolve) => {
+        resolveFirst = resolve;
+      });
+
+      const fn = vi
+        .fn<() => Promise<string>>()
+        .mockImplementation(async () => Promise.reject(new Error('unexpected-second-execution')))
+        .mockImplementationOnce(async () => firstWork);
+
+      const first = breaker.execute(fn);
+      const second = breaker.execute(fn);
+
+      await expect(second).rejects.toThrow(CircuitBreakerOpenException);
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      resolveFirst('success');
+      await expect(first).resolves.toBe('success');
+      expect(fallbackOnlyStore.setState).toHaveBeenCalledWith('test-circuit', CircuitState.CLOSED);
+      expect(fallbackOnlyStore.resetFailureCount).toHaveBeenCalledTimes(1);
     });
   });
 

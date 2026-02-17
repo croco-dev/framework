@@ -16,6 +16,10 @@ export class EventPublisher {
     }
   }
 
+  async publishManyParallel(events: DomainEvent[]): Promise<void> {
+    await Promise.all(events.map((event) => this.publishEventSafely(event)));
+  }
+
   private async publishEventSafely(event: DomainEvent): Promise<void> {
     try {
       await this.eventBus.publish(event);

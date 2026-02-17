@@ -10,6 +10,12 @@ class TestEvent extends DomainEvent {
   }
 }
 
+class EventA extends DomainEvent {}
+
+class EventB extends DomainEvent {}
+
+class EventC extends DomainEvent {}
+
 class MockEventBus implements EventBus {
   public publishedEvents: DomainEvent[] = [];
 
@@ -117,19 +123,25 @@ describe('EventPublisher', () => {
       expect(mockEventBus.publishedEvents).toHaveLength(0);
     });
 
-    it('should preserve event order regardless of per-event latency', async () => {
+    it('BUG-08 EventA/EventB/EventC 배치 발행은 순차 실행을 보장해야 한다', async () => {
       const completionOrder: string[] = [];
-      const delayByEventData: Record<string, number> = {
-        first: 30,
-        second: 10,
-        third: 0,
+      let inFlightCount = 0;
+      let maxInFlightCount = 0;
+      const delayByEventName: Record<string, number> = {
+        EventA: 50,
+        EventB: 20,
+        EventC: 0,
       };
 
       const latencyEventBus = {
         async publish(event: DomainEvent): Promise<void> {
-          const data = (event as TestEvent).data;
-          await new Promise((resolve) => setTimeout(resolve, delayByEventData[data] ?? 0));
-          completionOrder.push(data);
+          inFlightCount += 1;
+          maxInFlightCount = Math.max(maxInFlightCount, inFlightCount);
+
+          await new Promise((resolve) => setTimeout(resolve, delayByEventName[event.eventName] ?? 0));
+          completionOrder.push(event.eventName);
+
+          inFlightCount -= 1;
         },
         subscribe(): void {},
         unsubscribe(): void {},
@@ -138,11 +150,10 @@ describe('EventPublisher', () => {
 
       config.setEventBus(latencyEventBus);
 
-      const events = [new TestEvent('first'), new TestEvent('second'), new TestEvent('third')];
+      await publisher.publishMany([new EventA(), new EventB(), new EventC()]);
 
-      await publisher.publishMany(events);
-
-      expect(completionOrder).toEqual(['first', 'second', 'third']);
+      expect(completionOrder).toEqual(['EventA', 'EventB', 'EventC']);
+      expect(maxInFlightCount).toBe(1);
     });
 
     it('BUG-05 하나 실패해도 나머지 이벤트를 발행하고 실패 정보를 로깅해야 한다', async () => {
@@ -181,6 +192,41 @@ describe('EventPublisher', () => {
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(events[0]);
+    });
+  });
+
+  describe('publishManyParallel', () => {
+    it('should process events concurrently for latency-optimized workloads', async () => {
+      const completionOrder: string[] = [];
+      let inFlightCount = 0;
+      let maxInFlightCount = 0;
+      const delayByEventName: Record<string, number> = {
+        EventA: 50,
+        EventB: 20,
+        EventC: 0,
+      };
+
+      const latencyEventBus = {
+        async publish(event: DomainEvent): Promise<void> {
+          inFlightCount += 1;
+          maxInFlightCount = Math.max(maxInFlightCount, inFlightCount);
+
+          await new Promise((resolve) => setTimeout(resolve, delayByEventName[event.eventName] ?? 0));
+          completionOrder.push(event.eventName);
+
+          inFlightCount -= 1;
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      config.setEventBus(latencyEventBus);
+
+      await publisher.publishManyParallel([new EventA(), new EventB(), new EventC()]);
+
+      expect(completionOrder).toEqual(['EventC', 'EventB', 'EventA']);
+      expect(maxInFlightCount).toBeGreaterThan(1);
     });
   });
 

@@ -85,6 +85,9 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
               context.setLastError(err);
 
               const shouldRetry = retryPolicy.shouldRetry(err, attempt, maxAttempts);
+              const isLastAttempt = attempt === maxAttempts;
+              const isNonRetryable =
+                !shouldRetry && (!isLastAttempt || !retryPolicy.shouldRetry(err, attempt, maxAttempts + 1));
 
               // Record attempt failed event
               recordEvent('retry.attempt_failed', {
@@ -95,7 +98,7 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
                 'retry.will_retry': shouldRetry && attempt < maxAttempts,
               });
 
-              if (!shouldRetry && attempt < maxAttempts) {
+              if (isNonRetryable) {
                 throw err;
               }
 

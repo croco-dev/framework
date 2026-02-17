@@ -10,8 +10,10 @@ interface TxContext<TClient> {
   isRoot: boolean;
 }
 
+type NullableTxContext<TClient> = TxContext<TClient> | null;
+
 export class TxManager<TClient, TOptions = unknown> {
-  private readonly als = new AsyncLocalStorage<TxContext<TClient> | null>();
+  private readonly als = new AsyncLocalStorage<NullableTxContext<TClient>>();
   private readonly defaultNesting: NestingStrategy;
 
   constructor(
@@ -50,25 +52,33 @@ export class TxManager<TClient, TOptions = unknown> {
     }
 
     if (!this.adapter.supportsSavepoint()) {
+      this.warnSavepointNotSupported();
       return fn();
     }
 
-    const nestedContext: TxContext<TClient> = {
-      client: currentContext.client,
-      afterCommitHooks: [],
-      isRoot: false,
-    };
+    const nestedHooks: AfterCommitHook[] = [];
+    let shouldMergeNestedHooks = false;
 
     const result = await this.adapter.savepoint(
       currentContext.client,
       async (nestedClient) => {
-        nestedContext.client = nestedClient;
-        return this.als.run(nestedContext, fn);
+        const nestedContext: TxContext<TClient> = {
+          client: nestedClient,
+          afterCommitHooks: nestedHooks,
+          isRoot: false,
+        };
+
+        const nestedResult = await this.als.run(nestedContext, fn);
+        shouldMergeNestedHooks = true;
+
+        return nestedResult;
       },
       options
     );
 
-    currentContext.afterCommitHooks.push(...nestedContext.afterCommitHooks);
+    if (shouldMergeNestedHooks) {
+      currentContext.afterCommitHooks.push(...nestedHooks);
+    }
 
     return result;
   }
@@ -111,5 +121,18 @@ export class TxManager<TClient, TOptions = unknown> {
    */
   async suspend<T>(fn: () => Promise<T>): Promise<T> {
     return this.als.run(null, fn);
+  }
+
+  private warnSavepointNotSupported(): void {
+    try {
+      const logger = Container.get(Logger);
+      logger.warn(
+        '[TxManager] Savepoint nesting requested but adapter does not support savepoint. Falling back to join.'
+      );
+    } catch {
+      console.warn(
+        '[TxManager] Savepoint nesting requested but adapter does not support savepoint. Falling back to join.'
+      );
+    }
   }
 }

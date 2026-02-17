@@ -109,8 +109,11 @@ export class RetryTemplate {
         }
 
         const shouldRetry = this.retryPolicy.shouldRetry(err, attempt, this.maxAttempts);
+        const isLastAttempt = attempt === this.maxAttempts;
+        const isNonRetryable =
+          !shouldRetry && (!isLastAttempt || !this.retryPolicy.shouldRetry(err, attempt, this.maxAttempts + 1));
 
-        if (!shouldRetry && attempt < this.maxAttempts) {
+        if (isNonRetryable) {
           throw err;
         }
 
