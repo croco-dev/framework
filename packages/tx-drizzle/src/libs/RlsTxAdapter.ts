@@ -22,6 +22,19 @@ export interface RlsOptions {
   debug?: boolean;
 }
 
+type ExecutableTransactionClient = {
+  execute(query: unknown): Promise<unknown>;
+};
+
+function supportsExecute(client: unknown): client is ExecutableTransactionClient {
+  if (typeof client !== 'object' || client === null || !('execute' in client)) {
+    return false;
+  }
+
+  const executableClient = client as { execute?: unknown };
+  return typeof executableClient.execute === 'function';
+}
+
 export function createRlsTxAdapter<TDb extends DrizzleDb>(
   db: TDb,
   tenantProvider: RlsTenantProvider,
@@ -42,19 +55,21 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
     async transaction<T>(fn: (client: InferTxClient<TDb>) => Promise<T>, txOptions?: InferTxOptions<TDb>): Promise<T> {
       return baseAdapter.transaction(async (tx) => {
         const tenantId = tenantProvider.getTenantId();
-
-        if (tenantId) {
-          if (options.debug) {
-            logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
-          }
-
-          // Drizzle transaction client usually has .execute
-          if (typeof (tx as any).execute === 'function') {
-            await (tx as any).execute(sql`SET LOCAL ${sql.raw(configKey)} = ${tenantId}`);
-          } else {
-            logger?.warn('[RlsTxAdapter] Transaction client does not support .execute(), skipping RLS setup');
-          }
+        if (!tenantId) {
+          throw new Error('Tenant context is required');
         }
+
+        if (options.debug) {
+          logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
+        }
+
+        // Drizzle transaction client usually has .execute
+        if (!supportsExecute(tx)) {
+          logger?.warn('[RlsTxAdapter] Transaction client does not support .execute(), skipping RLS setup');
+          return fn(tx);
+        }
+
+        await tx.execute(sql`SET LOCAL ${sql.raw(configKey)} = ${tenantId}`);
 
         return fn(tx);
       }, txOptions);

@@ -1,9 +1,13 @@
 import type { TxAdapter } from '@croco/tx-core';
 import { describe, expect, it, vi } from 'vitest';
-import { createDrizzleTxAdapter } from '../index';
+import { createDrizzleTxAdapter, createRlsTxAdapter } from '../index';
 
 interface MockTx {
   id: string;
+}
+
+interface MockRlsTx extends MockTx {
+  execute(query: unknown): Promise<void>;
 }
 
 describe('DrizzleTxAdapter', () => {
@@ -75,6 +79,53 @@ describe('DrizzleTxAdapter', () => {
       });
 
       expect(result).toBe('savepoint-result');
+    });
+  });
+});
+
+describe('RlsTxAdapter', () => {
+  function createMockRlsDrizzleDb() {
+    const execute = vi.fn(async (_query: unknown): Promise<void> => undefined);
+    const transactionFn = async <T>(fn: (tx: MockRlsTx) => Promise<T>): Promise<T> => {
+      const tx: MockRlsTx = {
+        id: 'drizzle-rls-tx',
+        execute,
+      };
+
+      return fn(tx);
+    };
+
+    return {
+      execute,
+      transaction: vi.fn(transactionFn) as typeof transactionFn,
+    };
+  }
+
+  describe('transaction', () => {
+    it('should throw an error when tenant id is null', async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => null),
+      };
+      const adapter = createRlsTxAdapter(db, tenantProvider);
+
+      await expect(adapter.transaction(async () => 'result')).rejects.toThrow('Tenant context is required');
+      expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
+      expect(db.execute).not.toHaveBeenCalled();
+    });
+
+    it('should set RLS when tenant id exists', async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => 'tenant-123'),
+      };
+      const adapter = createRlsTxAdapter(db, tenantProvider);
+
+      const result = await adapter.transaction(async () => 'result');
+
+      expect(result).toBe('result');
+      expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
+      expect(db.execute).toHaveBeenCalledTimes(1);
     });
   });
 });
