@@ -88,7 +88,7 @@ describe('PolarWebhookHandler', () => {
       expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
     });
 
-    it('동시 동일 webhook 요청은 정확히 1번만 처리해야 함', async () => {
+    it('should process webhook only once for concurrent requests', async () => {
       vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
       vi.mocked(mockStore.markWebhookProcessed).mockResolvedValue(undefined);
@@ -174,7 +174,7 @@ describe('PolarWebhookHandler', () => {
       });
     });
 
-    it('currentPeriodEnd가 null이면 명시적으로 실패해야 함', async () => {
+    it('should throw error if currentPeriodEnd is missing', async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
 
       const eventData = {
@@ -200,7 +200,7 @@ describe('PolarWebhookHandler', () => {
       expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
     });
 
-    it('알 수 없는 Polar status면 실패해야 함', async () => {
+    it('should throw error for unknown status', async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
 
       const eventData = {
