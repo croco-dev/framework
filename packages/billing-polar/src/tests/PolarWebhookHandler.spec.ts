@@ -87,6 +87,50 @@ describe('PolarWebhookHandler', () => {
       expect(mockEventPublisher.publish).not.toHaveBeenCalled();
       expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
     });
+
+    it('동시 동일 webhook 요청은 정확히 1번만 처리해야 함', async () => {
+      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.markWebhookProcessed).mockResolvedValue(undefined);
+      vi.mocked(mockStore.saveSubscription).mockImplementation(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 10);
+        });
+      });
+
+      const eventData = {
+        id: 'evt-race-1',
+        type: 'subscription.created',
+        data: {
+          id: 'sub-race-1',
+          customer: { externalId: 'tenant-race-1', metadata: {} },
+          product: { id: 'plan-pro' },
+          status: 'active',
+          currentPeriodEnd: '2026-02-01T00:00:00Z',
+          cancelAtPeriodEnd: false,
+        },
+      };
+
+      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+
+      const body = JSON.stringify(eventData);
+      const headers = { 'webhook-id': 'evt-race-1' };
+      const secondHandler = new PolarWebhookHandler(config, {
+        store: mockStore,
+        eventPublisher: mockEventPublisher,
+      });
+
+      const [firstResult, secondResult] = await Promise.all([
+        handler.handle(body, headers),
+        secondHandler.handle(body, headers),
+      ]);
+
+      expect(firstResult.success).toBe(true);
+      expect(secondResult.success).toBe(true);
+      expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
+      expect(mockEventPublisher.publish).toHaveBeenCalledTimes(1);
+      expect(mockStore.markWebhookProcessed).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('subscription 이벤트 처리', () => {
@@ -126,6 +170,58 @@ describe('PolarWebhookHandler', () => {
         eventType: 'subscription.created',
         processedAt: expect.any(Date),
       });
+    });
+
+    it('currentPeriodEnd가 null이면 명시적으로 실패해야 함', async () => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+
+      const eventData = {
+        id: 'evt-null-period',
+        type: 'subscription.created',
+        data: {
+          id: 'sub-null-period',
+          customer: { externalId: 'tenant-123', metadata: {} },
+          product: { id: 'plan-pro' },
+          status: 'active',
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        },
+      };
+
+      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+
+      const result = await handler.handle(JSON.stringify(eventData), { 'webhook-id': 'evt-null-period' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('currentPeriodEnd is required');
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
+    });
+
+    it('알 수 없는 Polar status면 실패해야 함', async () => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+
+      const eventData = {
+        id: 'evt-unknown-status',
+        type: 'subscription.created',
+        data: {
+          id: 'sub-unknown-status',
+          customer: { externalId: 'tenant-123', metadata: {} },
+          product: { id: 'plan-pro' },
+          status: 'future_status',
+          currentPeriodEnd: '2026-02-01T00:00:00Z',
+          cancelAtPeriodEnd: false,
+        },
+      };
+
+      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+
+      const result = await handler.handle(JSON.stringify(eventData), { 'webhook-id': 'evt-unknown-status' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unknown Polar status: future_status');
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
     });
   });
 

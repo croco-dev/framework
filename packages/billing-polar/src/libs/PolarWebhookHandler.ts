@@ -17,6 +17,7 @@ export class PolarWebhookHandler {
   private readonly eventPublisher: EventPublisher;
   private readonly eventMapper: PolarEventMapper;
   private readonly webhookSecret: string;
+  private readonly inFlightEvents = new Map<string, Promise<WebhookHandlerResult>>();
 
   constructor(config: PolarConfig, deps: WebhookDependencies) {
     this.webhookSecret = config.webhookSecret;
@@ -60,9 +61,36 @@ export class PolarWebhookHandler {
       return { success: true, eventId };
     }
 
+    const inFlightEvent = this.inFlightEvents.get(eventId);
+    if (inFlightEvent) {
+      return inFlightEvent;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processingEvent = this.processEventAtomically(eventId, eventType, (event as any).data);
+    this.inFlightEvents.set(eventId, processingEvent);
+
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await this.processEvent(eventType, (event as any).data);
+      return await processingEvent;
+    } finally {
+      this.inFlightEvents.delete(eventId);
+    }
+  }
+
+  private async processEventAtomically(
+    eventId: string,
+    eventType: string,
+    data: unknown
+  ): Promise<WebhookHandlerResult> {
+    try {
+      await this.processEvent(eventType, data);
+      await this.store.markWebhookProcessed({
+        eventId,
+        eventType,
+        processedAt: new Date(),
+      });
+
+      return { success: true, eventId };
     } catch (error) {
       return {
         success: false,
@@ -70,14 +98,6 @@ export class PolarWebhookHandler {
         error: `Event processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
-
-    await this.store.markWebhookProcessed({
-      eventId,
-      eventType,
-      processedAt: new Date(),
-    });
-
-    return { success: true, eventId };
   }
 
   private async processEvent(eventType: string, data: unknown): Promise<void> {
@@ -107,13 +127,17 @@ export class PolarWebhookHandler {
     const previousSubscription = await this.store.findSubscription(tenantId);
     const previousPlanId = previousSubscription?.planId;
 
+    if (!subscriptionData.currentPeriodEnd) {
+      throw new Error('currentPeriodEnd is required');
+    }
+
     const subscription: Subscription = {
       id: subscriptionData.id,
       billingAccountId: tenantId,
       externalSubscriptionId: subscriptionData.id,
       planId: subscriptionData.product.id,
       status: this.mapStatus(subscriptionData.status),
-      currentPeriodEnd: subscriptionData.currentPeriodEnd ? new Date(subscriptionData.currentPeriodEnd) : new Date(),
+      currentPeriodEnd: new Date(subscriptionData.currentPeriodEnd),
       cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd,
       lastSyncedAt: new Date(),
     };
@@ -183,7 +207,7 @@ export class PolarWebhookHandler {
       case 'trialing':
         return 'trialing';
       default:
-        return 'active';
+        throw new Error(`Unknown Polar status: ${polarStatus}`);
     }
   }
 }
