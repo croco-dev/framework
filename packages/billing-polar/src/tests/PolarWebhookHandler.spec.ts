@@ -127,6 +127,8 @@ describe('PolarWebhookHandler', () => {
 
       expect(firstResult.success).toBe(true);
       expect(secondResult.success).toBe(true);
+      expect(firstResult.eventId).toBe('evt-race-1');
+      expect(secondResult.eventId).toBe('evt-race-1');
       expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
       expect(mockEventPublisher.publish).toHaveBeenCalledTimes(1);
       expect(mockStore.markWebhookProcessed).toHaveBeenCalledTimes(1);

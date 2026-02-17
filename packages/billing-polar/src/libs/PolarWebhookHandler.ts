@@ -17,7 +17,7 @@ export class PolarWebhookHandler {
   private readonly eventPublisher: EventPublisher;
   private readonly eventMapper: PolarEventMapper;
   private readonly webhookSecret: string;
-  private readonly inFlightEvents = new Map<string, Promise<WebhookHandlerResult>>();
+  private static readonly inFlightEvents = new Map<string, Promise<WebhookHandlerResult>>();
 
   constructor(config: PolarConfig, deps: WebhookDependencies) {
     this.webhookSecret = config.webhookSecret;
@@ -61,19 +61,19 @@ export class PolarWebhookHandler {
       return { success: true, eventId };
     }
 
-    const inFlightEvent = this.inFlightEvents.get(eventId);
+    const inFlightEvent = PolarWebhookHandler.inFlightEvents.get(eventId);
     if (inFlightEvent) {
       return inFlightEvent;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processingEvent = this.processEventAtomically(eventId, eventType, (event as any).data);
-    this.inFlightEvents.set(eventId, processingEvent);
+    PolarWebhookHandler.inFlightEvents.set(eventId, processingEvent);
 
     try {
       return await processingEvent;
     } finally {
-      this.inFlightEvents.delete(eventId);
+      PolarWebhookHandler.inFlightEvents.delete(eventId);
     }
   }
 
