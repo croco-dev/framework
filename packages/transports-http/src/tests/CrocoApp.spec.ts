@@ -5,6 +5,7 @@ import { Body, Controller, Get, Param, Post, Raw } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
 import { ErrorHandler } from '../libs/ErrorHandler';
+import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
 
 describe('CrocoApp', () => {
   beforeEach(() => {
@@ -17,6 +18,7 @@ describe('CrocoApp', () => {
     } as unknown as Logger;
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));
+    Container.set(HealthCheckRegistry, new HealthCheckRegistry());
   });
 
   @Controller('/api')

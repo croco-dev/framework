@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { CrocoApp } from '../libs/CrocoApp';
 import { createApp } from '../libs/CrocoApp';
 import { ErrorHandler } from '../libs/ErrorHandler';
+import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
 
 class AuthGuard implements Guard {
   canActivate(context: HttpContext): boolean {
@@ -71,6 +72,7 @@ describe('Transport Integration', () => {
     } as unknown as Logger;
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));
+    Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
     app = createApp({ controllers: [UserController] });
   });

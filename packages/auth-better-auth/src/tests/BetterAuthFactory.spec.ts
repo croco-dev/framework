@@ -1,0 +1,262 @@
+import 'reflect-metadata';
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BetterAuthFactory, DRIZZLE_TOKEN } from '../libs/BetterAuthFactory';
+import * as schema from '../libs/schema';
+
+vi.mock('better-auth', () => ({
+  betterAuth: vi.fn(),
+}));
+
+vi.mock('better-auth/adapters/drizzle', () => ({
+  drizzleAdapter: vi.fn(),
+}));
+
+describe('BetterAuthFactory', () => {
+  let mockDb: any;
+  let config: { baseURL: string; secret: string };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockDb = {
+      select: vi.fn(),
+      insert: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    };
+
+    config = {
+      baseURL: 'http://localhost:3000',
+      secret: 'test-secret-key',
+    };
+  });
+
+  describe('constructor', () => {
+    it('should create betterAuth instance with drizzle adapter', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      new BetterAuthFactory(mockDb, config);
+
+      expect(betterAuth).toHaveBeenCalledWith({
+        database: expect.any(Object),
+        baseURL: 'http://localhost:3000',
+        secret: 'test-secret-key',
+      });
+
+      expect(drizzleAdapter).toHaveBeenCalledWith(mockDb, {
+        provider: 'pg',
+        schema: schema,
+      });
+    });
+
+    it('should accept custom baseURL and secret', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const customConfig = {
+        baseURL: 'https://api.example.com',
+        secret: 'production-secret',
+      };
+
+      new BetterAuthFactory(mockDb, customConfig);
+
+      expect(betterAuth).toHaveBeenCalledWith({
+        database: expect.any(Object),
+        baseURL: 'https://api.example.com',
+        secret: 'production-secret',
+      });
+    });
+
+    it('should store auth instance', () => {
+      const mockAuthInstance = { api: { getSession: vi.fn() } };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      expect(factory.getAuth()).toBe(mockAuthInstance);
+    });
+  });
+
+  describe('getAuth', () => {
+    it('should return the auth instance', () => {
+      const mockAuthInstance = {
+        api: {
+          getSession: vi.fn(),
+          signIn: vi.fn(),
+          signOut: vi.fn(),
+        },
+      };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      const auth = factory.getAuth();
+
+      expect(auth).toBeDefined();
+      expect(auth).toBe(mockAuthInstance);
+      expect(auth.api).toBeDefined();
+    });
+
+    it('should return same auth instance on multiple calls', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      const auth1 = factory.getAuth();
+      const auth2 = factory.getAuth();
+
+      expect(auth1).toBe(auth2);
+    });
+  });
+
+  describe('DRIZZLE_TOKEN', () => {
+    it('should export DRIZZLE_TOKEN constant', () => {
+      expect(DRIZZLE_TOKEN).toBe('DRIZZLE_TOKEN');
+    });
+
+    it('should be usable for DI injection', () => {
+      expect(DRIZZLE_TOKEN).toBeDefined();
+      expect(typeof DRIZZLE_TOKEN).toBe('string');
+    });
+  });
+
+  describe('schema integration', () => {
+    it('should pass schema to drizzle adapter', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      new BetterAuthFactory(mockDb, config);
+
+      expect(drizzleAdapter).toHaveBeenCalledWith(mockDb, {
+        provider: 'pg',
+        schema: schema,
+      });
+    });
+
+    it('should export required schema tables', () => {
+      expect(schema.user).toBeDefined();
+      expect(schema.session).toBeDefined();
+      expect(schema.account).toBeDefined();
+      expect(schema.verification).toBeDefined();
+    });
+  });
+
+  describe('configuration validation', () => {
+    it('should handle empty baseURL', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const emptyConfig = {
+        baseURL: '',
+        secret: 'test-secret',
+      };
+
+      expect(() => new BetterAuthFactory(mockDb, emptyConfig)).not.toThrow();
+    });
+
+    it('should handle empty secret', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const emptySecretConfig = {
+        baseURL: 'http://localhost:3000',
+        secret: '',
+      };
+
+      expect(() => new BetterAuthFactory(mockDb, emptySecretConfig)).not.toThrow();
+    });
+
+    it('should handle special characters in secret', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const specialCharConfig = {
+        baseURL: 'http://localhost:3000',
+        secret: 'secret-with-!@#$%^&*()_+-=[]{}|;:,.<>?/',
+      };
+
+      expect(() => new BetterAuthFactory(mockDb, specialCharConfig)).not.toThrow();
+    });
+  });
+
+  describe('factory pattern', () => {
+    it('should create independent auth instances', () => {
+      const mockAuthInstance1 = { api: {}, id: 1 };
+      const mockAuthInstance2 = { api: {}, id: 2 };
+
+      vi.mocked(betterAuth)
+        .mockReturnValueOnce(mockAuthInstance1 as any)
+        .mockReturnValueOnce(mockAuthInstance2 as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const factory1 = new BetterAuthFactory(mockDb, config);
+      const factory2 = new BetterAuthFactory(mockDb, config);
+
+      expect(factory1.getAuth()).not.toBe(factory2.getAuth());
+    });
+
+    it('should handle factory reuse pattern', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      const auth1 = factory.getAuth();
+      const auth2 = factory.getAuth();
+
+      expect(betterAuth).toHaveBeenCalledTimes(1);
+      expect(auth1).toBe(auth2);
+    });
+  });
+
+  describe('integration scenarios', () => {
+    it('should support multiple database instances', () => {
+      const mockAuthInstance = { api: {} };
+      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as any);
+      vi.mocked(drizzleAdapter).mockReturnValue({} as any);
+
+      const db1 = { ...mockDb, name: 'db1' };
+      const db2 = { ...mockDb, name: 'db2' };
+
+      new BetterAuthFactory(db1, config);
+      new BetterAuthFactory(db2, config);
+
+      expect(drizzleAdapter).toHaveBeenCalledTimes(2);
+      expect(drizzleAdapter).toHaveBeenNthCalledWith(1, db1, expect.any(Object));
+      expect(drizzleAdapter).toHaveBeenNthCalledWith(2, db2, expect.any(Object));
+    });
+  });
+
+  describe('error handling', () => {
+    it('should propagate errors from betterAuth', () => {
+      vi.mocked(betterAuth).mockImplementation(() => {
+        throw new Error('Invalid configuration');
+      });
+
+      expect(() => new BetterAuthFactory(mockDb, config)).toThrow('Invalid configuration');
+    });
+
+    it('should propagate errors from drizzleAdapter', () => {
+      vi.mocked(betterAuth).mockReturnValue({ api: {} } as any);
+      vi.mocked(drizzleAdapter).mockImplementation(() => {
+        throw new Error('Invalid database schema');
+      });
+
+      expect(() => new BetterAuthFactory(mockDb, config)).toThrow('Invalid database schema');
+    });
+  });
+});
