@@ -196,7 +196,8 @@ describe('Logger', () => {
           version: '1.0.0',
         })
       );
-      expect(childLogger).toBe(logger);
+      expect(childLogger).not.toBe(logger);
+      expect(childLogger).toBeInstanceOf(Logger);
     });
 
     it('child()로 생성된 로거가 부모 컨텍스트를 상속해야 함', () => {
@@ -208,7 +209,7 @@ describe('Logger', () => {
       const childLogger = logger.child({ service: 'auth-service' });
 
       Context.run({ requestId: 'req-child-test' }, () => {
-        (childLogger as Logger).info('자식 로거 메시지');
+        childLogger.info('자식 로거 메시지');
       });
 
       expect(childSpy).toHaveBeenCalled();
@@ -229,7 +230,9 @@ describe('Logger', () => {
       const child3 = child2.child({ module: 'profile' });
 
       expect(childSpy).toHaveBeenCalledTimes(3);
-      expect(child3).toBe(logger);
+      expect(child1).not.toBe(logger);
+      expect(child2).not.toBe(child1);
+      expect(child3).not.toBe(child2);
     });
   });
 

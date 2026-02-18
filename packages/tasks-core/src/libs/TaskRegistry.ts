@@ -42,7 +42,7 @@ export class TaskRegistry {
     const allMetadata = MetadataStorage.getAll<TaskMetadata>(TASK_METADATA_KEY);
     for (const { value: metadata } of allMetadata) {
       if (!this.has(metadata.name)) {
-        this.register(metadata.name, metadata.target, metadata.methodName, metadata);
+        this.register(metadata.name, metadata.target, String(metadata.methodName), metadata);
       }
     }
   }

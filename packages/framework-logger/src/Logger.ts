@@ -6,7 +6,7 @@ import { LogLevel } from './LogLevel';
 
 @Component({ scope: 'singleton' })
 export class Logger {
-  private readonly logger: PinoLogger;
+  private logger: PinoLogger;
 
   constructor(private readonly config: ConfigService) {
     const isProduction = this.config.isProduction;
@@ -36,8 +36,10 @@ export class Logger {
    * Create a child logger with bound context
    */
   child(bindings: Record<string, unknown>): Logger {
-    this.logger.child(bindings);
-    return this;
+    const childPino = this.logger.child(bindings);
+    const childLogger = new Logger(this.config);
+    childLogger.logger = childPino;
+    return childLogger;
   }
 
   private getContext() {

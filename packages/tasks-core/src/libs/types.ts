@@ -42,6 +42,6 @@ export type TaskMetadata = {
   options?: TaskOptions;
   /** Target class */
   target: object;
-  /** Method name */
-  methodName: string;
+  /** Method name (string or symbol) */
+  methodName: string | symbol;
 };

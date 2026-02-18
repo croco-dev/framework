@@ -7,6 +7,8 @@ export type ClerkAuthOptions = {
 };
 
 export class ClerkAuthProvider implements AuthProvider<Request> {
+  private clerkClient: ReturnType<typeof createClerkClient>;
+
   constructor(private options: ClerkAuthOptions) {
     this.clerkClient = createClerkClient({ secretKey: options.secretKey, publishableKey: options.publishableKey });
   }
