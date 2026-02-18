@@ -5,7 +5,7 @@ prev: false
 title: "UsageAggregator"
 ---
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:18](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageAggregator.ts#L18)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:18](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageAggregator.ts#L18)
 
 Usage 배치 집계 및 DB 저장
 
@@ -21,7 +21,7 @@ Redis의 실시간 Usage 데이터를 주기적으로 DB에 영구 저장합니�
 
 > **new UsageAggregator**(`options`): `UsageAggregator`
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:22](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageAggregator.ts#L22)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:22](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageAggregator.ts#L22)
 
 #### Parameters
 
@@ -39,7 +39,7 @@ Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:22](https://gith
 
 > **flushAllForTenant**(`tenantId`): `Promise`\<[`FlushResult`](/api/metering-core/src/type-aliases/flushresult/)\>
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:62](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageAggregator.ts#L62)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:64](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageAggregator.ts#L64)
 
 테넌트의 모든 Meter에 대해 flush 수행
 
@@ -59,7 +59,7 @@ Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:62](https://gith
 
 > **flushUsageToDB**(`tenantId`, `meterId`, `period?`): `Promise`\<[`FlushResult`](/api/metering-core/src/type-aliases/flushresult/)\>
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:35](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageAggregator.ts#L35)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:35](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageAggregator.ts#L35)
 
 Redis에서 Usage 레코드를 가져와 DB에 저장
 
@@ -95,7 +95,7 @@ Meter ID
 
 > **getAggregatedUsage**(`options`): `Promise`\<`number`\>
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:77](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageAggregator.ts#L77)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:79](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageAggregator.ts#L79)
 
 특정 기간의 집계된 Usage 조회
 

@@ -7,7 +7,7 @@ title: "MiddlewareFunction"
 
 > **MiddlewareFunction** = (`ctx`, `next`) => `Promise`\<`void`\> \| `void`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:23](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L23)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:23](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L23)
 
 Middleware function signature.
 

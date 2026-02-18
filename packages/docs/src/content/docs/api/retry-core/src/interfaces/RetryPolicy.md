@@ -5,7 +5,7 @@ prev: false
 title: "RetryPolicy"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:6](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryPolicy.ts#L6)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:6](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/RetryPolicy.ts#L6)
 
 Determines whether an error should trigger a retry.
 
@@ -15,7 +15,7 @@ Determines whether an error should trigger a retry.
 
 > **shouldRetry**(`error`, `attempt`, `maxAttempts`): `boolean`
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:14](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/RetryPolicy.ts#L14)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:14](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/RetryPolicy.ts#L14)
 
 Check if the given error should be retried.
 

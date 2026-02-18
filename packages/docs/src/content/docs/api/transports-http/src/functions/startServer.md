@@ -7,7 +7,7 @@ title: "startServer"
 
 > **startServer**(`app`, `port`): `Promise`\<`void`\>
 
-Defined in: [packages/transports-http/src/libs/adapters/NodeAdapter.ts:3](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/transports-http/src/libs/adapters/NodeAdapter.ts#L3)
+Defined in: [packages/transports-http/src/libs/adapters/NodeAdapter.ts:3](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/transports-http/src/libs/adapters/NodeAdapter.ts#L3)
 
 ## Parameters
 

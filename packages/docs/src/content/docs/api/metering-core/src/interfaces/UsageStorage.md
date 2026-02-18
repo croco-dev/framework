@@ -5,7 +5,7 @@ prev: false
 title: "UsageStorage"
 ---
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:10](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageStorage.ts#L10)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:24](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L24)
 
 Redis 기반 실시간 Usage 저장소 인터페이스
 
@@ -16,11 +16,54 @@ Redis 기반 실시간 Usage 저장소 인터페이스
 
 ## Methods
 
+### checkAndRecordWithinQuota()?
+
+> `optional` **checkAndRecordWithinQuota**(`options`): `Promise`\<[`AtomicQuotaCheckResult`](/api/metering-core/src/type-aliases/atomicquotacheckresult/)\>
+
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:54](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L54)
+
+#### Parameters
+
+##### options
+
+[`AtomicQuotaCheckOptions`](/api/metering-core/src/type-aliases/atomicquotacheckoptions/)
+
+#### Returns
+
+`Promise`\<[`AtomicQuotaCheckResult`](/api/metering-core/src/type-aliases/atomicquotacheckresult/)\>
+
+***
+
+### deleteUsageRecords()?
+
+> `optional` **deleteUsageRecords**(`options`, `records`): `Promise`\<`void`\>
+
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:52](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L52)
+
+Usage 데이터 삭제 (배치 저장 후)
+저장이 성공한 경우에만 호출되어야 함
+
+#### Parameters
+
+##### options
+
+[`UsageQueryOptions`](/api/metering-core/src/type-aliases/usagequeryoptions/)
+
+##### records
+
+[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)[]
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
 ### fetchUsageRecords()
 
 > **fetchUsageRecords**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)[]\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:32](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageStorage.ts#L32)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:46](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L46)
 
 Usage 데이터 조회 (배치 저장용)
 Redis에서 특정 기간의 usage records 조회
@@ -41,7 +84,7 @@ Redis에서 특정 기간의 usage records 조회
 
 > **getUsage**(`options`): `Promise`\<`number`\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:20](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageStorage.ts#L20)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:34](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L34)
 
 Usage 조회 (특정 기간 합산)
 
@@ -61,7 +104,7 @@ Usage 조회 (특정 기간 합산)
 
 > **isIdempotent**(`tenantId`, `meterId`, `idempotencyKey`, `ttlSeconds`): `Promise`\<`boolean`\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:26](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageStorage.ts#L26)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:40](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L40)
 
 Idempotency 체크 (SET NX 기반)
 
@@ -95,7 +138,7 @@ true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
 > **record**(`usage`): `Promise`\<`void`\>
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:15](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/metering-core/src/libs/UsageStorage.ts#L15)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:29](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L29)
 
 Usage 기록 (즉시 flush)
 Redis Sorted Set에 저장

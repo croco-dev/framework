@@ -7,7 +7,7 @@ title: "Constructor"
 
 > **Constructor**\<`T`\> = (...`args`) => `T`
 
-Defined in: [packages/framework-context/src/libs/types.ts:10](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/framework-context/src/libs/types.ts#L10)
+Defined in: [packages/framework-context/src/libs/types.ts:10](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/framework-context/src/libs/types.ts#L10)
 
 Generic constructor type
 

@@ -5,7 +5,7 @@ prev: false
 title: "LlmModel"
 ---
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:24](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L24)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:24](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L24)
 
 LLM 모델 추상 클래스
 
@@ -34,7 +34,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 > `abstract` `readonly` **capabilities**: [`LlmCapabilities`](/api/llm-core/src/type-aliases/llmcapabilities/)
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:35](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L35)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:35](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L35)
 
 LLM 기능 플래그
 
@@ -44,7 +44,7 @@ LLM 기능 플래그
 
 > `abstract` `readonly` **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:30](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L30)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:30](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L30)
 
 모델 식별자
 
@@ -54,7 +54,7 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:30](https://github.com/croco
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`LlmModel`\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:25](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L25)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:25](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L25)
 
 ## Methods
 
@@ -62,7 +62,7 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:25](https://github.com/croco
 
 > `abstract` **callTool**(`params`): `Promise`\<[`ToolCallResult`](/api/llm-core/src/type-aliases/toolcallresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:67](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L67)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:67](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L67)
 
 툴 호출
 
@@ -86,7 +86,7 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:67](https://github.com/croco
 
 > `abstract` **embed**(`params`): `Promise`\<[`EmbedResult`](/api/llm-core/src/type-aliases/embedresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:75](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L75)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:75](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L75)
 
 임베딩 생성 (단일 텍스트)
 
@@ -110,7 +110,7 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:75](https://github.com/croco
 
 > `abstract` **embedMany**(`params`): `Promise`\<[`EmbedManyResult`](/api/llm-core/src/type-aliases/embedmanyresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:83](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L83)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:83](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L83)
 
 임베딩 생성 (배치)
 
@@ -134,7 +134,7 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:83](https://github.com/croco
 
 > `abstract` **generate**(`params`): `Promise`\<[`GenerateResult`](/api/llm-core/src/type-aliases/generateresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:43](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L43)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:43](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L43)
 
 텍스트 생성
 
@@ -158,7 +158,7 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:43](https://github.com/croco
 
 > `abstract` **generateObject**\<`T`\>(`params`): `Promise`\<`T`\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:59](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L59)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:59](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L59)
 
 객체 생성
 
@@ -188,7 +188,7 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:59](https://github.com/croco
 
 > `abstract` **stream**(`params`): `AsyncIterable`\<[`StreamChunk`](/api/llm-core/src/type-aliases/streamchunk/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:51](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmModel.ts#L51)
+Defined in: [packages/llm-core/src/libs/LlmModel.ts:51](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmModel.ts#L51)
 
 스트리밍 텍스트 생성
 

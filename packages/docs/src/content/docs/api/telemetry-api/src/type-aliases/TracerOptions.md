@@ -7,7 +7,7 @@ title: "TracerOptions"
 
 > **TracerOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/tracer.ts:6](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/telemetry-api/src/libs/tracer.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/tracer.ts:6](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/telemetry-api/src/libs/tracer.ts#L6)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/telemetry-api/src/libs/tracer.ts:6](https://github.com/cro
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/tracer.ts:7](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/telemetry-api/src/libs/tracer.ts#L7)
+Defined in: [packages/telemetry-api/src/libs/tracer.ts:7](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/telemetry-api/src/libs/tracer.ts#L7)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/telemetry-api/src/libs/tracer.ts:7](https://github.com/cro
 
 > `optional` **version**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/tracer.ts:8](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/telemetry-api/src/libs/tracer.ts#L8)
+Defined in: [packages/telemetry-api/src/libs/tracer.ts:8](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/telemetry-api/src/libs/tracer.ts#L8)

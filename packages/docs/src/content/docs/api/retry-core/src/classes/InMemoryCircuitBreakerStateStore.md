@@ -5,7 +5,7 @@ prev: false
 title: "InMemoryCircuitBreakerStateStore"
 ---
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:84](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L84)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:99](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L99)
 
 인메모리 Circuit Breaker 상태 저장소.
 
@@ -33,7 +33,7 @@ Lambda 환경에 최적화된 기본 구현입니다.
 
 > **getFailureCount**(`circuitId`): `Promise`\<`number`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:97](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L97)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:117](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L117)
 
 현재 실패 카운트를 가져옵니다.
 
@@ -57,11 +57,55 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:97](https://git
 
 ***
 
+### getHalfOpenActiveCount()
+
+> **getHalfOpenActiveCount**(`circuitId`): `Promise`\<`number`\>
+
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:152](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L152)
+
+#### Parameters
+
+##### circuitId
+
+`string`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+#### Implementation of
+
+[`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/).[`getHalfOpenActiveCount`](/api/retry-core/src/interfaces/circuitbreakerstatestore/#gethalfopenactivecount)
+
+***
+
+### getHalfOpenSuccessCount()
+
+> **getHalfOpenSuccessCount**(`circuitId`): `Promise`\<`number`\>
+
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:160](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L160)
+
+#### Parameters
+
+##### circuitId
+
+`string`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+#### Implementation of
+
+[`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/).[`getHalfOpenSuccessCount`](/api/retry-core/src/interfaces/circuitbreakerstatestore/#gethalfopensuccesscount)
+
+***
+
 ### getLastFailureTime()
 
 > **getLastFailureTime**(`circuitId`): `Promise`\<`number` \| `null`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:112](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L112)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:143](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L143)
 
 마지막 실패 시간을 가져옵니다.
 
@@ -89,7 +133,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:112](https://gi
 
 > **getState**(`circuitId`): `Promise`\<[`CircuitState`](/api/retry-core/src/enumerations/circuitstate/)\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:89](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L89)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:107](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L107)
 
 현재 회로 상태를 가져옵니다.
 
@@ -113,11 +157,37 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:89](https://git
 
 ***
 
+### incrementFailureAndCheck()
+
+> **incrementFailureAndCheck**(`circuitId`, `failureThreshold`): `Promise`\<\{ `failureCount`: `number`; `shouldOpen`: `boolean`; \}\>
+
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:128](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L128)
+
+#### Parameters
+
+##### circuitId
+
+`string`
+
+##### failureThreshold
+
+`number`
+
+#### Returns
+
+`Promise`\<\{ `failureCount`: `number`; `shouldOpen`: `boolean`; \}\>
+
+#### Implementation of
+
+[`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/).[`incrementFailureAndCheck`](/api/retry-core/src/interfaces/circuitbreakerstatestore/#incrementfailureandcheck)
+
+***
+
 ### incrementFailureCount()
 
 > **incrementFailureCount**(`circuitId`): `Promise`\<`number`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:101](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L101)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:121](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L121)
 
 실패 카운트를 증가시키고 새 값을 반환합니다.
 
@@ -145,7 +215,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:101](https://gi
 
 > **reset**(`circuitId`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:126](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L126)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:196](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L196)
 
 특정 회로의 모든 상태를 초기화합니다.
 
@@ -167,7 +237,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:126](https://gi
 
 > **resetAll**(): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:135](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L135)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:208](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L208)
 
 모든 회로의 상태를 초기화합니다.
 
@@ -181,7 +251,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:135](https://gi
 
 > **resetFailureCount**(`circuitId`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:108](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L108)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:139](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L139)
 
 실패 카운트를 초기화합니다.
 
@@ -203,11 +273,63 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:108](https://gi
 
 ***
 
+### setHalfOpenActiveCount()
+
+> **setHalfOpenActiveCount**(`circuitId`, `count`): `Promise`\<`void`\>
+
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:156](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L156)
+
+#### Parameters
+
+##### circuitId
+
+`string`
+
+##### count
+
+`number`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Implementation of
+
+[`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/).[`setHalfOpenActiveCount`](/api/retry-core/src/interfaces/circuitbreakerstatestore/#sethalfopenactivecount)
+
+***
+
+### setHalfOpenSuccessCount()
+
+> **setHalfOpenSuccessCount**(`circuitId`, `count`): `Promise`\<`void`\>
+
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:164](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L164)
+
+#### Parameters
+
+##### circuitId
+
+`string`
+
+##### count
+
+`number`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Implementation of
+
+[`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/).[`setHalfOpenSuccessCount`](/api/retry-core/src/interfaces/circuitbreakerstatestore/#sethalfopensuccesscount)
+
+***
+
 ### setLastFailureTime()
 
 > **setLastFailureTime**(`circuitId`, `time`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:117](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L117)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:148](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L148)
 
 마지막 실패 시간을 설정합니다.
 
@@ -239,7 +361,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:117](https://gi
 
 > **setState**(`circuitId`, `state`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:93](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/retry-core/src/libs/CircuitBreakerState.ts#L93)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:111](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L111)
 
 회로 상태를 설정합니다.
 
@@ -264,3 +386,35 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:93](https://git
 #### Implementation of
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/).[`setState`](/api/retry-core/src/interfaces/circuitbreakerstatestore/#setstate)
+
+***
+
+### withCircuitLock()
+
+> **withCircuitLock**\<`T`\>(`circuitId`, `operation`): `Promise`\<`T`\>
+
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:168](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/CircuitBreakerState.ts#L168)
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### circuitId
+
+`string`
+
+##### operation
+
+() => `Promise`\<`T`\>
+
+#### Returns
+
+`Promise`\<`T`\>
+
+#### Implementation of
+
+[`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/).[`withCircuitLock`](/api/retry-core/src/interfaces/circuitbreakerstatestore/#withcircuitlock)

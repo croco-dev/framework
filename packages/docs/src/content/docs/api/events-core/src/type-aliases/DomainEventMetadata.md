@@ -7,7 +7,7 @@ title: "DomainEventMetadata"
 
 > **DomainEventMetadata** = `object`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:3](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/DomainEvent.ts#L3)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:3](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/DomainEvent.ts#L3)
 
 ## Properties
 
@@ -15,4 +15,4 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:3](https://github.com/
 
 > `optional` **traceContext**: [`TraceInfo`](/api/telemetry-api/src/type-aliases/traceinfo/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:4](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/DomainEvent.ts#L4)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:4](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/DomainEvent.ts#L4)

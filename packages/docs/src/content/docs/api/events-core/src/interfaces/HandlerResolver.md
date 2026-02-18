@@ -5,7 +5,7 @@ prev: false
 title: "HandlerResolver"
 ---
 
-Defined in: [packages/events-core/src/libs/HandlerResolver.ts:8](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/HandlerResolver.ts#L8)
+Defined in: [packages/events-core/src/libs/HandlerResolver.ts:8](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/HandlerResolver.ts#L8)
 
 DI 컨테이너 추상화 인터페이스
 외부 DI 컨테이너(TypeDI 등)와 통합하기 위해 사용합니다.
@@ -16,7 +16,7 @@ DI 컨테이너 추상화 인터페이스
 
 > **resolve**\<`T`\>(`handlerClass`): [`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<`T`\>
 
-Defined in: [packages/events-core/src/libs/HandlerResolver.ts:9](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/events-core/src/libs/HandlerResolver.ts#L9)
+Defined in: [packages/events-core/src/libs/HandlerResolver.ts:9](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/HandlerResolver.ts#L9)
 
 #### Type Parameters
 

@@ -5,7 +5,7 @@ prev: false
 title: "LlmService"
 ---
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:20](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L20)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:22](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L22)
 
 ## Constructors
 
@@ -13,7 +13,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:20](https://github.com/cro
 
 > **new LlmService**(`registry`, `eventBus`): `LlmService`
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:23](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L23)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:25](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L25)
 
 #### Parameters
 
@@ -35,7 +35,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:23](https://github.com/cro
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`LlmService`\>
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:21](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L21)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:23](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L23)
 
 ## Methods
 
@@ -43,7 +43,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:21](https://github.com/cro
 
 > **callTool**(`params`): `Promise`\<[`ToolCallResult`](/api/llm-core/src/type-aliases/toolcallresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:85](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L85)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:115](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L115)
 
 #### Parameters
 
@@ -61,7 +61,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:85](https://github.com/cro
 
 > **embed**(`params`): `Promise`\<[`EmbedResult`](/api/llm-core/src/type-aliases/embedresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:55](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L55)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:85](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L85)
 
 #### Parameters
 
@@ -79,7 +79,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:55](https://github.com/cro
 
 > **embedMany**(`params`): `Promise`\<[`EmbedManyResult`](/api/llm-core/src/type-aliases/embedmanyresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:65](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L65)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:95](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L95)
 
 #### Parameters
 
@@ -97,7 +97,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:65](https://github.com/cro
 
 > **generate**(`params`): `Promise`\<[`GenerateResult`](/api/llm-core/src/type-aliases/generateresult/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:28](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L28)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:30](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L30)
 
 #### Parameters
 
@@ -115,7 +115,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:28](https://github.com/cro
 
 > **generateObject**\<`T`\>(`params`): `Promise`\<`T`\>
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:75](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L75)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:105](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L105)
 
 #### Type Parameters
 
@@ -139,7 +139,7 @@ Defined in: [packages/llm-core/src/libs/LlmService.ts:75](https://github.com/cro
 
 > **stream**(`params`): `AsyncIterable`\<[`StreamChunk`](/api/llm-core/src/type-aliases/streamchunk/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmService.ts:42](https://github.com/croco-dev/shared/blob/f4909b56644431401bcba1824d0465856b7783c7/packages/llm-core/src/libs/LlmService.ts#L42)
+Defined in: [packages/llm-core/src/libs/LlmService.ts:50](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmService.ts#L50)
 
 #### Parameters
 
