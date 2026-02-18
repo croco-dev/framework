@@ -1,5 +1,6 @@
 import { CrocoApp, createApp } from './libs/CrocoApp';
 import { ErrorHandler } from './libs/ErrorHandler';
+import type { HealthCheckRegistry } from './libs/HealthCheckRegistry';
 import { HttpExecutionContext } from './libs/HttpExecutionContext';
 import { ParamResolver } from './libs/ParamResolver';
 import { PipelineRunner } from './libs/PipelineRunner';
@@ -24,6 +25,21 @@ export type {
   PipeProvider,
 } from './libs/types';
 
-export { CrocoApp, createApp, ErrorHandler, HttpExecutionContext, ParamResolver, PipelineRunner, RouteCompiler };
+export {
+  CrocoApp,
+  createApp,
+  ErrorHandler,
+  type HealthCheckRegistry,
+  HttpExecutionContext,
+  ParamResolver,
+  PipelineRunner,
+  RouteCompiler,
+};
+export type {
+  HealthCheckFunction,
+  HealthCheckOptions,
+  HealthCheckResult,
+  HealthCheckStatus,
+} from './libs/HealthCheckRegistry';
 export type { PipelineConfig } from './libs/PipelineRunner';
 export type { CompileOptions } from './libs/RouteCompiler';

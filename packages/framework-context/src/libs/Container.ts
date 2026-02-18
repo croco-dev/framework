@@ -7,6 +7,8 @@ import type { Constructor, Scope } from './types';
 const COMPONENT_METADATA_KEY = Symbol('component:metadata');
 
 export class Container {
+  private static validated = false;
+
   static get<T>(token: Constructor<T>): T {
     const metadata = Container.getComponentMetadata(token);
 
@@ -44,10 +46,100 @@ export class Container {
 
   static reset(): void {
     TypeDIContainer.reset();
+    Container.validated = false;
+  }
+
+  static validate(): void {
+    if (Container.validated) {
+      return;
+    }
+
+    if (!Container.isValidationEnabled()) {
+      return;
+    }
+
+    const nodes = Container.getRegisteredComponents();
+    if (nodes.length === 0) {
+      Container.validated = true;
+      return;
+    }
+
+    const graph = Container.buildDependencyGraph(nodes);
+    Container.assertNoCircularDependency(nodes, graph);
+
+    Container.validated = true;
   }
 
   static register<T>(token: Constructor<T>, scope: Scope): void {
     MetadataStorage.define(COMPONENT_METADATA_KEY, token, { scope, target: token });
+    Container.validated = false;
+  }
+
+  private static isValidationEnabled(): boolean {
+    const configured = process.env.CROCO_DI_VALIDATE;
+    if (configured !== undefined) {
+      return configured !== '0' && configured.toLowerCase() !== 'false';
+    }
+
+    return process.env.NODE_ENV !== 'production';
+  }
+
+  private static getRegisteredComponents(): Constructor[] {
+    return MetadataStorage.getAll<{ scope: Scope; target: Constructor }>(COMPONENT_METADATA_KEY).map(
+      (entry) => entry.target as Constructor
+    );
+  }
+
+  private static buildDependencyGraph(nodes: Constructor[]): Map<Constructor, Constructor[]> {
+    const nodeSet = new Set(nodes);
+    const graph = new Map<Constructor, Constructor[]>();
+
+    for (const node of nodes) {
+      const paramTypes = (Reflect.getMetadata('design:paramtypes', node) as Constructor[] | undefined) ?? [];
+      const dependencies = paramTypes.filter(
+        (dep): dep is Constructor => typeof dep === 'function' && nodeSet.has(dep)
+      );
+      graph.set(node, dependencies);
+    }
+
+    return graph;
+  }
+
+  private static assertNoCircularDependency(nodes: Constructor[], graph: Map<Constructor, Constructor[]>): void {
+    const visitState = new Map<Constructor, 0 | 1 | 2>();
+    const stack: Constructor[] = [];
+    const stackIndex = new Map<Constructor, number>();
+
+    const visit = (node: Constructor): void => {
+      visitState.set(node, 1);
+      stackIndex.set(node, stack.length);
+      stack.push(node);
+
+      const deps = graph.get(node) ?? [];
+      for (const dep of deps) {
+        const state = visitState.get(dep) ?? 0;
+        if (state === 0) {
+          visit(dep);
+          continue;
+        }
+
+        if (state === 1) {
+          const cycleStartIndex = stackIndex.get(dep) ?? 0;
+          const cycle = stack.slice(cycleStartIndex).concat(dep);
+          throw new Error(`Circular dependency detected: ${cycle.map((t) => t.name).join(' → ')}`);
+        }
+      }
+
+      stack.pop();
+      stackIndex.delete(node);
+      visitState.set(node, 2);
+    };
+
+    for (const node of nodes) {
+      if ((visitState.get(node) ?? 0) === 0) {
+        visit(node);
+      }
+    }
   }
 
   private static getComponentMetadata(target: Constructor): { scope: Scope; target: Constructor } | undefined {

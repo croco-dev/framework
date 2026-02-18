@@ -3,6 +3,7 @@ import { Container, Context as FrameworkContext } from '@croco/framework-context
 import { Logger } from '@croco/framework-logger';
 import { Hono, type Context as HonoContext } from 'hono';
 import { ErrorHandler } from './ErrorHandler';
+import { HealthCheckRegistry } from './HealthCheckRegistry';
 import { HttpContext } from './HttpContext';
 import { telemetryMiddleware } from './middleware/telemetry';
 
@@ -72,6 +73,7 @@ export class CrocoApp {
   private hono: Hono;
   private routes: CompiledRoute[] = [];
   private errorHandler: ErrorHandler;
+  private healthCheckRegistry: HealthCheckRegistry;
   private booted = false;
   private logger: Logger;
 
@@ -80,10 +82,13 @@ export class CrocoApp {
     // Resolve dependencies manually since CrocoApp is the entry point
     this.logger = Container.get(Logger);
     this.errorHandler = Container.get(ErrorHandler);
+    this.healthCheckRegistry = Container.get(HealthCheckRegistry);
   }
 
   private boot(options: CompileOptions = {}): void {
     if (this.booted) return;
+
+    this.registerSystemRoutes();
 
     const compiler = new RouteCompiler();
     this.routes = compiler.compile(this.config.controllers, {
@@ -99,6 +104,15 @@ export class CrocoApp {
     }
 
     this.booted = true;
+  }
+
+  private registerSystemRoutes(): void {
+    this.hono.get('/health', (c) => c.json({ status: 'ok' }));
+
+    this.hono.get('/ready', async (c) => {
+      const result = await this.healthCheckRegistry.check();
+      return c.json(result, result.status === 'ok' ? 200 : 503);
+    });
   }
 
   private registerRoute(route: CompiledRoute): void {
