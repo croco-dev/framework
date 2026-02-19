@@ -1,0 +1,46 @@
+{
+  "name": "@croco/health-core",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "biome check .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@croco/utils-tsconfig": "workspace:*",
+    "drizzle-orm": "0.44.2"
+  },
+  "dependencies": {
+    "@croco/tx-drizzle": "workspace:*"
+  },
+  "peerDependencies": {
+    "drizzle-orm": ">=0.30.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.mjs",
+    "module": "./dist/index.mjs",
+    "exports": {
+      ".": {
+        "require": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "import": {
+          "types": "./dist/index.d.mts",
+          "default": "./dist/index.mjs"
+        }
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}
