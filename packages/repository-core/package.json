@@ -20,6 +20,8 @@
     "vitest": "^1.0.0"
   },
   "dependencies": {
+    "@croco/dataloader-core": "workspace:*",
+    "@croco/framework-context": "workspace:*",
     "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*"
   },
