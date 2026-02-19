@@ -113,3 +113,13 @@ export interface LifecycleHooks<TContext = RequestContext> {
    */
   onRequestError?: (ctx: TContext, error: Error) => Promise<void> | void;
 }
+
+/**
+ * Shutdown hook interface for graceful shutdown
+ */
+export interface ShutdownHook {
+  /**
+   * Called during graceful shutdown process
+   */
+  onShutdown(): Promise<void>;
+}
