@@ -1,0 +1,132 @@
+import { trace } from '@opentelemetry/api';
+import type { BatchLoader, BatchLoaderOptions } from './types';
+
+export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
+  private queue: K[] = [];
+  private callbacks: Array<{
+    resolve: (value: V | null) => void;
+    reject: (error: Error) => void;
+  }> = [];
+  private cache = new Map<K, Promise<V | null>>();
+  private readonly options: BatchLoaderOptions<K, V>;
+  private scheduled = false;
+
+  constructor(options: BatchLoaderOptions<K, V>) {
+    this.options = {
+      cache: true,
+      maxBatchSize: Infinity,
+      ...options,
+    };
+  }
+
+  async load(key: K): Promise<V | null> {
+    if (this.options.cache) {
+      const cached = this.cache.get(key);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    const promise = new Promise<V | null>((resolve, reject) => {
+      this.queue.push(key);
+      this.callbacks.push({ resolve, reject });
+
+      if (this.queue.length === 1) {
+        this.scheduleDispatch();
+      }
+    });
+
+    if (this.options.cache) {
+      this.cache.set(key, promise);
+    }
+
+    return promise;
+  }
+
+  async loadMany(keys: K[]): Promise<Array<V | Error | null>> {
+    return Promise.all(keys.map((key) => this.load(key).catch((error) => error)));
+  }
+
+  clear(key: K): void {
+    this.cache.delete(key);
+  }
+
+  clearAll(): void {
+    this.cache.clear();
+  }
+
+  prime(key: K, value: V | Error): void {
+    if (value instanceof Error) {
+      this.cache.set(key, Promise.reject(value));
+    } else {
+      this.cache.set(key, Promise.resolve(value));
+    }
+  }
+
+  private scheduleDispatch(): void {
+    if (this.scheduled) return;
+
+    this.scheduled = true;
+
+    // Use process.nextTick to batch execution within the same event loop tick
+    process.nextTick(() => {
+      this.dispatch();
+    });
+  }
+
+  private async dispatch(): Promise<void> {
+    this.scheduled = false;
+
+    if (this.queue.length === 0) return;
+
+    const batchSize = this.options.maxBatchSize ?? Infinity;
+
+    // Process queue in chunks if maxBatchSize is set
+    while (this.queue.length > 0) {
+      const keys = this.queue.splice(0, batchSize);
+      const callbacks = this.callbacks.splice(0, batchSize);
+
+      await this.executeBatch(keys, callbacks);
+    }
+  }
+
+  private async executeBatch(
+    keys: K[],
+    callbacks: Array<{ resolve: (value: V | null) => void; reject: (error: Error) => void }>
+  ): Promise<void> {
+    const tracer = trace.getTracer('dataloader-core');
+
+    // Create a span for the batch execution
+    await tracer.startActiveSpan(`dataloader:${this.options.name}:batch`, async (span) => {
+      try {
+        span.setAttribute('batch.size', keys.length);
+
+        const results = await this.options.batchFn(keys);
+
+        if (results.length !== keys.length) {
+          throw new Error(`BatchLoader: batch function returned ${results.length} results, expected ${keys.length}`);
+        }
+
+        results.forEach((result, index) => {
+          const callback = callbacks[index];
+          if (result instanceof Error) {
+            this.clear(keys[index]);
+            callback.reject(result);
+          } else {
+            callback.resolve(result);
+          }
+        });
+      } catch (error) {
+        // If the batch function itself fails, reject all promises in this batch
+        const err = error instanceof Error ? error : new Error(String(error));
+        span.recordException(err);
+
+        callbacks.forEach((callback) => {
+          callback.reject(err);
+        });
+      } finally {
+        span.end();
+      }
+    });
+  }
+}
