@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AbstractDrizzleRepository } from '../libs/AbstractDrizzleRepository';
 import type { TxManager } from '@croco/tx-core';
 import type { DrizzleDb } from '@croco/tx-drizzle';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AbstractDrizzleRepository } from '../libs/AbstractDrizzleRepository';
 
 type TestEntity = { id: string; name: string };
 type TestId = string;
@@ -19,7 +19,7 @@ class TestRepository extends AbstractDrizzleRepository<TestEntity, TestId, MockD
   async findById(id: TestId): Promise<TestEntity | null> {
     return null;
   }
-  
+
   async findByIds(ids: TestId[]): Promise<TestEntity[]> {
     return [];
   }
@@ -55,7 +55,7 @@ describe('AbstractDrizzleRepository', () => {
 
   it('should use default db when no transaction is active', () => {
     vi.mocked(mockTxManager.getClient).mockReturnValue(null);
-    
+
     const db = repository.getDbPublic();
     expect(db).toBe(mockDb);
   });

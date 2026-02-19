@@ -4,5 +4,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    env: {
+      SKIP_ENV_VALIDATION: '1',
+    },
   },
 });
