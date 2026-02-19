@@ -41,5 +41,7 @@ export type {
   HealthCheckResult,
   HealthCheckStatus,
 } from './libs/HealthCheckRegistry';
+export { type CorsOptions, corsMiddleware } from './libs/middleware/CorsMiddleware';
+export { type SecurityHeadersOptions, securityHeadersMiddleware } from './libs/middleware/SecurityHeadersMiddleware';
 export type { PipelineConfig } from './libs/PipelineRunner';
 export type { CompileOptions } from './libs/RouteCompiler';
