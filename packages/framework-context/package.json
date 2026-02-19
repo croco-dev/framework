@@ -17,9 +17,7 @@
     "typedi": "0.10.0"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
-    "@croco/framework-config": "workspace:*",
-    "@croco/health-core": "workspace:*"
+    "@croco/utils-tsconfig": "workspace:*"
   },
   "publishConfig": {
     "access": "public",
