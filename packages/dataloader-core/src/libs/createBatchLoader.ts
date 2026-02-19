@@ -20,8 +20,11 @@ export function createBatchLoader<K, V>(options: BatchLoaderOptions<K, V>): Batc
       return new BatchLoaderImpl(options);
     }
 
-    const scope = options.scope ? `:${options.scope}` : '';
-    const cacheKey = `dataloader:${options.name}:v1${scope}`;
+    const staticScope = options.scope ? `:${options.scope}` : '';
+    const dynamicScope = options.resolveScope?.();
+    const dynamicScopeKey = dynamicScope ? `:scope:${dynamicScope}` : '';
+
+    const cacheKey = `dataloader:${options.name}:v1${staticScope}${dynamicScopeKey}`;
 
     let loader = contextCache.get(cacheKey) as BatchLoaderImpl<K, V> | undefined;
 

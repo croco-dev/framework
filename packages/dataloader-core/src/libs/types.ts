@@ -30,6 +30,13 @@ export type BatchLoaderOptions<K, V> = {
    * Used to isolate caches between different scopes within the same request if needed.
    */
   scope?: string;
+
+  /**
+   * Function to resolve a dynamic scope for cache isolation.
+   * Useful for transaction-aware caching where the loader should be isolated per transaction.
+   * If the returned value changes, a new loader instance (and cache) is used.
+   */
+  resolveScope?: () => string | null | undefined;
 };
 
 export interface BatchLoader<K, V> {
