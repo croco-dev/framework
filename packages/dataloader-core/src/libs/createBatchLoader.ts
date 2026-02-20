@@ -10,14 +10,17 @@ import type { BatchLoader, BatchLoaderOptions } from './types';
  * @returns An object with the same interface as BatchLoader, but delegating to a context-scoped instance
  */
 export function createBatchLoader<K, V>(options: BatchLoaderOptions<K, V>): BatchLoader<K, V> {
+  let fallbackLoader: BatchLoaderImpl<K, V> | null = null;
+
   const getLoader = (): BatchLoader<K, V> => {
     const contextCache = Context.getCache();
 
-    // If no context is active, create a new instance.
-    // This allows usage outside of a request scope (e.g. tests),
-    // but caching/batching will only apply to that single call chain if the instance isn't reused.
     if (!contextCache) {
-      return new BatchLoaderImpl(options);
+      if (!fallbackLoader) {
+        fallbackLoader = new BatchLoaderImpl(options);
+      }
+
+      return fallbackLoader;
     }
 
     const staticScope = options.scope ? `:${options.scope}` : '';

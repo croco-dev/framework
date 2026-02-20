@@ -1,10 +1,9 @@
 import { Context } from '@croco/framework-context';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBatchLoader } from '../libs/createBatchLoader';
-import type { BatchFn } from '../libs/types';
 
 describe('BatchLoader', () => {
-  const batchFn = vi.fn<BatchFn<number, string>>(async (keys) => {
+  const batchFn = vi.fn(async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> => {
     return keys.map((key) => {
       if (key === -1) return new Error('Error for -1');
       if (key === 0) return null;
@@ -37,7 +36,7 @@ describe('BatchLoader', () => {
 
   it('should cache results within the same context', async () => {
     await Context.run({ requestId: 'test' }, async () => {
-      const loader = createBatchLoader({
+      const loader = createBatchLoader<number, string>({
         name: 'test-loader',
         batchFn: batchFn,
       });
@@ -51,7 +50,7 @@ describe('BatchLoader', () => {
 
   it('should not cache results across different contexts', async () => {
     await Context.run({ requestId: 'req1' }, async () => {
-      const loader = createBatchLoader({
+      const loader = createBatchLoader<number, string>({
         name: 'test-loader',
         batchFn: batchFn,
       });
@@ -59,7 +58,7 @@ describe('BatchLoader', () => {
     });
 
     await Context.run({ requestId: 'req2' }, async () => {
-      const loader = createBatchLoader({
+      const loader = createBatchLoader<number, string>({
         name: 'test-loader',
         batchFn: batchFn,
       });
@@ -71,7 +70,7 @@ describe('BatchLoader', () => {
 
   it('should handle errors correctly', async () => {
     await Context.run({ requestId: 'test' }, async () => {
-      const loader = createBatchLoader({
+      const loader = createBatchLoader<number, string>({
         name: 'test-loader',
         batchFn: batchFn,
       });
@@ -88,7 +87,7 @@ describe('BatchLoader', () => {
 
   it('should handle maxBatchSize', async () => {
     await Context.run({ requestId: 'test' }, async () => {
-      const loader = createBatchLoader({
+      const loader = createBatchLoader<number, string>({
         name: 'test-loader',
         batchFn: batchFn,
         maxBatchSize: 2,
@@ -108,7 +107,7 @@ describe('BatchLoader', () => {
 
   it('should work without cache when disabled', async () => {
     await Context.run({ requestId: 'test' }, async () => {
-      const loader = createBatchLoader({
+      const loader = createBatchLoader<number, string>({
         name: 'test-loader',
         batchFn: batchFn,
         cache: false,
@@ -123,11 +122,47 @@ describe('BatchLoader', () => {
 
   it('should not cache errors', async () => {
     await Context.run({ requestId: 'test-error-cache' }, async () => {
-      const fn = vi.fn(async (keys: number[]) => keys.map((_k) => new Error('fail')));
-      const loader = createBatchLoader({ name: 'error-loader', batchFn: fn });
+      const fn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((_k) => new Error('fail'))
+      );
+      const loader = createBatchLoader<number, string>({ name: 'error-loader', batchFn: fn });
 
       await expect(loader.load(1)).rejects.toThrow('fail');
       await expect(loader.load(1)).rejects.toThrow('fail');
+
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('should cache results outside request context for the same loader instance', async () => {
+    const loader = createBatchLoader<number, string>({
+      name: 'outside-context-loader',
+      batchFn,
+    });
+
+    await loader.load(1);
+    await loader.load(1);
+
+    expect(batchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('should clear cache when batch function throws so next load can retry', async () => {
+    let attempts = 0;
+    const fn = vi.fn(async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw new Error('batch failed');
+      }
+
+      return keys.map((key) => `Value: ${key}`);
+    });
+
+    await Context.run({ requestId: 'test-batch-level-failure' }, async () => {
+      const loader = createBatchLoader<number, string>({ name: 'batch-failure-loader', batchFn: fn });
+
+      await expect(loader.load(1)).rejects.toThrow('batch failed');
+      await expect(loader.load(1)).resolves.toBe('Value: 1');
 
       expect(fn).toHaveBeenCalledTimes(2);
     });
