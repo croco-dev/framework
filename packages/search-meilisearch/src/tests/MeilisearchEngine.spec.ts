@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('meilisearch', () => ({
   MeiliSearch: class {
     constructor() {
-      return mocks.clientMock;
+      Object.assign(this, mocks.clientMock);
     }
   },
 }));
@@ -134,6 +134,34 @@ describe('MeilisearchEngine', () => {
         expect.anything()
       );
       expect(token).toBe('token');
+    });
+
+    it('should compute expiresAt when expiresIn is 0', async () => {
+      const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+
+      const engineWithZeroExpiresIn = new MeilisearchEngine({
+        ...options,
+        tenantTokenOptions: {
+          apiKeyUid: 'uid',
+          expiresIn: 0,
+        },
+      });
+
+      await engineWithZeroExpiresIn.generateTenantToken('tenant-1');
+
+      expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
+        'uid',
+        {
+          '*': {
+            filter: `_tenantId = "tenant-1"`,
+          },
+        },
+        {
+          expiresAt: new Date(1_700_000_000_000),
+        }
+      );
+
+      dateNowSpy.mockRestore();
     });
   });
 });

@@ -1,15 +1,14 @@
 import 'reflect-metadata';
-import { AnalyticsManager } from '@croco/analytics-core';
-import { Container, Context } from '@croco/framework-context';
+import type { AnalyticsManager } from '@croco/analytics-core';
+import { Context } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OnboardingManager } from '../libs/OnboardingManager';
-import { InMemoryOnboardingStore, OnboardingStore } from '../libs/OnboardingStore';
+import { InMemoryOnboardingStore } from '../libs/OnboardingStore';
 import type { OnboardingDefinition } from '../libs/types';
 
 describe('OnboardingManager', () => {
   let manager: OnboardingManager;
   let analytics: AnalyticsManager;
-  let _store: OnboardingStore;
 
   const sampleDefinition: OnboardingDefinition = {
     id: 'welcome-tour',
@@ -21,28 +20,15 @@ describe('OnboardingManager', () => {
   };
 
   beforeEach(() => {
-    Container.reset();
-
-    // Mock AnalyticsManager
     const mockAnalytics = {
       capture: vi.fn(),
       identify: vi.fn(),
       group: vi.fn(),
     } as unknown as AnalyticsManager;
 
-    Container.set(AnalyticsManager.token, mockAnalytics);
-    Container.set(OnboardingStore.token, new InMemoryOnboardingStore());
-
-    // Resolve Manager manually for unit test
-    const storeInstance = Container.get(OnboardingStore.token);
-    const analyticsInstance = Container.get(AnalyticsManager.token);
-    manager = new OnboardingManager(storeInstance, analyticsInstance);
-
-    // Register for any internal usage
-    Container.set(OnboardingManager, manager);
-
-    analytics = analyticsInstance;
-    _store = storeInstance;
+    const storeInstance = new InMemoryOnboardingStore();
+    manager = new OnboardingManager(storeInstance, mockAnalytics);
+    analytics = mockAnalytics;
 
     manager.register(sampleDefinition);
   });
