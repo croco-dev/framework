@@ -7,7 +7,7 @@ title: "StreamParams"
 
 > **StreamParams** = `Omit`\<[`GenerateParams`](/api/llm-core/src/type-aliases/generateparams/), `"modelId"`\> & `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:64](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/types.ts#L64)
+Defined in: [packages/llm-core/src/libs/types.ts:64](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L64)
 
 스트리밍 파라미터
 

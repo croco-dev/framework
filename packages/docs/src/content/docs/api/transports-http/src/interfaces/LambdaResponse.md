@@ -5,7 +5,7 @@ prev: false
 title: "LambdaResponse"
 ---
 
-Defined in: [packages/transports-http/src/libs/types.ts:76](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/transports-http/src/libs/types.ts#L76)
+Defined in: [packages/transports-http/src/libs/types.ts:76](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L76)
 
 ## Properties
 
@@ -13,7 +13,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:76](https://github.com/c
 
 > `optional` **body**: `string`
 
-Defined in: [packages/transports-http/src/libs/types.ts:79](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/transports-http/src/libs/types.ts#L79)
+Defined in: [packages/transports-http/src/libs/types.ts:79](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L79)
 
 ***
 
@@ -21,7 +21,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:79](https://github.com/c
 
 > `optional` **headers**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/transports-http/src/libs/types.ts:78](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/transports-http/src/libs/types.ts#L78)
+Defined in: [packages/transports-http/src/libs/types.ts:78](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L78)
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:78](https://github.com/c
 
 > `optional` **isBase64Encoded**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/types.ts:80](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/transports-http/src/libs/types.ts#L80)
+Defined in: [packages/transports-http/src/libs/types.ts:80](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L80)
 
 ***
 
@@ -37,4 +37,4 @@ Defined in: [packages/transports-http/src/libs/types.ts:80](https://github.com/c
 
 > **statusCode**: `number`
 
-Defined in: [packages/transports-http/src/libs/types.ts:77](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/transports-http/src/libs/types.ts#L77)
+Defined in: [packages/transports-http/src/libs/types.ts:77](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L77)

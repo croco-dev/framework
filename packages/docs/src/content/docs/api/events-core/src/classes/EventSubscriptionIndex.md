@@ -5,7 +5,7 @@ prev: false
 title: "EventSubscriptionIndex"
 ---
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:140](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/EventBus.ts#L140)
+Defined in: [packages/events-core/src/libs/EventBus.ts:140](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventBus.ts#L140)
 
 이벤트 이름(예: `user.created`)과 구독 패턴(예: `user.*`)을 매칭하기 위한 인덱스입니다.
 
@@ -35,7 +35,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:140](https://github.com/c
 
 > **add**(`pattern`, `value`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:145](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/EventBus.ts#L145)
+Defined in: [packages/events-core/src/libs/EventBus.ts:145](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventBus.ts#L145)
 
 #### Parameters
 
@@ -57,7 +57,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:145](https://github.com/c
 
 > **clear**(): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:215](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/EventBus.ts#L215)
+Defined in: [packages/events-core/src/libs/EventBus.ts:215](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventBus.ts#L215)
 
 #### Returns
 
@@ -69,7 +69,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:215](https://github.com/c
 
 > **delete**(`pattern`, `value`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:169](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/EventBus.ts#L169)
+Defined in: [packages/events-core/src/libs/EventBus.ts:169](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventBus.ts#L169)
 
 #### Parameters
 
@@ -91,7 +91,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:169](https://github.com/c
 
 > **match**(`eventName`): `Set`\<`TValue`\>
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:192](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/EventBus.ts#L192)
+Defined in: [packages/events-core/src/libs/EventBus.ts:192](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventBus.ts#L192)
 
 #### Parameters
 

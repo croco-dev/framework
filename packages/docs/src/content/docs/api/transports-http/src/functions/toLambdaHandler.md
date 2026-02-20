@@ -7,7 +7,7 @@ title: "toLambdaHandler"
 
 > **toLambdaHandler**(`app`): [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
 
-Defined in: [packages/transports-http/src/libs/adapters/LambdaAdapter.ts:4](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/transports-http/src/libs/adapters/LambdaAdapter.ts#L4)
+Defined in: [packages/transports-http/src/libs/adapters/LambdaAdapter.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/adapters/LambdaAdapter.ts#L4)
 
 ## Parameters
 

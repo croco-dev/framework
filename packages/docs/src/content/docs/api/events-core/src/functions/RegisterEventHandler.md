@@ -7,7 +7,7 @@ title: "RegisterEventHandler"
 
 > **RegisterEventHandler**(`eventClass`): \<`T`\>(`f`) => `T`
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:10](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/events-core/src/libs/EventHandler.ts#L10)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventHandler.ts#L10)
 
 ## Parameters
 

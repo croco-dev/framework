@@ -7,7 +7,7 @@ title: "LlmModelConfig"
 
 > **LlmModelConfig** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:274](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/types.ts#L274)
+Defined in: [packages/llm-core/src/libs/types.ts:274](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L274)
 
 LLM 모델 설정
 
@@ -17,7 +17,7 @@ LLM 모델 설정
 
 > `optional` **apiKey**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:283](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/types.ts#L283)
+Defined in: [packages/llm-core/src/libs/types.ts:283](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L283)
 
 API 키
 
@@ -27,7 +27,7 @@ API 키
 
 > `optional` **baseUrl**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:288](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/types.ts#L288)
+Defined in: [packages/llm-core/src/libs/types.ts:288](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L288)
 
 기본 URL
 
@@ -37,7 +37,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:288](https://github.com/croco-d
 
 > **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:278](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/types.ts#L278)
+Defined in: [packages/llm-core/src/libs/types.ts:278](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L278)
 
 모델 ID
 
@@ -47,6 +47,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:278](https://github.com/croco-d
 
 > `optional` **timeout**: `number`
 
-Defined in: [packages/llm-core/src/libs/types.ts:293](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/types.ts#L293)
+Defined in: [packages/llm-core/src/libs/types.ts:293](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L293)
 
 타임아웃 (ms)

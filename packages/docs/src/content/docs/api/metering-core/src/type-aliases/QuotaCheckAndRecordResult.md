@@ -7,7 +7,7 @@ title: "QuotaCheckAndRecordResult"
 
 > **QuotaCheckAndRecordResult** = `object`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:18](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/QuotaManager.ts#L18)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:18](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/QuotaManager.ts#L18)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:18](https://github.
 
 > **exceeded**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:19](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/QuotaManager.ts#L19)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:19](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/QuotaManager.ts#L19)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:19](https://github.
 
 > **newUsage**: `number`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:20](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/QuotaManager.ts#L20)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:20](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/QuotaManager.ts#L20)

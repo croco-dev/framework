@@ -7,7 +7,7 @@ title: "getLlmMetadata"
 
 > **getLlmMetadata**(`target`, `propertyKey`): [`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/) \| `undefined`
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:97](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/decorators/Llm.ts#L97)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:97](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L97)
 
 메서드에서 Llm 메타데이터 조회
 

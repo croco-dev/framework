@@ -7,7 +7,7 @@ title: "Recover"
 
 > **Recover**(`exceptionType?`): `MethodDecorator`
 
-Defined in: [packages/retry-core/src/libs/Recover.ts:34](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/Recover.ts#L34)
+Defined in: [packages/retry-core/src/libs/Recover.ts:34](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/Recover.ts#L34)
 
 Decorator to mark a method as a recovery handler.
 

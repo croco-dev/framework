@@ -7,7 +7,7 @@ title: "parseWindowMs"
 
 > **parseWindowMs**(`window`): `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:76](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/ratelimit-core/src/libs/types.ts#L76)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:76](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/ratelimit-core/src/libs/types.ts#L76)
 
 Parse window string to milliseconds
 

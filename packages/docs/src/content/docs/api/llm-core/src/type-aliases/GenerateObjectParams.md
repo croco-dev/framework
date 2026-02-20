@@ -7,7 +7,7 @@ title: "GenerateObjectParams"
 
 > **GenerateObjectParams**\<`T`\> = [`GenerateParams`](/api/llm-core/src/type-aliases/generateparams/) & `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:86](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/types.ts#L86)
+Defined in: [packages/llm-core/src/libs/types.ts:86](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L86)
 
 객체 생성 파라미터
 
