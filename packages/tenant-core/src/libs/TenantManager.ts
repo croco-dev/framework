@@ -6,7 +6,7 @@ import type { TenantContext } from './types';
  * Provides tenant isolation across async boundaries.
  */
 export class TenantManager {
-  private readonly als = new AsyncLocalStorage<TenantContext>();
+  private readonly als = new AsyncLocalStorage<TenantContext | null>();
 
   /**
    * Run a function within a tenant context.
@@ -41,7 +41,7 @@ export class TenantManager {
    * Check if currently within a tenant context.
    */
   isInTenantContext(): boolean {
-    return this.als.getStore() !== undefined;
+    return this.als.getStore()?.tenantId !== undefined;
   }
 
   /**
@@ -49,6 +49,6 @@ export class TenantManager {
    * Useful for cross-tenant operations or admin tasks.
    */
   async suspend<T>(fn: () => Promise<T>): Promise<T> {
-    return this.als.run(undefined as unknown as TenantContext, fn);
+    return this.als.run(null, fn);
   }
 }
