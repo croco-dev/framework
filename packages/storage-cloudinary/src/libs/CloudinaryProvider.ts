@@ -34,38 +34,46 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
     this.validateKey(key);
 
-    try {
-      const uploadOptions: Record<string, unknown> = {
-        public_id: key,
-        resource_type: this.inferResourceType(options?.contentType),
-      };
+    const uploadOptions: Record<string, unknown> = {
+      public_id: key,
+      resource_type: this.inferResourceType(options?.contentType),
+    };
 
-      if (options?.metadata) {
-        uploadOptions.context = this.formatContext(options.metadata);
-      }
+    if (options?.metadata) {
+      uploadOptions.context = this.formatContext(options.metadata);
+    }
 
-      return new Promise<void>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
+    return new Promise<void>((resolve, reject) => {
+      let uploadStream: ReturnType<typeof cloudinary.uploader.upload_stream>;
+
+      try {
+        uploadStream = cloudinary.uploader.upload_stream(
           uploadOptions,
           (error: Error | undefined, _result: unknown) => {
             if (error) {
               reject(new UploadFailedProblem(key, error.message));
-            } else {
-              resolve();
+              return;
             }
+
+            resolve();
           }
         );
+      } catch (error) {
+        reject(new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown upload error')));
+        return;
+      }
 
-        if (Buffer.isBuffer(data)) {
-          uploadStream.end(data);
-        } else {
-          data.pipe(uploadStream);
-        }
+      if (Buffer.isBuffer(data)) {
+        uploadStream.end(data);
+        return;
+      }
+
+      data.once('error', (error) => {
+        reject(new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown upload stream error')));
       });
-    } catch (error) {
-      void error;
-      throw new UploadFailedProblem(key, 'Unknown upload error');
-    }
+
+      data.pipe(uploadStream);
+    });
   }
 
   async get(key: string): Promise<Buffer> {
@@ -77,7 +85,11 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new FileNotFoundProblem(key);
+        if (response.status === 404) {
+          throw new FileNotFoundProblem(key);
+        }
+
+        throw new UploadFailedProblem(key, `Failed to fetch file: HTTP ${response.status}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
@@ -86,7 +98,11 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
       if (error instanceof FileNotFoundProblem) {
         throw error;
       }
-      throw new UploadFailedProblem(key, error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof UploadFailedProblem) {
+        throw error;
+      }
+
+      throw new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown error'));
     }
   }
 
@@ -161,8 +177,12 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
         etag: resource.etag,
         metadata: resource.context ? this.parseContext(resource.context) : undefined,
       };
-    } catch {
-      throw new FileNotFoundProblem(key);
+    } catch (error) {
+      if (this.isNotFoundError(error)) {
+        throw new FileNotFoundProblem(key);
+      }
+
+      throw new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown metadata error'));
     }
   }
 
@@ -301,6 +321,33 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
       return context.custom as Record<string, string>;
     }
     return context as Record<string, string>;
+  }
+
+  private isNotFoundError(error: unknown): boolean {
+    if (typeof error === 'object' && error !== null && 'http_code' in error) {
+      const httpCode = Reflect.get(error, 'http_code');
+      if (httpCode === 404) {
+        return true;
+      }
+    }
+
+    const message = this.getErrorMessage(error, '').toLowerCase();
+    return message.includes('not found');
+  }
+
+  private getErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      const message = Reflect.get(error, 'message');
+      if (typeof message === 'string' && message.length > 0) {
+        return message;
+      }
+    }
+
+    return fallback;
   }
 
   private validateKey(key: string): void {

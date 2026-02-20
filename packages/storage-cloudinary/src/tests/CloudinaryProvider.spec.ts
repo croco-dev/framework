@@ -66,18 +66,19 @@ describe('CloudinaryProvider', () => {
     });
 
     it('should upload readable stream data successfully', async () => {
+      const { PassThrough, Readable } = await import('node:stream');
       const mockUploadStream = vi.fn(
         (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
-          callback(undefined, { public_id: 'test-key' });
-          return {
-            end: vi.fn(),
-          };
+          const destination = new PassThrough();
+          queueMicrotask(() => {
+            callback(undefined, { public_id: 'test-key' });
+          });
+          return destination;
         }
       );
 
       vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
 
-      const { Readable } = await import('node:stream');
       const stream = Readable.from(Buffer.from('test data'));
 
       await expect(provider.put('test-key', stream)).resolves.not.toThrow();
@@ -156,6 +157,28 @@ describe('CloudinaryProvider', () => {
       await expect(provider.put('test-key', buffer)).rejects.toThrow(UploadFailedProblem);
     });
 
+    it('should throw UploadFailedProblem when upload stream creation throws', async () => {
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(() => {
+        throw new Error('Cloudinary SDK error');
+      });
+
+      await expect(provider.put('test-key', Buffer.from('test data'))).rejects.toThrow(UploadFailedProblem);
+    });
+
+    it('should throw UploadFailedProblem when source stream emits error', async () => {
+      const { PassThrough } = await import('node:stream');
+      const destination = new PassThrough();
+
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(() => destination as any);
+
+      const source = new PassThrough();
+      const putPromise = provider.put('test-key', source);
+
+      source.emit('error', new Error('Stream broken'));
+
+      await expect(putPromise).rejects.toThrow(UploadFailedProblem);
+    });
+
     it('should throw InvalidKeyProblem for empty key', async () => {
       const buffer = Buffer.from('test data');
 
@@ -205,6 +228,17 @@ describe('CloudinaryProvider', () => {
       vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
 
       await expect(provider.get('test-key')).rejects.toThrow(FileNotFoundProblem);
+    });
+
+    it('should throw UploadFailedProblem on non-404 HTTP error', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 500,
+      };
+
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+
+      await expect(provider.get('test-key')).rejects.toThrow(UploadFailedProblem);
     });
 
     it('should throw UploadFailedProblem on fetch error', async () => {
@@ -384,6 +418,24 @@ describe('CloudinaryProvider', () => {
       vi.mocked(cloudinary.api.resource).mockRejectedValue(new Error('Not found'));
 
       await expect(provider.getMetadata('test-key')).rejects.toThrow(FileNotFoundProblem);
+    });
+
+    it('should throw FileNotFoundProblem when Cloudinary returns 404 code', async () => {
+      vi.mocked(cloudinary.api.resource).mockRejectedValue({
+        http_code: 404,
+        message: 'Resource not found',
+      });
+
+      await expect(provider.getMetadata('test-key')).rejects.toThrow(FileNotFoundProblem);
+    });
+
+    it('should throw UploadFailedProblem for non-404 metadata errors', async () => {
+      vi.mocked(cloudinary.api.resource).mockRejectedValue({
+        http_code: 403,
+        message: 'Forbidden',
+      });
+
+      await expect(provider.getMetadata('test-key')).rejects.toThrow(UploadFailedProblem);
     });
 
     it('should throw InvalidKeyProblem for invalid key', async () => {
