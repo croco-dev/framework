@@ -37,7 +37,7 @@ export class DrizzleSearchEngine extends SearchEngine {
 
     return {
       hits: result.rows.map((row: any) => ({
-        score: row.score || 1,
+        score: row.score ?? 1,
         document: row as T,
       })),
       total: result.rowCount || 0,

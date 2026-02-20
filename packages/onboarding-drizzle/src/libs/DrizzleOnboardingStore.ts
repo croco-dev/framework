@@ -5,14 +5,24 @@ import type { DrizzleDb } from '@croco/tx-drizzle';
 import { and, eq } from 'drizzle-orm';
 import { onboardingStates } from './schema';
 
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
+type DrizzleSelectFn = (...args: unknown[]) => any;
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
+type DrizzleInsertFn = (...args: unknown[]) => any;
+
+type DrizzleOnboardingClient = DrizzleDb & {
+  select: DrizzleSelectFn;
+  insert: DrizzleInsertFn;
+};
+
 // Token for Drizzle Database Instance
-export const DRIZZLE_TOKEN = new Token<DrizzleDb>('DRIZZLE_TOKEN');
+export const DRIZZLE_TOKEN = new Token<DrizzleOnboardingClient>('DRIZZLE_TOKEN');
 
 @Component()
 export class DrizzleOnboardingStore extends OnboardingStore {
   constructor(
-    @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleDb,
-    private readonly txManager: TxManager<DrizzleDb>
+    @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleOnboardingClient,
+    private readonly txManager: TxManager<DrizzleOnboardingClient>
   ) {
     super();
   }

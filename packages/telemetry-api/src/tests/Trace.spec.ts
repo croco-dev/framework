@@ -2,7 +2,7 @@ import { context, trace } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { TraceDecoratorOptions } from '../libs/decorators/Trace';
-import { Trace } from '../libs/decorators/Trace';
+import { getTraceOptions, Trace } from '../libs/decorators/Trace';
 import { getActiveTraceInfo, recordEvent, withSpan } from '../libs/span';
 import { getTracer } from '../libs/tracer';
 
@@ -93,6 +93,63 @@ describe('Trace', () => {
 
     await expect(service.failingMethod()).rejects.toThrow('Test error');
   });
+
+  it('should expose decorator options via getTraceOptions', () => {
+    class TestService {
+      async run(): Promise<void> {}
+    }
+
+    decorateMethodWithTrace(TestService.prototype, 'run', {
+      name: 'stored-options-operation',
+      attributes: { feature: 'trace-options' },
+    });
+
+    const options = getTraceOptions(TestService.prototype, 'run');
+    expect(options).toEqual({
+      name: 'stored-options-operation',
+      attributes: { feature: 'trace-options' },
+    });
+  });
+
+  it('should resolve inherited options from prototype chain', () => {
+    class BaseService {
+      async run(): Promise<void> {}
+    }
+
+    class ChildService extends BaseService {}
+
+    decorateMethodWithTrace(BaseService.prototype, 'run', {
+      name: 'base-operation',
+      attributes: { level: 'base' },
+    });
+
+    const options = getTraceOptions(ChildService.prototype, 'run');
+    expect(options).toEqual({
+      name: 'base-operation',
+      attributes: { level: 'base' },
+    });
+  });
+
+  it('should return cloned options to prevent external mutation', () => {
+    class TestService {
+      async run(): Promise<void> {}
+    }
+
+    decorateMethodWithTrace(TestService.prototype, 'run', {
+      name: 'clone-operation',
+      attributes: { stable: 'yes' },
+    });
+
+    const first = getTraceOptions(TestService.prototype, 'run');
+    expect(first).toBeDefined();
+    if (!first?.attributes) {
+      throw new Error('Expected attributes to be defined');
+    }
+    first.attributes.stable = 'mutated';
+
+    const second = getTraceOptions(TestService.prototype, 'run');
+    expect(second?.attributes).toEqual({ stable: 'yes' });
+  });
 });
 
 describe('withSpan', () => {
@@ -148,7 +205,6 @@ describe('getTracer', () => {
 describe('@Trace + withSpan error recording', () => {
   it('should not record error twice when @Trace wraps withSpan', async () => {
     class TestService {
-      @Trace({ name: 'outer-operation' })
       async methodWithInnerSpan(): Promise<void> {
         await withSpan(
           async () => {
@@ -158,6 +214,8 @@ describe('@Trace + withSpan error recording', () => {
         );
       }
     }
+
+    decorateMethodWithTrace(TestService.prototype, 'methodWithInnerSpan', { name: 'outer-operation' });
 
     const service = new TestService();
 

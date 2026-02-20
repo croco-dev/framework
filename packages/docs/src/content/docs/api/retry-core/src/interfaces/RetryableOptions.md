@@ -5,7 +5,7 @@ prev: false
 title: "RetryableOptions"
 ---
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:11](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/Retryable.ts#L11)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/Retryable.ts#L11)
 
 Options for
 
@@ -23,7 +23,7 @@ decorator.
 
 > `optional` **backoff**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:13](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/Retryable.ts#L13)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:13](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/Retryable.ts#L13)
 
 Backoff configuration
 
@@ -33,7 +33,7 @@ Backoff configuration
 
 > `optional` **backoffPolicy**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:19](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/Retryable.ts#L19)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:19](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/Retryable.ts#L19)
 
 Custom backoff policy
 
@@ -43,7 +43,7 @@ Custom backoff policy
 
 > `optional` **maxAttempts**: `number`
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:31](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/RetryPolicy.ts#L31)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:31](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/RetryPolicy.ts#L31)
 
 Maximum attempts (default: 3)
 
@@ -57,7 +57,7 @@ Maximum attempts (default: 3)
 
 > `optional` **noRetryFor**: (`message?`) => `Error`[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:25](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/RetryPolicy.ts#L25)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:25](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/RetryPolicy.ts#L25)
 
 Exception classes to never retry
 
@@ -81,7 +81,7 @@ Exception classes to never retry
 
 > `optional` **recover**: `string`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:25](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/Retryable.ts#L25)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:25](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/Retryable.ts#L25)
 
 Recovery method name on the same class
 
@@ -91,7 +91,7 @@ Recovery method name on the same class
 
 > `optional` **retryFor**: (`message?`) => `Error`[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:22](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/RetryPolicy.ts#L22)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:22](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/RetryPolicy.ts#L22)
 
 Exception classes to retry (empty = retry all except noRetryFor)
 
@@ -115,7 +115,7 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 > `optional` **retryForCategories**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:28](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/RetryPolicy.ts#L28)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:28](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/RetryPolicy.ts#L28)
 
 ProblemCategory values to retry (croco integration)
 
@@ -129,7 +129,7 @@ ProblemCategory values to retry (croco integration)
 
 > `optional` **retryPolicy**: [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:16](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/Retryable.ts#L16)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:16](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/Retryable.ts#L16)
 
 Custom retry policy
 
@@ -139,6 +139,6 @@ Custom retry policy
 
 > `optional` **wrapExhausted**: `boolean`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:22](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/Retryable.ts#L22)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:22](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/Retryable.ts#L22)
 
 Wrap exhausted error instead of re-throwing last error

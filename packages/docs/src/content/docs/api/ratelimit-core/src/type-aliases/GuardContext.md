@@ -7,7 +7,7 @@ title: "GuardContext"
 
 > **GuardContext** = [`KeyContext`](/api/ratelimit-core/src/type-aliases/keycontext/) & `object`
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:24](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L24)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:24](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L24)
 
 Execution context interface for guard.
 Compatible with protocols-rest ExecutionContext.

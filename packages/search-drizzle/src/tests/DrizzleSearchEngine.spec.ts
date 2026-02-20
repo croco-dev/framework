@@ -78,6 +78,18 @@ describe('DrizzleSearchEngine', () => {
     expect(mockStrategy.buildSearchQuery).toHaveBeenCalledWith('users', { query: 'test' }, 'tenant-123');
   });
 
+  it('should preserve zero score from search result', async () => {
+    (mockDb.execute as any).mockResolvedValueOnce({
+      rows: [{ id: 'doc-1', score: 0 }],
+      rowCount: 1,
+    });
+
+    engine = new DrizzleSearchEngine(mockDb, mockStrategy);
+    const result = await engine.search<{ id: string; score: number }>('users', { query: 'test' });
+
+    expect(result.hits[0]?.score).toBe(0);
+  });
+
   it('should delegate indexDocument to strategy', async () => {
     engine = new DrizzleSearchEngine(mockDb, mockStrategy);
     const doc = { id: '1', tenantId: 'tenant-123', title: 'hello' };

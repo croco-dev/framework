@@ -7,7 +7,7 @@ title: "RetryCallback"
 
 > **RetryCallback**\<`T`\> = (`context`) => `T` \| `Promise`\<`T`\>
 
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:36](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/retry-core/src/libs/RetryTemplate.ts#L36)
+Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:36](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/RetryTemplate.ts#L36)
 
 Retry operation callback.
 

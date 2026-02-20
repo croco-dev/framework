@@ -7,7 +7,7 @@ title: "recordError"
 
 > **recordError**(`error`, `span?`): `void`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:58](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/telemetry-api/src/libs/span.ts#L58)
+Defined in: [packages/telemetry-api/src/libs/span.ts:58](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/span.ts#L58)
 
 현재 Span에 에러를 기록합니다.
 

@@ -7,7 +7,7 @@ title: "AtomicQuotaCheckResult"
 
 > **AtomicQuotaCheckResult** = `object`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:12](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L12)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:12](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/UsageStorage.ts#L12)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:12](https://github.
 
 > **exceeded**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:13](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L13)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:13](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/UsageStorage.ts#L13)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:13](https://github.
 
 > **newUsage**: `number`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:14](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/metering-core/src/libs/UsageStorage.ts#L14)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:14](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/UsageStorage.ts#L14)

@@ -126,7 +126,8 @@ export class Context {
     middlewares: Middleware[],
     fn: () => Promise<T>
   ): Promise<T> {
-    let result: T | undefined;
+    const NO_RESULT = Symbol('NO_RESULT');
+    let result: T | typeof NO_RESULT = NO_RESULT;
     let index = -1;
 
     const dispatch = async (i: number): Promise<void> => {
@@ -146,10 +147,10 @@ export class Context {
 
     await dispatch(0);
 
-    if (result === undefined) {
+    if (result === NO_RESULT) {
       throw new Error('No result returned from function execution');
     }
 
-    return result as T;
+    return result;
   }
 }

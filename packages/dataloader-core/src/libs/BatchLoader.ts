@@ -57,7 +57,9 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
 
   prime(key: K, value: V | Error): void {
     if (value instanceof Error) {
-      this.cache.set(key, Promise.reject(value));
+      const rejected = Promise.reject<V | null>(value);
+      void rejected.catch(() => undefined);
+      this.cache.set(key, rejected);
     } else {
       this.cache.set(key, Promise.resolve(value));
     }
@@ -117,9 +119,12 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
           }
         });
       } catch (error) {
-        // If the batch function itself fails, reject all promises in this batch
         const err = error instanceof Error ? error : new Error(String(error));
         span.recordException(err);
+
+        keys.forEach((key) => {
+          this.clear(key);
+        });
 
         callbacks.forEach((callback) => {
           callback.reject(err);

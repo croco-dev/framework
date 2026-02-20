@@ -5,7 +5,7 @@ prev: false
 title: "InMemoryLlmRegistry"
 ---
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:5](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L5)
+Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L5)
 
 LLM 레지스트리 추상 클래스
 
@@ -38,7 +38,7 @@ Token 기반 DI를 지원하며, 다중 제공자 관리를 지원합니다.
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`LlmRegistry`](/api/llm-core/src/classes/llmregistry/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:12](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/LlmRegistry.ts#L12)
+Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:12](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/LlmRegistry.ts#L12)
 
 #### Inherited from
 
@@ -50,7 +50,7 @@ Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:12](https://github.com/cr
 
 > **getModel**(`modelId`): `Promise`\<[`LlmModel`](/api/llm-core/src/classes/llmmodel/)\>
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:9](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L9)
+Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L9)
 
 모델 조회
 
@@ -78,7 +78,7 @@ LLM 모델 인스턴스
 
 > **listModels**(): `Promise`\<`string`[]\>
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:25](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L25)
+Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:25](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L25)
 
 사용 가능한 모델 목록 조회
 
@@ -98,7 +98,7 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:25](https://githu
 
 > **registerProvider**(`providerId`, `factory`): `void`
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:29](https://github.com/croco-dev/shared/blob/96dae0f2dbf01371c7f838c83a65d292e64240ad/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L29)
+Defined in: [packages/llm-core/src/libs/InMemoryLlmRegistry.ts:29](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/InMemoryLlmRegistry.ts#L29)
 
 제공자 등록
 

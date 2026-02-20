@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { Context, type LifecycleHooks, type Middleware } from '../index';
 
 describe('MiddlewareChain', () => {
@@ -68,6 +69,17 @@ describe('MiddlewareChain', () => {
 
       expect(result).toBe('no-middleware-result');
       expect(executionOrder).toEqual(['handler']);
+    });
+
+    it('should allow undefined handler result', async () => {
+      const context = { requestId: 'test-undefined-result' };
+      const hooks: LifecycleHooks = {};
+
+      const result = await Context.runWithMiddleware(context, [], hooks, async () => {
+        return undefined;
+      });
+
+      expect(result).toBeUndefined();
     });
 
     it('should handle nested middleware calls', async () => {

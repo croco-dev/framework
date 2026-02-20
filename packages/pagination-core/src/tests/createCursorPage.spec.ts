@@ -19,7 +19,7 @@ describe('createCursorPage', () => {
   });
 
   it('should return empty data for empty array', () => {
-    const result = createCursorPage([], { limit: 20, getId: (item) => item.id });
+    const result = createCursorPage<{ id: string }>([], { limit: 20, getId: (item) => item.id });
     expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();

@@ -107,7 +107,7 @@ export class MeilisearchEngine extends SearchEngine {
     };
 
     return await this.client.generateTenantToken(apiKeyUid, searchRules, {
-      expiresAt: expiresAt || (expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined),
+      expiresAt: expiresAt ?? (expiresIn !== undefined ? new Date(Date.now() + expiresIn * 1000) : undefined),
     });
   }
 

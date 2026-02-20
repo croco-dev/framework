@@ -1,18 +1,21 @@
 import 'reflect-metadata';
-import { Container } from '@croco/framework-context';
 import type { OnboardingState } from '@croco/onboarding-core';
-import { type DrizzleDb, TxManager } from '@croco/tx-drizzle';
+import type { TxManager } from '@croco/tx-core';
+import type { DrizzleDb } from '@croco/tx-drizzle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DRIZZLE_TOKEN, DrizzleOnboardingStore } from '../libs/DrizzleOnboardingStore';
+import { DrizzleOnboardingStore } from '../libs/DrizzleOnboardingStore';
 
 describe('DrizzleOnboardingStore', () => {
   let store: DrizzleOnboardingStore;
-  let mockDb: any;
-  let mockTxManager: any;
+  let mockDb: {
+    select: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+  };
+  let mockTxManager: {
+    getClient: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
-    Container.reset();
-
     // Mock Drizzle DB chain
     // select().from().where().limit()
     const mockQueryBuilder = {
@@ -32,10 +35,18 @@ describe('DrizzleOnboardingStore', () => {
       getClient: vi.fn().mockReturnValue(null), // No active tx
     };
 
-    Container.set(DRIZZLE_TOKEN, mockDb);
-    Container.set(TxManager, mockTxManager);
-
-    store = new DrizzleOnboardingStore(mockDb as DrizzleDb, mockTxManager as TxManager<DrizzleDb>);
+    store = new DrizzleOnboardingStore(
+      mockDb as unknown as DrizzleDb & {
+        select: (...args: unknown[]) => unknown;
+        insert: (...args: unknown[]) => unknown;
+      },
+      mockTxManager as unknown as TxManager<
+        DrizzleDb & {
+          select: (...args: unknown[]) => unknown;
+          insert: (...args: unknown[]) => unknown;
+        }
+      >
+    );
   });
 
   it('should return null when state not found', async () => {

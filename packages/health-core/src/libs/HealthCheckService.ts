@@ -31,15 +31,29 @@ export class HealthCheckService {
     return { status, results };
   }
 
-  private checkWithTimeout(indicator: HealthIndicator): Promise<HealthIndicatorResult> {
+  private async checkWithTimeout(indicator: HealthIndicator): Promise<HealthIndicatorResult> {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const timeoutPromise = new Promise<HealthIndicatorResult>((_, reject) => {
-      setTimeout(() => reject(new Error(`Health check timeout for ${indicator.constructor.name}`)), this.timeout);
+      timeoutId = setTimeout(
+        () => reject(new Error(`Health check timeout for ${indicator.constructor.name}`)),
+        this.timeout
+      );
     });
 
-    return Promise.race([indicator.check(), timeoutPromise]).catch((error: Error) => ({
-      name: indicator.constructor.name,
-      status: 'down' as const,
-      details: { error: error.message },
-    }));
+    try {
+      return await Promise.race([indicator.check(), timeoutPromise]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        name: indicator.constructor.name,
+        status: 'down',
+        details: { error: message },
+      };
+    } finally {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+    }
   }
 }

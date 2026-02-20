@@ -7,4 +7,4 @@ title: "HealthCheckStatus"
 
 > **HealthCheckStatus** = `"up"` \| `"down"`
 
-Defined in: packages/transports-http/src/libs/HealthCheckRegistry.ts:3
+Defined in: [packages/transports-http/src/libs/HealthCheckRegistry.ts:3](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HealthCheckRegistry.ts#L3)

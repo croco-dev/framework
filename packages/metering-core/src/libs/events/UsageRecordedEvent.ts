@@ -12,8 +12,7 @@ export class UsageRecordedEvent extends DomainEvent {
     if (metadata !== undefined) {
       this.metadata = { ...this.metadata, ...metadata };
     } else {
-      // Explicitly set to undefined when no metadata provided
-      (this as any).metadata = undefined;
+      this.metadata = undefined as never;
     }
   }
 }

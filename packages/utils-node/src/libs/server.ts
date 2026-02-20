@@ -48,9 +48,9 @@ export class Bootstrap {
     if (config.controllers && config.controllers.length > 0) {
       useContainer(Container);
       useExpressServer(app, {
-        routePrefix: config.routePrefix || '/v1',
+        routePrefix: config.routePrefix ?? '/v1',
         controllers: config.controllers,
-        middlewares: config.middlewares || [],
+        middlewares: config.middlewares ?? [],
         validation: config.validation !== false,
         defaultErrorHandler: false,
       });
@@ -87,7 +87,7 @@ export class Bootstrap {
       throw new BootstrapError('Application not bootstrapped. Call bootstrap() first.');
     }
 
-    const port = serverConfig.port || process.env.PORT || 3000;
+    const port = serverConfig.port ?? (process.env.PORT || 3000);
     const server = Bootstrap.app.listen(port, () => {
       console.log(`🚀 Server is running on port ${port}`);
       console.log(`🔗 Health check: http://localhost:${port}/health`);
