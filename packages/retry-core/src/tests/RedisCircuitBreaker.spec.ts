@@ -18,7 +18,7 @@ function createSharedMockRedis(): { redis: MockUpstashRedis; data: Map<string, s
 
   const redis: MockUpstashRedis = {
     get: vi.fn(async (key: string) => data.get(key) ?? null),
-    set: vi.fn(async (key: string, value: string) => {
+    set: vi.fn(async (key: string, value: string, _opts?: { ex?: number }): Promise<'OK' | null> => {
       data.set(key, value);
       return 'OK';
     }),
@@ -43,7 +43,7 @@ function createFailingMockRedis(): MockUpstashRedis {
     get: vi.fn(async () => {
       throw new Error('redis-down');
     }),
-    set: vi.fn(async () => {
+    set: vi.fn(async (_key: string, _value: string, _opts?: { ex?: number }): Promise<'OK' | null> => {
       throw new Error('redis-down');
     }),
     incr: vi.fn(async () => {

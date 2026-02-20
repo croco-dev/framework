@@ -1,11 +1,9 @@
 import 'reflect-metadata';
-import { AnalyticsManager } from '@croco/analytics-core';
-import { FeatureManager } from '@croco/features-core';
-import { Container, Context } from '@croco/framework-context';
+import type { AnalyticsManager } from '@croco/analytics-core';
+import { Context } from '@croco/framework-context';
+import { PostHogClient } from '@croco/integrations-posthog';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostHogAnalyticsManager } from '../libs/PostHogAnalyticsManager';
-import { PostHogClientWrapper } from '../libs/PostHogClientWrapper';
-import { PostHogFeatureManager } from '../libs/PostHogFeatureManager';
 
 // Mock PostHog Node
 vi.mock('posthog-node', () => {
@@ -23,53 +21,20 @@ vi.mock('posthog-node', () => {
 });
 
 describe('PostHog Integration', () => {
-  let featureManager: FeatureManager;
   let analyticsManager: AnalyticsManager;
-  let clientWrapper: PostHogClientWrapper;
+  let postHogClient: PostHogClient;
 
   beforeEach(() => {
-    Container.reset();
-
-    // Manually construct and register instances to bypass DI complexity in unit tests
-    const wrapper = new PostHogClientWrapper();
-    Container.set(PostHogClientWrapper, wrapper);
-
-    const postHogFeatureManager = new PostHogFeatureManager(wrapper);
-    Container.set(PostHogFeatureManager, postHogFeatureManager);
-    Container.set(FeatureManager.token, postHogFeatureManager);
-
-    const postHogAnalyticsManager = new PostHogAnalyticsManager(wrapper);
-    Container.set(PostHogAnalyticsManager, postHogAnalyticsManager);
-    Container.set(AnalyticsManager.token, postHogAnalyticsManager);
-
-    featureManager = Container.get(FeatureManager.token);
-    analyticsManager = Container.get(AnalyticsManager.token);
-    clientWrapper = Container.get(PostHogClientWrapper);
+    postHogClient = new PostHogClient({ apiKey: 'test-api-key' });
+    analyticsManager = new PostHogAnalyticsManager(postHogClient);
   });
 
-  it('should resolve FeatureManager and AnalyticsManager', () => {
-    expect(featureManager).toBeInstanceOf(PostHogFeatureManager);
+  it('should resolve analytics manager', () => {
     expect(analyticsManager).toBeInstanceOf(PostHogAnalyticsManager);
   });
 
-  it('should auto-inject context into feature flags', async () => {
-    const spy = vi.spyOn(clientWrapper.client, 'isFeatureEnabled');
-
-    await Context.run({ requestId: 'req-1', user: { id: 'user-123' }, tenantId: 'tenant-abc' }, async () => {
-      const isEnabled = await featureManager.isEnabled('new-feature');
-      expect(isEnabled).toBe(true);
-      expect(spy).toHaveBeenCalledWith(
-        'new-feature',
-        'user-123',
-        expect.objectContaining({
-          groups: { tenant: 'tenant-abc' },
-        })
-      );
-    });
-  });
-
   it('should auto-inject context into analytics', async () => {
-    const spy = vi.spyOn(clientWrapper.client, 'capture');
+    const spy = vi.spyOn(postHogClient.getClient(), 'capture');
 
     await Context.run({ requestId: 'req-2', user: { id: 'user-456' }, tenantId: 'tenant-xyz' }, async () => {
       analyticsManager.capture('test-event');

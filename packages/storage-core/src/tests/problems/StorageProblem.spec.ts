@@ -6,6 +6,10 @@ describe('StorageProblem', () => {
   it('추상 클래스이므로 직접 인스턴스화 불가', () => {
     class TestStorageProblem extends StorageProblem {
       readonly code = 'TEST_STORAGE';
+
+      public constructor(code: string, category: ProblemCategory, detail?: string) {
+        super(code, category, detail);
+      }
     }
 
     const problem = new TestStorageProblem('TEST_STORAGE', ProblemCategory.InternalServerError, 'Test error');
@@ -18,6 +22,10 @@ describe('StorageProblem', () => {
   it('다양한 category로 생성 가능', () => {
     class TestStorageProblem extends StorageProblem {
       readonly code = 'TEST_STORAGE';
+
+      public constructor(code: string, category: ProblemCategory, detail?: string) {
+        super(code, category, detail);
+      }
     }
 
     const problem1 = new TestStorageProblem('TEST_STORAGE', ProblemCategory.NotFound, 'Resource not found');
@@ -30,6 +38,10 @@ describe('StorageProblem', () => {
   it('Problem을 상속받으므로 Problem 인스턴스로 throw/catch 가능', () => {
     class TestStorageProblem extends StorageProblem {
       readonly code = 'TEST_STORAGE';
+
+      public constructor(code: string, category: ProblemCategory, detail?: string) {
+        super(code, category, detail);
+      }
     }
 
     expect(() => {
