@@ -13,7 +13,9 @@ export type LlmUsageEvent = {
   provider: string;
   usage: LlmUsage;
   idempotencyKey: string;
-  metadata?: LlmMetadata;
+  metadata?: Omit<LlmMetadata, 'modelId'> & {
+    operationType?: string;
+  };
 };
 
 export type LlmCostRecord = {

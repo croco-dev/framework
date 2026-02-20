@@ -1,6 +1,7 @@
 import type { TraceInfo } from '@croco/telemetry-api';
 
 export type DomainEventMetadata = {
+  [key: string]: unknown;
   traceContext?: TraceInfo;
 };
 
