@@ -41,6 +41,10 @@ describe('AuthGuard', () => {
     mockContext.getRequest = vi.fn().mockReturnValue({ headers: {} });
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow('Missing authorization header');
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
+      status: 401,
+      code: 'AUTH_MISSING_HEADER',
+    });
     expect(mockVerifier).not.toHaveBeenCalled();
   });
 
@@ -50,6 +54,10 @@ describe('AuthGuard', () => {
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow('Invalid or expired token');
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
+      status: 401,
+      code: 'AUTH_INVALID_TOKEN',
+    });
     expect(mockVerifier).toHaveBeenCalledWith('invalid-token');
   });
 
@@ -69,6 +77,10 @@ describe('AuthGuard', () => {
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow('Invalid authorization header format');
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
+      status: 400,
+      code: 'AUTH_INVALID_HEADER_FORMAT',
+    });
   });
 
   it('should deny access with wrong scheme', async () => {
@@ -76,6 +88,10 @@ describe('AuthGuard', () => {
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow('Invalid authorization header format');
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
+      status: 400,
+      code: 'AUTH_INVALID_HEADER_FORMAT',
+    });
   });
 
   it('should use custom header name', async () => {
@@ -113,6 +129,21 @@ describe('AuthGuard', () => {
 
     expect(result).toBe(true);
     expect(mockVerifier).toHaveBeenCalledWith('my-token');
+  });
+
+  it('should read authorization from Headers object', async () => {
+    const request = new Request('https://example.com/protected', {
+      headers: new Headers({ authorization: 'Bearer headers-token' }),
+    }) as unknown as { headers: Headers; user?: unknown };
+
+    (mockVerifier as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'headers-user' });
+    mockContext.getRequest = vi.fn().mockReturnValue(request);
+
+    const result = await guard.canActivate(mockContext);
+
+    expect(result).toBe(true);
+    expect(mockVerifier).toHaveBeenCalledWith('headers-token');
+    expect(request.user).toEqual({ id: 'headers-user' });
   });
 
   it('should not set user if verifier returns falsy value', async () => {

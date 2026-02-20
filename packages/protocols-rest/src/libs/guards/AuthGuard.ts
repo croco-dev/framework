@@ -10,6 +10,38 @@ export type AuthGuardOptions = {
   scheme?: string;
 };
 
+class AuthGuardProblem extends Error {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(status: number, code: string, detail: string) {
+    super(detail);
+    this.status = status;
+    this.code = code;
+    this.name = 'AuthGuardProblem';
+
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  toJSON(): Record<string, unknown> {
+    return {
+      type: 'about:blank',
+      title: this.status === 400 ? 'Bad Request' : 'Unauthorized',
+      status: this.status,
+      code: this.code,
+      detail: this.message,
+    };
+  }
+}
+
+function unauthorized(code: string, detail: string): AuthGuardProblem {
+  return new AuthGuardProblem(401, code, detail);
+}
+
+function badRequest(code: string, detail: string): AuthGuardProblem {
+  return new AuthGuardProblem(400, code, detail);
+}
+
 export class AuthGuard implements Guard<ExecutionContext> {
   private readonly verifier: TokenVerifier;
   private readonly headerName: string;
@@ -23,15 +55,15 @@ export class AuthGuard implements Guard<ExecutionContext> {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.getRequest() as unknown as HttpRequestLike & { user?: unknown };
-    const authHeader = request.headers[this.headerName];
+    const authHeader = this.getHeaderValue(request.headers, this.headerName);
 
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      throw unauthorized('AUTH_MISSING_HEADER', 'Missing authorization header');
     }
 
     const token = this.extractToken(authHeader);
     if (!token) {
-      throw new Error('Invalid authorization header format');
+      throw badRequest('AUTH_INVALID_HEADER_FORMAT', 'Invalid authorization header format');
     }
 
     try {
@@ -43,7 +75,7 @@ export class AuthGuard implements Guard<ExecutionContext> {
 
       return true;
     } catch {
-      throw new Error('Invalid or expired token');
+      throw unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired token');
     }
   }
 
@@ -58,6 +90,37 @@ export class AuthGuard implements Guard<ExecutionContext> {
       return null;
     }
 
+    if (!token) {
+      return null;
+    }
+
     return token;
+  }
+
+  private getHeaderValue(headers: unknown, headerName: string): string | undefined {
+    if (headers instanceof Headers) {
+      return headers.get(headerName) ?? undefined;
+    }
+
+    if (typeof headers !== 'object' || headers === null) {
+      return undefined;
+    }
+
+    const headerRecord = headers as Record<string, unknown>;
+    const direct = headerRecord[headerName];
+
+    if (typeof direct === 'string') {
+      return direct;
+    }
+
+    const normalizedHeaderName = headerName.toLowerCase();
+
+    for (const [key, value] of Object.entries(headerRecord)) {
+      if (key.toLowerCase() === normalizedHeaderName && typeof value === 'string') {
+        return value;
+      }
+    }
+
+    return undefined;
   }
 }
