@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { Context } from '@croco/framework-context';
 import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { ExecutionContext, Guard } from '@croco/protocols-rest';
 import type { AccessEngine } from '../AccessEngine';
@@ -29,12 +30,18 @@ export class AccessGuard implements Guard<ExecutionContext> {
       return true;
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: ExecutionContext Request type does not have user/tenantId/params properties
-    const request = context.getRequest() as any;
-    const user = request.user;
-    const tenantId = request.tenantId;
+    const request = context.getRequest() as RequestWithAccessData;
+    const user = this.resolveUser(request);
+    if (!user) {
+      throw new BadRequestProblem('Authenticated user missing');
+    }
 
-    const objectId = request.params?.id || request.params?.[`${metadata.objectType}Id`];
+    const tenantId = this.resolveTenantId(context, request);
+    if (!tenantId) {
+      throw new BadRequestProblem('Tenant ID missing');
+    }
+
+    const objectId = this.resolveObjectId(context, request, metadata.objectType);
 
     if (!objectId) {
       throw new BadRequestProblem('Object ID missing');
@@ -55,4 +62,84 @@ export class AccessGuard implements Guard<ExecutionContext> {
 
     return true;
   }
+
+  private resolveUser(request: RequestWithAccessData): { id: string } | null {
+    const user = request.user;
+
+    if (typeof user !== 'object' || user === null) {
+      return null;
+    }
+
+    const userRecord = user as Record<string, unknown>;
+    return typeof userRecord.id === 'string' ? ({ id: userRecord.id } as { id: string }) : null;
+  }
+
+  private resolveTenantId(context: ExecutionContext, request: RequestWithAccessData): string | null {
+    if (typeof request.tenantId === 'string' && request.tenantId.length > 0) {
+      return request.tenantId;
+    }
+
+    const httpContext = this.getHttpContext(context);
+    if (httpContext) {
+      const contextTenantId = httpContext.get<string>('tenantId');
+      if (typeof contextTenantId === 'string' && contextTenantId.length > 0) {
+        return contextTenantId;
+      }
+    }
+
+    const currentTenantId = Context.getTenantId();
+    if (typeof currentTenantId === 'string' && currentTenantId.length > 0) {
+      return currentTenantId;
+    }
+
+    return null;
+  }
+
+  private resolveObjectId(
+    context: ExecutionContext,
+    request: RequestWithAccessData,
+    objectType: string
+  ): string | undefined {
+    const params = request.params ?? this.getHttpContext(context)?.req.params;
+
+    const objectTypeIdKey = `${objectType}Id`;
+    const byParams = params?.id ?? params?.[objectTypeIdKey];
+    if (typeof byParams === 'string' && byParams.length > 0) {
+      return byParams;
+    }
+
+    const httpContext = this.getHttpContext(context);
+    if (!httpContext) {
+      return undefined;
+    }
+
+    return httpContext.param('id') ?? httpContext.param(objectTypeIdKey);
+  }
+
+  private getHttpContext(context: ExecutionContext): CrocoHttpContextLike | null {
+    const contextWithHttp = context as ExecutionContextWithHttp;
+    if (typeof contextWithHttp.getHttpContext !== 'function') {
+      return null;
+    }
+
+    return contextWithHttp.getHttpContext();
+  }
 }
+
+type RequestWithAccessData = Request & {
+  user?: unknown;
+  tenantId?: string;
+  params?: Record<string, string>;
+};
+
+type CrocoHttpContextLike = {
+  req: {
+    params: Record<string, string>;
+  };
+  param(name: string): string | undefined;
+  get<T>(key: string): T | undefined;
+};
+
+type ExecutionContextWithHttp = ExecutionContext & {
+  getHttpContext?: () => CrocoHttpContextLike;
+};

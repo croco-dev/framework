@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import type { ExecutionContext, Guard } from '@croco/protocols-rest';
 import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
+import { getHeaderValue } from './headerUtils';
 
 export class ApiKeyGuard implements Guard<ExecutionContext> {
   constructor(private readonly apiKeyProvider: ApiKeyProvider) {}
@@ -28,7 +29,6 @@ export class ApiKeyGuard implements Guard<ExecutionContext> {
   }
 
   private extractApiKey(request: Request): string | null {
-    const headers = (request as unknown as Record<string, unknown>).headers as Record<string, string>;
-    return headers['x-api-key'] ?? headers['X-API-Key'] ?? null;
+    return getHeaderValue(request, 'x-api-key');
   }
 }

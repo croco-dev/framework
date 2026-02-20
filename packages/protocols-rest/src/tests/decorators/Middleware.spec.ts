@@ -4,22 +4,38 @@ import { REST_FILTERS_KEY, REST_GUARDS_KEY, REST_INTERCEPTORS_KEY, REST_PIPES_KE
 import { Controller } from '../../libs/decorators/Controller';
 import { Get, Post } from '../../libs/decorators/HttpMethod';
 import { UseFilters, UseGuards, UseInterceptors, UsePipes } from '../../libs/decorators/Lifecycle';
+import type { CallHandler } from '../../libs/interfaces/CallHandler';
+import type { ArgumentMetadata } from '../../libs/interfaces/PipeTransform';
 
-class MockGuard {}
-class MockPipe {}
-class MockInterceptor {}
-class MockFilter {}
+class MockGuard {
+  canActivate(): boolean {
+    return true;
+  }
+}
 
-const MockGuardCtor = MockGuard as any;
-const MockPipeCtor = MockPipe as any;
-const MockInterceptorCtor = MockInterceptor as any;
-const MockFilterCtor = MockFilter as any;
+class MockPipe {
+  transform(value: unknown, _metadata: ArgumentMetadata): unknown {
+    return value;
+  }
+}
+
+class MockInterceptor {
+  async intercept(_context: unknown, next: CallHandler): Promise<unknown> {
+    return next.handle();
+  }
+}
+
+class MockFilter {
+  catch(_exception: unknown, _context: unknown): unknown {
+    return undefined;
+  }
+}
 
 describe('Middleware decorators', () => {
   describe('@UseGuards decorator', () => {
     it('should register guards at class level', () => {
       @Controller('/users')
-      @UseGuards(MockGuardCtor)
+      @UseGuards(MockGuard)
       class UserController {}
 
       const guards = Reflect.getMetadata(REST_GUARDS_KEY, UserController);
@@ -41,7 +57,7 @@ describe('Middleware decorators', () => {
       @Controller('/users')
       class UserController {
         @Get()
-        @UseGuards(MockGuardCtor)
+        @UseGuards(MockGuard)
         list() {}
       }
 
@@ -53,10 +69,10 @@ describe('Middleware decorators', () => {
 
     it('should register guards at both class and method level', () => {
       @Controller('/users')
-      @UseGuards(MockGuardCtor)
+      @UseGuards(MockGuard)
       class UserController {
         @Get()
-        @UseGuards(MockGuardCtor)
+        @UseGuards(MockGuard)
         list() {}
       }
 
@@ -71,7 +87,7 @@ describe('Middleware decorators', () => {
   describe('@UsePipes decorator', () => {
     it('should register pipes at class level', () => {
       @Controller('/users')
-      @UsePipes(MockPipeCtor)
+      @UsePipes(MockPipe)
       class UserController {}
 
       const pipes = Reflect.getMetadata(REST_PIPES_KEY, UserController);
@@ -93,7 +109,7 @@ describe('Middleware decorators', () => {
       @Controller('/users')
       class UserController {
         @Post()
-        @UsePipes(MockPipeCtor)
+        @UsePipes(MockPipe)
         create() {}
       }
 
@@ -105,10 +121,10 @@ describe('Middleware decorators', () => {
 
     it('should register pipes at both class and method level', () => {
       @Controller('/users')
-      @UsePipes(MockPipeCtor)
+      @UsePipes(MockPipe)
       class UserController {
         @Post()
-        @UsePipes(MockPipeCtor)
+        @UsePipes(MockPipe)
         create() {}
       }
 
@@ -123,7 +139,7 @@ describe('Middleware decorators', () => {
   describe('@UseInterceptors decorator', () => {
     it('should register interceptors at class level', () => {
       @Controller('/users')
-      @UseInterceptors(MockInterceptorCtor)
+      @UseInterceptors(MockInterceptor)
       class UserController {}
 
       const interceptors = Reflect.getMetadata(REST_INTERCEPTORS_KEY, UserController);
@@ -145,7 +161,7 @@ describe('Middleware decorators', () => {
       @Controller('/users')
       class UserController {
         @Get()
-        @UseInterceptors(MockInterceptorCtor)
+        @UseInterceptors(MockInterceptor)
         list() {}
       }
 
@@ -157,10 +173,10 @@ describe('Middleware decorators', () => {
 
     it('should register interceptors at both class and method level', () => {
       @Controller('/users')
-      @UseInterceptors(MockInterceptorCtor)
+      @UseInterceptors(MockInterceptor)
       class UserController {
         @Get()
-        @UseInterceptors(MockInterceptorCtor)
+        @UseInterceptors(MockInterceptor)
         list() {}
       }
 
@@ -175,7 +191,7 @@ describe('Middleware decorators', () => {
   describe('@UseFilters decorator', () => {
     it('should register filters at class level', () => {
       @Controller('/users')
-      @UseFilters(MockFilterCtor)
+      @UseFilters(MockFilter)
       class UserController {}
 
       const filters = Reflect.getMetadata(REST_FILTERS_KEY, UserController);
@@ -197,7 +213,7 @@ describe('Middleware decorators', () => {
       @Controller('/users')
       class UserController {
         @Get()
-        @UseFilters(MockFilterCtor)
+        @UseFilters(MockFilter)
         list() {}
       }
 
@@ -209,10 +225,10 @@ describe('Middleware decorators', () => {
 
     it('should register filters at both class and method level', () => {
       @Controller('/users')
-      @UseFilters(MockFilterCtor)
+      @UseFilters(MockFilter)
       class UserController {
         @Get()
-        @UseFilters(MockFilterCtor)
+        @UseFilters(MockFilter)
         list() {}
       }
 
@@ -227,10 +243,10 @@ describe('Middleware decorators', () => {
   describe('Combined middleware decorators', () => {
     it('should register all middleware types at class level', () => {
       @Controller('/users')
-      @UseGuards(MockGuardCtor)
-      @UsePipes(MockPipeCtor)
-      @UseInterceptors(MockInterceptorCtor)
-      @UseFilters(MockFilterCtor)
+      @UseGuards(MockGuard)
+      @UsePipes(MockPipe)
+      @UseInterceptors(MockInterceptor)
+      @UseFilters(MockFilter)
       class UserController {}
 
       const guards = Reflect.getMetadata(REST_GUARDS_KEY, UserController);
@@ -248,10 +264,10 @@ describe('Middleware decorators', () => {
       @Controller('/users')
       class UserController {
         @Get()
-        @UseGuards(MockGuardCtor)
-        @UsePipes(MockPipeCtor)
-        @UseInterceptors(MockInterceptorCtor)
-        @UseFilters(MockFilterCtor)
+        @UseGuards(MockGuard)
+        @UsePipes(MockPipe)
+        @UseInterceptors(MockInterceptor)
+        @UseFilters(MockFilter)
         list() {}
       }
 

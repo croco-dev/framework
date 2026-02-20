@@ -4,6 +4,7 @@ import { AUTH_PUBLIC_KEY } from '../constants';
 import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
 import type { AuthProvider } from '../interfaces/AuthProvider';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
+import { getHeaderValue } from './headerUtils';
 
 export class UnifiedAuthGuard implements Guard<ExecutionContext> {
   constructor(
@@ -23,8 +24,7 @@ export class UnifiedAuthGuard implements Guard<ExecutionContext> {
     }
 
     const request = context.getRequest();
-    const headers = (request as unknown as Record<string, unknown>).headers as Record<string, string>;
-    const apiKeyHeader = headers['x-api-key'] ?? headers['X-API-Key'];
+    const apiKeyHeader = getHeaderValue(request, 'x-api-key');
 
     if (apiKeyHeader) {
       const principal = await this.apiKeyProvider.authenticate(request);

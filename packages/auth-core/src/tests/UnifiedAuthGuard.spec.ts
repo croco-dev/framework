@@ -46,6 +46,24 @@ describe('UnifiedAuthGuard', () => {
     } as unknown as ExecutionContext;
   };
 
+  const createRequestContext = (
+    target: unknown,
+    handlerName: string,
+    headersInit: HeadersInit = {}
+  ): ExecutionContext => {
+    const request = new Request('https://example.com/test', {
+      headers: new Headers(headersInit),
+    });
+
+    return {
+      getRequest: () => request,
+      getClass: () => target,
+      getHandler: () => handlerName,
+      getPath: () => '/test',
+      getMethod: () => 'GET',
+    } as unknown as ExecutionContext;
+  };
+
   beforeEach(() => {
     mockAuthProvider = {
       authenticate: vi.fn(),
@@ -106,6 +124,26 @@ describe('UnifiedAuthGuard', () => {
     expect(result).toBe(true);
     expect(request.principal).toBe(mockApiKeyPrincipal);
     expect(request.apiKey).toBe(mockApiKeyPrincipal);
+  });
+
+  it('should authenticate with API key when request uses Headers object', async () => {
+    class TestController {
+      protectedMethod() {}
+    }
+
+    const context = createRequestContext(TestController.prototype, 'protectedMethod', {
+      'x-api-key': 'pk_test_valid_key',
+    });
+    mockApiKeyProvider.authenticate.mockResolvedValue(mockApiKeyPrincipal);
+
+    const result = await guard.canActivate(context);
+    const request = context.getRequest() as unknown as Record<string, unknown>;
+
+    expect(result).toBe(true);
+    expect(request.principal).toBe(mockApiKeyPrincipal);
+    expect(request.apiKey).toBe(mockApiKeyPrincipal);
+    expect(mockApiKeyProvider.authenticate).toHaveBeenCalledWith(context.getRequest());
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
   });
 
   it('should throw UnauthorizedProblem when API key is invalid', async () => {

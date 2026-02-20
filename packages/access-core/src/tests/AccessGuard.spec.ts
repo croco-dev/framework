@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { Context } from '@croco/framework-context';
 import type { ExecutionContext } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccessEngine } from '../libs/AccessEngine';
@@ -32,6 +33,47 @@ describe('AccessGuard', () => {
       getHandler: () => handlerName,
       getPath: () => '/test',
       getMethod: () => 'GET',
+    } as unknown as ExecutionContext;
+  };
+
+  const createMockContextWithHttp = (
+    target: unknown,
+    handlerName: string,
+    options: {
+      user?: unknown;
+      tenantId?: string;
+      params?: Record<string, string>;
+      rawParams?: Record<string, string>;
+      ctxTenantId?: string;
+    } = {}
+  ): ExecutionContext => {
+    const request = {
+      headers: new Headers(),
+      user: options.user,
+      tenantId: options.tenantId,
+      params: options.params,
+    } as unknown as Request;
+
+    const httpContext = {
+      req: {
+        params: options.rawParams ?? {},
+      },
+      param: (name: string) => options.rawParams?.[name],
+      get: <T>(key: string) => {
+        if (key === 'tenantId') {
+          return options.ctxTenantId as T;
+        }
+        return undefined;
+      },
+    };
+
+    return {
+      getRequest: () => request,
+      getClass: () => target as never,
+      getHandler: () => handlerName,
+      getPath: () => '/test',
+      getMethod: () => 'GET',
+      getHttpContext: () => httpContext,
     } as unknown as ExecutionContext;
   };
 
@@ -164,5 +206,111 @@ describe('AccessGuard', () => {
     vi.spyOn(mockAccessEngine, 'check').mockRejectedValue(new Error('Database error'));
 
     await expect(accessGuard.canActivate(context)).rejects.toThrow();
+  });
+
+  it('should resolve objectId from http context params when request.params is missing', async () => {
+    class TestController {
+      @Access('document', 'viewer')
+      protectedMethod() {}
+    }
+
+    const context = createMockContextWithHttp(TestController, 'protectedMethod', {
+      user: mockUser,
+      tenantId: mockTenantId,
+      rawParams: { id: 'doc-from-http' },
+    });
+
+    vi.spyOn(mockAccessEngine, 'check').mockResolvedValue({ allowed: true });
+
+    const result = await accessGuard.canActivate(context);
+    expect(result).toBe(true);
+    expect(mockAccessEngine.check).toHaveBeenCalledWith({
+      tenantId: mockTenantId,
+      subject: `user:${mockUser.id}`,
+      relation: 'viewer',
+      object: 'document:doc-from-http',
+    });
+  });
+
+  it('should resolve tenantId from http context store when missing on request', async () => {
+    class TestController {
+      @Access('document', 'viewer')
+      protectedMethod() {}
+    }
+
+    const context = createMockContextWithHttp(TestController, 'protectedMethod', {
+      user: mockUser,
+      rawParams: { id: 'doc-ctx-tenant' },
+      ctxTenantId: 'tenant-from-context',
+    });
+
+    vi.spyOn(mockAccessEngine, 'check').mockResolvedValue({ allowed: true });
+
+    const result = await accessGuard.canActivate(context);
+    expect(result).toBe(true);
+    expect(mockAccessEngine.check).toHaveBeenCalledWith({
+      tenantId: 'tenant-from-context',
+      subject: `user:${mockUser.id}`,
+      relation: 'viewer',
+      object: 'document:doc-ctx-tenant',
+    });
+  });
+
+  it('should resolve tenantId from request context fallback when request and http context lack tenantId', async () => {
+    class TestController {
+      @Access('document', 'viewer')
+      protectedMethod() {}
+    }
+
+    const context = createMockContextWithHttp(TestController, 'protectedMethod', {
+      user: mockUser,
+      rawParams: { id: 'doc-context-fallback' },
+    });
+
+    vi.spyOn(mockAccessEngine, 'check').mockResolvedValue({ allowed: true });
+
+    await Context.run({ requestId: 'req-1', tenantId: 'tenant-from-request-context' }, async () => {
+      const result = await accessGuard.canActivate(context);
+      expect(result).toBe(true);
+    });
+
+    expect(mockAccessEngine.check).toHaveBeenCalledWith({
+      tenantId: 'tenant-from-request-context',
+      subject: `user:${mockUser.id}`,
+      relation: 'viewer',
+      object: 'document:doc-context-fallback',
+    });
+  });
+
+  it('should throw BadRequestProblem when tenantId cannot be resolved', async () => {
+    class TestController {
+      @Access('document', 'viewer')
+      protectedMethod() {}
+    }
+
+    const context = createMockContextWithHttp(TestController, 'protectedMethod', {
+      user: mockUser,
+      rawParams: { id: 'doc-1' },
+    });
+
+    await expect(accessGuard.canActivate(context)).rejects.toThrow(BadRequestProblem);
+    await expect(accessGuard.canActivate(context)).rejects.toThrow('Tenant ID missing');
+    expect(mockAccessEngine.check).not.toHaveBeenCalled();
+  });
+
+  it('should throw BadRequestProblem when authenticated user is missing', async () => {
+    class TestController {
+      @Access('document', 'viewer')
+      protectedMethod() {}
+    }
+
+    const context = createMockContextWithHttp(TestController, 'protectedMethod', {
+      tenantId: mockTenantId,
+      rawParams: { id: 'doc-1' },
+    });
+
+    await expect(accessGuard.canActivate(context)).rejects.toThrow(BadRequestProblem);
+    await expect(accessGuard.canActivate(context)).rejects.toThrow('Authenticated user missing');
+    expect(mockAccessEngine.check).not.toHaveBeenCalled();
   });
 });

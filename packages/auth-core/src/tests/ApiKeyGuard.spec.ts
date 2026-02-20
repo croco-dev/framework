@@ -31,6 +31,20 @@ describe('ApiKeyGuard', () => {
     } as unknown as ExecutionContext;
   };
 
+  const createRequestContext = (headersInit: HeadersInit): ExecutionContext => {
+    const request = new Request('https://example.com/test', {
+      headers: new Headers(headersInit),
+    });
+
+    return {
+      getRequest: () => request,
+      getClass: () => class TestController {} as never,
+      getHandler: () => 'testMethod',
+      getPath: () => '/test',
+      getMethod: () => 'GET',
+    } as unknown as ExecutionContext;
+  };
+
   beforeEach(() => {
     mockApiKeyProvider = {
       authenticate: vi.fn(),
@@ -53,6 +67,18 @@ describe('ApiKeyGuard', () => {
 
   it('should allow access with X-API-Key header (uppercase)', async () => {
     const context = createMockContext({ 'X-API-Key': 'pk_test_valid_key' });
+    mockApiKeyProvider.authenticate.mockResolvedValue(mockPrincipal);
+
+    const result = await guard.canActivate(context);
+    const request = context.getRequest() as unknown as Record<string, unknown>;
+
+    expect(result).toBe(true);
+    expect(request.principal).toBe(mockPrincipal);
+    expect(request.apiKey).toBe(mockPrincipal);
+  });
+
+  it('should allow access when request uses Headers object', async () => {
+    const context = createRequestContext({ 'x-api-key': 'pk_test_valid_key' });
     mockApiKeyProvider.authenticate.mockResolvedValue(mockPrincipal);
 
     const result = await guard.canActivate(context);
