@@ -1,5 +1,6 @@
 import { type AuditLogEntry, AuditLogRepository } from '@croco/audit-core';
 import { Component, Inject } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 import { desc, eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { auditLogs } from './schema';
@@ -26,6 +27,10 @@ export class PostgresAuditLogRepository extends AuditLogRepository {
         metadata: entry.metadata,
       })
       .returning();
+
+    if (!inserted) {
+      throw ProblemFactory.internalServerError('audit/insert-failed', 'Failed to persist audit log entry');
+    }
 
     return this.mapToEntry(inserted);
   }
