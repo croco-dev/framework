@@ -1,6 +1,11 @@
 import type { Constructor, ExecutionContext } from '@croco/protocols-rest';
 import type { CrocoHttpContext } from './types';
 
+type ContextRequest = Request & {
+  params?: Record<string, string>;
+  tenantId?: string;
+};
+
 export class HttpExecutionContext implements ExecutionContext {
   constructor(
     private readonly ctx: CrocoHttpContext,
@@ -9,8 +14,15 @@ export class HttpExecutionContext implements ExecutionContext {
   ) {}
 
   getRequest(): Request {
-    // Hono의 raw context에서 Request 추출
-    return this.ctx.raw.req.raw;
+    const request = this.ctx.raw.req.raw as ContextRequest;
+    request.params = this.ctx.req.params;
+
+    const contextTenantId = this.ctx.get<string>('tenantId');
+    if (typeof contextTenantId === 'string' && contextTenantId.length > 0) {
+      request.tenantId = contextTenantId;
+    }
+
+    return request;
   }
 
   getClass(): Constructor {

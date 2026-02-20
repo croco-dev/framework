@@ -12,6 +12,7 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
 
   constructor(readonly raw: HonoContext) {
     const url = new URL(raw.req.url);
+    const params = this.extractParams();
 
     const headers: Record<string, string> = {};
     raw.req.raw.headers.forEach((value, key) => {
@@ -22,7 +23,7 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
       method: raw.req.method,
       url: raw.req.url,
       path: url.pathname,
-      params: {},
+      params,
       query: Object.fromEntries(url.searchParams),
       headers,
     };
@@ -68,14 +69,32 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
   }
 
   text(body: string, status: number = 200): Response {
-    return this.raw.text(body, status as any);
+    return this.raw.text(body, status as Parameters<HonoContext['text']>[1]);
   }
 
   jsonResponse<T>(body: T, status: number = 200): Response {
-    return this.raw.json(body, status as any);
+    return this.raw.json(body, status as Parameters<HonoContext['json']>[1]);
   }
 
   redirect(url: string, status: number = 302): Response {
-    return this.raw.redirect(url, status as any);
+    return this.raw.redirect(url, status as Parameters<HonoContext['redirect']>[1]);
+  }
+
+  private extractParams(): Record<string, string> {
+    const paramValues = this.raw.req.param();
+
+    if (!paramValues || typeof paramValues !== 'object') {
+      return {};
+    }
+
+    const params: Record<string, string> = {};
+
+    for (const [key, value] of Object.entries(paramValues)) {
+      if (typeof value === 'string') {
+        params[key] = value;
+      }
+    }
+
+    return params;
   }
 }
