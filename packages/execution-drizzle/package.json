@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/execution-core": "workspace:*"
+    "@croco/execution-core": "workspace:*",
+    "ulid": "^3.0.2"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*",

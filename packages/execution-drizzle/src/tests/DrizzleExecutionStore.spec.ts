@@ -1,4 +1,4 @@
-import type { Execution, ExecutionStatus } from '@croco/execution-core';
+import { type Execution, ExecutionProblem, type ExecutionStatus } from '@croco/execution-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleExecutionStore } from '../libs/DrizzleExecutionStore';
 
@@ -135,6 +135,60 @@ describe('DrizzleExecutionStore', () => {
       expect(result.parentId).toBe('parent-execution-id');
       expect(result.metadata).toEqual({ source: 'api' });
     });
+
+    it('should return existing execution when idempotency key conflicts during insert', async () => {
+      const existing = createMockExecution({
+        id: 'existing-execution-id',
+        idempotencyKey: 'race-key-123',
+      });
+
+      vi.spyOn(store, 'findByIdempotencyKey').mockResolvedValueOnce(null).mockResolvedValueOnce(existing);
+
+      mockDb.insert = vi.fn(() => ({
+        values: vi.fn(() => ({
+          returning: vi.fn(() => {
+            throw {
+              code: '23505',
+              constraint: 'executions_idempotency_key_idx',
+              message: 'duplicate key value violates unique constraint',
+            };
+          }),
+        })),
+      }));
+
+      const result = await store.create({
+        type: 'task',
+        idempotencyKey: 'race-key-123',
+      });
+
+      expect(result).toEqual(existing);
+      expect(store.findByIdempotencyKey).toHaveBeenCalledTimes(2);
+      expect(store.findByIdempotencyKey).toHaveBeenNthCalledWith(1, 'race-key-123');
+      expect(store.findByIdempotencyKey).toHaveBeenNthCalledWith(2, 'race-key-123');
+    });
+
+    it('should throw conflict when duplicate key persists without existing record', async () => {
+      vi.spyOn(store, 'findByIdempotencyKey').mockResolvedValue(null);
+
+      mockDb.insert = vi.fn(() => ({
+        values: vi.fn(() => ({
+          returning: vi.fn(() => {
+            throw {
+              code: '23505',
+              constraint: 'executions_idempotency_key_idx',
+              message: 'duplicate key value violates unique constraint',
+            };
+          }),
+        })),
+      }));
+
+      await expect(
+        store.create({
+          type: 'task',
+          idempotencyKey: 'race-key-456',
+        })
+      ).rejects.toThrow("Execution with idempotency key 'race-key-456' already exists");
+    });
   });
 
   describe('findById', () => {
@@ -232,9 +286,7 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.update = updateMock;
 
-      await expect(store.update('non-existent-id', { status: 'completed' })).rejects.toThrow(
-        "Execution with id 'non-existent-id' not found"
-      );
+      await expect(store.update('non-existent-id', { status: 'completed' })).rejects.toThrow(ExecutionProblem);
     });
   });
 
@@ -281,19 +333,11 @@ describe('DrizzleExecutionStore', () => {
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
-            orderBy: vi.fn(() => {
-              const resultPromise = Promise.resolve(executions);
-              const queryObj = {
-                limit: vi.fn(() => {
-                  const withOffset = {
-                    offset: vi.fn(() => resultPromise),
-                  };
-                  (withOffset as any).then = resultPromise.then.bind(resultPromise);
-                  return withOffset;
-                }),
-              };
-              return queryObj;
-            }),
+            orderBy: vi.fn(() => ({
+              limit: vi.fn(() => ({
+                offset: vi.fn(() => Promise.resolve(executions)),
+              })),
+            })),
           })),
         })),
       }));
@@ -326,7 +370,7 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.delete = deleteMock;
 
-      await expect(store.delete('non-existent-id')).rejects.toThrow("Execution with id 'non-existent-id' not found");
+      await expect(store.delete('non-existent-id')).rejects.toThrow(ExecutionProblem);
     });
   });
 });

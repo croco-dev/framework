@@ -1,5 +1,12 @@
-import type { CreateExecutionParams, Execution, ExecutionStore, ListExecutionsOptions } from '@croco/execution-core';
+import {
+  type CreateExecutionParams,
+  type Execution,
+  ExecutionProblems,
+  type ExecutionStore,
+  type ListExecutionsOptions,
+} from '@croco/execution-core';
 import { and, asc, eq, isNull } from 'drizzle-orm';
+import { ulid } from 'ulid';
 import type { ExecutionRow, NewExecutionRow } from './schema';
 import { executions } from './schema';
 
@@ -37,7 +44,22 @@ export class DrizzleExecutionStore<TDb extends Record<string, unknown>> implemen
       progress: null,
     };
 
-    const result = (await this.dbOp.insert(executions).values(newExecution).returning()) as ExecutionRow[];
+    let result: ExecutionRow[];
+
+    try {
+      result = (await this.dbOp.insert(executions).values(newExecution).returning()) as ExecutionRow[];
+    } catch (error) {
+      if (params.idempotencyKey && this.isIdempotencyConstraintError(error)) {
+        const duplicated = await this.findByIdempotencyKey(params.idempotencyKey);
+        if (duplicated) {
+          return duplicated;
+        }
+
+        throw ExecutionProblems.conflict(`Execution with idempotency key '${params.idempotencyKey}' already exists`);
+      }
+
+      throw error;
+    }
 
     return this.mapToExecution(result[0]);
   }
@@ -80,7 +102,7 @@ export class DrizzleExecutionStore<TDb extends Record<string, unknown>> implemen
       .returning()) as ExecutionRow[];
 
     if (result.length === 0) {
-      throw new Error(`Execution with id '${id}' not found`);
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
 
     return this.mapToExecution(result[0]);
@@ -112,11 +134,9 @@ export class DrizzleExecutionStore<TDb extends Record<string, unknown>> implemen
       .orderBy(asc(executions.createdAt))
       .limit(options.limit ?? 100);
 
-    if (options.offset) {
-      query.offset(options.offset);
-    }
+    const queryWithOffset = options.offset !== undefined ? query.offset(options.offset) : query;
 
-    const result = (await query) as ExecutionRow[];
+    const result = (await queryWithOffset) as ExecutionRow[];
 
     return result.map((row: ExecutionRow) => this.mapToExecution(row));
   }
@@ -125,7 +145,7 @@ export class DrizzleExecutionStore<TDb extends Record<string, unknown>> implemen
     const result = (await this.dbOp.delete(executions).where(eq(executions.id, id)).returning()) as ExecutionRow[];
 
     if (result.length === 0) {
-      throw new Error(`Execution with id '${id}' not found`);
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
   }
 
@@ -153,6 +173,24 @@ export class DrizzleExecutionStore<TDb extends Record<string, unknown>> implemen
   }
 
   private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    return ulid();
+  }
+
+  private isIdempotencyConstraintError(error: unknown): boolean {
+    if (typeof error === 'object' && error !== null) {
+      const code = Reflect.get(error, 'code');
+      const constraint = Reflect.get(error, 'constraint');
+
+      if (code === '23505' && typeof constraint === 'string' && constraint.includes('idempotency_key')) {
+        return true;
+      }
+    }
+
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      return message.includes('idempotency') || message.includes('duplicate key');
+    }
+
+    return false;
   }
 }
