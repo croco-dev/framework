@@ -89,6 +89,25 @@ describe('createRateLimitMiddleware', () => {
     expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(expect.stringContaining('10.0.0.1'), policy);
   });
 
+  it('should fallback to cf-connecting-ip when x-forwarded-for is empty', async () => {
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
+      policy,
+      keySegments: ['ip'],
+    });
+    const ctx = createContext({
+      headers: {
+        'x-forwarded-for': '   ',
+        'cf-connecting-ip': '203.0.113.7',
+      },
+    });
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware(ctx, next);
+
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(expect.stringContaining('203.0.113.7'), policy);
+  });
+
   it('should store rate limit headers in context', async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,

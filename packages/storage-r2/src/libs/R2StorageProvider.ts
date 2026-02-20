@@ -5,6 +5,7 @@ import type { ConfigService } from '@croco/framework-config';
 import { Component } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from '@croco/storage-core';
+import { FileNotFoundProblem, InvalidKeyProblem, UploadFailedProblem } from '@croco/storage-core';
 import type { R2Options } from './types';
 
 /**
@@ -40,6 +41,8 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
+    this.validateKey(key);
+
     const { PutObjectCommand } = await import('@aws-sdk/client-s3');
 
     const command = new PutObjectCommand({
@@ -59,6 +62,8 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async get(key: string): Promise<Buffer> {
+    this.validateKey(key);
+
     const { GetObjectCommand } = await import('@aws-sdk/client-s3');
 
     const command = new GetObjectCommand({
@@ -87,6 +92,8 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async getStream(key: string): Promise<Readable> {
+    this.validateKey(key);
+
     const { GetObjectCommand } = await import('@aws-sdk/client-s3');
 
     const command = new GetObjectCommand({
@@ -108,6 +115,8 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
+    this.validateKey(key);
+
     const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
 
     const command = new DeleteObjectCommand({
@@ -123,6 +132,8 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async exists(key: string): Promise<boolean> {
+    this.validateKey(key);
+
     const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
 
     const command = new HeadObjectCommand({
@@ -142,13 +153,19 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   getPublicUrl(key: string): string {
+    this.validateKey(key);
+
     if (this.options.publicUrlBase) {
-      return `${this.options.publicUrlBase}/${key}`;
+      const normalizedBase = this.options.publicUrlBase.replace(/\/+$/, '');
+      return `${normalizedBase}/${key}`;
     }
+
     return `https://${this.options.bucket}.${this.options.accountId}.r2.dev/${key}`;
   }
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
+    this.validateKey(key);
+
     const { GetObjectCommand } = await import('@aws-sdk/client-s3');
 
     const command = new GetObjectCommand({
@@ -162,6 +179,8 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async getMetadata(key: string): Promise<ObjectMetadata> {
+    this.validateKey(key);
+
     const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
 
     const command = new HeadObjectCommand({
@@ -200,9 +219,9 @@ export class R2StorageProvider implements StorageProvider {
    */
   private throwNotFoundError(key: string, error: unknown): never {
     if (this.isNotFoundError(error)) {
-      const { FileNotFoundProblem } = require('@croco/storage-core');
       throw new FileNotFoundProblem(key);
     }
+
     throw error;
   }
 
@@ -210,8 +229,21 @@ export class R2StorageProvider implements StorageProvider {
    * 업로드 에러를 UploadFailedProblem으로 변환
    */
   private throwUploadError(key: string, error: unknown): never {
-    const { UploadFailedProblem } = require('@croco/storage-core');
     const message = error instanceof Error ? error.message : 'Unknown error';
     throw new UploadFailedProblem(key, message);
+  }
+
+  private validateKey(key: string): void {
+    if (!key || typeof key !== 'string') {
+      throw new InvalidKeyProblem(key, 'Key must be a non-empty string');
+    }
+
+    if (key.startsWith('/') || key.endsWith('/')) {
+      throw new InvalidKeyProblem(key, 'Key must not start or end with /');
+    }
+
+    if (key.includes('//')) {
+      throw new InvalidKeyProblem(key, 'Key must not contain //');
+    }
   }
 }

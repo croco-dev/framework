@@ -63,8 +63,11 @@ export class Worker {
 
     const results = await Promise.allSettled(
       event.Records.map(async (record) => {
+        let parsedJob: { job: string; data: TD } | null = null;
+
         try {
-          const { job, data } = JSON.parse(record.body) as { job: string; data: TD };
+          parsedJob = JSON.parse(record.body) as { job: string; data: TD };
+          const { job, data } = parsedJob;
 
           if (config.beforeJobExecution) {
             await config.beforeJobExecution(job, data);
@@ -79,13 +82,17 @@ export class Worker {
           }
         } catch (error) {
           console.error(`Error processing job:`, error);
-          if (config.onJobError) {
+
+          if (config.onJobError && parsedJob) {
+            const normalizedError = error instanceof Error ? error : new Error(String(error));
+
             try {
-              const { job, data } = JSON.parse(record.body) as { job: string; data: TD };
-              await config.onJobError(job, data, error as Error);
-              // eslint-disable-next-line no-empty
-            } catch {}
+              await config.onJobError(parsedJob.job, parsedJob.data, normalizedError);
+            } catch (onJobErrorFailure) {
+              console.error('onJobError hook failed:', onJobErrorFailure);
+            }
           }
+
           throw error;
         }
       })

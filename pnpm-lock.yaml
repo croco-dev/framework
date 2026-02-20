@@ -974,6 +974,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2

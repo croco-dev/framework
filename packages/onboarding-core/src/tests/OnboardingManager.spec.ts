@@ -4,6 +4,11 @@ import { Context } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OnboardingManager } from '../libs/OnboardingManager';
 import { InMemoryOnboardingStore } from '../libs/OnboardingStore';
+import {
+  OnboardingContextRequiredProblem,
+  OnboardingDefinitionNotFoundProblem,
+  OnboardingStepNotFoundProblem,
+} from '../libs/problems/OnboardingProblems';
 import type { OnboardingDefinition } from '../libs/types';
 
 describe('OnboardingManager', () => {
@@ -84,5 +89,21 @@ describe('OnboardingManager', () => {
       const status = await manager.getStatus('welcome-tour');
       expect(status.steps['step-1']).toBeUndefined(); // User B should not see User A's progress
     });
+  });
+
+  it('should throw OnboardingDefinitionNotFoundProblem when definition does not exist', async () => {
+    await Context.run({ requestId: 'req-6', user: { id: 'user-1' }, tenantId: 'tenant-1' }, async () => {
+      await expect(manager.completeStep('missing', 'step-1')).rejects.toThrow(OnboardingDefinitionNotFoundProblem);
+    });
+  });
+
+  it('should throw OnboardingStepNotFoundProblem when step does not exist', async () => {
+    await Context.run({ requestId: 'req-7', user: { id: 'user-1' }, tenantId: 'tenant-1' }, async () => {
+      await expect(manager.completeStep('welcome-tour', 'missing-step')).rejects.toThrow(OnboardingStepNotFoundProblem);
+    });
+  });
+
+  it('should throw OnboardingContextRequiredProblem when context is missing', async () => {
+    await expect(manager.completeStep('welcome-tour', 'step-1')).rejects.toThrow(OnboardingContextRequiredProblem);
   });
 });

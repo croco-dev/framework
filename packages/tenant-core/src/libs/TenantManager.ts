@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { TenantRequiredProblem } from './problems/TenantRequiredProblem';
 import type { TenantContext } from './types';
 
 /**
@@ -32,7 +33,7 @@ export class TenantManager {
   requireTenantId(): string {
     const tenantId = this.getTenantId();
     if (!tenantId) {
-      throw new Error('Tenant context is required but not found');
+      throw new TenantRequiredProblem('TenantManager.requireTenantId');
     }
     return tenantId;
   }

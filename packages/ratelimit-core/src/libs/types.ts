@@ -78,7 +78,12 @@ export function parseWindowMs(window: string): number {
   if (!match) {
     throw new Error(`Invalid window format: ${window}. Use format like '1m', '1h', '1d'`);
   }
+
   const value = parseInt(match[1], 10);
+  if (value <= 0) {
+    throw new Error(`Invalid window value: ${window}. Window must be greater than 0`);
+  }
+
   const unit = match[2];
   const multipliers: Record<string, number> = {
     s: 1000,

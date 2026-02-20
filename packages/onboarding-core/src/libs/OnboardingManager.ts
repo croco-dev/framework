@@ -1,6 +1,11 @@
 import type { AnalyticsManager } from '@croco/analytics-core';
 import { Component, Context } from '@croco/framework-context';
 import type { OnboardingStore } from './OnboardingStore';
+import {
+  OnboardingContextRequiredProblem,
+  OnboardingDefinitionNotFoundProblem,
+  OnboardingStepNotFoundProblem,
+} from './problems/OnboardingProblems';
 import type { OnboardingDefinition, OnboardingState } from './types';
 
 @Component()
@@ -29,12 +34,12 @@ export class OnboardingManager {
   async completeStep(onboardingId: string, stepId: string): Promise<void> {
     const definition = this.definitions.get(onboardingId);
     if (!definition) {
-      throw new Error(`Onboarding definition '${onboardingId}' not found`);
+      throw new OnboardingDefinitionNotFoundProblem(onboardingId);
     }
 
     const step = definition.steps.find((s) => s.id === stepId);
     if (!step) {
-      throw new Error(`Step '${stepId}' not found in onboarding '${onboardingId}'`);
+      throw new OnboardingStepNotFoundProblem(onboardingId, stepId);
     }
 
     const { tenantId, userId } = this.getContext();
@@ -85,7 +90,7 @@ export class OnboardingManager {
     const user = Context.getCurrentUser();
 
     if (!tenantId || !user?.id) {
-      throw new Error('Onboarding requires authenticated user context (tenantId & userId)');
+      throw new OnboardingContextRequiredProblem();
     }
 
     return { tenantId, userId: user.id };

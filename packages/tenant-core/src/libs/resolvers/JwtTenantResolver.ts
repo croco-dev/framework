@@ -41,13 +41,28 @@ export class JwtTenantResolver implements TenantResolver<JwtRequest> {
     headers: Record<string, string | string[] | undefined> | undefined,
     key: string
   ): string | undefined {
-    if (!headers) return undefined;
-    const value = headers[key] ?? headers[key.toLowerCase()];
-    return Array.isArray(value) ? value[0] : value;
+    if (!headers) {
+      return undefined;
+    }
+
+    const normalizedKey = key.toLowerCase();
+
+    for (const [headerName, headerValue] of Object.entries(headers)) {
+      if (headerName.toLowerCase() !== normalizedKey) {
+        continue;
+      }
+
+      const value = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+      if (typeof value === 'string' && value.length > 0) {
+        return value;
+      }
+    }
+
+    return undefined;
   }
 
   private extractBearerToken(authHeader: string): string | null {
-    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    const match = authHeader.match(/^Bearer\s+(\S+)$/i);
     return match ? match[1] : null;
   }
 
@@ -57,9 +72,16 @@ export class JwtTenantResolver implements TenantResolver<JwtRequest> {
       if (parts.length !== 3) {
         return null;
       }
+
       const payloadBase64 = parts[1];
-      const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf-8');
-      return JSON.parse(payloadJson) as JwtPayload;
+      const payloadJson = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
+      const parsedPayload = JSON.parse(payloadJson) as unknown;
+
+      if (typeof parsedPayload !== 'object' || parsedPayload === null) {
+        return null;
+      }
+
+      return parsedPayload as JwtPayload;
     } catch {
       return null;
     }

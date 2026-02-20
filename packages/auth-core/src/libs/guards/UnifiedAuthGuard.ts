@@ -6,6 +6,17 @@ import type { AuthProvider } from '../interfaces/AuthProvider';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
 import { getHeaderValue } from './headerUtils';
 
+function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
+  const classTarget = typeof controllerTarget === 'function' ? controllerTarget : controllerTarget.constructor;
+  const prototypeTarget = typeof controllerTarget === 'function' ? controllerTarget.prototype : controllerTarget;
+
+  return Boolean(
+    Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget, handler) ??
+      Reflect.getMetadata(AUTH_PUBLIC_KEY, prototypeTarget, handler) ??
+      Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget)
+  );
+}
+
 export class UnifiedAuthGuard implements Guard<ExecutionContext> {
   constructor(
     private readonly authProvider: AuthProvider,
@@ -16,8 +27,7 @@ export class UnifiedAuthGuard implements Guard<ExecutionContext> {
     const target = context.getClass();
     const handler = context.getHandler();
 
-    const isPublic =
-      Reflect.getMetadata(AUTH_PUBLIC_KEY, target, handler) || Reflect.getMetadata(AUTH_PUBLIC_KEY, target.constructor);
+    const isPublic = isPublicRoute(target, handler);
 
     if (isPublic) {
       return true;

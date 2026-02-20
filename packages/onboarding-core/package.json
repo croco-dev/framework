@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
-    "@croco/analytics-core": "workspace:*"
+    "@croco/analytics-core": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

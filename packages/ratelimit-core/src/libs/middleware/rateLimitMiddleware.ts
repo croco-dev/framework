@@ -95,6 +95,11 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
  * Creates a key context adapter from HTTP context.
  */
 function createKeyContext(ctx: HttpContext) {
+  const forwardedFor = ctx.req.headers['x-forwarded-for']?.split(',')[0]?.trim();
+  const realIp = ctx.req.headers['x-real-ip']?.trim();
+  const cfIp = ctx.req.headers['cf-connecting-ip']?.trim();
+  const clientIp = forwardedFor || realIp || cfIp || 'unknown';
+
   return {
     get<T>(key: string): T | undefined {
       // First check context store
@@ -105,9 +110,7 @@ function createKeyContext(ctx: HttpContext) {
       switch (key) {
         case 'ip':
         case 'clientIp':
-          return (ctx.req.headers['x-forwarded-for']?.split(',')[0]?.trim() ??
-            ctx.req.headers['x-real-ip'] ??
-            'unknown') as T;
+          return clientIp as T;
         case 'method':
           return ctx.req.method as T;
         case 'path':

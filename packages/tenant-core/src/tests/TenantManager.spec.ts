@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { TenantRequiredProblem } from '../libs/problems/TenantRequiredProblem';
 import { TenantManager } from '../libs/TenantManager';
 
 describe('TenantManager', () => {
@@ -60,6 +61,7 @@ describe('TenantManager', () => {
 
   describe('requireTenantId', () => {
     it('should throw when not in tenant context', () => {
+      expect(() => manager.requireTenantId()).toThrow(TenantRequiredProblem);
       expect(() => manager.requireTenantId()).toThrow('Tenant context is required');
     });
 

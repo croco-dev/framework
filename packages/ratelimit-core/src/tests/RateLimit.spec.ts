@@ -85,6 +85,21 @@ describe('@RateLimit decorator', () => {
     expect(meta1d.policy.windowMs).toBe(86400000);
   });
 
+  it('should throw when window value is zero', () => {
+    class TestController {
+      method() {}
+    }
+
+    const descriptor = Object.getOwnPropertyDescriptor(TestController.prototype, 'method');
+    if (!descriptor) {
+      throw new Error('descriptor not found');
+    }
+
+    expect(() => {
+      RateLimit({ window: '0m' })(TestController.prototype, 'method', descriptor);
+    }).toThrow('Window must be greater than 0');
+  });
+
   it('should auto-register RateLimitGuard', () => {
     class TestController {
       @RateLimit({ limit: 10, window: '1m' })
