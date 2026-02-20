@@ -72,4 +72,126 @@ describe('QStashTriggerHandler', () => {
     expect(getSpy).toHaveBeenCalledWith(Bug16Handler);
     expect(getSpy).not.toHaveBeenCalledWith('Bug16Handler');
   });
+
+  it('DI 해석 오류가 발생하면 500으로 반환해야 한다', async () => {
+    class ResolverFailureHandler {
+      async execute(): Promise<string> {
+        return 'handled';
+      }
+    }
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'execute',
+      target: ResolverFailureHandler.prototype,
+      options: {},
+    });
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const executionManager = {
+      create: vi.fn(),
+      start: vi.fn(),
+      complete: vi.fn(),
+      fail: vi.fn(),
+      cancel: vi.fn(),
+      retry: vi.fn(),
+      updateProgress: vi.fn(),
+      checkpoint: vi.fn(),
+      timeout: vi.fn(),
+    } as unknown as ExecutionManager;
+
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+      serviceResolver: () => {
+        throw new Error('DI resolution failed');
+      },
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: 'schedule-di-error',
+        className: 'ResolverFailureHandler',
+        methodName: 'execute',
+        cronExpression: '* * * * *',
+        timestamp: new Date().toISOString(),
+      }),
+      'valid-signature'
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.statusCode).toBe(500);
+    expect(result.body).toEqual({
+      error: 'Execution failed',
+      details: 'DI resolution failed',
+    });
+    expect(executionManager.create).not.toHaveBeenCalled();
+  });
+
+  it('Lambda 핸들러는 소문자 서명 헤더를 지원해야 한다', async () => {
+    class LowercaseHeaderHandler {
+      async execute(): Promise<string> {
+        return 'ok';
+      }
+    }
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'execute',
+      target: LowercaseHeaderHandler.prototype,
+      options: {},
+    });
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const executionManager = {
+      create: vi.fn().mockResolvedValue({ id: 'exec-lower-header' }),
+      start: vi.fn().mockResolvedValue({}),
+      complete: vi.fn().mockResolvedValue({}),
+      fail: vi.fn().mockResolvedValue({}),
+      cancel: vi.fn().mockResolvedValue({}),
+      retry: vi.fn().mockResolvedValue({}),
+      updateProgress: vi.fn().mockResolvedValue({}),
+      checkpoint: vi.fn().mockResolvedValue({}),
+      timeout: vi.fn().mockResolvedValue({}),
+    } as unknown as ExecutionManager;
+
+    const targetInstance = new LowercaseHeaderHandler();
+    const lambdaHandler = QStashTriggerHandler.createLambdaHandler({
+      receiver,
+      executionManager,
+      serviceResolver: () => targetInstance,
+    });
+
+    const response = await lambdaHandler({
+      body: JSON.stringify({
+        scheduleId: 'schedule-lower-header',
+        className: 'LowercaseHeaderHandler',
+        methodName: 'execute',
+        cronExpression: '* * * * *',
+        timestamp: new Date().toISOString(),
+      }),
+      headers: {
+        'upstash-signature': 'valid-signature',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+
+    const parsed = JSON.parse(response.body) as {
+      executionId: string;
+      result: string;
+    };
+
+    expect(parsed.executionId).toBe('exec-lower-header');
+    expect(parsed.result).toBe('ok');
+    expect(receiver.verify).toHaveBeenCalled();
+  });
 });

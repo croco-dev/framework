@@ -316,11 +316,7 @@ export class QStashTriggerHandler {
       return undefined;
     }
 
-    try {
-      return this.serviceResolver(targetClass);
-    } catch {
-      return undefined;
-    }
+    return this.serviceResolver(targetClass);
   }
 
   private resolveTargetClass(className: string): Constructor | undefined {
@@ -383,7 +379,7 @@ export class QStashTriggerHandler {
 
     return async (event) => {
       const body = event.body ?? '';
-      const signature = event.headers?.['Upstash-Signature'];
+      const signature = event.headers?.['Upstash-Signature'] ?? event.headers?.['upstash-signature'];
 
       const result = await handler.handle(body, signature);
 
