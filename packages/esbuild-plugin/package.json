@@ -9,7 +9,7 @@
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
     "lint": "biome check .",
     "test": "vitest run",
-    "typecheck": "npx tsc --noEmit"
+    "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*",

@@ -18,10 +18,10 @@
     }
   },
   "scripts": {
-    "build": "rollup -c rollup.config.mjs",
+    "build": "node ../../../node_modules/rollup/dist/bin/rollup -c rollup.config.mjs",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
     "lint": "biome check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "node ../../../node_modules/typescript/bin/tsc --noEmit"
   },
   "peerDependencies": {
     "next": "^15 || ^16"
