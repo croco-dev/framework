@@ -10,7 +10,7 @@ interface MetadataEntry {
 
 class MetadataStorageImpl {
   private static INSTANCE: MetadataStorageImpl;
-  private readonly storage: MetadataEntry[] = [];
+  private readonly storage = new Map<string, MetadataEntry>();
 
   static getInstance(): MetadataStorageImpl {
     if (!MetadataStorageImpl.INSTANCE) {
@@ -19,50 +19,51 @@ class MetadataStorageImpl {
     return MetadataStorageImpl.INSTANCE;
   }
 
-  define<T>(key: MetadataKey, target: MetadataTarget, value: T, propertyKey?: string | symbol): void {
-    const existing = this.storage.findIndex(
-      (entry) => entry.key === key && entry.target === target && entry.propertyKey === propertyKey
-    );
+  private makeKey(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): string {
+    const keyStr = typeof key === 'symbol' ? key.toString() : key;
+    const targetStr = typeof target === 'function' ? target.name : String(target);
+    const propStr = propertyKey ? String(propertyKey) : '';
+    return `${keyStr}::${targetStr}::${propStr}`;
+  }
 
-    if (existing !== -1) {
-      this.storage[existing].value = value;
-    } else {
-      this.storage.push({ key, target, propertyKey, value });
-    }
+  define<T>(key: MetadataKey, target: MetadataTarget, value: T, propertyKey?: string | symbol): void {
+    const compositeKey = this.makeKey(key, target, propertyKey);
+    this.storage.set(compositeKey, { key, target, propertyKey, value });
   }
 
   get<T>(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): T | undefined {
-    const entry = this.storage.find((e) => e.key === key && e.target === target && e.propertyKey === propertyKey);
-    return entry?.value as T | undefined;
+    const compositeKey = this.makeKey(key, target, propertyKey);
+    return this.storage.get(compositeKey)?.value as T | undefined;
   }
 
   getAll<T>(key: MetadataKey): Array<{ target: MetadataTarget; propertyKey?: string | symbol; value: T }> {
-    return this.storage
-      .filter((entry) => entry.key === key)
-      .map(({ target, propertyKey, value }) => ({ target, propertyKey, value: value as T }));
+    const entries: MetadataEntry[] = [];
+    for (const entry of this.storage.values()) {
+      if (entry.key === key) entries.push(entry);
+    }
+    return entries.map(({ target, propertyKey, value }) => ({ target, propertyKey, value: value as T }));
   }
 
   getAllForTarget<T>(key: MetadataKey, target: MetadataTarget): Array<{ propertyKey?: string | symbol; value: T }> {
-    return this.storage
-      .filter((entry) => entry.key === key && entry.target === target)
-      .map(({ propertyKey, value }) => ({ propertyKey, value: value as T }));
+    const entries: MetadataEntry[] = [];
+    for (const entry of this.storage.values()) {
+      if (entry.key === key && entry.target === target) entries.push(entry);
+    }
+    return entries.map(({ propertyKey, value }) => ({ propertyKey, value: value as T }));
   }
 
   has(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): boolean {
-    return this.storage.some((e) => e.key === key && e.target === target && e.propertyKey === propertyKey);
+    const compositeKey = this.makeKey(key, target, propertyKey);
+    return this.storage.has(compositeKey);
   }
 
   delete(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): boolean {
-    const index = this.storage.findIndex((e) => e.key === key && e.target === target && e.propertyKey === propertyKey);
-    if (index !== -1) {
-      this.storage.splice(index, 1);
-      return true;
-    }
-    return false;
+    const compositeKey = this.makeKey(key, target, propertyKey);
+    return this.storage.delete(compositeKey);
   }
 
   clear(): void {
-    this.storage.length = 0;
+    this.storage.clear();
   }
 }
 
