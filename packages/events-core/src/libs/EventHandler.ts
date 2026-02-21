@@ -7,10 +7,10 @@ export interface EventHandler<T extends DomainEvent = DomainEvent> {
 
 export type EventHandlerClass<T extends DomainEvent = DomainEvent> = new (...args: any) => EventHandler<T>;
 
-export function RegisterEventHandler(eventClass: new (...args: any) => DomainEvent) {
+export function RegisterEventHandler(eventClass: new (...args: any) => DomainEvent, options?: { eventName?: string }) {
   return <T extends EventHandlerClass>(f: T) => {
     EventBusConfig.getInstance().subscribe({
-      eventName: eventClass.name,
+      eventName: options?.eventName ?? eventClass.name,
       handlerClass: f,
     });
     return f;
