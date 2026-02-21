@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { ProblemFactory } from '@croco/problems-core';
 import { trace } from '@opentelemetry/api';
 import type { Constructor, LifecycleHooks, Middleware, RequestContext } from './types';
 
@@ -132,7 +133,10 @@ export class Context {
 
     const dispatch = async (i: number): Promise<void> => {
       if (i <= index) {
-        throw new Error('Middleware called next() multiple times');
+        throw ProblemFactory.internalServerError(
+          'context/middleware-multiple-next',
+          'Middleware called next() multiple times'
+        );
       }
       index = i;
 
@@ -148,7 +152,10 @@ export class Context {
     await dispatch(0);
 
     if (result === NO_RESULT) {
-      throw new Error('No result returned from function execution');
+      throw ProblemFactory.internalServerError(
+        'context/no-function-result',
+        'No result returned from function execution'
+      );
     }
 
     return result;

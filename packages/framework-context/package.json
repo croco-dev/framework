@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/problems-core": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "reflect-metadata": "0.2.2",
     "typedi": "0.10.0"
