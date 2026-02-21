@@ -79,9 +79,11 @@ export class RouteCompiler {
     const fullPath = this.joinPaths(controllerMeta.path, routeMeta.path);
 
     const handler = async (ctx: CrocoHttpContext): Promise<unknown> => {
-      const instance = options.container
-        ? options.container.get(controller)
-        : new (controller as new (...args: unknown[]) => unknown)();
+      const instance = (
+        options.container
+          ? options.container.get(controller)
+          : new (controller as new (...args: unknown[]) => unknown)()
+      ) as object;
 
       const execContext = new HttpExecutionContext(ctx, controller, routeMeta.methodName);
 
@@ -114,13 +116,12 @@ export class RouteCompiler {
 
       const controllerHandler = async (): Promise<unknown> => {
         const args = await this.paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
-        const method = (instance as Record<PropertyKey, unknown>)[routeMeta.methodName] as (
-          ...args: unknown[]
-        ) => unknown;
+        const method = (instance as Record<PropertyKey, unknown>)[routeMeta.methodName];
         if (typeof method !== 'function') {
-          throw new Error(`Method ${String(routeMeta.methodName)} not found on ${controller.name}`);
+          throw new Error(`Method ${String(routeMeta.methodName)} is not a function`);
         }
-        return method.apply(instance, args);
+        const typedMethod = method as (...args: unknown[]) => unknown;
+        return typedMethod.apply(instance, args);
       };
 
       return this.pipelineRunner.run(execContext, controllerHandler, {

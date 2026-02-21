@@ -54,8 +54,15 @@ export class AuthGuard implements Guard<ExecutionContext> {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.getRequest() as unknown as HttpRequestLike & { user?: unknown };
-    const authHeader = this.getHeaderValue(request.headers, this.headerName);
+    const request = context.getRequest();
+
+    // 타입 가드로 HttpRequestLike 최소 속성 검증
+    if (typeof request !== 'object' || request === null || !('method' in request) || !('headers' in request)) {
+      throw badRequest('AUTH_INVALID_REQUEST', 'Invalid request object');
+    }
+
+    const typedRequest = request as HttpRequestLike & { user?: unknown };
+    const authHeader = this.getHeaderValue(typedRequest.headers, this.headerName);
 
     if (!authHeader) {
       throw unauthorized('AUTH_MISSING_HEADER', 'Missing authorization header');
@@ -70,7 +77,7 @@ export class AuthGuard implements Guard<ExecutionContext> {
       const user = await this.verifier(token);
 
       if (user) {
-        request.user = user;
+        typedRequest.user = user;
       }
 
       return true;

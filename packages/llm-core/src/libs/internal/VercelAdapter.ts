@@ -1,3 +1,4 @@
+import type { EmbeddingModel, LanguageModelV1 } from 'ai';
 import { generateText, streamText } from 'ai';
 import type { LlmModel } from '../LlmModel';
 import type {
@@ -16,7 +17,7 @@ import type {
 
 export class VercelAdapter {
   static async generateText(model: LlmModel, params: GenerateParams): Promise<GenerateResult> {
-    const vercelModel = model as any;
+    const vercelModel = model as unknown as LanguageModelV1;
 
     const result = await generateText({
       model: vercelModel,
@@ -44,7 +45,7 @@ export class VercelAdapter {
   }
 
   static async *streamText(model: LlmModel, params: StreamParams): AsyncIterable<StreamChunk> {
-    const vercelModel = model as any;
+    const vercelModel = model as unknown as LanguageModelV1;
 
     const result = await streamText({
       model: vercelModel,
@@ -74,7 +75,7 @@ export class VercelAdapter {
 
   static async generateObject<T>(model: LlmModel, params: GenerateObjectParams<T>): Promise<T> {
     const { generateObject } = await import('ai');
-    const vercelModel = model as any;
+    const vercelModel = model as unknown as LanguageModelV1;
 
     const result = await generateObject<T>({
       model: vercelModel,
@@ -91,7 +92,7 @@ export class VercelAdapter {
 
   static async callTool(model: LlmModel, params: ToolCallParams): Promise<ToolCallResult> {
     const { generateText } = await import('ai');
-    const vercelModel = model as any;
+    const vercelModel = model as unknown as LanguageModelV1;
 
     const result = await generateText({
       model: vercelModel,
@@ -127,7 +128,7 @@ export class VercelAdapter {
 
   static async embed(model: LlmModel, params: EmbedParams): Promise<EmbedResult> {
     const { embed } = await import('ai');
-    const vercelModel = model as any;
+    const vercelModel = model as unknown as EmbeddingModel<string>;
 
     const result = await embed({
       model: vercelModel,
@@ -147,7 +148,7 @@ export class VercelAdapter {
 
   static async embedMany(model: LlmModel, params: EmbedManyParams): Promise<EmbedManyResult> {
     const { embedMany } = await import('ai');
-    const vercelModel = model as any;
+    const vercelModel = model as unknown as EmbeddingModel<string>;
 
     const result = await embedMany({
       model: vercelModel,

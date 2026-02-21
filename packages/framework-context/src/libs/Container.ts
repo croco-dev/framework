@@ -147,7 +147,7 @@ export class Container {
   }
 
   private static createTransientInstance<T>(token: Constructor<T>): T {
-    const paramTypes = Reflect.getMetadata('design:paramtypes', token) || [];
+    const paramTypes = (Reflect.getMetadata('design:paramtypes', token) as Constructor[] | undefined) ?? [];
     const dependencies = paramTypes.map((paramType: Constructor) => Container.get(paramType));
     return new token(...dependencies);
   }

@@ -37,9 +37,9 @@ export interface HttpContext {
 export interface HttpRequestLike {
   method: string;
   url: string;
-  headers: Record<string, string>;
-  params: Record<string, string>;
-  query: Record<string, string>;
+  headers: Headers | Record<string, string>;
+  params?: Record<string, string>;
+  query?: Record<string, string>;
 }
 
 export interface HttpResponseLike {
