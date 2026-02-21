@@ -1,11 +1,11 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { trace } from '@opentelemetry/api';
-import type { LifecycleHooks, Middleware, RequestContext } from './types';
+import type { Constructor, LifecycleHooks, Middleware, RequestContext } from './types';
 
 interface ContextData {
   context: RequestContext;
   createdAt: number;
-  scopedCache: Map<string, unknown>;
+  scopedCache: Map<Constructor, unknown>;
 }
 
 const contextStorage = new AsyncLocalStorage<ContextData>();
@@ -51,7 +51,7 @@ export class Context {
     return data?.createdAt ?? null;
   }
 
-  static getCache(): Map<string, unknown> | undefined {
+  static getCache(): Map<Constructor, unknown> | undefined {
     return Context.STORAGE.getStore()?.scopedCache;
   }
 

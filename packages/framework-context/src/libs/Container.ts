@@ -153,7 +153,7 @@ export class Container {
   }
 
   private static getRequestScoped<T>(token: Constructor<T>): T {
-    const cache = Context.getCache() as Map<Constructor, unknown> | undefined;
+    const cache = Context.getCache();
 
     if (!cache) {
       console.warn('[Container] getRequestScoped called outside Context.run(). Returning transient instance.');
