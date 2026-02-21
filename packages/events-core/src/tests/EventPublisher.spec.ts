@@ -173,16 +173,17 @@ describe('EventPublisher', () => {
         clear(): void {},
       } satisfies EventBus;
 
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       config.setEventBus(partialFailureEventBus);
 
       const events = [new TestEvent('first'), new TestEvent('second'), new TestEvent('third')];
+      const results = await publisher.publishMany(events);
 
-      await expect(publisher.publishMany(events)).resolves.toBeUndefined();
       expect(publishOrder).toEqual(['first', 'second', 'third']);
-      expect(errorSpy).toHaveBeenCalledWith('[EventPublisher] Failed to publish event: TestEvent', failure);
-
-      errorSpy.mockRestore();
+      expect(results).toHaveLength(3);
+      expect(results[0].success).toBe(true);
+      expect(results[1].success).toBe(false);
+      expect(results[1].error).toBe(failure);
+      expect(results[2].success).toBe(true);
     });
 
     it('should handle single event array', async () => {
