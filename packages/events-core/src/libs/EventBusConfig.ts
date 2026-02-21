@@ -11,7 +11,7 @@ export interface EventBusStartOptions {
 export class EventBusConfig {
   private static INSTANCE: EventBusConfig;
   private readonly subscriptions: Set<EventSubscription> = new Set();
-  private eventBus: EventBus;
+  private eventBus?: EventBus;
 
   private constructor() {}
 
@@ -24,6 +24,9 @@ export class EventBusConfig {
   }
 
   public getEventBus(): EventBus {
+    if (!this.eventBus) {
+      throw new Error('EventBus has not been set. Call setEventBus() first.');
+    }
     return this.eventBus;
   }
 

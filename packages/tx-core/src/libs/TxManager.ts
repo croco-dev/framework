@@ -105,12 +105,7 @@ export class TxManager<TClient, TOptions = unknown> {
       try {
         await hook();
       } catch (error) {
-        try {
-          const logger = Container.get(Logger);
-          logger.error('[TxManager] AfterCommit hook failed:', error as Error);
-        } catch {
-          console.error('[TxManager] AfterCommit hook failed:', error);
-        }
+        this.safeLog('error', 'AfterCommit hook failed:', { error });
       }
     }
   }
@@ -124,15 +119,24 @@ export class TxManager<TClient, TOptions = unknown> {
   }
 
   private warnSavepointNotSupported(): void {
+    this.safeLog('warn', 'Savepoint nesting requested but adapter does not support savepoint. Falling back to join.');
+  }
+
+  private safeLog(level: 'error' | 'warn', message: string, meta?: Record<string, unknown>): void {
+    const formattedMessage = `[TxManager] ${message}`;
     try {
       const logger = Container.get(Logger);
-      logger.warn(
-        '[TxManager] Savepoint nesting requested but adapter does not support savepoint. Falling back to join.'
-      );
+      if (meta) {
+        logger[level](formattedMessage, meta);
+      } else {
+        logger[level](formattedMessage);
+      }
     } catch {
-      console.warn(
-        '[TxManager] Savepoint nesting requested but adapter does not support savepoint. Falling back to join.'
-      );
+      if (meta) {
+        console[level](formattedMessage, meta);
+      } else {
+        console[level](formattedMessage);
+      }
     }
   }
 }
