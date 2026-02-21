@@ -57,7 +57,7 @@ export class AuthGuard implements Guard<ExecutionContext> {
     const request = context.getRequest();
 
     // 타입 가드로 HttpRequestLike 최소 속성 검증
-    if (typeof request !== 'object' || request === null || !('method' in request) || !('headers' in request)) {
+    if (typeof request !== 'object' || request === null || !('headers' in request)) {
       throw badRequest('AUTH_INVALID_REQUEST', 'Invalid request object');
     }
 
