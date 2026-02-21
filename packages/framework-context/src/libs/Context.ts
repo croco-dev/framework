@@ -6,7 +6,7 @@ import type { Constructor, LifecycleHooks, Middleware, RequestContext } from './
 interface ContextData {
   context: RequestContext;
   createdAt: number;
-  scopedCache: Map<Constructor, unknown>;
+  scopedCache: Map<string | Constructor, unknown>;
 }
 
 const contextStorage = new AsyncLocalStorage<ContextData>();
@@ -52,7 +52,7 @@ export class Context {
     return data?.createdAt ?? null;
   }
 
-  static getCache(): Map<Constructor, unknown> | undefined {
+  static getCache(): Map<string | Constructor, unknown> | undefined {
     return Context.STORAGE.getStore()?.scopedCache;
   }
 
