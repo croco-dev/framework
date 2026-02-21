@@ -11,6 +11,17 @@ interface MetadataEntry {
 class MetadataStorageImpl {
   private static INSTANCE: MetadataStorageImpl;
   private readonly storage = new Map<string, MetadataEntry>();
+  private targetIds = new WeakMap<object, number>();
+  private targetIdCounter = 0;
+
+  private getTargetId(target: object): number {
+    let id = this.targetIds.get(target);
+    if (id === undefined) {
+      id = ++this.targetIdCounter;
+      this.targetIds.set(target, id);
+    }
+    return id;
+  }
 
   static getInstance(): MetadataStorageImpl {
     if (!MetadataStorageImpl.INSTANCE) {
@@ -21,9 +32,9 @@ class MetadataStorageImpl {
 
   private makeKey(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): string {
     const keyStr = typeof key === 'symbol' ? key.toString() : key;
-    const targetStr = typeof target === 'function' ? target.name : String(target);
+    const targetId = String(this.getTargetId(target as object));
     const propStr = propertyKey ? String(propertyKey) : '';
-    return `${keyStr}::${targetStr}::${propStr}`;
+    return `${keyStr}::${targetId}::${propStr}`;
   }
 
   define<T>(key: MetadataKey, target: MetadataTarget, value: T, propertyKey?: string | symbol): void {
