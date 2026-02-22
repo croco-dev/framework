@@ -87,7 +87,7 @@ export const telemetryMiddleware =
 
       ctx.set('traceId', span.spanContext().traceId);
 
-      return context.with(trace.setSpan(context.active(), span), async () => {
+      return await context.with(trace.setSpan(context.active(), span), async () => {
         try {
           await next();
 
@@ -97,6 +97,7 @@ export const telemetryMiddleware =
           });
           span.setAttribute('http.status_code', status);
         } catch (error) {
+          ctx.res.status = 500;
           span.recordException(error as Error);
           span.setStatus({
             code: SpanStatusCode.ERROR,
@@ -107,7 +108,8 @@ export const telemetryMiddleware =
           span.end();
         }
       });
-    } catch {
+    } catch (error) {
+      console.warn('Telemetry middleware failed, proceeding without tracing', { error });
       await next();
     }
   };

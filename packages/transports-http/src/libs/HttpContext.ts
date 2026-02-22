@@ -69,14 +69,17 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
   }
 
   text(body: string, status: number = 200): Response {
+    this.res.status = status;
     return this.raw.text(body, status as Parameters<HonoContext['text']>[1]);
   }
 
   jsonResponse<T>(body: T, status: number = 200): Response {
+    this.res.status = status;
     return this.raw.json(body, status as Parameters<HonoContext['json']>[1]);
   }
 
   redirect(url: string, status: number = 302): Response {
+    this.res.status = status;
     return this.raw.redirect(url, status as Parameters<HonoContext['redirect']>[1]);
   }
 

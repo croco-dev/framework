@@ -145,6 +145,7 @@ export class CrocoApp {
           }
 
           if (result === undefined || result === null) {
+            ctx.res.status = 204;
             return ctx.text('', 204);
           }
 
