@@ -5,11 +5,10 @@ import { Hono, type Context as HonoContext } from 'hono';
 import { ErrorHandler } from './ErrorHandler';
 import { HealthCheckRegistry } from './HealthCheckRegistry';
 import { HttpContext } from './HttpContext';
-import { telemetryMiddleware, parseTraceParent, type TraceParent } from './middleware/telemetry';
+import { parseTraceParent, type TraceParent, telemetryMiddleware } from './middleware/telemetry';
 
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
 import type { AppConfig, CompiledRoute, LambdaContext, LambdaEvent, LambdaHandler, MiddlewareFunction } from './types';
-
 
 function isBinaryContentType(contentType: string): boolean {
   const mimeType = contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';

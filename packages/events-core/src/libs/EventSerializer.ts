@@ -1,4 +1,5 @@
 import type { DomainEvent } from './DomainEvent';
+import { getEventFields } from './decorators/EventField';
 import { globalEventRegistry } from './EventRegistry';
 
 /**
@@ -59,19 +60,39 @@ export class DefaultEventSerializer implements EventSerializer {
   }
 
   private extractPayload(event: DomainEvent): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-    const reservedKeys = new Set(['eventName', 'timestamp', 'metadata']);
+    const fields = getEventFields(event.constructor as new (...args: unknown[]) => unknown);
+    const obj = event as unknown as Record<string, unknown>;
 
-    for (const key in event) {
-      if (!reservedKeys.has(key)) {
-        result[key] = (event as unknown as Record<string, unknown>)[key];
+    if (fields) {
+      const result: Record<string, unknown> = {};
+      for (const { propertyKey, serializedKey } of fields) {
+        result[serializedKey] = obj[propertyKey];
       }
+      return result;
     }
 
+    const result: Record<string, unknown> = {};
+    const reservedKeys = new Set(['eventName', 'timestamp', 'metadata']);
+    for (const key in event) {
+      if (!reservedKeys.has(key)) {
+        result[key] = obj[key];
+      }
+    }
     return result;
   }
 
   private reconstructEvent<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, data: SerializedEvent): T {
+    const fields = getEventFields(EventClass as new (...args: unknown[]) => unknown);
+
+    if (fields) {
+      const instance = new EventClass() as T;
+      const obj = instance as unknown as Record<string, unknown>;
+      for (const { propertyKey, serializedKey } of fields) {
+        obj[propertyKey] = data.payload[serializedKey];
+      }
+      return instance;
+    }
+
     const constructorParameterNames = this.getConstructorParameterNames(EventClass);
     if (constructorParameterNames.length === 0) {
       return new EventClass(...Object.values(data.payload));

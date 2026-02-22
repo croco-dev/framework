@@ -1,4 +1,6 @@
 export { AggregateRoot } from './libs/AggregateRoot';
+export { EventField, getEventFields } from './libs/decorators/EventField';
+export type { EventFieldMeta } from './libs/decorators/EventField';
 export type { DomainEventMetadata } from './libs/DomainEvent';
 export { DomainEvent } from './libs/DomainEvent';
 export type { EventBus, EventSubscription } from './libs/EventBus';
