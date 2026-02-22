@@ -453,6 +453,9 @@ importers:
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -472,6 +475,16 @@ importers:
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+
+  packages/events-tx:
+    dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -571,6 +584,9 @@ importers:
 
   packages/framework-context:
     dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0

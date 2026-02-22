@@ -1,0 +1,56 @@
+import type { DomainEvent, EventBus } from '@croco/events-core';
+
+type TxPhase = 'active' | 'committed' | 'rolled-back';
+
+type TxSession = {
+  events: DomainEvent[];
+  phase: TxPhase;
+};
+
+export class TransactionalEventPublisher {
+  private readonly sessions = new Map<string, TxSession>();
+
+  constructor(private readonly eventBus: EventBus) {}
+
+  begin(txId: string): void {
+    if (this.sessions.has(txId)) {
+      throw new Error(`Transaction '${txId}' already started`);
+    }
+    this.sessions.set(txId, { events: [], phase: 'active' });
+  }
+
+  stage(txId: string, event: DomainEvent): void {
+    const session = this.requireActive(txId);
+    session.events.push(event);
+  }
+
+  async commit(txId: string): Promise<void> {
+    const session = this.requireActive(txId);
+    session.phase = 'committed';
+
+    const events = session.events.splice(0);
+    this.sessions.delete(txId);
+
+    for (const event of events) {
+      await this.eventBus.publish(event);
+    }
+  }
+
+  rollback(txId: string): void {
+    const session = this.sessions.get(txId);
+    if (!session) return;
+    session.phase = 'rolled-back';
+    this.sessions.delete(txId);
+  }
+
+  private requireActive(txId: string): TxSession {
+    const session = this.sessions.get(txId);
+    if (!session) {
+      throw new Error(`Transaction '${txId}' not found`);
+    }
+    if (session.phase !== 'active') {
+      throw new Error(`Transaction '${txId}' is already ${session.phase}`);
+    }
+    return session;
+  }
+}

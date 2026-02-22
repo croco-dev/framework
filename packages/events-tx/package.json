@@ -1,5 +1,5 @@
 {
-  "name": "@croco/events-core",
+  "name": "@croco/events-tx",
   "version": "0.1.0",
   "type": "commonjs",
   "main": "./src/index.ts",
@@ -15,8 +15,7 @@
     "@croco/utils-tsconfig": "workspace:*"
   },
   "dependencies": {
-    "@croco/telemetry-api": "workspace:*",
-    "reflect-metadata": "^0.2.2"
+    "@croco/events-core": "workspace:*"
   },
   "publishConfig": {
     "access": "public",
