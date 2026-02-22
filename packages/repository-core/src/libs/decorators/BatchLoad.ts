@@ -26,28 +26,20 @@ export function BatchLoad(options: BatchLoadOptions): MethodDecorator {
       const batchFn = async (keys: readonly any[]) => {
         // 1. Try to use findByIds if it exists (Optimization)
         if (typeof this.findByIds === 'function') {
-          try {
-            // Assume findByIds returns T[]
-            const results = await this.findByIds(keys as any[]);
+          // Assume findByIds returns T[]
+          const results = await this.findByIds(keys as any[]);
 
-            // Map results by the 'by' key to ensure order matches 'keys'
-            // We cast results to any[] to access the 'by' property dynamically
-            const resultMap = new Map();
-            for (const item of results) {
-              if (item && typeof item === 'object' && options.by in item) {
-                resultMap.set(item[options.by], item);
-              }
+          // Map results by the 'by' key to ensure order matches 'keys'
+          // We cast results to any[] to access the 'by' property dynamically
+          const resultMap = new Map();
+          for (const item of results) {
+            if (item && typeof item === 'object' && options.by in item) {
+              resultMap.set(item[options.by], item);
             }
-
-            // Return results in the same order as keys
-            return keys.map((key) => resultMap.get(key) || null);
-          } catch (error) {
-            // If findByIds fails, we propagate the error.
-            // In a batch context, this fails the entire batch.
-            // Alternatively, we could fallback to individual calls,
-            // but if findByIds exists, it's expected to work.
-            throw error;
           }
+
+          // Return results in the same order as keys
+          return keys.map((key) => resultMap.get(key) || null);
         }
 
         // 2. Fallback: Call original method for each key in parallel

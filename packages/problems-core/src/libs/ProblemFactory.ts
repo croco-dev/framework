@@ -1,11 +1,7 @@
 import { Problem, type ProblemOptions } from './Problem';
 import { ProblemCategory } from './ProblemCategory';
 
-class GenericProblem extends Problem {
-  constructor(code: string, category: ProblemCategory, detail?: string, options?: ProblemOptions) {
-    super(code, category, detail, options);
-  }
-}
+class GenericProblem extends Problem {}
 
 export const ProblemFactory = {
   badRequest(code: string, detail?: string, options?: ProblemOptions): Problem {

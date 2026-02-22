@@ -5,7 +5,7 @@ import type { CrocoHttpContext } from '../libs/types';
 function createMockContext(method: string, origin?: string): CrocoHttpContext {
   const headers: Record<string, string> = {};
   if (origin) {
-    headers['origin'] = origin;
+    headers.origin = origin;
   }
 
   const resHeaders: Record<string, string> = {};

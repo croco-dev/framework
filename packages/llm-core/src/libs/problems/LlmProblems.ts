@@ -1,10 +1,6 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
-export class LlmProblem extends Problem {
-  constructor(code: string, category: ProblemCategory, detail?: string) {
-    super(code, category, detail);
-  }
-}
+export class LlmProblem extends Problem {}
 
 export class LlmProviderNotFoundProblem extends Problem {
   static readonly CODE = 'LLM_PROVIDER_NOT_FOUND';

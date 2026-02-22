@@ -170,7 +170,8 @@ describe('CrocoApp', () => {
 
     const traceId = '4bf92f3577b34da6a3ce929d0e0e4736';
     const spanId = '00f067aa0ba902b7';
-    const traceFlags = '01';
+    const traceFlagsHex = '01';
+    const expectedTraceFlags = 1; // Number.parseInt('01', 16)
 
     const response = await handler(
       {
@@ -178,7 +179,7 @@ describe('CrocoApp', () => {
         rawPath: '/lambda/trace-context',
         rawQueryString: '',
         headers: {
-          traceparent: `00-${traceId}-${spanId}-${traceFlags}`,
+          traceparent: `00-${traceId}-${spanId}-${traceFlagsHex}`,
         },
       },
       lambdaContext
@@ -188,7 +189,7 @@ describe('CrocoApp', () => {
     expect(JSON.parse(response.body ?? '{}')).toEqual({
       traceId,
       spanId,
-      traceFlags,
+      traceFlags: expectedTraceFlags,
     });
   });
 });

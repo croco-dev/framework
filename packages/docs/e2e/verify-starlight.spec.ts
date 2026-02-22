@@ -1,5 +1,5 @@
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import path from 'path';
 
 test('verify starlight page', async ({ page }) => {
   await page.goto('http://localhost:4321');

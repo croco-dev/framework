@@ -1,5 +1,5 @@
-import { DomainEvent } from '@croco/events-core';
 import type { EventBus } from '@croco/events-core';
+import { DomainEvent } from '@croco/events-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TransactionalEventPublisher } from '../TransactionalEventPublisher';
 
@@ -16,7 +16,9 @@ describe('TransactionalEventPublisher', () => {
   beforeEach(() => {
     publishedEvents = [];
     const eventBus: EventBus = {
-      publish: async (event: DomainEvent) => { publishedEvents.push(event); },
+      publish: async (event: DomainEvent) => {
+        publishedEvents.push(event);
+      },
       subscribe: vi.fn(),
       unsubscribe: vi.fn(),
       clear: vi.fn(),
