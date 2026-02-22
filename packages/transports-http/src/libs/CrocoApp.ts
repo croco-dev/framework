@@ -5,46 +5,11 @@ import { Hono, type Context as HonoContext } from 'hono';
 import { ErrorHandler } from './ErrorHandler';
 import { HealthCheckRegistry } from './HealthCheckRegistry';
 import { HttpContext } from './HttpContext';
-import { telemetryMiddleware } from './middleware/telemetry';
+import { telemetryMiddleware, parseTraceParent, type TraceParent } from './middleware/telemetry';
 
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
 import type { AppConfig, CompiledRoute, LambdaContext, LambdaEvent, LambdaHandler, MiddlewareFunction } from './types';
 
-type TraceContextHeader = {
-  traceId: string;
-  spanId: string;
-  traceFlags: string;
-};
-
-function parseTraceIdFromHeader(traceparent: string | null | undefined): TraceContextHeader | null {
-  if (!traceparent) {
-    return null;
-  }
-
-  const parts = traceparent.trim().split('-');
-  if (parts.length !== 4) {
-    return null;
-  }
-
-  const [version, traceId, spanId, traceFlags] = parts;
-  const isValidTraceparent =
-    /^[\da-f]{2}$/i.test(version) &&
-    /^[\da-f]{32}$/i.test(traceId) &&
-    !/^0{32}$/i.test(traceId) &&
-    /^[\da-f]{16}$/i.test(spanId) &&
-    !/^0{16}$/i.test(spanId) &&
-    /^[\da-f]{2}$/i.test(traceFlags);
-
-  if (!isValidTraceparent) {
-    return null;
-  }
-
-  return {
-    traceId,
-    spanId,
-    traceFlags,
-  };
-}
 
 function isBinaryContentType(contentType: string): boolean {
   const mimeType = contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';
@@ -118,19 +83,20 @@ export class CrocoApp {
   private registerRoute(route: CompiledRoute): void {
     const method = route.method.toLowerCase();
 
+    // Create telemetry middleware once at route registration (not per-request)
+    const telemetry = telemetryMiddleware(route.path);
+
     const honoHandler = async (c: HonoContext) => {
       const ctx = new HttpContext(c);
 
       const traceparent = ctx.header('traceparent');
-      const traceContext = parseTraceIdFromHeader(traceparent);
+      const traceContext: TraceParent | null = parseTraceParent(traceparent ?? null);
       const requestContext = {
         requestId: randomUUID(),
         traceId: traceContext?.traceId,
         spanId: traceContext?.spanId,
         traceFlags: traceContext?.traceFlags,
       };
-
-      const telemetry = telemetryMiddleware(route.path);
 
       const middlewares = [telemetry, ...(this.config.middlewares ?? [])];
 

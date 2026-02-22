@@ -78,6 +78,34 @@ export class RouteCompiler {
   ): CompiledRoute {
     const fullPath = this.joinPaths(controllerMeta.path, routeMeta.path);
 
+    // Instantiate guards/interceptors/filters once at compile time (not per-request)
+    const globalGuards = (options.globalGuards || []) as GuardProvider<Guard<ExecutionContext>>[];
+    const globalInterceptors = (options.globalInterceptors || []) as InterceptorProvider<
+      Interceptor<ExecutionContext>
+    >[];
+    const globalFilters = (options.globalFilters || []) as FilterProvider<
+      ExceptionFilter<unknown, HttpExecutionContext>
+    >[];
+
+    const routeGuards = getGuards(controller, routeMeta.methodName);
+    const routeInterceptors = getInterceptors(controller, routeMeta.methodName);
+    const routeFilters = getFilters(controller, routeMeta.methodName);
+
+    const guards = [
+      ...globalGuards.map((g) => instantiateProvider(g, options.container)),
+      ...routeGuards.map((g) => instantiateProvider(g, options.container)),
+    ] as Guard<ExecutionContext>[];
+
+    const interceptors = [
+      ...globalInterceptors.map((i) => instantiateProvider(i, options.container)),
+      ...routeInterceptors.map((i) => instantiateProvider(i, options.container)),
+    ] as Interceptor<ExecutionContext>[];
+
+    const filters = [
+      ...globalFilters.map((f) => instantiateProvider(f, options.container)),
+      ...routeFilters.map((f) => instantiateProvider(f, options.container)),
+    ] as ExceptionFilter<unknown, HttpExecutionContext>[];
+
     const handler = async (ctx: CrocoHttpContext): Promise<unknown> => {
       const instance = (
         options.container
@@ -86,33 +114,6 @@ export class RouteCompiler {
       ) as object;
 
       const execContext = new HttpExecutionContext(ctx, controller, routeMeta.methodName);
-
-      const globalGuards = (options.globalGuards || []) as GuardProvider<Guard<ExecutionContext>>[];
-      const globalInterceptors = (options.globalInterceptors || []) as InterceptorProvider<
-        Interceptor<ExecutionContext>
-      >[];
-      const globalFilters = (options.globalFilters || []) as FilterProvider<
-        ExceptionFilter<unknown, HttpExecutionContext>
-      >[];
-
-      const routeGuards = getGuards(controller, routeMeta.methodName);
-      const routeInterceptors = getInterceptors(controller, routeMeta.methodName);
-      const routeFilters = getFilters(controller, routeMeta.methodName);
-
-      const guards = [
-        ...globalGuards.map((g) => instantiateProvider(g, options.container)),
-        ...routeGuards.map((g) => instantiateProvider(g, options.container)),
-      ] as Guard<ExecutionContext>[];
-
-      const interceptors = [
-        ...globalInterceptors.map((i) => instantiateProvider(i, options.container)),
-        ...routeInterceptors.map((i) => instantiateProvider(i, options.container)),
-      ] as Interceptor<ExecutionContext>[];
-
-      const filters = [
-        ...globalFilters.map((f) => instantiateProvider(f, options.container)),
-        ...routeFilters.map((f) => instantiateProvider(f, options.container)),
-      ] as ExceptionFilter<unknown, HttpExecutionContext>[];
 
       const controllerHandler = async (): Promise<unknown> => {
         const args = await this.paramResolver.resolveParams(ctx, controller, routeMeta.methodName);

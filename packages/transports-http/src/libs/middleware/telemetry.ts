@@ -1,7 +1,7 @@
 import { context, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { MiddlewareFunction } from '../types';
 
-interface TraceParent {
+export interface TraceParent {
   traceId: string;
   spanId: string;
   traceFlags: number;
@@ -12,7 +12,7 @@ interface TraceParent {
  * Format: traceparent-{version}-{trace-id}-{parent-id}-{trace-flags}
  * Example: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
  */
-function parseTraceParent(header: string | null): TraceParent | null {
+export function parseTraceParent(header: string | null): TraceParent | null {
   if (!header) {
     return null;
   }

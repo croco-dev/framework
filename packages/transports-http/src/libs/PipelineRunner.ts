@@ -4,6 +4,23 @@ import type { CallHandler, ExceptionFilter, ExecutionContext, Guard, Interceptor
 import { ErrorHandler } from './ErrorHandler';
 import type { HttpExecutionContext } from './HttpExecutionContext';
 
+type FilterResponse = {
+  status: number;
+  headers: Record<string, string>;
+  body: Record<string, unknown>;
+};
+
+function isFilterResponse(value: unknown): value is FilterResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'status' in value &&
+    'headers' in value &&
+    'body' in value &&
+    typeof (value as FilterResponse).status === 'number'
+  );
+}
+
 export interface PipelineConfig {
   guards: Guard<ExecutionContext>[];
   interceptors: Interceptor<ExecutionContext>[];
@@ -69,7 +86,22 @@ export class PipelineRunner {
 
     for (const filter of filters) {
       try {
-        return filter.catch(nextError, context);
+        const result = filter.catch(nextError, context);
+        // If the filter returned a proper Response, use it directly.
+        // Otherwise convert the plain object { status, headers, body } into a Response.
+        if (result instanceof Response) {
+          return result;
+        }
+        if (isFilterResponse(result)) {
+          const httpCtx = context.getHttpContext();
+          const response = httpCtx.jsonResponse(result.body, result.status);
+          // Apply custom headers from the filter (e.g. Content-Type: application/problem+json)
+          for (const [key, value] of Object.entries(result.headers)) {
+            response.headers.set(key, value);
+          }
+          return response;
+        }
+        return result;
       } catch (caughtError) {
         nextError = caughtError;
       }

@@ -1,5 +1,23 @@
-import { type Constructor, getParamsMeta, type ParamMetadata, ParamType } from '@croco/protocols-rest';
+import { Container } from '@croco/framework-context';
+import {
+  type ArgumentMetadata,
+  type Constructor,
+  getParamsMeta,
+  type ParamMetadata,
+  ParamType,
+  type PipeTransform,
+  type PipeTransformConstructor,
+} from '@croco/protocols-rest';
 import type { CrocoHttpContext } from './types';
+
+const PARAM_TYPE_MAP: Record<ParamType, ArgumentMetadata['type']> = {
+  [ParamType.PARAM]: 'param',
+  [ParamType.QUERY]: 'query',
+  [ParamType.BODY]: 'body',
+  [ParamType.HEADER]: 'header',
+  [ParamType.CTX]: 'custom',
+  [ParamType.RAW]: 'custom',
+};
 
 export class ParamResolver {
   private static readonly PARSED_BODY_PROMISE_KEY = '@croco/transports-http:parsed-body-promise';
@@ -17,7 +35,8 @@ export class ParamResolver {
     const cachedBody = await this.resolveBody(ctx, sortedParams);
 
     for (const param of sortedParams) {
-      args[param.index] = await this.resolveParam(ctx, param, cachedBody);
+      const rawValue = await this.resolveParam(ctx, param, cachedBody);
+      args[param.index] = await this.runPipes(rawValue, param);
     }
 
     return args;
@@ -62,6 +81,33 @@ export class ParamResolver {
 
       default:
         return undefined;
+    }
+  }
+
+  private async runPipes(value: unknown, param: ParamMetadata): Promise<unknown> {
+    if (!param.pipes || param.pipes.length === 0) {
+      return value;
+    }
+
+    const metadata: ArgumentMetadata = {
+      type: PARAM_TYPE_MAP[param.type] ?? 'custom',
+      name: param.name,
+    };
+
+    let result = value;
+    for (const PipeClass of param.pipes) {
+      const pipe: PipeTransform = this.resolvePipe(PipeClass);
+      result = await pipe.transform(result, metadata);
+    }
+
+    return result;
+  }
+
+  private resolvePipe(PipeClass: PipeTransformConstructor): PipeTransform {
+    try {
+      return Container.get(PipeClass);
+    } catch {
+      return new PipeClass();
     }
   }
 }
