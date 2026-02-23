@@ -8,7 +8,7 @@ export {
   CircuitState,
   InMemoryCircuitBreakerStateStore,
 } from './libs/CircuitBreakerState';
-export { CircuitBreakerOpenException, RetryExhaustedException } from './libs/errors';
+export { CircuitBreakerOpenProblem, RetryExhaustedProblem } from './libs/errors';
 export type { LambdaContext, TimeoutGuardOptions } from './libs/LambdaTimeoutGuard';
 export {
   getLambdaContext,

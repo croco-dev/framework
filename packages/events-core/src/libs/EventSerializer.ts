@@ -2,6 +2,14 @@ import type { DomainEvent } from './DomainEvent';
 import { getEventFields } from './decorators/EventField';
 import { globalEventRegistry } from './EventRegistry';
 
+type EventFromPayload = (payload: Record<string, unknown>) => DomainEvent;
+
+type EventClassWithOptionalFromPayload<T extends DomainEvent = DomainEvent> = (new (
+  ...args: unknown[]
+) => T) & {
+  fromPayload?: EventFromPayload;
+};
+
 /**
  * 직렬화된 이벤트 데이터 구조
  */
@@ -48,7 +56,7 @@ export class DefaultEventSerializer implements EventSerializer {
   }
 
   private generateEventId(): string {
-    return `evt_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    return crypto.randomUUID();
   }
 
   private extractAggregateId(event: DomainEvent): string | undefined {
@@ -82,6 +90,11 @@ export class DefaultEventSerializer implements EventSerializer {
   }
 
   private reconstructEvent<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, data: SerializedEvent): T {
+    const eventClassWithFromPayload = EventClass as EventClassWithOptionalFromPayload<T>;
+    if (eventClassWithFromPayload.fromPayload) {
+      return eventClassWithFromPayload.fromPayload(data.payload) as T;
+    }
+
     const fields = getEventFields(EventClass as new (...args: unknown[]) => unknown);
 
     if (fields) {

@@ -6,6 +6,7 @@ import type { EventHandler, EventHandlerClass } from '../libs/EventHandler';
 import type { HandlerResolver } from '../libs/HandlerResolver';
 
 class TestEvent extends DomainEvent {
+  static eventName = 'TestEvent';
   constructor(public readonly data: string) {
     super();
   }

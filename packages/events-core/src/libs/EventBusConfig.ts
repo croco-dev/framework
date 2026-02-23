@@ -9,18 +9,21 @@ export interface EventBusStartOptions {
 }
 
 export class EventBusConfig {
-  private static INSTANCE: EventBusConfig;
+  private static instance?: EventBusConfig;
   private readonly subscriptions: Set<EventSubscription> = new Set();
   private eventBus?: EventBus;
 
-  private constructor() {}
+  constructor() {}
 
   public static getInstance(): EventBusConfig {
-    if (!EventBusConfig.INSTANCE) {
-      EventBusConfig.INSTANCE = new EventBusConfig();
+    if (!EventBusConfig.instance) {
+      EventBusConfig.instance = new EventBusConfig();
     }
+    return EventBusConfig.instance;
+  }
 
-    return EventBusConfig.INSTANCE;
+  public static setInstance(config: EventBusConfig): void {
+    EventBusConfig.instance = config;
   }
 
   public getEventBus(): EventBus {

@@ -2,6 +2,7 @@ import { DomainEvent } from '@croco/events-core';
 import type { LlmUsage } from '../types';
 
 export class LlmGeneratedEvent extends DomainEvent {
+  static eventName = 'llm.generated';
   readonly type = 'llm.generated';
 
   constructor(

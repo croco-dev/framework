@@ -11,4 +11,5 @@ export class MembershipCreatedEvent extends DomainEvent {
   constructor(public readonly data: MembershipCreatedEventData) {
     super();
   }
+  static eventName = 'membership.created';
 }

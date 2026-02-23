@@ -8,6 +8,7 @@ export type ToolCall = {
 
 export class LlmToolCalledEvent extends DomainEvent {
   readonly type = 'llm.tool_called';
+  static eventName = 'llm.tool_called';
 
   constructor(
     public readonly modelId: string,

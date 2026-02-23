@@ -1,6 +1,8 @@
 import { DomainEvent } from '@croco/events-core';
 
 export class UsageRecordedEvent extends DomainEvent {
+  static eventName = 'metering.usage_recorded';
+
   constructor(
     public readonly tenantId: string,
     public readonly meterId: string,

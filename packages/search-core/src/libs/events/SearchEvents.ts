@@ -1,6 +1,8 @@
 import { DomainEvent } from '@croco/events-core';
 
 export class DocumentIndexedEvent extends DomainEvent {
+  static eventName = 'search.document_indexed';
+
   constructor(
     public readonly indexName: string,
     public readonly documentId: string,
@@ -12,6 +14,8 @@ export class DocumentIndexedEvent extends DomainEvent {
 }
 
 export class DocumentDeletedEvent extends DomainEvent {
+  static eventName = 'search.document_deleted';
+
   constructor(
     public readonly indexName: string,
     public readonly documentId: string,
@@ -22,6 +26,8 @@ export class DocumentDeletedEvent extends DomainEvent {
 }
 
 export class SearchSyncFailedEvent extends DomainEvent {
+  static eventName = 'search.sync_failed';
+
   constructor(
     public readonly indexName: string,
     public readonly documentId: string,

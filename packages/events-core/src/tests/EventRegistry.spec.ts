@@ -3,12 +3,14 @@ import { DomainEvent } from '../libs/DomainEvent';
 import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/EventRegistry';
 
 class FirstEvent extends DomainEvent {
+  static eventName = 'FirstEvent';
   constructor(public readonly data: string) {
     super();
   }
 }
 
 class SecondEvent extends DomainEvent {
+  static eventName = 'SecondEvent';
   constructor(public readonly value: number) {
     super();
   }

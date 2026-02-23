@@ -4,6 +4,7 @@ import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/Event
 import { DefaultEventSerializer, type SerializedEvent } from '../libs/EventSerializer';
 
 class TestEvent extends DomainEvent {
+  static eventName = 'TestEvent';
   constructor(
     public readonly value: string,
     public readonly count: number
@@ -13,6 +14,7 @@ class TestEvent extends DomainEvent {
 }
 
 class TestEventWithAggregate extends DomainEvent {
+  static eventName = 'TestEventWithAggregate';
   constructor(
     public readonly value: string,
     public readonly aggregateId: string
@@ -22,6 +24,7 @@ class TestEventWithAggregate extends DomainEvent {
 }
 
 class ThreeFieldEvent extends DomainEvent {
+  static eventName = 'ThreeFieldEvent';
   constructor(
     public readonly a: string,
     public readonly b: number,
@@ -31,8 +34,8 @@ class ThreeFieldEvent extends DomainEvent {
   }
 }
 
-@RegisterEvent()
 class RegisteredEvent extends DomainEvent {
+  static eventName = 'RegisteredEvent';
   constructor(public readonly data: string) {
     super();
   }

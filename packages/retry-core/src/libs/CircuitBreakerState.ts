@@ -72,21 +72,27 @@ export interface CircuitBreakerStateStore {
    * @param time 타임스탬프 (ms)
    */
   setLastFailureTime(circuitId: string, time: number): Promise<void>;
+}
 
-  withCircuitLock?<T>(circuitId: string, operation: () => Promise<T>): Promise<T>;
+export interface DistributedCircuitBreakerStateStore extends CircuitBreakerStateStore {
+  withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T>;
 
-  incrementFailureAndCheck?(
+  incrementFailureAndCheck(
     circuitId: string,
     failureThreshold: number
   ): Promise<{ failureCount: number; shouldOpen: boolean }>;
 
-  getHalfOpenActiveCount?(circuitId: string): Promise<number>;
+  getHalfOpenActiveCount(circuitId: string): Promise<number>;
 
-  setHalfOpenActiveCount?(circuitId: string, count: number): Promise<void>;
+  setHalfOpenActiveCount(circuitId: string, count: number): Promise<void>;
 
-  getHalfOpenSuccessCount?(circuitId: string): Promise<number>;
+  getHalfOpenSuccessCount(circuitId: string): Promise<number>;
 
-  setHalfOpenSuccessCount?(circuitId: string, count: number): Promise<void>;
+  setHalfOpenSuccessCount(circuitId: string, count: number): Promise<void>;
+}
+
+export function isDistributedStore(store: CircuitBreakerStateStore): store is DistributedCircuitBreakerStateStore {
+  return 'withCircuitLock' in store;
 }
 
 /**
@@ -125,6 +131,10 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
     return next;
   }
 
+  async resetFailureCount(circuitId: string): Promise<void> {
+    this.failures.set(circuitId, 0);
+  }
+
   async incrementFailureAndCheck(
     circuitId: string,
     failureThreshold: number
@@ -134,10 +144,6 @@ export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStor
       failureCount,
       shouldOpen: failureCount >= failureThreshold,
     };
-  }
-
-  async resetFailureCount(circuitId: string): Promise<void> {
-    this.failures.set(circuitId, 0);
   }
 
   async getLastFailureTime(circuitId: string): Promise<number | null> {

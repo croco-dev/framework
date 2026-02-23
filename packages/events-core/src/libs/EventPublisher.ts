@@ -8,8 +8,10 @@ export type PublishResult<T extends DomainEvent> = {
 };
 
 export class EventPublisher {
+  constructor(private readonly config: EventBusConfig) {}
+
   private get eventBus() {
-    return EventBusConfig.getInstance().getEventBus();
+    return this.config.getEventBus();
   }
 
   async publish(event: DomainEvent): Promise<void> {

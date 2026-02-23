@@ -4,6 +4,7 @@ import type { EventBus, EventSubscription } from '../libs/EventBus';
 import type { EventHandler, EventHandlerClass } from '../libs/EventHandler';
 
 class TestEvent extends DomainEvent {
+  static eventName = 'TestEvent';
   constructor(public readonly value: string) {
     super();
   }
@@ -203,6 +204,7 @@ describe('EventBus interface contract', () => {
   describe('event isolation', () => {
     it('should not deliver event to handlers of different event type', async () => {
       class OtherEvent extends DomainEvent {
+        static eventName = 'OtherEvent';
         constructor(public readonly data: string) {
           super();
         }
@@ -228,12 +230,14 @@ describe('EventBus interface contract', () => {
 
     it('should handle multiple event types independently', async () => {
       class FirstEvent extends DomainEvent {
+        static eventName = 'FirstEvent';
         constructor(public readonly first: string) {
           super();
         }
       }
 
       class SecondEvent extends DomainEvent {
+        static eventName = 'SecondEvent';
         constructor(public readonly second: string) {
           super();
         }
@@ -277,8 +281,12 @@ describe('EventBus interface contract', () => {
 
   describe('channel isolation', () => {
     it('should isolate events by event name', async () => {
-      class ChannelAEvent extends DomainEvent {}
-      class ChannelBEvent extends DomainEvent {}
+      class ChannelAEvent extends DomainEvent {
+        static eventName = 'ChannelAEvent';
+      }
+      class ChannelBEvent extends DomainEvent {
+        static eventName = 'ChannelBEvent';
+      }
 
       let channelACalled = false;
       let channelBCalled = false;

@@ -5,16 +5,23 @@ import { EventBusConfig } from '../libs/EventBusConfig';
 import { EventPublisher } from '../libs/EventPublisher';
 
 class TestEvent extends DomainEvent {
+  static eventName = 'TestEvent';
   constructor(public readonly data: string) {
     super();
   }
 }
 
-class EventA extends DomainEvent {}
+class EventA extends DomainEvent {
+  static eventName = 'EventA';
+}
 
-class EventB extends DomainEvent {}
+class EventB extends DomainEvent {
+  static eventName = 'EventB';
+}
 
-class EventC extends DomainEvent {}
+class EventC extends DomainEvent {
+  static eventName = 'EventC';
+}
 
 class MockEventBus implements EventBus {
   public publishedEvents: DomainEvent[] = [];
@@ -41,7 +48,7 @@ describe('EventPublisher', () => {
     mockEventBus = new MockEventBus();
     config = EventBusConfig.getInstance();
     config.setEventBus(mockEventBus);
-    publisher = new EventPublisher();
+    publisher = new EventPublisher(config);
   });
 
   describe('publish', () => {

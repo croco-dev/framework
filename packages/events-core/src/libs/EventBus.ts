@@ -46,15 +46,28 @@ class PrefixTrie<TValue> {
 
   delete(prefix: string, value: TValue): void {
     let node = this.root;
+    const path: Array<{ parent: TrieNode<TValue>; char: string; node: TrieNode<TValue> }> = [];
+
     for (const ch of prefix) {
       const next = node.children.get(ch);
       if (!next) {
         return;
       }
+
+      path.push({ parent: node, char: ch, node: next });
       node = next;
     }
 
     node.values.delete(value);
+
+    for (let i = path.length - 1; i >= 0; i--) {
+      const { parent, char, node: current } = path[i];
+      if (current.values.size > 0 || current.children.size > 0) {
+        break;
+      }
+
+      parent.children.delete(char);
+    }
   }
 
   match(eventName: string, out: Set<TValue>): void {

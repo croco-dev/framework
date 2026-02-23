@@ -1,6 +1,7 @@
 import { type BackoffOptions, type BackoffPolicy, ExponentialBackoff } from './BackoffPolicy';
-import { RetryExhaustedException } from './errors/RetryExhaustedException';
+import { RetryExhaustedProblem } from './errors/RetryExhaustedProblem';
 import { RetryContext } from './RetryContext';
+import { executeRetryLoop } from './RetryEngine';
 import type { RetryListener } from './RetryListener';
 import { CompositeRetryListener } from './RetryListener';
 import { DefaultRetryPolicy, type RetryPolicy, type RetryPolicyOptions } from './RetryPolicy';
@@ -83,63 +84,58 @@ export class RetryTemplate {
   async execute<T>(callback: RetryCallback<T>, recovery?: RecoveryCallback<T>): Promise<T> {
     const context = new RetryContext('execute', [], this.maxAttempts);
 
-    if (this.listener) {
-      const shouldStart = await this.listener.onStart(context);
-      if (!shouldStart) {
-        throw new Error('Retry aborted by listener');
+    try {
+      return await executeRetryLoop(
+        async () => await callback(context),
+        {
+          maxAttempts: this.maxAttempts,
+          retryPolicy: this.retryPolicy,
+          backoffPolicy: this.backoffPolicy,
+          context,
+        },
+        {
+          onStart: async (retryContext) => {
+            if (!this.listener) {
+              return true;
+            }
+            return await this.listener.onStart(retryContext);
+          },
+          onRetryError: async (error, retryContext) => {
+            if (this.listener) {
+              await this.listener.onError(retryContext, error);
+            }
+          },
+          onSuccess: async (retryContext) => {
+            if (this.listener) {
+              await this.listener.onSuccess(retryContext);
+            }
+          },
+          onExhausted: async (_error, retryContext) => {
+            if (this.listener) {
+              await this.listener.onExhausted(retryContext);
+            }
+          },
+        }
+      );
+    } catch (error) {
+      const retryError = error instanceof Error ? error : new Error(String(error));
+
+      if (!context.exhausted) {
+        throw retryError;
       }
-    }
 
-    for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
-      context.incrementAttempt();
-
-      try {
-        const result = await callback(context);
-
-        if (this.listener) {
-          await this.listener.onSuccess(context);
-        }
-        return result;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        context.setLastError(err);
-
-        if (this.listener) {
-          await this.listener.onError(context, err);
-        }
-
-        const shouldRetry = this.retryPolicy.shouldRetry(err, attempt, this.maxAttempts);
-        const isLastAttempt = attempt === this.maxAttempts;
-        const isNonRetryable =
-          !shouldRetry && (!isLastAttempt || !this.retryPolicy.shouldRetry(err, attempt, this.maxAttempts + 1));
-
-        if (isNonRetryable) {
-          throw err;
-        }
-
-        if (attempt < this.maxAttempts && shouldRetry) {
-          await this.backoffPolicy.wait(attempt - 1);
-        }
+      if (recovery) {
+        return await recovery(context);
       }
+
+      if (this.wrapExhausted) {
+        throw RetryExhaustedProblem.fromContext('execute', this.maxAttempts, context.lastError);
+      }
+
+      throw (
+        context.lastError ??
+        new RetryExhaustedProblem(`Retry exhausted after ${this.maxAttempts} attempts`, null, this.maxAttempts)
+      );
     }
-
-    context.setExhausted();
-
-    if (this.listener) {
-      await this.listener.onExhausted(context);
-    }
-
-    if (recovery) {
-      return await recovery(context);
-    }
-
-    if (this.wrapExhausted) {
-      throw RetryExhaustedException.fromContext('execute', this.maxAttempts, context.lastError);
-    }
-
-    throw (
-      context.lastError ??
-      new RetryExhaustedException(`Retry exhausted after ${this.maxAttempts} attempts`, null, this.maxAttempts)
-    );
   }
 }

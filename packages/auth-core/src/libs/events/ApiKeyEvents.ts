@@ -25,24 +25,31 @@ export type ApiKeyRotatedEventData = {
 };
 
 export class ApiKeyUsedEvent extends DomainEvent {
+  static eventName = 'auth.api_key_used';
+
   constructor(public readonly data: ApiKeyUsedEventData) {
     super();
   }
 }
 
 export class ApiKeyCreatedEvent extends DomainEvent {
+  static eventName = 'auth.api_key_created';
+
   constructor(public readonly data: ApiKeyCreatedEventData) {
     super();
   }
 }
 
 export class ApiKeyRevokedEvent extends DomainEvent {
+  static eventName = 'auth.api_key_revoked';
   constructor(public readonly data: ApiKeyRevokedEventData) {
     super();
   }
 }
 
 export class ApiKeyRotatedEvent extends DomainEvent {
+  static eventName = 'auth.api_key_rotated';
+
   constructor(public readonly data: ApiKeyRotatedEventData) {
     super();
   }

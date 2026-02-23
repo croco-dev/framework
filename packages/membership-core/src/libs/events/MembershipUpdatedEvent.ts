@@ -9,6 +9,8 @@ export type MembershipUpdatedEventData = {
 };
 
 export class MembershipUpdatedEvent extends DomainEvent {
+  static eventName = 'membership.updated';
+
   constructor(public readonly data: MembershipUpdatedEventData) {
     super();
   }

@@ -1,2 +1,2 @@
-export { CircuitBreakerOpenException } from './CircuitBreakerOpenException';
-export { RetryExhaustedException } from './RetryExhaustedException';
+export { CircuitBreakerOpenProblem } from './CircuitBreakerOpenProblem';
+export { RetryExhaustedProblem } from './RetryExhaustedProblem';

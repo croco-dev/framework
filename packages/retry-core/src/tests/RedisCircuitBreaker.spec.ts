@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CircuitBreaker } from '../libs/CircuitBreaker';
 import { CircuitState } from '../libs/CircuitBreakerState';
-import { CircuitBreakerOpenException } from '../libs/errors/CircuitBreakerOpenException';
+import { CircuitBreakerOpenProblem } from '../libs/errors/CircuitBreakerOpenProblem';
 import { RedisCircuitBreakerStore } from '../libs/stores/RedisCircuitBreakerStore';
 
 type MockUpstashRedis = {
@@ -92,7 +92,7 @@ describe('RedisCircuitBreakerStore', () => {
 
     await expect(breakerA.execute(async () => Promise.reject(new Error('fail')))).rejects.toThrow('fail');
 
-    await expect(breakerB.execute(async () => 'ok')).rejects.toThrow(CircuitBreakerOpenException);
+    await expect(breakerB.execute(async () => 'ok')).rejects.toThrow(CircuitBreakerOpenProblem);
     await expect(breakerB.getState()).resolves.toBe(CircuitState.OPEN);
   });
 
@@ -118,7 +118,7 @@ describe('RedisCircuitBreakerStore', () => {
 
     // 첫 실행: 실패 → CB OPEN
     await expect(breaker.execute(async () => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
-    // 두 번째 실행: CB OPEN이므로 CircuitBreakerOpenException
-    await expect(breaker.execute(async () => 'ok')).rejects.toThrow(CircuitBreakerOpenException);
+    // 두 번째 실행: CB OPEN이므로 CircuitBreakerOpenProblem
+    await expect(breaker.execute(async () => 'ok')).rejects.toThrow(CircuitBreakerOpenProblem);
   });
 });

@@ -38,24 +38,28 @@ export type InvitationDeclinedEventData = {
 };
 
 export class InvitationCreatedEvent extends DomainEvent {
+  static eventName = 'invitation.created';
   constructor(public readonly data: InvitationCreatedEventData) {
     super();
   }
 }
 
 export class InvitationAcceptedEvent extends DomainEvent {
+  static eventName = 'invitation.accepted';
   constructor(public readonly data: InvitationAcceptedEventData) {
     super();
   }
 }
 
 export class InvitationRevokedEvent extends DomainEvent {
+  static eventName = 'invitation.revoked';
   constructor(public readonly data: InvitationRevokedEventData) {
     super();
   }
 }
 
 export class InvitationDeclinedEvent extends DomainEvent {
+  static eventName = 'invitation.declined';
   constructor(public readonly data: InvitationDeclinedEventData) {
     super();
   }

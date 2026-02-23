@@ -3,6 +3,7 @@ import type { LlmUsage } from '../types';
 
 export class LlmUsageRecordedEvent extends DomainEvent {
   readonly type = 'llm.usage_recorded';
+  static eventName = 'llm.usage_recorded';
 
   constructor(
     public readonly modelId: string,

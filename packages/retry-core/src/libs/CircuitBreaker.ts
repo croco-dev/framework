@@ -1,6 +1,6 @@
 import type { CircuitBreakerStateStore } from './CircuitBreakerState';
-import { CircuitState, InMemoryCircuitBreakerStateStore } from './CircuitBreakerState';
-import { CircuitBreakerOpenException } from './errors/CircuitBreakerOpenException';
+import { CircuitState, InMemoryCircuitBreakerStateStore, isDistributedStore } from './CircuitBreakerState';
+import { CircuitBreakerOpenProblem } from './errors/CircuitBreakerOpenProblem';
 
 /**
  * Circuit Breaker 옵션.
@@ -42,7 +42,7 @@ export interface CircuitBreakerOptions {
 
   /**
    * OPEN 시 호출할 fallback 함수.
-   * 설정되지 않으면 CircuitBreakerOpenException이 발생합니다.
+   * 설정되지 않으면 CircuitBreakerOpenProblem이 발생합니다.
    */
   fallback?: <T>() => T | Promise<T>;
 }
@@ -65,7 +65,7 @@ export interface CircuitBreakerOptions {
  *     return await fetchApi();
  *   });
  * } catch (error) {
- *   if (error instanceof CircuitBreakerOpenException) {
+ *   if (error instanceof CircuitBreakerOpenProblem) {
  *     // 회로가 열려서 요청이 차단됨
  *   }
  * }
@@ -97,7 +97,7 @@ export class CircuitBreaker {
    *
    * @param fn 실행할 작업
    * @returns 작업 결과
-   * @throws CircuitBreakerOpenException 회로가 OPEN 상태이고 fallback이 없는 경우
+   * @throws CircuitBreakerOpenProblem 회로가 OPEN 상태이고 fallback이 없는 경우
    */
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     const state = await this.stateStore.getState(this.circuitId);
@@ -158,7 +158,7 @@ export class CircuitBreaker {
   private async handleHalfOpen<T>(fn: () => Promise<T>): Promise<T> {
     const canExecute = await this.tryAcquireHalfOpenSlot();
     if (!canExecute) {
-      throw new CircuitBreakerOpenException(this.circuitId);
+      throw new CircuitBreakerOpenProblem(this.circuitId);
     }
 
     try {
@@ -247,9 +247,8 @@ export class CircuitBreaker {
   }
 
   private async incrementFailureAndCheck(): Promise<{ failureCount: number; shouldOpen: boolean }> {
-    const incrementFailureAndCheck = this.stateStore.incrementFailureAndCheck;
-    if (incrementFailureAndCheck) {
-      return incrementFailureAndCheck.call(this.stateStore, this.circuitId, this.failureThreshold);
+    if (isDistributedStore(this.stateStore)) {
+      return this.stateStore.incrementFailureAndCheck(this.circuitId, this.failureThreshold);
     }
 
     const failureCount = await this.stateStore.incrementFailureCount(this.circuitId);
@@ -260,7 +259,7 @@ export class CircuitBreaker {
   }
 
   private async withCircuitLock<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.stateStore.withCircuitLock) {
+    if (isDistributedStore(this.stateStore)) {
       return this.stateStore.withCircuitLock(this.circuitId, operation);
     }
 
@@ -337,9 +336,8 @@ export class CircuitBreaker {
   }
 
   private async getHalfOpenActiveCount(): Promise<number> {
-    const getHalfOpenActiveCount = this.stateStore.getHalfOpenActiveCount;
-    if (getHalfOpenActiveCount) {
-      return getHalfOpenActiveCount.call(this.stateStore, this.circuitId);
+    if (isDistributedStore(this.stateStore)) {
+      return this.stateStore.getHalfOpenActiveCount(this.circuitId);
     }
 
     return this.localHalfOpenActiveCount;
@@ -347,10 +345,9 @@ export class CircuitBreaker {
 
   private async setHalfOpenActiveCount(count: number): Promise<void> {
     const nextCount = Math.max(0, count);
-    const setHalfOpenActiveCount = this.stateStore.setHalfOpenActiveCount;
 
-    if (setHalfOpenActiveCount) {
-      await setHalfOpenActiveCount.call(this.stateStore, this.circuitId, nextCount);
+    if (isDistributedStore(this.stateStore)) {
+      await this.stateStore.setHalfOpenActiveCount(this.circuitId, nextCount);
       return;
     }
 
@@ -358,9 +355,8 @@ export class CircuitBreaker {
   }
 
   private async getHalfOpenSuccessCount(): Promise<number> {
-    const getHalfOpenSuccessCount = this.stateStore.getHalfOpenSuccessCount;
-    if (getHalfOpenSuccessCount) {
-      return getHalfOpenSuccessCount.call(this.stateStore, this.circuitId);
+    if (isDistributedStore(this.stateStore)) {
+      return this.stateStore.getHalfOpenSuccessCount(this.circuitId);
     }
 
     return this.localHalfOpenSuccessCount;
@@ -368,10 +364,9 @@ export class CircuitBreaker {
 
   private async setHalfOpenSuccessCount(count: number): Promise<void> {
     const nextCount = Math.max(0, count);
-    const setHalfOpenSuccessCount = this.stateStore.setHalfOpenSuccessCount;
 
-    if (setHalfOpenSuccessCount) {
-      await setHalfOpenSuccessCount.call(this.stateStore, this.circuitId, nextCount);
+    if (isDistributedStore(this.stateStore)) {
+      await this.stateStore.setHalfOpenSuccessCount(this.circuitId, nextCount);
       return;
     }
 
@@ -383,7 +378,7 @@ export class CircuitBreaker {
       return this.fallback<T>();
     }
 
-    throw new CircuitBreakerOpenException(this.circuitId);
+    throw new CircuitBreakerOpenProblem(this.circuitId);
   }
 
   /**

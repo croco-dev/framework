@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { NoBackoff } from '../libs/BackoffPolicy';
-import { RetryExhaustedException } from '../libs/errors';
+import { RetryExhaustedProblem } from '../libs/errors';
 import type { RetryListener } from '../libs/RetryListener';
 import { RetryTemplate } from '../libs/RetryTemplate';
 
@@ -59,7 +59,7 @@ describe('RetryTemplate', () => {
       template.execute(async () => {
         throw new Error('fail');
       })
-    ).rejects.toThrow(RetryExhaustedException);
+    ).rejects.toThrow(RetryExhaustedProblem);
   });
 
   it('calls recovery on exhaustion', async () => {

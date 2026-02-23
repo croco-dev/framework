@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CircuitBreaker, type CircuitBreakerOptions } from '../libs/CircuitBreaker';
 import { CircuitState, InMemoryCircuitBreakerStateStore } from '../libs/CircuitBreakerState';
-import { CircuitBreakerOpenException } from '../libs/errors/CircuitBreakerOpenException';
+import { CircuitBreakerOpenProblem } from '../libs/errors/CircuitBreakerOpenProblem';
 
 describe('CircuitBreaker', () => {
   const createBreaker = (options: Partial<CircuitBreakerOptions> = {}) => {
@@ -54,7 +54,7 @@ describe('CircuitBreaker', () => {
     fn.mockClear();
     fn.mockResolvedValue('success');
 
-    await expect(breaker.execute(fn)).rejects.toThrow(CircuitBreakerOpenException);
+    await expect(breaker.execute(fn)).rejects.toThrow(CircuitBreakerOpenProblem);
     expect(fn).not.toHaveBeenCalled();
   });
 
@@ -130,7 +130,7 @@ describe('CircuitBreaker', () => {
 
     expect(await breaker.getState()).toBe(CircuitState.OPEN);
 
-    await expect(breaker.execute(fn)).rejects.toThrow(CircuitBreakerOpenException);
+    await expect(breaker.execute(fn)).rejects.toThrow(CircuitBreakerOpenProblem);
   });
 
   it('forceClose로 상태를 강제 설정할 수 있어야 한다', async () => {
@@ -283,7 +283,7 @@ describe('CircuitBreaker', () => {
       const second = breaker.execute(fn);
       const third = breaker.execute(fn);
 
-      await expect(third).rejects.toThrow(CircuitBreakerOpenException);
+      await expect(third).rejects.toThrow(CircuitBreakerOpenProblem);
       expect(fn).toHaveBeenCalledTimes(2);
 
       resolveFirst('first-success');
@@ -330,7 +330,7 @@ describe('CircuitBreaker', () => {
       await expect(first).rejects.toThrow('BUG-13 fail-1');
       await expect(second).rejects.toThrow('BUG-13 fail-2');
       await expect(third).rejects.toThrow('BUG-13 fail-3');
-      await expect(fourth).rejects.toThrow(CircuitBreakerOpenException);
+      await expect(fourth).rejects.toThrow(CircuitBreakerOpenProblem);
 
       expect(fn).toHaveBeenCalledTimes(3);
       expect(await breaker.getFailureCount()).toBe(3);
@@ -366,7 +366,7 @@ describe('CircuitBreaker', () => {
       const first = breaker.execute(fn);
       const second = breaker.execute(fn);
 
-      await expect(second).rejects.toThrow(CircuitBreakerOpenException);
+      await expect(second).rejects.toThrow(CircuitBreakerOpenProblem);
       expect(fn).toHaveBeenCalledTimes(1);
 
       resolveFirst('success');

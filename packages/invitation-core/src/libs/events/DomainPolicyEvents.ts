@@ -8,6 +8,8 @@ export type DomainPolicyAddedEventData = {
 };
 
 export class DomainPolicyAddedEvent extends DomainEvent {
+  static eventName = 'invitation.domain_policy_added';
+
   constructor(public readonly data: DomainPolicyAddedEventData) {
     super();
   }
@@ -19,6 +21,8 @@ export type DomainPolicyRemovedEventData = {
 };
 
 export class DomainPolicyRemovedEvent extends DomainEvent {
+  static eventName = 'invitation.domain_policy_removed';
+
   constructor(public readonly data: DomainPolicyRemovedEventData) {
     super();
   }
@@ -33,6 +37,8 @@ export type DomainAutoJoinedEventData = {
 };
 
 export class DomainAutoJoinedEvent extends DomainEvent {
+  static eventName = 'invitation.domain_auto_joined';
+
   constructor(public readonly data: DomainAutoJoinedEventData) {
     super();
   }

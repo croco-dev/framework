@@ -2,6 +2,7 @@ import { DomainEvent } from '@croco/events-core';
 import type { LlmUsage } from '../types';
 
 export class LlmStreamCompletedEvent extends DomainEvent {
+  static eventName = 'llm.stream_completed';
   readonly type = 'llm.stream_completed';
 
   constructor(
