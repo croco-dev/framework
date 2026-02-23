@@ -10,7 +10,6 @@ import {
   RegisterEventHandler,
 } from '../index';
 
-
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';
   constructor(public readonly data: string) {

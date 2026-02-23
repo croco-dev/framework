@@ -1,5 +1,5 @@
 import type { DomainEvent } from './DomainEvent';
-import { EventBusConfig } from './EventBusConfig';
+import type { EventBusConfig } from './EventBusConfig';
 
 export type PublishResult<T extends DomainEvent> = {
   event: T;
