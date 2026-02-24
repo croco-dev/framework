@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryEventBus } from '../index';
 
 class TestEvent extends DomainEvent {
+  static readonly eventName = 'TestEvent';
+
   constructor(public readonly message: string) {
     super();
   }
@@ -35,15 +37,18 @@ describe('InMemoryEventBus', () => {
   });
 
   describe('subscribe', () => {
-    it('should subscribe a handler to an event', () => {
+    it('should subscribe a handler to an event', async () => {
       Container.set(TestHandler, testHandler);
       const subscription: EventSubscription = { eventName: 'TestEvent', handlerClass: TestHandler };
       eventBus.subscribe(subscription);
 
-      expect(true).toBe(true);
+      const event = new TestEvent('subscribe-test');
+      await eventBus.publish(event);
+      expect(testHandler.handledEvents).toHaveLength(1);
+      expect(testHandler.handledEvents[0].message).toBe('subscribe-test');
     });
 
-    it('should allow multiple handlers for same event', () => {
+    it('should allow multiple handlers for same event', async () => {
       class Handler1 extends TestHandler {}
       class Handler2 extends TestHandler {}
 
@@ -56,7 +61,10 @@ describe('InMemoryEventBus', () => {
       eventBus.subscribe({ eventName: 'TestEvent', handlerClass: Handler1 });
       eventBus.subscribe({ eventName: 'TestEvent', handlerClass: Handler2 });
 
-      expect(true).toBe(true);
+      const event = new TestEvent('multi-handler');
+      await eventBus.publish(event);
+      expect(handler1.handledEvents).toHaveLength(1);
+      expect(handler2.handledEvents).toHaveLength(1);
     });
   });
 
