@@ -1,15 +1,7 @@
 import type { Readable } from 'node:stream';
-import { Readable as ReadableImpl } from 'node:stream';
 import { Component } from '@croco/framework-context';
-import type {
-  ImageProvider,
-  PutOptions,
-  SignedUrlOptions,
-  StorageProvider,
-  TransformOptions,
-  UploadIntent,
-} from '@croco/storage-core';
-import { FileNotFoundProblem, UploadFailedProblem } from '@croco/storage-core';
+import type { ImageProvider, PutOptions, SignedUrlOptions, TransformOptions, UploadIntent } from '@croco/storage-core';
+import { BaseStorageProvider } from '@croco/storage-core';
 import type {
   CloudflareImageDetails,
   CloudflareImagesOptions,
@@ -18,12 +10,13 @@ import type {
 } from './types';
 
 @Component()
-export class CloudflareImagesProvider implements StorageProvider, ImageProvider {
+export class CloudflareImagesProvider extends BaseStorageProvider implements ImageProvider {
   private readonly options: CloudflareImagesOptions;
   private readonly baseUrl: string;
   private readonly apiBaseUrl: string;
 
   constructor(options: CloudflareImagesOptions) {
+    super();
     this.options = options;
     this.baseUrl = options.customDomain
       ? `https://${options.customDomain}/cdn-cgi/imagedelivery`
@@ -32,6 +25,8 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
+    this.validateKey(key);
+
     const formData = new FormData();
 
     let file: File | Blob;
@@ -64,34 +59,33 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new UploadFailedProblem(key, `Cloudflare API error: ${errorText}`);
+      this.throwUploadFailed(key, `Cloudflare API error: ${errorText}`);
     }
 
     const result = (await response.json()) as CloudflareUploadResponse;
 
     if (!result.success) {
-      throw new UploadFailedProblem(key, `Cloudflare upload failed: ${result.errors.join(', ')}`);
+      this.throwUploadFailed(key, `Cloudflare upload failed: ${result.errors.join(', ')}`);
     }
   }
 
   async get(key: string): Promise<Buffer> {
+    this.validateKey(key);
+
     const url = this.buildImageUrl(key, this.options.defaultVariant ?? 'public');
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new FileNotFoundProblem(key);
+      this.throwNotFound(key);
     }
 
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
   }
 
-  async getStream(key: string): Promise<Readable> {
-    const buffer = await this.get(key);
-    return ReadableImpl.from(buffer);
-  }
-
   async delete(key: string): Promise<void> {
+    this.validateKey(key);
+
     const response = await fetch(`${this.apiBaseUrl}/${key}`, {
       method: 'DELETE',
       headers: {
@@ -101,33 +95,25 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new UploadFailedProblem(key, `Cloudflare delete error: ${errorText}`);
+      this.throwDeleteFailed(key, `Cloudflare delete error: ${errorText}`);
     }
 
     const result = await response.json();
 
     if (!result.success) {
-      throw new UploadFailedProblem(key, `Cloudflare delete failed: ${result.errors.join(', ')}`);
-    }
-  }
-
-  async exists(key: string): Promise<boolean> {
-    try {
-      await this.getMetadata(key);
-      return true;
-    } catch (error) {
-      if (error instanceof FileNotFoundProblem) {
-        return false;
-      }
-      throw error;
+      this.throwDeleteFailed(key, `Cloudflare delete failed: ${result.errors.join(', ')}`);
     }
   }
 
   getPublicUrl(key: string): string {
+    this.validateKey(key);
+
     return this.buildImageUrl(key, this.options.defaultVariant ?? 'public');
   }
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
+    this.validateKey(key);
+
     const url = this.buildImageUrl(key, this.options.defaultVariant ?? 'public');
 
     const expiresAt = Math.floor(Date.now() / 1000) + options.expiresIn;
@@ -138,6 +124,8 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
   }
 
   async getMetadata(key: string): Promise<{ size: number; contentType?: string; lastModified: Date; etag?: string }> {
+    this.validateKey(key);
+
     const response = await fetch(`${this.apiBaseUrl}/${key}`, {
       headers: {
         Authorization: `Bearer ${this.options.apiToken}`,
@@ -145,18 +133,18 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
     });
 
     if (response.status === 404) {
-      throw new FileNotFoundProblem(key);
+      this.throwNotFound(key);
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new UploadFailedProblem(key, `Cloudflare metadata error: ${errorText}`);
+      this.throwUploadFailed(key, `Cloudflare metadata error: ${errorText}`);
     }
 
     const result = (await response.json()) as CloudflareImageDetails;
 
     if (!result.success) {
-      throw new UploadFailedProblem(key, `Cloudflare metadata failed: ${result.errors.join(', ')}`);
+      this.throwUploadFailed(key, `Cloudflare metadata failed: ${result.errors.join(', ')}`);
     }
 
     return {
@@ -166,6 +154,8 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
   }
 
   getTransformUrl(key: string, options: TransformOptions): string {
+    this.validateKey(key);
+
     if (this.options.customDomain) {
       return this.buildTransformUrlCustomDomain(key, options);
     }
@@ -174,6 +164,8 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
   }
 
   async getUploadIntent(key: string): Promise<UploadIntent> {
+    this.validateKey(key);
+
     const url = `${this.apiBaseUrl}/direct_upload`;
 
     const response = await fetch(url, {
@@ -192,13 +184,13 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new UploadFailedProblem(key, `Cloudflare upload intent error: ${errorText}`);
+      this.throwUploadFailed(key, `Cloudflare upload intent error: ${errorText}`);
     }
 
     const result = await response.json();
 
     if (!result.success) {
-      throw new UploadFailedProblem(key, `Cloudflare upload intent failed: ${result.errors.join(', ')}`);
+      this.throwUploadFailed(key, `Cloudflare upload intent failed: ${result.errors.join(', ')}`);
     }
 
     const uploadUrl = result.result.uploadURL;
@@ -213,10 +205,6 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
   }
 
   private buildImageUrl(key: string, variant: string): string {
-    if (this.options.customDomain) {
-      return `${this.baseUrl}/${this.options.accountHash}/${key}/${variant}`;
-    }
-
     return `${this.baseUrl}/${this.options.accountHash}/${key}/${variant}`;
   }
 
@@ -239,7 +227,7 @@ export class CloudflareImagesProvider implements StorageProvider, ImageProvider 
       return this.buildImageUrl(key, this.options.defaultVariant ?? 'public');
     }
 
-    return `${this.options.customDomain}/cdn-cgi/image/${params}/${this.options.accountHash}/${key}`;
+    return `https://${this.options.customDomain}/cdn-cgi/image/${params}/${this.options.accountHash}/${key}`;
   }
 
   private buildTransformParams(options: CloudflareTransformOptions): string {

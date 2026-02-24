@@ -1,25 +1,24 @@
 import type { Readable } from 'node:stream';
-import { Readable as ReadableImpl } from 'node:stream';
 import { Component } from '@croco/framework-context';
 import type {
   ImageProvider,
   ObjectMetadata,
   PutOptions,
   SignedUrlOptions,
-  StorageProvider,
   TransformOptions,
   UploadIntent,
 } from '@croco/storage-core';
-import { FileNotFoundProblem, InvalidKeyProblem, UploadFailedProblem } from '@croco/storage-core';
+import { BaseStorageProvider } from '@croco/storage-core';
 import { v2 as cloudinary } from 'cloudinary';
 import type { CloudinaryConfig, CloudinaryTransformOptions } from './types';
 
 @Component()
-export class CloudinaryProvider implements StorageProvider, ImageProvider {
+export class CloudinaryProvider extends BaseStorageProvider implements ImageProvider {
   private readonly cloudName: string;
   private readonly secure: boolean;
 
   constructor(config: CloudinaryConfig) {
+    super();
     this.cloudName = config.cloudName;
     this.secure = config.secure ?? true;
 
@@ -51,7 +50,7 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
           uploadOptions,
           (error: Error | undefined, _result: unknown) => {
             if (error) {
-              reject(new UploadFailedProblem(key, error.message));
+              reject(error);
               return;
             }
 
@@ -59,7 +58,7 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
           }
         );
       } catch (error) {
-        reject(new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown upload error')));
+        reject(error);
         return;
       }
 
@@ -69,10 +68,12 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
       }
 
       data.once('error', (error) => {
-        reject(new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown upload stream error')));
+        reject(error);
       });
 
       data.pipe(uploadStream);
+    }).catch((error) => {
+      this.throwUploadFailed(key, this.getErrorMessage(error, 'Unknown upload error'));
     });
   }
 
@@ -86,29 +87,20 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new FileNotFoundProblem(key);
+          this.throwNotFound(key);
         }
 
-        throw new UploadFailedProblem(key, `Failed to fetch file: HTTP ${response.status}`);
+        this.throwUploadFailed(key, `Failed to fetch file: HTTP ${response.status}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
       return Buffer.from(arrayBuffer);
     } catch (error) {
-      if (error instanceof FileNotFoundProblem) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'STORAGE_FILE_NOT_FOUND') {
         throw error;
       }
-      if (error instanceof UploadFailedProblem) {
-        throw error;
-      }
-
-      throw new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown error'));
+      this.throwUploadFailed(key, this.getErrorMessage(error, 'Unknown error'));
     }
-  }
-
-  async getStream(key: string): Promise<Readable> {
-    const buffer = await this.get(key);
-    return ReadableImpl.from(buffer);
   }
 
   async delete(key: string): Promise<void> {
@@ -120,26 +112,13 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
       });
 
       if (result.result !== 'ok' && result.result !== 'not found') {
-        throw new UploadFailedProblem(key, `Delete failed: ${result.result}`);
+        this.throwDeleteFailed(key, `Delete failed: ${result.result}`);
       }
     } catch (error) {
-      if (error instanceof UploadFailedProblem) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'STORAGE_DELETE_FAILED') {
         throw error;
       }
-      throw new UploadFailedProblem(key, error instanceof Error ? error.message : 'Unknown error');
-    }
-  }
-
-  async exists(key: string): Promise<boolean> {
-    this.validateKey(key);
-
-    try {
-      const resource = await cloudinary.api.resource(key, {
-        resource_type: 'image',
-      });
-      return !!resource;
-    } catch {
-      return false;
+      this.throwDeleteFailed(key, error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
@@ -179,10 +158,10 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
       };
     } catch (error) {
       if (this.isNotFoundError(error)) {
-        throw new FileNotFoundProblem(key);
+        this.throwNotFound(key);
       }
 
-      throw new UploadFailedProblem(key, this.getErrorMessage(error, 'Unknown metadata error'));
+      this.throwUploadFailed(key, this.getErrorMessage(error, 'Unknown metadata error'));
     }
   }
 
@@ -348,19 +327,5 @@ export class CloudinaryProvider implements StorageProvider, ImageProvider {
     }
 
     return fallback;
-  }
-
-  private validateKey(key: string): void {
-    if (!key || typeof key !== 'string') {
-      throw new InvalidKeyProblem(key, 'Key must be a non-empty string');
-    }
-
-    if (key.startsWith('/') || key.endsWith('/')) {
-      throw new InvalidKeyProblem(key, 'Key must not start or end with /');
-    }
-
-    if (key.includes('//')) {
-      throw new InvalidKeyProblem(key, 'Key must not contain //');
-    }
   }
 }

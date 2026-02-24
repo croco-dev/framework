@@ -4,8 +4,8 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { ConfigService } from '@croco/framework-config';
 import { Component } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
-import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from '@croco/storage-core';
-import { FileNotFoundProblem, InvalidKeyProblem, UploadFailedProblem } from '@croco/storage-core';
+import type { ObjectMetadata, PutOptions, SignedUrlOptions } from '@croco/storage-core';
+import { BaseStorageProvider } from '@croco/storage-core';
 import type { R2Options } from './types';
 
 /**
@@ -14,7 +14,7 @@ import type { R2Options } from './types';
  * AWS S3 SDK를 사용하여 R2와 통신합니다.
  */
 @Component()
-export class R2StorageProvider implements StorageProvider {
+export class R2StorageProvider extends BaseStorageProvider {
   private readonly client: S3Client;
   private readonly options: R2Options;
 
@@ -22,6 +22,7 @@ export class R2StorageProvider implements StorageProvider {
     private readonly config: ConfigService,
     private readonly logger: Logger
   ) {
+    super();
     this.options = {
       accountId: this.config.get('R2_ACCOUNT_ID') ?? '',
       accessKeyId: this.config.get('R2_ACCESS_KEY_ID') ?? '',
@@ -57,7 +58,7 @@ export class R2StorageProvider implements StorageProvider {
     try {
       await this.client.send(command);
     } catch (error) {
-      this.throwUploadError(key, error);
+      this.throwUploadFailed(key, error);
     }
   }
 
@@ -87,30 +88,7 @@ export class R2StorageProvider implements StorageProvider {
 
       return Buffer.concat(chunks);
     } catch (error) {
-      return this.throwNotFoundError(key, error);
-    }
-  }
-
-  async getStream(key: string): Promise<Readable> {
-    this.validateKey(key);
-
-    const { GetObjectCommand } = await import('@aws-sdk/client-s3');
-
-    const command = new GetObjectCommand({
-      Bucket: this.options.bucket,
-      Key: key,
-    });
-
-    try {
-      const response = await this.client.send(command);
-
-      if (!response.Body) {
-        throw new Error('Empty response body');
-      }
-
-      return response.Body as Readable;
-    } catch (error) {
-      return this.throwNotFoundError(key, error);
+      return this.handleNotFoundError(key, error);
     }
   }
 
@@ -127,28 +105,7 @@ export class R2StorageProvider implements StorageProvider {
     try {
       await this.client.send(command);
     } catch (error) {
-      this.logger.warn(`[R2StorageProvider] Failed to delete key '${key}':`, { error });
-    }
-  }
-
-  async exists(key: string): Promise<boolean> {
-    this.validateKey(key);
-
-    const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
-
-    const command = new HeadObjectCommand({
-      Bucket: this.options.bucket,
-      Key: key,
-    });
-
-    try {
-      await this.client.send(command);
-      return true;
-    } catch (error) {
-      if (this.isNotFoundError(error)) {
-        return false;
-      }
-      throw error;
+      this.throwDeleteFailed(key, error);
     }
   }
 
@@ -199,7 +156,7 @@ export class R2StorageProvider implements StorageProvider {
         metadata: response.Metadata,
       };
     } catch (error) {
-      return this.throwNotFoundError(key, error);
+      return this.handleNotFoundError(key, error);
     }
   }
 
@@ -214,36 +171,10 @@ export class R2StorageProvider implements StorageProvider {
     return false;
   }
 
-  /**
-   * 404 에러를 FileNotFoundProblem으로 변환
-   */
-  private throwNotFoundError(key: string, error: unknown): never {
+  private handleNotFoundError(key: string, error: unknown): never {
     if (this.isNotFoundError(error)) {
-      throw new FileNotFoundProblem(key);
+      this.throwNotFound(key, error);
     }
-
     throw error;
-  }
-
-  /**
-   * 업로드 에러를 UploadFailedProblem으로 변환
-   */
-  private throwUploadError(key: string, error: unknown): never {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    throw new UploadFailedProblem(key, message);
-  }
-
-  private validateKey(key: string): void {
-    if (!key || typeof key !== 'string') {
-      throw new InvalidKeyProblem(key, 'Key must be a non-empty string');
-    }
-
-    if (key.startsWith('/') || key.endsWith('/')) {
-      throw new InvalidKeyProblem(key, 'Key must not start or end with /');
-    }
-
-    if (key.includes('//')) {
-      throw new InvalidKeyProblem(key, 'Key must not contain //');
-    }
   }
 }
