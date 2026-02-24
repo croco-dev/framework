@@ -1,25 +1,38 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
+import { EventField } from '../libs/decorators/EventField';
 import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/EventRegistry';
-import { DefaultEventSerializer, type SerializedEvent } from '../libs/EventSerializer';
+import { DefaultEventSerializer, EventDeserializationError, type SerializedEvent } from '../libs/EventSerializer';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';
-  constructor(
-    public readonly value: string,
-    public readonly count: number
-  ) {
+
+  @EventField()
+  public readonly value: string;
+
+  @EventField()
+  public readonly count: number;
+
+  constructor(value: string, count: number) {
     super();
+    this.value = value;
+    this.count = count;
   }
 }
 
 class TestEventWithAggregate extends DomainEvent {
   static eventName = 'TestEventWithAggregate';
-  constructor(
-    public readonly value: string,
-    public readonly aggregateId: string
-  ) {
+
+  @EventField()
+  public readonly value: string;
+
+  @EventField()
+  public readonly aggregateId: string;
+
+  constructor(value: string, aggregateId: string) {
     super();
+    this.value = value;
+    this.aggregateId = aggregateId;
   }
 }
 
@@ -36,8 +49,13 @@ class ThreeFieldEvent extends DomainEvent {
 
 class RegisteredEvent extends DomainEvent {
   static eventName = 'RegisteredEvent';
-  constructor(public readonly data: string) {
+
+  @EventField()
+  public readonly data: string;
+
+  constructor(data: string) {
     super();
+    this.data = data;
   }
 }
 
@@ -64,7 +82,7 @@ describe('DefaultEventSerializer', () => {
         },
       });
 
-      expect(serialized.eventId).toMatch(/^evt_\d+_[a-z0-9]+$/);
+      expect(serialized.eventId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(new Date(serialized.occurredAt)).toBeInstanceOf(Date);
     });
 
@@ -193,14 +211,12 @@ describe('DefaultEventSerializer', () => {
         b: serialized.payload.b,
       };
 
-      const deserialized = serializer.deserialize<ThreeFieldEvent>({
-        ...serialized,
-        payload: reorderedPayload,
-      });
-
-      expect(deserialized.a).toBe(original.a);
-      expect(deserialized.b).toBe(original.b);
-      expect(deserialized.c).toBe(original.c);
+      expect(() =>
+        serializer.deserialize<ThreeFieldEvent>({
+          ...serialized,
+          payload: reorderedPayload,
+        })
+      ).toThrow(EventDeserializationError);
     });
   });
 
@@ -232,18 +248,19 @@ describe('DefaultEventSerializer', () => {
     });
 
     it('should handle event with no custom properties', () => {
-      class EmptyEvent extends DomainEvent {}
+      class EmptyEvent extends DomainEvent {
+        static readonly eventName = 'EmptyEvent';
+      }
       registry.register(EmptyEvent);
 
       const original = new EmptyEvent();
       const serialized = serializer.serialize(original);
-      const deserialized = serializer.deserialize<EmptyEvent>(serialized);
-
-      expect(deserialized).toBeInstanceOf(EmptyEvent);
+      expect(() => serializer.deserialize<EmptyEvent>(serialized)).toThrow(EventDeserializationError);
     });
 
     it('should handle event with complex payload values', () => {
       class ComplexEvent extends DomainEvent {
+        static readonly eventName = 'ComplexEvent';
         constructor(
           public readonly nested: Record<string, unknown>,
           public readonly array: number[]
@@ -255,10 +272,7 @@ describe('DefaultEventSerializer', () => {
 
       const original = new ComplexEvent({ key: 'value' }, [1, 2, 3]);
       const serialized = serializer.serialize(original);
-      const deserialized = serializer.deserialize<ComplexEvent>(serialized);
-
-      expect(deserialized.nested).toEqual({ key: 'value' });
-      expect(deserialized.array).toEqual([1, 2, 3]);
+      expect(() => serializer.deserialize<ComplexEvent>(serialized)).toThrow(EventDeserializationError);
     });
   });
 });

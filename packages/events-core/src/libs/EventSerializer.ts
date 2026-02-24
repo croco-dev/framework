@@ -28,6 +28,12 @@ export interface EventSerializer {
   serialize<T extends DomainEvent>(event: T): SerializedEvent;
   deserialize<T extends DomainEvent>(data: SerializedEvent): T;
 }
+export class EventDeserializationError extends Error {
+  constructor(eventName: string, reason: string) {
+    super(`Cannot deserialize event '${eventName}': ${reason}`);
+    this.name = 'EventDeserializationError';
+  }
+}
 
 /**
  * 기본 이벤트 직렬화 구현체
@@ -97,7 +103,7 @@ export class DefaultEventSerializer implements EventSerializer {
 
     const fields = getEventFields(EventClass as new (...args: unknown[]) => unknown);
 
-    if (fields) {
+    if (fields && fields.length > 0) {
       const instance = new EventClass() as T;
       const obj = instance as unknown as Record<string, unknown>;
       for (const { propertyKey, serializedKey } of fields) {
@@ -106,31 +112,10 @@ export class DefaultEventSerializer implements EventSerializer {
       return instance;
     }
 
-    const constructorParameterNames = this.getConstructorParameterNames(EventClass);
-    if (constructorParameterNames.length === 0) {
-      return new EventClass(...Object.values(data.payload));
-    }
-
-    const args = constructorParameterNames.map((parameterName) => data.payload[parameterName]);
-    return new EventClass(...args);
-  }
-
-  private getConstructorParameterNames<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T): string[] {
-    const constructorSource = EventClass.toString();
-    const constructorMatch = constructorSource.match(/constructor\s*\(([^)]*)\)/);
-    if (!constructorMatch) {
-      return [];
-    }
-
-    return constructorMatch[1]
-      .split(',')
-      .map((parameter) => parameter.trim())
-      .filter(Boolean)
-      .map((parameter) =>
-        parameter
-          .replace(/=.*$/, '')
-          .replace(/^\.\.\./, '')
-          .trim()
-      );
+    throw new EventDeserializationError(
+      EventClass.name,
+      'EventSerializer requires @EventField decorator or static fromPayload() method for deserialization. ' +
+        'Constructor parameter name inference via toString() has been removed for minification safety.'
+    );
   }
 }
