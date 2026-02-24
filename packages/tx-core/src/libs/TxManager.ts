@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import type { TxAdapter } from './TxAdapter';
@@ -12,7 +13,7 @@ interface TxContext<TClient> {
 
 type NullableTxContext<TClient> = TxContext<TClient> | null;
 
-export class TxManager<TClient, TOptions = unknown> {
+export class TxManager<TClient, TOptions = unknown> implements TransactionContext {
   private readonly als = new AsyncLocalStorage<NullableTxContext<TClient>>();
   private readonly defaultNesting: NestingStrategy;
 
@@ -21,6 +22,7 @@ export class TxManager<TClient, TOptions = unknown> {
     config: TxManagerConfig = {}
   ) {
     this.defaultNesting = config.defaultNesting ?? 'join';
+    Container.set(TRANSACTION_CONTEXT_TOKEN as never, this);
   }
 
   async run<T>(fn: () => Promise<T>, runOptions?: TxRunOptions<TOptions>): Promise<T> {

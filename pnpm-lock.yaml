@@ -450,6 +450,9 @@ importers:
 
   packages/events-core:
     dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -1530,6 +1533,9 @@ importers:
 
   packages/tx-core:
     dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context

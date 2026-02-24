@@ -11,6 +11,12 @@ export abstract class AggregateRoot {
     return [...this.domainEvents];
   }
 
+  public pullDomainEvents(): ReadonlyArray<DomainEvent> {
+    const events = [...this.domainEvents];
+    this.domainEvents = [];
+    return events;
+  }
+
   public clearDomainEvents(): void {
     this.domainEvents = [];
   }

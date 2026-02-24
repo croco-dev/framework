@@ -7,6 +7,11 @@ type TxSession = {
   phase: TxPhase;
 };
 
+/**
+ * @deprecated EventPublisher가 TxManager 컨텍스트를 자동으로 인식합니다.
+ * EventPublisher.publish()를 직접 사용하세요.
+ * 이 클래스는 향후 메이저 버전에서 제거됩니다.
+ */
 export class TransactionalEventPublisher {
   private readonly sessions = new Map<string, TxSession>();
 

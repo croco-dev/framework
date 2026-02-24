@@ -15,6 +15,7 @@
     "@croco/utils-tsconfig": "workspace:*"
   },
   "dependencies": {
+    "@croco/framework-context": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "reflect-metadata": "^0.2.2"
   },

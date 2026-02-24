@@ -1,8 +1,11 @@
+import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AggregateRoot } from '../libs/AggregateRoot';
 import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
 import { EventPublisher } from '../libs/EventPublisher';
+import { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '../libs/TransactionContext';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';
@@ -261,6 +264,106 @@ describe('EventPublisher', () => {
       expect(secondEventBus.publishedEvents).toHaveLength(1);
       expect((firstEventBus.publishedEvents[0] as TestEvent).data).toBe('first');
       expect((secondEventBus.publishedEvents[0] as TestEvent).data).toBe('second');
+    });
+  });
+  describe('tx-aware publishing', () => {
+    it('트랜잭션 외부에서는 즉시 발행', async () => {
+      vi.spyOn(Container, 'get').mockImplementation(() => {
+        throw new Error('Not found');
+      });
+
+      const event = new TestEvent('no-tx');
+      await publisher.publish(event);
+
+      expect(mockEventBus.publishedEvents).toHaveLength(1);
+      expect(mockEventBus.publishedEvents[0]).toBe(event);
+    });
+
+    it('트랜잭션 내부에서는 onAfterCommit에 등록', async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+
+      vi.spyOn(Container, 'get').mockImplementation((token: any) => {
+        if (token === TRANSACTION_CONTEXT_TOKEN) return mockTxContext;
+        throw new Error('Not found');
+      });
+
+      const event = new TestEvent('with-tx');
+      await publisher.publish(event);
+
+      // Should not be published immediately
+      expect(mockEventBus.publishedEvents).toHaveLength(0);
+
+      // Execute the registered hook
+      expect(registeredHook).toBeDefined();
+      await registeredHook?.();
+
+      // Should be published now
+      expect(mockEventBus.publishedEvents).toHaveLength(1);
+      expect(mockEventBus.publishedEvents[0]).toBe(event);
+    });
+
+    it('rollback 시 이벤트 발행 안 됨', async () => {
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        onAfterCommit: () => {
+          // registered, but simulating rollback by never executing the hook
+        },
+      };
+
+      vi.spyOn(Container, 'get').mockImplementation((token: any) => {
+        if (token === TRANSACTION_CONTEXT_TOKEN) return mockTxContext;
+        throw new Error('Not found');
+      });
+
+      const event = new TestEvent('rollback-tx');
+      await publisher.publish(event);
+
+      // Even after waiting, it should not be published
+      expect(mockEventBus.publishedEvents).toHaveLength(0);
+    });
+
+    it('AggregateRoot.pullDomainEvents() + tx publish', async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+
+      vi.spyOn(Container, 'get').mockImplementation((token: any) => {
+        if (token === TRANSACTION_CONTEXT_TOKEN) return mockTxContext;
+        throw new Error('Not found');
+      });
+
+      class TestAgg extends AggregateRoot {
+        doWork() {
+          this.addDomainEvent(new TestEvent('agg-event'));
+        }
+      }
+
+      const agg = new TestAgg();
+      agg.doWork();
+
+      const events = agg.pullDomainEvents();
+      expect(events).toHaveLength(1);
+      expect(agg.getDomainEvents()).toHaveLength(0); // Should be empty now
+
+      await publisher.publishMany([...events]);
+
+      expect(mockEventBus.publishedEvents).toHaveLength(0);
+
+      expect(registeredHook).toBeDefined();
+      await registeredHook?.();
+
+      expect(mockEventBus.publishedEvents).toHaveLength(1);
+      expect(mockEventBus.publishedEvents[0]).toBe(events[0]);
     });
   });
 });

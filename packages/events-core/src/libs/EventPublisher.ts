@@ -1,5 +1,7 @@
+import { Container } from '@croco/framework-context';
 import type { DomainEvent } from './DomainEvent';
 import type { EventBusConfig } from './EventBusConfig';
+import { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from './TransactionContext';
 
 export type PublishResult<T extends DomainEvent> = {
   event: T;
@@ -10,12 +12,25 @@ export type PublishResult<T extends DomainEvent> = {
 export class EventPublisher {
   constructor(private readonly config: EventBusConfig) {}
 
+  private tryGetTransactionContext(): TransactionContext | null {
+    try {
+      return Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN as never);
+    } catch {
+      return null;
+    }
+  }
+
   private get eventBus() {
     return this.config.getEventBus();
   }
 
   async publish(event: DomainEvent): Promise<void> {
-    await this.eventBus.publish(event);
+    const txContext = this.tryGetTransactionContext();
+    if (txContext?.isInTransaction()) {
+      txContext.onAfterCommit(() => this.eventBus.publish(event));
+    } else {
+      await this.eventBus.publish(event);
+    }
   }
 
   async publishMany(events: DomainEvent[]): Promise<PublishResult<DomainEvent>[]> {
