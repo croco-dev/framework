@@ -19,9 +19,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/events-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*",
-    "@croco/events-core": "workspace:*"
+    "@croco/framework-logger": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

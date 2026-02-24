@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/framework-context": "workspace:*"
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-logger": "workspace:*"
   },
   "peerDependencies": {
     "@croco/protocols-rest": "workspace:*"

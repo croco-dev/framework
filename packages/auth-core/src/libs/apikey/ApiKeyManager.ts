@@ -1,17 +1,20 @@
 import type { EventBus } from '@croco/events-core';
+import type { Logger } from '@croco/framework-logger';
 import { ApiKeyCreatedEvent, ApiKeyRevokedEvent, ApiKeyRotatedEvent, ApiKeyUsedEvent } from '../events/ApiKeyEvents';
 import type { ApiKey, CreateApiKeyOptions, CreateApiKeyResult, RotateApiKeyResult } from '../interfaces/ApiKey';
 import type { ApiKeyPrincipal } from '../interfaces/Principal';
 import { ApiKeyGenerator } from './ApiKeyGenerator';
 import { ApiKeyHasher } from './ApiKeyHasher';
 import type { ApiKeyStore } from './ApiKeyStore';
+import { ApiKeyNotFoundProblem } from './problems/ApiKeyNotFoundProblem';
 
 export class ApiKeyManager {
   constructor(
     private readonly store: ApiKeyStore,
     private readonly generator: ApiKeyGenerator = new ApiKeyGenerator(),
     private readonly hasher: ApiKeyHasher = new ApiKeyHasher(),
-    private readonly eventBus?: EventBus
+    private readonly eventBus?: EventBus,
+    private readonly logger?: Logger
   ) {}
 
   async create(options: CreateApiKeyOptions): Promise<CreateApiKeyResult> {
@@ -35,7 +38,11 @@ export class ApiKeyManager {
 
     this.eventBus
       ?.publish(new ApiKeyCreatedEvent({ keyId: key.id, tenantId: key.tenantId, name: key.name }))
-      .catch(() => {});
+      .catch((err: unknown) => {
+        this.logger?.warn('ApiKeyCreatedEvent publish failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
     return {
       key: fullKey,
@@ -57,13 +64,17 @@ export class ApiKeyManager {
     if (keyData.revokedAt) return null;
     if (keyData.expiresAt && keyData.expiresAt < new Date()) return null;
 
-    this.store.updateLastUsed(keyData.id).catch(() => {
-      // 실패 무시 - 사용 기록 업데이트는 인증 결과에 영향하지 않음
+    this.store.updateLastUsed(keyData.id).catch((err: unknown) => {
+      this.logger?.warn('ApiKey updateLastUsed failed', { error: err instanceof Error ? err.message : String(err) });
     });
 
     this.eventBus
       ?.publish(new ApiKeyUsedEvent({ keyId: keyData.id, tenantId: keyData.tenantId, timestamp: new Date() }))
-      .catch(() => {});
+      .catch((err: unknown) => {
+        this.logger?.warn('ApiKeyUsedEvent publish failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
     return {
       type: 'apikey',
@@ -84,14 +95,18 @@ export class ApiKeyManager {
     if (keyData) {
       this.eventBus
         ?.publish(new ApiKeyRevokedEvent({ keyId: id, tenantId: keyData.tenantId, revokedAt: new Date() }))
-        .catch(() => {});
+        .catch((err: unknown) => {
+          this.logger?.warn('ApiKeyRevokedEvent publish failed', {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
     }
   }
 
   async rotate(id: string): Promise<RotateApiKeyResult> {
     const existingKey = await this.store.findById(id);
     if (!existingKey) {
-      throw new Error(`API Key with id '${id}' not found`);
+      throw new ApiKeyNotFoundProblem(id);
     }
 
     const { prefix = 'sk', shortToken, longToken, fullKey } = this.generator.generate(existingKey.prefix);
@@ -116,7 +131,11 @@ export class ApiKeyManager {
 
     this.eventBus
       ?.publish(new ApiKeyRotatedEvent({ oldKeyId: id, newKeyId: newKey.id, tenantId: existingKey.tenantId }))
-      .catch(() => {});
+      .catch((err: unknown) => {
+        this.logger?.warn('ApiKeyRotatedEvent publish failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
     return {
       key: fullKey,

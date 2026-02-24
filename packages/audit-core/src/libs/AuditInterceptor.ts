@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import type { Constructor } from '@croco/framework-context';
 import { Container, Context } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import type { CallHandler, ExecutionContext, Interceptor } from '@croco/protocols-rest';
 import { AuditLogRepository } from './AuditLogRepository';
 import { AUDIT_METADATA_KEY } from './constants';
@@ -119,7 +120,15 @@ function writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
       const repository = Container.get(AuditLogRepository as unknown as Constructor<AuditLogRepository>);
       return repository.create(entry);
     })
-    .catch(() => undefined);
+    .catch((err: unknown) => {
+      try {
+        const logger = Container.get(Logger as unknown as Constructor<Logger>);
+        logger.warn('Audit log write failed', { error: err instanceof Error ? err.message : String(err) });
+      } catch {
+        // Logger도 resolve 실패 시 무시
+      }
+      return undefined;
+    });
 }
 
 export class AuditInterceptor implements Interceptor<ExecutionContext> {
