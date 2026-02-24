@@ -363,9 +363,15 @@ importers:
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@polar-sh/sdk':
         specifier: ^0.32.2
         version: 0.32.16(zod@4.3.6)
+      zod:
+        specifier: ^4.0.0
+        version: 4.3.6
     devDependencies:
       tsup:
         specifier: ^8.0.0

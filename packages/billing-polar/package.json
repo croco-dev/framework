@@ -20,7 +20,9 @@
   "dependencies": {
     "@croco/billing-core": "workspace:*",
     "@croco/events-core": "workspace:*",
-    "@polar-sh/sdk": "^0.32.2"
+    "@croco/problems-core": "workspace:*",
+    "@polar-sh/sdk": "^0.32.2",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

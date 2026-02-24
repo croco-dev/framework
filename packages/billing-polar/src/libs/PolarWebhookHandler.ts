@@ -3,7 +3,10 @@ import type { EventPublisher } from '@croco/events-core';
 import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/dist/esm/webhooks.js';
 import type { PolarConfig, WebhookHandlerResult } from '../types';
 import { PolarEventMapper } from './PolarEventMapper';
-
+import { BillingStatusMappingProblem } from './problems/BillingStatusMappingProblem';
+import { WebhookProcessingProblem } from './problems/WebhookProcessingProblem';
+import { WebhookValidationProblem } from './problems/WebhookValidationProblem';
+import { PolarEventSchema, PolarOrderDataSchema, PolarSubscriptionDataSchema } from './schemas/polarWebhookSchema';
 export type WebhookDependencies = {
   store: BillingStore;
   eventPublisher: EventPublisher;
@@ -69,26 +72,19 @@ export class PolarWebhookHandler {
    * @param headers - Request headers
    */
   async handle(body: Buffer | string, headers: Record<string, string>): Promise<WebhookHandlerResult> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let event: any;
+    let event: unknown;
     try {
       event = validateEvent(body, headers, this.webhookSecret);
     } catch (error) {
       if (error instanceof WebhookVerificationError) {
-        return {
-          success: false,
-          error: `Webhook verification failed: ${error.message}`,
-        };
+        throw new WebhookValidationProblem(error.message);
       }
-      return {
-        success: false,
-        error: `Webhook verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
+      throw new WebhookValidationProblem(error instanceof Error ? error.message : 'Unknown error');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const eventId = (event as any).id ?? headers['webhook-id'];
-    const eventType = (event as any).type;
+    const parsedEvent = PolarEventSchema.parse(event);
+    const eventId = parsedEvent.id ?? headers['webhook-id'];
+    const eventType = parsedEvent.type;
 
     if (!eventId || !eventType) {
       return { success: false, error: 'Missing event ID or type' };
@@ -103,9 +99,7 @@ export class PolarWebhookHandler {
       return inFlightEvent;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const processingEvent = this.processEventAtomically(eventId, eventType, (event as any).data);
-    PolarWebhookHandler.inFlightEvents.set(eventId, processingEvent);
+    const processingEvent = this.processEventAtomically(eventId, eventType, parsedEvent.data);
 
     try {
       return await processingEvent;
@@ -198,67 +192,29 @@ export class PolarWebhookHandler {
   }
 
   private parseSubscriptionPayload(data: unknown): ParsedSubscriptionPayload {
-    const subscriptionData = data as {
-      id?: unknown;
-      customer?: { externalId?: string | null; metadata?: Record<string, unknown> | null };
-      product?: { id?: unknown };
-      status?: unknown;
-      currentPeriodEnd?: Date | string | null;
-      cancelAtPeriodEnd?: unknown;
-    };
-
-    if (!this.isNonEmptyString(subscriptionData.id)) {
-      throw new Error('Subscription ID is required');
-    }
-
-    if (!subscriptionData.customer) {
-      throw new Error('Customer payload is required');
-    }
-
-    if (!subscriptionData.product || !this.isNonEmptyString(subscriptionData.product.id)) {
-      throw new Error('Product ID is required');
-    }
-
-    if (!this.isNonEmptyString(subscriptionData.status)) {
-      throw new Error('Subscription status is required');
-    }
+    const subscriptionData = PolarSubscriptionDataSchema.parse(data);
 
     const status = this.mapStatus(subscriptionData.status);
 
     return {
       id: subscriptionData.id,
       tenantId: this.extractTenantId(subscriptionData.customer),
-      productId: subscriptionData.product.id,
+      productId: subscriptionData.product?.id ?? '',
       rawStatus: subscriptionData.status,
       status,
       currentPeriodEnd: this.resolveCurrentPeriodEnd(subscriptionData.currentPeriodEnd),
       cancelAtPeriodEnd: Boolean(subscriptionData.cancelAtPeriodEnd),
     };
   }
-
   private parseOrderPayload(data: unknown): ParsedOrderPayload {
-    const orderData = data as {
-      id?: unknown;
-      amount?: unknown;
-      currency?: unknown;
-      createdAt?: unknown;
-      customer?: { externalId?: string | null; metadata?: Record<string, unknown> | null };
-    };
-
-    if (!this.isNonEmptyString(orderData.id)) {
-      throw new Error('Order ID is required');
-    }
+    const orderData = PolarOrderDataSchema.parse(data);
 
     if (typeof orderData.amount !== 'number' || Number.isNaN(orderData.amount)) {
-      throw new Error('Order amount is invalid');
+      throw new WebhookProcessingProblem('Order amount is invalid');
     }
 
     if (!this.isNonEmptyString(orderData.currency)) {
-      throw new Error('Order currency is required');
-    }
-
-    if (!orderData.customer) {
-      throw new Error('Customer payload is required');
+      throw new WebhookProcessingProblem('Order currency is required');
     }
 
     return {
@@ -269,8 +225,14 @@ export class PolarWebhookHandler {
       paidAt: this.resolvePaidAt(orderData.createdAt),
     };
   }
+  private extractTenantId(customer?: {
+    externalId?: string | null;
+    metadata?: Record<string, unknown> | null;
+  }): string {
+    if (!customer) {
+      throw new WebhookProcessingProblem('Customer payload is required');
+    }
 
-  private extractTenantId(customer: { externalId?: string | null; metadata?: Record<string, unknown> | null }): string {
     if (this.isNonEmptyString(customer.externalId)) {
       return customer.externalId;
     }
@@ -280,9 +242,8 @@ export class PolarWebhookHandler {
       return metadataTenantId;
     }
 
-    throw new Error('Customer externalId (tenantId) not found in webhook payload');
+    throw new WebhookProcessingProblem('Customer externalId (tenantId) not found in webhook payload');
   }
-
   private resolvePaidAt(createdAt: unknown): Date {
     if (createdAt === null || createdAt === undefined) {
       return new Date();
@@ -291,27 +252,25 @@ export class PolarWebhookHandler {
     if (createdAt instanceof Date || this.isNonEmptyString(createdAt)) {
       const paidAt = new Date(createdAt);
       if (Number.isNaN(paidAt.getTime())) {
-        throw new Error('Order createdAt is invalid');
+        throw new WebhookProcessingProblem('Order createdAt is invalid');
       }
       return paidAt;
     }
 
-    throw new Error('Order createdAt is invalid');
+    throw new WebhookProcessingProblem('Order createdAt is invalid');
   }
-
   private resolveCurrentPeriodEnd(currentPeriodEnd: Date | string | null | undefined): Date {
     if (currentPeriodEnd === null || currentPeriodEnd === undefined) {
-      throw new Error('currentPeriodEnd is required');
+      throw new WebhookProcessingProblem('currentPeriodEnd is required');
     }
 
     const parsedCurrentPeriodEnd = new Date(currentPeriodEnd);
     if (Number.isNaN(parsedCurrentPeriodEnd.getTime())) {
-      throw new Error('currentPeriodEnd is invalid');
+      throw new WebhookProcessingProblem('currentPeriodEnd is invalid');
     }
 
     return parsedCurrentPeriodEnd;
   }
-
   private async handleSubscriptionEvent(eventType: string, payload: ParsedSubscriptionPayload): Promise<void> {
     const previousSubscription = await this.store.findSubscription(payload.tenantId);
     const previousPlanId = previousSubscription?.planId;
@@ -380,19 +339,24 @@ export class PolarWebhookHandler {
       case 'trialing':
         return 'trialing';
       default:
-        throw new Error(`Unknown Polar status: ${polarStatus}`);
+        throw new BillingStatusMappingProblem(polarStatus);
     }
+  }
+  private isRollbackCapable(store: BillingStore): store is RollbackCapableBillingStore {
+    return (
+      'unmarkWebhookProcessed' in store &&
+      typeof (store as RollbackCapableBillingStore).unmarkWebhookProcessed === 'function'
+    );
   }
 
   private async tryRollbackWebhook(eventId: string): Promise<string | null> {
-    const rollbackStore = this.store as RollbackCapableBillingStore;
-
-    if (!rollbackStore.unmarkWebhookProcessed) {
+    if (!this.isRollbackCapable(this.store)) {
       return null;
     }
-
     try {
-      await rollbackStore.unmarkWebhookProcessed(eventId);
+      if (this.store.unmarkWebhookProcessed) {
+        await this.store.unmarkWebhookProcessed(eventId);
+      }
       return null;
     } catch (error) {
       return this.getErrorMessage(error);
