@@ -1,4 +1,5 @@
 import type { ExecutionManager } from '@croco/execution-core';
+import { TaskNotFoundProblem } from './problems/TasksProblems';
 import { TaskRegistry } from './TaskRegistry';
 
 export class TaskRunner {
@@ -11,7 +12,7 @@ export class TaskRunner {
   async execute(taskId: string, payload: unknown): Promise<unknown> {
     const task = this.registry.get(taskId);
     if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
+      throw new TaskNotFoundProblem(taskId);
     }
 
     const options = task.metadata.options ?? {};

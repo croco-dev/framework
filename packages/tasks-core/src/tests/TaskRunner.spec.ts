@@ -83,7 +83,7 @@ describe('TaskRunner', () => {
   it('should throw error for non-existent task', async () => {
     const runner = new TaskRunner(mockExecutionManager);
 
-    await expect(runner.execute('non-existent-task', {})).rejects.toThrow('Task not found: non-existent-task');
+    await expect(runner.execute('non-existent-task', {})).rejects.toThrow("Task not found: 'non-existent-task'");
   });
 
   it('should handle task execution failure', async () => {

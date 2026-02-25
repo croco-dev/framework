@@ -3,6 +3,7 @@
 
 // Decorator
 export { TASK_METADATA_KEY, Task } from './libs/decorators/Task';
+export { TaskNotFoundProblem } from './libs/problems/TasksProblems';
 export type { RegisteredTask } from './libs/TaskRegistry';
 // Registry
 export { TaskRegistry } from './libs/TaskRegistry';

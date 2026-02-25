@@ -1,5 +1,6 @@
 // Core
 
+export { TenantManagerNotRegisteredProblem } from './libs/problems/TenantManagerNotRegisteredProblem';
 // Problems
 export { TenantNotFoundProblem } from './libs/problems/TenantNotFoundProblem';
 // Problems

@@ -1,3 +1,4 @@
+import { TenantManagerNotRegisteredProblem } from './problems/TenantManagerNotRegisteredProblem';
 import type { TenantManager } from './TenantManager';
 
 /**
@@ -22,7 +23,7 @@ export class TenantManagerRegistry {
   static get(key?: string | symbol): TenantManager {
     const manager = TenantManagerRegistry.managers.get(key ?? TenantManagerRegistry.DEFAULT_KEY);
     if (!manager) {
-      throw new Error(`TenantManager not registered for key: ${String(key ?? 'default')}`);
+      throw new TenantManagerNotRegisteredProblem(key === undefined ? undefined : String(key));
     }
     return manager;
   }
