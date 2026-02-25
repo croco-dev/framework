@@ -48,6 +48,8 @@ describe('EventPublisher', () => {
   let config!: EventBusConfig;
 
   beforeEach(() => {
+    Container.reset();
+    mockEventBus = new MockEventBus();
     mockEventBus = new MockEventBus();
     config = EventBusConfig.getInstance();
     config.setEventBus(mockEventBus);

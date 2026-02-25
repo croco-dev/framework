@@ -2,14 +2,40 @@ import { EventBusConfig, type EventHandler, RegisterEventHandler } from '@croco/
 import { Container, MetadataStorage } from '@croco/framework-context';
 import { SEARCHABLE_METADATA, type SearchableMetadata } from '../decorators/Searchable';
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../events';
+class LRUCache<T> {
+  private cache = new Map<string, T>();
+
+  constructor(private maxSize: number = 10000) {}
+
+  has(key: string): boolean {
+    return this.cache.has(key);
+  }
+
+  add(key: string, value: T): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+    this.cache.set(key, value);
+    if (this.cache.size > this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) {
+        this.cache.delete(firstKey);
+      }
+    }
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
 import { SearchEngine } from '../SearchEngine';
 
 @RegisterEventHandler(DocumentIndexedEvent)
 export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | DocumentDeletedEvent> {
-  private processedEvents = new Set<string>();
+  private processedEvents = new LRUCache<void>(10000);
 
   async handle(event: DocumentIndexedEvent | DocumentDeletedEvent): Promise<void> {
-    const eventKey = `${event.eventName}:${event.indexName}:${event.documentId}:${event.tenantId}:${event.timestamp.getTime()}`;
+    const eventKey = `${event.eventName}:${event.indexName}:${event.documentId}:${event.tenantId}`;
 
     if (this.processedEvents.has(eventKey)) {
       return;
