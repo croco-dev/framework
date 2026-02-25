@@ -14,5 +14,10 @@ export type { EventSerializer, SerializedEvent } from './libs/EventSerializer';
 export { DefaultEventSerializer } from './libs/EventSerializer';
 export type { HandlerResolver } from './libs/HandlerResolver';
 export { DefaultHandlerResolver } from './libs/HandlerResolver';
-export { EventBusNotSetProblem, EventDefinitionProblem, UnknownEventTypeProblem } from './libs/problems/EventsProblems';
+export {
+  EventBusNotSetProblem,
+  EventDefinitionProblem,
+  EventDeserializationError,
+  UnknownEventTypeProblem,
+} from './libs/problems/EventsProblems';
 export { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from './libs/TransactionContext';

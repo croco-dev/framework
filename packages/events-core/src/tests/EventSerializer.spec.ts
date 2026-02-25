@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
 import { EventField } from '../libs/decorators/EventField';
 import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/EventRegistry';
-import { DefaultEventSerializer, EventDeserializationError, type SerializedEvent } from '../libs/EventSerializer';
+import { DefaultEventSerializer, type SerializedEvent } from '../libs/EventSerializer';
+import { EventDeserializationError } from '../libs/problems/EventsProblems';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';

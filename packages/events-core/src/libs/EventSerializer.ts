@@ -1,7 +1,7 @@
 import type { DomainEvent } from './DomainEvent';
 import { getEventFields } from './decorators/EventField';
 import { globalEventRegistry } from './EventRegistry';
-import { UnknownEventTypeProblem } from './problems/EventsProblems';
+import { EventDeserializationError, UnknownEventTypeProblem } from './problems/EventsProblems';
 
 type EventFromPayload = (payload: Record<string, unknown>) => DomainEvent;
 
@@ -28,12 +28,6 @@ export interface SerializedEvent {
 export interface EventSerializer {
   serialize<T extends DomainEvent>(event: T): SerializedEvent;
   deserialize<T extends DomainEvent>(data: SerializedEvent): T;
-}
-export class EventDeserializationError extends Error {
-  constructor(eventName: string, reason: string) {
-    super(`Cannot deserialize event '${eventName}': ${reason}`);
-    this.name = 'EventDeserializationError';
-  }
 }
 
 /**

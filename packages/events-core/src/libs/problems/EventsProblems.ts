@@ -25,3 +25,13 @@ export class UnknownEventTypeProblem extends Problem {
     super('events-core/unknown-event-type', ProblemCategory.InternalServerError, `Unknown event type: '${eventType}'`);
   }
 }
+
+export class EventDeserializationError extends Problem {
+  constructor(eventName: string, reason: string) {
+    super(
+      'events-core/deserialization-error',
+      ProblemCategory.InternalServerError,
+      `Cannot deserialize event '${eventName}': ${reason}`
+    );
+  }
+}
