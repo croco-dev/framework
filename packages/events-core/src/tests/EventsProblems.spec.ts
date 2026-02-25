@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EventBusNotSetProblem,
   EventDefinitionProblem,
+  EventDeserializationError,
   UnknownEventTypeProblem,
 } from '../libs/problems/EventsProblems';
 
@@ -29,5 +30,13 @@ describe('EventsProblems', () => {
     expect(problem.code).toBe('events-core/unknown-event-type');
     expect(problem.category).toBe(ProblemCategory.InternalServerError);
     expect(problem.detail).toBe("Unknown event type: 'UnknownEvent'");
+  });
+
+  it('should create EventDeserializationError with expected metadata', () => {
+    const error = new EventDeserializationError('OrderCreated', 'missing @EventField decorator');
+
+    expect(error.code).toBe('events-core/deserialization-error');
+    expect(error.category).toBe(ProblemCategory.InternalServerError);
+    expect(error.detail).toBe("Cannot deserialize event 'OrderCreated': missing @EventField decorator");
   });
 });
