@@ -1,12 +1,13 @@
-import type { DistributedCircuitBreakerStateStore } from '../CircuitBreakerState';
+import type { CircuitBreakerStateStore } from '../CircuitBreakerState';
 import { CircuitState, InMemoryCircuitBreakerStateStore } from '../CircuitBreakerState';
 
 type UpstashRedisLike = {
   get: (key: string) => Promise<string | null>;
   set: (key: string, value: string, opts?: { ex?: number; nx?: boolean }) => Promise<'OK' | null>;
   incr: (key: string) => Promise<number>;
-  del: (key: string) => Promise<number>;
+  del: (...keys: string[]) => Promise<number>;
   expire: (key: string, seconds: number) => Promise<number>;
+  scan: (cursor: number, opts?: { match?: string; count?: number }) => Promise<[string, string[]]>;
 };
 
 export type OnStoreError = 'throw' | 'open' | 'fallback-inmemory';
@@ -17,7 +18,7 @@ export type RedisCircuitBreakerStoreOptions = {
   onStoreError?: OnStoreError;
 };
 
-export class RedisCircuitBreakerStore implements DistributedCircuitBreakerStateStore {
+export class RedisCircuitBreakerStore implements CircuitBreakerStateStore {
   private readonly redis: UpstashRedisLike;
   private readonly ttlSeconds: number;
   private readonly onStoreError: OnStoreError;
@@ -226,6 +227,32 @@ export class RedisCircuitBreakerStore implements DistributedCircuitBreakerStateS
       (store) => store.setHalfOpenSuccessCount(circuitId, count),
       async () => undefined
     );
+  }
+
+  async reset(circuitId: string): Promise<void> {
+    const suffixes = ['state', 'failures', 'lastFailureTime', 'halfOpenActive', 'halfOpenSuccess', 'lock'];
+    await this.redis.del(...suffixes.map((suffix) => this.key(circuitId, suffix)));
+
+    if (this.fallbackStore) {
+      await this.fallbackStore.reset(circuitId);
+    }
+  }
+
+  async resetAll(): Promise<void> {
+    let cursor = 0;
+
+    do {
+      const [nextCursor, keys] = await this.redis.scan(cursor, { match: 'croco:cb:*', count: 100 });
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+
+      cursor = Number(nextCursor);
+    } while (cursor !== 0);
+
+    if (this.fallbackStore) {
+      await this.fallbackStore.resetAll();
+    }
   }
 
   async withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T> {

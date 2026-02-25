@@ -72,9 +72,7 @@ export interface CircuitBreakerStateStore {
    * @param time 타임스탬프 (ms)
    */
   setLastFailureTime(circuitId: string, time: number): Promise<void>;
-}
 
-export interface DistributedCircuitBreakerStateStore extends CircuitBreakerStateStore {
   withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T>;
 
   incrementFailureAndCheck(
@@ -89,10 +87,24 @@ export interface DistributedCircuitBreakerStateStore extends CircuitBreakerState
   getHalfOpenSuccessCount(circuitId: string): Promise<number>;
 
   setHalfOpenSuccessCount(circuitId: string, count: number): Promise<void>;
+
+  reset(circuitId: string): Promise<void>;
+
+  resetAll(): Promise<void>;
 }
 
-export function isDistributedStore(store: CircuitBreakerStateStore): store is DistributedCircuitBreakerStateStore {
-  return 'withCircuitLock' in store;
+/**
+ * @deprecated Use CircuitBreakerStateStore directly.
+ * DistributedCircuitBreakerStateStore is now merged into CircuitBreakerStateStore.
+ */
+export type DistributedCircuitBreakerStateStore = CircuitBreakerStateStore;
+
+/**
+ * @deprecated All CircuitBreakerStateStore instances are now distributed-capable.
+ * This function always returns true and will be removed in a future version.
+ */
+export function isDistributedStore(_store: CircuitBreakerStateStore): _store is DistributedCircuitBreakerStateStore {
+  return true;
 }
 
 /**
