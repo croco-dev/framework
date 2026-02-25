@@ -1,3 +1,5 @@
+import { InvalidPermissionActionProblem, InvalidPermissionFormatProblem } from '../problems/AuthProblems';
+
 export type Permission = {
   resource: string;
   action: 'read' | 'write' | 'delete' | 'manage';
@@ -8,11 +10,11 @@ const VALID_ACTIONS = ['read', 'write', 'delete', 'manage'] as const;
 export function parsePermission(permission: string): Permission {
   const [resource, action] = permission.split(':');
   if (!resource || !action) {
-    throw new Error(`Invalid permission format: ${permission}`);
+    throw new InvalidPermissionFormatProblem(permission);
   }
 
   if (!VALID_ACTIONS.includes(action as Permission['action'])) {
-    throw new Error(`Invalid permission action: '${action}'. Must be one of: ${VALID_ACTIONS.join(', ')}`);
+    throw new InvalidPermissionActionProblem(action);
   }
 
   return { resource, action: action as Permission['action'] };

@@ -23,3 +23,23 @@ export class ApiKeyRevokedProblem extends Problem {
     super('API_KEY_REVOKED', ProblemCategory.Unauthorized, detail);
   }
 }
+
+export class InvalidPermissionFormatProblem extends Problem {
+  constructor(permission: string) {
+    super(
+      'auth-core/invalid-permission-format',
+      ProblemCategory.ValidationError,
+      `Invalid permission format: '${permission}'`
+    );
+  }
+}
+
+export class InvalidPermissionActionProblem extends Problem {
+  constructor(action: string) {
+    super(
+      'auth-core/invalid-permission-action',
+      ProblemCategory.ValidationError,
+      `Invalid permission action: '${action}'`
+    );
+  }
+}

@@ -23,6 +23,8 @@ export {
   ApiKeyExpiredProblem,
   ApiKeyRevokedProblem,
   ForbiddenProblem,
+  InvalidPermissionActionProblem,
+  InvalidPermissionFormatProblem,
   UnauthorizedProblem,
 } from './libs/problems/AuthProblems';
 export { formatPermission, hasPermission, type Permission, parsePermission } from './libs/rbac/Permission';

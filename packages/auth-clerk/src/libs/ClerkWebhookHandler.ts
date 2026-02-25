@@ -1,4 +1,5 @@
 import { verifyWebhook, type WebhookEvent } from '@clerk/backend/webhooks';
+import { WebhookVerificationProblem } from './problems/ClerkProblems';
 import type {
   ClerkMembershipEvent,
   ClerkOrgEvent,
@@ -18,7 +19,7 @@ export class ClerkWebhookHandler {
     try {
       event = await verifyWebhook(request, { signingSecret: this.options.signingSecret });
     } catch {
-      throw new Error('Webhook verification failed');
+      throw new WebhookVerificationProblem();
     }
 
     const webhookEvent = event as WebhookEvent;
