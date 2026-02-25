@@ -1,5 +1,6 @@
 import { recordEvent, withSpan } from '@croco/telemetry-api';
 import { TxPropagationError } from './errors';
+import { TransactionDecoratorProblem } from './problems/TransactionProblems';
 import { TxManagerRegistry } from './TxManagerRegistry';
 import type { Propagation, TransactionalOptions } from './types';
 
@@ -19,7 +20,7 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
     const originalMethod = descriptor.value as AsyncMethod;
 
     if (typeof originalMethod !== 'function') {
-      throw new Error('@Transactional can only be applied to methods');
+      throw new TransactionDecoratorProblem();
     }
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {

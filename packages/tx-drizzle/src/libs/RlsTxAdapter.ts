@@ -3,6 +3,7 @@ import { Logger } from '@croco/framework-logger';
 import type { TxAdapter } from '@croco/tx-core';
 import { sql } from 'drizzle-orm';
 import { createDrizzleTxAdapter } from './DrizzleTxAdapter';
+import { TenantContextRequiredProblem } from './problems/TxDrizzleProblems';
 import type { DrizzleDb, InferTxClient, InferTxOptions } from './types';
 
 export interface RlsTenantProvider {
@@ -39,7 +40,7 @@ function getTenantIdOrThrow(tenantProvider: RlsTenantProvider): string {
   const tenantId = tenantProvider.getTenantId();
 
   if (!tenantId) {
-    throw new Error('Tenant context is required');
+    throw new TenantContextRequiredProblem();
   }
 
   return tenantId;

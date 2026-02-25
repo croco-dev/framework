@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
+import { TransactionContextProblem } from './problems/TransactionProblems';
 import type { TxAdapter } from './TxAdapter';
 import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
 
@@ -97,7 +98,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
   onAfterCommit(hook: AfterCommitHook): void {
     const context = this.als.getStore();
     if (!context) {
-      throw new Error('onAfterCommit must be called within a transaction');
+      throw new TransactionContextProblem();
     }
     context.afterCommitHooks.push(hook);
   }

@@ -1,4 +1,5 @@
 export { TxManagerNotRegisteredError, TxPropagationError } from './libs/errors';
+export { TransactionContextProblem, TransactionDecoratorProblem } from './libs/problems/TransactionProblems';
 export { Transactional } from './libs/Transactional';
 export type { TxAdapter } from './libs/TxAdapter';
 export { TxManager } from './libs/TxManager';
