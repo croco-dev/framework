@@ -9,10 +9,16 @@ import {
   LlmTokenLimitExceededProblem,
 } from '../../libs/problems/LlmProblems';
 
+class TestLlmProblem extends LlmProblem {
+  constructor(code: string, category: ProblemCategory, detail: string) {
+    super(code, category, detail);
+  }
+}
+
 describe('LlmProblems', () => {
   describe('LlmProblem', () => {
     it('should create base problem with correct properties', () => {
-      const problem = new LlmProblem('CUSTOM_ERROR', ProblemCategory.InternalServerError, 'Test error message');
+      const problem = new TestLlmProblem('CUSTOM_ERROR', ProblemCategory.InternalServerError, 'Test error message');
 
       expect(problem.code).toBe('CUSTOM_ERROR');
       expect(problem.category).toBe(ProblemCategory.InternalServerError);
@@ -21,14 +27,14 @@ describe('LlmProblems', () => {
     });
 
     it('should accept custom category', () => {
-      const problem = new LlmProblem('CUSTOM_ERROR', ProblemCategory.NotFound, 'Not found');
+      const problem = new TestLlmProblem('CUSTOM_ERROR', ProblemCategory.NotFound, 'Not found');
 
       expect(problem.category).toBe(ProblemCategory.NotFound);
       expect(problem.status).toBe(404);
     });
 
     it('should convert to RFC 7807 format', () => {
-      const problem = new LlmProblem('CUSTOM_ERROR', ProblemCategory.InternalServerError, 'Test error');
+      const problem = new TestLlmProblem('CUSTOM_ERROR', ProblemCategory.InternalServerError, 'Test error');
       const json = problem.toJSON();
 
       expect(json).toHaveProperty('type');
