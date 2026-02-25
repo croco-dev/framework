@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CircuitBreaker, type CircuitBreakerOptions } from '../libs/CircuitBreaker';
-import { CircuitState, InMemoryCircuitBreakerStateStore } from '../libs/CircuitBreakerState';
+import {
+  type CircuitBreakerStateStore,
+  CircuitState,
+  InMemoryCircuitBreakerStateStore,
+} from '../libs/CircuitBreakerState';
 import { CircuitBreakerOpenProblem } from '../libs/errors/CircuitBreakerOpenProblem';
 
 describe('CircuitBreaker', () => {
@@ -337,19 +341,67 @@ describe('CircuitBreaker', () => {
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
     });
 
-    it('halfOpen 카운터 확장 API가 없으면 인스턴스 로컬 카운터를 사용한다', async () => {
-      const fallbackOnlyStore = {
-        getState: vi.fn().mockResolvedValue(CircuitState.HALF_OPEN),
-        setState: vi.fn().mockResolvedValue(undefined),
-        getFailureCount: vi.fn().mockResolvedValue(0),
-        incrementFailureCount: vi.fn().mockResolvedValue(1),
-        resetFailureCount: vi.fn().mockResolvedValue(undefined),
+    it('halfOpen 카운터는 stateStore API를 사용해 관리해야 한다', async () => {
+      let currentState = CircuitState.HALF_OPEN;
+      let failureCount = 0;
+      let halfOpenActiveCount = 0;
+      let halfOpenSuccessCount = 0;
+      let lock: Promise<void> = Promise.resolve();
+
+      const mockStore: CircuitBreakerStateStore = {
+        getState: vi.fn().mockImplementation(async () => currentState),
+        setState: vi.fn().mockImplementation(async (_id, state) => {
+          currentState = state;
+          halfOpenActiveCount = 0;
+          halfOpenSuccessCount = 0;
+        }),
+        getFailureCount: vi.fn().mockImplementation(async () => failureCount),
+        incrementFailureCount: vi.fn().mockImplementation(async () => {
+          failureCount += 1;
+          return failureCount;
+        }),
+        resetFailureCount: vi.fn().mockImplementation(async () => {
+          failureCount = 0;
+        }),
         getLastFailureTime: vi.fn().mockResolvedValue(null),
         setLastFailureTime: vi.fn().mockResolvedValue(undefined),
+        withCircuitLock: vi.fn().mockImplementation(async (_id, operation) => {
+          const previousLock = lock;
+          let releaseLock!: () => void;
+
+          lock = new Promise<void>((resolve) => {
+            releaseLock = resolve;
+          });
+
+          await previousLock;
+
+          try {
+            return await operation();
+          } finally {
+            releaseLock();
+          }
+        }),
+        incrementFailureAndCheck: vi.fn().mockImplementation(async (_id, threshold) => {
+          failureCount += 1;
+          return {
+            failureCount,
+            shouldOpen: failureCount >= threshold,
+          };
+        }),
+        getHalfOpenActiveCount: vi.fn().mockImplementation(async () => halfOpenActiveCount),
+        setHalfOpenActiveCount: vi.fn().mockImplementation(async (_id, count) => {
+          halfOpenActiveCount = Math.max(0, count);
+        }),
+        getHalfOpenSuccessCount: vi.fn().mockImplementation(async () => halfOpenSuccessCount),
+        setHalfOpenSuccessCount: vi.fn().mockImplementation(async (_id, count) => {
+          halfOpenSuccessCount = Math.max(0, count);
+        }),
+        reset: vi.fn().mockResolvedValue(undefined),
+        resetAll: vi.fn().mockResolvedValue(undefined),
       };
 
       const breaker = createBreaker({
-        stateStore: fallbackOnlyStore,
+        stateStore: mockStore,
         halfOpenRequests: 1,
       });
 
@@ -371,14 +423,18 @@ describe('CircuitBreaker', () => {
 
       resolveFirst('success');
       await expect(first).resolves.toBe('success');
-      expect(fallbackOnlyStore.setState).toHaveBeenCalledWith('test-circuit', CircuitState.CLOSED);
-      expect(fallbackOnlyStore.resetFailureCount).toHaveBeenCalledTimes(1);
+      expect(mockStore.setState).toHaveBeenCalledWith('test-circuit', CircuitState.CLOSED);
+      expect(mockStore.resetFailureCount).toHaveBeenCalledTimes(1);
+      expect(mockStore.getHalfOpenActiveCount).toHaveBeenCalled();
+      expect(mockStore.setHalfOpenActiveCount).toHaveBeenCalled();
+      expect(mockStore.getHalfOpenSuccessCount).toHaveBeenCalled();
+      expect(mockStore.setHalfOpenSuccessCount).toHaveBeenCalled();
     });
   });
 
   describe('저장소 예외 처리', () => {
     it('getState 실패 시 에러를 전파해야 한다', async () => {
-      const mockStore = {
+      const mockStore: CircuitBreakerStateStore = {
         getState: vi.fn().mockRejectedValue(new Error('Store unavailable')),
         setState: vi.fn(),
         getFailureCount: vi.fn(),
@@ -386,6 +442,14 @@ describe('CircuitBreaker', () => {
         resetFailureCount: vi.fn(),
         getLastFailureTime: vi.fn(),
         setLastFailureTime: vi.fn(),
+        withCircuitLock: vi.fn(),
+        incrementFailureAndCheck: vi.fn(),
+        getHalfOpenActiveCount: vi.fn(),
+        setHalfOpenActiveCount: vi.fn(),
+        getHalfOpenSuccessCount: vi.fn(),
+        setHalfOpenSuccessCount: vi.fn(),
+        reset: vi.fn(),
+        resetAll: vi.fn(),
       };
 
       const breaker = new CircuitBreaker({
@@ -397,7 +461,7 @@ describe('CircuitBreaker', () => {
     });
 
     it('setState 실패 시 에러를 전파해야 한다', async () => {
-      const mockStore = {
+      const mockStore: CircuitBreakerStateStore = {
         getState: vi.fn().mockResolvedValue(CircuitState.CLOSED),
         setState: vi.fn().mockRejectedValue(new Error('Store write failed')),
         getFailureCount: vi.fn().mockResolvedValue(0),
@@ -405,6 +469,14 @@ describe('CircuitBreaker', () => {
         resetFailureCount: vi.fn(),
         getLastFailureTime: vi.fn().mockResolvedValue(null),
         setLastFailureTime: vi.fn().mockResolvedValue(undefined),
+        withCircuitLock: vi.fn().mockImplementation(async (_id, operation) => operation()),
+        incrementFailureAndCheck: vi.fn().mockResolvedValue({ failureCount: 1, shouldOpen: true }),
+        getHalfOpenActiveCount: vi.fn().mockResolvedValue(0),
+        setHalfOpenActiveCount: vi.fn().mockResolvedValue(undefined),
+        getHalfOpenSuccessCount: vi.fn().mockResolvedValue(0),
+        setHalfOpenSuccessCount: vi.fn().mockResolvedValue(undefined),
+        reset: vi.fn().mockResolvedValue(undefined),
+        resetAll: vi.fn().mockResolvedValue(undefined),
       };
 
       const breaker = new CircuitBreaker({
