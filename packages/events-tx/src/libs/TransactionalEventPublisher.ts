@@ -1,4 +1,5 @@
 import type { DomainEvent, EventBus } from '@croco/events-core';
+import { TransactionStateProblem } from './problems/EventsTxProblems';
 
 type TxPhase = 'active' | 'committed' | 'rolled-back';
 
@@ -19,7 +20,7 @@ export class TransactionalEventPublisher {
 
   begin(txId: string): void {
     if (this.sessions.has(txId)) {
-      throw new Error(`Transaction '${txId}' already started`);
+      throw new TransactionStateProblem(`Transaction '${txId}' already started`);
     }
     this.sessions.set(txId, { events: [], phase: 'active' });
   }
@@ -51,10 +52,10 @@ export class TransactionalEventPublisher {
   private requireActive(txId: string): TxSession {
     const session = this.sessions.get(txId);
     if (!session) {
-      throw new Error(`Transaction '${txId}' not found`);
+      throw new TransactionStateProblem(`Transaction '${txId}' not found`);
     }
     if (session.phase !== 'active') {
-      throw new Error(`Transaction '${txId}' is already ${session.phase}`);
+      throw new TransactionStateProblem(`Transaction '${txId}' is already ${session.phase}`);
     }
     return session;
   }

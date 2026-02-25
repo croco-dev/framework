@@ -139,7 +139,9 @@ describe('EventBusConfig', () => {
       const config = EventBusConfig.getInstance();
       config.setEventBus(undefined as unknown as EventBus);
 
-      await expect(config.start({ handlers: [] })).rejects.toThrow('EventBus is not set');
+      await expect(config.start({ handlers: [] })).rejects.toThrow(
+        'EventBus has not been set. Call setEventBus() first.'
+      );
     });
 
     it('should register subscriptions from handlers array', async () => {

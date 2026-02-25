@@ -172,7 +172,7 @@ describe('DefaultEventSerializer', () => {
         payload: {},
       };
 
-      expect(() => serializer.deserialize(data)).toThrow('Unknown event type: UnknownEvent');
+      expect(() => serializer.deserialize(data)).toThrow("Unknown event type: 'UnknownEvent'");
     });
   });
 

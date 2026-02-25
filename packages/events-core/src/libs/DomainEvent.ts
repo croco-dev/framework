@@ -1,4 +1,5 @@
 import type { TraceInfo } from '@croco/telemetry-api';
+import { EventDefinitionProblem } from './problems/EventsProblems';
 
 export type DomainEventMetadata = {
   [key: string]: unknown;
@@ -16,7 +17,7 @@ export abstract class DomainEvent {
     const ctor = this.constructor as typeof DomainEvent & { eventName?: string };
 
     if (!ctor.eventName) {
-      throw new Error('DomainEvent subclass must define static eventName');
+      throw new EventDefinitionProblem();
     }
 
     this.eventName = ctor.eventName;

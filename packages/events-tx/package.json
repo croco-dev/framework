@@ -15,7 +15,8 @@
     "@croco/utils-tsconfig": "workspace:*"
   },
   "dependencies": {
-    "@croco/events-core": "workspace:*"
+    "@croco/events-core": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

@@ -2,6 +2,7 @@ import type { EventBus, EventSubscription } from './EventBus';
 import type { EventHandlerClass } from './EventHandler';
 import type { HandlerResolver } from './HandlerResolver';
 import { DefaultHandlerResolver } from './HandlerResolver';
+import { EventBusNotSetProblem } from './problems/EventsProblems';
 
 export interface EventBusStartOptions {
   handlers: EventHandlerClass[];
@@ -28,7 +29,7 @@ export class EventBusConfig {
 
   public getEventBus(): EventBus {
     if (!this.eventBus) {
-      throw new Error('EventBus has not been set. Call setEventBus() first.');
+      throw new EventBusNotSetProblem();
     }
     return this.eventBus;
   }
@@ -43,7 +44,7 @@ export class EventBusConfig {
 
   public async start(options: EventBusStartOptions): Promise<void> {
     if (!this.eventBus) {
-      throw new Error('EventBus is not set');
+      throw new EventBusNotSetProblem();
     }
 
     const resolver = options.resolver ?? new DefaultHandlerResolver();

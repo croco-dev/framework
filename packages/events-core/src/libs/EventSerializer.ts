@@ -1,6 +1,7 @@
 import type { DomainEvent } from './DomainEvent';
 import { getEventFields } from './decorators/EventField';
 import { globalEventRegistry } from './EventRegistry';
+import { UnknownEventTypeProblem } from './problems/EventsProblems';
 
 type EventFromPayload = (payload: Record<string, unknown>) => DomainEvent;
 
@@ -55,7 +56,7 @@ export class DefaultEventSerializer implements EventSerializer {
     const EventClass = this.registry.get(data.eventType);
 
     if (!EventClass) {
-      throw new Error(`Unknown event type: ${data.eventType}`);
+      throw new UnknownEventTypeProblem(data.eventType);
     }
 
     return this.reconstructEvent(EventClass, data) as T;
