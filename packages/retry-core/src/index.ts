@@ -6,7 +6,9 @@ export { CircuitBreakerRetryTemplate } from './libs/CircuitBreakerRetryTemplate'
 export {
   type CircuitBreakerStateStore,
   CircuitState,
+  type DistributedCircuitBreakerStateStore,
   InMemoryCircuitBreakerStateStore,
+  isDistributedStore,
 } from './libs/CircuitBreakerState';
 export { CircuitBreakerOpenProblem, RetryExhaustedProblem } from './libs/errors';
 export type { LambdaContext, TimeoutGuardOptions } from './libs/LambdaTimeoutGuard';
@@ -23,8 +25,12 @@ export { findRecoverMethod, getRecoverMethods, Recover } from './libs/Recover';
 export type { RetryableOptions } from './libs/Retryable';
 export { Retryable } from './libs/Retryable';
 export { RetryContext } from './libs/RetryContext';
+export type { RetryHooks } from './libs/RetryEngine';
+export { executeRetryLoop } from './libs/RetryEngine';
 export type { RetryListener } from './libs/RetryListener';
 export { CompositeRetryListener, LoggingRetryListener } from './libs/RetryListener';
+export type { RetryOrchestratorOptions } from './libs/RetryOrchestrator';
+export { RetryOrchestrator } from './libs/RetryOrchestrator';
 export type { RetryPolicy, RetryPolicyOptions } from './libs/RetryPolicy';
 export { DEFAULT_NO_RETRY_FOR, DEFAULT_RETRYABLE_CATEGORIES, DefaultRetryPolicy } from './libs/RetryPolicy';
 export type { RecoveryCallback, RetryCallback, RetryTemplateOptions } from './libs/RetryTemplate';
