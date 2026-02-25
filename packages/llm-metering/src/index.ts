@@ -10,7 +10,11 @@ export { LlmUsageRecordedEvent } from './libs/events/LlmUsageRecordedEvent';
 export type { LlmCostRecord, LlmMeteringServiceOptions, LlmUsageEvent } from './libs/LlmMeteringService';
 export { LlmMeteringService } from './libs/LlmMeteringService';
 export { PricingTable } from './libs/PricingTable';
-export { LlmCostLimitExceededProblem, LlmQuotaExceededProblem } from './libs/problems/LlmMeteringProblems';
+export {
+  LlmCostLimitExceededProblem,
+  LlmQuotaExceededProblem,
+  PricingNotFoundProblem,
+} from './libs/problems/LlmMeteringProblems';
 export {
   createMeteredAsyncIterable,
   extractUsageFromChunk,

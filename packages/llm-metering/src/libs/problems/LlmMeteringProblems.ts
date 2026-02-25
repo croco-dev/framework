@@ -34,3 +34,13 @@ export class LlmCostLimitExceededProblem extends Problem {
     );
   }
 }
+
+export class PricingNotFoundProblem extends Problem {
+  constructor(provider: string, modelId: string) {
+    super(
+      'llm-metering/pricing-not-found',
+      ProblemCategory.NotFound,
+      `Pricing not found for provider '${provider}' and model '${modelId}'`
+    );
+  }
+}

@@ -4,7 +4,7 @@ import type { LlmMetadata, LlmUsage } from '@croco/llm-core';
 import type { MeteringService } from '@croco/metering-core';
 import { LlmUsageRecordedEvent } from './events/LlmUsageRecordedEvent';
 import { PricingTable } from './PricingTable';
-import { LlmQuotaExceededProblem } from './problems/LlmMeteringProblems';
+import { LlmQuotaExceededProblem, PricingNotFoundProblem } from './problems/LlmMeteringProblems';
 import type { LlmEmbeddingUsageRecord, LlmUsageRecord } from './types';
 
 export type LlmUsageEvent = {
@@ -81,7 +81,7 @@ export class LlmMeteringService {
 
     // 2. 비용 계산
     if (!pricing) {
-      throw new Error(`Pricing not found for provider ${provider} and model ${modelId}`);
+      throw new PricingNotFoundProblem(provider, modelId);
     }
     const costUsd = PricingTable.calculateCost(
       {
@@ -197,7 +197,7 @@ export class LlmMeteringService {
 
     // 2. 비용 계산
     if (!pricing) {
-      throw new Error(`Pricing not found for provider ${provider} and model ${modelId}`);
+      throw new PricingNotFoundProblem(provider, modelId);
     }
     const costUsd = PricingTable.calculateCost(
       {
@@ -279,7 +279,7 @@ export class LlmMeteringService {
 
     // 2. 비용 계산
     if (!pricing) {
-      throw new Error(`Pricing not found for provider ${provider} and model ${modelId}`);
+      throw new PricingNotFoundProblem(provider, modelId);
     }
     const costUsd = PricingTable.calculateCost(
       {

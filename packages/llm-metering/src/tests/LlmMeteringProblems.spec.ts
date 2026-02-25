@@ -1,6 +1,10 @@
 import { ProblemCategory } from '@croco/problems-core';
 import { describe, expect, it } from 'vitest';
-import { LlmCostLimitExceededProblem, LlmQuotaExceededProblem } from '../libs/problems/LlmMeteringProblems';
+import {
+  LlmCostLimitExceededProblem,
+  LlmQuotaExceededProblem,
+  PricingNotFoundProblem,
+} from '../libs/problems/LlmMeteringProblems';
 
 describe('LlmMeteringProblems', () => {
   describe('LlmQuotaExceededProblem', () => {
@@ -44,6 +48,18 @@ describe('LlmMeteringProblems', () => {
       expect(problem.detail).toContain('$100.00');
       expect(problem.detail).toContain('monthly');
       expect(problem.extensions?.period).toBe('monthly');
+    });
+  });
+
+  describe('PricingNotFoundProblem', () => {
+    it('should create problem with not found category', () => {
+      const problem = new PricingNotFoundProblem('openai', 'gpt-4');
+
+      expect(problem.code).toBe('llm-metering/pricing-not-found');
+      expect(problem.category).toBe(ProblemCategory.NotFound);
+      expect(problem.status).toBe(404);
+      expect(problem.detail).toContain("provider 'openai'");
+      expect(problem.detail).toContain("model 'gpt-4'");
     });
   });
 });
