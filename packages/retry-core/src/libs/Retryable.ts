@@ -1,15 +1,15 @@
 import { recordEvent, withSpan } from '@croco/telemetry-api';
-import { type BackoffOptions, type BackoffPolicy, ExponentialBackoff } from './BackoffPolicy';
+import type { BackoffOptions, BackoffPolicy } from './BackoffPolicy';
 import { CircuitBreaker } from './CircuitBreaker';
 import { CircuitState } from './CircuitBreakerState';
 import { CircuitBreakerOpenProblem } from './errors/CircuitBreakerOpenProblem';
 import { RetryExhaustedProblem } from './errors/RetryExhaustedProblem';
 import { LambdaTimeoutGuard } from './LambdaTimeoutGuard';
-import { findRecoverMethod } from './Recover';
-import { RetryContext } from './RetryContext';
-import { executeRetryLoop } from './RetryEngine';
-import { CompositeRetryListener, type RetryListener } from './RetryListener';
-import { DefaultRetryPolicy, type RetryPolicy, type RetryPolicyOptions } from './RetryPolicy';
+import { findRecoverMethod, getRecoverMethods } from './Recover';
+import type { RetryContext } from './RetryContext';
+import type { RetryListener } from './RetryListener';
+import { RetryOrchestrator } from './RetryOrchestrator';
+import type { RetryPolicy, RetryPolicyOptions } from './RetryPolicy';
 
 /**
  * Options for @Retryable decorator.
@@ -66,202 +66,147 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
   const wrapExhausted = options.wrapExhausted ?? false;
   const trace = options.trace ?? true;
 
-  const retryPolicy =
-    options.retryPolicy ??
-    new DefaultRetryPolicy({
-      retryFor: options.retryFor,
-      noRetryFor: options.noRetryFor,
-      retryForCategories: options.retryForCategories,
-      maxAttempts,
-    });
-
-  const backoffPolicy = options.backoffPolicy ?? new ExponentialBackoff(options.backoff);
-  const listener =
-    options.listeners && options.listeners.length > 0 ? new CompositeRetryListener(options.listeners) : null;
-
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
     const originalMethod = descriptor.value;
     const methodName = String(propertyKey);
     const targetName = (_target as { constructor?: { name?: string } }).constructor?.name ?? 'UnknownTarget';
     const circuitId = `${targetName}.${methodName}`;
-    const halfOpenRequests = options.circuitBreaker?.successThreshold ?? options.circuitBreaker?.halfOpenAttempts;
-    const circuitBreaker =
-      options.circuitBreaker !== undefined
-        ? new CircuitBreaker({
-            circuitId,
-            failureThreshold: options.circuitBreaker.failureThreshold,
-            openDuration: options.circuitBreaker.timeout,
-            halfOpenRequests,
-          })
-        : null;
-    const timeoutGuard =
-      options.lambdaTimeoutReserveMs !== undefined
-        ? new LambdaTimeoutGuard({ reserveTimeMs: options.lambdaTimeoutReserveMs })
-        : null;
-    const effectiveRetryPolicy: RetryPolicy =
-      circuitBreaker !== null
-        ? {
-            shouldRetry(error: unknown, attempt: number, configuredMaxAttempts: number): boolean {
-              if (error instanceof CircuitBreakerOpenProblem) {
-                return false;
-              }
-
-              return retryPolicy.shouldRetry(error, attempt, configuredMaxAttempts);
-            },
-          }
-        : retryPolicy;
-
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      const executeWithRetry = async (): Promise<unknown> => {
-        const context = new RetryContext(methodName, args, maxAttempts);
+      const halfOpenRequests = options.circuitBreaker?.successThreshold ?? options.circuitBreaker?.halfOpenAttempts;
+      const circuitBreaker =
+        options.circuitBreaker !== undefined
+          ? new CircuitBreaker({
+              circuitId,
+              failureThreshold: options.circuitBreaker.failureThreshold,
+              openDuration: options.circuitBreaker.timeout,
+              halfOpenRequests,
+            })
+          : undefined;
+      const timeoutGuard =
+        options.lambdaTimeoutReserveMs !== undefined
+          ? new LambdaTimeoutGuard({ reserveTimeMs: options.lambdaTimeoutReserveMs })
+          : undefined;
+      const prototype = Object.getPrototypeOf(this);
+      const hasRecover = options.recover !== undefined || getRecoverMethods(prototype).length > 0;
 
-        try {
-          return await executeRetryLoop(
-            async () => {
-              if (circuitBreaker) {
-                return await circuitBreaker.execute(async () => await originalMethod.apply(this, args));
-              }
+      const callback = circuitBreaker
+        ? async (): Promise<unknown> => await circuitBreaker.execute(async () => await originalMethod.apply(this, args))
+        : async (): Promise<unknown> => await originalMethod.apply(this, args);
 
-              return await originalMethod.apply(this, args);
-            },
-            {
-              maxAttempts,
-              retryPolicy: effectiveRetryPolicy,
-              backoffPolicy,
-              context,
-            },
-            {
-              onStart: async (retryContext) => {
-                if (listener) {
-                  const shouldStart = await listener.onStart(retryContext);
-                  if (!shouldStart) {
-                    return false;
-                  }
-                }
-
-                if (trace) {
-                  retryContext.setAttribute('telemetry.span_name', `retry:${methodName}`);
-                }
-
-                return true;
-              },
-              onRetryError: async (error, retryContext) => {
-                if (listener) {
-                  await listener.onError(retryContext, error);
-                }
-
-                if (!trace) {
-                  return;
-                }
-
-                const canRetry = effectiveRetryPolicy.shouldRetry(error, retryContext.attempt, maxAttempts);
-
-                recordEvent('retry.attempt_failed', {
-                  'retry.attempt': retryContext.attempt,
-                  'retry.method_name': methodName,
-                  'retry.error_type': error.name,
-                  'retry.error_message': error.message,
-                  'retry.will_retry': canRetry && retryContext.attempt < maxAttempts,
-                });
-              },
-              onSuccess: async (retryContext) => {
-                if (listener) {
-                  await listener.onSuccess(retryContext);
-                }
-
-                if (!trace) {
-                  return;
-                }
-
-                recordEvent('retry.success', {
-                  'retry.attempt': retryContext.attempt,
-                  'retry.method_name': methodName,
-                });
-              },
-              onExhausted: async (_error, retryContext) => {
-                if (listener) {
-                  await listener.onExhausted(retryContext);
-                }
-
-                if (!trace) {
-                  return;
-                }
-
-                recordEvent('retry.exhausted', {
-                  'retry.max_attempts': maxAttempts,
-                  'retry.method_name': methodName,
-                  'retry.final_error': retryContext.lastError?.name,
-                });
-              },
-              beforeWait: async (delay) => {
-                if (circuitBreaker) {
-                  const circuitState = await circuitBreaker.getState();
-                  if (circuitState === CircuitState.OPEN) {
-                    throw new CircuitBreakerOpenProblem(circuitId);
-                  }
-                }
-
-                if (timeoutGuard) {
-                  timeoutGuard.checkTimeout(delay);
-                }
-
-                return true;
-              },
-            }
-          );
-        } catch (error) {
-          const retryError = error instanceof Error ? error : new Error(String(error));
-
-          if (!context.exhausted) {
-            throw retryError;
+      const additionalHooks = {
+        onStart: async (context: RetryContext): Promise<boolean> => {
+          if (trace) {
+            context.setAttribute('telemetry.span_name', `retry:${methodName}`);
           }
 
-          // Try recovery method if specified
-          if (options.recover) {
-            const recoverMethod = (this as Record<string, unknown>)[options.recover];
-            if (typeof recoverMethod === 'function') {
-              return await recoverMethod.call(this, context.lastError, ...args);
+          return true;
+        },
+        onRetryError: async (error: Error, context: RetryContext): Promise<void> => {
+          if (!trace) {
+            return;
+          }
+
+          recordEvent('retry.attempt_failed', {
+            'retry.attempt': context.attempt,
+            'retry.method_name': methodName,
+            'retry.error_type': error.name,
+            'retry.error_message': error.message,
+            'retry.will_retry': context.attempt < maxAttempts,
+          });
+        },
+        onSuccess: async (context: RetryContext): Promise<void> => {
+          if (!trace) {
+            return;
+          }
+
+          recordEvent('retry.success', {
+            'retry.attempt': context.attempt,
+            'retry.method_name': methodName,
+          });
+        },
+        onExhausted: async (_error: Error, context: RetryContext): Promise<void> => {
+          if (!trace) {
+            return;
+          }
+
+          recordEvent('retry.exhausted', {
+            'retry.max_attempts': maxAttempts,
+            'retry.method_name': methodName,
+            'retry.final_error': context.lastError?.name,
+          });
+        },
+        beforeWait: async (delay: number): Promise<boolean> => {
+          if (circuitBreaker) {
+            const circuitState = await circuitBreaker.getState();
+            if (circuitState === CircuitState.OPEN) {
+              throw new CircuitBreakerOpenProblem(circuitId);
             }
           }
 
-          // Try @Recover decorated method if no explicit recover option
-          if (!options.recover && context.lastError) {
-            const recoverMeta = findRecoverMethod(Object.getPrototypeOf(this), context.lastError);
+          if (timeoutGuard) {
+            timeoutGuard.checkTimeout(delay);
+          }
+
+          return true;
+        },
+      };
+
+      const recovery = hasRecover
+        ? async (context: RetryContext): Promise<unknown> => {
+            const lastError =
+              context.lastError ??
+              new RetryExhaustedProblem(
+                `Retry exhausted after ${maxAttempts} attempts for '${methodName}'`,
+                null,
+                maxAttempts,
+                methodName
+              );
+
+            const recoverMeta = findRecoverMethod(prototype, lastError);
             if (recoverMeta) {
               const recoverMethod = (this as Record<string, unknown>)[recoverMeta.methodName];
               if (typeof recoverMethod === 'function') {
-                return await recoverMethod.call(this, context.lastError, ...args);
+                return await recoverMethod.call(this, lastError, ...args);
               }
             }
-          }
 
-          // Re-throw last error or wrap
-          if (wrapExhausted) {
-            throw RetryExhaustedProblem.fromContext(methodName, maxAttempts, context.lastError);
-          }
+            if (options.recover) {
+              const recoverMethod = (this as Record<string, unknown>)[options.recover];
+              if (typeof recoverMethod === 'function') {
+                return await recoverMethod.call(this, lastError, ...args);
+              }
+            }
 
-          throw (
-            context.lastError ??
-            new RetryExhaustedProblem(
-              `Retry exhausted after ${maxAttempts} attempts for '${methodName}'`,
-              null,
-              maxAttempts,
-              methodName
-            )
-          );
-        }
-      };
+            if (wrapExhausted) {
+              throw RetryExhaustedProblem.fromContext(methodName, maxAttempts, context.lastError);
+            }
+
+            throw lastError;
+          }
+        : undefined;
+
+      const executeWithRetry = async (): Promise<unknown> =>
+        await RetryOrchestrator.execute(
+          methodName,
+          args,
+          callback,
+          { ...options, maxAttempts, wrapExhausted },
+          additionalHooks,
+          recovery
+        );
 
       if (!trace) {
         return await executeWithRetry();
       }
+
+      const retryPolicyName = options.retryPolicy?.constructor.name ?? 'DefaultRetryPolicy';
 
       return await withSpan(
         async (span) => {
           // Set span attributes
           span.setAttribute('retry.max_attempts', maxAttempts);
           span.setAttribute('retry.method_name', methodName);
-          span.setAttribute('retry.policy', retryPolicy.constructor.name);
+          span.setAttribute('retry.policy', retryPolicyName);
 
           return await executeWithRetry();
         },
