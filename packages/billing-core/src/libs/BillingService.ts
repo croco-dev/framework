@@ -3,6 +3,7 @@ import type { Subscription, SubscriptionStatus } from '../types';
 import type { BillingGateway, CreateCheckoutParams } from './BillingGateway';
 import type { BillingStore } from './BillingStore';
 import { SubscriptionCanceledEvent } from './events/SubscriptionCanceledEvent';
+import { BillingAccountNotFoundProblem, SubscriptionNotFoundProblem } from './problems/BillingProblems';
 
 export type BillingServiceDependencies = {
   store: BillingStore;
@@ -97,7 +98,7 @@ export class BillingService {
   async cancelSubscription(tenantId: string, immediate = false): Promise<void> {
     const subscription = await this.store.findSubscription(tenantId);
     if (!subscription) {
-      throw new Error(`No subscription found for tenant ${tenantId}`);
+      throw new SubscriptionNotFoundProblem(tenantId);
     }
 
     await this.gateway.cancelSubscription(subscription.externalSubscriptionId, immediate);
@@ -122,7 +123,7 @@ export class BillingService {
   async resumeSubscription(tenantId: string): Promise<void> {
     const subscription = await this.store.findSubscription(tenantId);
     if (!subscription) {
-      throw new Error(`No subscription found for tenant ${tenantId}`);
+      throw new SubscriptionNotFoundProblem(tenantId);
     }
 
     await this.gateway.resumeSubscription(subscription.externalSubscriptionId);
@@ -140,7 +141,7 @@ export class BillingService {
   async getCustomerPortalUrl(tenantId: string): Promise<string> {
     const account = await this.store.findAccountByTenantId(tenantId);
     if (!account) {
-      throw new Error(`No billing account found for tenant ${tenantId}`);
+      throw new BillingAccountNotFoundProblem(tenantId);
     }
 
     return this.gateway.getCustomerPortalUrl(account.externalCustomerId);

@@ -14,6 +14,7 @@ export { SubscriptionPastDueEvent } from './libs/events/SubscriptionPastDueEvent
 export { SubscriptionRevokedEvent } from './libs/events/SubscriptionRevokedEvent';
 export { InMemoryBillingStore } from './libs/InMemoryBillingStore';
 export type { PlanRegistry } from './libs/PlanRegistry';
+export { BillingAccountNotFoundProblem, SubscriptionNotFoundProblem } from './libs/problems/BillingProblems';
 
 // Types
 export type {
