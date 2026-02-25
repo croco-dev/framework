@@ -58,7 +58,7 @@ describe('SearchTransformRegistry', () => {
   it('throws when transform not found', () => {
     const registry = new InMemorySearchTransformRegistry();
 
-    expect(() => registry.apply(textTransforms.initials, 'Hello')).toThrow('Transform not found: text.initials');
+    expect(() => registry.apply(textTransforms.initials, 'Hello')).toThrow("Transform not found: 'text.initials'");
   });
 });
 

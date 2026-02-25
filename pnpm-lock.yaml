@@ -589,6 +589,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@t3-oss/env-core':
         specifier: 0.13.10
         version: 0.13.10(typescript@5.9.3)(zod@4.3.6)
@@ -649,6 +652,9 @@ importers:
 
   packages/gid-core:
     dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       ulid:
         specifier: ^3.0.1
         version: 3.0.2
@@ -936,6 +942,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
@@ -1259,6 +1268,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/search-core':
         specifier: workspace:*
         version: link:../search-core
@@ -1566,6 +1578,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -1582,6 +1597,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/tx-core':
         specifier: workspace:*
         version: link:../tx-core

@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import type { z } from 'zod';
+import { ConfigSchemaNotFoundProblem } from '../libs/problems/ConfigProblems';
 import { validateConfig } from '../validateConfig';
 
 const CONFIG_SCHEMA_KEY = Symbol('config:schema');
@@ -20,7 +21,7 @@ export function getConfigSchema(target: Constructor): z.ZodType | undefined {
 export function bootstrapConfig<T>(target: Constructor, env?: Record<string, string | undefined>): T {
   const schema = getConfigSchema(target);
   if (!schema) {
-    throw new Error(`No config schema found for ${target.name}. Did you forget @ConfigSchema()?`);
+    throw new ConfigSchemaNotFoundProblem(target.name);
   }
   return validateConfig(schema, env) as T;
 }

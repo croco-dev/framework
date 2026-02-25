@@ -9,9 +9,11 @@ export { LlmModel } from './libs/LlmModel';
 export { LlmRegistry } from './libs/LlmRegistry';
 export { LlmService } from './libs/LlmService';
 export {
+  InvalidLlmResponseProblem,
   LlmProblem,
   LlmProviderNotFoundProblem,
   LlmRateLimitProblem,
+  LlmServiceNotInitializedProblem,
   LlmTokenLimitExceededProblem,
 } from './libs/problems/LlmProblems';
 export {

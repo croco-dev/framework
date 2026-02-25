@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import type { LlmService } from '../LlmService';
+import { LlmServiceNotInitializedProblem } from '../problems/LlmProblems';
 import type { GenerateParams, GenerateResult, LlmMetadata } from '../types';
 
 export const LLM_METADATA_KEY = Symbol('llm:llm');
@@ -68,7 +69,7 @@ export function Llm(options: LlmOptions = {}): MethodDecorator {
     descriptor.value = async (...args: unknown[]): Promise<string> => {
       const service = getLlmService();
       if (!service) {
-        throw new Error('LlmService not initialized. Call setLlmService() first.');
+        throw new LlmServiceNotInitializedProblem();
       }
 
       // GenerateParams 구성

@@ -1,6 +1,7 @@
 export * from './ConfigService';
 export * from './core';
 export * from './decorators/ConfigSchema';
+export * from './libs/problems/ConfigProblems';
 export * from './presets/app';
 export * from './presets/database';
 export * from './presets/redis';

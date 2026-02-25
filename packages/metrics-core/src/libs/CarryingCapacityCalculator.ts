@@ -1,6 +1,7 @@
 import type { CCComparisonResult, CCResult } from '../types';
 import type { ActiveUserProvider } from './interfaces/ActiveUserProvider';
 import type { MetricsRepository } from './interfaces/MetricsRepository';
+import { CarryingCapacitySimulationProblem } from './problems/MetricsProblems';
 
 /**
  * Configuration for User Carrying Capacity calculation.
@@ -157,7 +158,7 @@ export class CarryingCapacityCalculator {
     const baseline = await this.calculateUserCC({ lookbackDays: 30 });
 
     if (!baseline) {
-      throw new Error('Cannot simulate: baseline CC is null (infinite capacity)');
+      throw new CarryingCapacitySimulationProblem('Cannot simulate: baseline CC is null (infinite capacity)');
     }
 
     const inflowMultiplier = changes.inflowChange ? 1 + changes.inflowChange / 100 : 1;
@@ -167,7 +168,7 @@ export class CarryingCapacityCalculator {
     const simulatedDailyChurnRate = Math.max(0, baseline.dailyChurnRate * churnMultiplier);
 
     if (simulatedDailyChurnRate <= 0) {
-      throw new Error('Simulated churn rate is zero → infinite capacity');
+      throw new CarryingCapacitySimulationProblem('Simulated churn rate is zero → infinite capacity');
     }
 
     const simulatedCapacity = simulatedDailyInflow / simulatedDailyChurnRate;

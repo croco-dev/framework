@@ -21,7 +21,8 @@
   "dependencies": {
     "@croco/billing-core": "workspace:*",
     "@croco/events-core": "workspace:*",
-    "@croco/framework-context": "workspace:*"
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

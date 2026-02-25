@@ -1,4 +1,5 @@
 import { ulid } from 'ulid';
+import { InvalidIdPrefixProblem } from './problems/GidProblems';
 
 const MINIMUM_PREFIX_LENGTH = 3;
 const ULID_LENGTH = 26;
@@ -10,7 +11,7 @@ export class IdPrefix<TPrefix extends string = string> {
 
   constructor(prefix: TPrefix) {
     if (prefix.length < MINIMUM_PREFIX_LENGTH) {
-      throw new Error(`Prefix must be at least ${MINIMUM_PREFIX_LENGTH} characters long, but got ${prefix.length}`);
+      throw new InvalidIdPrefixProblem(prefix.length, MINIMUM_PREFIX_LENGTH);
     }
 
     this.prefix = prefix;

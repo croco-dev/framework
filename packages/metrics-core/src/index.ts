@@ -17,6 +17,7 @@ export { LtvCalculator } from './libs/LtvCalculator';
 export { MetricsEngine } from './libs/MetricsEngine';
 // Calculators
 export { MrrCalculator } from './libs/MrrCalculator';
+export { CarryingCapacitySimulationProblem, LogoChurnDataRequiredProblem } from './libs/problems/MetricsProblems';
 export { RetentionCalculator } from './libs/RetentionCalculator';
 export type { SnapshotInput, SnapshotSchedulerConfig } from './libs/SnapshotScheduler';
 export { SnapshotScheduler } from './libs/SnapshotScheduler';

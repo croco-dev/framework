@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@t3-oss/env-core": "0.13.10",
     "typedi": "0.10.0",
     "zod": "4.3.6"

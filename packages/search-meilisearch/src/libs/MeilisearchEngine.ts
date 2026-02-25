@@ -8,6 +8,7 @@ import type {
 } from '@croco/search-core';
 import { MissingTenantProblem, SearchEngine } from '@croco/search-core';
 import { MeiliSearch } from 'meilisearch';
+import { TenantTokenNotConfiguredProblem } from './problems/MeilisearchProblems';
 import type { MeilisearchEngineOptions } from './types';
 
 @Component()
@@ -95,7 +96,7 @@ export class MeilisearchEngine extends SearchEngine {
 
   async generateTenantToken(tenantId: string, expiresAt?: Date): Promise<string> {
     if (!this.options.tenantTokenOptions) {
-      throw new Error('Tenant token options are not configured');
+      throw new TenantTokenNotConfiguredProblem();
     }
 
     const { apiKeyUid, expiresIn } = this.options.tenantTokenOptions;

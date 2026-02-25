@@ -14,10 +14,8 @@ export class MissingTenantProblem extends Problem {
 }
 
 export class TransformNotFoundProblem extends Problem {
-  constructor(transformId: string) {
-    super('TRANSFORM_NOT_FOUND', ProblemCategory.NotFound, `Search transform not found: ${transformId}`, {
-      extensions: { transformId },
-    });
+  constructor(id: string) {
+    super('search-core/transform-not-found', ProblemCategory.NotFound, `Transform not found: '${id}'`);
   }
 }
 

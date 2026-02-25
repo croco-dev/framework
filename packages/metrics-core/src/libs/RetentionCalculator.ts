@@ -1,4 +1,5 @@
 import type { MRRMovement, Percentage } from '../types';
+import { LogoChurnDataRequiredProblem } from './problems/MetricsProblems';
 
 /**
  * Calculator for customer and revenue retention metrics.
@@ -31,7 +32,7 @@ export class RetentionCalculator {
       return (movement.churned.amount / startingMRR) * 100;
     }
 
-    throw new Error('Logo churn calculation requires customer count data. Use revenue churn instead.');
+    throw new LogoChurnDataRequiredProblem();
   }
 
   /**

@@ -1,4 +1,5 @@
 import { Token } from '@croco/framework-context';
+import { TransformNotFoundProblem } from '../problems/SearchProblems';
 import type { SearchTransformAdapter, SearchTransformRef } from './types';
 
 export abstract class SearchTransformRegistry {
@@ -23,7 +24,7 @@ export class InMemorySearchTransformRegistry extends SearchTransformRegistry {
   apply<TOptions>(ref: SearchTransformRef<TOptions>, input: string, options?: TOptions): string {
     const adapter = this.get(ref);
     if (!adapter) {
-      throw new Error(`Transform not found: ${ref.id}`);
+      throw new TransformNotFoundProblem(ref.id);
     }
 
     return adapter.transform(input, options as TOptions);

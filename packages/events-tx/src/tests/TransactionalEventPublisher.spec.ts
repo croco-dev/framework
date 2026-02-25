@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TransactionalEventPublisher } from '../libs/TransactionalEventPublisher';
 
 class TestEvent extends DomainEvent {
+  static eventName = 'TestEvent';
+
   constructor(public readonly data: string) {
     super();
   }

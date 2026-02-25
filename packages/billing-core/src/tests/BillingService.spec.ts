@@ -298,7 +298,7 @@ describe('BillingService', () => {
 
     it('should throw error when no subscription exists', async () => {
       await expect(service.cancelSubscription('tenant-1')).rejects.toThrow(
-        'No subscription found for tenant \'tenant-1\''
+        "No subscription found for tenant 'tenant-1'"
       );
     });
 
@@ -363,7 +363,7 @@ describe('BillingService', () => {
 
     it('should throw error when no subscription exists', async () => {
       await expect(service.resumeSubscription('tenant-1')).rejects.toThrow(
-        'No subscription found for tenant \'tenant-1\''
+        "No subscription found for tenant 'tenant-1'"
       );
     });
   });
@@ -387,7 +387,7 @@ describe('BillingService', () => {
 
     it('should throw error when no billing account exists', async () => {
       await expect(service.getCustomerPortalUrl('tenant-1')).rejects.toThrow(
-        'No billing account found for tenant \'tenant-1\''
+        "No billing account found for tenant 'tenant-1'"
       );
     });
   });

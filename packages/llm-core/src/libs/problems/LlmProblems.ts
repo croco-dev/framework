@@ -55,3 +55,19 @@ export class LlmRateLimitProblem extends Problem {
     );
   }
 }
+
+export class InvalidLlmResponseProblem extends Problem {
+  constructor(response: string) {
+    super('llm-core/invalid-llm-response', ProblemCategory.InternalServerError, `Invalid JSON response: ${response}`);
+  }
+}
+
+export class LlmServiceNotInitializedProblem extends Problem {
+  constructor() {
+    super(
+      'llm-core/llm-service-not-initialized',
+      ProblemCategory.InternalServerError,
+      'LlmService not initialized. Call setLlmService() first.'
+    );
+  }
+}

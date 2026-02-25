@@ -1,9 +1,11 @@
 import { ProblemCategory } from '@croco/problems-core';
 import { describe, expect, it } from 'vitest';
 import {
+  InvalidLlmResponseProblem,
   LlmProblem,
   LlmProviderNotFoundProblem,
   LlmRateLimitProblem,
+  LlmServiceNotInitializedProblem,
   LlmTokenLimitExceededProblem,
 } from '../../libs/problems/LlmProblems';
 
@@ -120,6 +122,28 @@ describe('LlmProblems', () => {
 
       expect(json.retryAfter).toBe(45);
       expect(json.retryAt).toBeUndefined();
+    });
+  });
+
+  describe('InvalidLlmResponseProblem', () => {
+    it('should create problem with correct code and category', () => {
+      const problem = new InvalidLlmResponseProblem('not-json');
+
+      expect(problem.code).toBe('llm-core/invalid-llm-response');
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
+      expect(problem.detail).toBe('Invalid JSON response: not-json');
+      expect(problem.status).toBe(500);
+    });
+  });
+
+  describe('LlmServiceNotInitializedProblem', () => {
+    it('should create problem with correct code and category', () => {
+      const problem = new LlmServiceNotInitializedProblem();
+
+      expect(problem.code).toBe('llm-core/llm-service-not-initialized');
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
+      expect(problem.detail).toBe('LlmService not initialized. Call setLlmService() first.');
+      expect(problem.status).toBe(500);
     });
   });
 });

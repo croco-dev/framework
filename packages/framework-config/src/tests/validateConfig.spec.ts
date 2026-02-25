@@ -218,9 +218,7 @@ describe('bootstrapConfig', () => {
   it('should throw error for class without decorator', () => {
     class PlainConfig {}
 
-    expect(() => bootstrapConfig(PlainConfig, {})).toThrow(
-      'No config schema found for PlainConfig. Did you forget @ConfigSchema()?'
-    );
+    expect(() => bootstrapConfig(PlainConfig, {})).toThrow("No config schema found for 'PlainConfig'");
   });
 
   it('should call process.exit(1) when validation fails', () => {

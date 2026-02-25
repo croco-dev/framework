@@ -27,15 +27,15 @@ describe('SearchProblems', () => {
   describe('TransformNotFoundProblem', () => {
     it('has correct code and category', () => {
       const problem = new TransformNotFoundProblem('text.initials');
-      expect(problem.code).toBe('TRANSFORM_NOT_FOUND');
+      expect(problem.code).toBe('search-core/transform-not-found');
       expect(problem.category).toBe(ProblemCategory.NotFound);
-      expect(problem.message).toContain('text.initials');
+      expect(problem.message).toBe("Transform not found: 'text.initials'");
       expect(problem.status).toBe(404);
     });
 
-    it('includes transformId in extensions', () => {
+    it('does not include extensions', () => {
       const problem = new TransformNotFoundProblem('user.name');
-      expect(problem.extensions?.transformId).toBe('user.name');
+      expect(problem.extensions).toBeUndefined();
     });
   });
 

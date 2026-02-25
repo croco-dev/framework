@@ -1,4 +1,5 @@
 import { LlmModel } from './LlmModel';
+import { InvalidLlmResponseProblem } from './problems/LlmProblems';
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -90,7 +91,7 @@ export class InMemoryLlmModel extends LlmModel {
     try {
       return JSON.parse(response) as T;
     } catch {
-      throw new Error(`Invalid JSON response: ${response}`);
+      throw new InvalidLlmResponseProblem(response);
     }
   }
 
