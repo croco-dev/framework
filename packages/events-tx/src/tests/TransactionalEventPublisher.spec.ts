@@ -1,7 +1,7 @@
 import type { EventBus } from '@croco/events-core';
 import { DomainEvent } from '@croco/events-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TransactionalEventPublisher } from '../TransactionalEventPublisher';
+import { TransactionalEventPublisher } from '../libs/TransactionalEventPublisher';
 
 class TestEvent extends DomainEvent {
   constructor(public readonly data: string) {
