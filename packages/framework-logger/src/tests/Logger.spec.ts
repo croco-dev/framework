@@ -3,6 +3,8 @@ import { Context } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '../Logger';
 
+type LoggerCtorConfig = Pick<ConfigService, 'get' | 'isProduction' | 'isDevelopment' | 'isTest'>;
+
 // Mock pino module first, before importing it
 vi.mock('pino', () => {
   const mockLogger = {
@@ -260,14 +262,15 @@ describe('Logger', () => {
       const mockPino = vi.mocked(pino);
       const prodConfig = {
         isProduction: true,
+        isDevelopment: false,
+        isTest: false,
         get: vi.fn((key: string) => {
           if (key === 'LOG_LEVEL') return 'error';
           return undefined;
         }),
       };
 
-      // biome-ignore lint/suspicious/noExplicitAny: mock config
-      logger = new Logger(prodConfig as any);
+      logger = new Logger(prodConfig as LoggerCtorConfig);
 
       expect(mockPino).toHaveBeenCalledTimes(1);
       const pinoOptions = mockPino.mock.calls[0][0] as Record<string, unknown>;
@@ -303,14 +306,15 @@ describe('Logger', () => {
       const mockPino = vi.mocked(pino);
       const customConfig = {
         isProduction: false,
+        isDevelopment: true,
+        isTest: false,
         get: vi.fn((key: string) => {
           if (key === 'LOG_LEVEL') return 'debug';
           return undefined;
         }),
       };
 
-      // biome-ignore lint/suspicious/noExplicitAny: mock config
-      logger = new Logger(customConfig as any);
+      logger = new Logger(customConfig as LoggerCtorConfig);
 
       expect(mockPino).toHaveBeenCalledTimes(1);
       const pinoOptions = mockPino.mock.calls[0][0] as Record<string, unknown>;
@@ -322,11 +326,12 @@ describe('Logger', () => {
       const mockPino = vi.mocked(pino);
       const noLogLevelConfig = {
         isProduction: false,
+        isDevelopment: true,
+        isTest: false,
         get: vi.fn(() => undefined),
       };
 
-      // biome-ignore lint/suspicious/noExplicitAny: mock config
-      logger = new Logger(noLogLevelConfig as any);
+      logger = new Logger(noLogLevelConfig as LoggerCtorConfig);
 
       expect(mockPino).toHaveBeenCalledTimes(1);
       const pinoOptions = mockPino.mock.calls[0][0] as Record<string, unknown>;

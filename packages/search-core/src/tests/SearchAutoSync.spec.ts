@@ -1,6 +1,8 @@
+import type { EventBus } from '@croco/events-core';
 import { EventBusConfig } from '@croco/events-core';
+import type { Constructor } from '@croco/framework-context';
 import { Container, MetadataStorage } from '@croco/framework-context';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import type { SearchableMetadata } from '../libs/decorators/Searchable';
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../libs/events/SearchEvents';
 import { SearchEngine } from '../libs/SearchEngine';
@@ -9,7 +11,12 @@ import { SearchAutoSync } from '../libs/sync/SearchAutoSync';
 describe('SearchAutoSync', () => {
   let searchAutoSync!: SearchAutoSync;
   let searchEngine!: SearchEngine;
-  let eventBusMock!: any;
+  let eventBusMock!: {
+    publish: ReturnType<typeof vi.fn>;
+    subscribe: ReturnType<typeof vi.fn>;
+    unsubscribe: ReturnType<typeof vi.fn>;
+    clear: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     Container.reset();
@@ -20,13 +27,15 @@ describe('SearchAutoSync', () => {
       indexDocument: vi.fn(),
       deleteDocument: vi.fn(),
     } as unknown as SearchEngine;
-    // biome-ignore lint/suspicious/noExplicitAny: Token support
-    Container.set(SearchEngine.token as any, searchEngine);
+    Container.set(SearchEngine.token as unknown as Constructor<SearchEngine>, searchEngine);
 
     eventBusMock = {
       publish: vi.fn(),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+      clear: vi.fn(),
     };
-    EventBusConfig.getInstance().setEventBus(eventBusMock);
+    EventBusConfig.getInstance().setEventBus(eventBusMock as unknown as EventBus);
 
     searchAutoSync = new SearchAutoSync();
   });
@@ -111,7 +120,7 @@ describe('SearchAutoSync', () => {
       ]);
 
       const error = new Error('Indexing failed');
-      (searchEngine.indexDocument as any).mockRejectedValue(error);
+      (searchEngine.indexDocument as Mock).mockRejectedValue(error);
 
       const event = new DocumentIndexedEvent('users', 'user-1', 'tenant-1', { name: 'John' });
 
@@ -157,7 +166,7 @@ describe('SearchAutoSync', () => {
       ]);
 
       const error = new Error('Delete failed');
-      (searchEngine.deleteDocument as any).mockRejectedValue(error);
+      (searchEngine.deleteDocument as Mock).mockRejectedValue(error);
 
       const event = new DocumentDeletedEvent('users', 'user-1', 'tenant-1');
 

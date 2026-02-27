@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkWebhookHandler } from '../libs/ClerkWebhookHandler';
 import type { WebhookEventHandler } from '../libs/types';
 
+type VerifiedWebhook = Awaited<ReturnType<typeof verifyWebhook>>;
+
 vi.mock('@clerk/backend/webhooks', () => ({
   verifyWebhook: vi.fn(),
 }));
@@ -29,7 +31,7 @@ describe('ClerkWebhookHandler', () => {
 
   it('should verify webhook signature', async () => {
     const request = createRequest();
-    vi.mocked(verifyWebhook).mockResolvedValue({ type: 'user.created', data: {} } as any);
+    vi.mocked(verifyWebhook).mockResolvedValue({ type: 'user.created', data: {} } as unknown as VerifiedWebhook);
 
     await webhookHandler.handleWebhook(request);
 
@@ -49,7 +51,7 @@ describe('ClerkWebhookHandler', () => {
     vi.mocked(verifyWebhook).mockResolvedValue({
       type: 'user.created',
       data: eventData,
-    } as any);
+    } as unknown as VerifiedWebhook);
 
     await webhookHandler.handleWebhook(request);
 
@@ -62,7 +64,7 @@ describe('ClerkWebhookHandler', () => {
     vi.mocked(verifyWebhook).mockResolvedValue({
       type: 'organization.updated',
       data: eventData,
-    } as any);
+    } as unknown as VerifiedWebhook);
 
     await webhookHandler.handleWebhook(request);
 
@@ -74,7 +76,7 @@ describe('ClerkWebhookHandler', () => {
     vi.mocked(verifyWebhook).mockResolvedValue({
       type: 'user.deleted',
       data: { id: 'user_123' },
-    } as any);
+    } as unknown as VerifiedWebhook);
 
     await webhookHandler.handleWebhook(request);
 

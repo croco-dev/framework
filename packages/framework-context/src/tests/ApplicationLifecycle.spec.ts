@@ -5,10 +5,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ShutdownManager } from '../libs/ShutdownManager';
 
+type ShutdownManagerStatic = {
+  instance: ShutdownManager | undefined;
+};
+
 describe('application lifecycle integration', () => {
   afterEach(() => {
     ShutdownManager.reset();
-    (ShutdownManager as any).instance = undefined;
+    (ShutdownManager as unknown as ShutdownManagerStatic).instance = undefined;
   });
 
   it('should run Config -> Start -> Health -> Shutdown flow without errors', async () => {

@@ -1,5 +1,5 @@
 import type { ExecutionManager } from '@croco/execution-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { ChunkExecutor } from '../libs/ChunkExecutor';
 import type { ItemReader } from '../libs/interfaces/ItemReader';
 import { Step } from '../libs/Step';
@@ -50,7 +50,7 @@ describe('ChunkExecutor', () => {
       restoreCheckpoint: vi.fn(),
     };
 
-    (executionManager.start as any).mockResolvedValue({
+    (executionManager.start as Mock).mockResolvedValue({
       id: 'exec-1',
       checkpoints: { 'test-step.cursor': { offset: 5 } },
     });

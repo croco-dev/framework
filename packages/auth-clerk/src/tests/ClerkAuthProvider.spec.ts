@@ -2,6 +2,8 @@ import { verifyToken } from '@clerk/backend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkAuthProvider } from '../libs/ClerkAuthProvider';
 
+type VerifiedToken = Awaited<ReturnType<typeof verifyToken>>;
+
 vi.mock('@clerk/backend', () => ({
   createClerkClient: vi.fn(),
   verifyToken: vi.fn(),
@@ -58,7 +60,7 @@ describe('ClerkAuthProvider', () => {
       sid: 'sess_123',
     };
 
-    vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as any);
+    vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as unknown as VerifiedToken);
 
     const result = await authProvider.authenticate(request);
 
@@ -86,7 +88,7 @@ describe('ClerkAuthProvider', () => {
       // Missing email, org info
     };
 
-    vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as any);
+    vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as unknown as VerifiedToken);
 
     const result = await authProvider.authenticate(request);
 

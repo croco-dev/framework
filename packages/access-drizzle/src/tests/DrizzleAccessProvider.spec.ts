@@ -4,6 +4,8 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleAccessProvider } from '../libs/DrizzleAccessProvider';
 
+type DrizzleAccessDb = ConstructorParameters<typeof DrizzleAccessProvider>[0];
+
 const testRelationTuples = sqliteTable('relation_tuples', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   tenantId: text('tenant_id').notNull(),
@@ -44,8 +46,7 @@ describe('DrizzleAccessProvider', () => {
       execute: executeFn,
     };
 
-    // biome-ignore lint/suspicious/noExplicitAny: mock object for testing
-    provider = new DrizzleAccessProvider(mockDb as any);
+    provider = new DrizzleAccessProvider(mockDb as DrizzleAccessDb);
   });
 
   describe('check - direct access', () => {

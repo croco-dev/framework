@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SearchEngine } from '../libs/SearchEngine';
+import type { SearchQuery } from '../libs/types';
 
 describe('SearchEngine', () => {
   describe('Token', () => {
@@ -21,7 +22,7 @@ describe('SearchEngine', () => {
         return {
           hits: [] as T[],
           total: 0,
-          query: {} as any,
+          query: { query: '' } as SearchQuery,
           processingTimeMs: 0,
         };
       }
