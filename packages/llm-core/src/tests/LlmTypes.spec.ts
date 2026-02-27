@@ -138,7 +138,7 @@ describe('types', () => {
       };
       expect(tool.name).toBe('calculator');
       expect(tool.description).toBe('Calculate expressions');
-      expect(tool.parameters).toBeDefined();
+      expect(tool.parameters).not.toBeUndefined();
     });
   });
 

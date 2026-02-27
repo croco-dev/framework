@@ -204,7 +204,7 @@ describe('BetterAuthProvider', () => {
       expect(typeof provider.authenticate).toBe('function');
 
       const providerAsInterface: AuthProvider<Request> = provider;
-      expect(providerAsInterface.authenticate).toBeDefined();
+      expect(providerAsInterface.authenticate).not.toBeUndefined();
     });
 
     it('should handle API errors gracefully', async () => {
@@ -307,7 +307,7 @@ describe('BetterAuthProvider', () => {
       const request = createMockRequest();
       const result = await provider.authenticate(request);
 
-      expect(result?.metadata).toBeDefined();
+      expect(result?.metadata).not.toBeUndefined();
       expect(result?.metadata?.emailVerified).toBe(true);
       expect(result?.metadata?.image).toBe('https://example.com/avatar.png');
     });
@@ -326,7 +326,7 @@ describe('BetterAuthProvider', () => {
       const request = createMockRequest();
       const result = await provider.authenticate(request);
 
-      expect(result?.metadata).toBeDefined();
+      expect(result?.metadata).not.toBeUndefined();
       expect(result?.metadata?.image).toBeUndefined();
       expect(result?.metadata?.emailVerified).toBeUndefined();
     });

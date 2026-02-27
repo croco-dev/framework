@@ -12,7 +12,7 @@ describe('Access', () => {
 
     const metadata = Reflect.getMetadata(ACCESS_METADATA_KEY, TestController, 'testMethod');
 
-    expect(metadata).toBeDefined();
+    expect(metadata).not.toBeUndefined();
     expect(metadata.objectType).toBe('document');
     expect(metadata.relation).toBe('editor');
   });

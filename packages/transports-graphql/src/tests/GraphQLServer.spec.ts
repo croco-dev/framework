@@ -52,7 +52,7 @@ describe('GraphQLServer integration', () => {
   });
 
   it('should compile schema successfully', () => {
-    expect(server).toBeDefined();
+    expect(server).not.toBeUndefined();
   });
 
   it('should execute hello query', async () => {
@@ -151,7 +151,7 @@ describe('GraphQLServer integration', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.errors).toBeDefined();
+    expect(data.errors).not.toBeUndefined();
     expect(Array.isArray(data.errors)).toBe(true);
   });
 

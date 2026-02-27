@@ -42,7 +42,7 @@ describe('RateLimitExceededProblem', () => {
       limit: 100,
       remaining: 0,
     });
-    expect(problem.extensions?.resetAt).toBeDefined();
+    expect(problem.extensions?.resetAt).not.toBeUndefined();
     expect(problem.extensions?.retryAfterSeconds).toBeGreaterThan(0);
   });
 

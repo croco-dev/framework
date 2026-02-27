@@ -103,7 +103,7 @@ describe('LlmModel', () => {
   });
 
   it('should have token', () => {
-    expect(LlmModel.token).toBeDefined();
+    expect(LlmModel.token).not.toBeUndefined();
     expect(LlmModel.token.name).toBe('LlmModel');
   });
 
@@ -132,7 +132,7 @@ describe('LlmModel', () => {
         prompt: 'Hello',
         systemPrompt: 'You are a helpful assistant',
       });
-      expect(result.text).toBeDefined();
+      expect(result.text).not.toBeUndefined();
     });
 
     it('should support temperature option', async () => {
@@ -140,7 +140,7 @@ describe('LlmModel', () => {
         prompt: 'Hello',
         temperature: 0.7,
       });
-      expect(result.text).toBeDefined();
+      expect(result.text).not.toBeUndefined();
     });
 
     it('should support maxTokens option', async () => {
@@ -148,7 +148,7 @@ describe('LlmModel', () => {
         prompt: 'Hello',
         maxTokens: 100,
       });
-      expect(result.text).toBeDefined();
+      expect(result.text).not.toBeUndefined();
     });
 
     it('should support stop sequences', async () => {
@@ -156,7 +156,7 @@ describe('LlmModel', () => {
         prompt: 'Hello',
         stopSequences: ['END'],
       });
-      expect(result.text).toBeDefined();
+      expect(result.text).not.toBeUndefined();
     });
 
     it('should support metadata', async () => {
@@ -164,7 +164,7 @@ describe('LlmModel', () => {
         prompt: 'Hello',
         metadata: { requestId: '123' },
       });
-      expect(result.text).toBeDefined();
+      expect(result.text).not.toBeUndefined();
     });
   });
 
@@ -183,7 +183,7 @@ describe('LlmModel', () => {
         chunks.push(chunk);
       }
       const lastChunk = chunks[chunks.length - 1];
-      expect(lastChunk.usage).toBeDefined();
+      expect(lastChunk.usage).not.toBeUndefined();
       expect(lastChunk.usage?.totalTokens).toBe(30);
     });
   });

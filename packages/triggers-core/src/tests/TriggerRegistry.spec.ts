@@ -152,12 +152,12 @@ describe('TriggerRegistry', () => {
   });
 
   it('should export triggerRegistry instance', () => {
-    expect(triggerRegistry).toBeDefined();
+    expect(triggerRegistry).not.toBeUndefined();
     expect(triggerRegistry).toBeInstanceOf(TriggerRegistryClass);
   });
 
   it('should export TRIGGER_METADATA_KEY symbol', () => {
-    expect(TRIGGER_METADATA_KEY).toBeDefined();
+    expect(TRIGGER_METADATA_KEY).not.toBeUndefined();
     expect(typeof TRIGGER_METADATA_KEY).toBe('symbol');
   });
 
@@ -218,7 +218,7 @@ describe('TriggerRegistry', () => {
     const allTriggers = TriggerRegistryClass.getInstance().getAllTriggers();
     const symbolClassTriggers = allTriggers.get(SymbolHandler.prototype);
 
-    expect(symbolClassTriggers).toBeDefined();
+    expect(symbolClassTriggers).not.toBeUndefined();
     expect(symbolClassTriggers?.has(methodSymbol)).toBe(true);
   });
 });

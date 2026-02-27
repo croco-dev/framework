@@ -42,7 +42,7 @@ describe('DefaultHandlerResolver', () => {
     it('should return handler instance', () => {
       const handler = resolver.resolve(TestHandler as EventHandlerClass);
 
-      expect(handler.handle).toBeDefined();
+      expect(handler.handle).not.toBeUndefined();
       expect(typeof handler.handle).toBe('function');
     });
 
@@ -132,7 +132,7 @@ describe('DefaultHandlerResolver', () => {
     it('should support generic event handlers', () => {
       class GenericHandler implements EventHandler<DomainEvent> {
         async handle(event: DomainEvent): Promise<void> {
-          expect(event.eventName).toBeDefined();
+          expect(event.eventName).not.toBeUndefined();
         }
       }
 

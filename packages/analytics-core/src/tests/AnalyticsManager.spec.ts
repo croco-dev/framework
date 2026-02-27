@@ -117,7 +117,7 @@ describe('AnalyticsManager', () => {
 
   describe('token', () => {
     it('should have a static token for DI', () => {
-      expect(AnalyticsManager.token).toBeDefined();
+      expect(AnalyticsManager.token).not.toBeUndefined();
       expect(AnalyticsManager.token.name).toBe('AnalyticsManager');
     });
   });
@@ -125,17 +125,17 @@ describe('AnalyticsManager', () => {
   describe('contract verification', () => {
     it('should require capture method to be implemented', () => {
       // This test verifies the abstract contract
-      expect(analyticsManager.capture).toBeDefined();
+      expect(analyticsManager.capture).not.toBeUndefined();
       expect(typeof analyticsManager.capture).toBe('function');
     });
 
     it('should require identify method to be implemented', () => {
-      expect(analyticsManager.identify).toBeDefined();
+      expect(analyticsManager.identify).not.toBeUndefined();
       expect(typeof analyticsManager.identify).toBe('function');
     });
 
     it('should require group method to be implemented', () => {
-      expect(analyticsManager.group).toBeDefined();
+      expect(analyticsManager.group).not.toBeUndefined();
       expect(typeof analyticsManager.group).toBe('function');
     });
 

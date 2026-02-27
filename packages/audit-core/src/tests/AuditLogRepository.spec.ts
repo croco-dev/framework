@@ -51,7 +51,7 @@ describe('AuditLogRepository', () => {
     // @ts-expect-error - abstract methods must be implemented
     class InvalidAuditLogRepository extends AuditLogRepository {}
 
-    expect(InvalidAuditLogRepository).toBeDefined();
+    expect(InvalidAuditLogRepository).not.toBeUndefined();
 
     expect(typeof AuditLogRepository).toBe('function');
   });

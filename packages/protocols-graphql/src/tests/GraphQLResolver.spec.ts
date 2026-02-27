@@ -54,7 +54,7 @@ describe('GraphQLResolver decorator', () => {
     class TestResolver {}
 
     const meta = getResolverMetadata(TestResolver);
-    expect(meta).toBeDefined();
+    expect(meta).not.toBeUndefined();
     expect(meta?.target).toBe(TestResolver);
   });
 
@@ -63,7 +63,7 @@ describe('GraphQLResolver decorator', () => {
     class RequestScopedResolver {}
 
     const meta = getResolverMetadata(RequestScopedResolver);
-    expect(meta).toBeDefined();
+    expect(meta).not.toBeUndefined();
     expect(meta?.target).toBe(RequestScopedResolver);
   });
 });

@@ -10,7 +10,7 @@ describe('@Meter decorator', () => {
 
       const metadata = getMeterMetadata(TestController);
 
-      expect(metadata).toBeDefined();
+      expect(metadata).not.toBeUndefined();
       expect(metadata?.meterId).toBe('api_calls');
     });
 
@@ -117,7 +117,7 @@ describe('@Meter decorator', () => {
 
       const metadata = Reflect.getMetadata(METER_METADATA_KEY, TestClass);
 
-      expect(metadata).toBeDefined();
+      expect(metadata).not.toBeUndefined();
       expect(metadata.meterId).toBe('test');
     });
   });

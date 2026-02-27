@@ -194,7 +194,7 @@ describe('@Metered decorator', () => {
 
       const metadata = getMeteredMetadata(TestService.prototype, 'doSomething');
 
-      expect(metadata).toBeDefined();
+      expect(metadata).not.toBeUndefined();
       expect(metadata?.meterId).toBe('api_calls');
     });
 

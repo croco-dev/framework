@@ -39,7 +39,7 @@ describe('Middleware decorators', () => {
       class UserController {}
 
       const guards = Reflect.getMetadata(REST_GUARDS_KEY, UserController);
-      expect(guards).toBeDefined();
+      expect(guards).not.toBeUndefined();
       expect(guards).toHaveLength(1);
       expect(guards[0]).toBe(MockGuard);
     });
@@ -62,7 +62,7 @@ describe('Middleware decorators', () => {
       }
 
       const guards = Reflect.getMetadata(REST_GUARDS_KEY, UserController, 'list');
-      expect(guards).toBeDefined();
+      expect(guards).not.toBeUndefined();
       expect(guards).toHaveLength(1);
       expect(guards[0]).toBe(MockGuard);
     });
@@ -91,7 +91,7 @@ describe('Middleware decorators', () => {
       class UserController {}
 
       const pipes = Reflect.getMetadata(REST_PIPES_KEY, UserController);
-      expect(pipes).toBeDefined();
+      expect(pipes).not.toBeUndefined();
       expect(pipes).toHaveLength(1);
       expect(pipes[0]).toBe(MockPipe);
     });
@@ -114,7 +114,7 @@ describe('Middleware decorators', () => {
       }
 
       const pipes = Reflect.getMetadata(REST_PIPES_KEY, UserController, 'create');
-      expect(pipes).toBeDefined();
+      expect(pipes).not.toBeUndefined();
       expect(pipes).toHaveLength(1);
       expect(pipes[0]).toBe(MockPipe);
     });
@@ -143,7 +143,7 @@ describe('Middleware decorators', () => {
       class UserController {}
 
       const interceptors = Reflect.getMetadata(REST_INTERCEPTORS_KEY, UserController);
-      expect(interceptors).toBeDefined();
+      expect(interceptors).not.toBeUndefined();
       expect(interceptors).toHaveLength(1);
       expect(interceptors[0]).toBe(MockInterceptor);
     });
@@ -166,7 +166,7 @@ describe('Middleware decorators', () => {
       }
 
       const interceptors = Reflect.getMetadata(REST_INTERCEPTORS_KEY, UserController, 'list');
-      expect(interceptors).toBeDefined();
+      expect(interceptors).not.toBeUndefined();
       expect(interceptors).toHaveLength(1);
       expect(interceptors[0]).toBe(MockInterceptor);
     });
@@ -195,7 +195,7 @@ describe('Middleware decorators', () => {
       class UserController {}
 
       const filters = Reflect.getMetadata(REST_FILTERS_KEY, UserController);
-      expect(filters).toBeDefined();
+      expect(filters).not.toBeUndefined();
       expect(filters).toHaveLength(1);
       expect(filters[0]).toBe(MockFilter);
     });
@@ -218,7 +218,7 @@ describe('Middleware decorators', () => {
       }
 
       const filters = Reflect.getMetadata(REST_FILTERS_KEY, UserController, 'list');
-      expect(filters).toBeDefined();
+      expect(filters).not.toBeUndefined();
       expect(filters).toHaveLength(1);
       expect(filters[0]).toBe(MockFilter);
     });

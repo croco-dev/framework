@@ -26,7 +26,7 @@ describe('DrizzleTxAdapter', () => {
     const db = createMockDrizzleDb();
     const adapter = createDrizzleTxAdapter(db);
 
-    expect(adapter).toBeDefined();
+    expect(adapter).not.toBeUndefined();
     expect(typeof adapter.transaction).toBe('function');
     expect(typeof adapter.savepoint).toBe('function');
     expect(typeof adapter.supportsSavepoint).toBe('function');

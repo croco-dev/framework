@@ -109,7 +109,7 @@ describe('ExecutionManagerImpl', () => {
 
       expect(started.status).toBe('running');
       expect(started.attempts).toBe(1);
-      expect(started.startedAt).toBeDefined();
+      expect(started.startedAt).not.toBeUndefined();
     });
 
     it('transitions retrying to running without incrementing attempts', async () => {
@@ -141,7 +141,7 @@ describe('ExecutionManagerImpl', () => {
 
       expect(completed.status).toBe('completed');
       expect(completed.result).toEqual({ data: 'success' });
-      expect(completed.completedAt).toBeDefined();
+      expect(completed.completedAt).not.toBeUndefined();
     });
 
     it('throws for pending execution', async () => {
@@ -161,7 +161,7 @@ describe('ExecutionManagerImpl', () => {
 
       expect(failed.status).toBe('failed');
       expect(failed.error).toEqual(error);
-      expect(failed.completedAt).toBeDefined();
+      expect(failed.completedAt).not.toBeUndefined();
     });
 
     it('transitions running to retrying when retryable and attempts remain', async () => {
@@ -193,7 +193,7 @@ describe('ExecutionManagerImpl', () => {
       const cancelled = await manager.cancel(execution.id, 'user request');
 
       expect(cancelled.status).toBe('cancelled');
-      expect(cancelled.completedAt).toBeDefined();
+      expect(cancelled.completedAt).not.toBeUndefined();
       expect(cancelled.metadata?.cancellationReason).toBe('user request');
     });
 
@@ -307,7 +307,7 @@ describe('ExecutionManagerImpl', () => {
       const timedOut = await manager.timeout(execution.id);
 
       expect(timedOut.status).toBe('timed_out');
-      expect(timedOut.completedAt).toBeDefined();
+      expect(timedOut.completedAt).not.toBeUndefined();
       expect(timedOut.error?.message).toBe('Execution timed out');
       expect(timedOut.error?.retryable).toBe(true);
     });

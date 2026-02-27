@@ -4,7 +4,7 @@ import { SearchEngine } from '../libs/SearchEngine';
 describe('SearchEngine', () => {
   describe('Token', () => {
     it('should have a static Token property', () => {
-      expect(SearchEngine.token).toBeDefined();
+      expect(SearchEngine.token).not.toBeUndefined();
       expect(SearchEngine.token.constructor.name).toBe('Token');
     });
   });
@@ -50,7 +50,7 @@ describe('SearchEngine', () => {
 
     it('should require capabilities property', () => {
       const engine = new MockSearchEngine();
-      expect(engine.capabilities).toBeDefined();
+      expect(engine.capabilities).not.toBeUndefined();
       expect(typeof engine.capabilities.facetedSearch).toBe('boolean');
       expect(typeof engine.capabilities.vectorSearch).toBe('boolean');
       expect(typeof engine.capabilities.highlightSearch).toBe('boolean');

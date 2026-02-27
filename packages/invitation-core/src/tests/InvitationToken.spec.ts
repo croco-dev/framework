@@ -5,13 +5,13 @@ describe('token', () => {
   describe('generateToken', () => {
     it('should generate a token with default length', () => {
       const token = generateToken();
-      expect(token).toBeDefined();
+      expect(token).not.toBeUndefined();
       expect(token).toHaveLength(64);
     });
 
     it('should generate a token with custom length', () => {
       const token = generateToken(16);
-      expect(token).toBeDefined();
+      expect(token).not.toBeUndefined();
       expect(token).toHaveLength(32);
     });
 
@@ -31,7 +31,7 @@ describe('token', () => {
     it('should hash a token to SHA-256 format', () => {
       const token = generateToken();
       const hashed = hashToken(token);
-      expect(hashed).toBeDefined();
+      expect(hashed).not.toBeUndefined();
       expect(hashed).toHaveLength(64);
     });
 

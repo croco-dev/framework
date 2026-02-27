@@ -17,48 +17,39 @@ import type {
 
 describe('@croco/triggers-core package exports', () => {
   it('should export Cron decorator', () => {
-    expect(Cron).toBeDefined();
     expect(typeof Cron).toBe('function');
   });
 
   it('should export CRON_METADATA_KEY symbol', () => {
-    expect(CRON_METADATA_KEY).toBeDefined();
     expect(typeof CRON_METADATA_KEY).toBe('symbol');
   });
 
   it('should export OnEvent decorator', () => {
-    expect(OnEvent).toBeDefined();
     expect(typeof OnEvent).toBe('function');
   });
 
   it('should export EVENT_METADATA_KEY symbol', () => {
-    expect(EVENT_METADATA_KEY).toBeDefined();
     expect(typeof EVENT_METADATA_KEY).toBe('symbol');
   });
 
   it('should export OnWebhook decorator', () => {
-    expect(OnWebhook).toBeDefined();
     expect(typeof OnWebhook).toBe('function');
   });
 
   it('should export WEBHOOK_METADATA_KEY symbol', () => {
-    expect(WEBHOOK_METADATA_KEY).toBeDefined();
     expect(typeof WEBHOOK_METADATA_KEY).toBe('symbol');
   });
 
   it('should export TRIGGER_METADATA_KEY symbol', () => {
-    expect(TRIGGER_METADATA_KEY).toBeDefined();
     expect(typeof TRIGGER_METADATA_KEY).toBe('symbol');
   });
 
   it('should export TriggerRegistry class', () => {
-    expect(TriggerRegistry).toBeDefined();
     expect(typeof TriggerRegistry).toBe('function');
     expect(typeof TriggerRegistry.getInstance).toBe('function');
   });
 
   it('should export triggerRegistry instance', () => {
-    expect(triggerRegistry).toBeDefined();
     expect(triggerRegistry).toBeInstanceOf(TriggerRegistry);
   });
 
@@ -66,7 +57,7 @@ describe('@croco/triggers-core package exports', () => {
     const typeCheck1: TriggerType = 'cron';
     const typeCheck2: TriggerType = 'event';
     const typeCheck3: TriggerType = 'webhook';
-    expect([typeCheck1, typeCheck2, typeCheck3]).toBeDefined();
+    expect([typeCheck1, typeCheck2, typeCheck3]).toEqual(['cron', 'event', 'webhook']);
   });
 
   it('should export TriggerMetadata type', () => {
@@ -75,7 +66,7 @@ describe('@croco/triggers-core package exports', () => {
       methodName: 'testMethod',
       target: class Test {},
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck.type).toBe('cron');
   });
 
   it('should export CronTriggerMetadata type', () => {
@@ -85,7 +76,7 @@ describe('@croco/triggers-core package exports', () => {
       methodName: 'testMethod',
       target: class Test {},
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck.expression).toBe('0 0 * * *');
   });
 
   it('should export EventTriggerMetadata type', () => {
@@ -95,7 +86,7 @@ describe('@croco/triggers-core package exports', () => {
       methodName: 'testMethod',
       target: class Test {},
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck.event).toBe('TestEvent');
   });
 
   it('should export WebhookTriggerMetadata type', () => {
@@ -106,7 +97,7 @@ describe('@croco/triggers-core package exports', () => {
       methodName: 'testMethod',
       target: class Test {},
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck.path).toBe('/webhooks/test');
   });
 
   it('should export AnyTriggerMetadata type', () => {
@@ -129,7 +120,7 @@ describe('@croco/triggers-core package exports', () => {
       methodName: 'testMethod',
       target: class Test {},
     };
-    expect([typeCheck1, typeCheck2, typeCheck3]).toBeDefined();
+    expect([typeCheck1.type, typeCheck2.type, typeCheck3.type]).toEqual(['cron', 'event', 'webhook']);
   });
 
   it('should export CronOptions type', () => {
@@ -139,7 +130,7 @@ describe('@croco/triggers-core package exports', () => {
       enabled: true,
       timezone: 'UTC',
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck.timezone).toBe('UTC');
   });
 
   it('should export EventOptions type', () => {
@@ -150,7 +141,7 @@ describe('@croco/triggers-core package exports', () => {
       concurrency: 5,
       timeout: 10000,
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck.concurrency).toBe(5);
   });
 
   it('should export WebhookOptions type', () => {
@@ -165,6 +156,6 @@ describe('@croco/triggers-core package exports', () => {
         allowedHeaders: ['Content-Type', 'Authorization'],
       },
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck.cors?.origin).toBe('https://example.com');
   });
 });

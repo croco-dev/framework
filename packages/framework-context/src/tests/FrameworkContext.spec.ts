@@ -65,7 +65,7 @@ describe('Container', () => {
     it('should clear all registered instances', () => {
       Container.set(SimpleService, new SimpleService());
       const beforeReset = Container.get(SimpleService);
-      expect(beforeReset).toBeDefined();
+      expect(beforeReset).not.toBeUndefined();
 
       Container.reset();
       Container.set(SimpleService, new SimpleService());

@@ -33,7 +33,7 @@ describe('InMemoryLlmModel', () => {
     });
 
     it('should initialize with predefined responses', () => {
-      expect(model).toBeDefined();
+      expect(model).not.toBeUndefined();
     });
 
     it('should create model without responses', () => {
@@ -97,7 +97,7 @@ describe('InMemoryLlmModel', () => {
       };
       const result = await model.generate(params);
 
-      expect(result.metadata).toBeDefined();
+      expect(result.metadata).not.toBeUndefined();
       expect(result.metadata?.modelId).toBe('test-model');
     });
   });

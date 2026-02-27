@@ -6,23 +6,23 @@ import type { TaskMetadata, TaskOptions, TaskReference } from '../libs/types';
 
 describe('@croco/tasks-core package exports', () => {
   it('should export Task decorator', () => {
-    expect(Task).toBeDefined();
+    expect(Task).not.toBeUndefined();
     expect(typeof Task).toBe('function');
   });
 
   it('should export TASK_METADATA_KEY symbol', () => {
-    expect(TASK_METADATA_KEY).toBeDefined();
+    expect(TASK_METADATA_KEY).not.toBeUndefined();
     expect(typeof TASK_METADATA_KEY).toBe('symbol');
   });
 
   it('should export TaskRegistry class', () => {
-    expect(TaskRegistry).toBeDefined();
+    expect(TaskRegistry).not.toBeUndefined();
     expect(typeof TaskRegistry).toBe('function');
     expect(typeof TaskRegistry.getInstance).toBe('function');
   });
 
   it('should export TaskRunner class', () => {
-    expect(TaskRunner).toBeDefined();
+    expect(TaskRunner).not.toBeUndefined();
     expect(typeof TaskRunner).toBe('function');
   });
 
@@ -32,7 +32,7 @@ describe('@croco/tasks-core package exports', () => {
       target: class Test {},
       methodName: 'testMethod',
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck).not.toBeUndefined();
   });
 
   it('should export TaskMetadata type', () => {
@@ -41,7 +41,7 @@ describe('@croco/tasks-core package exports', () => {
       target: class Test {},
       methodName: 'testMethod',
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck).not.toBeUndefined();
   });
 
   it('should export TaskOptions type', () => {
@@ -51,7 +51,7 @@ describe('@croco/tasks-core package exports', () => {
       timeout: 5000,
       idempotencyKey: 'unique-key',
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck).not.toBeUndefined();
   });
 
   it('should export TaskReference type', () => {
@@ -60,6 +60,6 @@ describe('@croco/tasks-core package exports', () => {
       target: class Test {},
       methodName: 'testMethod',
     };
-    expect(typeCheck).toBeDefined();
+    expect(typeCheck).not.toBeUndefined();
   });
 });

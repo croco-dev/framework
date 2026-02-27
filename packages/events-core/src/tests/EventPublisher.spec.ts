@@ -302,7 +302,7 @@ describe('EventPublisher', () => {
       expect(mockEventBus.publishedEvents).toHaveLength(0);
 
       // Execute the registered hook
-      expect(registeredHook).toBeDefined();
+      expect(registeredHook).not.toBeUndefined();
       await registeredHook?.();
 
       // Should be published now
@@ -361,7 +361,7 @@ describe('EventPublisher', () => {
 
       expect(mockEventBus.publishedEvents).toHaveLength(0);
 
-      expect(registeredHook).toBeDefined();
+      expect(registeredHook).not.toBeUndefined();
       await registeredHook?.();
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);

@@ -25,7 +25,7 @@ describe('ComponentScanner', () => {
 
   describe('constructor', () => {
     it('should create scanner with default options', () => {
-      expect(scanner).toBeDefined();
+      expect(scanner).not.toBeUndefined();
     });
 
     it('should create scanner with custom options', () => {
@@ -34,7 +34,7 @@ describe('ComponentScanner', () => {
         exclude: ['**/*.spec.ts'],
       };
       const customScanner = new ComponentScanner(options);
-      expect(customScanner).toBeDefined();
+      expect(customScanner).not.toBeUndefined();
     });
   });
 

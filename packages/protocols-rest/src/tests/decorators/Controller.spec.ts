@@ -10,7 +10,7 @@ describe('Controller decorator', () => {
     class UserController {}
 
     const metadata = Reflect.getMetadata(REST_CONTROLLER_KEY, UserController) as ControllerMetadata;
-    expect(metadata).toBeDefined();
+    expect(metadata).not.toBeUndefined();
     expect(metadata?.path).toBe('/users');
     expect(metadata?.target).toBe(UserController);
   });

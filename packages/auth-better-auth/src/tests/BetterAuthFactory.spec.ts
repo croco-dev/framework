@@ -99,9 +99,9 @@ describe('BetterAuthFactory', () => {
 
       const auth = factory.getAuth();
 
-      expect(auth).toBeDefined();
+      expect(auth).not.toBeUndefined();
       expect(auth).toBe(mockAuthInstance);
-      expect(auth.api).toBeDefined();
+      expect(auth.api).not.toBeUndefined();
     });
 
     it('should return same auth instance on multiple calls', () => {
@@ -124,7 +124,7 @@ describe('BetterAuthFactory', () => {
     });
 
     it('should be usable for DI injection', () => {
-      expect(DRIZZLE_TOKEN).toBeDefined();
+      expect(DRIZZLE_TOKEN).not.toBeUndefined();
       expect(typeof DRIZZLE_TOKEN).toBe('string');
     });
   });
@@ -144,10 +144,10 @@ describe('BetterAuthFactory', () => {
     });
 
     it('should export required schema tables', () => {
-      expect(schema.user).toBeDefined();
-      expect(schema.session).toBeDefined();
-      expect(schema.account).toBeDefined();
-      expect(schema.verification).toBeDefined();
+      expect(schema.user).not.toBeUndefined();
+      expect(schema.session).not.toBeUndefined();
+      expect(schema.account).not.toBeUndefined();
+      expect(schema.verification).not.toBeUndefined();
     });
   });
 

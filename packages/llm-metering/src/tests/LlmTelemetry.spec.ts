@@ -117,7 +117,7 @@ describe('LlmTelemetryBridge', () => {
       await bridge.recordLlmUsage(usageRecord, mockSpan);
 
       const usageEvent = capturedEvents.find((e) => e.name === 'llm.usage');
-      expect(usageEvent).toBeDefined();
+      expect(usageEvent).not.toBeUndefined();
       expect(usageEvent?.attributes).toMatchObject({
         provider: 'openai',
         model: 'gpt-4',

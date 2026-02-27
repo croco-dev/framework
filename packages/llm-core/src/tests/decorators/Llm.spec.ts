@@ -58,14 +58,14 @@ describe('@Llm Decorator', () => {
     it('should store metadata with modelId', () => {
       const metadata: LlmMetadata = Reflect.getMetadata(LLM_METADATA_KEY, TestService.prototype, 'generateText');
 
-      expect(metadata).toBeDefined();
+      expect(metadata).not.toBeUndefined();
       expect(metadata?.modelId).toBe('gpt-4');
     });
 
     it('should use default modelId if not provided', () => {
       const metadata: LlmMetadata = Reflect.getMetadata(LLM_METADATA_KEY, TestService.prototype, 'defaultModel');
 
-      expect(metadata).toBeDefined();
+      expect(metadata).not.toBeUndefined();
       expect(metadata?.modelId).toBe('default');
     });
   });

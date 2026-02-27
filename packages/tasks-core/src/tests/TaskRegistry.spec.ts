@@ -50,7 +50,7 @@ describe('TaskRegistry', () => {
 
     const task = TaskRegistry.getInstance().get('retrievable-task');
 
-    expect(task).toBeDefined();
+    expect(task).not.toBeUndefined();
     expect(task?.name).toBe('retrievable-task');
     expect(task?.target).toBe(TestTaskHandler);
     expect(task?.methodName).toBe('process');

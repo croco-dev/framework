@@ -10,7 +10,7 @@ describe('@Searchable decorator', () => {
 
       const metadata = getSearchableMetadata(TestEntity);
 
-      expect(metadata).toBeDefined();
+      expect(metadata).not.toBeUndefined();
       expect(metadata?.index).toBe('testentity');
     });
 

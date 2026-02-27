@@ -9,7 +9,7 @@ describe('Controller decorator', () => {
     class UserController {}
 
     const meta = getControllerMeta(UserController);
-    expect(meta).toBeDefined();
+    expect(meta).not.toBeUndefined();
     expect(meta?.path).toBe('/users');
   });
 

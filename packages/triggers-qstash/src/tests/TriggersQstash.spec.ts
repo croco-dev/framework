@@ -4,7 +4,7 @@ describe('@croco/triggers-qstash', () => {
   it('package exports should be available', async () => {
     const { QStashScheduler, QStashTriggerHandler } = await import('../index');
 
-    expect(QStashScheduler).toBeDefined();
-    expect(QStashTriggerHandler).toBeDefined();
+    expect(QStashScheduler).not.toBeUndefined();
+    expect(QStashTriggerHandler).not.toBeUndefined();
   });
 });

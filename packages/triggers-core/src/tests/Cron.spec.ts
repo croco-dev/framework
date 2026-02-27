@@ -115,7 +115,7 @@ describe('@Cron decorator', () => {
   });
 
   it('should export CRON_METADATA_KEY symbol', () => {
-    expect(CRON_METADATA_KEY).toBeDefined();
+    expect(CRON_METADATA_KEY).not.toBeUndefined();
     expect(typeof CRON_METADATA_KEY).toBe('symbol');
   });
 });

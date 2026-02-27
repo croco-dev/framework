@@ -112,7 +112,7 @@ describe('Transport Integration', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.name).toBe('Charlie');
-      expect(data.id).toBeDefined();
+      expect(data.id).not.toBeUndefined();
     });
 
     it('PUT /api/users/:id - should update user', async () => {
@@ -151,7 +151,7 @@ describe('Transport Integration', () => {
 
       const response = await handler(event, context);
       expect(response.statusCode).toBe(200);
-      expect(response.body).toBeDefined();
+      expect(response.body).not.toBeUndefined();
     });
   });
 });

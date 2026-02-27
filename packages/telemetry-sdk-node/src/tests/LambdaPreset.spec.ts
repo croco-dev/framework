@@ -41,7 +41,7 @@ describe('lambdaPreset', () => {
       probability: 0.25,
     });
 
-    expect(config.trace?.sampler).toBeDefined();
+    expect(config.trace?.sampler).not.toBeUndefined();
   });
 
   it('should use custom exporterUrl', () => {

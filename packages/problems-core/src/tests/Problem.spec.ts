@@ -72,53 +72,53 @@ describe('Problem', () => {
 
 describe('ProblemCategory', () => {
   it('should have BadRequest category', () => {
-    expect(ProblemCategory.BadRequest).toBeDefined();
+    expect(ProblemCategory.BadRequest).not.toBeUndefined();
   });
 
   it('should have Unauthorized category', () => {
-    expect(ProblemCategory.Unauthorized).toBeDefined();
+    expect(ProblemCategory.Unauthorized).not.toBeUndefined();
 
     const problem = new UnauthorizedProblem();
     expect(problem.category).toBe(ProblemCategory.Unauthorized);
   });
 
   it('should have Forbidden category', () => {
-    expect(ProblemCategory.Forbidden).toBeDefined();
+    expect(ProblemCategory.Forbidden).not.toBeUndefined();
   });
 
   it('should have NotFound category', () => {
-    expect(ProblemCategory.NotFound).toBeDefined();
+    expect(ProblemCategory.NotFound).not.toBeUndefined();
   });
 
   it('should have Conflict category', () => {
-    expect(ProblemCategory.Conflict).toBeDefined();
+    expect(ProblemCategory.Conflict).not.toBeUndefined();
   });
 
   it('should have Gone category', () => {
-    expect(ProblemCategory.Gone).toBeDefined();
+    expect(ProblemCategory.Gone).not.toBeUndefined();
   });
 
   it('should have ValidationError category', () => {
-    expect(ProblemCategory.ValidationError).toBeDefined();
+    expect(ProblemCategory.ValidationError).not.toBeUndefined();
 
     const problem = new ValidationProblem('email');
     expect(problem.category).toBe(ProblemCategory.ValidationError);
   });
 
   it('should have BusinessRuleViolation category', () => {
-    expect(ProblemCategory.BusinessRuleViolation).toBeDefined();
+    expect(ProblemCategory.BusinessRuleViolation).not.toBeUndefined();
   });
 
   it('should have TooManyRequests category', () => {
-    expect(ProblemCategory.TooManyRequests).toBeDefined();
+    expect(ProblemCategory.TooManyRequests).not.toBeUndefined();
   });
 
   it('should have InternalServerError category', () => {
-    expect(ProblemCategory.InternalServerError).toBeDefined();
+    expect(ProblemCategory.InternalServerError).not.toBeUndefined();
   });
 
   it('should have NotImplemented category', () => {
-    expect(ProblemCategory.NotImplemented).toBeDefined();
+    expect(ProblemCategory.NotImplemented).not.toBeUndefined();
   });
 });
 

@@ -287,7 +287,7 @@ describe('@AiMetered decorator', () => {
 
       const prototype = TestService.prototype;
       const descriptor = Object.getOwnPropertyDescriptor(prototype, 'generate');
-      expect(descriptor).toBeDefined();
+      expect(descriptor).not.toBeUndefined();
     });
   });
 });

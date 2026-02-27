@@ -251,8 +251,8 @@ describe('Logger', () => {
         paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret', 'authorization', 'cookie'],
         remove: true,
       });
-      expect(pinoOptions.base).toBeDefined();
-      expect(pinoOptions.transport).toBeDefined();
+      expect(pinoOptions.base).not.toBeUndefined();
+      expect(pinoOptions.transport).not.toBeUndefined();
     });
 
     it('프로덕션 환경에서는 transport가 undefined여야 함', () => {

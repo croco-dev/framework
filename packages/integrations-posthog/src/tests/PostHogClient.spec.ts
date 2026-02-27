@@ -22,8 +22,8 @@ describe('PostHogClient', () => {
 
   it('should return underlying PostHog client', () => {
     const underlyingClient = client.getClient();
-    expect(underlyingClient).toBeDefined();
-    expect(underlyingClient.shutdown).toBeDefined();
+    expect(underlyingClient).not.toBeUndefined();
+    expect(underlyingClient.shutdown).not.toBeUndefined();
   });
 
   it('should shutdown PostHog client', async () => {
@@ -37,7 +37,7 @@ describe('PostHogClient', () => {
 
   it('should create PostHog client with default host', () => {
     const client2 = new PostHogClient({ apiKey: 'new-key' });
-    expect(client2.getClient()).toBeDefined();
+    expect(client2.getClient()).not.toBeUndefined();
   });
 
   it('should create PostHog client with custom host', () => {
@@ -45,15 +45,15 @@ describe('PostHogClient', () => {
       apiKey: 'custom-key',
       host: 'https://custom.posthog.com',
     });
-    expect(clientWithHost.getClient()).toBeDefined();
+    expect(clientWithHost.getClient()).not.toBeUndefined();
   });
 
   it('should allow multiple client instances', () => {
     const client1 = new PostHogClient({ apiKey: 'key-1' });
     const client2 = new PostHogClient({ apiKey: 'key-2' });
 
-    expect(client1.getClient()).toBeDefined();
-    expect(client2.getClient()).toBeDefined();
+    expect(client1.getClient()).not.toBeUndefined();
+    expect(client2.getClient()).not.toBeUndefined();
     expect(client1.getClient()).not.toBe(client2.getClient());
   });
 });

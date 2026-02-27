@@ -35,7 +35,7 @@ describe('crocoPlugin', () => {
     it('should use default config when none provided', () => {
       const plugin = crocoPlugin();
 
-      expect(plugin).toBeDefined();
+      expect(plugin).not.toBeUndefined();
       expect(plugin.name).toBe('croco-plugin');
       expect(typeof plugin.setup).toBe('function');
     });
@@ -51,7 +51,7 @@ describe('crocoPlugin', () => {
 
       const plugin = crocoPlugin(customConfig);
 
-      expect(plugin).toBeDefined();
+      expect(plugin).not.toBeUndefined();
       expect(plugin.name).toBe('croco-plugin');
     });
 
@@ -62,7 +62,7 @@ describe('crocoPlugin', () => {
 
       const plugin = crocoPlugin(customConfig);
 
-      expect(plugin).toBeDefined();
+      expect(plugin).not.toBeUndefined();
     });
   });
 

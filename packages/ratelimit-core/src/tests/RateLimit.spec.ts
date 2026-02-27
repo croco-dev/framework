@@ -14,7 +14,7 @@ describe('@RateLimit decorator', () => {
     const instance = new TestController();
     const metadata = Reflect.getMetadata(RATE_LIMIT_METADATA_KEY, instance.testMethod) as RateLimitMetadata;
 
-    expect(metadata).toBeDefined();
+    expect(metadata).not.toBeUndefined();
     expect(metadata.policy.limit).toBe(100);
     expect(metadata.policy.windowMs).toBe(60000); // 1m
     expect(metadata.policy.name).toBe('testMethod-default');

@@ -135,7 +135,7 @@ describe('EventBusConfig', () => {
       async handle(): Promise<void> {}
     }
 
-    expect(DecoratorTestHandler).toBeDefined();
+    expect(DecoratorTestHandler).not.toBeUndefined();
   });
 
   it('should start event bus with subscriptions', async () => {
@@ -158,7 +158,7 @@ describe('EventBusConfig', () => {
     await config.start({ handlers: [StartTestHandler] });
 
     const anotherEventSubscription = subscriptions.find((s) => s.eventName === 'AnotherTestEvent');
-    expect(anotherEventSubscription).toBeDefined();
+    expect(anotherEventSubscription).not.toBeUndefined();
   });
 });
 
@@ -220,7 +220,7 @@ describe('HandlerResolver', () => {
       await config.start({ handlers: [], resolver: new CustomResolver() });
 
       const resolverTestHandlerSubscription = subscriptions.find((sub) => sub.handler instanceof ResolverTestHandler);
-      expect(resolverTestHandlerSubscription).toBeDefined();
+      expect(resolverTestHandlerSubscription).not.toBeUndefined();
       expect(resolveCount).toBeGreaterThanOrEqual(1);
     });
 
@@ -241,7 +241,7 @@ describe('HandlerResolver', () => {
       await config.start({ handlers: [] });
 
       const resolverTestHandlerSubscription = subscriptions.find((sub) => sub.handler instanceof ResolverTestHandler);
-      expect(resolverTestHandlerSubscription).toBeDefined();
+      expect(resolverTestHandlerSubscription).not.toBeUndefined();
     });
   });
 });

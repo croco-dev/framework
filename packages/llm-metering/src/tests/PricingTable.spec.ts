@@ -7,7 +7,7 @@ describe('PricingTable', () => {
     it('should return pricing for GPT-4', () => {
       const pricing = PricingTable.getPrice('openai', 'gpt-4');
 
-      expect(pricing).toBeDefined();
+      expect(pricing).not.toBeUndefined();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.outputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.currency).toBe('USD');
@@ -16,7 +16,7 @@ describe('PricingTable', () => {
     it('should return pricing for GPT-3.5-turbo', () => {
       const pricing = PricingTable.getPrice('openai', 'gpt-3.5-turbo');
 
-      expect(pricing).toBeDefined();
+      expect(pricing).not.toBeUndefined();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.outputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.currency).toBe('USD');
@@ -25,7 +25,7 @@ describe('PricingTable', () => {
     it('should return pricing for Claude-3 Opus', () => {
       const pricing = PricingTable.getPrice('anthropic', 'claude-3-opus-20240229');
 
-      expect(pricing).toBeDefined();
+      expect(pricing).not.toBeUndefined();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.outputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.currency).toBe('USD');
@@ -34,7 +34,7 @@ describe('PricingTable', () => {
     it('should return pricing for Claude-3 Sonnet', () => {
       const pricing = PricingTable.getPrice('anthropic', 'claude-3-sonnet-20240229');
 
-      expect(pricing).toBeDefined();
+      expect(pricing).not.toBeUndefined();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.outputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.currency).toBe('USD');
@@ -43,7 +43,7 @@ describe('PricingTable', () => {
     it('should return pricing for text-embedding-ada-002', () => {
       const pricing = PricingTable.getPrice('openai', 'text-embedding-ada-002');
 
-      expect(pricing).toBeDefined();
+      expect(pricing).not.toBeUndefined();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
       expect(pricing?.currency).toBe('USD');
     });
@@ -140,8 +140,8 @@ describe('PricingTable', () => {
       const gpt4Pricing = PricingTable.getPrice('openai', 'gpt-4');
       const gpt35Pricing = PricingTable.getPrice('openai', 'gpt-3.5-turbo');
 
-      expect(gpt4Pricing).toBeDefined();
-      expect(gpt35Pricing).toBeDefined();
+      expect(gpt4Pricing).not.toBeUndefined();
+      expect(gpt35Pricing).not.toBeUndefined();
 
       if (!gpt4Pricing || !gpt35Pricing) {
         throw new Error('Pricing not found');
@@ -155,8 +155,8 @@ describe('PricingTable', () => {
       const opusPricing = PricingTable.getPrice('anthropic', 'claude-3-opus-20240229');
       const sonnetPricing = PricingTable.getPrice('anthropic', 'claude-3-sonnet-20240229');
 
-      expect(opusPricing).toBeDefined();
-      expect(sonnetPricing).toBeDefined();
+      expect(opusPricing).not.toBeUndefined();
+      expect(sonnetPricing).not.toBeUndefined();
 
       if (!opusPricing || !sonnetPricing) {
         throw new Error('Pricing not found');

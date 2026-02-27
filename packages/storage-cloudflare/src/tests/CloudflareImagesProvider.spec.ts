@@ -50,12 +50,12 @@ describe('CloudflareImagesProvider', () => {
   describe('constructor', () => {
     it('should initialize with default options', () => {
       const newProvider = new CloudflareImagesProvider(mockOptions);
-      expect(newProvider).toBeDefined();
+      expect(newProvider).not.toBeUndefined();
     });
 
     it('should initialize with custom domain', () => {
       const newProvider = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
-      expect(newProvider).toBeDefined();
+      expect(newProvider).not.toBeUndefined();
     });
   });
 
@@ -202,7 +202,7 @@ describe('CloudflareImagesProvider', () => {
 
       const stream = await provider.getStream('test-image-id');
 
-      expect(stream).toBeDefined();
+      expect(stream).not.toBeUndefined();
       const chunks: Buffer[] = [];
       for await (const chunk of stream) {
         chunks.push(chunk as Buffer);

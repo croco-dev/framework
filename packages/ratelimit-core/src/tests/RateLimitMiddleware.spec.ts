@@ -120,7 +120,7 @@ describe('createRateLimitMiddleware', () => {
     await middleware(ctx, next);
 
     const headers = ctx.get<Record<string, string>>('rateLimitHeaders');
-    expect(headers).toBeDefined();
+    expect(headers).not.toBeUndefined();
     expect(headers?.['X-RateLimit-Limit']).toBe('100');
     expect(headers?.['X-RateLimit-Remaining']).toBe('99');
   });

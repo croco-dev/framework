@@ -139,7 +139,7 @@ describe('CrocoApp', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.isBase64Encoded).toBe(true);
-    expect(response.body).toBeDefined();
+    expect(response.body).not.toBeUndefined();
 
     const decoded = Buffer.from(response.body ?? '', 'base64');
     expect(Buffer.compare(decoded, binaryBody)).toBe(0);

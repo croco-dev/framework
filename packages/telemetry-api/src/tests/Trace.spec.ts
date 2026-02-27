@@ -141,7 +141,7 @@ describe('Trace', () => {
     });
 
     const first = getTraceOptions(TestService.prototype, 'run');
-    expect(first).toBeDefined();
+    expect(first).not.toBeUndefined();
     if (!first?.attributes) {
       throw new Error('Expected attributes to be defined');
     }
@@ -165,7 +165,7 @@ describe('withSpan', () => {
     );
 
     expect(result).toBe(42);
-    expect(capturedSpan).toBeDefined();
+    expect(capturedSpan).not.toBeUndefined();
   });
 
   it('should record errors and rethrow', async () => {
@@ -193,12 +193,12 @@ describe('getActiveTraceInfo', () => {
 describe('getTracer', () => {
   it('should return tracer instance', () => {
     const tracer = getTracer();
-    expect(tracer).toBeDefined();
+    expect(tracer).not.toBeUndefined();
   });
 
   it('should use custom name when provided', () => {
     const tracer = getTracer({ name: 'custom-tracer' });
-    expect(tracer).toBeDefined();
+    expect(tracer).not.toBeUndefined();
   });
 });
 

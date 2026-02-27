@@ -263,8 +263,8 @@ describe('CloudinaryProvider', () => {
 
       const stream = await provider.getStream('test-key');
 
-      expect(stream).toBeDefined();
-      expect(stream.pipe).toBeDefined();
+      expect(stream).not.toBeUndefined();
+      expect(stream.pipe).not.toBeUndefined();
     });
   });
 

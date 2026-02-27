@@ -13,7 +13,7 @@ describe('RateLimitKeyBuilder', () => {
 
     it('should accept valid segments', () => {
       const builder = new RateLimitKeyBuilder(['tenant', 'user']);
-      expect(builder).toBeDefined();
+      expect(builder).not.toBeUndefined();
     });
   });
 

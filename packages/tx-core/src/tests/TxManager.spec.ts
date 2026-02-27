@@ -36,7 +36,7 @@ describe('TxManager', () => {
     it('should provide client within transaction', async () => {
       await txManager.run(async () => {
         const client = txManager.getClient();
-        expect(client).toBeDefined();
+        expect(client).not.toBeUndefined();
         expect(client?.id).toBe('tx-client');
       });
     });
