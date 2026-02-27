@@ -103,7 +103,6 @@ describe('LlmModel', () => {
   });
 
   it('should have token', () => {
-    expect(LlmModel.token).not.toBeUndefined();
     expect(LlmModel.token.name).toBe('LlmModel');
   });
 

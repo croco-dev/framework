@@ -4,7 +4,6 @@ import { SearchEngine } from '../libs/SearchEngine';
 describe('SearchEngine', () => {
   describe('Token', () => {
     it('should have a static Token property', () => {
-      expect(SearchEngine.token).not.toBeUndefined();
       expect(SearchEngine.token.constructor.name).toBe('Token');
     });
   });

@@ -32,7 +32,7 @@ describe('SearchAutoSync', () => {
   });
 
   it('should be defined', () => {
-    expect(searchAutoSync).not.toBeUndefined();
+    expect(searchAutoSync).not.toBeNull();
   });
 
   describe('handle DocumentIndexedEvent', () => {

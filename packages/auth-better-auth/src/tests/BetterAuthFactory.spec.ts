@@ -124,7 +124,6 @@ describe('BetterAuthFactory', () => {
     });
 
     it('should be usable for DI injection', () => {
-      expect(DRIZZLE_TOKEN).not.toBeUndefined();
       expect(typeof DRIZZLE_TOKEN).toBe('string');
     });
   });

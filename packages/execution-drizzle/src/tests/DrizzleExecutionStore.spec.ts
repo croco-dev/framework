@@ -80,7 +80,7 @@ describe('DrizzleExecutionStore', () => {
 
       const result = await store.create(params);
 
-      expect(result).not.toBeUndefined();
+      expect(result).not.toBeNull();
       expect(result.type).toBe('task');
       expect(result.payload).toEqual({ data: 'test' });
       expect(result.maxAttempts).toBe(3);

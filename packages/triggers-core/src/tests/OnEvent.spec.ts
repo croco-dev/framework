@@ -135,7 +135,6 @@ describe('@OnEvent decorator', () => {
   });
 
   it('should export EVENT_METADATA_KEY symbol', () => {
-    expect(EVENT_METADATA_KEY).not.toBeUndefined();
     expect(typeof EVENT_METADATA_KEY).toBe('symbol');
   });
 

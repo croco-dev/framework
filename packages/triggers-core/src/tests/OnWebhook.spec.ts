@@ -182,7 +182,6 @@ describe('@OnWebhook decorator', () => {
   });
 
   it('should export WEBHOOK_METADATA_KEY symbol', () => {
-    expect(WEBHOOK_METADATA_KEY).not.toBeUndefined();
     expect(typeof WEBHOOK_METADATA_KEY).toBe('symbol');
   });
 

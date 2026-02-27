@@ -123,7 +123,7 @@ describe('LlmMeteringService', () => {
 
       // Should not throw, returns the usage record even with partial failures
       const result = await meteringService.recordUsage(usageEvent);
-      expect(result).not.toBeUndefined();
+      expect(result).not.toBeNull();
       expect(result.promptTokens).toBe(100);
       expect(result.completionTokens).toBe(50);
     });
@@ -266,7 +266,7 @@ describe('LlmMeteringService', () => {
       const costRecord = await meteringService.trackCost(usageEvent);
 
       // Should still return a cost record with default pricing
-      expect(costRecord).not.toBeUndefined();
+      expect(costRecord).not.toBeNull();
       expect(costRecord.costUsd).toBeGreaterThanOrEqual(0);
     });
   });

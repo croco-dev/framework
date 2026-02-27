@@ -157,7 +157,6 @@ describe('TriggerRegistry', () => {
   });
 
   it('should export TRIGGER_METADATA_KEY symbol', () => {
-    expect(TRIGGER_METADATA_KEY).not.toBeUndefined();
     expect(typeof TRIGGER_METADATA_KEY).toBe('symbol');
   });
 

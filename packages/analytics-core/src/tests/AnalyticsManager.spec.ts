@@ -117,7 +117,6 @@ describe('AnalyticsManager', () => {
 
   describe('token', () => {
     it('should have a static token for DI', () => {
-      expect(AnalyticsManager.token).not.toBeUndefined();
       expect(AnalyticsManager.token.name).toBe('AnalyticsManager');
     });
   });
@@ -130,12 +129,10 @@ describe('AnalyticsManager', () => {
     });
 
     it('should require identify method to be implemented', () => {
-      expect(analyticsManager.identify).not.toBeUndefined();
       expect(typeof analyticsManager.identify).toBe('function');
     });
 
     it('should require group method to be implemented', () => {
-      expect(analyticsManager.group).not.toBeUndefined();
       expect(typeof analyticsManager.group).toBe('function');
     });
 
