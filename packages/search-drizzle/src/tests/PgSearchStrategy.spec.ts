@@ -3,6 +3,19 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { PgSearchStrategy } from '../libs/strategies/PgSearchStrategy';
 
+type PgSearchStrategyPrivate = {
+  indexName: string;
+};
+
+type SQLRenderable = {
+  toQuery: (config: {
+    escapeName: (value: string) => string;
+    escapeParam: () => string;
+    escapeString: (value: string) => string;
+    casing: CasingCache;
+  }) => { sql: string };
+};
+
 const mockDb = {
   execute: vi.fn(),
 } as unknown as NodePgDatabase<Record<string, never>>;
@@ -21,8 +34,7 @@ describe('PgSearchStrategy', () => {
 
   it('should initialize with index name', () => {
     strategy = new PgSearchStrategy({ indexName: 'custom_index' });
-    // biome-ignore lint/suspicious/noExplicitAny: Accessing private property for testing
-    expect((strategy as any).indexName).toBe('custom_index');
+    expect((strategy as unknown as PgSearchStrategyPrivate).indexName).toBe('custom_index');
   });
 
   describe('buildSearchQuery', () => {
@@ -94,9 +106,8 @@ describe('PgSearchStrategy', () => {
       expect(result).toBe(true);
       expect(mockDb.execute).toHaveBeenCalled();
       const callArgs = (mockDb.execute as Mock).mock.calls[0];
-      // biome-ignore lint/suspicious/noExplicitAny: Check sql content
       expect(
-        (callArgs[0] as any).toQuery({
+        (callArgs[0] as SQLRenderable).toQuery({
           escapeName: (x: string) => `"${x}"`,
           escapeParam: () => '$1',
           escapeString: (x: string) => `'${x}'`,

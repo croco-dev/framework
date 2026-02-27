@@ -9,6 +9,10 @@ import type {
   ToolCallParams,
 } from '../libs/types';
 
+type StringShape = {
+  [key: string]: string;
+};
+
 describe('InMemoryLlmModel', () => {
   let model!: InMemoryLlmModel;
 
@@ -165,7 +169,7 @@ describe('InMemoryLlmModel', () => {
 
       const params: GenerateObjectParams<{ name: string; age: number }> = {
         prompt: 'Create user',
-        schema: { name: 'string', age: 'number' } as any,
+        schema: { name: 'string', age: 'number' } as unknown as { name: string; age: number },
       };
 
       const result = await objectModel.generateObject(params);
@@ -178,9 +182,9 @@ describe('InMemoryLlmModel', () => {
         Invalid: 'not a json',
       });
 
-      const params: GenerateObjectParams<any> = {
+      const params: GenerateObjectParams<StringShape> = {
         prompt: 'Invalid',
-        schema: { name: 'string' } as any,
+        schema: { name: 'string' },
       };
 
       await expect(invalidModel.generateObject(params)).rejects.toThrow();
@@ -192,9 +196,9 @@ describe('InMemoryLlmModel', () => {
         Test: jsonResponse,
       });
 
-      const params: GenerateObjectParams<any> = {
+      const params: GenerateObjectParams<StringShape> = {
         prompt: 'Test',
-        schema: {} as any,
+        schema: {},
       };
 
       const result = await objectModel.generateObject(params);

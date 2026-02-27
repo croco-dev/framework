@@ -3,6 +3,10 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { PgTrgmStrategy } from '../libs/strategies/PgTrgmStrategy';
 
+type PgTrgmStrategyPrivate = {
+  similarityThreshold: number;
+};
+
 const mockDb = {
   execute: vi.fn(),
 } as unknown as NodePgDatabase<Record<string, never>>;
@@ -16,14 +20,12 @@ describe('PgTrgmStrategy', () => {
   });
 
   it('should initialize with default threshold', () => {
-    // biome-ignore lint/suspicious/noExplicitAny: Accessing private property for testing
-    expect((strategy as any).similarityThreshold).toBe(0.3);
+    expect((strategy as unknown as PgTrgmStrategyPrivate).similarityThreshold).toBe(0.3);
   });
 
   it('should initialize with custom threshold', () => {
     strategy = new PgTrgmStrategy({ threshold: 0.5 });
-    // biome-ignore lint/suspicious/noExplicitAny: Accessing private property for testing
-    expect((strategy as any).similarityThreshold).toBe(0.5);
+    expect((strategy as unknown as PgTrgmStrategyPrivate).similarityThreshold).toBe(0.5);
   });
 
   describe('buildSearchQuery', () => {

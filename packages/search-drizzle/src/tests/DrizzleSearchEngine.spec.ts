@@ -1,6 +1,7 @@
 import { Container, Context } from '@croco/framework-context';
 import { StrategyUnavailableProblem } from '@croco/search-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { DrizzleSearchEngine } from '../libs/DrizzleSearchEngine';
 import type { SearchStrategy } from '../libs/types';
 
@@ -23,12 +24,16 @@ const mockStrategy = {
   getRequiredExtensions: vi.fn(),
   checkCapability: vi.fn(),
   getCapabilities: vi.fn(),
-} as unknown as SearchStrategy;
+};
+
+const strategy = mockStrategy as unknown as SearchStrategy;
+
+const executeMock = vi.fn();
 
 // Mock DB
 const mockDb = {
-  execute: vi.fn(),
-} as any;
+  execute: executeMock,
+} as unknown as NodePgDatabase<Record<string, never>>;
 
 describe('DrizzleSearchEngine', () => {
   let engine!: DrizzleSearchEngine;
@@ -39,9 +44,9 @@ describe('DrizzleSearchEngine', () => {
     Container.reset();
 
     // Default setups
-    (Context.getTenantId as any).mockReturnValue('tenant-123');
-    (mockStrategy.checkCapability as any).mockResolvedValue(true);
-    (mockStrategy.getCapabilities as any).mockReturnValue({
+    (Context.getTenantId as Mock).mockReturnValue('tenant-123');
+    mockStrategy.checkCapability.mockResolvedValue(true);
+    mockStrategy.getCapabilities.mockReturnValue({
       fullText: true,
       fuzzy: false,
       highlight: false,
@@ -49,29 +54,29 @@ describe('DrizzleSearchEngine', () => {
 
     // Mock SQL return
     const mockSql = { toSQL: () => ({ sql: 'SELECT 1', params: [] }) };
-    (mockStrategy.buildSearchQuery as any).mockReturnValue(mockSql);
-    (mockStrategy.buildIndexQuery as any).mockReturnValue(mockSql);
-    (mockStrategy.buildDeleteQuery as any).mockReturnValue(mockSql);
+    mockStrategy.buildSearchQuery.mockReturnValue(mockSql);
+    mockStrategy.buildIndexQuery.mockReturnValue(mockSql);
+    mockStrategy.buildDeleteQuery.mockReturnValue(mockSql);
 
-    (mockDb.execute as any).mockResolvedValue({ rows: [] });
+    executeMock.mockResolvedValue({ rows: [] });
   });
 
   it('should initialize and pass capability check', async () => {
-    engine = new DrizzleSearchEngine(mockDb, mockStrategy);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
 
     // Since check is async, we verify it eventually called
     expect(mockStrategy.checkCapability).toHaveBeenCalledWith(mockDb);
   });
 
   it('should throw StrategyUnavailableProblem if capability check fails', async () => {
-    (mockStrategy.checkCapability as any).mockResolvedValue(false);
-    engine = new DrizzleSearchEngine(mockDb, mockStrategy);
+    mockStrategy.checkCapability.mockResolvedValue(false);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
 
     await expect(engine.search('users', { query: 'test' })).rejects.toThrow(StrategyUnavailableProblem);
   });
 
   it('should use tenantId from Context in search', async () => {
-    engine = new DrizzleSearchEngine(mockDb, mockStrategy);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
 
     await engine.search('users', { query: 'test' });
 
@@ -80,33 +85,33 @@ describe('DrizzleSearchEngine', () => {
   });
 
   it('should preserve zero score from search result', async () => {
-    (mockDb.execute as any).mockResolvedValueOnce({
+    executeMock.mockResolvedValueOnce({
       rows: [{ id: 'doc-1', score: 0 }],
       rowCount: 1,
     });
 
-    engine = new DrizzleSearchEngine(mockDb, mockStrategy);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
     const result = await engine.search<{ id: string; score: number }>('users', { query: 'test' });
 
     expect(result.hits[0]?.score).toBe(0);
   });
 
   it('should delegate indexDocument to strategy', async () => {
-    engine = new DrizzleSearchEngine(mockDb, mockStrategy);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
     const doc = { id: '1', tenantId: 'tenant-123', title: 'hello' };
 
     await engine.indexDocument('users', doc);
 
     expect(mockStrategy.buildIndexQuery).toHaveBeenCalledWith('users', doc, 'tenant-123');
-    expect(mockDb.execute).toHaveBeenCalled();
+    expect(executeMock).toHaveBeenCalled();
   });
 
   it('should delegate deleteDocument to strategy', async () => {
-    engine = new DrizzleSearchEngine(mockDb, mockStrategy);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
 
     await engine.deleteDocument('users', '1');
 
     expect(mockStrategy.buildDeleteQuery).toHaveBeenCalledWith('users', '1', 'tenant-123');
-    expect(mockDb.execute).toHaveBeenCalled();
+    expect(executeMock).toHaveBeenCalled();
   });
 });

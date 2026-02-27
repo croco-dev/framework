@@ -1,7 +1,7 @@
 import type { EventBus } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import type { MeteringService } from '@croco/metering-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { LlmUsageRecordedEvent } from '../libs/events/LlmUsageRecordedEvent';
 import { LlmMeteringService } from '../libs/LlmMeteringService';
 import { LlmQuotaExceededProblem } from '../libs/problems/LlmMeteringProblems';
@@ -119,7 +119,7 @@ describe('LlmMeteringService', () => {
 
       // Second call with same key - should handle gracefully
       // Simulate idempotency check failure for prompt tokens
-      (mockMeteringCore.record as any).mockRejectedValueOnce(new Error('Duplicate idempotency key'));
+      (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error('Duplicate idempotency key'));
 
       // Should not throw, returns the usage record even with partial failures
       const result = await meteringService.recordUsage(usageEvent);
@@ -190,7 +190,7 @@ describe('LlmMeteringService', () => {
 
   describe('checkQuota', () => {
     it('should return true when quota is not exceeded', async () => {
-      (mockMeteringCore.getUsage as any).mockResolvedValue(1000);
+      (mockMeteringCore.getUsage as Mock).mockResolvedValue(1000);
 
       const result = await meteringService.checkQuota('tenant-123', 'llm.prompt_tokens', 10000);
 
@@ -203,7 +203,7 @@ describe('LlmMeteringService', () => {
     });
 
     it('should throw LlmQuotaExceededProblem when quota exceeded', async () => {
-      (mockMeteringCore.getUsage as any).mockResolvedValue(15000);
+      (mockMeteringCore.getUsage as Mock).mockResolvedValue(15000);
 
       await expect(meteringService.checkQuota('tenant-123', 'llm.prompt_tokens', 10000)).rejects.toThrow(
         LlmQuotaExceededProblem
@@ -211,7 +211,7 @@ describe('LlmMeteringService', () => {
     });
 
     it('should not throw when quota is exactly at limit', async () => {
-      (mockMeteringCore.getUsage as any).mockResolvedValue(10000);
+      (mockMeteringCore.getUsage as Mock).mockResolvedValue(10000);
 
       const result = await meteringService.checkQuota('tenant-123', 'llm.prompt_tokens', 10000);
 

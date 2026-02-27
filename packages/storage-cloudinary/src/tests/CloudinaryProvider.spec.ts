@@ -5,6 +5,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloudinaryProvider } from '../libs/CloudinaryProvider';
 
+type UploadStream = typeof cloudinary.uploader.upload_stream;
+
 // Cloudinary SDK 모킹
 vi.mock('cloudinary', () => ({
   v2: {
@@ -51,7 +53,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
       await expect(provider.put('test-key', buffer)).resolves.not.toThrow();
@@ -77,7 +79,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const stream = Readable.from(Buffer.from('test data'));
 
@@ -94,7 +96,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
       const options: PutOptions = { contentType: 'image/jpeg' };
@@ -120,7 +122,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
       const options: PutOptions = {
@@ -150,7 +152,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
 
@@ -169,7 +171,9 @@ describe('CloudinaryProvider', () => {
       const { PassThrough } = await import('node:stream');
       const destination = new PassThrough();
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(() => destination as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(
+        () => destination as unknown as ReturnType<UploadStream>
+      );
 
       const source = new PassThrough();
       const putPromise = provider.put('test-key', source);
@@ -211,7 +215,7 @@ describe('CloudinaryProvider', () => {
         arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(10)),
       };
 
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as unknown as Response);
 
       const result = await provider.get('test-key');
 
@@ -225,7 +229,7 @@ describe('CloudinaryProvider', () => {
         status: 404,
       };
 
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(provider.get('test-key')).rejects.toThrow(FileNotFoundProblem);
     });
@@ -236,7 +240,7 @@ describe('CloudinaryProvider', () => {
         status: 500,
       };
 
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(provider.get('test-key')).rejects.toThrow(UploadFailedProblem);
     });
@@ -259,7 +263,7 @@ describe('CloudinaryProvider', () => {
         arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(10)),
       };
 
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as unknown as Response);
 
       const stream = await provider.getStream('test-key');
 
@@ -635,7 +639,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
       await provider.put('test-key', buffer, { contentType: 'image/png' });
@@ -659,7 +663,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
       await provider.put('test-key', buffer, { contentType: 'video/mp4' });
@@ -683,7 +687,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
       await provider.put('test-key', buffer, { contentType: 'application/pdf' });
@@ -707,7 +711,7 @@ describe('CloudinaryProvider', () => {
         }
       );
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as any);
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
 
       const buffer = Buffer.from('test data');
       await provider.put('test-key', buffer);
