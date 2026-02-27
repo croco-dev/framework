@@ -52,7 +52,7 @@ describe('R2StorageProvider', () => {
     });
 
     it('should return custom public URL when publicUrlBase is set', () => {
-      (configService.get as any).mockImplementation((key: string) => {
+      vi.mocked(configService.get).mockImplementation((key: string) => {
         if (key === 'R2_PUBLIC_URL_BASE') return 'https://cdn.example.com';
         if (key === 'R2_BUCKET') return 'test-bucket';
         return 'test-value';

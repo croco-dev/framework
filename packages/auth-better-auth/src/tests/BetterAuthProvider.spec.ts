@@ -249,7 +249,7 @@ describe('BetterAuthProvider', () => {
       mockFactory = createMockBetterAuthFactory(null);
       provider = new BetterAuthProvider(mockFactory);
 
-      const factory = (provider as any).factory;
+      const factory = (provider as unknown as { factory: BetterAuthFactory }).factory;
       expect(factory).toBe(mockFactory);
     });
   });

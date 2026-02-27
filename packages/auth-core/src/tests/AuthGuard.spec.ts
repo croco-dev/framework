@@ -79,7 +79,7 @@ describe('AuthGuard', () => {
 
     expect(result).toBe(true);
     expect(mockAuthProvider.authenticate).toHaveBeenCalledWith(context.getRequest());
-    expect((context.getRequest() as any).user).toBe(mockUser);
+    expect((context.getRequest() as Request & { user: AuthUser }).user).toBe(mockUser);
   });
 
   it('should throw UnauthorizedProblem when authentication fails', async () => {

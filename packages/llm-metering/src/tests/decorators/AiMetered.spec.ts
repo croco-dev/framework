@@ -241,7 +241,7 @@ describe('@AiMetered decorator', () => {
       }
 
       // Mock record to throw
-      (mockMeteringService.record as any).mockRejectedValue(new Error('Metering failed'));
+      vi.mocked(mockMeteringService.record).mockRejectedValue(new Error('Metering failed'));
 
       const service = new TestService();
       const result = await service.generate();
