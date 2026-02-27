@@ -11,12 +11,12 @@ import type { Money, MRRMovement } from '../types';
 
 describe('MetricsEngine', () => {
   let engine!: MetricsEngine;
-  let mockMrrCalculator: MrrCalculator;
-  let mockRetentionCalculator: RetentionCalculator;
-  let mockGrowthCalculator: GrowthCalculator;
-  let mockCcCalculator: CarryingCapacityCalculator;
-  let mockLtvCalculator: LtvCalculator;
-  let mockSnapshotScheduler: SnapshotScheduler;
+  let mockMrrCalculator!: MrrCalculator;
+  let mockRetentionCalculator!: RetentionCalculator;
+  let mockGrowthCalculator!: GrowthCalculator;
+  let mockCcCalculator!: CarryingCapacityCalculator;
+  let mockLtvCalculator!: LtvCalculator;
+  let mockSnapshotScheduler!: SnapshotScheduler;
 
   beforeEach(() => {
     mockMrrCalculator = {

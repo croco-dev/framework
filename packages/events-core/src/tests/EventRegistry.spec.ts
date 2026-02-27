@@ -17,7 +17,7 @@ class SecondEvent extends DomainEvent {
 }
 
 describe('EventRegistry', () => {
-  let registry: EventRegistry;
+  let registry!: EventRegistry;
 
   beforeEach(() => {
     registry = new EventRegistry();

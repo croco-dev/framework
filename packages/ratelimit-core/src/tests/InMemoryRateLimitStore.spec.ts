@@ -3,7 +3,7 @@ import { InMemoryRateLimitStore } from '../libs/InMemoryRateLimitStore';
 import type { RateLimitPolicy } from '../libs/types';
 
 describe('InMemoryRateLimitStore', () => {
-  let store: InMemoryRateLimitStore;
+  let store!: InMemoryRateLimitStore;
   const policy: RateLimitPolicy = {
     name: 'test',
     limit: 3,

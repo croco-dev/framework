@@ -19,11 +19,11 @@ type MockEventBus = {
 };
 
 describe('ApiKeyManager', () => {
-  let manager: ApiKeyManager;
-  let mockStore: ReturnType<typeof createMockStore>;
-  let mockEventBus: MockEventBus;
-  let generator: ApiKeyGenerator;
-  let hasher: ApiKeyHasher;
+  let manager!: ApiKeyManager;
+  let mockStore!: ReturnType<typeof createMockStore>;
+  let mockEventBus!: MockEventBus;
+  let generator!: ApiKeyGenerator;
+  let hasher!: ApiKeyHasher;
 
   function createMockStore() {
     const keys = new Map<string, ApiKey>();
@@ -172,8 +172,8 @@ describe('ApiKeyManager', () => {
   });
 
   describe('verify', () => {
-    let createdKey: { key: string; id: string; keyStart: string };
-    let _keyData: ApiKey;
+    let createdKey!: { key: string; id: string; keyStart: string };
+    let _keyData!: ApiKey;
 
     beforeEach(async () => {
       const options: CreateApiKeyOptions = {
@@ -320,7 +320,7 @@ describe('ApiKeyManager', () => {
   });
 
   describe('rotate', () => {
-    let originalKey: { key: string; id: string; keyStart: string };
+    let originalKey!: { key: string; id: string; keyStart: string };
 
     beforeEach(async () => {
       const options: CreateApiKeyOptions = {

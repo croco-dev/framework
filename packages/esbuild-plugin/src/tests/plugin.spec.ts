@@ -8,7 +8,7 @@ const TEMP_DIR = path.join(__dirname, 'plugin-temp');
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 
 describe('crocoPlugin', () => {
-  let mockBuildContext: esbuild.PluginBuild;
+  let mockBuildContext!: esbuild.PluginBuild;
 
   beforeEach(() => {
     mockBuildContext = {

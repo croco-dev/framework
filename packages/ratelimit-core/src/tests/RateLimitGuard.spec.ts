@@ -11,8 +11,8 @@ import type { RateLimiter } from '../libs/RateLimiter';
 import type { RateLimitPolicy, RateLimitResult } from '../libs/types';
 
 describe('RateLimitGuard', () => {
-  let guard: RateLimitGuard;
-  let mockRateLimiter: RateLimiter;
+  let guard!: RateLimitGuard;
+  let mockRateLimiter!: RateLimiter;
 
   const policy: RateLimitPolicy = {
     name: 'test-policy',

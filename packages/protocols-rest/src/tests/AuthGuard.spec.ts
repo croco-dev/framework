@@ -6,9 +6,9 @@ import type { ExecutionContext } from '../libs/interfaces/ExecutionContext';
 type TokenVerifier = (token: string) => Promise<unknown> | unknown;
 
 describe('AuthGuard', () => {
-  let mockVerifier: ReturnType<typeof vi.fn>;
-  let guard: AuthGuard;
-  let mockContext: ExecutionContext;
+  let mockVerifier!: ReturnType<typeof vi.fn>;
+  let guard!: AuthGuard;
+  let mockContext!: ExecutionContext;
 
   beforeEach(() => {
     mockVerifier = vi.fn();

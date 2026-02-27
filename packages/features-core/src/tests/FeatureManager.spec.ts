@@ -22,7 +22,7 @@ class MockFeatureManager extends FeatureManager {
 }
 
 describe('FeatureManager', () => {
-  let featureManager: MockFeatureManager;
+  let featureManager!: MockFeatureManager;
 
   beforeEach(() => {
     featureManager = new MockFeatureManager();

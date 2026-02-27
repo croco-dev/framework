@@ -5,8 +5,8 @@ import type { UsageRecord } from '../libs/types';
 import type { UsageStorage } from '../libs/UsageStorage';
 
 describe('QuotaManager', () => {
-  let quotaManager: QuotaManager;
-  let mockStorage: UsageStorage;
+  let quotaManager!: QuotaManager;
+  let mockStorage!: UsageStorage;
 
   const createUsageRecord = (overrides: Partial<UsageRecord> = {}): UsageRecord => ({
     id: 'usage-123',

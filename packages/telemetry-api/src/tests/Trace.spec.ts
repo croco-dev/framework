@@ -154,7 +154,7 @@ describe('Trace', () => {
 
 describe('withSpan', () => {
   it('should wrap function execution with span', async () => {
-    let capturedSpan: unknown;
+    let capturedSpan!: unknown;
 
     const result = await withSpan(
       async (span) => {

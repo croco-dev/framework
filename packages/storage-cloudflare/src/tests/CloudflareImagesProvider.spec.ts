@@ -5,10 +5,10 @@ import { CloudflareImagesProvider } from '../libs/CloudflareImagesProvider';
 
 describe('CloudflareImagesProvider', () => {
   let provider!: CloudflareImagesProvider;
-  let mockFetch: ReturnType<typeof vi.fn>;
-  let originalFetch: typeof global.fetch;
-  let mockCryptoSign: ReturnType<typeof vi.fn>;
-  let mockCryptoImportKey: ReturnType<typeof vi.fn>;
+  let mockFetch!: ReturnType<typeof vi.fn>;
+  let originalFetch!: typeof global.fetch;
+  let mockCryptoSign!: ReturnType<typeof vi.fn>;
+  let mockCryptoImportKey!: ReturnType<typeof vi.fn>;
 
   const mockOptions = {
     accountId: 'test-account-id',

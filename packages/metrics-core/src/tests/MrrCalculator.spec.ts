@@ -4,7 +4,7 @@ import { MrrCalculator } from '../libs/MrrCalculator';
 
 describe('MrrCalculator', () => {
   let calculator!: MrrCalculator;
-  let mockPlanRegistry: PlanRegistry;
+  let mockPlanRegistry!: PlanRegistry;
 
   beforeEach(() => {
     calculator = new MrrCalculator();

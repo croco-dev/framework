@@ -17,7 +17,7 @@ vi.mock('resend', () => {
 
 describe('ResendProvider', () => {
   let provider!: ResendProvider;
-  let mockResendClient: any;
+  let mockResendClient!: any;
 
   const mockConfig = {
     apiKey: 're_test-key',

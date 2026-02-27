@@ -3,7 +3,7 @@ import type { MeterRepository } from '../libs/MeterRepository';
 import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from '../libs/types';
 
 describe('MeterRepository', () => {
-  let mockRepository: MeterRepository;
+  let mockRepository!: MeterRepository;
 
   beforeEach(() => {
     mockRepository = {

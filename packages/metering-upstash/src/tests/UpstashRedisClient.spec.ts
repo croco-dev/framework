@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createUpstashRedisClient, UpstashRedisClient } from '../libs/UpstashRedisClient';
 
 describe('UpstashRedisClient', () => {
-  let client: UpstashRedisClient;
-  let mockRedis: Redis;
+  let client!: UpstashRedisClient;
+  let mockRedis!: Redis;
 
   beforeEach(() => {
     mockRedis = {

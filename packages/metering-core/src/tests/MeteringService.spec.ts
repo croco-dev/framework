@@ -12,11 +12,11 @@ import type { MeterDefinition } from '../libs/types';
 import type { UsageStorage } from '../libs/UsageStorage';
 
 describe('MeteringService', () => {
-  let service: MeteringService;
-  let mockRegistry: MeterRegistry;
-  let mockStorage: UsageStorage;
-  let mockIdempotency: IdempotencyManager;
-  let mockEventBus: EventBus;
+  let service!: MeteringService;
+  let mockRegistry!: MeterRegistry;
+  let mockStorage!: UsageStorage;
+  let mockIdempotency!: IdempotencyManager;
+  let mockEventBus!: EventBus;
 
   const createMeter = (overrides: Partial<MeterDefinition> = {}): MeterDefinition => ({
     id: 'meter-123',

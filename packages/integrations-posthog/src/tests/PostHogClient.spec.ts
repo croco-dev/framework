@@ -13,7 +13,7 @@ vi.mock('posthog-node', () => {
 });
 
 describe('PostHogClient', () => {
-  let client: PostHogClient;
+  let client!: PostHogClient;
 
   beforeEach(() => {
     Container.reset();

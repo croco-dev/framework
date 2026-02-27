@@ -5,8 +5,8 @@ import { RedisUsageStorage } from '../libs/RedisUsageStorage';
 import type { UsageQueryOptions, UsageRecord } from '../libs/types';
 
 describe('RedisUsageStorage', () => {
-  let storage: RedisUsageStorage;
-  let mockRedis: RedisClient;
+  let storage!: RedisUsageStorage;
+  let mockRedis!: RedisClient;
 
   beforeEach(() => {
     mockRedis = {

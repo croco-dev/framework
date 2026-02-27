@@ -25,7 +25,7 @@ vi.mock('pino', () => {
 });
 
 describe('Logger.child() - Request-scoped Isolation', () => {
-  let logger: Logger;
+  let logger!: Logger;
   const mockConfig = {
     get: vi.fn(),
     has: vi.fn(),

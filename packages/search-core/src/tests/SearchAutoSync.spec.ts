@@ -7,11 +7,12 @@ import { SearchEngine } from '../libs/SearchEngine';
 import { SearchAutoSync } from '../libs/sync/SearchAutoSync';
 
 describe('SearchAutoSync', () => {
-  let searchAutoSync: SearchAutoSync;
-  let searchEngine: SearchEngine;
-  let eventBusMock: any;
+  let searchAutoSync!: SearchAutoSync;
+  let searchEngine!: SearchEngine;
+  let eventBusMock!: any;
 
   beforeEach(() => {
+    Container.reset();
     vi.clearAllMocks();
     Container.reset();
 

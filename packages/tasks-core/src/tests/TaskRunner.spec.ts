@@ -7,9 +7,9 @@ import { TaskRunner } from '../libs/TaskRunner';
 import type { TaskMetadata } from '../libs/types';
 
 describe('TaskRunner', () => {
-  let mockExecutionManager: ExecutionManager;
+  let mockExecutionManager!: ExecutionManager;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let testClassInstance: any;
+  let testClassInstance!: any;
 
   beforeEach(() => {
     MetadataStorage.clear();

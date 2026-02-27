@@ -5,9 +5,9 @@ import type { RateLimitStore } from '../libs/RateLimitStore';
 import type { RateLimitPolicy, RateLimitResult } from '../libs/types';
 
 describe('RateLimiter', () => {
-  let mockStore: RateLimitStore;
-  let keyBuilder: RateLimitKeyBuilder;
-  let rateLimiter: RateLimiter;
+  let mockStore!: RateLimitStore;
+  let keyBuilder!: RateLimitKeyBuilder;
+  let rateLimiter!: RateLimiter;
 
   const policy: RateLimitPolicy = {
     name: 'test-policy',

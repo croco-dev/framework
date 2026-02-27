@@ -10,7 +10,7 @@ const mockTaskRunner = {
 
 describe('NotificationService', () => {
   let service!: NotificationService;
-  let mockProvider: {
+  let mockProvider!: {
     getName: ReturnType<typeof vi.fn>;
     getChannel: ReturnType<typeof vi.fn>;
     send: ReturnType<typeof vi.fn>;

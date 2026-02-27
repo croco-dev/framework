@@ -7,8 +7,8 @@ import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 
 describe('ApiKeyGuard', () => {
-  let guard: ApiKeyGuard;
-  let mockApiKeyProvider: ApiKeyProvider & { authenticate: ReturnType<typeof vi.fn> };
+  let guard!: ApiKeyGuard;
+  let mockApiKeyProvider!: ApiKeyProvider & { authenticate: ReturnType<typeof vi.fn> };
 
   const mockPrincipal: ApiKeyPrincipal = {
     type: 'apikey',

@@ -3,7 +3,7 @@ import { TenantRequiredProblem } from '../libs/problems/TenantRequiredProblem';
 import { TenantManager } from '../libs/TenantManager';
 
 describe('TenantManager', () => {
-  let manager: TenantManager;
+  let manager!: TenantManager;
 
   beforeEach(() => {
     manager = new TenantManager();

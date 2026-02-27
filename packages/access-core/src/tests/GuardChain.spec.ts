@@ -44,9 +44,9 @@ class MockPermissionGuard implements Guard<ExecutionContext> {
 }
 
 describe('Guard Chain Integration (RBAC OR ReBAC)', () => {
-  let accessGuard: AccessGuard;
-  let mockAccessEngine: AccessEngine;
-  let mockRbacEngine: RbacEngine;
+  let accessGuard!: AccessGuard;
+  let mockAccessEngine!: AccessEngine;
+  let mockRbacEngine!: RbacEngine;
 
   const mockUser: AuthUser = { id: 'user-1', name: 'Test User', permissions: [] };
   const mockTenantId = 'tenant-1';

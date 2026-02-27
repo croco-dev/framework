@@ -12,8 +12,8 @@ import {
 import type { OnboardingDefinition } from '../libs/types';
 
 describe('OnboardingManager', () => {
-  let manager: OnboardingManager;
-  let analytics: AnalyticsManager;
+  let manager!: OnboardingManager;
+  let analytics!: AnalyticsManager;
 
   const sampleDefinition: OnboardingDefinition = {
     id: 'welcome-tour',

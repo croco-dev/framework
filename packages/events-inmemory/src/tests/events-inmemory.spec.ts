@@ -27,10 +27,11 @@ class FailingHandler implements EventHandler<TestEvent> {
 }
 
 describe('InMemoryEventBus', () => {
-  let eventBus: InMemoryEventBus;
-  let testHandler: TestHandler;
+  let eventBus!: InMemoryEventBus;
+  let testHandler!: TestHandler;
 
   beforeEach(() => {
+    Container.reset();
     eventBus = new InMemoryEventBus();
     testHandler = new TestHandler();
     Container.reset();

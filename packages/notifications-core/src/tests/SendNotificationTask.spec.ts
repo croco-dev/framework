@@ -5,7 +5,7 @@ import type { NotificationJobPayload, NotificationProvider } from '../libs/types
 
 describe('SendNotificationTask', () => {
   let task!: SendNotificationTask;
-  let mockProvider: NotificationProvider;
+  let mockProvider!: NotificationProvider;
 
   beforeEach(() => {
     Container.reset();

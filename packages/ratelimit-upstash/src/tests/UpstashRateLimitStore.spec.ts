@@ -24,9 +24,9 @@ vi.mock('@upstash/ratelimit', () => {
 });
 
 describe('UpstashRateLimitStore', () => {
-  let store: UpstashRateLimitStore;
-  let mockRedis: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
-  let mockSlidingWindow: ReturnType<typeof vi.fn>;
+  let store!: UpstashRateLimitStore;
+  let mockRedis!: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
+  let mockSlidingWindow!: ReturnType<typeof vi.fn>;
 
   const policy: RateLimitPolicy = {
     name: 'test-policy',

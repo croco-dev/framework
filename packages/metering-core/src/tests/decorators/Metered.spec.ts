@@ -4,7 +4,7 @@ import { getMeteredMetadata, getMeteringService, Metered, setMeteringService } f
 import type { MeteringService } from '../../libs/MeteringService';
 
 describe('@Metered decorator', () => {
-  let mockService: MeteringService;
+  let mockService!: MeteringService;
 
   beforeEach(() => {
     mockService = {

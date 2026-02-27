@@ -3,7 +3,7 @@ import { HealthCheckService } from '../libs/HealthCheckService';
 import type { HealthIndicator, HealthIndicatorResult } from '../libs/HealthIndicator';
 
 describe('HealthCheckService', () => {
-  let service: HealthCheckService;
+  let service!: HealthCheckService;
 
   beforeEach(() => {
     service = new HealthCheckService();

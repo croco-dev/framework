@@ -14,8 +14,8 @@ vi.mock('better-auth/adapters/drizzle', () => ({
 }));
 
 describe('BetterAuthFactory', () => {
-  let mockDb: any;
-  let config: { baseURL: string; secret: string };
+  let mockDb!: any;
+  let config!: { baseURL: string; secret: string };
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -7,9 +7,9 @@ import { LlmMeteringService } from '../libs/LlmMeteringService';
 import { LlmQuotaExceededProblem } from '../libs/problems/LlmMeteringProblems';
 
 describe('LlmMeteringService', () => {
-  let meteringService: LlmMeteringService;
-  let mockMeteringCore: MeteringService;
-  let mockEventBus: EventBus;
+  let meteringService!: LlmMeteringService;
+  let mockMeteringCore!: MeteringService;
+  let mockEventBus!: EventBus;
 
   beforeEach(() => {
     Container.reset();

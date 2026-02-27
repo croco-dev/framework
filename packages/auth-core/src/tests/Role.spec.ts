@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { RoleRegistry } from '../libs/rbac/Role';
 
 describe('RoleRegistry', () => {
-  let registry: RoleRegistry;
+  let registry!: RoleRegistry;
 
   beforeEach(() => {
     registry = new RoleRegistry();

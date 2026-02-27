@@ -54,7 +54,7 @@ function createCallHandler(result: unknown): CallHandler {
 }
 
 describe('AuditInterceptor', () => {
-  let interceptor: AuditInterceptor;
+  let interceptor!: AuditInterceptor;
 
   beforeEach(() => {
     Container.reset();

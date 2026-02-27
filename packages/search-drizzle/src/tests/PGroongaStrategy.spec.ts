@@ -8,7 +8,7 @@ const mockDb = {
 } as unknown as NodePgDatabase<Record<string, never>>;
 
 describe('PGroongaStrategy', () => {
-  let strategy: PGroongaStrategy;
+  let strategy!: PGroongaStrategy;
 
   beforeEach(() => {
     vi.clearAllMocks();

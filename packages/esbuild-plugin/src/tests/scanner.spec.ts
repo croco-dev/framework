@@ -7,7 +7,7 @@ const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 const TEMP_DIR = path.join(__dirname, 'scanner-temp');
 
 describe('ComponentScanner', () => {
-  let scanner: ComponentScanner;
+  let scanner!: ComponentScanner;
 
   beforeEach(() => {
     scanner = new ComponentScanner();

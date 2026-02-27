@@ -6,9 +6,9 @@ import { AiMetered, setLlmMeteringService } from '../../libs/decorators/AiMetere
 import { LlmMeteringService } from '../../libs/LlmMeteringService';
 
 describe('@AiMetered decorator', () => {
-  let mockMeteringService: MeteringService;
-  let mockEventBus: EventBus;
-  let llmMeteringService: LlmMeteringService;
+  let mockMeteringService!: MeteringService;
+  let mockEventBus!: EventBus;
+  let llmMeteringService!: LlmMeteringService;
 
   beforeEach(() => {
     Container.reset();

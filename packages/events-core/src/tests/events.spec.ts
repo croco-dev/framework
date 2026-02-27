@@ -58,7 +58,7 @@ describe('DomainEvent', () => {
 });
 
 describe('AggregateRoot', () => {
-  let aggregate: TestAggregate;
+  let aggregate!: TestAggregate;
 
   beforeEach(() => {
     aggregate = new TestAggregate();
@@ -105,7 +105,7 @@ describe('AggregateRoot', () => {
 });
 
 describe('EventBusConfig', () => {
-  let config: EventBusConfig;
+  let config!: EventBusConfig;
 
   beforeEach(() => {
     config = EventBusConfig.getInstance();

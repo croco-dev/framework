@@ -6,12 +6,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleOnboardingStore } from '../libs/DrizzleOnboardingStore';
 
 describe('DrizzleOnboardingStore', () => {
-  let store: DrizzleOnboardingStore;
-  let mockDb: {
+  let store!: DrizzleOnboardingStore;
+  let mockDb!: {
     select: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
   };
-  let mockTxManager: {
+  let mockTxManager!: {
     getClient: ReturnType<typeof vi.fn>;
   };
 

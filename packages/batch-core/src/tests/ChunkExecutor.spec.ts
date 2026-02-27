@@ -5,8 +5,8 @@ import type { ItemReader } from '../libs/interfaces/ItemReader';
 import { Step } from '../libs/Step';
 
 describe('ChunkExecutor', () => {
-  let executionManager: ExecutionManager;
-  let executor: ChunkExecutor;
+  let executionManager!: ExecutionManager;
+  let executor!: ChunkExecutor;
 
   beforeEach(() => {
     executionManager = {

@@ -12,8 +12,8 @@ class TestEvent extends DomainEvent {
 }
 
 describe('TransactionalEventPublisher', () => {
-  let publisher: TransactionalEventPublisher;
-  let publishedEvents: DomainEvent[];
+  let publisher!: TransactionalEventPublisher;
+  let publishedEvents!: DomainEvent[];
 
   beforeEach(() => {
     publishedEvents = [];

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ApiKeyGenerator } from '../libs/apikey/ApiKeyGenerator';
 
 describe('ApiKeyGenerator', () => {
-  let generator: ApiKeyGenerator;
+  let generator!: ApiKeyGenerator;
 
   beforeEach(() => {
     generator = new ApiKeyGenerator();

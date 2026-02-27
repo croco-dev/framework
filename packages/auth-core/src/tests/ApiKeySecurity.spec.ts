@@ -5,10 +5,10 @@ import { ApiKeyManager } from '../libs/apikey/ApiKeyManager';
 import type { ApiKey, CreateApiKeyOptions } from '../libs/interfaces/ApiKey';
 
 describe('ApiKey Security', () => {
-  let manager: ApiKeyManager;
-  let mockStore: ReturnType<typeof createMockStore>;
-  let generator: ApiKeyGenerator;
-  let hasher: ApiKeyHasher;
+  let manager!: ApiKeyManager;
+  let mockStore!: ReturnType<typeof createMockStore>;
+  let generator!: ApiKeyGenerator;
+  let hasher!: ApiKeyHasher;
 
   function createMockStore() {
     const keys = new Map<string, ApiKey>();

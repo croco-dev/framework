@@ -60,7 +60,7 @@ class UserController {
 }
 
 describe('Transport Integration', () => {
-  let app: CrocoApp;
+  let app!: CrocoApp;
 
   beforeEach(() => {
     Container.reset();

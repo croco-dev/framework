@@ -6,12 +6,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QStashChunkExecutor } from '../libs/QStashChunkExecutor';
 
 describe('QStashChunkExecutor', () => {
-  let startMock: ReturnType<typeof vi.fn>;
-  let executionManager: ExecutionManager;
-  let qstashClient: {
+  let startMock!: ReturnType<typeof vi.fn>;
+  let executionManager!: ExecutionManager;
+  let qstashClient!: {
     publishJSON: ReturnType<typeof vi.fn>;
   };
-  let executor: QStashChunkExecutor;
+  let executor!: QStashChunkExecutor;
 
   beforeEach(() => {
     startMock = vi.fn().mockResolvedValue({ id: 'exec-1', checkpoints: {} });

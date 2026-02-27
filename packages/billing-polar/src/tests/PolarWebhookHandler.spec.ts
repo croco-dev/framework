@@ -43,9 +43,9 @@ vi.mock('@polar-sh/sdk/dist/esm/webhooks.js', () => ({
 
 describe('PolarWebhookHandler', () => {
   let handler!: PolarWebhookHandler;
-  let mockStore: BillingStore;
-  let mockEventPublisher: EventPublisher;
-  let config: PolarConfig;
+  let mockStore!: BillingStore;
+  let mockEventPublisher!: EventPublisher;
+  let config!: PolarConfig;
 
   beforeEach(() => {
     mockStore = createMockStore();

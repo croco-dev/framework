@@ -13,9 +13,9 @@ class TestProblem extends Problem {
 }
 
 describe('ErrorHandler', () => {
-  let errorHandler: ErrorHandler;
-  let mockCtx: CrocoHttpContext;
-  let mockLogger: Logger;
+  let errorHandler!: ErrorHandler;
+  let mockCtx!: CrocoHttpContext;
+  let mockLogger!: Logger;
 
   beforeEach(() => {
     Container.reset();

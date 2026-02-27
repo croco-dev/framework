@@ -4,8 +4,8 @@ import { RbacEngine } from '../libs/rbac/RbacEngine';
 import { RoleRegistry } from '../libs/rbac/Role';
 
 describe('RbacEngine', () => {
-  let rbacEngine: RbacEngine;
-  let roleRegistry: RoleRegistry;
+  let rbacEngine!: RbacEngine;
+  let roleRegistry!: RoleRegistry;
 
   beforeEach(() => {
     roleRegistry = new RoleRegistry();

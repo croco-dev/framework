@@ -7,7 +7,7 @@ import { ErrorHandler } from '../libs/ErrorHandler';
 import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
 
 describe('HealthCheck', () => {
-  let registry: HealthCheckRegistry;
+  let registry!: HealthCheckRegistry;
 
   beforeEach(() => {
     Container.reset();

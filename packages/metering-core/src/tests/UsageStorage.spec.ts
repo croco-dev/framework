@@ -3,7 +3,7 @@ import type { UsageQueryOptions, UsageRecord } from '../libs/types';
 import type { UsageStorage } from '../libs/UsageStorage';
 
 describe('UsageStorage', () => {
-  let mockStorage: UsageStorage;
+  let mockStorage!: UsageStorage;
 
   beforeEach(() => {
     mockStorage = {

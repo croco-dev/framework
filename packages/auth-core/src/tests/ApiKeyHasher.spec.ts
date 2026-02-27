@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ApiKeyHasher } from '../libs/apikey/ApiKeyHasher';
 
 describe('ApiKeyHasher', () => {
-  let hasher: ApiKeyHasher;
+  let hasher!: ApiKeyHasher;
 
   beforeEach(() => {
     hasher = new ApiKeyHasher();

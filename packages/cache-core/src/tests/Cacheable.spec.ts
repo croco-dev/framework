@@ -4,7 +4,7 @@ import { CacheEvict } from '../libs/decorators/CacheEvict';
 import { InMemoryCacheStore } from '../libs/InMemoryCacheStore';
 
 describe('@Cacheable', () => {
-  let cache: InMemoryCacheStore<string>;
+  let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
     cache = new InMemoryCacheStore<string>();
@@ -109,7 +109,7 @@ describe('@Cacheable', () => {
 });
 
 describe('@CacheEvict', () => {
-  let cache: InMemoryCacheStore<string>;
+  let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
     cache = new InMemoryCacheStore<string>();
@@ -206,7 +206,7 @@ describe('@CacheEvict', () => {
 });
 
 describe('@Cacheable with @CacheEvict integration', () => {
-  let cache: InMemoryCacheStore<string>;
+  let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
     cache = new InMemoryCacheStore<string>();

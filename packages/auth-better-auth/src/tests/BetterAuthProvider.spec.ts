@@ -21,8 +21,8 @@ function createMockRequest(headers: Record<string, string> = {}): Request {
 }
 
 describe('BetterAuthProvider', () => {
-  let provider: BetterAuthProvider;
-  let mockFactory: BetterAuthFactory;
+  let provider!: BetterAuthProvider;
+  let mockFactory!: BetterAuthFactory;
 
   beforeEach(() => {
     vi.clearAllMocks();

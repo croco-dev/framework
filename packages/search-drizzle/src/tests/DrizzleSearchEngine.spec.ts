@@ -31,9 +31,10 @@ const mockDb = {
 } as any;
 
 describe('DrizzleSearchEngine', () => {
-  let engine: DrizzleSearchEngine;
+  let engine!: DrizzleSearchEngine;
 
   beforeEach(() => {
+    Container.reset();
     vi.clearAllMocks();
     Container.reset();
 

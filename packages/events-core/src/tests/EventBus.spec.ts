@@ -61,8 +61,8 @@ class MockEventBus implements EventBus {
 }
 
 describe('EventBus interface contract', () => {
-  let eventBus: MockEventBus;
-  let handler: TestHandler;
+  let eventBus!: MockEventBus;
+  let handler!: TestHandler;
 
   beforeEach(() => {
     eventBus = new MockEventBus();

@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostHogFeatureManager } from '../libs/PostHogFeatureManager';
 
 describe('PostHogFeatureManager', () => {
-  let featureManager: PostHogFeatureManager;
-  let mockPostHogClient: PostHogClient;
-  let mockPostHog: {
+  let featureManager!: PostHogFeatureManager;
+  let mockPostHogClient!: PostHogClient;
+  let mockPostHog!: {
     isFeatureEnabled: ReturnType<typeof vi.fn>;
     getFeatureFlag: ReturnType<typeof vi.fn>;
   };

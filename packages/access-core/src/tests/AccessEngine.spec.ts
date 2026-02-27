@@ -17,8 +17,8 @@ class TestSystemProblem extends Problem {
 }
 
 describe('AccessEngine', () => {
-  let accessEngine: AccessEngine;
-  let mockProvider: AccessProvider;
+  let accessEngine!: AccessEngine;
+  let mockProvider!: AccessProvider;
 
   beforeEach(() => {
     mockProvider = {

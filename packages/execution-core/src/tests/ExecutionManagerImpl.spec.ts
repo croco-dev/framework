@@ -63,8 +63,8 @@ class MockExecutionStore implements ExecutionStore {
 }
 
 describe('ExecutionManagerImpl', () => {
-  let store: MockExecutionStore;
-  let manager: ExecutionManagerImpl;
+  let store!: MockExecutionStore;
+  let manager!: ExecutionManagerImpl;
 
   beforeEach(() => {
     store = new MockExecutionStore();

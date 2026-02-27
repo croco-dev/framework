@@ -10,9 +10,9 @@ import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 
 describe('UnifiedAuthGuard', () => {
-  let guard: UnifiedAuthGuard;
-  let mockAuthProvider: AuthProvider & { authenticate: ReturnType<typeof vi.fn> };
-  let mockApiKeyProvider: ApiKeyProvider & { authenticate: ReturnType<typeof vi.fn> };
+  let guard!: UnifiedAuthGuard;
+  let mockAuthProvider!: AuthProvider & { authenticate: ReturnType<typeof vi.fn> };
+  let mockApiKeyProvider!: ApiKeyProvider & { authenticate: ReturnType<typeof vi.fn> };
 
   const mockUser: AuthUser = {
     id: 'user-1',

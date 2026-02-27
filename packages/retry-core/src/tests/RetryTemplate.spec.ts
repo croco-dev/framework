@@ -199,7 +199,7 @@ describe('RetryTemplate', () => {
 
   describe('RetryContext 전파', () => {
     it('context에 attempt가 올바르게 설정되어야 한다', async () => {
-      let capturedContext: any;
+      let capturedContext!: any;
 
       const template = new RetryTemplate({
         maxAttempts: 3,
@@ -225,7 +225,7 @@ describe('RetryTemplate', () => {
     });
 
     it('context에 lastError가 설정되어야 한다', async () => {
-      let capturedContext: any;
+      let capturedContext!: any;
 
       const template = new RetryTemplate({
         maxAttempts: 2,
@@ -248,7 +248,7 @@ describe('RetryTemplate', () => {
     });
 
     it('context에 startTime과 elapsedTime이 계산되어야 한다', async () => {
-      let capturedContext: any;
+      let capturedContext!: any;
 
       const template = new RetryTemplate({
         maxAttempts: 3,
@@ -265,7 +265,7 @@ describe('RetryTemplate', () => {
     });
 
     it('context에 exhausted 플래그가 설정되어야 한다', async () => {
-      let capturedContext: any;
+      let capturedContext!: any;
 
       const template = new RetryTemplate({
         maxAttempts: 2,

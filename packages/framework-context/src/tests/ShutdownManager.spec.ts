@@ -7,6 +7,7 @@ import type { ShutdownHook } from '../libs/types';
 
 describe('ShutdownManager', () => {
   beforeEach(() => {
+    Container.reset();
     ShutdownManager.reset();
     Container.reset();
   });
@@ -191,6 +192,7 @@ describe('ShutdownManager', () => {
 
 describe('OnShutdown decorator', () => {
   beforeEach(() => {
+    Container.reset();
     ShutdownManager.reset();
     Container.reset();
   });

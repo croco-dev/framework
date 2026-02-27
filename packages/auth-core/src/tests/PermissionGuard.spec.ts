@@ -9,8 +9,8 @@ import { ForbiddenProblem } from '../libs/problems/AuthProblems';
 import type { RbacEngine } from '../libs/rbac/RbacEngine';
 
 describe('PermissionGuard', () => {
-  let permissionGuard: PermissionGuard;
-  let mockRbacEngine: RbacEngine;
+  let permissionGuard!: PermissionGuard;
+  let mockRbacEngine!: RbacEngine;
 
   const mockUser = { id: 'user-1' } as AuthUser;
 

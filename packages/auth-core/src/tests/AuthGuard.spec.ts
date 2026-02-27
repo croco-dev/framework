@@ -8,8 +8,8 @@ import type { AuthUser } from '../libs/interfaces/AuthUser';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 
 describe('AuthGuard', () => {
-  let authGuard: AuthGuard;
-  let mockAuthProvider: AuthProvider;
+  let authGuard!: AuthGuard;
+  let mockAuthProvider!: AuthProvider;
 
   // Mock objects
   const mockUser = { id: 'user-1' } as AuthUser;

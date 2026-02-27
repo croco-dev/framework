@@ -6,8 +6,8 @@ import type { LlmService } from '../../libs/LlmService';
 import type { LlmMetadata } from '../../libs/types';
 
 describe('@Llm Decorator', () => {
-  let mockLlmService: LlmService;
-  let testService: TestService;
+  let mockLlmService!: LlmService;
+  let testService!: TestService;
 
   // 테스트용 서비스 클래스
   class TestService {

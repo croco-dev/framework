@@ -4,8 +4,8 @@ import { HttpExceptionFilter } from '../libs/filters/HttpExceptionFilter';
 import type { ExecutionContext } from '../libs/interfaces/ExecutionContext';
 
 describe('HttpExceptionFilter', () => {
-  let filter: HttpExceptionFilter;
-  let mockContext: ExecutionContext;
+  let filter!: HttpExceptionFilter;
+  let mockContext!: ExecutionContext;
 
   beforeEach(() => {
     filter = new HttpExceptionFilter();

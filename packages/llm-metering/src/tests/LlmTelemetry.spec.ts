@@ -4,10 +4,10 @@ import { LlmTelemetryBridge } from '../libs/LlmTelemetryBridge';
 import type { LlmUsageRecord } from '../libs/types';
 
 describe('LlmTelemetryBridge', () => {
-  let bridge: LlmTelemetryBridge;
-  let mockSpan: Span;
-  let capturedAttributes: Record<string, unknown>;
-  let capturedEvents: Array<{ name: string; attributes: Attributes }>;
+  let bridge!: LlmTelemetryBridge;
+  let mockSpan!: Span;
+  let capturedAttributes!: Record<string, unknown>;
+  let capturedEvents!: Array<{ name: string; attributes: Attributes }>;
 
   beforeEach(() => {
     bridge = new LlmTelemetryBridge();

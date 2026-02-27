@@ -25,7 +25,7 @@ vi.mock('pino', () => {
 import pino from 'pino';
 
 describe('Logger', () => {
-  let logger: Logger;
+  let logger!: Logger;
   const mockConfig = {
     get: vi.fn(),
     has: vi.fn(),

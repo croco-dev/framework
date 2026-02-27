@@ -5,8 +5,8 @@ import { InvalidMeterProblem } from '../libs/problems/InvalidMeterProblem';
 import type { MeterDefinition, MeterRegistrationOptions } from '../libs/types';
 
 describe('MeterRegistry', () => {
-  let registry: MeterRegistry;
-  let mockRepository: MeterRepository;
+  let registry!: MeterRegistry;
+  let mockRepository!: MeterRepository;
 
   const createMeter = (overrides: Partial<MeterDefinition> = {}): MeterDefinition => ({
     id: 'meter-123',

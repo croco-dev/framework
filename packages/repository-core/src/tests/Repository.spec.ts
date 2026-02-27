@@ -34,9 +34,9 @@ class TestRepository extends AbstractDrizzleRepository<TestEntity, TestId, MockD
 }
 
 describe('AbstractDrizzleRepository', () => {
-  let repository: TestRepository;
-  let mockDb: MockDb;
-  let mockTxManager: TxManager<MockDb>;
+  let repository!: TestRepository;
+  let mockDb!: MockDb;
+  let mockTxManager!: TxManager<MockDb>;
 
   beforeEach(() => {
     mockDb = {

@@ -14,10 +14,10 @@ const testRelationTuples = sqliteTable('relation_tuples', {
 });
 
 describe('DrizzleAccessProvider', () => {
-  let provider: DrizzleAccessProvider;
-  let db: ReturnType<typeof drizzle>;
-  let sqlite: Database.Database;
-  let executeFn: ReturnType<typeof vi.fn>;
+  let provider!: DrizzleAccessProvider;
+  let db!: ReturnType<typeof drizzle>;
+  let sqlite!: Database.Database;
+  let executeFn!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     sqlite = new Database(':memory:');

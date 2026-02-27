@@ -15,8 +15,8 @@ function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAda
 }
 
 describe('TxManager', () => {
-  let txManager: TxManager<{ id: string }>;
-  let mockAdapter: TxAdapter<{ id: string }>;
+  let txManager!: TxManager<{ id: string }>;
+  let mockAdapter!: TxAdapter<{ id: string }>;
 
   beforeEach(() => {
     mockAdapter = createMockAdapter();

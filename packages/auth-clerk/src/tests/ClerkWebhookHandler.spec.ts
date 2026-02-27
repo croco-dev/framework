@@ -8,8 +8,8 @@ vi.mock('@clerk/backend/webhooks', () => ({
 }));
 
 describe('ClerkWebhookHandler', () => {
-  let webhookHandler: ClerkWebhookHandler;
-  let mockHandlers: WebhookEventHandler;
+  let webhookHandler!: ClerkWebhookHandler;
+  let mockHandlers!: WebhookEventHandler;
   const options = { signingSecret: 'whsec_test' };
 
   beforeEach(() => {

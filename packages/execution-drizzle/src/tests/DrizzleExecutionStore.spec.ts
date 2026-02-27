@@ -61,8 +61,8 @@ function createMockDb(): MockDb {
 }
 
 describe('DrizzleExecutionStore', () => {
-  let mockDb: MockDb;
-  let store: DrizzleExecutionStore<MockDb>;
+  let mockDb!: MockDb;
+  let store!: DrizzleExecutionStore<MockDb>;
 
   beforeEach(() => {
     mockDb = createMockDb();

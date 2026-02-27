@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryCacheStore } from '../libs/InMemoryCacheStore';
 
 describe('InMemoryCacheStore', () => {
-  let cache: InMemoryCacheStore<string>;
+  let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
     cache = new InMemoryCacheStore<string>();

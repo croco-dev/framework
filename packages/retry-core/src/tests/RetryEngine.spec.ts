@@ -7,9 +7,9 @@ import type { RetryPolicy } from '../libs/RetryPolicy';
 import { DefaultRetryPolicy } from '../libs/RetryPolicy';
 
 describe('executeRetryLoop', () => {
-  let retryPolicy: RetryPolicy;
-  let backoffPolicy: BackoffPolicy;
-  let context: RetryContext;
+  let retryPolicy!: RetryPolicy;
+  let backoffPolicy!: BackoffPolicy;
+  let context!: RetryContext;
 
   beforeEach(() => {
     retryPolicy = new DefaultRetryPolicy();

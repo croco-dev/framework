@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { EventSubscriptionIndex } from '../libs/EventBus';
 
 describe('EventSubscriptionIndex', () => {
-  let index: EventSubscriptionIndex<string>;
+  let index!: EventSubscriptionIndex<string>;
 
   beforeEach(() => {
     index = new EventSubscriptionIndex<string>();

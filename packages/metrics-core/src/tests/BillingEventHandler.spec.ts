@@ -6,10 +6,10 @@ import type { MetricsRepository } from '../libs/interfaces/MetricsRepository';
 import type { MRRMovement } from '../types';
 
 describe('BillingEventHandler', () => {
-  let handler: BillingEventHandler;
-  let planRegistry: PlanRegistry;
-  let billingStore: BillingStore;
-  let metricsRepository: MetricsRepository;
+  let handler!: BillingEventHandler;
+  let planRegistry!: PlanRegistry;
+  let billingStore!: BillingStore;
+  let metricsRepository!: MetricsRepository;
 
   const mockPlan: Plan = {
     id: 'plan-pro',

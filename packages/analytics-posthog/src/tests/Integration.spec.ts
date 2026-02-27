@@ -21,8 +21,8 @@ vi.mock('posthog-node', () => {
 });
 
 describe('PostHog Integration', () => {
-  let analyticsManager: AnalyticsManager;
-  let postHogClient: PostHogClient;
+  let analyticsManager!: AnalyticsManager;
+  let postHogClient!: PostHogClient;
 
   beforeEach(() => {
     postHogClient = new PostHogClient({ apiKey: 'test-api-key' });

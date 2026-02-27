@@ -7,8 +7,8 @@ import { Access } from '../libs/decorators/Access';
 import { AccessGuard, BadRequestProblem, ForbiddenProblem } from '../libs/guards/AccessGuard';
 
 describe('AccessGuard', () => {
-  let accessGuard: AccessGuard;
-  let mockAccessEngine: AccessEngine;
+  let accessGuard!: AccessGuard;
+  let mockAccessEngine!: AccessEngine;
 
   const mockUser = { id: 'user-1', name: 'Test User' };
   const mockTenantId = 'tenant-1';

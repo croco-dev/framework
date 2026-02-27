@@ -4,8 +4,8 @@ import { DuplicateRecordProblem } from '../libs/problems/DuplicateRecordProblem'
 import type { RedisClient } from '../libs/RedisClient';
 
 describe('IdempotencyManager', () => {
-  let manager: IdempotencyManager;
-  let mockRedis: RedisClient;
+  let manager!: IdempotencyManager;
+  let mockRedis!: RedisClient;
 
   beforeEach(() => {
     mockRedis = {

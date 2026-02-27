@@ -4,7 +4,7 @@ import { ClerkTenantMapper, type TenantMappingStore } from '../libs/ClerkTenantM
 
 describe('ClerkTenantMapper', () => {
   describe('InMemory Store', () => {
-    let mapper: ClerkTenantMapper;
+    let mapper!: ClerkTenantMapper;
 
     beforeEach(() => {
       mapper = new ClerkTenantMapper();
@@ -56,8 +56,8 @@ describe('ClerkTenantMapper', () => {
   });
 
   describe('Custom Store', () => {
-    let mapper: ClerkTenantMapper;
-    let mockStore: TenantMappingStore;
+    let mapper!: ClerkTenantMapper;
+    let mockStore!: TenantMappingStore;
 
     beforeEach(() => {
       mockStore = {

@@ -4,8 +4,8 @@ import { CarryingCapacityCalculator } from '../libs/CarryingCapacityCalculator';
 
 describe('CarryingCapacityCalculator', () => {
   let calculator!: CarryingCapacityCalculator;
-  let mockUserProvider: ActiveUserProvider;
-  let mockMetricsRepository: MetricsRepository;
+  let mockUserProvider!: ActiveUserProvider;
+  let mockMetricsRepository!: MetricsRepository;
 
   beforeEach(() => {
     mockUserProvider = {

@@ -8,7 +8,7 @@ vi.mock('@clerk/backend', () => ({
 }));
 
 describe('ClerkAuthProvider', () => {
-  let authProvider: ClerkAuthProvider;
+  let authProvider!: ClerkAuthProvider;
   const options = { secretKey: 'sk_test_123', publishableKey: 'pk_test_123' };
 
   beforeEach(() => {

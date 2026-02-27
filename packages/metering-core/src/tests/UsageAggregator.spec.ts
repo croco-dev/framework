@@ -5,9 +5,9 @@ import { UsageAggregator } from '../libs/UsageAggregator';
 import type { UsageStorage } from '../libs/UsageStorage';
 
 describe('UsageAggregator', () => {
-  let aggregator: UsageAggregator;
-  let mockStorage: UsageStorage;
-  let mockRepository: MeterRepository;
+  let aggregator!: UsageAggregator;
+  let mockStorage!: UsageStorage;
+  let mockRepository!: MeterRepository;
 
   const createMeter = (overrides: Partial<MeterDefinition> = {}): MeterDefinition => ({
     id: 'meter-123',

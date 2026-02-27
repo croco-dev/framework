@@ -5,7 +5,7 @@ import type { RateLimiter } from '../libs/RateLimiter';
 import type { RateLimitPolicy, RateLimitResult } from '../libs/types';
 
 describe('createRateLimitMiddleware', () => {
-  let mockRateLimiter: RateLimiter;
+  let mockRateLimiter!: RateLimiter;
   const policy: RateLimitPolicy = {
     name: 'test-global',
     limit: 100,

@@ -7,7 +7,7 @@ import { LlmService } from '../libs/LlmService';
 describe('LlmService', () => {
   let service!: LlmService;
   let registry!: InMemoryLlmRegistry;
-  let eventBus: EventBus;
+  let eventBus!: EventBus;
 
   beforeEach(() => {
     registry = new InMemoryLlmRegistry();

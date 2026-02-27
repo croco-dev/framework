@@ -61,8 +61,8 @@ class RegisteredEvent extends DomainEvent {
 }
 
 describe('DefaultEventSerializer', () => {
-  let registry: EventRegistry;
-  let serializer: DefaultEventSerializer;
+  let registry!: EventRegistry;
+  let serializer!: DefaultEventSerializer;
 
   beforeEach(() => {
     registry = new EventRegistry();

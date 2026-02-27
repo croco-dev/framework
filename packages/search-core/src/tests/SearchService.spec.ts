@@ -6,8 +6,8 @@ import { SearchService } from '../libs/SearchService';
 import type { SearchDocument, SearchQuery, SearchResult } from '../libs/types';
 
 describe('SearchService', () => {
-  let mockEngine: SearchEngine;
-  let searchService: SearchService;
+  let mockEngine!: SearchEngine;
+  let searchService!: SearchService;
 
   beforeEach(() => {
     // Mock SearchEngine 구현

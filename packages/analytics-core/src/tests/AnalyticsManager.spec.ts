@@ -10,7 +10,7 @@ class MockAnalyticsManager extends AnalyticsManager {
 }
 
 describe('AnalyticsManager', () => {
-  let analyticsManager: MockAnalyticsManager;
+  let analyticsManager!: MockAnalyticsManager;
 
   beforeEach(() => {
     analyticsManager = new MockAnalyticsManager();

@@ -5,9 +5,9 @@ import type { CallHandler } from '../libs/interfaces/CallHandler';
 import type { ExecutionContext } from '../libs/interfaces/ExecutionContext';
 
 describe('LoggingInterceptor', () => {
-  let interceptor: LoggingInterceptor;
-  let mockContext: ExecutionContext;
-  let mockNext: CallHandler;
+  let interceptor!: LoggingInterceptor;
+  let mockContext!: ExecutionContext;
+  let mockNext!: CallHandler;
 
   beforeEach(() => {
     interceptor = new LoggingInterceptor();

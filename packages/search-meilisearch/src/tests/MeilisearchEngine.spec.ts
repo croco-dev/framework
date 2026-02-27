@@ -31,7 +31,7 @@ vi.mock('meilisearch', () => ({
 }));
 
 describe('MeilisearchEngine', () => {
-  let engine: MeilisearchEngine;
+  let engine!: MeilisearchEngine;
 
   const options: MeilisearchEngineOptions = {
     host: 'http://localhost:7700',

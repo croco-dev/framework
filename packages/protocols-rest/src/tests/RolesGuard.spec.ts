@@ -5,7 +5,7 @@ import { RolesGuard } from '../libs/guards/RolesGuard';
 import type { ExecutionContext } from '../libs/interfaces/ExecutionContext';
 
 describe('RolesGuard', () => {
-  let guard: RolesGuard;
+  let guard!: RolesGuard;
 
   beforeEach(() => {
     guard = new RolesGuard();

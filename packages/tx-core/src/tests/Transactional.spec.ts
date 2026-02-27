@@ -22,8 +22,8 @@ function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAda
 }
 
 describe('TxManagerRegistry', () => {
-  let mockAdapter: TxAdapter<{ id: string }>;
-  let txManager: TxManager<{ id: string }>;
+  let mockAdapter!: TxAdapter<{ id: string }>;
+  let txManager!: TxManager<{ id: string }>;
 
   beforeEach(() => {
     TxManagerRegistry.clear();
@@ -119,8 +119,8 @@ describe('TxManagerRegistry', () => {
 });
 
 describe('@Transactional decorator', () => {
-  let txManager: TxManager<{ id: string }>;
-  let mockAdapter: TxAdapter<{ id: string }>;
+  let txManager!: TxManager<{ id: string }>;
+  let mockAdapter!: TxAdapter<{ id: string }>;
 
   beforeEach(() => {
     TxManagerRegistry.clear();
