@@ -1,6 +1,6 @@
+import type { Repository } from '@croco/repository-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb, InferTxClient } from '@croco/tx-drizzle';
-import type { Repository } from './Repository';
+import type { DrizzleDb, InferTxClient } from './types';
 
 export abstract class AbstractDrizzleRepository<TEntity, TId, TDb extends DrizzleDb<any> = DrizzleDb>
   implements Repository<TEntity, TId>

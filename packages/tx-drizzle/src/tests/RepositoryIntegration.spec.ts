@@ -1,9 +1,9 @@
 import { Context } from '@croco/framework-context';
+import { BatchLoad } from '@croco/repository-core';
 import { Transactional, type TxAdapter, TxManager, TxManagerRegistry } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AbstractDrizzleRepository } from '../libs/AbstractDrizzleRepository';
-import { BatchLoad } from '../libs/decorators/BatchLoad';
+import type { DrizzleDb } from '../libs/types';
 
 type UserEntity = {
   id: string;
@@ -69,21 +69,26 @@ describe('Repository + BatchLoad + Transaction integration', () => {
     TxManagerRegistry.clear();
 
     let txCounter = 0;
+    const transaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> => {
+      txCounter += 1;
+      return fn({ txId: `tx-${txCounter}` });
+    };
+    const savepoint = async <T>(client: TxClient, fn: (nested: TxClient) => Promise<T>): Promise<T> => fn(client);
+
     adapter = {
-      transaction: vi.fn(async <T>(fn: (client: TxClient) => Promise<T>) => {
-        txCounter += 1;
-        return fn({ txId: `tx-${txCounter}` });
-      }),
-      savepoint: vi.fn(async <T>(client: TxClient, fn: (nested: TxClient) => Promise<T>) => fn(client)),
+      transaction: vi.fn(transaction) as typeof transaction,
+      savepoint: vi.fn(savepoint) as typeof savepoint,
       supportsSavepoint: () => true,
     };
 
     const txManager = new TxManager(adapter);
     TxManagerRegistry.register(txManager);
 
+    const dbTransaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> => fn({ txId: 'db-client' });
+
     const db: MockDb = {
       name: 'db',
-      transaction: vi.fn(async <T>(fn: (client: TxClient) => Promise<T>) => fn({ txId: 'db-client' })),
+      transaction: vi.fn(dbTransaction) as typeof dbTransaction,
     };
 
     repository = new IntegrationRepository(db, txManager);

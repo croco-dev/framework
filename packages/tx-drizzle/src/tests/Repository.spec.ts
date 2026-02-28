@@ -1,7 +1,7 @@
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AbstractDrizzleRepository } from '../libs/AbstractDrizzleRepository';
+import type { DrizzleDb } from '../libs/types';
 
 type TestEntity = { id: string; name: string };
 type TestId = string;
@@ -16,11 +16,11 @@ class TestRepository extends AbstractDrizzleRepository<TestEntity, TestId, MockD
     return this.getDb();
   }
 
-  async findById(id: TestId): Promise<TestEntity | null> {
+  async findById(_id: TestId): Promise<TestEntity | null> {
     return null;
   }
 
-  async findByIds(ids: TestId[]): Promise<TestEntity[]> {
+  async findByIds(_ids: TestId[]): Promise<TestEntity[]> {
     return [];
   }
 
@@ -28,7 +28,7 @@ class TestRepository extends AbstractDrizzleRepository<TestEntity, TestId, MockD
     return entity;
   }
 
-  async delete(id: TestId): Promise<void> {
+  async delete(_id: TestId): Promise<void> {
     return;
   }
 }

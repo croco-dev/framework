@@ -15,6 +15,7 @@
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/repository-core": "workspace:*",
     "@croco/tx-core": "workspace:*"
   },
   "devDependencies": {

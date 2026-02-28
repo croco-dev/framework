@@ -81,6 +81,7 @@ export { TenantContextRequiredProblem } from './libs/problems/TxDrizzleProblems'
  */
 
 export { createRlsTxAdapter, type RlsOptions, type RlsTenantProvider } from './libs/RlsTxAdapter';
+
 /**
  * Drizzle 트랜잭션 관련 타입 유틸리티입니다.
  *
@@ -93,4 +94,5 @@ export { createRlsTxAdapter, type RlsOptions, type RlsTenantProvider } from './l
  * ```
  */
 
+export { AbstractDrizzleRepository } from './libs/AbstractDrizzleRepository';
 export type { DrizzleDb, DrizzleTx, InferTxClient, InferTxOptions } from './libs/types';
