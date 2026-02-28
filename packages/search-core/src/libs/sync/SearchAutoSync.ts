@@ -32,9 +32,11 @@ class LRUCache<T> {
 
 import { SearchEngine } from '../SearchEngine';
 
+@RegisterEventHandler(DocumentDeletedEvent)
 @RegisterEventHandler(DocumentIndexedEvent)
 export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | DocumentDeletedEvent> {
   private processedEvents = new LRUCache<void>(10000);
+  private readonly searchEngineToken = SearchEngine.token;
 
   async handle(event: DocumentIndexedEvent | DocumentDeletedEvent): Promise<void> {
     const eventKey = `${event.eventName}:${event.indexName}:${event.documentId}:${event.tenantId}`;
@@ -50,8 +52,7 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
     }
 
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: Token support
-      const searchEngine = Container.get(SearchEngine.token as any) as SearchEngine;
+      const searchEngine = Container.get(this.searchEngineToken);
 
       if (event instanceof DocumentIndexedEvent) {
         await searchEngine.indexDocument(event.indexName, {
@@ -71,7 +72,15 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
         event instanceof DocumentIndexedEvent ? 'index' : 'delete'
       );
 
-      await EventBusConfig.getInstance().getEventBus()?.publish(failedEvent);
+      await this.publishFailedEvent(failedEvent);
+    }
+  }
+
+  private async publishFailedEvent(event: SearchSyncFailedEvent): Promise<void> {
+    try {
+      await EventBusConfig.getInstance().getEventBus().publish(event);
+    } catch {
+      return;
     }
   }
 

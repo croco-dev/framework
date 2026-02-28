@@ -193,12 +193,14 @@ describe('RouteCompiler', () => {
       container,
     });
 
-    const result = await route.handler(createMockHttpContext());
+    const firstResult = await route.handler(createMockHttpContext());
+    const secondResult = await route.handler(createMockHttpContext());
 
-    expect(result).toEqual({ ok: true });
-    expect(requestedTypes).toContain(SecuredController);
-    expect(requestedTypes).toContain(RouteLevelGuard);
-    expect(requestedTypes).toContain(RouteLevelInterceptor);
-    expect(requestedTypes).toContain(RouteLevelFilter);
+    expect(firstResult).toEqual({ ok: true });
+    expect(secondResult).toEqual({ ok: true });
+    expect(requestedTypes.filter((type) => type === SecuredController)).toHaveLength(2);
+    expect(requestedTypes.filter((type) => type === RouteLevelGuard)).toHaveLength(2);
+    expect(requestedTypes.filter((type) => type === RouteLevelInterceptor)).toHaveLength(2);
+    expect(requestedTypes.filter((type) => type === RouteLevelFilter)).toHaveLength(2);
   });
 });

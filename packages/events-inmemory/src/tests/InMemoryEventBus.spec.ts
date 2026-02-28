@@ -12,6 +12,20 @@ class TestEvent extends DomainEvent {
   }
 }
 
+class MutablePayloadEvent extends DomainEvent {
+  static readonly eventName = 'MutablePayloadEvent';
+
+  constructor(
+    public payload: {
+      nested: {
+        count: number;
+      };
+    }
+  ) {
+    super();
+  }
+}
+
 class TestHandler implements EventHandler<TestEvent> {
   public handledEvents: TestEvent[] = [];
 
@@ -286,6 +300,44 @@ describe('InMemoryEventBus', () => {
       expect(handleSpan.recordException).toHaveBeenCalledTimes(1);
       expect(handleSpan.recordException).toHaveBeenCalledWith(expectedError);
       expect((handleSpan.recordException.mock.calls[0][0] as Error).stack).toBe(expectedError.stack);
+    });
+
+    it('should isolate mutable payload between handlers in the same publish', async () => {
+      class MutatingHandler implements EventHandler<MutablePayloadEvent> {
+        async handle(event: MutablePayloadEvent): Promise<void> {
+          event.payload.nested.count = 99;
+          event.metadata.custom = { changed: true };
+        }
+      }
+
+      class ObservingHandler implements EventHandler<MutablePayloadEvent> {
+        public readonly observedCounts: number[] = [];
+        public readonly observedMetadata: Array<Record<string, unknown>> = [];
+
+        async handle(event: MutablePayloadEvent): Promise<void> {
+          this.observedCounts.push(event.payload.nested.count);
+          this.observedMetadata.push(event.metadata);
+        }
+      }
+
+      const mutatingHandler = new MutatingHandler();
+      const observingHandler = new ObservingHandler();
+
+      Container.set(MutatingHandler, mutatingHandler);
+      Container.set(ObservingHandler, observingHandler);
+
+      eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: MutatingHandler });
+      eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: ObservingHandler });
+
+      const event = new MutablePayloadEvent({ nested: { count: 1 } });
+
+      await eventBus.publish(event);
+
+      expect(event.payload.nested.count).toBe(1);
+      expect(event.metadata).toEqual({});
+      expect(observingHandler.observedCounts).toEqual([1]);
+      expect(observingHandler.observedMetadata).toHaveLength(1);
+      expect(observingHandler.observedMetadata[0]).not.toHaveProperty('custom');
     });
   });
 

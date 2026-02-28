@@ -15,7 +15,7 @@ export class InMemoryEventBus implements EventBus {
 
     // PRODUCER: Capture active trace context and inject into event metadata
     const activeTraceInfo = getActiveTraceInfo();
-    const eventWithTraceContext = this.createEventWithTraceContext(event, activeTraceInfo);
+    const baseEvent = this.createEventWithTraceContext(event, activeTraceInfo);
 
     const handlerClasses = this.index.match(eventName);
 
@@ -50,7 +50,8 @@ export class InMemoryEventBus implements EventBus {
                 async (handleSpan: Span) => {
                   try {
                     const handlerInstance = Container.get(handlerClass);
-                    await handlerInstance.handle(eventWithTraceContext);
+                    const handlerEvent = this.cloneEvent(baseEvent);
+                    await handlerInstance.handle(handlerEvent);
                     handleSpan.setStatus({ code: SpanStatusCode.OK });
                   } catch (error) {
                     const normalizedError = this.normalizeError(error);
@@ -89,15 +90,45 @@ export class InMemoryEventBus implements EventBus {
   }
 
   private createEventWithTraceContext(event: DomainEvent, traceContext: TraceInfo): DomainEvent {
-    const eventCopy = Object.create(Object.getPrototypeOf(event)) as DomainEvent;
-    Object.assign(eventCopy, event);
+    const eventCopy = this.cloneEvent(event);
     const traceContextCopy = { ...traceContext };
     eventCopy.metadata = {
-      ...event.metadata,
+      ...eventCopy.metadata,
       traceContext: traceContextCopy,
     };
 
     return eventCopy;
+  }
+
+  private cloneEvent(event: DomainEvent): DomainEvent {
+    const clonedEvent = Object.create(Object.getPrototypeOf(event)) as DomainEvent;
+    Object.assign(clonedEvent, this.cloneValue({ ...event }));
+
+    return clonedEvent;
+  }
+
+  private cloneValue<T>(value: T): T {
+    if (value instanceof Date) {
+      return new Date(value.getTime()) as T;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.cloneValue(item)) as T;
+    }
+
+    if (!value || typeof value !== 'object') {
+      return value;
+    }
+
+    const prototype = Object.getPrototypeOf(value);
+
+    if (prototype !== Object.prototype && prototype !== null) {
+      return value;
+    }
+
+    const clonedEntries = Object.entries(value).map(([key, entryValue]) => [key, this.cloneValue(entryValue)]);
+
+    return Object.fromEntries(clonedEntries) as T;
   }
 
   private normalizeError(error: unknown): Error {
