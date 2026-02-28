@@ -1,3 +1,25 @@
+/**
+ * @packageDocumentation
+ * 
+ * # @croco/search-core
+ * 
+ * Core search abstraction layer for Croco framework.
+ * Provides decorator-based metadata, search engine abstraction, and transform utilities.
+ * 
+ * @example
+ * ```typescript
+ * import { Searchable, SearchField } from '@croco/search-core';
+ * 
+ * @Searchable({ index: 'users', autoSync: true })
+ * class User {
+ *   @SearchField({ searchable: true, filterable: true })
+ *   name!: string;
+ * }
+ * ```
+ */
+
+// Decorator Metadata Keys
+
 // Events & Sync
 
 export { SEARCH_FIELD_METADATA, SEARCHABLE_METADATA } from './libs/decorators/constants';
