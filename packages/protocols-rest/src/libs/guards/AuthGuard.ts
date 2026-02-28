@@ -1,3 +1,4 @@
+import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { ExecutionContext } from '../interfaces/ExecutionContext';
 import type { Guard } from '../interfaces/Guard';
 import type { HttpRequestLike } from '../types';
@@ -10,27 +11,9 @@ export type AuthGuardOptions = {
   scheme?: string;
 };
 
-class AuthGuardProblem extends Error {
-  readonly status: number;
-  readonly code: string;
-
+class AuthGuardProblem extends Problem {
   constructor(status: number, code: string, detail: string) {
-    super(detail);
-    this.status = status;
-    this.code = code;
-    this.name = 'AuthGuardProblem';
-
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  toJSON(): Record<string, unknown> {
-    return {
-      type: 'about:blank',
-      title: this.status === 400 ? 'Bad Request' : 'Unauthorized',
-      status: this.status,
-      code: this.code,
-      detail: this.message,
-    };
+    super(code, status === 400 ? ProblemCategory.BadRequest : ProblemCategory.Unauthorized, detail);
   }
 }
 

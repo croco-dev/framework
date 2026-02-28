@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { Problem } from '@croco/problems-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGuard } from '../libs/guards/AuthGuard';
 import type { ExecutionContext } from '../libs/interfaces/ExecutionContext';
@@ -40,6 +41,7 @@ describe('AuthGuard', () => {
   it('should deny access without Authorization header', async () => {
     mockContext.getRequest = vi.fn().mockReturnValue({ headers: {} });
 
+    await expect(guard.canActivate(mockContext)).rejects.toBeInstanceOf(Problem);
     await expect(guard.canActivate(mockContext)).rejects.toThrow('Missing authorization header');
     await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
       status: 401,

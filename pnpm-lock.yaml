@@ -1104,6 +1104,9 @@ importers:
 
   packages/protocols-rest:
     dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2

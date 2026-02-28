@@ -13,6 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@croco/problems-core": "workspace:*",
     "reflect-metadata": "0.2.2"
   },
   "devDependencies": {
