@@ -9,7 +9,6 @@ export function Component(options?: ComponentOptions): (target: Constructor) => 
 }
 
 export function getComponentScope(target: Constructor): Scope | undefined {
-  const containerAny = Container as unknown as { getComponentMetadata?: (t: Constructor) => { scope?: Scope } };
-  const metadata = containerAny.getComponentMetadata?.(target);
+  const metadata = Container.getComponentMetadata(target);
   return metadata?.scope;
 }

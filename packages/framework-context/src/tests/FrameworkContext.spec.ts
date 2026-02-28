@@ -285,4 +285,13 @@ describe('Component decorator', () => {
     const scope = getComponentScope(RequestService);
     expect(scope).toBe('request');
   });
+
+  it('should expose component metadata through Container public API', () => {
+    @Component({ scope: 'transient' })
+    class MetadataService {}
+
+    const metadata = Container.getComponentMetadata(MetadataService);
+    expect(metadata?.scope).toBe('transient');
+    expect(metadata?.target).toBe(MetadataService);
+  });
 });

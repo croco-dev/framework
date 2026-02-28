@@ -2,7 +2,7 @@ import { Service, Container as TypeDIContainer } from 'typedi';
 import 'reflect-metadata';
 import { Context } from './Context';
 import { MetadataStorage } from './MetadataStorage';
-import type { Constructor, Scope } from './types';
+import type { ComponentMetadata, Constructor, Scope } from './types';
 
 export type TokenIdentifier<T> = Constructor<T> | import('typedi').Token<T>;
 
@@ -148,7 +148,7 @@ export class Container {
     }
   }
 
-  private static getComponentMetadata(target: Constructor): { scope: Scope; target: Constructor } | undefined {
+  static getComponentMetadata(target: Constructor): ComponentMetadata | undefined {
     return MetadataStorage.get(COMPONENT_METADATA_KEY, target);
   }
 
