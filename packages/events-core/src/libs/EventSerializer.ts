@@ -99,7 +99,7 @@ export class DefaultEventSerializer implements EventSerializer {
     const fields = getEventFields(EventClass as new (...args: unknown[]) => unknown);
 
     if (fields && fields.length > 0) {
-      const instance = new EventClass() as T;
+      const instance = this.createInstance(EventClass, data);
       const obj = instance as unknown as Record<string, unknown>;
       for (const { propertyKey, serializedKey } of fields) {
         obj[propertyKey] = data.payload[serializedKey];
@@ -112,5 +112,18 @@ export class DefaultEventSerializer implements EventSerializer {
       'EventSerializer requires @EventField decorator or static fromPayload() method for deserialization. ' +
         'Constructor parameter name inference via toString() has been removed for minification safety.'
     );
+  }
+
+  private createInstance<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, data: SerializedEvent): T {
+    try {
+      return new EventClass();
+    } catch {
+      const instance = Object.create(EventClass.prototype) as T;
+      const obj = instance as unknown as Record<string, unknown>;
+      obj.eventName = data.eventType;
+      obj.timestamp = new Date(data.occurredAt);
+      obj.metadata = {};
+      return instance;
+    }
   }
 }

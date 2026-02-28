@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
 import { EventField } from '../libs/decorators/EventField';
-import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/EventRegistry';
+import { EventRegistry, globalEventRegistry } from '../libs/EventRegistry';
 import { DefaultEventSerializer, type SerializedEvent } from '../libs/EventSerializer';
 import { EventDeserializationError } from '../libs/problems/EventsProblems';
 
@@ -57,6 +57,18 @@ class RegisteredEvent extends DomainEvent {
   constructor(data: string) {
     super();
     this.data = data;
+  }
+}
+
+class ConstructorSensitiveEvent extends DomainEvent {
+  static eventName = 'ConstructorSensitiveEvent';
+
+  @EventField()
+  public readonly message: string;
+
+  constructor(message: string) {
+    super();
+    this.message = message.toUpperCase();
   }
 }
 
@@ -127,6 +139,7 @@ describe('DefaultEventSerializer', () => {
     beforeEach(() => {
       registry.register(TestEvent);
       registry.register(TestEventWithAggregate);
+      registry.register(ConstructorSensitiveEvent);
     });
 
     it('should deserialize event successfully', () => {
@@ -174,6 +187,24 @@ describe('DefaultEventSerializer', () => {
       };
 
       expect(() => serializer.deserialize(data)).toThrow("Unknown event type: 'UnknownEvent'");
+    });
+
+    it('BUG-79 생성자 인자가 필수인 @EventField 이벤트도 역직렬화할 수 있어야 한다', () => {
+      const data: SerializedEvent = {
+        eventType: 'ConstructorSensitiveEvent',
+        eventId: 'evt_bug_79',
+        occurredAt: new Date().toISOString(),
+        payload: {
+          message: 'safe payload',
+        },
+      };
+
+      const event = serializer.deserialize<ConstructorSensitiveEvent>(data);
+
+      expect(event).toBeInstanceOf(ConstructorSensitiveEvent);
+      expect(event.message).toBe('safe payload');
+      expect(event.eventName).toBe('ConstructorSensitiveEvent');
+      expect(event.timestamp).toBeInstanceOf(Date);
     });
   });
 
