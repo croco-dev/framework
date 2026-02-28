@@ -1,13 +1,14 @@
 import { Component } from '@croco/framework-context';
 import { Task } from '@croco/tasks-core';
+import type { NotificationProviderRegistry } from './NotificationProviderRegistry';
 import type { NotificationJobPayload, NotificationProvider } from './types';
 
 @Component()
 export class SendNotificationTask {
-  private providers = new Map<string, NotificationProvider>();
+  constructor(private registry: NotificationProviderRegistry) {}
 
   registerProvider(provider: NotificationProvider) {
-    this.providers.set(provider.getName(), provider);
+    this.registry.registerProvider(provider);
   }
 
   @Task({
@@ -17,7 +18,7 @@ export class SendNotificationTask {
   async handle(payload: NotificationJobPayload): Promise<void> {
     const { providerName, ...notificationPayload } = payload;
 
-    const provider = this.providers.get(providerName);
+    const provider = this.registry.getProvider(providerName);
     if (!provider) {
       throw new Error(`Provider ${providerName} not found`);
     }

@@ -1,5 +1,6 @@
 import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NotificationProviderRegistry } from '../libs/NotificationProviderRegistry';
 import { NotificationService } from '../libs/NotificationService';
 import { NotificationChannel } from '../libs/types';
 
@@ -10,6 +11,7 @@ const mockTaskRunner = {
 
 describe('NotificationService', () => {
   let service!: NotificationService;
+  let registry!: NotificationProviderRegistry;
   let mockProvider!: {
     getName: ReturnType<typeof vi.fn>;
     getChannel: ReturnType<typeof vi.fn>;
@@ -20,7 +22,8 @@ describe('NotificationService', () => {
     Container.reset();
     vi.clearAllMocks();
 
-    service = new NotificationService(mockTaskRunner as never);
+    registry = new NotificationProviderRegistry();
+    service = new NotificationService(mockTaskRunner as never, registry);
 
     mockProvider = {
       getName: vi.fn().mockReturnValue('test-provider'),
