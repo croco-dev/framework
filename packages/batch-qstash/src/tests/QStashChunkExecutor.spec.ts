@@ -83,6 +83,7 @@ describe('QStashChunkExecutor', () => {
     const result = await executor.executeChunk('exec-1', step);
 
     expect(writer.write).toHaveBeenCalledWith([1, 2]);
+    expect(executionManager.checkpoint).toHaveBeenCalledWith('exec-1', 'test-step.processedCount', 2);
     expect(qstashClient.publishJSON).toHaveBeenCalledWith({
       url: 'https://example.com/webhook',
       body: {
@@ -95,6 +96,32 @@ describe('QStashChunkExecutor', () => {
     });
     expect(executionManager.complete).not.toHaveBeenCalled();
     expect(result).toEqual({ hasMore: true, processedCount: 2 });
+  });
+
+  it('should complete with cumulative processedCount from prior checkpoints', async () => {
+    startMock.mockResolvedValue({
+      id: 'exec-1',
+      checkpoints: { 'test-step.processedCount': 10 },
+    });
+
+    const reader = {
+      read: vi.fn().mockResolvedValueOnce(7).mockResolvedValueOnce(null),
+    };
+    const writer = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const step = new Step<number, number>({
+      name: 'test-step',
+      reader,
+      writer,
+      chunkSize: 10,
+    });
+
+    const result = await executor.executeChunk('exec-1', step);
+
+    expect(executionManager.complete).toHaveBeenCalledWith('exec-1', { processedCount: 11 });
+    expect(result).toEqual({ hasMore: false, processedCount: 1 });
   });
 
   it('BUG-14 청크 경계 아이템이 유실되지 않음', async () => {
