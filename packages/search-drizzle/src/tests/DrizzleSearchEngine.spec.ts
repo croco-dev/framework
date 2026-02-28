@@ -24,6 +24,7 @@ const mockStrategy = {
   getRequiredExtensions: vi.fn(),
   checkCapability: vi.fn(),
   getCapabilities: vi.fn(),
+  mapSearchRow: vi.fn(),
 };
 
 const strategy = mockStrategy as unknown as SearchStrategy;
@@ -51,6 +52,7 @@ describe('DrizzleSearchEngine', () => {
       fuzzy: false,
       highlight: false,
     });
+    mockStrategy.mapSearchRow.mockReset();
 
     // Mock SQL return
     const mockSql = { toSQL: () => ({ sql: 'SELECT 1', params: [] }) };
@@ -94,6 +96,38 @@ describe('DrizzleSearchEngine', () => {
     const result = await engine.search<{ id: string; score: number }>('users', { query: 'test' });
 
     expect(result.hits[0]?.score).toBe(0);
+  });
+
+  it('should throw when search returns non-object rows', async () => {
+    executeMock.mockResolvedValueOnce({
+      rows: [null],
+      rowCount: 1,
+    });
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(engine.search('users', { query: 'test' })).rejects.toThrow(
+      'Invalid search row: expected object result'
+    );
+  });
+
+  it('should map search rows through strategy mapper when provided', async () => {
+    executeMock.mockResolvedValueOnce({
+      rows: [{ id: 'doc-1', title: 'raw title', score: 0.8 }],
+      rowCount: 1,
+    });
+
+    mockStrategy.mapSearchRow = vi.fn().mockImplementation((row) => ({
+      id: row.id,
+      title: String(row.title).toUpperCase(),
+    }));
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const result = await engine.search<{ id: string; title: string }>('users', { query: 'test' });
+
+    expect(mockStrategy.mapSearchRow).toHaveBeenCalledWith({ id: 'doc-1', title: 'raw title', score: 0.8 });
+    expect(result.hits[0]?.document).toEqual({ id: 'doc-1', title: 'RAW TITLE' });
+    expect(result.hits[0]?.score).toBe(0.8);
   });
 
   it('should delegate indexDocument to strategy', async () => {
