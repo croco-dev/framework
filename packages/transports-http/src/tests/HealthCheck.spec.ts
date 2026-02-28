@@ -79,8 +79,29 @@ describe('HealthCheck', () => {
 
     it('should handle timeout', async () => {
       vi.useFakeTimers();
-      registry.register('slow', async () => {
-        await new Promise((resolve) => setTimeout(resolve, 6000));
+      let didAbort = false;
+      registry.register('slow', async (signal?: AbortSignal) => {
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, 6000);
+          const onAbort = () => {
+            didAbort = true;
+            clearTimeout(timer);
+            resolve();
+          };
+          const onDone = () => {
+            signal?.removeEventListener('abort', onAbort);
+          };
+
+          if (signal?.aborted) {
+            onAbort();
+            onDone();
+            return;
+          }
+
+          signal?.addEventListener('abort', onAbort, { once: true });
+          setTimeout(onDone, 6000);
+        });
+
         return { status: 'up' };
       });
 
@@ -94,6 +115,7 @@ describe('HealthCheck', () => {
       const json = await response.json();
       expect(json.checks.slow.status).toBe('down');
       expect(json.checks.slow.error).toBe('timeout');
+      expect(didAbort).toBe(true);
 
       vi.useRealTimers();
     });

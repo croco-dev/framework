@@ -7,7 +7,7 @@ export interface HealthCheckResult {
   [key: string]: unknown;
 }
 
-export type HealthCheckFunction = () => Promise<HealthCheckResult>;
+export type HealthCheckFunction = (signal?: AbortSignal) => Promise<HealthCheckResult>;
 
 export interface HealthCheckOptions {
   timeout?: number;
@@ -27,14 +27,18 @@ export class HealthCheckRegistry {
 
     const checkPromises = Array.from(this.checks.entries()).map(async ([name, { fn, options }]) => {
       const timeout = options.timeout ?? 5000;
+      const controller = new AbortController();
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
       try {
         const timeoutPromise = new Promise<HealthCheckResult>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('timeout')), timeout);
+          timeoutId = setTimeout(() => {
+            controller.abort();
+            reject(new Error('timeout'));
+          }, timeout);
         });
 
-        const result = await Promise.race([fn(), timeoutPromise]);
+        const result = await Promise.race([fn(controller.signal), timeoutPromise]);
         results[name] = result;
         if (result.status === 'down') {
           globalStatus = 'error';
