@@ -17,7 +17,7 @@ describe('Events', () => {
     it('should set eventName automatically', () => {
       const event = new UsageRecordedEvent('tenant-1', 'api_calls', 1, 'key-1');
 
-      expect(event.eventName).toBe('UsageRecordedEvent');
+      expect(event.eventName).toBe('metering.usage_recorded');
     });
 
     it('should set timestamp automatically', () => {
@@ -49,7 +49,7 @@ describe('Events', () => {
     it('should set eventName automatically', () => {
       const event = new QuotaExceededEvent('tenant-1', 'api_calls', 150, 100);
 
-      expect(event.eventName).toBe('QuotaExceededEvent');
+      expect(event.eventName).toBe('metering.quota_exceeded');
     });
 
     it('should set timestamp automatically', () => {
