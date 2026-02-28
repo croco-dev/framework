@@ -1,3 +1,4 @@
+import { ShutdownTimeoutProblem } from './problems/ShutdownProblems';
 import type { ShutdownHook } from './types';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -56,22 +57,32 @@ export class ShutdownManager {
     }
     this.isShuttingDown = true;
 
-    const timeout = setTimeout(() => {
-      console.error('[ShutdownManager] Shutdown timeout exceeded. Forcing exit.');
-      process.exit(1);
-    }, this.timeoutMs);
-
     const reversedHooks = [...this.hooks].reverse();
+    const hookExecution = (async (): Promise<void> => {
+      for (const hook of reversedHooks) {
+        try {
+          await hook.onShutdown();
+        } catch (error) {
+          console.error('[ShutdownManager] Hook execution failed:', error);
+        }
+      }
+    })();
 
-    for (const hook of reversedHooks) {
-      try {
-        await hook.onShutdown();
-      } catch (error) {
-        console.error('[ShutdownManager] Hook execution failed:', error);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        console.error('[ShutdownManager] Shutdown timeout exceeded.');
+        reject(new ShutdownTimeoutProblem(this.timeoutMs));
+      }, this.timeoutMs);
+    });
+
+    try {
+      await Promise.race([hookExecution, timeoutPromise]);
+    } finally {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
       }
     }
-
-    clearTimeout(timeout);
   }
 
   private removeAllListeners(): void {

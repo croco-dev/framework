@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Container } from '../libs/Container';
 import { Component } from '../libs/decorators/Component';
 import { OnShutdown } from '../libs/decorators/OnShutdown';
+import { ShutdownTimeoutProblem } from '../libs/problems/ShutdownProblems';
 import { ShutdownManager } from '../libs/ShutdownManager';
 import type { ShutdownHook } from '../libs/types';
 
@@ -159,7 +160,7 @@ describe('ShutdownManager', () => {
       expect(hook.onShutdown).toHaveBeenCalledTimes(1);
     });
 
-    it('should force exit after timeout', async () => {
+    it('should reject with timeout problem after timeout', async () => {
       vi.useFakeTimers();
 
       const manager = ShutdownManager.getInstance(100);
@@ -175,17 +176,17 @@ describe('ShutdownManager', () => {
       manager.register(hook);
 
       const shutdownPromise = manager.shutdown();
+      const rejected = expect(shutdownPromise).rejects.toBeInstanceOf(ShutdownTimeoutProblem);
 
       await vi.advanceTimersByTimeAsync(100);
 
-      expect(errorSpy).toHaveBeenCalledWith('[ShutdownManager] Shutdown timeout exceeded. Forcing exit.');
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      await rejected;
+      expect(errorSpy).toHaveBeenCalledWith('[ShutdownManager] Shutdown timeout exceeded.');
+      expect(exitSpy).not.toHaveBeenCalled();
 
       vi.useRealTimers();
       errorSpy.mockRestore();
       exitSpy.mockRestore();
-
-      void shutdownPromise;
     });
   });
 });
