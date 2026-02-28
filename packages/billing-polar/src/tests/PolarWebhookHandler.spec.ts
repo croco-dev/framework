@@ -1,7 +1,9 @@
 import type { BillingStore } from '@croco/billing-core';
 import type { EventPublisher } from '@croco/events-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ZodError } from 'zod';
 import { PolarWebhookHandler } from '../libs/PolarWebhookHandler';
+import { WebhookValidationProblem } from '../libs/problems/WebhookValidationProblem';
 import type { PolarConfig } from '../types';
 
 function createMockStore(): BillingStore {
@@ -230,7 +232,7 @@ describe('PolarWebhookHandler', () => {
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
     });
 
-    it('should throw error for unknown status', async () => {
+    it('should return a failure result for unknown status', async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
 
       const eventData = {
@@ -251,7 +253,7 @@ describe('PolarWebhookHandler', () => {
       const result = await handler.handle(JSON.stringify(eventData), { 'webhook-id': 'evt-unknown-status' });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Unknown Polar status: future_status');
+      expect(result.error).toContain('Unknown billing status: future_status');
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
     });
@@ -320,10 +322,11 @@ describe('PolarWebhookHandler', () => {
         throw new WebhookVerificationError('Invalid signature');
       });
 
-      const result = await handler.handle(body, headers);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Webhook verification failed');
+      await expect(handler.handle(body, headers)).rejects.toBeInstanceOf(WebhookValidationProblem);
+      await expect(handler.handle(body, headers)).rejects.toMatchObject({
+        code: 'WEBHOOK_VALIDATION_FAILED',
+        detail: 'Webhook validation failed: Invalid signature',
+      });
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockEventPublisher.publish).not.toHaveBeenCalled();
     });
@@ -339,10 +342,7 @@ describe('PolarWebhookHandler', () => {
         type: null,
       } as never);
 
-      const result = await handler.handle(body, headers);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Missing event ID or type');
+      await expect(handler.handle(body, headers)).rejects.toBeInstanceOf(ZodError);
     });
   });
 

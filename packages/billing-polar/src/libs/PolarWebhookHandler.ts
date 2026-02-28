@@ -100,6 +100,7 @@ export class PolarWebhookHandler {
     }
 
     const processingEvent = this.processEventAtomically(eventId, eventType, parsedEvent.data);
+    PolarWebhookHandler.inFlightEvents.set(eventId, processingEvent);
 
     try {
       return await processingEvent;

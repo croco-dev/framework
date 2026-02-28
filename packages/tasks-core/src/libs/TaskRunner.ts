@@ -1,6 +1,9 @@
 import type { ExecutionManager } from '@croco/execution-core';
+import { Container } from '@croco/framework-context';
 import { TaskNotFoundProblem } from './problems/TasksProblems';
 import { TaskRegistry } from './TaskRegistry';
+
+type Constructor<T = object> = new (...args: unknown[]) => T;
 
 export class TaskRunner {
   constructor(private executionManager: ExecutionManager) {
@@ -48,7 +51,11 @@ export class TaskRunner {
 
   private createInstance(target: object): object {
     if (typeof target === 'function') {
-      return new (target as new () => object)();
+      try {
+        return Container.get(target as Constructor<object>);
+      } catch {
+        return new (target as Constructor<object>)();
+      }
     }
     return target;
   }

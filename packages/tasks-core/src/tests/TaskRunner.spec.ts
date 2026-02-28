@@ -1,5 +1,5 @@
 import type { ExecutionManager } from '@croco/execution-core';
-import { MetadataStorage } from '@croco/framework-context';
+import { Container, MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TASK_METADATA_KEY, Task } from '../libs/decorators/Task';
 import { TaskRegistry } from '../libs/TaskRegistry';
@@ -12,6 +12,7 @@ describe('TaskRunner', () => {
   let testClassInstance!: any;
 
   beforeEach(() => {
+    Container.reset();
     MetadataStorage.clear();
     TaskRegistry.getInstance().reset();
 
@@ -174,7 +175,7 @@ describe('TaskRunner', () => {
     );
   });
 
-  it('should create new instance for class constructors', async () => {
+  it('should resolve class constructors through the container', async () => {
     class StatelessTaskHandler {
       @Task({ name: 'stateless-task' })
       async process(payload: { value: number }): Promise<number> {
@@ -183,11 +184,13 @@ describe('TaskRunner', () => {
     }
 
     TaskRegistry.getInstance().collectFromMetadata();
+    const getSpy = vi.spyOn(Container, 'get');
     const runner = new TaskRunner(mockExecutionManager);
 
     const result = await runner.execute('stateless-task', { value: 21 });
 
     expect(result).toBe(42);
+    expect(getSpy).toHaveBeenCalledWith(StatelessTaskHandler);
   });
 
   it('should handle non-Error objects in error handling', async () => {
