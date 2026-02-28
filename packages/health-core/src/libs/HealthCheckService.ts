@@ -32,17 +32,18 @@ export class HealthCheckService {
   }
 
   private async checkWithTimeout(indicator: HealthIndicator): Promise<HealthIndicatorResult> {
+    const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const timeoutPromise = new Promise<HealthIndicatorResult>((_, reject) => {
-      timeoutId = setTimeout(
-        () => reject(new Error(`Health check timeout for ${indicator.constructor.name}`)),
-        this.timeout
-      );
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error(`Health check timeout for ${indicator.constructor.name}`));
+      }, this.timeout);
     });
 
     try {
-      return await Promise.race([indicator.check(), timeoutPromise]);
+      return await Promise.race([indicator.check(controller.signal), timeoutPromise]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {

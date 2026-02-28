@@ -7,5 +7,5 @@ export type HealthIndicatorResult = {
 };
 
 export interface HealthIndicator {
-  check(): Promise<HealthIndicatorResult>;
+  check(signal?: AbortSignal): Promise<HealthIndicatorResult>;
 }

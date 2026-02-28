@@ -70,15 +70,19 @@ describe('HealthCheckService', () => {
   });
 
   it('should handle timeout for slow indicators', async () => {
+    let didAbort = false;
+
     const slowIndicator: HealthIndicator = {
-      check: vi
-        .fn()
-        .mockImplementation(
-          () =>
-            new Promise<HealthIndicatorResult>((resolve) =>
-              setTimeout(() => resolve({ name: 'slow', status: 'up' }), 10000)
-            )
-        ),
+      check: vi.fn().mockImplementation(
+        (signal?: AbortSignal) =>
+          new Promise<HealthIndicatorResult>((resolve) => {
+            signal?.addEventListener('abort', () => {
+              didAbort = true;
+            });
+
+            setTimeout(() => resolve({ name: 'slow', status: 'up' }), 10000);
+          })
+      ),
     };
 
     const fastService = new HealthCheckService({ timeout: 100 });
@@ -89,6 +93,7 @@ describe('HealthCheckService', () => {
     expect(result.status).toBe('down');
     expect(result.results[0].status).toBe('down');
     expect(result.results[0].details?.error).toContain('timeout');
+    expect(didAbort).toBe(true);
   });
 
   it('should use default timeout of 5000ms', () => {
@@ -98,7 +103,7 @@ describe('HealthCheckService', () => {
 
   it('should include indicator name in timeout error', async () => {
     class CustomIndicator implements HealthIndicator {
-      async check(): Promise<HealthIndicatorResult> {
+      async check(_signal?: AbortSignal): Promise<HealthIndicatorResult> {
         return new Promise((resolve) => setTimeout(() => resolve({ name: 'custom', status: 'up' }), 10000));
       }
     }
