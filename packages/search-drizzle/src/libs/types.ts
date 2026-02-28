@@ -4,6 +4,8 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export const DRIZZLE_TOKEN = 'DRIZZLE_TOKEN';
 
+export type SearchResultRow = Record<string, unknown>;
+
 export interface SearchStrategy {
   /**
    * Build a SQL query for searching
@@ -34,4 +36,6 @@ export interface SearchStrategy {
    * Get capabilities of this strategy
    */
   getCapabilities(): SearchEngineCapabilities;
+
+  mapSearchRow?<T>(row: SearchResultRow): T;
 }
