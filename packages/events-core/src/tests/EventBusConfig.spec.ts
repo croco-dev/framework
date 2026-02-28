@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus, EventSubscription } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
@@ -41,6 +41,10 @@ class MockEventBus implements EventBus {
 }
 
 describe('EventBusConfig', () => {
+  beforeEach(() => {
+    EventBusConfig.setInstance(new EventBusConfig());
+  });
+
   describe('singleton pattern', () => {
     it('should return same instance across multiple calls', () => {
       const instance1 = EventBusConfig.getInstance();
@@ -305,7 +309,7 @@ describe('EventBusConfig', () => {
       await config.start({ handlers: [] });
 
       const repeatEventSubs = mockBus.subscriptions.filter((s) => s.eventName === 'RepeatEvent');
-      expect(repeatEventSubs.length).toBe(2);
+      expect(repeatEventSubs.length).toBe(1);
     });
   });
 });

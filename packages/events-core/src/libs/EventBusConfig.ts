@@ -12,6 +12,7 @@ export interface EventBusStartOptions {
 export class EventBusConfig {
   private static instance?: EventBusConfig;
   private readonly subscriptions: Set<EventSubscription> = new Set();
+  private readonly startedSubscriptionKeys: Set<string> = new Set();
   private eventBus?: EventBus;
 
   constructor() {}
@@ -36,6 +37,7 @@ export class EventBusConfig {
 
   public setEventBus(eventBus: EventBus): void {
     this.eventBus = eventBus;
+    this.startedSubscriptionKeys.clear();
   }
 
   public subscribe(subscription: EventSubscription): void {
@@ -50,11 +52,22 @@ export class EventBusConfig {
     const resolver = options.resolver ?? new DefaultHandlerResolver();
 
     for (const subscription of this.subscriptions) {
+      const subscriptionKey = this.createSubscriptionKey(subscription);
+
+      if (this.startedSubscriptionKeys.has(subscriptionKey)) {
+        continue;
+      }
+
       const handler = resolver.resolve(subscription.handlerClass);
       this.eventBus.subscribe({
         ...subscription,
         handler,
       });
+      this.startedSubscriptionKeys.add(subscriptionKey);
     }
+  }
+
+  private createSubscriptionKey(subscription: EventSubscription): string {
+    return `${subscription.eventName}:${subscription.handlerClass.name}`;
   }
 }
