@@ -85,7 +85,7 @@ export class QStashChunkExecutor {
 
       if (hasMore) {
         await this.executionManager.checkpoint(executionId, processedCountKey, cumulativeProcessedCount);
-        await this.triggerNextChunk(executionId, step.name, checkpointAfterChunk);
+        await this.triggerNextChunk(executionId, step.name, checkpointAfterChunk, cumulativeProcessedCount);
       } else {
         await this.executionManager.complete(executionId, {
           processedCount: cumulativeProcessedCount,
@@ -159,13 +159,28 @@ export class QStashChunkExecutor {
     return JSON.stringify(checkpoint);
   }
 
-  private buildIdempotencyKey(executionId: string, stepName: string, checkpoint: unknown): string {
+  private buildIdempotencyKey(
+    executionId: string,
+    stepName: string,
+    checkpoint: unknown,
+    processedCount: number
+  ): string {
     const cursorValue = this.extractCursorValue(checkpoint);
+
+    if (cursorValue === 'no-checkpoint') {
+      return `chunk:${executionId}:${stepName}:${cursorValue}:${processedCount}`;
+    }
+
     return `chunk:${executionId}:${stepName}:${cursorValue}`;
   }
 
-  private async triggerNextChunk(executionId: string, stepName: string, checkpoint: unknown): Promise<void> {
-    const idempotencyKey = this.buildIdempotencyKey(executionId, stepName, checkpoint);
+  private async triggerNextChunk(
+    executionId: string,
+    stepName: string,
+    checkpoint: unknown,
+    processedCount: number
+  ): Promise<void> {
+    const idempotencyKey = this.buildIdempotencyKey(executionId, stepName, checkpoint, processedCount);
 
     await this.options.qstashClient.publishJSON({
       url: this.options.webhookUrl,
