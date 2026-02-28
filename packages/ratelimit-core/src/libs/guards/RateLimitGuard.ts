@@ -1,13 +1,17 @@
-import type { Guard } from '@croco/protocols-rest';
 import { RateLimitExceededProblem } from '../problems/RateLimitExceededProblem';
 import type { RateLimiter } from '../RateLimiter';
 import type { KeyContext } from '../RateLimitKeyBuilder';
 import type { RateLimitPolicy } from '../types';
 
+type Guard<TContext = unknown> = {
+  canActivate(context: TContext): boolean | Promise<boolean>;
+};
+
 /**
  * Metadata key for @RateLimit decorator.
  */
 export const RATE_LIMIT_METADATA_KEY = Symbol('rateLimit');
+export const ROUTE_GUARDS_METADATA_KEY = Symbol.for('croco:rest:guards');
 
 /**
  * Rate limit metadata stored by @RateLimit decorator.

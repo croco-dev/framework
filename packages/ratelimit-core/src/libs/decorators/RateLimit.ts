@@ -1,6 +1,10 @@
 import 'reflect-metadata';
-import { REST_GUARDS_KEY } from '@croco/protocols-rest';
-import { RATE_LIMIT_METADATA_KEY, RateLimitGuard, type RateLimitMetadata } from '../guards/RateLimitGuard';
+import {
+  RATE_LIMIT_METADATA_KEY,
+  RateLimitGuard,
+  type RateLimitMetadata,
+  ROUTE_GUARDS_METADATA_KEY,
+} from '../guards/RateLimitGuard';
 import { parseWindowMs, type RateLimitDecoratorOptions, type RateLimitPolicy } from '../types';
 
 /**
@@ -52,9 +56,15 @@ export function RateLimit(options: RateLimitDecoratorOptions = {}): MethodDecora
     Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, metadata, descriptor.value);
 
     // Auto-register RateLimitGuard (no need for @UseGuards)
-    const existingGuards: unknown[] = Reflect.getMetadata(REST_GUARDS_KEY, _target.constructor, propertyKey) || [];
+    const existingGuards: unknown[] =
+      Reflect.getMetadata(ROUTE_GUARDS_METADATA_KEY, _target.constructor, propertyKey) || [];
     if (!existingGuards.includes(RateLimitGuard)) {
-      Reflect.defineMetadata(REST_GUARDS_KEY, [...existingGuards, RateLimitGuard], _target.constructor, propertyKey);
+      Reflect.defineMetadata(
+        ROUTE_GUARDS_METADATA_KEY,
+        [...existingGuards, RateLimitGuard],
+        _target.constructor,
+        propertyKey
+      );
     }
 
     return descriptor;

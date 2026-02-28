@@ -1,8 +1,12 @@
 import 'reflect-metadata';
-import { REST_GUARDS_KEY } from '@croco/protocols-rest';
 import { describe, expect, it } from 'vitest';
 import { RateLimit } from '../libs/decorators/RateLimit';
-import { RATE_LIMIT_METADATA_KEY, RateLimitGuard, type RateLimitMetadata } from '../libs/guards/RateLimitGuard';
+import {
+  RATE_LIMIT_METADATA_KEY,
+  RateLimitGuard,
+  type RateLimitMetadata,
+  ROUTE_GUARDS_METADATA_KEY,
+} from '../libs/guards/RateLimitGuard';
 
 describe('@RateLimit decorator', () => {
   it('should store metadata with default values', () => {
@@ -106,7 +110,7 @@ describe('@RateLimit decorator', () => {
       guardedMethod() {}
     }
 
-    const guards = Reflect.getMetadata(REST_GUARDS_KEY, TestController, 'guardedMethod') || [];
+    const guards = Reflect.getMetadata(ROUTE_GUARDS_METADATA_KEY, TestController, 'guardedMethod') || [];
     expect(guards).toContain(RateLimitGuard);
   });
 
@@ -117,7 +121,7 @@ describe('@RateLimit decorator', () => {
     }
 
     // Simulate applying decorator twice
-    const guards = Reflect.getMetadata(REST_GUARDS_KEY, TestController, 'guardedMethod') || [];
+    const guards = Reflect.getMetadata(ROUTE_GUARDS_METADATA_KEY, TestController, 'guardedMethod') || [];
     expect(guards.filter((g: unknown) => g === RateLimitGuard)).toHaveLength(1);
   });
 
@@ -129,14 +133,14 @@ describe('@RateLimit decorator', () => {
     }
 
     // Pre-register a guard
-    Reflect.defineMetadata(REST_GUARDS_KEY, [FakeGuard], TestController, 'guardedMethod');
+    Reflect.defineMetadata(ROUTE_GUARDS_METADATA_KEY, [FakeGuard], TestController, 'guardedMethod');
 
     // Apply decorator manually
     const descriptor = Object.getOwnPropertyDescriptor(TestController.prototype, 'guardedMethod');
     if (!descriptor) throw new Error('descriptor not found');
     RateLimit({ limit: 5, window: '1m' })(TestController.prototype, 'guardedMethod', descriptor);
 
-    const guards = Reflect.getMetadata(REST_GUARDS_KEY, TestController, 'guardedMethod') || [];
+    const guards = Reflect.getMetadata(ROUTE_GUARDS_METADATA_KEY, TestController, 'guardedMethod') || [];
     expect(guards).toContain(FakeGuard);
     expect(guards).toContain(RateLimitGuard);
     expect(guards).toHaveLength(2);

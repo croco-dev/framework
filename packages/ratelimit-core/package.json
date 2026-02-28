@@ -19,8 +19,7 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*",
-    "@croco/protocols-rest": "workspace:*"
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
