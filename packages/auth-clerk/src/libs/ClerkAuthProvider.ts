@@ -1,4 +1,4 @@
-import { createClerkClient, verifyToken, type ClerkClient } from '@clerk/backend';
+import { type ClerkClient, createClerkClient, verifyToken } from '@clerk/backend';
 import type { AuthProvider, AuthUser } from '@croco/auth-core';
 
 export type ClerkAuthOptions = {
@@ -12,7 +12,6 @@ export class ClerkAuthProvider implements AuthProvider<Request> {
   constructor(private options: ClerkAuthOptions) {
     this.clerkClient = createClerkClient({ secretKey: options.secretKey, publishableKey: options.publishableKey });
   }
-
 
   async authenticate(request: Request): Promise<AuthUser | null> {
     const authHeader = request.headers.get('Authorization');
