@@ -31,6 +31,7 @@ export class ChunkExecutor {
 
     let items: O[] = [];
     let processedCount = 0;
+    const totalCount = execution.progress?.total;
 
     // 3. Read - Process - Write loop
     try {
@@ -60,7 +61,7 @@ export class ChunkExecutor {
 
         // Write if chunk full
         if (items.length >= step.chunkSize) {
-          await this.writeChunk(executionId, step, items, checkpointKey);
+          await this.writeChunk(executionId, step, items, checkpointKey, processedCount + items.length, totalCount);
           processedCount += items.length;
           items = [];
         }
@@ -68,7 +69,7 @@ export class ChunkExecutor {
 
       // Write remaining items
       if (items.length > 0) {
-        await this.writeChunk(executionId, step, items, checkpointKey);
+        await this.writeChunk(executionId, step, items, checkpointKey, processedCount + items.length, totalCount);
         processedCount += items.length;
       }
 
@@ -92,7 +93,9 @@ export class ChunkExecutor {
     executionId: string,
     step: Step<I, O>,
     items: O[],
-    checkpointKey: string
+    checkpointKey: string,
+    currentProcessedCount: number,
+    totalCount?: number
   ): Promise<void> {
     await step.writer.write(items);
 
@@ -102,20 +105,15 @@ export class ChunkExecutor {
       await this.executionManager.checkpoint(executionId, checkpointKey, checkpoint);
     }
 
-    // Update progress (simplified)
-    // We don't know total count unless reader provides it.
-    // Assuming simple counter update for now.
-    // ExecutionManager.updateProgress requires ProgressInfo object.
-    // We need to know 'current' and 'total'.
-    // If we don't know total, we can just update 'current'.
-    // But ProgressInfo interface has 'total'. Let's check if it's optional.
-    // "total: number" is required in interface.
-    // If we don't know total, maybe we can fetch it from current progress or assume 0/unknown?
-    // Let's assume reader knows? Or just pass 0 for now if unknown.
-    // Better: check if execution.progress exists and update it.
+    if (this.hasValidTotal(totalCount)) {
+      await this.executionManager.updateProgress(executionId, {
+        current: currentProcessedCount,
+        total: totalCount,
+      });
+    }
+  }
 
-    // For now, skipping updateProgress to avoid complexity with unknown total.
-    // Or we could read existing progress first... but we don't have get(id).
-    // We can rely on user to initialize progress in 'create'.
+  private hasValidTotal(total: number | undefined): total is number {
+    return typeof total === 'number' && Number.isFinite(total) && total > 0;
   }
 }
