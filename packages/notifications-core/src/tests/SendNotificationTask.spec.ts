@@ -1,17 +1,21 @@
 import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NotificationProviderRegistry } from '../libs/NotificationProviderRegistry';
+import { NotificationService } from '../libs/NotificationService';
 import { SendNotificationTask } from '../libs/SendNotificationTask';
 import type { NotificationJobPayload, NotificationProvider } from '../libs/types';
 
 describe('SendNotificationTask', () => {
   let task!: SendNotificationTask;
+  let registry!: NotificationProviderRegistry;
   let mockProvider!: NotificationProvider;
 
   beforeEach(() => {
     Container.reset();
     vi.clearAllMocks();
 
-    task = new SendNotificationTask();
+    registry = new NotificationProviderRegistry();
+    task = new SendNotificationTask(registry);
 
     mockProvider = {
       getName: vi.fn().mockReturnValue('resend'),
@@ -144,6 +148,33 @@ describe('SendNotificationTask', () => {
 
       await task.handle(payload);
 
+      expect(mockProvider.send).toHaveBeenCalledWith({
+        to: 'test@example.com',
+        content: 'Test Content',
+      });
+    });
+  });
+
+  describe('shared registry', () => {
+    it('should resolve provider registered through NotificationService', async () => {
+      const service = new NotificationService(
+        {
+          execute: vi.fn().mockResolvedValue(undefined),
+        } as never,
+        registry
+      );
+      const mockResult = { success: true, messageId: 'msg-123' };
+      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
+
+      service.registerProvider(mockProvider as never, true);
+
+      const payload: NotificationJobPayload = {
+        providerName: 'resend',
+        to: 'test@example.com',
+        content: 'Test Content',
+      };
+
+      await expect(task.handle(payload)).resolves.not.toThrow();
       expect(mockProvider.send).toHaveBeenCalledWith({
         to: 'test@example.com',
         content: 'Test Content',
