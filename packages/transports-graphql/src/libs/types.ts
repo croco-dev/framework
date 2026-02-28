@@ -1,15 +1,15 @@
 import type { GraphQLSchema } from 'graphql';
 import type { YogaServerOptions } from 'graphql-yoga';
-import type { Container as ContainerClass } from 'typedi';
+import type { BuildSchemaOptions } from 'type-graphql';
 
-export type ContainerType = ContainerClass;
+export type ContainerType = BuildSchemaOptions['container'];
 
 export type SchemaCompileOptions = {
   resolvers?: Function[];
   autoDiscover?: boolean;
   container?: ContainerType;
-  emitSchemaFile?: boolean | string;
-  validate?: boolean;
+  emitSchemaFile?: BuildSchemaOptions['emitSchemaFile'];
+  validate?: BuildSchemaOptions['validate'];
 };
 
 export type GraphQLServerOptions = {
