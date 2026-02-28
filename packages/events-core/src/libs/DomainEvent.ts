@@ -1,9 +1,15 @@
-import type { TraceInfo } from '@croco/telemetry-api';
 import { EventDefinitionProblem } from './problems/EventsProblems';
+
+export type EventTraceContext = {
+  traceId?: string;
+  spanId?: string;
+  traceFlags?: number;
+  isValid?: boolean;
+};
 
 export type DomainEventMetadata = {
   [key: string]: unknown;
-  traceContext?: TraceInfo;
+  traceContext?: EventTraceContext;
 };
 
 export abstract class DomainEvent {

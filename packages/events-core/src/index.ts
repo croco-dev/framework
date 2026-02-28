@@ -2,11 +2,10 @@
  * 도메인 이벤트를 수집하고 발행할 수 있는 Aggregate Root 추상 클래스입니다.
  */
 export { AggregateRoot } from './libs/AggregateRoot';
-
 /**
  * 도메인 이벤트에 첨부할 수 있는 메타데이터 타입입니다.
  */
-export type { DomainEventMetadata } from './libs/DomainEvent';
+export type { DomainEventMetadata, EventTraceContext } from './libs/DomainEvent';
 
 /**
  * 모든 도메인 이벤트가 상속해야 하는 기본 추상 클래스입니다.
