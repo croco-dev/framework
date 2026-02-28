@@ -12,14 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
-    "drizzle-orm": "0.44.2"
-  },
-  "dependencies": {
-    "@croco/tx-drizzle": "workspace:*"
-  },
-  "peerDependencies": {
-    "drizzle-orm": ">=0.30.0"
+    "@croco/utils-tsconfig": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

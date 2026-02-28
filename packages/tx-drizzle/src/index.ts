@@ -95,4 +95,6 @@ export { createRlsTxAdapter, type RlsOptions, type RlsTenantProvider } from './l
  */
 
 export { AbstractDrizzleRepository } from './libs/AbstractDrizzleRepository';
+export type { DrizzleHealthIndicatorOptions } from './libs/DrizzleHealthIndicator';
+export { DrizzleHealthIndicator } from './libs/DrizzleHealthIndicator';
 export type { DrizzleDb, DrizzleTx, InferTxClient, InferTxOptions } from './libs/types';

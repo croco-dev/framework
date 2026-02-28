@@ -34,6 +34,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
 
     if (!currentContext) {
       const rootAfterCommitHooks: AfterCommitHook[] = [];
+      let rootContext: TxContext<TClient> | null = null;
 
       const result = await this.adapter.transaction(async (client) => {
         const context: TxContext<TClient> = {
@@ -41,11 +42,14 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
           afterCommitHooks: rootAfterCommitHooks,
           isRoot: true,
         };
+        rootContext = context;
 
         return this.als.run(context, fn);
       }, options);
 
-      await this.executeAfterCommitHooks(rootAfterCommitHooks);
+      if (rootContext) {
+        await this.als.run(rootContext, () => this.executeAfterCommitHooks(rootAfterCommitHooks));
+      }
 
       return result;
     }

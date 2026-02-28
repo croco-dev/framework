@@ -191,6 +191,19 @@ describe('TxManager', () => {
       expect(rootHook).toHaveBeenCalledTimes(1);
       expect(savepointHook).toHaveBeenCalledTimes(1);
     });
+
+    it('should keep transaction context while running afterCommit hooks', async () => {
+      const observedClients: Array<{ id: string } | null> = [];
+
+      await txManager.run(async () => {
+        txManager.onAfterCommit(async () => {
+          observedClients.push(txManager.getClient());
+        });
+      });
+
+      expect(observedClients).toEqual([{ id: 'tx-client' }]);
+      expect(txManager.getClient()).toBeNull();
+    });
   });
 
   describe('run with options', () => {

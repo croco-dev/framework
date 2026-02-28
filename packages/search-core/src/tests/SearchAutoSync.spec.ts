@@ -44,6 +44,24 @@ describe('SearchAutoSync', () => {
     expect(searchAutoSync).not.toBeNull();
   });
 
+  it('should register both index and delete events with domain event names', async () => {
+    const subscribeCalls: string[] = [];
+    const startBus = {
+      publish: vi.fn(),
+      subscribe: vi.fn((subscription: { eventName: string }) => {
+        subscribeCalls.push(subscription.eventName);
+      }),
+      unsubscribe: vi.fn(),
+      clear: vi.fn(),
+    };
+
+    EventBusConfig.getInstance().setEventBus(startBus as unknown as EventBus);
+    await EventBusConfig.getInstance().start({ handlers: [] });
+
+    expect(subscribeCalls).toContain(DocumentIndexedEvent.eventName);
+    expect(subscribeCalls).toContain(DocumentDeletedEvent.eventName);
+  });
+
   describe('handle DocumentIndexedEvent', () => {
     it('should index document when autoSync is true', async () => {
       vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
@@ -175,6 +193,32 @@ describe('SearchAutoSync', () => {
       expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
       const failedEvent = eventBusMock.publish.mock.calls[0][0];
       expect(failedEvent.operation).toBe('delete');
+    });
+
+    it('should swallow missing event bus when publishing SearchSyncFailedEvent fails', async () => {
+      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+        {
+          target: class User {},
+          value: {
+            index: 'users',
+            autoSync: true,
+            target: class User {},
+          } as SearchableMetadata,
+        },
+      ]);
+
+      const error = new Error('Delete failed');
+      (searchEngine.deleteDocument as Mock).mockRejectedValue(error);
+
+      const getEventBusSpy = vi.spyOn(EventBusConfig.getInstance(), 'getEventBus').mockImplementation(() => {
+        throw new Error('EventBus missing');
+      });
+
+      await expect(
+        searchAutoSync.handle(new DocumentDeletedEvent('users', 'user-1', 'tenant-1'))
+      ).resolves.toBeUndefined();
+
+      getEventBusSpy.mockRestore();
     });
   });
 });

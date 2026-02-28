@@ -4,17 +4,23 @@
  * Health check monitoring system for Croco applications.
  *
  * This package provides a flexible health check framework for monitoring application health,
- * including database connectivity checks and extensible health indicators.
+ * with extensible health indicators.
  *
  * @example
  * ```typescript
- * import { HealthCheckService, DrizzleHealthIndicator } from '@croco/health-core';
+ * import type { HealthIndicator } from '@croco/health-core';
+ * import { HealthCheckService } from '@croco/health-core';
  *
  * // Create health check service
  * const healthService = new HealthCheckService({ timeout: 5000 });
  *
- * // Register indicators
- * healthService.register(new DrizzleHealthIndicator(db, { name: 'postgres' }));
+ * class ApiHealthIndicator implements HealthIndicator {
+ *   async check() {
+ *     return { name: 'api', status: 'up' as const };
+ *   }
+ * }
+ *
+ * healthService.register(new ApiHealthIndicator());
  *
  * // Check health
  * const result = await healthService.check();
@@ -23,39 +29,6 @@
  * ```
  */
 
-/**
- * Options for configuring Drizzle database health indicator.
- *
- * @example
- * ```typescript
- * const options: DrizzleHealthIndicatorOptions = {
- *   name: 'postgres',
- * };
- * ```
- */
-export type { DrizzleHealthIndicatorOptions } from './libs/DrizzleHealthIndicator';
-
-/**
- * Health indicator for Drizzle ORM database connections.
- *
- * Performs a simple query (`SELECT 1`) within a transaction to verify database connectivity.
- * Returns 'up' if the query succeeds, 'down' with error details if it fails.
- *
- * @example
- * ```typescript
- * import { DrizzleHealthIndicator } from '@croco/health-core';
- *
- * const indicator = new DrizzleHealthIndicator(db, { name: 'primary-db' });
- * const result = await indicator.check();
- *
- * if (result.status === 'up') {
- *   console.log(`${result.name} is healthy`);
- * } else {
- *   console.error(`${result.name} is down:`, result.details?.error);
- * }
- * ```
- */
-export { DrizzleHealthIndicator } from './libs/DrizzleHealthIndicator';
 /**
  * Result of a health check operation.
  *
@@ -97,8 +70,8 @@ export type { HealthCheckResult, HealthCheckServiceOptions } from './libs/Health
  * import { HealthCheckService } from '@croco/health-core';
  *
  * const service = new HealthCheckService({ timeout: 5000 });
- * service.register(new DrizzleHealthIndicator(db));
  * service.register(new RedisHealthIndicator(redis));
+ * service.register(new ApiHealthIndicator());
  *
  * const result = await service.check();
  * // Returns overall status and detailed results from each indicator

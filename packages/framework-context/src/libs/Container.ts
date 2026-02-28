@@ -4,12 +4,18 @@ import { Context } from './Context';
 import { MetadataStorage } from './MetadataStorage';
 import type { Constructor, Scope } from './types';
 
+export type TokenIdentifier<T> = Constructor<T> | import('typedi').Token<T>;
+
 const COMPONENT_METADATA_KEY = Symbol('component:metadata');
 
 export class Container {
   private static validated = false;
 
-  static get<T>(token: Constructor<T>): T {
+  static get<T>(token: TokenIdentifier<T>): T {
+    if (!(token instanceof Function)) {
+      return TypeDIContainer.get(token);
+    }
+
     const metadata = Container.getComponentMetadata(token);
 
     if (!metadata) {
@@ -31,16 +37,16 @@ export class Container {
     }
   }
 
-  static getMany<T>(tokens: Constructor<T>[]): T[] {
+  static getMany<T>(tokens: Array<TokenIdentifier<T>>): T[] {
     return tokens.map((token) => Container.get(token));
   }
 
-  static set<T>(token: Constructor<T>, instance: T): T {
+  static set<T>(token: TokenIdentifier<T>, instance: T): T {
     TypeDIContainer.set({ id: token, value: instance });
     return instance;
   }
 
-  static remove<T>(token: Constructor<T>): void {
+  static remove<T>(token: TokenIdentifier<T>): void {
     TypeDIContainer.remove(token);
   }
 

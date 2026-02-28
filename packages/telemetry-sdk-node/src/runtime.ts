@@ -14,6 +14,11 @@ class TelemetryRuntime {
 
   private constructor() {}
 
+  private reportError(phase: 'init' | 'forceFlush' | 'shutdown', error: unknown): void {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    console.warn(`[TelemetryRuntime] ${phase} failed: ${normalizedError.message}`, normalizedError);
+  }
+
   static getInstance(): TelemetryRuntime {
     if (!TelemetryRuntime.instance) {
       TelemetryRuntime.instance = new TelemetryRuntime();
@@ -67,8 +72,11 @@ class TelemetryRuntime {
     try {
       this.sdk.start();
       this.initialized = true;
-    } catch {
+    } catch (error) {
       this.initialized = false;
+      this.sdk = null;
+      this.processor = null;
+      this.reportError('init', error);
     }
   }
 
@@ -79,7 +87,9 @@ class TelemetryRuntime {
 
     try {
       await this.processor.forceFlush();
-    } catch {}
+    } catch (error) {
+      this.reportError('forceFlush', error);
+    }
   }
 
   async shutdown(): Promise<void> {
@@ -92,7 +102,9 @@ class TelemetryRuntime {
       this.sdk = null;
       this.processor = null;
       this.initialized = false;
-    } catch {}
+    } catch (error) {
+      this.reportError('shutdown', error);
+    }
   }
 
   isInitialized(): boolean {

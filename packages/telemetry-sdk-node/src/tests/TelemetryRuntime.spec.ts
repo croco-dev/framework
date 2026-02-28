@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TelemetryRuntime } from '../runtime';
 
 describe('TelemetryRuntime', () => {
@@ -47,5 +47,23 @@ describe('TelemetryRuntime', () => {
 
   it('should handle shutdown without error', async () => {
     await runtime.shutdown();
+  });
+
+  it('should log warning when forceFlush fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const forceFlush = vi.fn().mockRejectedValue(new Error('flush failed'));
+
+    Object.defineProperty(runtime, 'processor', {
+      value: { forceFlush },
+      configurable: true,
+      writable: true,
+    });
+
+    await runtime.forceFlush();
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toContain('[TelemetryRuntime] forceFlush failed: flush failed');
+
+    warnSpy.mockRestore();
   });
 });
