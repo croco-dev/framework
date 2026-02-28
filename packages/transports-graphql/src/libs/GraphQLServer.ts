@@ -8,6 +8,16 @@ import type { GraphQLServerOptions } from './types';
 
 type YogaHandler = (request: Request) => Promise<Response>;
 
+const DEFAULT_MAX_BODY_SIZE_BYTES = 1024 * 1024;
+
+class RequestBodyTooLargeError extends Error {
+  readonly statusCode = 413;
+
+  constructor(maxBodySizeBytes: number) {
+    super(`Payload Too Large (max ${maxBodySizeBytes} bytes)`);
+  }
+}
+
 export class GraphQLServer {
   private yogaHandler: YogaHandler | null = null;
   private server: Server | null = null;
@@ -70,7 +80,21 @@ export class GraphQLServer {
       const url = req.url ? new URL(req.url, `http://${req.headers.host}`) : new URL('http://localhost');
       const method = req.method || 'GET';
 
-      const body = req.method !== 'GET' && req.method !== 'HEAD' ? await this.getBody(req) : undefined;
+      let body: string | undefined;
+
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        try {
+          body = await this.getBody(req);
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            res.statusCode = error.statusCode;
+            res.end(error.message);
+            return;
+          }
+
+          throw error;
+        }
+      }
 
       const request = new Request(url, {
         method,
@@ -121,14 +145,60 @@ export class GraphQLServer {
 
   private getBody(req: IncomingMessage): Promise<string> {
     return new Promise((resolve, reject) => {
+      const maxBodySizeBytes = this.options.maxBodySizeBytes ?? DEFAULT_MAX_BODY_SIZE_BYTES;
+      const contentLength = req.headers['content-length'];
+
+      if (typeof contentLength === 'string') {
+        const parsedContentLength = Number(contentLength);
+
+        if (Number.isFinite(parsedContentLength) && parsedContentLength > maxBodySizeBytes) {
+          reject(new RequestBodyTooLargeError(maxBodySizeBytes));
+          return;
+        }
+      }
+
       const chunks: Buffer[] = [];
-      req.on('data', (chunk) => {
+      let totalBytes = 0;
+
+      const cleanup = () => {
+        req.off('data', onData);
+        req.off('end', onEnd);
+        req.off('error', onError);
+        req.off('aborted', onAborted);
+      };
+
+      const onData = (chunk: Buffer) => {
+        totalBytes += chunk.length;
+
+        if (totalBytes > maxBodySizeBytes) {
+          cleanup();
+          req.pause();
+          reject(new RequestBodyTooLargeError(maxBodySizeBytes));
+          return;
+        }
+
         chunks.push(chunk);
-      });
-      req.on('end', () => {
+      };
+
+      const onEnd = () => {
+        cleanup();
         resolve(Buffer.concat(chunks).toString());
-      });
-      req.on('error', reject);
+      };
+
+      const onError = (error: Error) => {
+        cleanup();
+        reject(error);
+      };
+
+      const onAborted = () => {
+        cleanup();
+        reject(new Error('Request body aborted'));
+      };
+
+      req.on('data', onData);
+      req.on('end', onEnd);
+      req.on('error', onError);
+      req.on('aborted', onAborted);
     });
   }
 

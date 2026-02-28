@@ -171,4 +171,31 @@ describe('GraphQLServer integration', () => {
 
     await testServer.stop();
   });
+
+  it('should reject oversized request bodies with 413', async () => {
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+      maxBodySizeBytes: 32,
+    });
+
+    await testServer.initialize();
+    await testServer.start(4002);
+
+    const response = await fetch('http://localhost:4002/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: '{ hello }',
+        padding: 'x'.repeat(128),
+      }),
+    });
+
+    expect(response.status).toBe(413);
+    await expect(response.text()).resolves.toContain('Payload Too Large');
+
+    await testServer.stop();
+  });
 });
