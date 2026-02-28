@@ -2,6 +2,7 @@ import { EventBusConfig, type EventHandler, RegisterEventHandler } from '@croco/
 import { Container, MetadataStorage } from '@croco/framework-context';
 import { SEARCHABLE_METADATA, type SearchableMetadata } from '../decorators/Searchable';
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../events';
+
 class LRUCache<T> {
   private cache = new Map<string, T>();
 
@@ -28,6 +29,7 @@ class LRUCache<T> {
     this.cache.clear();
   }
 }
+
 import { SearchEngine } from '../SearchEngine';
 
 @RegisterEventHandler(DocumentIndexedEvent)
