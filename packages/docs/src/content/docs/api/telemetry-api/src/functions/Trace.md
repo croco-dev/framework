@@ -7,7 +7,9 @@ title: "Trace"
 
 > **Trace**(`options?`): `MethodDecorator`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/decorators/Trace.ts#L9)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/decorators/Trace.ts#L31)
+
+Decorator that automatically traces async method execution.
 
 ## Parameters
 
@@ -18,3 +20,21 @@ Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:9](https://gith
 ## Returns
 
 `MethodDecorator`
+
+## Remarks
+
+Wraps the method in an OpenTelemetry Span, recording execution time and errors.
+Must be used after SDK initialization via @croco/telemetry-sdk-node.
+
+## Example
+
+```typescript
+import { Trace } from '@croco/telemetry-api';
+
+class OrderService {
+  @Trace({ name: 'place-order' })
+  async placeOrder(dto: CreateOrderDto): Promise<Order> {
+    return this.repository.save(dto);
+  }
+}
+```

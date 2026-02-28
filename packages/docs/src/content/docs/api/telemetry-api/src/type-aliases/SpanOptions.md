@@ -7,7 +7,21 @@ title: "SpanOptions"
 
 > **SpanOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/span.ts#L4)
+Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/span.ts#L4)
+
+Information about the current active trace context.
+
+## Remarks
+
+Contains trace ID, span ID, and sampling status for distributed tracing.
+
+## Example
+
+```typescript
+const traceInfo = getActiveTraceInfo();
+console.log('Trace ID:', traceInfo.traceId);
+console.log('Is Sampled:', traceInfo.isValid);
+```
 
 ## Properties
 
@@ -15,7 +29,7 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco
 
 > `optional` **attributes**: `Attributes`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/span.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/span.ts#L6)
 
 ***
 
@@ -23,4 +37,4 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/span.ts#L5)
+Defined in: [packages/telemetry-api/src/libs/span.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/span.ts#L5)

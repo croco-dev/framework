@@ -5,7 +5,9 @@ prev: false
 title: "ErrorHandler"
 ---
 
-Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:7](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/ErrorHandler.ts#L7)
+Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/ErrorHandler.ts#L7)
+
+Croco HTTP 앱의 핵심 런타임 API입니다.
 
 ## Constructors
 
@@ -13,7 +15,7 @@ Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:7](https://github
 
 > **new ErrorHandler**(`logger`): `ErrorHandler`
 
-Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:8](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/ErrorHandler.ts#L8)
+Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/ErrorHandler.ts#L8)
 
 #### Parameters
 
@@ -31,7 +33,7 @@ Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:8](https://github
 
 > **handleError**(`error`, `ctx`): `Response`
 
-Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/ErrorHandler.ts#L10)
+Defined in: [packages/transports-http/src/libs/ErrorHandler.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/ErrorHandler.ts#L10)
 
 #### Parameters
 

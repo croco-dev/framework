@@ -7,7 +7,7 @@ title: "LlmOptions"
 
 > **LlmOptions** = `object`
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:7](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L7)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/decorators/Llm.ts#L8)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:7](https://github.com/
 
 > `optional` **maxTokens**: `number`
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L11)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/decorators/Llm.ts#L12)
 
 ***
 
@@ -23,7 +23,7 @@ Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:11](https://github.com
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:13](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L13)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/decorators/Llm.ts#L14)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:13](https://github.com
 
 > `optional` **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:8](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L8)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/decorators/Llm.ts#L9)
 
 ***
 
@@ -39,7 +39,7 @@ Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:8](https://github.com/
 
 > `optional` **stopSequences**: `string`[]
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:12](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L12)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/decorators/Llm.ts#L13)
 
 ***
 
@@ -47,7 +47,7 @@ Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:12](https://github.com
 
 > `optional` **systemPrompt**: `string`
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L9)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/decorators/Llm.ts#L10)
 
 ***
 
@@ -55,4 +55,4 @@ Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:9](https://github.com/
 
 > `optional` **temperature**: `number`
 
-Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/decorators/Llm.ts#L10)
+Defined in: [packages/llm-core/src/libs/decorators/Llm.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/decorators/Llm.ts#L11)

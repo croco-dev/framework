@@ -5,7 +5,9 @@ prev: false
 title: "LlmStreamCompletedEvent"
 ---
 
-Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L4)
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L4)
+
+모든 도메인 이벤트가 상속해야 하는 기본 추상 클래스입니다.
 
 ## Extends
 
@@ -17,7 +19,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:4](htt
 
 > **new LlmStreamCompletedEvent**(`modelId`, `text`, `usage`, `chunkCount?`): `LlmStreamCompletedEvent`
 
-Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:7](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L7)
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L8)
 
 #### Parameters
 
@@ -51,7 +53,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:7](htt
 
 > `readonly` `optional` **chunkCount**: `number`
 
-Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L11)
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L12)
 
 ***
 
@@ -59,7 +61,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:11](ht
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/DomainEvent.ts#L9)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L12)
 
 #### Inherited from
 
@@ -71,7 +73,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:9](https://github.com/
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/DomainEvent.ts#L11)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L14)
 
 #### Inherited from
 
@@ -83,7 +85,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:11](https://github.com
 
 > `readonly` **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:8](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L8)
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L9)
 
 ***
 
@@ -91,7 +93,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:8](htt
 
 > `readonly` **text**: `string`
 
-Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L9)
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L10)
 
 ***
 
@@ -99,7 +101,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:9](htt
 
 > `readonly` **timestamp**: `Date`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/DomainEvent.ts#L10)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L13)
 
 #### Inherited from
 
@@ -111,7 +113,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:10](https://github.com
 
 > `readonly` **type**: `"llm.stream_completed"` = `'llm.stream_completed'`
 
-Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L5)
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L6)
 
 ***
 
@@ -119,4 +121,16 @@ Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:5](htt
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L10)
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L11)
+
+***
+
+### eventName
+
+> `static` **eventName**: `string` = `'llm.stream_completed'`
+
+Defined in: [packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/events/LlmStreamCompletedEvent.ts#L5)
+
+#### Overrides
+
+[`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname-1)

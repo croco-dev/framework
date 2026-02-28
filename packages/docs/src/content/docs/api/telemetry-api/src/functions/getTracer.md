@@ -7,7 +7,7 @@ title: "getTracer"
 
 > **getTracer**(`options?`): `Tracer`
 
-Defined in: [packages/telemetry-api/src/libs/tracer.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/tracer.ts#L11)
+Defined in: [packages/telemetry-api/src/libs/tracer.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/tracer.ts#L11)
 
 ## Parameters
 
@@ -15,6 +15,10 @@ Defined in: [packages/telemetry-api/src/libs/tracer.ts:11](https://github.com/cr
 
 [`TracerOptions`](/api/telemetry-api/src/type-aliases/traceroptions/) = `{}`
 
+Tracer configuration with name and optional version
+
 ## Returns
 
 `Tracer`
+
+Configured OpenTelemetry Tracer instance

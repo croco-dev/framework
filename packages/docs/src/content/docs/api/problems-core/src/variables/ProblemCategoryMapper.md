@@ -7,7 +7,9 @@ title: "ProblemCategoryMapper"
 
 > `const` **ProblemCategoryMapper**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:31](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L31)
+Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L31)
+
+ProblemCategory를 HTTP 응답용 status/title로 변환하는 매퍼입니다.
 
 ## Type Declaration
 
@@ -38,3 +40,12 @@ Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:31](https:
 #### Returns
 
 `string`
+
+## Example
+
+```typescript
+import { ProblemCategory, ProblemCategoryMapper } from '@croco/problems-core';
+
+const status = ProblemCategoryMapper.toHttpStatus(ProblemCategory.NotFound);
+const title = ProblemCategoryMapper.toTitle(ProblemCategory.NotFound);
+```

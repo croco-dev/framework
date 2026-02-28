@@ -5,13 +5,23 @@ prev: false
 title: "EventPublisher"
 ---
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventPublisher.ts#L4)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventPublisher.ts#L12)
+
+구성된 EventBus를 통해 단건/다건 이벤트를 발행하는 헬퍼입니다.
 
 ## Constructors
 
 ### Constructor
 
-> **new EventPublisher**(): `EventPublisher`
+> **new EventPublisher**(`config`): `EventPublisher`
+
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventPublisher.ts#L13)
+
+#### Parameters
+
+##### config
+
+[`EventBusConfig`](/api/events-core/src/classes/eventbusconfig/)
 
 #### Returns
 
@@ -23,7 +33,7 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:4](https://github.c
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventPublisher.ts#L9)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:27](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventPublisher.ts#L27)
 
 #### Parameters
 
@@ -39,9 +49,9 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:9](https://github.c
 
 ### publishMany()
 
-> **publishMany**(`events`): `Promise`\<`void`\>
+> **publishMany**(`events`): `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:13](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventPublisher.ts#L13)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:36](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventPublisher.ts#L36)
 
 #### Parameters
 
@@ -51,15 +61,15 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:13](https://github.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
 ***
 
 ### publishManyParallel()
 
-> **publishManyParallel**(`events`): `Promise`\<`void`\>
+> **publishManyParallel**(`events`): `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:19](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventPublisher.ts#L19)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:49](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventPublisher.ts#L49)
 
 #### Parameters
 
@@ -69,4 +79,4 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:19](https://github.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>

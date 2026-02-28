@@ -7,7 +7,9 @@ title: "ProblemFactory"
 
 > `const` **ProblemFactory**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/problems-core/src/libs/ProblemFactory.ts#L10)
+Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/ProblemFactory.ts#L10)
+
+카테고리별 기본 Problem 인스턴스를 생성하는 팩토리입니다.
 
 ## Type Declaration
 
@@ -252,3 +254,12 @@ Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:10](https://githu
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+## Example
+
+```typescript
+import { ProblemFactory } from '@croco/problems-core';
+
+const problem = ProblemFactory.notFound('user/not-found', '사용자를 찾을 수 없습니다.');
+const body = problem.toJSON();
+```

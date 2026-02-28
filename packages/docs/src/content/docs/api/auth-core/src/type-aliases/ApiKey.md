@@ -7,7 +7,9 @@ title: "ApiKey"
 
 > **ApiKey** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:6](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L6)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L6)
+
+API key domain model and creation option types.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:6](https://github.
 
 > `optional` **allowedIps**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:20](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L20)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L20)
 
 ***
 
@@ -23,7 +25,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:20](https://github
 
 > **createdAt**: `Date`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:15](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L15)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:15](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L15)
 
 ***
 
@@ -31,7 +33,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:15](https://github
 
 > **createdBy**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:14](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L14)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L14)
 
 ***
 
@@ -39,7 +41,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:14](https://github
 
 > **expiresAt**: `Date` \| `null`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:16](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L16)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:16](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L16)
 
 ***
 
@@ -47,7 +49,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:16](https://github
 
 > **hash**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L10)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L10)
 
 ***
 
@@ -55,7 +57,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:10](https://github
 
 > **id**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:7](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L7)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L7)
 
 ***
 
@@ -63,7 +65,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:7](https://github.
 
 > **lastUsedAt**: `Date` \| `null`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:18](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L18)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:18](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L18)
 
 ***
 
@@ -71,7 +73,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:18](https://github
 
 > **name**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:12](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L12)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L12)
 
 ***
 
@@ -79,7 +81,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:12](https://github
 
 > **permissions**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L11)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L11)
 
 ***
 
@@ -87,7 +89,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:11](https://github
 
 > **prefix**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:8](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L8)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L8)
 
 ***
 
@@ -95,7 +97,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:8](https://github.
 
 > `optional` **rateLimit**: [`ApiKeyRateLimit`](/api/auth-core/src/type-aliases/apikeyratelimit/)
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:19](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L19)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:19](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L19)
 
 ***
 
@@ -103,7 +105,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:19](https://github
 
 > **revokedAt**: `Date` \| `null`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:17](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L17)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:17](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L17)
 
 ***
 
@@ -111,7 +113,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:17](https://github
 
 > **shortToken**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L9)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L9)
 
 ***
 
@@ -119,4 +121,4 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:9](https://github.
 
 > **tenantId**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:13](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L13)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L13)

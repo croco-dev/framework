@@ -7,7 +7,9 @@ title: "SecurityHeadersOptions"
 
 > **SecurityHeadersOptions** = `object`
 
-Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:3](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L3)
+Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L3)
+
+보안 헤더 미들웨어 및 옵션 타입입니다.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddlew
 
 > `optional` **contentTypeOptions**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L5)
+Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L5)
 
 Enable X-Content-Type-Options: nosniff. Default: true
 
@@ -25,7 +27,7 @@ Enable X-Content-Type-Options: nosniff. Default: true
 
 > `optional` **frameOptions**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L9)
+Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L9)
 
 Enable X-Frame-Options: DENY. Default: true
 
@@ -35,7 +37,7 @@ Enable X-Frame-Options: DENY. Default: true
 
 > `optional` **referrerPolicy**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:13](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L13)
+Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L13)
 
 Enable Referrer-Policy: strict-origin-when-cross-origin. Default: true
 
@@ -45,7 +47,7 @@ Enable Referrer-Policy: strict-origin-when-cross-origin. Default: true
 
 > `optional` **strictTransportSecurity**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:7](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L7)
+Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L7)
 
 Enable Strict-Transport-Security. Default: true
 
@@ -55,6 +57,6 @@ Enable Strict-Transport-Security. Default: true
 
 > `optional` **xssProtection**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L11)
+Defined in: [packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts#L11)
 
 Enable X-XSS-Protection: 1; mode=block. Default: true

@@ -7,7 +7,7 @@ title: "lambdaPreset"
 
 > **lambdaPreset**(`options`): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/)
 
-Defined in: [packages/telemetry-sdk-node/src/libs/presets/lambda.ts:12](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-sdk-node/src/libs/presets/lambda.ts#L12)
+Defined in: [packages/telemetry-sdk-node/src/libs/presets/lambda.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-sdk-node/src/libs/presets/lambda.ts#L12)
 
 ## Parameters
 
@@ -15,6 +15,10 @@ Defined in: [packages/telemetry-sdk-node/src/libs/presets/lambda.ts:12](https://
 
 `LambdaPresetOptions`
 
+Lambda preset options
+
 ## Returns
 
 [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/)
+
+A complete [TelemetryConfig](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) object

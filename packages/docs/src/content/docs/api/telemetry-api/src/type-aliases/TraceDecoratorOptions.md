@@ -7,7 +7,31 @@ title: "TraceDecoratorOptions"
 
 > **TraceDecoratorOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/decorators/Trace.ts#L4)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/decorators/Trace.ts#L4)
+
+Options for configuring the
+
+## Trace
+
+decorator behavior.
+
+## Remarks
+
+Allows customization of the Span name and additional attributes.
+
+## Example
+
+```typescript
+class PaymentService {
+  @Trace({
+    name: 'process-payment',
+    attributes: { 'service.type': 'payment' }
+  })
+  async processPayment(amount: number): Promise<void> {
+    // ...
+  }
+}
+```
 
 ## Properties
 
@@ -15,7 +39,9 @@ Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:4](https://gith
 
 > `optional` **attributes**: `Attributes`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:6](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/decorators/Trace.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/decorators/Trace.ts#L6)
+
+Additional key-value pairs to attach to the Span
 
 ***
 
@@ -23,4 +49,6 @@ Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:6](https://gith
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/decorators/Trace.ts#L5)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/decorators/Trace.ts#L5)
+
+Custom Span name (defaults to method name)

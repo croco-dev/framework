@@ -5,15 +5,23 @@ prev: false
 title: "RegisterEventHandler"
 ---
 
-> **RegisterEventHandler**(`eventClass`): \<`T`\>(`f`) => `T`
+> **RegisterEventHandler**(`eventClass`, `options?`): \<`T`\>(`f`) => `T`
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventHandler.ts#L10)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventHandler.ts#L10)
+
+이벤트 타입과 핸들러를 연결하는 클래스 데코레이터입니다.
 
 ## Parameters
 
 ### eventClass
 
 (...`args`) => [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
+### options?
+
+#### eventName?
+
+`string`
 
 ## Returns
 

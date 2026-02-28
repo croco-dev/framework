@@ -7,7 +7,13 @@ title: "MeterOptions"
 
 > **MeterOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:6](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/decorators/Meter.ts#L6)
+Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/decorators/Meter.ts#L6)
+
+Meter 클래스 데코레이터의 메타데이터 타입입니다.
+
+## Description
+
+`@Meter` 데코레이터로 클래스에 정의된 Meter의 메타데이터를 나타냅니다.
 
 ## Properties
 
@@ -15,7 +21,7 @@ Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:6](https://gith
 
 > `optional` **allowOverQuota**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:10](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/decorators/Meter.ts#L10)
+Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/decorators/Meter.ts#L10)
 
 ***
 
@@ -23,7 +29,7 @@ Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:10](https://git
 
 > **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:7](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/decorators/Meter.ts#L7)
+Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/decorators/Meter.ts#L7)
 
 ***
 
@@ -31,7 +37,7 @@ Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:7](https://gith
 
 > `optional` **quota**: `number`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/decorators/Meter.ts#L9)
+Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/decorators/Meter.ts#L9)
 
 ***
 
@@ -39,4 +45,4 @@ Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:9](https://gith
 
 > `optional` **type**: [`MeterType`](/api/metering-core/src/type-aliases/metertype/)
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:8](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/decorators/Meter.ts#L8)
+Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/decorators/Meter.ts#L8)

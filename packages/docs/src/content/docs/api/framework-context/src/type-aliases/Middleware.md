@@ -7,7 +7,7 @@ title: "Middleware"
 
 > **Middleware**\<`TContext`\> = (`ctx`, `next`) => `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:50](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/framework-context/src/libs/types.ts#L50)
+Defined in: [packages/framework-context/src/libs/types.ts:50](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/types.ts#L50)
 
 Onion middleware function type
 Similar to Koa middleware pattern

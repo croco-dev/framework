@@ -5,7 +5,9 @@ prev: false
 title: "PipelineRunner"
 ---
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:13](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/PipelineRunner.ts#L13)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:30](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/PipelineRunner.ts#L30)
+
+Croco HTTP 앱의 핵심 런타임 API입니다.
 
 ## Constructors
 
@@ -23,7 +25,7 @@ Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:13](https://git
 
 > **run**(`execContext`, `handler`, `config`): `Promise`\<`unknown`\>
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:18](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/PipelineRunner.ts#L18)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:35](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/PipelineRunner.ts#L35)
 
 #### Parameters
 

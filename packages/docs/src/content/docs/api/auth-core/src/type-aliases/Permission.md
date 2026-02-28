@@ -7,7 +7,9 @@ title: "Permission"
 
 > **Permission** = `object`
 
-Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:1](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/rbac/Permission.ts#L1)
+Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/Permission.ts#L3)
+
+Permission utilities and permission type.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:1](https://github.co
 
 > **action**: `"read"` \| `"write"` \| `"delete"` \| `"manage"`
 
-Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:3](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/rbac/Permission.ts#L3)
+Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/Permission.ts#L5)
 
 ***
 
@@ -23,4 +25,4 @@ Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:3](https://github.co
 
 > **resource**: `string`
 
-Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:2](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/rbac/Permission.ts#L2)
+Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/Permission.ts#L4)

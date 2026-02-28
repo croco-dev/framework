@@ -5,7 +5,9 @@ prev: false
 title: "CrocoHttpContext"
 ---
 
-Defined in: [packages/transports-http/src/libs/types.ts:20](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L20)
+Defined in: [packages/transports-http/src/libs/types.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L20)
+
+transports-http 구성과 실행에 사용되는 핵심 타입 집합입니다.
 
 ## Properties
 
@@ -13,7 +15,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:20](https://github.com/c
 
 > `readonly` **raw**: `Context`
 
-Defined in: [packages/transports-http/src/libs/types.ts:23](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L23)
+Defined in: [packages/transports-http/src/libs/types.ts:23](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L23)
 
 ***
 
@@ -21,7 +23,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:23](https://github.com/c
 
 > `readonly` **req**: [`CrocoRequest`](/api/transports-http/src/interfaces/crocorequest/)
 
-Defined in: [packages/transports-http/src/libs/types.ts:21](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L21)
+Defined in: [packages/transports-http/src/libs/types.ts:21](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L21)
 
 ***
 
@@ -29,7 +31,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:21](https://github.com/c
 
 > `readonly` **res**: [`CrocoResponse`](/api/transports-http/src/interfaces/crocoresponse/)
 
-Defined in: [packages/transports-http/src/libs/types.ts:22](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L22)
+Defined in: [packages/transports-http/src/libs/types.ts:22](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L22)
 
 ## Methods
 
@@ -37,7 +39,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:22](https://github.com/c
 
 > **get**\<`T`\>(`key`): `T` \| `undefined`
 
-Defined in: [packages/transports-http/src/libs/types.ts:29](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L29)
+Defined in: [packages/transports-http/src/libs/types.ts:29](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L29)
 
 #### Type Parameters
 
@@ -61,7 +63,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:29](https://github.com/c
 
 > **header**(`name`): `string` \| `undefined`
 
-Defined in: [packages/transports-http/src/libs/types.ts:26](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L26)
+Defined in: [packages/transports-http/src/libs/types.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L26)
 
 #### Parameters
 
@@ -79,7 +81,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:26](https://github.com/c
 
 > **json**\<`T`\>(): `Promise`\<`T`\>
 
-Defined in: [packages/transports-http/src/libs/types.ts:27](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L27)
+Defined in: [packages/transports-http/src/libs/types.ts:27](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L27)
 
 #### Type Parameters
 
@@ -97,7 +99,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:27](https://github.com/c
 
 > **jsonResponse**\<`T`\>(`body`, `status?`): `Response`
 
-Defined in: [packages/transports-http/src/libs/types.ts:31](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L31)
+Defined in: [packages/transports-http/src/libs/types.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L31)
 
 #### Type Parameters
 
@@ -125,7 +127,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:31](https://github.com/c
 
 > **param**(`name`): `string` \| `undefined`
 
-Defined in: [packages/transports-http/src/libs/types.ts:24](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L24)
+Defined in: [packages/transports-http/src/libs/types.ts:24](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L24)
 
 #### Parameters
 
@@ -143,7 +145,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:24](https://github.com/c
 
 > **query**(`name`): `string` \| `undefined`
 
-Defined in: [packages/transports-http/src/libs/types.ts:25](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L25)
+Defined in: [packages/transports-http/src/libs/types.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L25)
 
 #### Parameters
 
@@ -161,7 +163,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:25](https://github.com/c
 
 > **redirect**(`url`, `status?`): `Response`
 
-Defined in: [packages/transports-http/src/libs/types.ts:32](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L32)
+Defined in: [packages/transports-http/src/libs/types.ts:32](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L32)
 
 #### Parameters
 
@@ -183,7 +185,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:32](https://github.com/c
 
 > **set**\<`T`\>(`key`, `value`): `void`
 
-Defined in: [packages/transports-http/src/libs/types.ts:28](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L28)
+Defined in: [packages/transports-http/src/libs/types.ts:28](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L28)
 
 #### Type Parameters
 
@@ -211,7 +213,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:28](https://github.com/c
 
 > **text**(`body`, `status?`): `Response`
 
-Defined in: [packages/transports-http/src/libs/types.ts:30](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/types.ts#L30)
+Defined in: [packages/transports-http/src/libs/types.ts:30](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/types.ts#L30)
 
 #### Parameters
 

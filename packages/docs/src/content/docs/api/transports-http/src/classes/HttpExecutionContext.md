@@ -5,7 +5,9 @@ prev: false
 title: "HttpExecutionContext"
 ---
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L4)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L9)
+
+Croco HTTP 앱의 핵심 런타임 API입니다.
 
 ## Implements
 
@@ -17,7 +19,7 @@ Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:4](https:
 
 > **new HttpExecutionContext**(`ctx`, `controllerClass`, `handlerName`): `HttpExecutionContext`
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L5)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L10)
 
 #### Parameters
 
@@ -43,7 +45,7 @@ Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:5](https:
 
 > **getClass**(): `Constructor`
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:16](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L16)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:28](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L28)
 
 컨트롤러 클래스 참조
 
@@ -61,7 +63,7 @@ Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:16](https
 
 > **getHandler**(): `string` \| `symbol`
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:20](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L20)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:32](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L32)
 
 핸들러 메서드 이름
 
@@ -79,7 +81,7 @@ Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:20](https
 
 > **getHttpContext**(): [`CrocoHttpContext`](/api/transports-http/src/interfaces/crocohttpcontext/)
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:32](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L32)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:44](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L44)
 
 #### Returns
 
@@ -91,7 +93,7 @@ Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:32](https
 
 > **getMethod**(): `string`
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:28](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L28)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:40](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L40)
 
 HTTP 메서드 (GET, POST 등)
 
@@ -109,7 +111,7 @@ HTTP 메서드 (GET, POST 등)
 
 > **getPath**(): `string`
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:24](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L24)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:36](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L36)
 
 요청 URL 경로
 
@@ -127,7 +129,7 @@ Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:24](https
 
 > **getRequest**(): `Request`
 
-Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:11](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/transports-http/src/libs/HttpExecutionContext.ts#L11)
+Defined in: [packages/transports-http/src/libs/HttpExecutionContext.ts:16](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/HttpExecutionContext.ts#L16)
 
 원본 HTTP Request 객체
 

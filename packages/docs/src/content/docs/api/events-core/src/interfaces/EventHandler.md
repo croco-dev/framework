@@ -5,7 +5,9 @@ prev: false
 title: "EventHandler"
 ---
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventHandler.ts#L4)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventHandler.ts#L4)
+
+이벤트 핸들러 계약 타입과 핸들러 클래스 타입입니다.
 
 ## Type Parameters
 
@@ -19,7 +21,7 @@ Defined in: [packages/events-core/src/libs/EventHandler.ts:4](https://github.com
 
 > **handle**(`event`): `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/events-core/src/libs/EventHandler.ts#L5)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventHandler.ts#L5)
 
 #### Parameters
 

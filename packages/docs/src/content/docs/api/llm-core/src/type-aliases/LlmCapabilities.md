@@ -7,7 +7,7 @@ title: "LlmCapabilities"
 
 > **LlmCapabilities** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:299](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L299)
+Defined in: [packages/llm-core/src/libs/types.ts:299](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L299)
 
 LLM 기능 플래그
 
@@ -17,7 +17,7 @@ LLM 기능 플래그
 
 > **embedding**: `boolean`
 
-Defined in: [packages/llm-core/src/libs/types.ts:318](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L318)
+Defined in: [packages/llm-core/src/libs/types.ts:318](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L318)
 
 임베딩 지원
 
@@ -27,7 +27,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:318](https://github.com/croco-d
 
 > **objectGeneration**: `boolean`
 
-Defined in: [packages/llm-core/src/libs/types.ts:308](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L308)
+Defined in: [packages/llm-core/src/libs/types.ts:308](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L308)
 
 객체 생성 지원
 
@@ -37,7 +37,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:308](https://github.com/croco-d
 
 > **streaming**: `boolean`
 
-Defined in: [packages/llm-core/src/libs/types.ts:303](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L303)
+Defined in: [packages/llm-core/src/libs/types.ts:303](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L303)
 
 스트리밍 지원
 
@@ -47,6 +47,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:303](https://github.com/croco-d
 
 > **toolCalling**: `boolean`
 
-Defined in: [packages/llm-core/src/libs/types.ts:313](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/llm-core/src/libs/types.ts#L313)
+Defined in: [packages/llm-core/src/libs/types.ts:313](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L313)
 
 툴 호출 지원

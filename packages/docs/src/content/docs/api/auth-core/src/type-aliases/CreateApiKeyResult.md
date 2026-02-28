@@ -7,7 +7,9 @@ title: "CreateApiKeyResult"
 
 > **CreateApiKeyResult** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:34](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L34)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:34](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L34)
+
+API key domain model and creation option types.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:34](https://github
 
 > **id**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:36](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L36)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:36](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L36)
 
 ***
 
@@ -23,7 +25,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:36](https://github
 
 > **key**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:35](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L35)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:35](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L35)
 
 ***
 
@@ -31,4 +33,4 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:35](https://github
 
 > **keyStart**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:37](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/ApiKey.ts#L37)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:37](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/ApiKey.ts#L37)

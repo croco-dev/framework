@@ -7,7 +7,7 @@ title: "Component"
 
 > **Component**(`options?`): (`target`) => `void`
 
-Defined in: [packages/framework-context/src/libs/decorators/Component.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/framework-context/src/libs/decorators/Component.ts#L4)
+Defined in: [packages/framework-context/src/libs/decorators/Component.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/decorators/Component.ts#L4)
 
 ## Parameters
 
@@ -15,7 +15,11 @@ Defined in: [packages/framework-context/src/libs/decorators/Component.ts:4](http
 
 [`ComponentOptions`](/api/framework-context/src/interfaces/componentoptions/)
 
+컴포넌트 등록 옵션입니다.
+
 ## Returns
+
+클래스 데코레이터를 반환합니다.
 
 > (`target`): `void`
 

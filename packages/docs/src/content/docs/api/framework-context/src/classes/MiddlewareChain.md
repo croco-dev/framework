@@ -5,7 +5,7 @@ prev: false
 title: "MiddlewareChain"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:55](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/framework-context/src/libs/types.ts#L55)
+Defined in: [packages/framework-context/src/libs/types.ts:55](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/types.ts#L55)
 
 Middleware chain class for executing middleware in onion pattern
 
@@ -31,7 +31,7 @@ Middleware chain class for executing middleware in onion pattern
 
 > **clear**(): `void`
 
-Defined in: [packages/framework-context/src/libs/types.ts:92](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/framework-context/src/libs/types.ts#L92)
+Defined in: [packages/framework-context/src/libs/types.ts:92](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/types.ts#L92)
 
 Clear all middlewares
 
@@ -45,7 +45,7 @@ Clear all middlewares
 
 > **execute**(`ctx`): `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:69](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/framework-context/src/libs/types.ts#L69)
+Defined in: [packages/framework-context/src/libs/types.ts:69](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/types.ts#L69)
 
 Execute middleware chain in onion pattern
 
@@ -65,7 +65,7 @@ Execute middleware chain in onion pattern
 
 > **use**(`middleware`): `this`
 
-Defined in: [packages/framework-context/src/libs/types.ts:61](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/framework-context/src/libs/types.ts#L61)
+Defined in: [packages/framework-context/src/libs/types.ts:61](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/types.ts#L61)
 
 Add middleware to the chain
 

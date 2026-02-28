@@ -7,7 +7,9 @@ title: "Principal"
 
 > **Principal** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:3](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/Principal.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/Principal.ts#L3)
+
+Principal types used by guards and authorization.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:3](https://gith
 
 > **id**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:5](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/Principal.ts#L5)
+Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/Principal.ts#L5)
 
 ***
 
@@ -23,7 +25,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:5](https://gith
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:8](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/Principal.ts#L8)
+Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/Principal.ts#L8)
 
 ***
 
@@ -31,7 +33,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:8](https://gith
 
 > **permissions**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:6](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/Principal.ts#L6)
+Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/Principal.ts#L6)
 
 ***
 
@@ -39,7 +41,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:6](https://gith
 
 > `optional` **tenantId**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:7](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/Principal.ts#L7)
+Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/Principal.ts#L7)
 
 ***
 
@@ -47,4 +49,4 @@ Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:7](https://gith
 
 > **type**: [`PrincipalType`](/api/auth-core/src/type-aliases/principaltype/)
 
-Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:4](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/interfaces/Principal.ts#L4)
+Defined in: [packages/auth-core/src/libs/interfaces/Principal.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/Principal.ts#L4)

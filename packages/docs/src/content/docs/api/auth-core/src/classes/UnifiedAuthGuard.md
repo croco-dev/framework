@@ -5,7 +5,9 @@ prev: false
 title: "UnifiedAuthGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:8](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L8)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L20)
+
+Unified guard supporting principal and API key flows.
 
 ## Implements
 
@@ -17,7 +19,7 @@ Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:8](https://g
 
 > **new UnifiedAuthGuard**(`authProvider`, `apiKeyProvider`): `UnifiedAuthGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:9](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L9)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:21](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L21)
 
 #### Parameters
 
@@ -39,7 +41,7 @@ Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:9](https://g
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:14](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L14)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L26)
 
 #### Parameters
 

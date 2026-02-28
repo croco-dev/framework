@@ -7,7 +7,7 @@ title: "recordEvent"
 
 > **recordEvent**(`name`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:44](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/telemetry-api/src/libs/span.ts#L44)
+Defined in: [packages/telemetry-api/src/libs/span.ts:44](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/span.ts#L44)
 
 ## Parameters
 
@@ -22,3 +22,5 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:44](https://github.com/croc
 ## Returns
 
 `void`
+
+TraceInfo object with trace details, or empty object if no active trace

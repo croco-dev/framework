@@ -5,7 +5,32 @@ prev: false
 title: "QuotaManager"
 ---
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:23](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/QuotaManager.ts#L23)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:23](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/QuotaManager.ts#L23)
+
+quota 검증과 기록을 담당하는 관리자입니다.
+
+## Description
+
+Quota 확인 및 사용량 기록을 원자적으로 수행하는 관리자입니다. Redis Lua 스크립트를 사용하여 race condition을 방지합니다.
+
+## Example
+
+```typescript
+const manager = new QuotaManager(usageStorage, meterRegistry);
+
+// 원자적 quota 체크 및 기록
+const result = await manager.checkAndRecord({
+  tenantId: 'tenant-123',
+  meterId: 'api_calls',
+  value: 1,
+});
+
+if (!result.allowed) {
+  throw new QuotaExceededProblem('api_calls', result.quota, result.currentUsage);
+}
+
+console.log(`현재 사용량: ${result.currentUsage}/${result.quota}`);
+```
 
 ## Constructors
 
@@ -13,7 +38,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:23](https://github.
 
 > **new QuotaManager**(`options`): `QuotaManager`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:27](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/QuotaManager.ts#L27)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:27](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/QuotaManager.ts#L27)
 
 #### Parameters
 
@@ -31,7 +56,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:27](https://github.
 
 > **checkAndRecord**(`options`): `Promise`\<[`QuotaCheckAndRecordResult`](/api/metering-core/src/type-aliases/quotacheckandrecordresult/)\>
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:31](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/QuotaManager.ts#L31)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/QuotaManager.ts#L31)
 
 #### Parameters
 
@@ -49,7 +74,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:31](https://github.
 
 > **validateOrThrow**(`options`): `void`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:63](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/metering-core/src/libs/QuotaManager.ts#L63)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:63](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/QuotaManager.ts#L63)
 
 #### Parameters
 

@@ -5,7 +5,7 @@ prev: false
 title: "CircuitBreakerRetryTemplate"
 ---
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:24](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L24)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:24](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L24)
 
 Circuit Breaker와 Retry를 결합한 템플릿.
 
@@ -31,7 +31,7 @@ const result = await template.execute(
 
 > **new CircuitBreakerRetryTemplate**(`circuitBreaker`, `retryTemplate`): `CircuitBreakerRetryTemplate`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:25](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L25)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L25)
 
 #### Parameters
 
@@ -53,7 +53,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:25](htt
 
 > **execute**\<`T`\>(`callback`, `recovery?`): `Promise`\<`T`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:37](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L37)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:37](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L37)
 
 Circuit Breaker로 보호하며 재시도 로직을 적용하여 작업을 실행합니다.
 
@@ -89,7 +89,7 @@ Circuit Breaker로 보호하며 재시도 로직을 적용하여 작업을 실�
 
 > **getCircuitBreaker**(): [`CircuitBreaker`](/api/retry-core/src/classes/circuitbreaker/)
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:44](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L44)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:44](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L44)
 
 Circuit Breaker 인스턴스를 반환합니다.
 
@@ -103,7 +103,7 @@ Circuit Breaker 인스턴스를 반환합니다.
 
 > **getRetryTemplate**(): [`RetryTemplate`](/api/retry-core/src/classes/retrytemplate/)
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:51](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L51)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:51](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L51)
 
 RetryTemplate 인스턴스를 반환합니다.
 
@@ -117,7 +117,7 @@ RetryTemplate 인스턴스를 반환합니다.
 
 > `static` **withOptions**(`circuitBreakerOptions`, `retryTemplateOptions?`): `CircuitBreakerRetryTemplate`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:62](https://github.com/croco-dev/shared/blob/dbd54c8f608d8b724372129dd3d92924b60cf720/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L62)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts:62](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/CircuitBreakerRetryTemplate.ts#L62)
 
 Circuit Breaker와 Retry 옵션으로 새 인스턴스를 생성합니다.
 
