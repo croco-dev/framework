@@ -91,7 +91,7 @@ describe('QStashChunkExecutor', () => {
         stepName: 'test-step',
       },
       headers: {
-        'Idempotency-Key': 'chunk:exec-1:test-step:no-checkpoint',
+        'Idempotency-Key': 'chunk:exec-1:test-step:no-checkpoint:2',
       },
     });
     expect(executionManager.complete).not.toHaveBeenCalled();
@@ -207,6 +207,44 @@ describe('QStashChunkExecutor', () => {
     const secondIdempotencyKey = secondPublish[0].headers['Idempotency-Key'];
 
     expect(firstIdempotencyKey).not.toBe(secondIdempotencyKey);
+  });
+
+  it('BUG-77 checkpoint 없는 청크 체이닝에서도 멱등성 키가 청크별로 달라야 한다', async () => {
+    startMock
+      .mockResolvedValueOnce({ id: 'exec-1', checkpoints: {} })
+      .mockResolvedValueOnce({ id: 'exec-1', checkpoints: { 'bug-77-step.processedCount': 2 } });
+
+    const reader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(4)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(null),
+    };
+    const writer = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const step = new Step<number, number>({
+      name: 'bug-77-step',
+      reader,
+      writer,
+      chunkSize: 2,
+    });
+
+    await executor.executeChunk('exec-1', step);
+    await executor.executeChunk('exec-1', step);
+
+    expect(qstashClient.publishJSON).toHaveBeenCalledTimes(2);
+
+    const firstCallHeaders = qstashClient.publishJSON.mock.calls[0]?.[0]?.headers;
+    const secondCallHeaders = qstashClient.publishJSON.mock.calls[1]?.[0]?.headers;
+
+    expect(firstCallHeaders?.['Idempotency-Key']).toBe('chunk:exec-1:bug-77-step:no-checkpoint:2');
+    expect(secondCallHeaders?.['Idempotency-Key']).toBe('chunk:exec-1:bug-77-step:no-checkpoint:4');
   });
 
   it('should restore checkpoint from execution', async () => {
