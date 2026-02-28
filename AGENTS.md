@@ -272,3 +272,18 @@ service:
 - AsyncLocalStorage: request-scoped context
 - 이벤트 기반 아키텍처 (events-core + events-inmemory)
 - 분산 추적: OpenTelemetry OTLP 기반 (@croco/telemetry-api + @croco/telemetry-sdk-node)
+
+
+## Dependency Rules
+
+### repository-core
+
+`@croco/repository-core`는 **인터페이스 레이어**다. 아래 의존성을 가져서는 안 된다:
+
+- `drizzle-orm` — ORM 라이브러리 직접 참조 금지
+- `@croco/tx-drizzle` — Drizzle 구현체 참조 금지
+- `@croco/tx-core`의 Drizzle 관련 타입 직접 사용 금지
+
+Drizzle 기반 구현체(`AbstractDrizzleRepository` 등)는 반드시 `@croco/tx-drizzle` 패키지에 위치해야 한다.
+
+위반 체크: `grep -r "drizzle" packages/repository-core/src/`가 결과를 출력하면 의존성 오염이다.
