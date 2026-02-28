@@ -2,20 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import 'reflect-metadata';
 import { z } from 'zod';
 import { bootstrapConfig, ConfigSchema, getConfigSchema } from '../decorators/ConfigSchema';
+import { ConfigValidationProblem } from '../libs/problems/ConfigProblems';
 import { validateConfig } from '../validateConfig';
 
 describe('validateConfig', () => {
-  const originalExit = process.exit;
   const originalEnv = process.env;
 
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    process.exit = vi.fn() as never;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    process.exit = originalExit;
     process.env = originalEnv;
   });
 
@@ -72,7 +70,7 @@ describe('validateConfig', () => {
   });
 
   describe('with invalid config', () => {
-    it('should call process.exit(1) when required field is missing', () => {
+    it('should throw when required field is missing', () => {
       const schema = z.object({
         DATABASE_URL: z.string(),
         API_KEY: z.string(),
@@ -82,9 +80,7 @@ describe('validateConfig', () => {
         DATABASE_URL: 'postgresql://localhost:5432/test',
       };
 
-      validateConfig(schema, env);
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
     });
 
     it('should log missing required fields', () => {
@@ -95,7 +91,7 @@ describe('validateConfig', () => {
 
       const env = {};
 
-      validateConfig(schema, env);
+      expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith('[CONFIG ERROR] Missing required: MISSING_VAR');
     });
@@ -109,7 +105,7 @@ describe('validateConfig', () => {
 
       const env = {};
 
-      validateConfig(schema, env);
+      expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith('[CONFIG ERROR] Missing required: VAR1, VAR2');
     });
@@ -124,7 +120,7 @@ describe('validateConfig', () => {
 
       const env = {};
 
-      validateConfig(schema, env);
+      expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith('[CONFIG ERROR] Missing required: DATABASE');
     });
@@ -185,16 +181,12 @@ describe('ConfigSchema decorator', () => {
 });
 
 describe('bootstrapConfig', () => {
-  const originalExit = process.exit;
-
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    process.exit = vi.fn() as never;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    process.exit = originalExit;
   });
 
   it('should validate and return config for decorated class', () => {
@@ -221,7 +213,7 @@ describe('bootstrapConfig', () => {
     expect(() => bootstrapConfig(PlainConfig, {})).toThrow("No config schema found for 'PlainConfig'");
   });
 
-  it('should call process.exit(1) when validation fails', () => {
+  it('should throw when validation fails', () => {
     const schema = z.object({
       REQUIRED_VAR: z.string(),
     });
@@ -230,8 +222,6 @@ describe('bootstrapConfig', () => {
     class AppConfig {}
     ConfigSchema(schema)(AppConfig);
 
-    bootstrapConfig(AppConfig, {});
-
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(() => bootstrapConfig(AppConfig, {})).toThrow(ConfigValidationProblem);
   });
 });
