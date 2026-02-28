@@ -33,6 +33,8 @@ export class InMemoryEventBus implements EventBus {
       },
       async (publishSpan: Span) => {
         try {
+          let hasHandlerFailure = false;
+
           await Promise.allSettled(
             Array.from(handlerClasses).map(async (handlerClass) => {
               const handlerName = handlerClass.name;
@@ -54,6 +56,7 @@ export class InMemoryEventBus implements EventBus {
                     await handlerInstance.handle(handlerEvent);
                     handleSpan.setStatus({ code: SpanStatusCode.OK });
                   } catch (error) {
+                    hasHandlerFailure = true;
                     const normalizedError = this.normalizeError(error);
                     handleSpan.recordException(normalizedError);
                     handleSpan.setStatus({
@@ -74,7 +77,15 @@ export class InMemoryEventBus implements EventBus {
               );
             })
           );
-          publishSpan.setStatus({ code: SpanStatusCode.OK });
+
+          if (hasHandlerFailure) {
+            publishSpan.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: 'One or more event handlers failed',
+            });
+          } else {
+            publishSpan.setStatus({ code: SpanStatusCode.OK });
+          }
         } catch (error) {
           const normalizedError = this.normalizeError(error);
           publishSpan.recordException(normalizedError);

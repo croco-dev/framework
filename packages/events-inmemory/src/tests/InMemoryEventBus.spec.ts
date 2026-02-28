@@ -1,6 +1,7 @@
 import { DomainEvent, type EventHandler, type EventSubscription } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import * as telemetryApi from '@croco/telemetry-api';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryEventBus } from '../index';
 
@@ -300,6 +301,56 @@ describe('InMemoryEventBus', () => {
       expect(handleSpan.recordException).toHaveBeenCalledTimes(1);
       expect(handleSpan.recordException).toHaveBeenCalledWith(expectedError);
       expect((handleSpan.recordException.mock.calls[0][0] as Error).stack).toBe(expectedError.stack);
+    });
+
+    it('should mark publish span as error when any handler fails', async () => {
+      class SuccessHandler extends TestHandler {}
+      class FailHandler extends FailingHandler {}
+
+      const successHandler = new SuccessHandler();
+      const failHandler = new FailHandler();
+
+      Container.set(SuccessHandler, successHandler);
+      Container.set(FailHandler, failHandler);
+
+      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailHandler });
+      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SuccessHandler });
+
+      const publishSpan = {
+        setStatus: vi.fn(),
+        recordException: vi.fn(),
+        end: vi.fn(),
+      };
+      const handleSpan = {
+        setStatus: vi.fn(),
+        recordException: vi.fn(),
+        end: vi.fn(),
+      };
+
+      const mockTracer = {
+        startActiveSpan: vi.fn(
+          async (
+            name: string,
+            _options: { attributes: Record<string, unknown> },
+            callback: (span: typeof publishSpan) => Promise<void>
+          ) => {
+            const span = name.startsWith('event.publish:') ? publishSpan : handleSpan;
+            await callback(span);
+          }
+        ),
+      };
+
+      Object.defineProperty(eventBus, 'tracer', {
+        value: mockTracer,
+      });
+
+      await eventBus.publish(new TestEvent('status-check'));
+
+      expect(publishSpan.setStatus).toHaveBeenCalledWith({
+        code: SpanStatusCode.ERROR,
+        message: 'One or more event handlers failed',
+      });
+      expect(successHandler.handledEvents).toHaveLength(1);
     });
 
     it('should isolate mutable payload between handlers in the same publish', async () => {
