@@ -14,6 +14,30 @@ type DrizzleDb = {
 
 type SQLWrapper = { getSQL: () => unknown };
 
+function normalizeAllowedValue(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === '1' || normalized === 'true' || normalized === 't') {
+      return true;
+    }
+
+    if (normalized === '0' || normalized === 'false' || normalized === 'f') {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 const MAX_TRAVERSAL_DEPTH = 10;
 
 export class DrizzleAccessProvider implements AccessProvider {
@@ -44,8 +68,8 @@ export class DrizzleAccessProvider implements AccessProvider {
       `
     );
 
-    const rows = result.rows as unknown as { allowed: 0 | 1 }[];
-    return { allowed: rows[0]?.allowed === 1 };
+    const firstRow = result.rows[0] as { allowed?: unknown } | undefined;
+    return { allowed: normalizeAllowedValue(firstRow?.allowed) };
   }
 
   async grant(request: GrantRequest): Promise<void> {
