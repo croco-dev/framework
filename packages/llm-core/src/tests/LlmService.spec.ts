@@ -72,7 +72,7 @@ describe('LlmService', () => {
 
       expect(eventBus.publish).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventName: 'LlmGeneratedEvent',
+          eventName: 'llm.generated',
           type: 'llm.generated',
           modelId: 'test-model',
           prompt: 'Hello',
@@ -159,7 +159,7 @@ describe('LlmService', () => {
 
       expect(eventBus.publish).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventName: 'LlmStreamCompletedEvent',
+          eventName: 'llm.stream_completed',
           type: 'llm.stream_completed',
           modelId: 'stream-model',
           usage: expect.objectContaining({

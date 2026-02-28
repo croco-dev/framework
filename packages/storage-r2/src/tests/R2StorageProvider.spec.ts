@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import type { ConfigService } from '@croco/framework-config';
 import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -77,13 +78,28 @@ describe('R2StorageProvider', () => {
 
   describe('getStream', () => {
     it('should return a readable stream from S3', async () => {
-      const mockStream = { test: 'stream' };
+      const mockBody = Readable.from([Buffer.from('stream')]);
       mockSend.mockResolvedValue({
-        Body: mockStream,
+        Body: mockBody,
       });
 
       const stream = await provider.getStream('test/file.txt');
-      expect(stream).toEqual(mockStream);
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        if (Buffer.isBuffer(chunk)) {
+          chunks.push(chunk);
+          continue;
+        }
+
+        if (typeof chunk === 'string') {
+          chunks.push(Buffer.from(chunk));
+          continue;
+        }
+
+        chunks.push(Buffer.from([Number(chunk)]));
+      }
+
+      expect(Buffer.concat(chunks)).toEqual(Buffer.from('stream'));
     });
 
     it('should throw FileNotFoundProblem when S3 returns 404', async () => {
