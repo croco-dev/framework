@@ -1,8 +1,8 @@
 import 'reflect-metadata';
-import type { ExecutionContext } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiKeyGuard } from '../libs/guards/ApiKeyGuard';
 import type { ApiKeyProvider } from '../libs/interfaces/ApiKeyProvider';
+import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 
@@ -20,7 +20,7 @@ describe('ApiKeyGuard', () => {
     tenantId: 'tenant-1',
   };
 
-  const createMockContext = (headers: Record<string, string>): ExecutionContext => {
+  const createMockContext = (headers: Record<string, string>): RouteExecutionContext => {
     const request = { headers } as unknown as Request;
     return {
       getRequest: () => request,
@@ -28,10 +28,10 @@ describe('ApiKeyGuard', () => {
       getHandler: () => 'testMethod',
       getPath: () => '/test',
       getMethod: () => 'GET',
-    } as unknown as ExecutionContext;
+    } as RouteExecutionContext;
   };
 
-  const createRequestContext = (headersInit: HeadersInit): ExecutionContext => {
+  const createRequestContext = (headersInit: HeadersInit): RouteExecutionContext => {
     const request = new Request('https://example.com/test', {
       headers: new Headers(headersInit),
     });
@@ -42,7 +42,7 @@ describe('ApiKeyGuard', () => {
       getHandler: () => 'testMethod',
       getPath: () => '/test',
       getMethod: () => 'GET',
-    } as unknown as ExecutionContext;
+    } as RouteExecutionContext;
   };
 
   beforeEach(() => {

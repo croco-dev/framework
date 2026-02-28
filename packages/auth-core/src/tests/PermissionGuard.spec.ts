@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import type { ExecutionContext } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_PERMISSIONS_KEY } from '../libs/constants';
 import { PermissionGuard } from '../libs/guards/PermissionGuard';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
+import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { ForbiddenProblem } from '../libs/problems/AuthProblems';
 import type { RbacEngine } from '../libs/rbac/RbacEngine';
@@ -38,7 +38,7 @@ describe('PermissionGuard', () => {
       getHandler: () => handlerName,
       getPath: () => '/test',
       getMethod: () => 'GET',
-    } as unknown as ExecutionContext;
+    } as RouteExecutionContext;
   };
 
   beforeEach(() => {

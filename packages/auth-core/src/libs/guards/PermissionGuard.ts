@@ -1,6 +1,6 @@
 import 'reflect-metadata';
-import type { ExecutionContext, Guard } from '@croco/protocols-rest';
 import { AUTH_PERMISSIONS_KEY } from '../constants';
+import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
 import type { ApiKeyPrincipal, Principal, UserPrincipal } from '../interfaces/Principal';
 import { ForbiddenProblem } from '../problems/AuthProblems';
 import { hasPermission } from '../rbac/Permission';
@@ -10,12 +10,20 @@ type PrincipalWithRoles =
   | UserPrincipal
   | { id: string; email?: string; roles: string[]; permissions: string[]; metadata?: Record<string, unknown> };
 
-export class PermissionGuard implements Guard<ExecutionContext> {
+function isMetadataTarget(value: unknown): value is object {
+  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+}
+
+export class PermissionGuard implements Guard<RouteExecutionContext> {
   constructor(private rbacEngine: RbacEngine) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  canActivate(context: RouteExecutionContext): boolean {
     const target = context.getClass();
     const handler = context.getHandler();
+
+    if (!isMetadataTarget(target)) {
+      return true;
+    }
 
     const requiredPermissions = Reflect.getMetadata(AUTH_PERMISSIONS_KEY, target, handler) as string[] | undefined;
 

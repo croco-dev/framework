@@ -1,10 +1,10 @@
 import 'reflect-metadata';
-import type { ExecutionContext } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_PUBLIC_KEY } from '../libs/constants';
 import { AuthGuard } from '../libs/guards/AuthGuard';
 import type { AuthProvider } from '../libs/interfaces/AuthProvider';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
+import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 
 describe('AuthGuard', () => {
@@ -23,7 +23,7 @@ describe('AuthGuard', () => {
       getHandler: () => handlerName,
       getPath: () => '/test',
       getMethod: () => 'GET',
-    } as unknown as ExecutionContext;
+    } as RouteExecutionContext;
   };
 
   beforeEach(() => {

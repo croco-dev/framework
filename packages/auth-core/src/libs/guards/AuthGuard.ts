@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import type { ExecutionContext, Guard } from '@croco/protocols-rest';
 import { AUTH_PUBLIC_KEY } from '../constants';
 import type { AuthProvider } from '../interfaces/AuthProvider';
+import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
 
 function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
@@ -15,12 +15,20 @@ function isPublicRoute(controllerTarget: object, handler: string | symbol): bool
   );
 }
 
-export class AuthGuard implements Guard<ExecutionContext> {
+function isMetadataTarget(value: unknown): value is object {
+  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+}
+
+export class AuthGuard implements Guard<RouteExecutionContext> {
   constructor(private authProvider: AuthProvider) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  async canActivate(context: RouteExecutionContext): Promise<boolean> {
     const target = context.getClass();
     const handler = context.getHandler();
+
+    if (!isMetadataTarget(target)) {
+      return true;
+    }
 
     const isPublic = isPublicRoute(target, handler);
 

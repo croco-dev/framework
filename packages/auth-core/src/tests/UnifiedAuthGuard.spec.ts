@@ -1,11 +1,11 @@
 import 'reflect-metadata';
-import type { ExecutionContext } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_PUBLIC_KEY } from '../libs/constants';
 import { UnifiedAuthGuard } from '../libs/guards/UnifiedAuthGuard';
 import type { ApiKeyProvider } from '../libs/interfaces/ApiKeyProvider';
 import type { AuthProvider } from '../libs/interfaces/AuthProvider';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
+import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 
@@ -35,7 +35,7 @@ describe('UnifiedAuthGuard', () => {
     target: unknown,
     handlerName: string,
     headers: Record<string, string> = {}
-  ): ExecutionContext => {
+  ): RouteExecutionContext => {
     const request = { headers } as unknown as Request;
     return {
       getRequest: () => request,
@@ -43,14 +43,14 @@ describe('UnifiedAuthGuard', () => {
       getHandler: () => handlerName,
       getPath: () => '/test',
       getMethod: () => 'GET',
-    } as unknown as ExecutionContext;
+    } as RouteExecutionContext;
   };
 
   const createRequestContext = (
     target: unknown,
     handlerName: string,
     headersInit: HeadersInit = {}
-  ): ExecutionContext => {
+  ): RouteExecutionContext => {
     const request = new Request('https://example.com/test', {
       headers: new Headers(headersInit),
     });
@@ -61,7 +61,7 @@ describe('UnifiedAuthGuard', () => {
       getHandler: () => handlerName,
       getPath: () => '/test',
       getMethod: () => 'GET',
-    } as unknown as ExecutionContext;
+    } as RouteExecutionContext;
   };
 
   beforeEach(() => {

@@ -1,13 +1,13 @@
 import 'reflect-metadata';
-import type { ExecutionContext, Guard } from '@croco/protocols-rest';
 import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
+import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
 import { getHeaderValue } from './headerUtils';
 
-export class ApiKeyGuard implements Guard<ExecutionContext> {
+export class ApiKeyGuard implements Guard<RouteExecutionContext> {
   constructor(private readonly apiKeyProvider: ApiKeyProvider) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  async canActivate(context: RouteExecutionContext): Promise<boolean> {
     const request = context.getRequest();
     const apiKey = this.extractApiKey(request);
 
