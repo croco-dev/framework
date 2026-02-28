@@ -76,7 +76,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     const response = await fetch(url);
 
     if (!response.ok) {
-      this.throwNotFound(key);
+      if (response.status === 404) {
+        this.throwNotFound(key);
+      }
+
+      this.throwUploadFailed(key, `Failed to fetch image: HTTP ${response.status}`);
     }
 
     const arrayBuffer = await response.arrayBuffer();

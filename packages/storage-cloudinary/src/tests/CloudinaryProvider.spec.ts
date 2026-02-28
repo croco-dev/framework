@@ -1,6 +1,6 @@
 import { Container } from '@croco/framework-context';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions, TransformOptions, UploadIntent } from '@croco/storage-core';
-import { FileNotFoundProblem, InvalidKeyProblem, UploadFailedProblem } from '@croco/storage-core';
+import { DeleteFailedProblem, FileNotFoundProblem, InvalidKeyProblem, UploadFailedProblem } from '@croco/storage-core';
 import { v2 as cloudinary } from 'cloudinary';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloudinaryProvider } from '../libs/CloudinaryProvider';
@@ -289,10 +289,10 @@ describe('CloudinaryProvider', () => {
       await expect(provider.delete('test-key')).resolves.not.toThrow();
     });
 
-    it('should throw UploadFailedProblem on delete failure', async () => {
+    it('should throw DeleteFailedProblem on delete failure', async () => {
       vi.mocked(cloudinary.uploader.destroy).mockResolvedValue({ result: 'error' });
 
-      await expect(provider.delete('test-key')).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.delete('test-key')).rejects.toThrow(DeleteFailedProblem);
     });
 
     it('should throw InvalidKeyProblem for invalid key', async () => {
@@ -302,18 +302,15 @@ describe('CloudinaryProvider', () => {
 
   describe('exists()', () => {
     it('should return true for existing resource', async () => {
-      vi.mocked(cloudinary.api.resource).mockResolvedValue({ public_id: 'test-key' });
+      vi.mocked(global.fetch).mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3])));
 
       const result = await provider.exists('test-key');
 
       expect(result).toBe(true);
-      expect(cloudinary.api.resource).toHaveBeenCalledWith('test-key', {
-        resource_type: 'image',
-      });
     });
 
     it('should return false for non-existing resource', async () => {
-      vi.mocked(cloudinary.api.resource).mockRejectedValue(new Error('Not found'));
+      vi.mocked(global.fetch).mockResolvedValueOnce(new Response(null, { status: 404 }));
 
       const result = await provider.exists('test-key');
 

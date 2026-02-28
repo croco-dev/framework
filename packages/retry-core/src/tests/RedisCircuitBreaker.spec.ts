@@ -99,6 +99,7 @@ describe('RedisCircuitBreakerStore', () => {
   it('Redis 오류 발생 시 인메모리로 자동 전환되어야 한다', async () => {
     const redis = createFailingMockRedis();
     const store = new RedisCircuitBreakerStore({
+      onStoreError: 'fallback-inmemory',
       redis: redis as unknown as never,
     });
 
