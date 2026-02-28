@@ -1,43 +1,35 @@
 import 'reflect-metadata';
 import { getAllResolvers } from '@croco/protocols-graphql';
 import type { GraphQLSchema } from 'graphql';
-import { buildSchema } from 'type-graphql';
+import { type BuildSchemaOptions, buildSchema, type NonEmptyArray } from 'type-graphql';
 import type { SchemaCompileOptions } from './types';
 
 export class SchemaCompiler {
   static async compileSchema(options: SchemaCompileOptions = {}): Promise<GraphQLSchema> {
     const { resolvers: manualResolvers, autoDiscover = true, container, emitSchemaFile, validate } = options;
 
-    const buildOptions: {
-      resolvers: Function[];
-      container?: unknown;
-      emitSchemaFile?: boolean | string;
-      validate?: boolean;
-    } = {
-      resolvers: [...(manualResolvers || [])],
-    };
+    const resolvers = [...(manualResolvers || [])];
 
     if (autoDiscover) {
       const discoveredResolvers = getAllResolvers();
-      buildOptions.resolvers.push(...discoveredResolvers);
+      resolvers.push(...discoveredResolvers);
     }
 
-    if (buildOptions.resolvers.length === 0) {
+    const [firstResolver, ...remainingResolvers] = resolvers;
+
+    if (!firstResolver) {
       throw new Error('No resolvers provided. Provide resolvers manually or enable autoDiscover.');
     }
 
-    if (container) {
-      buildOptions.container = container;
-    }
+    const schemaResolvers: NonEmptyArray<Function> = [firstResolver, ...remainingResolvers];
 
-    if (emitSchemaFile !== undefined) {
-      buildOptions.emitSchemaFile = emitSchemaFile;
-    }
+    const buildOptions: BuildSchemaOptions = {
+      resolvers: schemaResolvers,
+      ...(container !== undefined ? { container } : {}),
+      ...(emitSchemaFile !== undefined ? { emitSchemaFile } : {}),
+      ...(validate !== undefined ? { validate } : {}),
+    };
 
-    if (validate !== undefined) {
-      buildOptions.validate = validate;
-    }
-
-    return buildSchema(buildOptions as never);
+    return buildSchema(buildOptions);
   }
 }
