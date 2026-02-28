@@ -35,11 +35,14 @@ export class QStashChunkExecutor {
     const execution = await this.executionManager.start(executionId);
 
     const checkpointKey = `${step.name}.cursor`;
+    const processedCountKey = `${step.name}.processedCount`;
     if (execution.checkpoints?.[checkpointKey]) {
       if (isCheckpointable(step.reader)) {
         step.reader.restoreCheckpoint(execution.checkpoints[checkpointKey]);
       }
     }
+
+    const previousProcessedCount = this.getProcessedCount(execution.checkpoints?.[processedCountKey]);
 
     const items: O[] = [];
     let hasMore = false;
@@ -78,12 +81,14 @@ export class QStashChunkExecutor {
       }
 
       hasMore = await this.hasMoreItems(step, readCount, checkpointAfterChunk);
+      const cumulativeProcessedCount = previousProcessedCount + items.length;
 
       if (hasMore) {
+        await this.executionManager.checkpoint(executionId, processedCountKey, cumulativeProcessedCount);
         await this.triggerNextChunk(executionId, step.name, checkpointAfterChunk);
       } else {
         await this.executionManager.complete(executionId, {
-          processedCount: items.length,
+          processedCount: cumulativeProcessedCount,
         });
       }
 
@@ -97,6 +102,14 @@ export class QStashChunkExecutor {
       });
       throw error;
     }
+  }
+
+  private getProcessedCount(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return 0;
+    }
+
+    return value;
   }
 
   private async hasMoreItems<I, O>(
