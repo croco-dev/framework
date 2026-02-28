@@ -41,6 +41,46 @@ describe('ChunkExecutor', () => {
     expect(reader.read).toHaveBeenCalledTimes(3);
     expect(writer.write).toHaveBeenCalledWith([1, 2]);
     expect(executionManager.complete).toHaveBeenCalledWith('exec-1', { processedCount: 2 });
+    expect(executionManager.updateProgress).not.toHaveBeenCalled();
+  });
+
+  it('should update progress after each successful chunk when total is available', async () => {
+    (executionManager.start as Mock).mockResolvedValue({
+      id: 'exec-1',
+      checkpoints: {},
+      progress: { current: 0, total: 3 },
+    });
+
+    const reader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(null),
+    };
+    const writer = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const step = new Step<number, number>({
+      name: 'test-step',
+      reader,
+      writer,
+      chunkSize: 2,
+    });
+
+    await executor.execute('exec-1', step);
+
+    expect(executionManager.updateProgress).toHaveBeenNthCalledWith(1, 'exec-1', {
+      current: 2,
+      total: 3,
+    });
+    expect(executionManager.updateProgress).toHaveBeenNthCalledWith(2, 'exec-1', {
+      current: 3,
+      total: 3,
+    });
+    expect(executionManager.complete).toHaveBeenCalledWith('exec-1', { processedCount: 3 });
   });
 
   it('should support checkpointing', async () => {
