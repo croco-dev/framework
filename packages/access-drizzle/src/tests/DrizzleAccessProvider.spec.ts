@@ -50,6 +50,88 @@ describe('DrizzleAccessProvider', () => {
   });
 
   describe('check - direct access', () => {
+    it('should normalize boolean allowed values', async () => {
+      executeFn.mockResolvedValueOnce({ rows: [{ allowed: true }] });
+
+      const allowedResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      executeFn.mockResolvedValueOnce({ rows: [{ allowed: false }] });
+
+      const deniedResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      expect(allowedResult.allowed).toBe(true);
+      expect(deniedResult.allowed).toBe(false);
+    });
+
+    it('should normalize string allowed values', async () => {
+      executeFn
+        .mockResolvedValueOnce({ rows: [{ allowed: 'true' }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: 'false' }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: '1' }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: '0' }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: 't' }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: 'f' }] });
+
+      const trueResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      const falseResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      const oneResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      const zeroResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      const tResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      const fResult = await provider.check({
+        tenantId: 'tenant-1',
+        subject: 'user:alice',
+        relation: 'viewer',
+        object: 'document:doc1',
+      });
+
+      expect(trueResult.allowed).toBe(true);
+      expect(falseResult.allowed).toBe(false);
+      expect(oneResult.allowed).toBe(true);
+      expect(zeroResult.allowed).toBe(false);
+      expect(tResult.allowed).toBe(true);
+      expect(fResult.allowed).toBe(false);
+    });
+
     it('should return deny when no tuple exists', async () => {
       executeFn.mockResolvedValueOnce({ rows: [{ allowed: 0 }] });
 
