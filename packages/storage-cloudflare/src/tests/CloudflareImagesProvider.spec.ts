@@ -1,5 +1,5 @@
 import { Container } from '@croco/framework-context';
-import { FileNotFoundProblem, UploadFailedProblem } from '@croco/storage-core';
+import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from '@croco/storage-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloudflareImagesProvider } from '../libs/CloudflareImagesProvider';
 
@@ -236,7 +236,7 @@ describe('CloudflareImagesProvider', () => {
       );
     });
 
-    it('should throw UploadFailedProblem when delete fails', async () => {
+    it('should throw DeleteFailedProblem when delete fails', async () => {
       const mockResponse = {
         ok: false,
         text: async () => 'Not found',
@@ -244,10 +244,10 @@ describe('CloudflareImagesProvider', () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.delete('test-image-id')).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.delete('test-image-id')).rejects.toThrow(DeleteFailedProblem);
     });
 
-    it('should throw UploadFailedProblem when response success is false', async () => {
+    it('should throw DeleteFailedProblem when response success is false', async () => {
       const mockResponse = {
         ok: true,
         json: async () => ({
@@ -258,24 +258,13 @@ describe('CloudflareImagesProvider', () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.delete('test-image-id')).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.delete('test-image-id')).rejects.toThrow(DeleteFailedProblem);
     });
   });
 
   describe('exists', () => {
     it('should return true when image exists', async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          success: true,
-          result: {
-            id: 'test-image-id',
-            size: 1024,
-            uploaded: new Date().toISOString(),
-          },
-          errors: [],
-        }),
-      };
+      const mockResponse = new Response(new Uint8Array([1, 2, 3]));
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
