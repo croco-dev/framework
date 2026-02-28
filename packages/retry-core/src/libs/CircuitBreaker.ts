@@ -124,7 +124,7 @@ export class CircuitBreaker {
   }
 
   private releaseClosedExecutionSlot(): void {
-    this._closedActiveCount -= 1;
+    this._closedActiveCount = Math.max(0, this._closedActiveCount - 1);
   }
 
   private async recordClosedSuccess(): Promise<void> {

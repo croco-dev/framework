@@ -341,6 +341,67 @@ describe('CircuitBreaker', () => {
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
     });
 
+    it('BUG-88 CLOSED 슬롯 중복 해제 시에도 임계값 판정이 느슨해지지 않아야 한다', async () => {
+      let currentState = CircuitState.CLOSED;
+      let failureCount = 0;
+      let lockCallCount = 0;
+
+      const mockStore: CircuitBreakerStateStore = {
+        getState: vi.fn().mockImplementation(async () => currentState),
+        setState: vi.fn().mockImplementation(async (_id, state) => {
+          currentState = state;
+        }),
+        getFailureCount: vi.fn().mockImplementation(async () => failureCount),
+        incrementFailureCount: vi.fn().mockImplementation(async () => {
+          failureCount += 1;
+          return failureCount;
+        }),
+        resetFailureCount: vi.fn().mockImplementation(async () => {
+          failureCount = 0;
+        }),
+        getLastFailureTime: vi.fn().mockResolvedValue(null),
+        setLastFailureTime: vi.fn().mockResolvedValue(undefined),
+        withCircuitLock: vi.fn().mockImplementation(async (_id, operation) => {
+          lockCallCount += 1;
+          const result = await operation();
+
+          if (lockCallCount === 1) {
+            await operation();
+          }
+
+          return result;
+        }),
+        incrementFailureAndCheck: vi.fn().mockImplementation(async (_id, threshold) => {
+          failureCount += 1;
+          return {
+            failureCount,
+            shouldOpen: failureCount >= threshold,
+          };
+        }),
+        getHalfOpenActiveCount: vi.fn().mockResolvedValue(0),
+        setHalfOpenActiveCount: vi.fn().mockResolvedValue(undefined),
+        getHalfOpenSuccessCount: vi.fn().mockResolvedValue(0),
+        setHalfOpenSuccessCount: vi.fn().mockResolvedValue(undefined),
+        reset: vi.fn().mockResolvedValue(undefined),
+        resetAll: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const breaker = new CircuitBreaker({
+        circuitId: 'test-circuit',
+        failureThreshold: 1,
+        stateStore: mockStore,
+      });
+
+      const fn = vi.fn().mockResolvedValue('ok');
+
+      await expect(breaker.execute(fn)).resolves.toBe('ok');
+
+      failureCount = 1;
+
+      await expect(breaker.execute(fn)).rejects.toThrow(CircuitBreakerOpenProblem);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
     it('halfOpen 카운터는 stateStore API를 사용해 관리해야 한다', async () => {
       let currentState = CircuitState.HALF_OPEN;
       let failureCount = 0;
