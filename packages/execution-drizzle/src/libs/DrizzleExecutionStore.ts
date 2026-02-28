@@ -10,10 +10,56 @@ import { ulid } from 'ulid';
 import type { ExecutionRow, NewExecutionRow } from './schema';
 import { executions } from './schema';
 
-export class DrizzleExecutionStore<TDb extends Record<string, unknown>> implements ExecutionStore {
+type AwaitableQueryResult = PromiseLike<unknown>;
+
+type InsertQuery = {
+  values(values: unknown): {
+    returning(): AwaitableQueryResult;
+  };
+};
+
+type SelectOrderedQuery = {
+  limit(limit: number): AwaitableQueryResult & {
+    offset(offset: number): AwaitableQueryResult;
+  };
+};
+
+type SelectFilteredQuery = {
+  limit(limit: number): AwaitableQueryResult;
+  orderBy(...values: unknown[]): SelectOrderedQuery;
+};
+
+type SelectQuery = {
+  from(table: unknown): {
+    where(condition: unknown): SelectFilteredQuery;
+  };
+};
+
+type UpdateQuery = {
+  set(values: unknown): {
+    where(condition: unknown): {
+      returning(): AwaitableQueryResult;
+    };
+  };
+};
+
+type DeleteQuery = {
+  where(condition: unknown): {
+    returning(): AwaitableQueryResult;
+  };
+};
+
+type ExecutionDb = {
+  select(): SelectQuery;
+  insert(table: unknown): InsertQuery;
+  update(table: unknown): UpdateQuery;
+  delete(table: unknown): DeleteQuery;
+};
+
+export class DrizzleExecutionStore<TDb extends ExecutionDb> implements ExecutionStore {
   constructor(private readonly db: TDb) {}
 
-  private get dbOp(): any {
+  private get dbOp(): TDb {
     return this.db;
   }
 
