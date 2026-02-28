@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { Container, Context } from '@croco/framework-context';
+import type { Logger } from '@croco/framework-logger';
 import type { CallHandler, ExecutionContext } from '@croco/protocols-rest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuditInterceptor } from '../libs/AuditInterceptor';
@@ -55,10 +56,23 @@ function createCallHandler(result: unknown): CallHandler {
 
 describe('AuditInterceptor', () => {
   let interceptor!: AuditInterceptor;
+  let repository!: AuditLogRepository;
+  let createSpy!: ReturnType<typeof vi.fn>;
+  let logger!: Logger;
+  let warnSpy!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     Container.reset();
-    interceptor = new AuditInterceptor();
+    createSpy = vi.fn(async (entry: Omit<AuditLogEntry, 'id' | 'createdAt'>) => createPersistedEntry(entry));
+    repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+    warnSpy = vi.fn();
+    logger = {
+      warn: warnSpy,
+    } as unknown as Logger;
+    interceptor = new AuditInterceptor(repository, logger);
   });
 
   afterEach(() => {
@@ -67,13 +81,6 @@ describe('AuditInterceptor', () => {
   });
 
   it('should extract request metadata (URL, IP, method) and persist audit log', async () => {
-    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, 'id' | 'createdAt'>) => createPersistedEntry(entry));
-    const repository = {
-      create: createSpy,
-      find: vi.fn(),
-    } as unknown as AuditLogRepository;
-
-    vi.spyOn(Container, 'get').mockReturnValue(repository);
     vi.spyOn(Context, 'get').mockReturnValue({
       requestId: 'req-1',
       tenantId: 'tenant-1',
@@ -124,15 +131,37 @@ describe('AuditInterceptor', () => {
     );
   });
 
+  it('should log a warning when audit persistence fails', async () => {
+    createSpy.mockRejectedValueOnce(new Error('repository unavailable'));
+    vi.spyOn(Context, 'get').mockReturnValue({
+      requestId: 'req-2',
+      tenantId: 'tenant-2',
+      user: { id: 'actor-2' },
+    } as RequestContextStub);
+
+    class TestController {
+      update() {}
+    }
+
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: 'update',
+      method: 'PATCH',
+      path: '/projects/project-2',
+      request: {
+        headers: {},
+      },
+    });
+
+    await interceptor.intercept(context, createCallHandler({ ok: true }));
+    await Promise.resolve();
+
+    expect(warnSpy).toHaveBeenCalledWith('Audit log write failed', {
+      error: 'repository unavailable',
+    });
+  });
+
   it('should skip creating a new audit entry when @Auditable metadata already exists', async () => {
-    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, 'id' | 'createdAt'>) => createPersistedEntry(entry));
-    const repository = {
-      create: createSpy,
-      find: vi.fn(),
-    } as unknown as AuditLogRepository;
-
-    vi.spyOn(Container, 'get').mockReturnValue(repository);
-
     class TestController {
       create() {}
     }
@@ -174,13 +203,6 @@ describe('AuditInterceptor', () => {
   });
 
   it('should work standalone without @Auditable metadata', async () => {
-    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, 'id' | 'createdAt'>) => createPersistedEntry(entry));
-    const repository = {
-      create: createSpy,
-      find: vi.fn(),
-    } as unknown as AuditLogRepository;
-
-    vi.spyOn(Container, 'get').mockReturnValue(repository);
     vi.spyOn(Context, 'get').mockReturnValue(null);
 
     class PublicController {

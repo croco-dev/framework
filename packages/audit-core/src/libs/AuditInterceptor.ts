@@ -114,24 +114,22 @@ function resolveResourceId(path: string): string {
   return path;
 }
 
-function writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
-  void Promise.resolve()
-    .then(() => {
-      const repository = Container.get(AuditLogRepository as unknown as Constructor<AuditLogRepository>);
-      return repository.create(entry);
-    })
-    .catch((err: unknown) => {
-      try {
-        const logger = Container.get(Logger as unknown as Constructor<Logger>);
-        logger.warn('Audit log write failed', { error: err instanceof Error ? err.message : String(err) });
-      } catch {
-        // Logger도 resolve 실패 시 무시
-      }
-      return undefined;
-    });
-}
-
 export class AuditInterceptor implements Interceptor<ExecutionContext> {
+  constructor(
+    private readonly repository: AuditLogRepository = Container.get(
+      AuditLogRepository as unknown as Constructor<AuditLogRepository>
+    ),
+    private readonly logger: Logger = Container.get(Logger)
+  ) {}
+
+  private writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
+    void this.repository.create(entry).catch((error: unknown) => {
+      this.logger.warn('Audit log write failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+
   async intercept(context: ExecutionContext, next: CallHandler): Promise<unknown> {
     const target = context.getClass();
     const handler = context.getHandler();
@@ -148,7 +146,7 @@ export class AuditInterceptor implements Interceptor<ExecutionContext> {
     try {
       const result = await next.handle();
 
-      writeAuditLog({
+      this.writeAuditLog({
         tenantId: contextData?.tenantId ?? 'unknown',
         actorId: contextData?.user?.id ?? 'unknown',
         action: resolveAction(controllerName, handler),
@@ -163,7 +161,7 @@ export class AuditInterceptor implements Interceptor<ExecutionContext> {
 
       return result;
     } catch (error) {
-      writeAuditLog({
+      this.writeAuditLog({
         tenantId: contextData?.tenantId ?? 'unknown',
         actorId: contextData?.user?.id ?? 'unknown',
         action: resolveAction(controllerName, handler),
