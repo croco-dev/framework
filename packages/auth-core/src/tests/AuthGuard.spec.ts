@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_PUBLIC_KEY } from '../libs/constants';
 import { AuthGuard } from '../libs/guards/AuthGuard';
 import type { AuthProvider } from '../libs/interfaces/AuthProvider';
+import type { AuthRequest } from '../libs/interfaces/AuthRequest';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
 import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
@@ -15,8 +16,8 @@ describe('AuthGuard', () => {
   const mockUser = { id: 'user-1' } as AuthUser;
 
   // Mock context factory
-  const createMockContext = (target: any, handlerName: string) => {
-    const request = { headers: new Headers() } as unknown as Request;
+  const createMockContext = (target: unknown, handlerName: string) => {
+    const request = { headers: new Headers() } as unknown as AuthRequest;
     return {
       getRequest: () => request,
       getClass: () => target,
@@ -79,7 +80,7 @@ describe('AuthGuard', () => {
 
     expect(result).toBe(true);
     expect(mockAuthProvider.authenticate).toHaveBeenCalledWith(context.getRequest());
-    expect((context.getRequest() as Request & { user: AuthUser }).user).toBe(mockUser);
+    expect(context.getRequest().user).toBe(mockUser);
   });
 
   it('should throw UnauthorizedProblem when authentication fails', async () => {

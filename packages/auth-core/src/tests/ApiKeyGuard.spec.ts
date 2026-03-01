@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiKeyGuard } from '../libs/guards/ApiKeyGuard';
 import type { ApiKeyProvider } from '../libs/interfaces/ApiKeyProvider';
+import type { AuthRequest } from '../libs/interfaces/AuthRequest';
 import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
@@ -21,7 +22,7 @@ describe('ApiKeyGuard', () => {
   };
 
   const createMockContext = (headers: Record<string, string>): RouteExecutionContext => {
-    const request = { headers } as unknown as Request;
+    const request = { headers } as unknown as AuthRequest;
     return {
       getRequest: () => request,
       getClass: () => class TestController {} as never,
@@ -32,7 +33,7 @@ describe('ApiKeyGuard', () => {
   };
 
   const createRequestContext = (headersInit: HeadersInit): RouteExecutionContext => {
-    const request = new Request('https://example.com/test', {
+    const request: AuthRequest = new Request('https://example.com/test', {
       headers: new Headers(headersInit),
     });
 
@@ -57,7 +58,7 @@ describe('ApiKeyGuard', () => {
     mockApiKeyProvider.authenticate.mockResolvedValue(mockPrincipal);
 
     const result = await guard.canActivate(context);
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
 
     expect(result).toBe(true);
     expect(request.principal).toBe(mockPrincipal);
@@ -70,7 +71,7 @@ describe('ApiKeyGuard', () => {
     mockApiKeyProvider.authenticate.mockResolvedValue(mockPrincipal);
 
     const result = await guard.canActivate(context);
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
 
     expect(result).toBe(true);
     expect(request.principal).toBe(mockPrincipal);
@@ -82,7 +83,7 @@ describe('ApiKeyGuard', () => {
     mockApiKeyProvider.authenticate.mockResolvedValue(mockPrincipal);
 
     const result = await guard.canActivate(context);
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
 
     expect(result).toBe(true);
     expect(request.principal).toBe(mockPrincipal);
@@ -130,7 +131,7 @@ describe('ApiKeyGuard', () => {
 
     await expect(guard.canActivate(context)).rejects.toThrow();
 
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
     expect(request.principal).toBeUndefined();
     expect(request.apiKey).toBeUndefined();
   });
