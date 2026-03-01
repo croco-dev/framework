@@ -1,0 +1,18 @@
+---
+description: Backend testing guidelines
+globs: ["**/*.spec.ts", "**/*.test.ts"]
+alwaysApply: false
+---
+
+# Backend Testing Rules
+
+## Test Structure
+- Use Vitest for all tests
+- Test files: `src/tests/{ClassName}.spec.ts`
+- Reset DI container in `beforeEach`
+- Mock external services, not internal domain logic
+
+## Coverage
+- Domain logic: 80%+ coverage
+- API resolvers/handlers: integration tests required
+- Datasource layer: use test database (not mocks)

@@ -1,0 +1,17 @@
+---
+description: Frontend performance optimization rules
+globs: ["apps/web/**/*.tsx", "apps/web/**/*.ts"]
+alwaysApply: false
+---
+
+# Frontend Performance Rules
+
+## Next.js Optimization
+- Use Server Components by default, Client Components only when needed
+- Add 'use client' only at leaf components that require interactivity
+- Use `next/image` for all images
+- Use `next/font` for font loading
+
+## Bundle Size
+- Avoid importing entire libraries (use tree-shakeable imports)
+- Dynamic import for large components with `next/dynamic`
