@@ -13,6 +13,7 @@ describe('CloudflareImagesProvider', () => {
   const mockOptions = {
     accountId: 'test-account-id',
     apiToken: 'test-api-token',
+    signingKey: 'test-signing-key',
     accountHash: 'test-account-hash',
     defaultVariant: 'public',
   };
@@ -365,6 +366,19 @@ describe('CloudflareImagesProvider', () => {
       const url = await providerWithCustomDomain.getSignedUrl('test-image-id', { expiresIn: 3600 });
 
       expect(url).toContain('cdn.example.com');
+    });
+
+    it('should throw UploadFailedProblem when signingKey is missing', async () => {
+      const providerWithoutSigningKey = new CloudflareImagesProvider({
+        accountId: 'test-account-id',
+        apiToken: 'test-api-token',
+        accountHash: 'test-account-hash',
+        defaultVariant: 'public',
+      });
+
+      await expect(providerWithoutSigningKey.getSignedUrl('test-image-id', { expiresIn: 3600 })).rejects.toThrow(
+        UploadFailedProblem
+      );
     });
   });
 

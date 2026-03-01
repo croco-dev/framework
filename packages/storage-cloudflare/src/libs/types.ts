@@ -12,6 +12,8 @@ export type CloudflareImagesOptions = {
    */
   apiToken: string;
 
+  signingKey?: string;
+
   /**
    * Cloudflare Account Hash (공개 URL용)
    */

@@ -352,7 +352,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     const encoder = new TextEncoder();
     const data = encoder.encode(text);
 
-    const signature = await crypto.subtle.sign('HMAC', await this.getSigningKey(), data);
+    const signature = await crypto.subtle.sign('HMAC', await this.getSigningKey(key), data);
 
     const signatureArray = Array.from(new Uint8Array(signature));
     const signatureHex = signatureArray.map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -360,8 +360,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     return signatureHex;
   }
 
-  private async getSigningKey(): Promise<CryptoKey> {
-    const keyData = new TextEncoder().encode(this.options.apiToken);
+  private async getSigningKey(key: string): Promise<CryptoKey> {
+    const { signingKey } = this.options;
+    if (!signingKey) {
+      this.throwUploadFailed(key, 'Cloudflare signingKey is required for signed URL generation');
+    }
+
+    const keyData = new TextEncoder().encode(signingKey);
 
     return crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   }
