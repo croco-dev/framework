@@ -1,3 +1,5 @@
+import { TRANSACTION_CONTEXT_TOKEN } from '@croco/events-core';
+import { Container } from '@croco/framework-context';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   Transactional,
@@ -26,12 +28,14 @@ describe('TxManagerRegistry', () => {
   let txManager!: TxManager<{ id: string }>;
 
   beforeEach(() => {
+    Container.reset();
     TxManagerRegistry.clear();
     mockAdapter = createMockAdapter();
     txManager = new TxManager(mockAdapter);
   });
 
   afterEach(() => {
+    Container.reset();
     TxManagerRegistry.clear();
   });
 
@@ -53,6 +57,21 @@ describe('TxManagerRegistry', () => {
 
       expect(TxManagerRegistry.get('key1')).toBe(txManager);
       expect(TxManagerRegistry.get('key2')).toBe(txManager2);
+    });
+
+    it('should bind transaction context token when default key manager is registered', () => {
+      const firstManager = new TxManager(createMockAdapter());
+      const secondManager = new TxManager(createMockAdapter());
+      const initialTokenManager = Container.get(TRANSACTION_CONTEXT_TOKEN as never);
+
+      TxManagerRegistry.register(firstManager, 'key1');
+      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(initialTokenManager);
+
+      TxManagerRegistry.register(secondManager, 'key2');
+      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(initialTokenManager);
+
+      TxManagerRegistry.register(secondManager);
+      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(secondManager);
     });
   });
 

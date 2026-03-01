@@ -1,3 +1,5 @@
+import { TRANSACTION_CONTEXT_TOKEN } from '@croco/events-core';
+import { Container } from '@croco/framework-context';
 import { TxManagerNotRegisteredError } from './errors';
 import type { TxManager } from './TxManager';
 import { DEFAULT_TX_MANAGER_KEY, type TxManagerKey } from './types';
@@ -10,6 +12,10 @@ class TxManagerRegistryClass {
   register(manager: TxManagerInstance, key?: TxManagerKey): void {
     const managerKey = key ?? DEFAULT_TX_MANAGER_KEY;
     this.managers.set(managerKey, manager);
+
+    if (managerKey === DEFAULT_TX_MANAGER_KEY) {
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, manager as never);
+    }
   }
 
   get<TClient = unknown, TOptions = unknown>(key?: TxManagerKey): TxManager<TClient, TOptions> {
