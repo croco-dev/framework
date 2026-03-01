@@ -7,11 +7,10 @@ export type { ClerkAuthOptions } from './libs/ClerkAuthProvider';
  * Clerk 토큰을 검증해 auth-core 사용자 정보로 변환하는 인증 제공자입니다.
  */
 export { ClerkAuthProvider } from './libs/ClerkAuthProvider';
-
 /**
  * Clerk 조직과 내부 tenant를 연결하는 저장소 계약입니다.
  */
-export type { TenantMappingStore } from './libs/ClerkTenantMapper';
+export type { ClerkTenantRequest, TenantMappingStore } from './libs/ClerkTenantMapper';
 
 /**
  * Clerk 조직 정보를 내부 tenant 매핑으로 변환하는 매퍼입니다.

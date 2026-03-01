@@ -7,12 +7,16 @@ export interface TenantMappingStore {
   delete(externalOrgId: string): Promise<void>;
 }
 
-export class ClerkTenantMapper implements TenantMappingProvider, TenantResolver<Request> {
+export type ClerkTenantRequest = {
+  user?: AuthUser;
+};
+
+export class ClerkTenantMapper implements TenantMappingProvider, TenantResolver<ClerkTenantRequest> {
   private inMemoryStore = new Map<string, string>();
 
   constructor(private store?: TenantMappingStore) {}
 
-  async resolve(requestOrOrgId: string | Request): Promise<string | null> {
+  async resolve(requestOrOrgId: string | ClerkTenantRequest): Promise<string | null> {
     if (typeof requestOrOrgId === 'string') {
       return this.resolveByOrgId(requestOrOrgId);
     }
@@ -42,9 +46,8 @@ export class ClerkTenantMapper implements TenantMappingProvider, TenantResolver<
     return this.inMemoryStore.get(externalOrgId) ?? null;
   }
 
-  private async resolveByRequest(request: Request): Promise<string | null> {
-    const authUser = (request as unknown as { user?: AuthUser }).user;
-    const orgId = authUser?.metadata?.orgId;
+  private async resolveByRequest(request: ClerkTenantRequest): Promise<string | null> {
+    const orgId = request.user?.metadata?.orgId;
 
     if (typeof orgId === 'string') {
       return this.resolveByOrgId(orgId);
