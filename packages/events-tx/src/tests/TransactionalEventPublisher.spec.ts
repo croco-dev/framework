@@ -72,6 +72,36 @@ describe('TransactionalEventPublisher', () => {
     it('should throw when committing a non-existent transaction', async () => {
       await expect(publisher.commit('no-such')).rejects.toThrow("Transaction 'no-such' not found");
     });
+
+    it('should keep remaining events when publish fails and allow retry', async () => {
+      let failedOnce = false;
+      const flakyEventBus: EventBus = {
+        publish: async (event: DomainEvent) => {
+          const data = (event as TestEvent).data;
+          if (data === 'second' && !failedOnce) {
+            failedOnce = true;
+            throw new Error('publish failed');
+          }
+          publishedEvents.push(event);
+        },
+        subscribe: vi.fn(),
+        unsubscribe: vi.fn(),
+        clear: vi.fn(),
+      };
+      publisher = new TransactionalEventPublisher(flakyEventBus);
+
+      publisher.begin('tx-1');
+      publisher.stage('tx-1', new TestEvent('first'));
+      publisher.stage('tx-1', new TestEvent('second'));
+      publisher.stage('tx-1', new TestEvent('third'));
+
+      await expect(publisher.commit('tx-1')).rejects.toThrow('publish failed');
+      expect(publishedEvents.map((event) => (event as TestEvent).data)).toEqual(['first']);
+
+      await expect(publisher.commit('tx-1')).resolves.toBeUndefined();
+      expect(publishedEvents.map((event) => (event as TestEvent).data)).toEqual(['first', 'second', 'third']);
+      await expect(publisher.commit('tx-1')).rejects.toThrow("Transaction 'tx-1' not found");
+    });
   });
 
   describe('rollback', () => {

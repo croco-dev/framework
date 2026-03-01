@@ -34,11 +34,17 @@ export class TransactionalEventPublisher {
     const session = this.requireActive(txId);
     session.phase = 'committed';
 
-    const events = session.events.splice(0);
-    this.sessions.delete(txId);
+    try {
+      while (session.events.length > 0) {
+        const event = session.events[0];
+        await this.eventBus.publish(event);
+        session.events.shift();
+      }
 
-    for (const event of events) {
-      await this.eventBus.publish(event);
+      this.sessions.delete(txId);
+    } catch (error) {
+      session.phase = 'active';
+      throw error;
     }
   }
 
