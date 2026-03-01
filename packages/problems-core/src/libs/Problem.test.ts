@@ -52,6 +52,15 @@ describe('Problem', () => {
     expect(problem.instance).toBe('/users/123');
   });
 
+  it('should preserve cause when provided', () => {
+    const cause = new Error('Database unavailable');
+    const problem = ProblemFactory.internalServerError('DB_DOWN', 'Database unavailable', {
+      cause,
+    });
+
+    expect(problem.cause).toBe(cause);
+  });
+
   it('should preserve backward compatibility with subclasses', () => {
     class CustomProblem extends Problem {
       public constructor(code: string, category: ProblemCategory, detail?: string) {
