@@ -1,3 +1,5 @@
+import { TRANSACTION_CONTEXT_TOKEN } from '@croco/events-core';
+import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type TxAdapter, TxManager } from '../index';
 
@@ -19,8 +21,17 @@ describe('TxManager', () => {
   let mockAdapter!: TxAdapter<{ id: string }>;
 
   beforeEach(() => {
+    Container.reset();
     mockAdapter = createMockAdapter();
     txManager = new TxManager(mockAdapter);
+  });
+
+  it('should not overwrite existing transaction context token on new instance', () => {
+    const firstManager = txManager;
+    const secondManager = new TxManager(createMockAdapter());
+
+    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(firstManager);
+    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).not.toBe(secondManager);
   });
 
   describe('run', () => {
