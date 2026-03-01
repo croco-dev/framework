@@ -26,6 +26,10 @@ const DEFAULT_SCAN_DIRS = ['src'];
 const DEFAULT_EXCLUDE = ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**'];
 const DEFAULT_DECORATORS = ['Component', 'Controller', 'GraphQLResolver'];
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export class ComponentScanner {
   private cache: Map<string, ScanCache> = new Map();
   private options: Required<CrocoPluginOptions>;
@@ -181,7 +185,27 @@ export class ComponentScanner {
 
   private getDecorators(filePath: string): string[] {
     try {
+      if (filePath.endsWith('.d.ts')) {
+        return [];
+      }
+
       const sourceCode = fs.readFileSync(filePath, 'utf-8');
+      const parseResult = ts.transpileModule(sourceCode, {
+        compilerOptions: {
+          target: ts.ScriptTarget.Latest,
+        },
+        fileName: filePath,
+        reportDiagnostics: true,
+      });
+      const [firstDiagnostic] = parseResult.diagnostics ?? [];
+
+      if (firstDiagnostic) {
+        const message = firstDiagnostic
+          ? ts.flattenDiagnosticMessageText(firstDiagnostic.messageText, '\n')
+          : 'Unknown parse error';
+        throw new Error(message);
+      }
+
       const sourceFile = ts.createSourceFile(filePath, sourceCode, ts.ScriptTarget.Latest, true);
 
       const decorators: string[] = [];
@@ -198,8 +222,8 @@ export class ComponentScanner {
 
       ts.forEachChild(sourceFile, visitNode);
       return decorators;
-    } catch {
-      return [];
+    } catch (error) {
+      throw new Error(`Failed to scan decorators in '${filePath}': ${getErrorMessage(error)}`);
     }
   }
 
@@ -219,8 +243,8 @@ export class ComponentScanner {
   private getFileMtime(filePath: string): number {
     try {
       return fs.statSync(filePath).mtimeMs;
-    } catch {
-      return 0;
+    } catch (error) {
+      throw new Error(`Failed to read file metadata for '${filePath}': ${getErrorMessage(error)}`);
     }
   }
 }

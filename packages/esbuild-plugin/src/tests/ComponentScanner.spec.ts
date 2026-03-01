@@ -175,7 +175,7 @@ describe('ComponentScanner', () => {
         exclude: ['**/*.test.ts', '**/fixtures/**', '**/*.spec.ts'],
       });
 
-      const results = patternScanner.scan();
+      const results = patternScanner.scan(FIXTURES_DIR);
       expect(results).toBeInstanceOf(Array);
     });
   });
@@ -203,12 +203,11 @@ describe('ComponentScanner', () => {
       expect(result.hasComponent).toBe(false);
     });
 
-    it('should handle parse errors gracefully', () => {
+    it('should throw when parsing fails', () => {
       const invalidFile = path.join(TEMP_DIR, 'invalid.ts');
       fs.writeFileSync(invalidFile, 'this is not valid typescript {{{');
 
-      const result = scanner.scanFile(invalidFile);
-      expect(result.hasComponent).toBe(false);
+      expect(() => scanner.scanFile(invalidFile)).toThrow(/Failed to scan decorators/);
     });
   });
 
