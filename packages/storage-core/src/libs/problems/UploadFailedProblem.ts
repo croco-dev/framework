@@ -7,11 +7,14 @@ import { StorageProblem } from './StorageProblem';
 export class UploadFailedProblem extends StorageProblem {
   readonly code = 'STORAGE_UPLOAD_FAILED';
 
-  constructor(key: string, reason?: string) {
+  constructor(key: string, reason?: string, cause?: Error) {
     super(
       'STORAGE_UPLOAD_FAILED',
       ProblemCategory.InternalServerError,
-      reason ? `Failed to upload file '${key}': ${reason}` : `Failed to upload file '${key}'`
+      reason ? `Failed to upload file '${key}': ${reason}` : `Failed to upload file '${key}'`,
+      {
+        cause,
+      }
     );
   }
 }

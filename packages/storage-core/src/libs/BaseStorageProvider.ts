@@ -36,28 +36,16 @@ export abstract class BaseStorageProvider implements StorageProvider {
   }
 
   protected throwNotFound(key: string, cause?: unknown): never {
-    const err = new FileNotFoundProblem(key);
-    if (cause instanceof Error) {
-      (err as unknown as { cause: Error }).cause = cause;
-    }
-    throw err;
+    throw new FileNotFoundProblem(key, cause instanceof Error ? cause : undefined);
   }
 
   protected throwUploadFailed(key: string, cause?: unknown): never {
     const reason = cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : undefined;
-    const err = new UploadFailedProblem(key, reason);
-    if (cause instanceof Error) {
-      (err as unknown as { cause: Error }).cause = cause;
-    }
-    throw err;
+    throw new UploadFailedProblem(key, reason, cause instanceof Error ? cause : undefined);
   }
 
   protected throwDeleteFailed(key: string, cause?: unknown): never {
-    const err = new DeleteFailedProblem(key, cause);
-    if (cause instanceof Error) {
-      (err as unknown as { cause: Error }).cause = cause;
-    }
-    throw err;
+    throw new DeleteFailedProblem(key, cause);
   }
 
   abstract put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void>;
