@@ -1,6 +1,7 @@
 import { verifyWebhook } from '@clerk/backend/webhooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkWebhookHandler } from '../libs/ClerkWebhookHandler';
+import { InvalidWebhookPayloadProblem } from '../libs/problems/ClerkProblems';
 import type { WebhookEventHandler } from '../libs/types';
 
 type VerifiedWebhook = Awaited<ReturnType<typeof verifyWebhook>>;
@@ -31,7 +32,10 @@ describe('ClerkWebhookHandler', () => {
 
   it('should verify webhook signature', async () => {
     const request = createRequest();
-    vi.mocked(verifyWebhook).mockResolvedValue({ type: 'user.created', data: {} } as unknown as VerifiedWebhook);
+    vi.mocked(verifyWebhook).mockResolvedValue({
+      type: 'user.created',
+      data: { id: 'user_123' },
+    } as unknown as VerifiedWebhook);
 
     await webhookHandler.handleWebhook(request);
 
@@ -83,5 +87,15 @@ describe('ClerkWebhookHandler', () => {
     // No error should be thrown, and no mock handler called
     expect(mockHandlers['user.created']).not.toHaveBeenCalled();
     expect(mockHandlers['organization.updated']).not.toHaveBeenCalled();
+  });
+
+  it('should throw validation problem for malformed user webhook payload', async () => {
+    const request = createRequest();
+    vi.mocked(verifyWebhook).mockResolvedValue({
+      type: 'user.created',
+      data: { email_addresses: [] },
+    } as unknown as VerifiedWebhook);
+
+    await expect(webhookHandler.handleWebhook(request)).rejects.toBeInstanceOf(InvalidWebhookPayloadProblem);
   });
 });
