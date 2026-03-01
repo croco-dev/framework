@@ -39,7 +39,7 @@ export type QStashWebhookPayload = {
   /**
    * Target class name to execute.
    */
-  readonly className: string;
+  readonly className?: string;
 
   /**
    * Target method name to execute.
@@ -225,9 +225,6 @@ export class QStashTriggerHandler {
     if (!payload.scheduleId) {
       return 'Missing scheduleId';
     }
-    if (!payload.className) {
-      return 'Missing className';
-    }
     if (!payload.methodName) {
       return 'Missing methodName';
     }
@@ -241,15 +238,15 @@ export class QStashTriggerHandler {
    * Dispatch execution to the target method.
    */
   private async dispatchExecution(payload: QStashWebhookPayload): Promise<HandleResult> {
-    const { className, methodName, scheduleId, options } = payload;
+    const { methodName, scheduleId, options } = payload;
 
     // Resolve target instance
-    const target = this.resolveTarget(className);
+    const target = this.resolveTarget(payload);
     if (!target) {
       return {
         success: false,
         statusCode: 404,
-        body: { error: `Target class not found: ${className}` },
+        body: { error: `Target not found for trigger: ${this.formatTriggerKey(payload)}` },
       };
     }
 
@@ -259,7 +256,7 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 400,
-        body: { error: `Method not found: ${className}.${String(methodName)}` },
+        body: { error: `Method not found for trigger: ${this.formatTriggerKey(payload)}` },
       };
     }
 
@@ -268,7 +265,7 @@ export class QStashTriggerHandler {
       type: 'cron',
       payload: {
         scheduleId,
-        className,
+        className: payload.className ?? 'unknown',
         methodName,
         cronExpression: payload.cronExpression,
         timestamp: payload.timestamp,
@@ -314,8 +311,8 @@ export class QStashTriggerHandler {
   /**
    * Resolve target instance from class name.
    */
-  private resolveTarget(className: string): unknown {
-    const targetClass = this.resolveTargetClass(className);
+  private resolveTarget(payload: QStashWebhookPayload): unknown {
+    const targetClass = this.resolveTargetClass(payload);
     if (!targetClass) {
       return undefined;
     }
@@ -323,17 +320,49 @@ export class QStashTriggerHandler {
     return this.serviceResolver(targetClass);
   }
 
-  private resolveTargetClass(className: string): Constructor | undefined {
+  private resolveTargetClass(payload: QStashWebhookPayload): Constructor | undefined {
     const allTriggers = triggerRegistry.getAllTriggers();
+    const methodMatches: Constructor[] = [];
 
-    for (const target of allTriggers.keys()) {
+    for (const [target, triggers] of allTriggers.entries()) {
       const targetClass = this.getTargetClass(target);
-      if (targetClass?.name === className) {
+      if (!targetClass) {
+        continue;
+      }
+
+      const hasMatchingMethod = [...triggers.keys()].some(
+        (registeredMethodName) => String(registeredMethodName) === payload.methodName
+      );
+
+      if (!hasMatchingMethod) {
+        continue;
+      }
+
+      if (this.matchesScheduleId(payload.scheduleId, targetClass, payload.methodName)) {
         return targetClass;
       }
+
+      methodMatches.push(targetClass);
+    }
+
+    if (methodMatches.length === 1) {
+      return methodMatches[0];
     }
 
     return undefined;
+  }
+
+  private matchesScheduleId(scheduleId: string, targetClass: Constructor, methodName: string): boolean {
+    const expectedSuffix = `:${targetClass.name}:${methodName}`;
+    return scheduleId.endsWith(expectedSuffix);
+  }
+
+  private formatTriggerKey(payload: QStashWebhookPayload): string {
+    if (payload.className) {
+      return `${payload.className}.${payload.methodName}`;
+    }
+
+    return `${payload.scheduleId}:${payload.methodName}`;
   }
 
   private getTargetClass(target: object): Constructor | undefined {
