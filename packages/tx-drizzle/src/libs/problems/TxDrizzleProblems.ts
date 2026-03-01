@@ -5,3 +5,13 @@ export class TenantContextRequiredProblem extends Problem {
     super('tx-drizzle/tenant-context-required', ProblemCategory.InternalServerError, 'Tenant context is required');
   }
 }
+
+export class RlsExecuteUnsupportedProblem extends Problem {
+  constructor(configKey: string) {
+    super(
+      'tx-drizzle/rls-execute-unsupported',
+      ProblemCategory.InternalServerError,
+      `Transaction client does not support execute(), cannot set RLS key '${configKey}'`
+    );
+  }
+}

@@ -1,6 +1,6 @@
 import type { TxAdapter } from '@croco/tx-core';
 import { describe, expect, it, vi } from 'vitest';
-import { createDrizzleTxAdapter, createRlsTxAdapter } from '../index';
+import { createDrizzleTxAdapter, createRlsTxAdapter, RlsExecuteUnsupportedProblem } from '../index';
 
 interface MockTx {
   id: string;
@@ -101,6 +101,17 @@ describe('RlsTxAdapter', () => {
     };
   }
 
+  function createMockRlsDrizzleDbWithoutExecute() {
+    const transactionFn = async <T>(fn: (tx: MockTx) => Promise<T>): Promise<T> => {
+      const tx: MockTx = { id: 'drizzle-rls-no-execute-tx' };
+      return fn(tx);
+    };
+
+    return {
+      transaction: vi.fn(transactionFn) as typeof transactionFn,
+    };
+  }
+
   describe('transaction', () => {
     it('should throw an error when tenant id is null', async () => {
       const db = createMockRlsDrizzleDb();
@@ -135,6 +146,23 @@ describe('RlsTxAdapter', () => {
       expect(db.transaction).toHaveBeenCalledTimes(1);
       expect(db.execute).toHaveBeenCalledTimes(1);
       expect(runQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fail fast when transaction client does not support execute', async () => {
+      const dbWithoutExecute = createMockRlsDrizzleDbWithoutExecute();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => 'tenant-123'),
+      };
+      const adapter = createRlsTxAdapter(
+        dbWithoutExecute as unknown as Parameters<typeof createRlsTxAdapter>[0],
+        tenantProvider
+      );
+      const runQuery = vi.fn(async () => 'result');
+
+      await expect(adapter.transaction(runQuery)).rejects.toThrow(RlsExecuteUnsupportedProblem);
+      expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
+      expect(dbWithoutExecute.transaction).toHaveBeenCalledTimes(1);
+      expect(runQuery).not.toHaveBeenCalled();
     });
   });
 });

@@ -60,7 +60,7 @@ export { createDrizzleTxAdapter } from './libs/DrizzleTxAdapter';
  * ```
  */
 
-export { TenantContextRequiredProblem } from './libs/problems/TxDrizzleProblems';
+export { RlsExecuteUnsupportedProblem, TenantContextRequiredProblem } from './libs/problems/TxDrizzleProblems';
 /**
  * Row-Level Security(RLS)를 지원하는 Drizzle 트랜잭션 어댑터를 생성합니다.
  *

@@ -3,7 +3,7 @@ import { Logger } from '@croco/framework-logger';
 import type { TxAdapter } from '@croco/tx-core';
 import { sql } from 'drizzle-orm';
 import { createDrizzleTxAdapter } from './DrizzleTxAdapter';
-import { TenantContextRequiredProblem } from './problems/TxDrizzleProblems';
+import { RlsExecuteUnsupportedProblem, TenantContextRequiredProblem } from './problems/TxDrizzleProblems';
 import type { DrizzleDb, InferTxClient, InferTxOptions } from './types';
 
 export interface RlsTenantProvider {
@@ -73,8 +73,9 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
 
         // Drizzle transaction client usually has .execute
         if (!supportsExecute(tx)) {
-          logger?.warn('[RlsTxAdapter] Transaction client does not support .execute(), skipping RLS setup');
-          return fn(tx);
+          const problem = new RlsExecuteUnsupportedProblem(configKey);
+          logger?.error(`[RlsTxAdapter] ${problem.detail}`);
+          throw problem;
         }
 
         await tx.execute(sql`SET LOCAL ${sql.raw(configKey)} = ${tenantId}`);
