@@ -49,6 +49,7 @@ describe('EventPublisher', () => {
 
   beforeEach(() => {
     Container.reset();
+    vi.restoreAllMocks();
     mockEventBus = new MockEventBus();
     mockEventBus = new MockEventBus();
     config = EventBusConfig.getInstance();
@@ -270,6 +271,8 @@ describe('EventPublisher', () => {
   });
   describe('tx-aware publishing', () => {
     it('트랜잭션 외부에서는 즉시 발행', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
       vi.spyOn(Container, 'get').mockImplementation(() => {
         throw new Error('Not found');
       });
@@ -279,6 +282,22 @@ describe('EventPublisher', () => {
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(event);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Transaction context unavailable; falling back to immediate publish')
+      );
+    });
+
+    it('트랜잭션 컨텍스트 조회 실패 경고는 한 번만 출력', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      vi.spyOn(Container, 'get').mockImplementation(() => {
+        throw new Error('Not found');
+      });
+
+      await publisher.publish(new TestEvent('first-no-tx'));
+      await publisher.publish(new TestEvent('second-no-tx'));
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
     });
 
     it('트랜잭션 내부에서는 onAfterCommit에 등록', async () => {

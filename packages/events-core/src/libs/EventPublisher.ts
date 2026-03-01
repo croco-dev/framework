@@ -10,12 +10,28 @@ export type PublishResult<T extends DomainEvent> = {
 };
 
 export class EventPublisher {
+  private hasWarnedAboutTransactionContextFallback = false;
+
   constructor(private readonly config: EventBusConfig) {}
+
+  private warnTransactionContextFallback(error: unknown): void {
+    if (this.hasWarnedAboutTransactionContextFallback) {
+      return;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `[EventPublisher] Transaction context unavailable; falling back to immediate publish. ` +
+        `after-commit delivery is not guaranteed. Cause: ${message}`
+    );
+    this.hasWarnedAboutTransactionContextFallback = true;
+  }
 
   private tryGetTransactionContext(): TransactionContext | null {
     try {
       return Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN as never);
-    } catch {
+    } catch (error) {
+      this.warnTransactionContextFallback(error);
       return null;
     }
   }
