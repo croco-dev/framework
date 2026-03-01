@@ -230,19 +230,15 @@ export class QStashScheduler {
   private async listQStashSchedules(): Promise<Map<string, { cron: string }>> {
     const schedules = new Map<string, { cron: string }>();
 
-    try {
-      const response = await this.client.schedules.list();
+    const response = await this.client.schedules.list();
 
-      for (const schedule of response) {
-        const scheduleId = schedule.scheduleId;
-        if (scheduleId?.startsWith(this.schedulePrefix)) {
-          schedules.set(scheduleId, {
-            cron: schedule.cron ?? '',
-          });
-        }
+    for (const schedule of response) {
+      const scheduleId = schedule.scheduleId;
+      if (scheduleId?.startsWith(this.schedulePrefix)) {
+        schedules.set(scheduleId, {
+          cron: schedule.cron ?? '',
+        });
       }
-    } catch (error) {
-      console.warn('Failed to list QStash schedules:', error);
     }
 
     return schedules;
