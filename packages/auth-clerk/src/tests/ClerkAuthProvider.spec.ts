@@ -81,6 +81,36 @@ describe('ClerkAuthProvider', () => {
     expect(verifyToken).toHaveBeenCalledWith('valid-token', { secretKey: options.secretKey });
   });
 
+  it('should discard org_permissions when it contains non-string values', async () => {
+    const request = createRequest('Bearer valid-token');
+    const mockVerifiedToken = {
+      sub: 'user_123',
+      org_role: 'admin',
+      org_permissions: ['perm:read', 123],
+    };
+
+    vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as unknown as VerifiedToken);
+
+    const result = await authProvider.authenticate(request);
+
+    expect(result?.roles).toEqual(['admin']);
+    expect(result?.permissions).toEqual([]);
+  });
+
+  it('should discard org_permissions when claim is not an array', async () => {
+    const request = createRequest('Bearer valid-token');
+    const mockVerifiedToken = {
+      sub: 'user_123',
+      org_permissions: 'perm:read',
+    };
+
+    vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as unknown as VerifiedToken);
+
+    const result = await authProvider.authenticate(request);
+
+    expect(result?.permissions).toEqual([]);
+  });
+
   it('should handle missing optional fields correctly', async () => {
     const request = createRequest('Bearer valid-token');
     const mockVerifiedToken = {
