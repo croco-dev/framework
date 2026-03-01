@@ -32,4 +32,11 @@ describe('UploadFailedProblem', () => {
       throw new UploadFailedProblem('upload.txt', 'Connection lost');
     }).toThrow(UploadFailedProblem);
   });
+
+  it('cause를 함께 보존할 수 있음', () => {
+    const cause = new Error('Connection lost');
+    const problem = new UploadFailedProblem('upload.txt', 'Connection lost', cause);
+
+    expect(problem.cause).toBe(cause);
+  });
 });
