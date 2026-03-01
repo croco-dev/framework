@@ -59,7 +59,9 @@
     "access": "public"
   },
   "peerDependencies": {
+    "@next/eslint-plugin-next": ">=15",
     "eslint": ">=9",
+    "eslint-plugin-react-hooks": ">=5",
     "typescript-eslint": ">=8"
   },
   "dependencies": {
@@ -68,10 +70,12 @@
     "eslint-plugin-import-x": "^4.0.0"
   },
   "devDependencies": {
+    "@types/eslint-config-prettier": "6.11.3",
     "eslint": "^9.0.0",
+    "globals": "^15.0.0",
+    "tsup": "^8.3.5",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.0.0",
-    "tsup": "^8.3.5",
     "vitest": "^4.0.0"
   },
   "scripts": {
@@ -79,5 +83,13 @@
     "lint": "biome check --write .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "peerDependenciesMeta": {
+    "eslint-plugin-react-hooks": {
+      "optional": "true"
+    },
+    "@next/eslint-plugin-next": {
+      "optional": "true"
+    }
   }
 }
