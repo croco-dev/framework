@@ -109,7 +109,19 @@ export const telemetryMiddleware =
         }
       });
     } catch (error) {
-      console.warn('Telemetry middleware failed, proceeding without tracing', { error });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const fallbackTraceId = `telemetry-degraded-${Date.now().toString(36)}`;
+
+      ctx.set('traceId', fallbackTraceId);
+      ctx.set('telemetryDegraded', true);
+
+      console.warn('Telemetry middleware failed, proceeding without tracing', {
+        route,
+        method: ctx.req.method,
+        path: ctx.req.path,
+        telemetryDegraded: true,
+        errorMessage,
+      });
       await next();
     }
   };
