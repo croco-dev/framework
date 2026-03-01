@@ -21,9 +21,8 @@ export class ApiKeyGuard implements Guard<RouteExecutionContext> {
       throw new UnauthorizedProblem('Invalid API key');
     }
 
-    const requestRecord = request as unknown as Record<string, unknown>;
-    requestRecord.principal = principal;
-    requestRecord.apiKey = principal;
+    request.principal = principal;
+    request.apiKey = principal;
 
     return true;
   }

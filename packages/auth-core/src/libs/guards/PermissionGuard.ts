@@ -1,14 +1,13 @@
 import 'reflect-metadata';
 import { AUTH_PERMISSIONS_KEY } from '../constants';
+import type { AuthUser } from '../interfaces/AuthUser';
 import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
-import type { ApiKeyPrincipal, Principal, UserPrincipal } from '../interfaces/Principal';
+import type { UserPrincipal } from '../interfaces/Principal';
 import { ForbiddenProblem } from '../problems/AuthProblems';
 import { hasPermission } from '../rbac/Permission';
 import type { RbacEngine } from '../rbac/RbacEngine';
 
-type PrincipalWithRoles =
-  | UserPrincipal
-  | { id: string; email?: string; roles: string[]; permissions: string[]; metadata?: Record<string, unknown> };
+type PrincipalWithRoles = UserPrincipal | AuthUser;
 
 function isMetadataTarget(value: unknown): value is object {
   return (typeof value === 'object' && value !== null) || typeof value === 'function';
@@ -31,10 +30,9 @@ export class PermissionGuard implements Guard<RouteExecutionContext> {
       return true;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const request = context.getRequest() as any;
-    const principal = request.principal as Principal | undefined;
-    const user = request.user; // 하위 호환성
+    const request = context.getRequest();
+    const principal = request.principal;
+    const user = request.user;
 
     const authenticatedPrincipal = principal || user;
 
@@ -43,10 +41,9 @@ export class PermissionGuard implements Guard<RouteExecutionContext> {
     }
 
     // ApiKeyPrincipal: roles가 없으므로 permissions 직접 체크
-    if (authenticatedPrincipal.type === 'apikey') {
-      const apiKeyPrincipal = authenticatedPrincipal as ApiKeyPrincipal;
+    if ('type' in authenticatedPrincipal && authenticatedPrincipal.type === 'apikey') {
       for (const permission of requiredPermissions) {
-        if (!hasPermission(apiKeyPrincipal.permissions, permission)) {
+        if (!hasPermission(authenticatedPrincipal.permissions, permission)) {
           throw new ForbiddenProblem(`Missing permission: ${permission}`);
         }
       }

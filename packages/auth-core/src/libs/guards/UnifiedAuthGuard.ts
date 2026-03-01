@@ -47,9 +47,8 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
     if (apiKeyHeader) {
       const principal = await this.apiKeyProvider.authenticate(request);
       if (principal) {
-        const requestRecord = request as unknown as Record<string, unknown>;
-        requestRecord.principal = principal;
-        requestRecord.apiKey = principal;
+        request.principal = principal;
+        request.apiKey = principal;
         return true;
       }
       throw new UnauthorizedProblem('Invalid API key');
@@ -57,9 +56,8 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
 
     const user = await this.authProvider.authenticate(request);
     if (user) {
-      const requestRecord = request as unknown as Record<string, unknown>;
-      requestRecord.principal = { ...user, type: 'user' as const };
-      requestRecord.user = user;
+      request.principal = { ...user, type: 'user' as const };
+      request.user = user;
       return true;
     }
 

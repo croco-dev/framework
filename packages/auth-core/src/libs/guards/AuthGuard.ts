@@ -43,7 +43,7 @@ export class AuthGuard implements Guard<RouteExecutionContext> {
       throw new UnauthorizedProblem();
     }
 
-    (request as unknown as Record<string, unknown>).user = user;
+    request.user = user;
     return true;
   }
 }

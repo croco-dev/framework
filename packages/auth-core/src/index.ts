@@ -82,11 +82,14 @@ export type { ApiKey, ApiKeyRateLimit, CreateApiKeyOptions, CreateApiKeyResult }
  * Contract for resolving API keys to principals.
  */
 export type { ApiKeyProvider } from './libs/interfaces/ApiKeyProvider';
-
 /**
  * Contract for resolving authenticated user identities.
  */
 export type { AuthProvider } from './libs/interfaces/AuthProvider';
+/**
+ * Request contract enriched by auth guards.
+ */
+export type { AuthRequest } from './libs/interfaces/AuthRequest';
 
 /**
  * Authenticated user shape used by auth flows.

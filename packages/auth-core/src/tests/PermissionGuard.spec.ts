@@ -2,9 +2,10 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_PERMISSIONS_KEY } from '../libs/constants';
 import { PermissionGuard } from '../libs/guards/PermissionGuard';
+import type { AuthRequest } from '../libs/interfaces/AuthRequest';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
 import type { RouteExecutionContext } from '../libs/interfaces/Guard';
-import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
+import type { ApiKeyPrincipal, UserPrincipal } from '../libs/interfaces/Principal';
 import { ForbiddenProblem } from '../libs/problems/AuthProblems';
 import type { RbacEngine } from '../libs/rbac/RbacEngine';
 
@@ -15,15 +16,14 @@ describe('PermissionGuard', () => {
   const mockUser = { id: 'user-1' } as AuthUser;
 
   const createMockContext = (
-    target: any,
+    target: unknown,
     handlerName: string,
     user?: AuthUser,
-    principal?: ApiKeyPrincipal | AuthUser
+    principal?: ApiKeyPrincipal | UserPrincipal
   ) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const request: any = {
+    const request = {
       headers: new Headers(),
-    };
+    } as unknown as AuthRequest;
 
     if (user) {
       request.user = user;
@@ -151,7 +151,8 @@ describe('PermissionGuard', () => {
   });
 
   describe('principal fallback', () => {
-    const mockUserPrincipal: AuthUser = {
+    const mockUserPrincipal: UserPrincipal = {
+      type: 'user',
       id: 'user-1',
       email: 'test@example.com',
       roles: ['admin'],

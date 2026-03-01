@@ -4,6 +4,7 @@ import { AUTH_PUBLIC_KEY } from '../libs/constants';
 import { UnifiedAuthGuard } from '../libs/guards/UnifiedAuthGuard';
 import type { ApiKeyProvider } from '../libs/interfaces/ApiKeyProvider';
 import type { AuthProvider } from '../libs/interfaces/AuthProvider';
+import type { AuthRequest } from '../libs/interfaces/AuthRequest';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
 import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
@@ -36,7 +37,7 @@ describe('UnifiedAuthGuard', () => {
     handlerName: string,
     headers: Record<string, string> = {}
   ): RouteExecutionContext => {
-    const request = { headers } as unknown as Request;
+    const request = { headers } as unknown as AuthRequest;
     return {
       getRequest: () => request,
       getClass: () => target,
@@ -51,7 +52,7 @@ describe('UnifiedAuthGuard', () => {
     handlerName: string,
     headersInit: HeadersInit = {}
   ): RouteExecutionContext => {
-    const request = new Request('https://example.com/test', {
+    const request: AuthRequest = new Request('https://example.com/test', {
       headers: new Headers(headersInit),
     });
 
@@ -100,7 +101,7 @@ describe('UnifiedAuthGuard', () => {
     mockApiKeyProvider.authenticate.mockResolvedValue(mockApiKeyPrincipal);
 
     const result = await guard.canActivate(context);
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
 
     expect(result).toBe(true);
     expect(request.principal).toBe(mockApiKeyPrincipal);
@@ -119,7 +120,7 @@ describe('UnifiedAuthGuard', () => {
     mockApiKeyProvider.authenticate.mockResolvedValue(mockApiKeyPrincipal);
 
     const result = await guard.canActivate(context);
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
 
     expect(result).toBe(true);
     expect(request.principal).toBe(mockApiKeyPrincipal);
@@ -137,7 +138,7 @@ describe('UnifiedAuthGuard', () => {
     mockApiKeyProvider.authenticate.mockResolvedValue(mockApiKeyPrincipal);
 
     const result = await guard.canActivate(context);
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
 
     expect(result).toBe(true);
     expect(request.principal).toBe(mockApiKeyPrincipal);
@@ -168,7 +169,7 @@ describe('UnifiedAuthGuard', () => {
     mockAuthProvider.authenticate.mockResolvedValue(mockUser);
 
     const result = await guard.canActivate(context);
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
 
     expect(result).toBe(true);
     expect(request.principal).toEqual({ ...mockUser, type: 'user' });
@@ -222,7 +223,7 @@ describe('UnifiedAuthGuard', () => {
 
     await expect(guard.canActivate(context)).rejects.toThrow();
 
-    const request = context.getRequest() as unknown as Record<string, unknown>;
+    const request = context.getRequest();
     expect(request.principal).toBeUndefined();
     expect(request.user).toBeUndefined();
   });
