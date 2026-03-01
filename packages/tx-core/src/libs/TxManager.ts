@@ -23,7 +23,12 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     config: TxManagerConfig = {}
   ) {
     this.defaultNesting = config.defaultNesting ?? 'join';
-    Container.set(TRANSACTION_CONTEXT_TOKEN as never, this);
+
+    try {
+      Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN as never);
+    } catch {
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, this);
+    }
   }
 
   async run<T>(fn: () => Promise<T>, runOptions?: TxRunOptions<TOptions>): Promise<T> {
