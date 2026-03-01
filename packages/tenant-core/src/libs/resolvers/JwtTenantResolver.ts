@@ -1,31 +1,41 @@
 import type { TenantResolver } from '../TenantResolver';
 
-type JwtRequest = {
+export type JwtRequest = {
   headers?: Record<string, string | string[] | undefined>;
 };
 
 type JwtPayload = Record<string, unknown>;
 
-/**
- * Resolves tenant ID from JWT token's payload claims.
- * Expects the JWT to be passed in the Authorization header as Bearer token.
- */
-export class JwtTenantResolver implements TenantResolver<JwtRequest> {
-  constructor(private readonly claimKey: string = 'tenant_id') {}
+export type JwtClaimsResolver<TRequest extends JwtRequest = JwtRequest> = (
+  request: TRequest
+) => Promise<JwtPayload | null> | JwtPayload | null;
 
-  async resolve(request: JwtRequest): Promise<string | null> {
-    const authHeader = this.getHeader(request.headers, 'authorization');
-    if (!authHeader) {
-      return null;
+export type JwtTenantResolverOptions<TRequest extends JwtRequest = JwtRequest> = {
+  claimKey?: string;
+  resolveVerifiedClaims?: JwtClaimsResolver<TRequest>;
+};
+
+function isJwtPayload(value: unknown): value is JwtPayload {
+  return typeof value === 'object' && value !== null;
+}
+
+export class JwtTenantResolver<TRequest extends JwtRequest = JwtRequest> implements TenantResolver<TRequest> {
+  private readonly claimKey: string;
+  private readonly resolveVerifiedClaims?: JwtClaimsResolver<TRequest>;
+
+  constructor(config: string | JwtTenantResolverOptions<TRequest> = 'tenant_id') {
+    if (typeof config === 'string') {
+      this.claimKey = config;
+      return;
     }
 
-    const token = this.extractBearerToken(authHeader);
-    if (!token) {
-      return null;
-    }
+    this.claimKey = config.claimKey ?? 'tenant_id';
+    this.resolveVerifiedClaims = config.resolveVerifiedClaims;
+  }
 
-    const payload = this.decodeJwtPayload(token);
-    if (!payload) {
+  async resolve(request: TRequest): Promise<string | null> {
+    const payload = await this.resolvePayload(request);
+    if (payload === null) {
       return null;
     }
 
@@ -37,53 +47,16 @@ export class JwtTenantResolver implements TenantResolver<JwtRequest> {
     return tenantId;
   }
 
-  private getHeader(
-    headers: Record<string, string | string[] | undefined> | undefined,
-    key: string
-  ): string | undefined {
-    if (!headers) {
-      return undefined;
-    }
-
-    const normalizedKey = key.toLowerCase();
-
-    for (const [headerName, headerValue] of Object.entries(headers)) {
-      if (headerName.toLowerCase() !== normalizedKey) {
-        continue;
-      }
-
-      const value = Array.isArray(headerValue) ? headerValue[0] : headerValue;
-      if (typeof value === 'string' && value.length > 0) {
-        return value;
-      }
-    }
-
-    return undefined;
-  }
-
-  private extractBearerToken(authHeader: string): string | null {
-    const match = authHeader.match(/^Bearer\s+(\S+)$/i);
-    return match ? match[1] : null;
-  }
-
-  private decodeJwtPayload(token: string): JwtPayload | null {
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        return null;
-      }
-
-      const payloadBase64 = parts[1];
-      const payloadJson = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
-      const parsedPayload = JSON.parse(payloadJson) as unknown;
-
-      if (typeof parsedPayload !== 'object' || parsedPayload === null) {
-        return null;
-      }
-
-      return parsedPayload as JwtPayload;
-    } catch {
+  private async resolvePayload(request: TRequest): Promise<JwtPayload | null> {
+    if (!this.resolveVerifiedClaims) {
       return null;
     }
+
+    const claims = await this.resolveVerifiedClaims(request);
+    if (!isJwtPayload(claims)) {
+      return null;
+    }
+
+    return claims;
   }
 }
