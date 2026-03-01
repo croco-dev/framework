@@ -72,6 +72,63 @@ describe('QStashTriggerHandler', () => {
     expect(getSpy).not.toHaveBeenCalledWith('Bug16Handler');
   });
 
+  it('className 없이도 scheduleId와 methodName으로 타깃을 해석해야 한다', async () => {
+    class NameFreeHandler {
+      async execute(): Promise<string> {
+        return 'name-free';
+      }
+    }
+
+    const triggerMetadata: CronTriggerMetadata = {
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'execute',
+      target: NameFreeHandler.prototype,
+      options: {},
+    };
+    triggerRegistry.register(triggerMetadata);
+
+    const targetInstance = new NameFreeHandler();
+    Container.set(NameFreeHandler, targetInstance);
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const executionManager = {
+      create: vi.fn().mockResolvedValue({ id: 'exec-name-free' }),
+      start: vi.fn().mockResolvedValue({}),
+      complete: vi.fn().mockResolvedValue({}),
+      fail: vi.fn().mockResolvedValue({}),
+      cancel: vi.fn().mockResolvedValue({}),
+      retry: vi.fn().mockResolvedValue({}),
+      updateProgress: vi.fn().mockResolvedValue({}),
+      checkpoint: vi.fn().mockResolvedValue({}),
+      timeout: vi.fn().mockResolvedValue({}),
+    } as unknown as ExecutionManager;
+
+    const getSpy = vi.spyOn(Container, 'get');
+
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: 'croco-trigger:NameFreeHandler:execute',
+        methodName: 'execute',
+        cronExpression: '* * * * *',
+        timestamp: new Date().toISOString(),
+      }),
+      'valid-signature'
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.statusCode).toBe(200);
+    expect(getSpy).toHaveBeenCalledWith(NameFreeHandler);
+  });
+
   it('DI 해석 오류가 발생하면 500으로 반환해야 한다', async () => {
     class ResolverFailureHandler {
       async execute(): Promise<string> {
