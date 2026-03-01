@@ -126,7 +126,6 @@ describe('QStashTriggerHandler', () => {
     expect(result.statusCode).toBe(500);
     expect(result.body).toEqual({
       error: 'Execution failed',
-      details: 'DI resolution failed',
     });
     expect(executionManager.create).not.toHaveBeenCalled();
   });
