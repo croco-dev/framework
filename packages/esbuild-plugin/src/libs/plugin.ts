@@ -138,34 +138,41 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
         const scanDirs = normalizedConfig.scan.dirs;
         if (scanDirs && scanDirs.length > 0) {
           const baseDir = entryPointPaths.length > 0 ? path.dirname(entryPointPaths[0]) : process.cwd();
-          const scanResults = scanner.scan(baseDir);
-          const componentFiles = scanResults.filter((r) => r.hasComponent);
+          try {
+            const scanResults = scanner.scan(baseDir);
+            const componentFiles = scanResults.filter((r) => r.hasComponent);
 
-          const importStatements = componentFiles.map((result) => {
-            const relativePath = path.relative(baseDir, result.filePath);
-            const importPath = `./${relativePath.replace(/\.tsx?$/, '')}`;
-            return `import '${importPath}';`;
-          });
+            const importStatements = componentFiles.map((result) => {
+              const relativePath = path.relative(baseDir, result.filePath);
+              const importPath = `./${relativePath.replace(/\.tsx?$/, '')}`;
+              return `import '${importPath}';`;
+            });
 
-          autoImportContent = `// @croco/auto-import\n${importStatements.join('\n')}\n`;
+            autoImportContent = `// @croco/auto-import\n${importStatements.join('\n')}\n`;
 
-          if (normalizedConfig.generateRegistry.enabled) {
-            const controllers = scanResults.filter((r) => r.decorators.includes('Controller'));
-            const components = scanResults.filter((r) => r.decorators.includes('Component'));
+            if (normalizedConfig.generateRegistry.enabled) {
+              const controllers = scanResults.filter((r) => r.decorators.includes('Controller'));
+              const components = scanResults.filter((r) => r.decorators.includes('Component'));
 
-            const outPath = path.join(
-              normalizedConfig.generateRegistry.outDir,
-              normalizedConfig.generateRegistry.outFile
-            );
-            const registryDir = path.dirname(path.resolve(outPath));
-            const content = generateRegistryContent(controllers, components, registryDir);
+              const outPath = path.join(
+                normalizedConfig.generateRegistry.outDir,
+                normalizedConfig.generateRegistry.outFile
+              );
+              const registryDir = path.dirname(path.resolve(outPath));
+              const content = generateRegistryContent(controllers, components, registryDir);
 
-            const outDir = path.dirname(outPath);
-            if (!fs.existsSync(outDir)) {
-              fs.mkdirSync(outDir, { recursive: true });
+              const outDir = path.dirname(outPath);
+              if (!fs.existsSync(outDir)) {
+                fs.mkdirSync(outDir, { recursive: true });
+              }
+
+              fs.writeFileSync(outPath, content);
             }
-
-            fs.writeFileSync(outPath, content);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return {
+              errors: [{ text: `Component scan failed: ${message}` }],
+            };
           }
         }
       });
