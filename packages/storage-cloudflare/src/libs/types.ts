@@ -30,6 +30,8 @@ export type CloudflareImagesOptions = {
    * 기본값: 'public'
    */
   defaultVariant?: string;
+
+  maxUploadBytes?: number;
 };
 
 /**
