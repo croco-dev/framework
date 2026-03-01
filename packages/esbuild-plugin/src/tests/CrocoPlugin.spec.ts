@@ -100,6 +100,35 @@ describe('crocoPlugin', () => {
 
       expect(mockBuildContext.onStart).toHaveBeenCalled();
     });
+
+    it('should surface scan failures as build errors', () => {
+      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+      const invalidFilePath = path.join(TEMP_DIR, 'invalid.ts');
+
+      fs.writeFileSync(entryFilePath, "console.log('hello');");
+      fs.writeFileSync(invalidFilePath, 'this is not valid typescript {{{');
+
+      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
+
+      const plugin = crocoPlugin({
+        scan: {
+          dirs: [TEMP_DIR],
+        },
+      });
+
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      const result = onStartCallback?.();
+
+      expect(result).toEqual({
+        errors: [
+          expect.objectContaining({
+            text: expect.stringContaining('Component scan failed:'),
+          }),
+        ],
+      });
+    });
   });
 
   describe('onLoad', () => {
