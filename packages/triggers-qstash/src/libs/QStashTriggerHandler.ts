@@ -189,12 +189,11 @@ export class QStashTriggerHandler {
     try {
       const result = await this.dispatchExecution(payload);
       return result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+    } catch {
       return {
         success: false,
         statusCode: 500,
-        body: { error: 'Execution failed', details: errorMessage },
+        body: { error: 'Execution failed' },
       };
     }
   }
