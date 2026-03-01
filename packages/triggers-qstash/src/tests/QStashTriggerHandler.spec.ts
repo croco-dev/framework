@@ -1,15 +1,14 @@
 import type { ExecutionManager } from '@croco/execution-core';
-import { MetadataStorage } from '@croco/framework-context';
+import { Container, MetadataStorage } from '@croco/framework-context';
 import type { CronTriggerMetadata } from '@croco/triggers-core';
 import { triggerRegistry } from '@croco/triggers-core';
 import type { Receiver } from '@upstash/qstash';
-import { Container as TypeDIContainer } from 'typedi';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QStashTriggerHandler } from '../libs/QStashTriggerHandler';
 
 describe('QStashTriggerHandler', () => {
   beforeEach(() => {
-    TypeDIContainer.reset();
+    Container.reset();
     MetadataStorage.clear();
     vi.restoreAllMocks();
   });
@@ -31,7 +30,7 @@ describe('QStashTriggerHandler', () => {
     triggerRegistry.register(triggerMetadata);
 
     const targetInstance = new Bug16Handler();
-    TypeDIContainer.set({ id: Bug16Handler, value: targetInstance });
+    Container.set(Bug16Handler, targetInstance);
 
     const receiver = {
       verify: vi.fn().mockResolvedValue(undefined),
@@ -49,7 +48,7 @@ describe('QStashTriggerHandler', () => {
       timeout: vi.fn().mockResolvedValue({}),
     } as unknown as ExecutionManager;
 
-    const getSpy = vi.spyOn(TypeDIContainer, 'get');
+    const getSpy = vi.spyOn(Container, 'get');
 
     const handler = new QStashTriggerHandler({
       receiver,

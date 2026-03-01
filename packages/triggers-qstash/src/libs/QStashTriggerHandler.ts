@@ -1,8 +1,8 @@
 import type { ExecutionManager } from '@croco/execution-core';
 import type { Constructor } from '@croco/framework-context';
+import { Container } from '@croco/framework-context';
 import { triggerRegistry } from '@croco/triggers-core';
 import type { Receiver } from '@upstash/qstash';
-import { Container as TypeDIContainer } from 'typedi';
 
 type ServiceResolver = (targetClass: Constructor) => unknown;
 
@@ -22,7 +22,7 @@ export type QStashTriggerHandlerOptions = {
 
   /**
    * Optional service resolver for getting target instances.
-   * If not provided, uses TypeDI Container.get() with class constructor.
+   * If not provided, uses the framework Container with constructor fallback.
    */
   readonly serviceResolver?: ServiceResolver;
 };
@@ -137,7 +137,11 @@ export class QStashTriggerHandler {
     this.serviceResolver =
       options.serviceResolver ??
       ((targetClass: Constructor) => {
-        return TypeDIContainer.get(targetClass);
+        try {
+          return Container.get(targetClass);
+        } catch {
+          return new targetClass();
+        }
       });
   }
 
