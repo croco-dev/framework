@@ -24,4 +24,11 @@ describe('FileNotFoundProblem', () => {
       throw new FileNotFoundProblem('missing/file.txt');
     }).toThrow(FileNotFoundProblem);
   });
+
+  it('cause를 함께 보존할 수 있음', () => {
+    const cause = new Error('fs missing');
+    const problem = new FileNotFoundProblem('missing/file.txt', cause);
+
+    expect(problem.cause).toBe(cause);
+  });
 });

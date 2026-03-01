@@ -5,6 +5,7 @@ export interface ProblemOptions {
   type?: string;
   instance?: string;
   extensions?: Record<string, unknown>;
+  cause?: Error;
 }
 
 export interface ProblemDetails {
@@ -24,6 +25,7 @@ export abstract class Problem extends Error {
   public readonly type: string;
   public readonly instance?: string;
   public readonly extensions?: Record<string, unknown>;
+  public readonly cause?: Error;
 
   protected constructor(code: string, category: ProblemCategory, detail?: string, options?: ProblemOptions) {
     super(detail ?? code);
@@ -35,6 +37,15 @@ export abstract class Problem extends Error {
     this.instance = options?.instance;
     this.extensions = options?.extensions;
     this.name = new.target.name;
+
+    if (options?.cause && this.cause === undefined) {
+      Object.defineProperty(this, 'cause', {
+        configurable: true,
+        enumerable: false,
+        value: options.cause,
+        writable: true,
+      });
+    }
 
     Object.setPrototypeOf(this, new.target.prototype);
 

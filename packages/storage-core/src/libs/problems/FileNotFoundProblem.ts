@@ -7,7 +7,9 @@ import { StorageProblem } from './StorageProblem';
 export class FileNotFoundProblem extends StorageProblem {
   readonly code = 'STORAGE_FILE_NOT_FOUND';
 
-  constructor(key: string) {
-    super('STORAGE_FILE_NOT_FOUND', ProblemCategory.NotFound, `File with key '${key}' not found`);
+  constructor(key: string, cause?: Error) {
+    super('STORAGE_FILE_NOT_FOUND', ProblemCategory.NotFound, `File with key '${key}' not found`, {
+      cause,
+    });
   }
 }
