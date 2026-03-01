@@ -101,7 +101,6 @@ export class Bootstrap {
       if (Bootstrap.config?.onShutdown) {
         await Bootstrap.config.onShutdown();
       }
-      process.exit(0);
     };
 
     process.on('SIGTERM', shutdown);
