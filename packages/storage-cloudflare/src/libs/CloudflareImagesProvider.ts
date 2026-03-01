@@ -9,6 +9,8 @@ import type {
   CloudflareUploadResponse,
 } from './types';
 
+const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 @Component()
 export class CloudflareImagesProvider extends BaseStorageProvider implements ImageProvider {
   private readonly options: CloudflareImagesOptions;
@@ -34,14 +36,32 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       const uint8Array = new Uint8Array(data);
       file = new File([uint8Array], key, { type: options?.contentType ?? 'application/octet-stream' });
     } else {
-      const chunks: Uint8Array[] = [];
+      const maxUploadBytes = this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+      const chunks: Buffer[] = [];
+      let totalBytes = 0;
+
       for await (const chunk of data) {
+        let bufferChunk: Buffer;
         if (Buffer.isBuffer(chunk)) {
-          chunks.push(new Uint8Array(chunk));
+          bufferChunk = chunk;
+        } else if (chunk instanceof Uint8Array) {
+          bufferChunk = Buffer.from(chunk);
+        } else if (chunk instanceof ArrayBuffer) {
+          bufferChunk = Buffer.from(chunk);
+        } else if (typeof chunk === 'string') {
+          bufferChunk = Buffer.from(chunk);
         } else {
-          chunks.push(chunk);
+          this.throwUploadFailed(key, 'Cloudflare upload stream contains unsupported chunk type');
         }
+
+        totalBytes += bufferChunk.length;
+        if (totalBytes > maxUploadBytes) {
+          this.throwUploadFailed(key, `Cloudflare upload stream exceeds maxUploadBytes(${maxUploadBytes})`);
+        }
+
+        chunks.push(bufferChunk);
       }
+
       const buffer = Buffer.concat(chunks);
       const uint8Array = new Uint8Array(buffer);
       file = new File([uint8Array], key, { type: options?.contentType ?? 'application/octet-stream' });

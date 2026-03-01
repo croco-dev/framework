@@ -117,6 +117,18 @@ describe('CloudflareImagesProvider', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
+    it('should throw UploadFailedProblem when stream exceeds maxUploadBytes', async () => {
+      const { Readable } = await import('node:stream');
+      const providerWithLimit = new CloudflareImagesProvider({
+        ...mockOptions,
+        maxUploadBytes: 4,
+      });
+      const mockStream = Readable.from([Buffer.from('1234'), Buffer.from('5')]);
+
+      await expect(providerWithLimit.put('test.jpg', mockStream)).rejects.toThrow(UploadFailedProblem);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
     it('should throw UploadFailedProblem when API returns error', async () => {
       const mockBuffer = Buffer.from('test-image-data');
       const mockResponse = {
