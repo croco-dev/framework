@@ -131,6 +131,66 @@ describe('QStashTriggerHandler', () => {
     expect(executionManager.create).not.toHaveBeenCalled();
   });
 
+  it('기본 serviceResolver는 DI 해석 실패를 숨기지 않고 500으로 반환해야 한다', async () => {
+    class DefaultResolverFailureHandler {
+      async execute(): Promise<string> {
+        return 'handled';
+      }
+    }
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'execute',
+      target: DefaultResolverFailureHandler.prototype,
+      options: {},
+    });
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const executionManager = {
+      create: vi.fn(),
+      start: vi.fn(),
+      complete: vi.fn(),
+      fail: vi.fn(),
+      cancel: vi.fn(),
+      retry: vi.fn(),
+      updateProgress: vi.fn(),
+      checkpoint: vi.fn(),
+      timeout: vi.fn(),
+    } as unknown as ExecutionManager;
+
+    vi.spyOn(Container, 'get').mockImplementation(() => {
+      throw new Error('Container resolution failed');
+    });
+
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: 'schedule-default-di-error',
+        className: 'DefaultResolverFailureHandler',
+        methodName: 'execute',
+        cronExpression: '* * * * *',
+        timestamp: new Date().toISOString(),
+      }),
+      'valid-signature'
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.statusCode).toBe(500);
+    expect(result.body).toEqual({
+      error: 'Execution failed',
+      details: 'Container resolution failed',
+    });
+    expect(executionManager.create).not.toHaveBeenCalled();
+  });
+
   it('Lambda 핸들러는 소문자 서명 헤더를 지원해야 한다', async () => {
     class LowercaseHeaderHandler {
       async execute(): Promise<string> {

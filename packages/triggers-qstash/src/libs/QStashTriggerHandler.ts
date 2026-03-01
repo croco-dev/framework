@@ -137,11 +137,7 @@ export class QStashTriggerHandler {
     this.serviceResolver =
       options.serviceResolver ??
       ((targetClass: Constructor) => {
-        try {
-          return Container.get(targetClass);
-        } catch {
-          return new targetClass();
-        }
+        return Container.get(targetClass);
       });
   }
 
