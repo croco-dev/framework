@@ -1,6 +1,5 @@
-import type { AuthUser } from '@croco/auth-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ClerkTenantMapper, type TenantMappingStore } from '../libs/ClerkTenantMapper';
+import { ClerkTenantMapper, type ClerkTenantRequest, type TenantMappingStore } from '../libs/ClerkTenantMapper';
 
 describe('ClerkTenantMapper', () => {
   describe('InMemory Store', () => {
@@ -31,24 +30,30 @@ describe('ClerkTenantMapper', () => {
     it('should resolve by request with auth user', async () => {
       await mapper.register('org_123', 'tenant_abc');
 
-      const request = {
+      const request: ClerkTenantRequest = {
         user: {
+          id: 'user-1',
+          roles: [],
+          permissions: [],
           metadata: {
             orgId: 'org_123',
           },
-        } as unknown as AuthUser,
-      } as unknown as Request;
+        },
+      };
 
       const tenantId = await mapper.resolve(request);
       expect(tenantId).toBe('tenant_abc');
     });
 
     it('should return null if request has no orgId', async () => {
-      const request = {
+      const request: ClerkTenantRequest = {
         user: {
+          id: 'user-2',
+          roles: [],
+          permissions: [],
           metadata: {},
-        } as unknown as AuthUser,
-      } as unknown as Request;
+        },
+      };
 
       const tenantId = await mapper.resolve(request);
       expect(tenantId).toBeNull();
