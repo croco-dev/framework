@@ -35,13 +35,21 @@ export function createProgram(): Command {
         if (rawOptions.scope) cliOptions.scope = rawOptions.scope as string;
         if (rawOptions.api) cliOptions.api = rawOptions.api as GeneratorOptions['api'];
         if (rawOptions.apiHosting) cliOptions.apiHosting = rawOptions.apiHosting as GeneratorOptions['apiHosting'];
-        if (rawOptions.webApps) cliOptions.webApps = (rawOptions.webApps as string).split(',').map((s) => s.trim());
+        if (rawOptions.webApps)
+          cliOptions.webApps = (rawOptions.webApps as string)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
         if (rawOptions.backendDeploy)
           cliOptions.backendDeploy = rawOptions.backendDeploy as GeneratorOptions['backendDeploy'];
         if (rawOptions.frontendDeploy)
           cliOptions.frontendDeploy = rawOptions.frontendDeploy as GeneratorOptions['frontendDeploy'];
         if (rawOptions.db)
-          cliOptions.db = (rawOptions.db as string).split(',').map((s) => s.trim()) as GeneratorOptions['db'];
+          cliOptions.db = (rawOptions.db as string)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean) as GeneratorOptions['db'];
+        cliOptions.db = (rawOptions.db as string).split(',').map((s) => s.trim()) as GeneratorOptions['db'];
         if (rawOptions.agentRules === false) cliOptions.agentRules = false;
         if (rawOptions.install === false) cliOptions.installDeps = false;
         if (rawOptions.git === false) cliOptions.initGit = false;

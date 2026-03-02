@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { mergeInto } from './helpers/fs.js';
 import {
   installAgentRules,
@@ -24,69 +24,70 @@ const TEMPLATES_DIR = new URL('../templates', import.meta.url).pathname;
 export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
   const vars = { projectName: options.projectName, scope: options.scope };
 
-  // Step 1: targetDir 생성 (non-empty 체크)
-  if (existsSync(targetDir) && readdirSync(targetDir).length > 0) {
-    throw new Error(`Directory '${targetDir}' is not empty.`);
+  // Step 1: targetDir 정규화 및 생성 (non-empty 체크)
+  const resolvedTarget = resolve(targetDir);
+  if (existsSync(resolvedTarget) && readdirSync(resolvedTarget).length > 0) {
+    throw new Error(`Directory '${resolvedTarget}' is not empty.`);
   }
-  mkdirSync(targetDir, { recursive: true });
+  mkdirSync(resolvedTarget, { recursive: true });
 
   // Step 2: 프리셋 분기 — blank or ddd
   if (options.preset === 'blank') {
-    mergeInto(join(TEMPLATES_DIR, 'blank'), targetDir, vars);
+    mergeInto(join(TEMPLATES_DIR, 'blank'), resolvedTarget, vars);
   } else {
     // ddd-api or ddd-fullstack
-    mergeInto(join(TEMPLATES_DIR, 'base-ddd'), targetDir, vars);
+    mergeInto(join(TEMPLATES_DIR, 'base-ddd'), resolvedTarget, vars);
   }
 
   // 이하 단계들은 blank preset에서는 스킵
   if (options.preset === 'blank') {
-    await finalize(targetDir, options);
+    await finalize(resolvedTarget, options);
     return;
   }
 
   // Step 3: API + hosting installer
   if (options.api === 'graphql') {
     if (options.apiHosting === 'standalone') {
-      installGraphqlStandalone(targetDir, vars);
+      installGraphqlStandalone(resolvedTarget, vars);
     } else {
-      installGraphqlNextjs(targetDir, vars);
+      installGraphqlNextjs(resolvedTarget, vars);
     }
   } else if (options.api === 'trpc') {
     if (options.apiHosting === 'standalone') {
-      installTrpcStandalone(targetDir, vars);
+      installTrpcStandalone(resolvedTarget, vars);
     } else {
-      installTrpcNextjs(targetDir, vars);
+      installTrpcNextjs(resolvedTarget, vars);
     }
   }
 
   // Step 4: shared/ui (standalone fullstack or nextjs hosting에서 웹앱 있을 때)
   const hasWebApps = options.webApps.length > 0;
   if (hasWebApps && (options.preset === 'ddd-fullstack' || options.apiHosting === 'nextjs')) {
-    installSharedUi(targetDir, vars);
+    installSharedUi(resolvedTarget, vars);
   }
 
   // Step 5: web addon (standalone hosting + web apps)
   if (options.apiHosting === 'standalone' && hasWebApps) {
     for (const webAppName of options.webApps) {
       if (options.api === 'graphql') {
-        installWebGraphql(targetDir, webAppName, vars);
+        installWebGraphql(resolvedTarget, webAppName, vars);
       } else if (options.api === 'trpc') {
-        installWebTrpc(targetDir, webAppName, vars);
+        installWebTrpc(resolvedTarget, webAppName, vars);
       }
     }
   }
 
   // Step 6: backend deploy
   if (options.backendDeploy === 'docker') {
-    installDocker(targetDir, { ...vars, api: options.api });
+    installDocker(resolvedTarget, { ...vars, api: options.api });
   } else if (options.backendDeploy === 'lambda') {
-    installLambda(targetDir, { ...vars, api: options.api });
+    installLambda(resolvedTarget, { ...vars, api: options.api });
   }
 
   // Step 7: frontend deploy
   if (options.frontendDeploy && hasWebApps) {
     for (const webAppName of options.webApps) {
-      installFrontendDeploy(targetDir, webAppName, {
+      installFrontendDeploy(resolvedTarget, webAppName, {
         ...vars,
         frontendDeploy: options.frontendDeploy,
       });
@@ -95,18 +96,18 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
 
   // Step 8: DB addons
   if (options.db.includes('mongodb')) {
-    installMongodb(targetDir, vars);
+    installMongodb(resolvedTarget, vars);
   }
   if (options.db.includes('redis')) {
-    installRedis(targetDir, vars);
+    installRedis(resolvedTarget, vars);
   }
 
   // Step 9: agent-rules
   if (options.agentRules) {
-    installAgentRules(targetDir, vars);
+    installAgentRules(resolvedTarget, vars);
   }
 
-  await finalize(targetDir, options);
+  await finalize(resolvedTarget, options);
 }
 
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
