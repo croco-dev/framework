@@ -1,6 +1,9 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { copySync, ensureDirSync, readFileSync, writeFileSync } from 'fs-extra';
+import fsExtra from 'fs-extra';
+
+const { copySync, ensureDirSync, readFileSync, writeFileSync } = fsExtra;
+
 import Handlebars from 'handlebars';
 
 export function copyTemplate(src: string, dest: string): void {

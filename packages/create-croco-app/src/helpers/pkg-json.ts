@@ -1,5 +1,7 @@
 import { join } from 'node:path';
-import { pathExistsSync, readJsonSync, writeJsonSync } from 'fs-extra';
+import fsExtra from 'fs-extra';
+
+const { pathExistsSync, readJsonSync, writeJsonSync } = fsExtra;
 
 export function mergePackageJson(targetDir: string, additions: Record<string, unknown>): void {
   const pkgPath = join(targetDir, 'package.json');
