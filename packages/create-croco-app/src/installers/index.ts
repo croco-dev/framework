@@ -1,4 +1,5 @@
 export { installAgentRules } from './agent-rules.js';
+export { installDocker } from './docker.js';
 export { installGraphqlNextjs } from './graphql-nextjs.js';
 export { installGraphqlStandalone } from './graphql-standalone.js';
 export { installSharedUi } from './shared-ui.js';
