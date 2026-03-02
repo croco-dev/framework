@@ -1,0 +1,129 @@
+import { execSync } from 'node:child_process';
+import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { mergeInto } from './helpers/fs.js';
+import {
+  installAgentRules,
+  installDocker,
+  installFrontendDeploy,
+  installGraphqlNextjs,
+  installGraphqlStandalone,
+  installLambda,
+  installMongodb,
+  installRedis,
+  installSharedUi,
+  installTrpcNextjs,
+  installTrpcStandalone,
+  installWebGraphql,
+  installWebTrpc,
+} from './installers/index.js';
+import type { GeneratorOptions } from './types.js';
+
+const TEMPLATES_DIR = new URL('../templates', import.meta.url).pathname;
+
+export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
+  const vars = { projectName: options.projectName, scope: options.scope };
+
+  // Step 1: targetDir 생성 (non-empty 체크)
+  if (existsSync(targetDir) && readdirSync(targetDir).length > 0) {
+    throw new Error(`Directory '${targetDir}' is not empty.`);
+  }
+  mkdirSync(targetDir, { recursive: true });
+
+  // Step 2: 프리셋 분기 — blank or ddd
+  if (options.preset === 'blank') {
+    mergeInto(join(TEMPLATES_DIR, 'blank'), targetDir, vars);
+  } else {
+    // ddd-api or ddd-fullstack
+    mergeInto(join(TEMPLATES_DIR, 'base-ddd'), targetDir, vars);
+  }
+
+  // 이하 단계들은 blank preset에서는 스킵
+  if (options.preset === 'blank') {
+    await finalize(targetDir, options);
+    return;
+  }
+
+  // Step 3: API + hosting installer
+  if (options.api === 'graphql') {
+    if (options.apiHosting === 'standalone') {
+      installGraphqlStandalone(targetDir, vars);
+    } else {
+      installGraphqlNextjs(targetDir, vars);
+    }
+  } else if (options.api === 'trpc') {
+    if (options.apiHosting === 'standalone') {
+      installTrpcStandalone(targetDir, vars);
+    } else {
+      installTrpcNextjs(targetDir, vars);
+    }
+  }
+
+  // Step 4: shared/ui (standalone fullstack or nextjs hosting에서 웹앱 있을 때)
+  const hasWebApps = options.webApps.length > 0;
+  if (hasWebApps && (options.preset === 'ddd-fullstack' || options.apiHosting === 'nextjs')) {
+    installSharedUi(targetDir, vars);
+  }
+
+  // Step 5: web addon (standalone hosting + web apps)
+  if (options.apiHosting === 'standalone' && hasWebApps) {
+    for (const webAppName of options.webApps) {
+      if (options.api === 'graphql') {
+        installWebGraphql(targetDir, webAppName, vars);
+      } else if (options.api === 'trpc') {
+        installWebTrpc(targetDir, webAppName, vars);
+      }
+    }
+  }
+
+  // Step 6: backend deploy
+  if (options.backendDeploy === 'docker') {
+    installDocker(targetDir, { ...vars, api: options.api });
+  } else if (options.backendDeploy === 'lambda') {
+    installLambda(targetDir, { ...vars, api: options.api });
+  }
+
+  // Step 7: frontend deploy
+  if (options.frontendDeploy && hasWebApps) {
+    for (const webAppName of options.webApps) {
+      installFrontendDeploy(targetDir, webAppName, {
+        ...vars,
+        frontendDeploy: options.frontendDeploy,
+      });
+    }
+  }
+
+  // Step 8: DB addons
+  if (options.db.includes('mongodb')) {
+    installMongodb(targetDir, vars);
+  }
+  if (options.db.includes('redis')) {
+    installRedis(targetDir, vars);
+  }
+
+  // Step 9: agent-rules
+  if (options.agentRules) {
+    installAgentRules(targetDir, vars);
+  }
+
+  await finalize(targetDir, options);
+}
+
+async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
+  // Step 10: .env.example → .env 복사
+  const envExample = join(targetDir, '.env.example');
+  const envFile = join(targetDir, '.env');
+  if (existsSync(envExample) && !existsSync(envFile)) {
+    copyFileSync(envExample, envFile);
+  }
+
+  // Step 11: git init
+  if (options.initGit) {
+    execSync('git init', { cwd: targetDir, stdio: 'ignore' });
+  }
+
+  // Step 12: pnpm install
+  if (options.installDeps) {
+    execSync('pnpm install', { cwd: targetDir, stdio: 'inherit' });
+  }
+}
