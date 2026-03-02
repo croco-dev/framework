@@ -4,6 +4,8 @@ export { installFrontendDeploy } from './frontend-deploy.js';
 export { installGraphqlNextjs } from './graphql-nextjs.js';
 export { installGraphqlStandalone } from './graphql-standalone.js';
 export { installLambda } from './lambda.js';
+export { installMongodb } from './mongodb.js';
+export { installRedis } from './redis.js';
 export { installSharedUi } from './shared-ui.js';
 export { installTrpcNextjs } from './trpc-nextjs.js';
 export { installTrpcStandalone } from './trpc-standalone.js';

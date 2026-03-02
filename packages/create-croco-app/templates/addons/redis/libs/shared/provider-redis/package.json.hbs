@@ -1,0 +1,17 @@
+{
+  "name": "{{scope}}/provider-redis",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ioredis": "^5.0.0",
+    "typedi": "^0.10.0",
+    "{{scope}}/utils-env": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
