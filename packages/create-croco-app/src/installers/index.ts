@@ -2,6 +2,7 @@ export { installAgentRules } from './agent-rules.js';
 export { installDocker } from './docker.js';
 export { installGraphqlNextjs } from './graphql-nextjs.js';
 export { installGraphqlStandalone } from './graphql-standalone.js';
+export { installLambda } from './lambda.js';
 export { installSharedUi } from './shared-ui.js';
 export { installTrpcNextjs } from './trpc-nextjs.js';
 export { installTrpcStandalone } from './trpc-standalone.js';
