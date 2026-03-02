@@ -1,5 +1,6 @@
 export { installAgentRules } from './agent-rules.js';
 export { installDocker } from './docker.js';
+export { installFrontendDeploy } from './frontend-deploy.js';
 export { installGraphqlNextjs } from './graphql-nextjs.js';
 export { installGraphqlStandalone } from './graphql-standalone.js';
 export { installLambda } from './lambda.js';
