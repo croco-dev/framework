@@ -1,0 +1,31 @@
+{
+  "name": "create-croco-app",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "create-croco-app": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.0",
+    "commander": "^12.0.0",
+    "fs-extra": "^11.0.0",
+    "handlebars": "^4.7.0",
+    "picocolors": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.0",
+    "@types/handlebars": "^4.1.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.16"
+  }
+}

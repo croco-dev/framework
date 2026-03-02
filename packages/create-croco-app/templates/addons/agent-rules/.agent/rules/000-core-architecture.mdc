@@ -1,0 +1,18 @@
+---
+description: Core DDD architecture rules for {{scope}} monorepo
+globs: ["libs/**/*.ts", "apps/**/*.ts"]
+alwaysApply: true
+---
+
+# Core Architecture Rules
+
+## Domain-Driven Design (DDD)
+- Each domain lives under `libs/{domain}/`
+- Layer structure: `domain/` → `service/` → `datasource/`
+- Cross-domain imports are forbidden (use shared interfaces)
+- `libs/shared/` is the only cross-domain shared code
+
+## Forbidden Patterns
+- Direct cross-domain imports (e.g., `libs/order` importing from `libs/user`)
+- Datasource imports from domain/service layers
+- Circular dependencies between domains

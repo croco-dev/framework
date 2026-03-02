@@ -1,0 +1,17 @@
+---
+description: Backend server development guidelines
+globs: ["apps/api/**/*.ts", "apps/graphql-api/**/*.ts", "libs/**/*.ts"]
+alwaysApply: false
+---
+
+# Server Development Rules
+
+## API Design
+- Use RFC 7807 Problem Details for error responses
+- All endpoints must be typed end-to-end
+- Use dependency injection via typedi
+
+## Error Handling
+- Throw typed Problem subclasses, never plain Error
+- Always handle async errors with try/catch
+- Log errors with context (request ID, user ID)

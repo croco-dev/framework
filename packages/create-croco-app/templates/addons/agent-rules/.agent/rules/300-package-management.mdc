@@ -1,0 +1,16 @@
+---
+description: Package management rules for {{scope}} monorepo
+globs: ["**/package.json", "pnpm-workspace.yaml"]
+alwaysApply: true
+---
+
+# Package Management Rules
+
+## pnpm Workspace
+- Always use `workspace:*` for internal package references
+- Run `pnpm install` from monorepo root, not individual packages
+- Use `pnpm --filter <package>` for package-specific commands
+
+## Versioning
+- Internal packages use `version: "0.0.1"` and `private: true`
+- External releases follow semantic versioning

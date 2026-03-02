@@ -1,0 +1,19 @@
+---
+description: Code quality and style rules
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Code Quality Rules
+
+## TypeScript
+- No `any` type — use `unknown` and narrow with type guards
+- Explicit return types on public functions
+- Use `type` imports (`import type { X }`)
+- No non-null assertions (`!`) — use optional chaining or type guards
+
+## Naming
+- Classes: PascalCase
+- Interfaces/Types: PascalCase (no `I` prefix)
+- Constants: SCREAMING_SNAKE_CASE
+- Files: PascalCase for classes, camelCase for utilities

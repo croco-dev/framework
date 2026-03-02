@@ -1,0 +1,22 @@
+{
+  "name": "{{scope}}/provider-database",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --clean --dts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.2",
+    "pg": "^8.11.0",
+    "typedi": "^0.10.0",
+    "{{scope}}/utils-env": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "typescript": "^5.8.0",
+    "tsup": "^8.5.1"
+  }
+}

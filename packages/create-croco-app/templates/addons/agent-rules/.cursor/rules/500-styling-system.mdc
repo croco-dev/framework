@@ -1,0 +1,16 @@
+---
+description: Styling system rules
+globs: ["**/*.tsx", "**/*.css"]
+alwaysApply: false
+---
+
+# Styling System Rules
+
+## Tailwind CSS
+- Use Tailwind utility classes, avoid custom CSS
+- Extract repeated class combinations with `cn()` helper
+- Use `class-variance-authority` for component variants
+
+## Component Library
+- Shared UI components live in `libs/shared/ui/`
+- Use `cn()` from `libs/shared/ui/lib/cn.ts` for conditional classes

@@ -1,0 +1,17 @@
+---
+description: Frontend client development guidelines
+globs: ["apps/web/**/*.tsx", "apps/web/**/*.ts", "libs/shared/ui/**/*.tsx"]
+alwaysApply: false
+---
+
+# Client Development Rules
+
+## React Component Guidelines
+- Use functional components with TypeScript
+- Co-locate component tests with the component
+- Use Tailwind CSS for styling
+- Extract reusable components to `libs/shared/ui/`
+
+## State Management
+- Prefer server state (React Query / tRPC) over client state
+- Use React Context only for UI state (theme, sidebar open/closed)

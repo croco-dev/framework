@@ -1,0 +1,17 @@
+---
+description: Backend performance optimization rules
+globs: ["libs/**/datasource/**/*.ts", "apps/api/**/*.ts"]
+alwaysApply: false
+---
+
+# Backend Performance Rules
+
+## Database
+- Use connection pooling (pg Pool)
+- Add database indexes for frequently queried fields
+- Use batch queries where possible (avoid N+1)
+- Paginate all list endpoints
+
+## Caching
+- Use Redis for session and frequently-read data
+- Set TTL on all cache entries

@@ -1,0 +1,24 @@
+{
+  "name": "{{scope}}/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --clean",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@trpc/server": "^11.0.0",
+    "typedi": "^0.10.0",
+    "reflect-metadata": "^0.2.0",
+    "superjson": "^2.2.0",
+    "{{scope}}/provider-database": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0"
+  }
+}
