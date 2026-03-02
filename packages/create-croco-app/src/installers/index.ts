@@ -4,3 +4,4 @@ export { installGraphqlStandalone } from './graphql-standalone.js';
 export { installSharedUi } from './shared-ui.js';
 export { installTrpcNextjs } from './trpc-nextjs.js';
 export { installTrpcStandalone } from './trpc-standalone.js';
+export { installWebGraphql } from './web-graphql.js';
