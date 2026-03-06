@@ -142,10 +142,6 @@ export class PolarWebhookHandler {
   }
 
   private async reserveWebhook(eventId: string, eventType: string): Promise<boolean> {
-    if (await this.store.isWebhookProcessed(eventId)) {
-      return false;
-    }
-
     try {
       await this.store.markWebhookProcessed({
         eventId,
@@ -374,6 +370,7 @@ export class PolarWebhookHandler {
     const normalizedMessage = error.message.toLowerCase();
 
     return (
+      errorCode === 'billing/webhook-already-processed' ||
       errorCode === '23505' ||
       normalizedMessage.includes('duplicate') ||
       normalizedMessage.includes('already exists') ||
