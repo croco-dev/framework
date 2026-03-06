@@ -290,7 +290,8 @@ describe('QStashTriggerHandler', () => {
 
     const result = await handler.handle(
       JSON.stringify({
-        scheduleId: 'schedule-default-di-error',
+        scheduleId: 'croco-trigger:execute:execute',
+        triggerName: 'execute',
         className: 'DefaultResolverFailureHandler',
         methodName: 'execute',
         cronExpression: '* * * * *',
