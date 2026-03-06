@@ -120,8 +120,6 @@ export class MembershipService {
   private async publishSafely(
     event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent
   ): Promise<void> {
-    try {
-      await this.eventPublisher.publish(event);
-    } catch {}
+    await this.eventPublisher.publish(event);
   }
 }

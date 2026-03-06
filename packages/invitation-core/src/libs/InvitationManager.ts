@@ -356,8 +356,6 @@ export class InvitationManager {
   private async publishSafely(
     event: InvitationCreatedEvent | InvitationAcceptedEvent | InvitationRevokedEvent | InvitationDeclinedEvent
   ): Promise<void> {
-    try {
-      await this.eventPublisher.publish(event);
-    } catch {}
+    await this.eventPublisher.publish(event);
   }
 }

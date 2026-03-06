@@ -46,6 +46,12 @@ describe('DomainPolicyManager', () => {
     expect(event.data).toEqual({ tenantId: 'tenant-1', domain: 'croco.dev', role: 'member' });
   });
 
+  it('should propagate event publication failures when adding domain policy', async () => {
+    publish.mockRejectedValueOnce(new Error('publish failed'));
+
+    await expect(manager.addDomainPolicy('tenant-1', 'croco.dev', 'member')).rejects.toThrow('publish failed');
+  });
+
   it('should reject public email domains', async () => {
     await expect(manager.addDomainPolicy('tenant-1', 'gmail.com', 'member')).rejects.toBeInstanceOf(
       PublicEmailDomainNotAllowedProblem
@@ -101,6 +107,27 @@ describe('DomainPolicyManager', () => {
     expect(addMember).toHaveBeenCalledWith('tenant-1', 'user-1', 'member');
     expect(result).toEqual(membership);
     expect(publish).toHaveBeenCalledWith(expect.any(DomainAutoJoinedEvent));
+  });
+
+  it('should propagate event publication failures after auto-join', async () => {
+    await manager.addDomainPolicy('tenant-1', 'croco.dev', 'member');
+
+    const membership: Membership = {
+      id: 'mem-1',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      role: 'member',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    addMember.mockResolvedValue(membership);
+    publish.mockClear();
+    publish.mockRejectedValueOnce(new Error('auto join publish failed'));
+
+    await expect(manager.tryAutoJoin('tenant-1', 'user-1', 'user@croco.dev')).rejects.toThrow(
+      'auto join publish failed'
+    );
   });
 
   it('should return null when no matching policy exists', async () => {

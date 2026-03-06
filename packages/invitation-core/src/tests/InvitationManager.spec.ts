@@ -91,6 +91,20 @@ describe('InvitationManager', () => {
     expect(publish).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
   });
 
+  it('should propagate event publication failures when creating email invitation', async () => {
+    send.mockResolvedValue(undefined);
+    publish.mockRejectedValueOnce(new Error('publish failed'));
+
+    await expect(
+      manager.createEmailInvitation({
+        tenantId: 'tenant-1',
+        inviterId: 'inviter-1',
+        email: 'member@croco.dev',
+        role: 'member',
+      })
+    ).rejects.toThrow('publish failed');
+  });
+
   it('should create link invitation without sending notification', async () => {
     const token = await manager.createLinkInvitation({
       tenantId: 'tenant-1',
@@ -129,6 +143,30 @@ describe('InvitationManager', () => {
     expect(accepted.status).toBe('accepted');
     expect(accepted.acceptedAt).not.toBeNull();
     expect(publish).toHaveBeenCalledWith(expect.any(InvitationAcceptedEvent));
+  });
+
+  it('should propagate event publication failures when accepting invitation', async () => {
+    await store.save(createInvitation('accept-fail-token'));
+
+    const membership: Membership = {
+      id: 'mem-1',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      role: 'member',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    addMember.mockResolvedValue(membership);
+    publish.mockRejectedValueOnce(new Error('accept publish failed'));
+
+    await expect(
+      manager.acceptInvitation({
+        token: 'accept-fail-token',
+        userId: 'user-1',
+        email: 'member@croco.dev',
+      })
+    ).rejects.toThrow('accept publish failed');
   });
 
   it('should accept link invitation without email match check', async () => {
