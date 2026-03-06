@@ -15,3 +15,9 @@ export class CarryingCapacitySimulationProblem extends Problem {
     super('metrics-core/carrying-capacity-simulation-error', ProblemCategory.BusinessRuleViolation, detail);
   }
 }
+
+export class RetentionMetricsUnavailableProblem extends Problem {
+  constructor(detail = 'Retention metrics are not available until full retention calculation is implemented') {
+    super('metrics-core/retention-metrics-unavailable', ProblemCategory.NotImplemented, detail);
+  }
+}
