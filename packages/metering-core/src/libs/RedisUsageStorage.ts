@@ -1,7 +1,7 @@
 import { RedisProblem } from './problems/RedisProblem';
 import type { RedisClient } from './RedisClient';
 import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from './types';
-import type { UsageStorage } from './UsageStorage';
+import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from './UsageStorage';
 
 /**
  * Redis 기반 UsageStorage 구현체
@@ -13,6 +13,32 @@ import type { UsageStorage } from './UsageStorage';
 export class RedisUsageStorage implements UsageStorage {
   private static readonly USAGE_KEY_PREFIX = 'usage';
   private static readonly IDEM_KEY_PREFIX = 'idem';
+  private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
+local usageKey = KEYS[1]
+local quota = tonumber(ARGV[1])
+local value = tonumber(ARGV[2])
+local score = tonumber(ARGV[3])
+local member = ARGV[4]
+local allowOverQuota = ARGV[5] == '1'
+local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
+local currentUsage = 0
+
+for _, existingMember in ipairs(records) do
+  local usageValue = string.match(existingMember, ':(%d+)$')
+  if usageValue then
+    currentUsage = currentUsage + tonumber(usageValue)
+  end
+end
+
+local newUsage = currentUsage + value
+local exceeded = newUsage > quota
+
+if (not exceeded) or allowOverQuota then
+  redis.call('ZADD', usageKey, score, member)
+end
+
+return { exceeded and 1 or 0, newUsage }
+`;
 
   constructor(private readonly redis: RedisClient) {}
 
@@ -53,6 +79,26 @@ export class RedisUsageStorage implements UsageStorage {
       return result === 'OK';
     } catch (error) {
       throw new RedisProblem('SET', error instanceof Error ? error : undefined);
+    }
+  }
+
+  async checkAndRecordWithinQuota(options: AtomicQuotaCheckOptions): Promise<AtomicQuotaCheckResult> {
+    try {
+      const key = this.buildUsageKey(options.tenantId, options.meterId, options.usageRecord.timestamp);
+      const score = options.usageRecord.timestamp.getTime();
+      const member = `${options.usageRecord.id}:${options.usageRecord.value}`;
+      const [exceeded, newUsage] = await this.redis.eval<[number, number]>(
+        RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
+        [key],
+        [options.quota, options.value, score, member, options.allowOverQuota ? 1 : 0]
+      );
+
+      return {
+        exceeded: exceeded === 1,
+        newUsage,
+      };
+    } catch (error) {
+      throw new RedisProblem('EVAL', error instanceof Error ? error : undefined);
     }
   }
 
