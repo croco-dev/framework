@@ -1,5 +1,6 @@
 import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../../types';
 import type { MetricsRepository } from '../interfaces/MetricsRepository';
+import { RetentionMetricsUnavailableProblem } from '../problems/MetricsProblems';
 
 /**
  * PostgreSQL 클라이언트 인터페이스 (pg 또는 호환 라이브러리)
@@ -174,13 +175,8 @@ export class TimescaleMetricsStore implements MetricsRepository {
   }
 
   async getRetentionMetrics(_tenantId: string, _period: Period): Promise<RetentionMetrics> {
-    // TODO: 실제 리텐션 메트릭 계산 로직 구현
-    // 시작 MRR, 종료 MRR, 변동 이력을 집계하여 계산해야 합니다
-    return {
-      logoChurn: 0,
-      revenueChurn: 0,
-      grr: 100,
-      nrr: 100,
-    };
+    throw new RetentionMetricsUnavailableProblem(
+      'TimescaleMetricsStore.getRetentionMetrics() is not implemented yet; returning fabricated retention values is unsafe'
+    );
   }
 }
