@@ -1,6 +1,11 @@
 import { Component } from '@croco/framework-context';
+import { Problem } from '@croco/problems-core';
 import { Task } from '@croco/tasks-core';
 import type { NotificationProviderRegistry } from './NotificationProviderRegistry';
+import {
+  NotificationDeliveryFailedProblem,
+  NotificationProviderNotFoundProblem,
+} from './problems/NotificationProblems';
 import type { NotificationJobPayload, NotificationProvider } from './types';
 
 @Component()
@@ -20,13 +25,17 @@ export class SendNotificationTask {
 
     const provider = this.registry.getProvider(providerName);
     if (!provider) {
-      throw new Error(`Provider ${providerName} not found`);
+      throw new NotificationProviderNotFoundProblem(providerName);
     }
 
     const result = await provider.send(notificationPayload);
 
     if (!result.success) {
-      throw result.error || new Error('Notification failed without error details');
+      if (result.error instanceof Problem || result.error instanceof Error) {
+        throw result.error;
+      }
+
+      throw new NotificationDeliveryFailedProblem(providerName);
     }
   }
 }
