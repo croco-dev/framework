@@ -6,14 +6,32 @@ import type { TenantManager } from './TenantManager';
  * Supports multiple managers with key-based lookup.
  */
 export class TenantManagerRegistry {
-  private static managers = new Map<string | symbol, TenantManager>();
   private static readonly DEFAULT_KEY = Symbol.for('default');
+  private static instance: TenantManagerRegistry;
+
+  private readonly managers: Map<string | symbol, TenantManager>;
+
+  constructor(entries?: Iterable<readonly [string | symbol, TenantManager]>) {
+    this.managers = new Map(entries);
+  }
+
+  static getInstance(): TenantManagerRegistry {
+    if (!TenantManagerRegistry.instance) {
+      TenantManagerRegistry.instance = new TenantManagerRegistry();
+    }
+
+    return TenantManagerRegistry.instance;
+  }
 
   /**
    * Register a TenantManager instance.
    */
   static register(manager: TenantManager, key?: string | symbol): void {
-    TenantManagerRegistry.managers.set(key ?? TenantManagerRegistry.DEFAULT_KEY, manager);
+    TenantManagerRegistry.getInstance().register(manager, key);
+  }
+
+  register(manager: TenantManager, key?: string | symbol): void {
+    this.managers.set(key ?? TenantManagerRegistry.DEFAULT_KEY, manager);
   }
 
   /**
@@ -21,7 +39,11 @@ export class TenantManagerRegistry {
    * @throws Error if manager is not registered
    */
   static get(key?: string | symbol): TenantManager {
-    const manager = TenantManagerRegistry.managers.get(key ?? TenantManagerRegistry.DEFAULT_KEY);
+    return TenantManagerRegistry.getInstance().get(key);
+  }
+
+  get(key?: string | symbol): TenantManager {
+    const manager = this.managers.get(key ?? TenantManagerRegistry.DEFAULT_KEY);
     if (!manager) {
       throw new TenantManagerNotRegisteredProblem(key === undefined ? undefined : String(key));
     }
@@ -32,13 +54,21 @@ export class TenantManagerRegistry {
    * Check if a TenantManager is registered.
    */
   static has(key?: string | symbol): boolean {
-    return TenantManagerRegistry.managers.has(key ?? TenantManagerRegistry.DEFAULT_KEY);
+    return TenantManagerRegistry.getInstance().has(key);
+  }
+
+  has(key?: string | symbol): boolean {
+    return this.managers.has(key ?? TenantManagerRegistry.DEFAULT_KEY);
   }
 
   /**
    * Clear all registered managers. Useful for testing.
    */
   static clear(): void {
-    TenantManagerRegistry.managers.clear();
+    TenantManagerRegistry.getInstance().clear();
+  }
+
+  clear(): void {
+    this.managers.clear();
   }
 }
