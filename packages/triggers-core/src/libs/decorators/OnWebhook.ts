@@ -1,7 +1,8 @@
-import { triggerRegistry } from '../TriggerRegistry';
+import { MetadataStorage } from '@croco/framework-context';
+import { WEBHOOK_METADATA_KEY } from '../metadataKeys';
 import type { WebhookOptions, WebhookTriggerMetadata } from '../types';
 
-export const WEBHOOK_METADATA_KEY = Symbol('WEBHOOK_METADATA');
+export { WEBHOOK_METADATA_KEY } from '../metadataKeys';
 
 /**
  * OnWebhook decorator for handling HTTP webhook requests.
@@ -34,7 +35,7 @@ export function OnWebhook(path: string, method: string, options: WebhookOptions 
       target,
     };
 
-    triggerRegistry.register(metadata);
+    MetadataStorage.define(WEBHOOK_METADATA_KEY, target, metadata, propertyKey);
 
     return descriptor;
   };

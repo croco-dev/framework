@@ -1,7 +1,8 @@
-import { triggerRegistry } from '../TriggerRegistry';
+import { MetadataStorage } from '@croco/framework-context';
+import { CRON_METADATA_KEY } from '../metadataKeys';
 import type { CronOptions, CronTriggerMetadata } from '../types';
 
-export const CRON_METADATA_KEY = Symbol('CRON_METADATA');
+export { CRON_METADATA_KEY } from '../metadataKeys';
 
 /**
  * Cron decorator for scheduling periodic execution.
@@ -29,7 +30,7 @@ export function Cron(expression: string, options: CronOptions = {}): MethodDecor
       target,
     };
 
-    triggerRegistry.register(metadata);
+    MetadataStorage.define(CRON_METADATA_KEY, target, metadata, propertyKey);
 
     return descriptor;
   };

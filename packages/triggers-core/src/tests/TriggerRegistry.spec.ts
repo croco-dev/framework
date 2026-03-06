@@ -1,19 +1,15 @@
 import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Cron } from '../libs/decorators/Cron';
-import { OnEvent } from '../libs/decorators/OnEvent';
-import { OnWebhook } from '../libs/decorators/OnWebhook';
+import { CRON_METADATA_KEY, Cron } from '../libs/decorators/Cron';
+import { EVENT_METADATA_KEY, OnEvent } from '../libs/decorators/OnEvent';
+import { OnWebhook, WEBHOOK_METADATA_KEY } from '../libs/decorators/OnWebhook';
 import {
   TRIGGER_METADATA_KEY,
   TriggerRegistry as TriggerRegistryClass,
   triggerRegistry,
 } from '../libs/TriggerRegistry';
-import type {
-  AnyTriggerMetadata,
-  CronTriggerMetadata,
-  EventTriggerMetadata,
-  WebhookTriggerMetadata,
-} from '../libs/types';
+
+import type { CronTriggerMetadata } from '../libs/types';
 
 describe('TriggerRegistry', () => {
   beforeEach(() => {
@@ -39,6 +35,8 @@ describe('TriggerRegistry', () => {
 
     const [metadata] = Array.from(triggers.values());
     expect(metadata.type).toBe('cron');
+    expect(MetadataStorage.get(CRON_METADATA_KEY, TestScheduler.prototype, 'dailyTask')).toEqual(metadata);
+    expect(MetadataStorage.get(TRIGGER_METADATA_KEY, TestScheduler.prototype, 'dailyTask')).toBeUndefined();
   });
 
   it('should register event trigger', () => {
@@ -52,6 +50,8 @@ describe('TriggerRegistry', () => {
 
     const [metadata] = Array.from(triggers.values());
     expect(metadata.type).toBe('event');
+    expect(MetadataStorage.get(EVENT_METADATA_KEY, TestEventHandler.prototype, 'handleEvent')).toEqual(metadata);
+    expect(MetadataStorage.get(TRIGGER_METADATA_KEY, TestEventHandler.prototype, 'handleEvent')).toBeUndefined();
   });
 
   it('should register webhook trigger', () => {
@@ -65,6 +65,8 @@ describe('TriggerRegistry', () => {
 
     const [metadata] = Array.from(triggers.values());
     expect(metadata.type).toBe('webhook');
+    expect(MetadataStorage.get(WEBHOOK_METADATA_KEY, TestWebhookHandler.prototype, 'handleWebhook')).toEqual(metadata);
+    expect(MetadataStorage.get(TRIGGER_METADATA_KEY, TestWebhookHandler.prototype, 'handleWebhook')).toBeUndefined();
   });
 
   it('should get all triggers for a target', () => {
@@ -134,6 +136,9 @@ describe('TriggerRegistry', () => {
 
     const allTriggers = TriggerRegistryClass.getInstance().getAllTriggers();
     expect(allTriggers.size).toBe(3);
+    expect(allTriggers.has(Handler1.prototype)).toBe(true);
+    expect(allTriggers.has(Handler2.prototype)).toBe(true);
+    expect(allTriggers.has(Handler3.prototype)).toBe(true);
 
     let totalTriggerCount = 0;
     for (const [, triggers] of allTriggers) {
