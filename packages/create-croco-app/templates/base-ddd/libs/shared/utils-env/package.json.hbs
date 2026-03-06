@@ -6,12 +6,14 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --clean --dts",
+    "test": "tsx --test src/tests/**/*.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "tsx": "^4.20.3",
     "typescript": "^5.8.0",
     "tsup": "^8.5.1"
   }
