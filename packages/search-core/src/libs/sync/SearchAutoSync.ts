@@ -1,4 +1,5 @@
-import { EventBusConfig, type EventHandler, RegisterEventHandler } from '@croco/events-core';
+import type { EventHandler } from '@croco/events-core';
+import { RegisterEventHandler } from '@croco/events-core';
 import { Container, MetadataStorage } from '@croco/framework-context';
 import { SEARCHABLE_METADATA, type SearchableMetadata } from '../decorators/Searchable';
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../events';
@@ -32,11 +33,17 @@ class LRUCache<T> {
 
 import { SearchEngine } from '../SearchEngine';
 
+export type SearchSyncFailedEventPublisher = {
+  publish(event: SearchSyncFailedEvent): Promise<void>;
+};
+
 @RegisterEventHandler(DocumentDeletedEvent)
 @RegisterEventHandler(DocumentIndexedEvent)
 export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | DocumentDeletedEvent> {
   private processedEvents = new LRUCache<void>(10000);
   private readonly searchEngineToken = SearchEngine.token;
+
+  constructor(private readonly failedEventPublisher?: SearchSyncFailedEventPublisher) {}
 
   async handle(event: DocumentIndexedEvent | DocumentDeletedEvent): Promise<void> {
     const eventKey = `${event.eventName}:${event.indexName}:${event.documentId}:${event.tenantId}`;
@@ -77,8 +84,12 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
   }
 
   private async publishFailedEvent(event: SearchSyncFailedEvent): Promise<void> {
+    if (!this.failedEventPublisher) {
+      return;
+    }
+
     try {
-      await EventBusConfig.getInstance().getEventBus().publish(event);
+      await this.failedEventPublisher.publish(event);
     } catch {
       return;
     }
