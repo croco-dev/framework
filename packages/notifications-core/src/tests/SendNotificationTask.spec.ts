@@ -1,7 +1,12 @@
 import { Container } from '@croco/framework-context';
+import { Problem } from '@croco/problems-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationProviderRegistry } from '../libs/NotificationProviderRegistry';
 import { NotificationService } from '../libs/NotificationService';
+import {
+  NotificationDeliveryFailedProblem,
+  NotificationProviderNotFoundProblem,
+} from '../libs/problems/NotificationProblems';
 import { SendNotificationTask } from '../libs/SendNotificationTask';
 import type { NotificationJobPayload, NotificationProvider } from '../libs/types';
 
@@ -106,7 +111,7 @@ describe('SendNotificationTask', () => {
         content: 'Test Content',
       };
 
-      await expect(task.handle(payload)).rejects.toThrow('Provider non-existent not found');
+      await expect(task.handle(payload)).rejects.toBeInstanceOf(NotificationProviderNotFoundProblem);
     });
 
     it('should throw error when provider send fails', async () => {
@@ -133,7 +138,49 @@ describe('SendNotificationTask', () => {
         content: 'Test Content',
       };
 
-      await expect(task.handle(payload)).rejects.toThrow('Notification failed without error details');
+      await expect(task.handle(payload)).rejects.toBeInstanceOf(NotificationDeliveryFailedProblem);
+    });
+
+    it('should mark fallback delivery failures as retryable', async () => {
+      const mockResult = { success: false };
+      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
+
+      const payload: NotificationJobPayload = {
+        providerName: 'resend',
+        to: 'test@example.com',
+        content: 'Test Content',
+      };
+
+      await expect(task.handle(payload)).rejects.toMatchObject({
+        extensions: {
+          providerName: 'resend',
+          retryable: true,
+        },
+      });
+    });
+
+    it('should preserve provider problem errors for upstream retry classification', async () => {
+      class RetryableProviderProblem extends Problem {
+        constructor() {
+          super('notifications-core/provider-temporary-failure', 'InternalServerError' as never, 'Temporary failure', {
+            extensions: {
+              retryable: true,
+            },
+          });
+        }
+      }
+
+      const providerProblem = new RetryableProviderProblem();
+      const mockResult = { success: false, error: providerProblem };
+      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
+
+      const payload: NotificationJobPayload = {
+        providerName: 'resend',
+        to: 'test@example.com',
+        content: 'Test Content',
+      };
+
+      await expect(task.handle(payload)).rejects.toBe(providerProblem);
     });
 
     it('should handle optional subject field', async () => {
