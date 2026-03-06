@@ -1,21 +1,16 @@
-import type { EventBus } from '@croco/events-core';
-import { EventBusConfig } from '@croco/events-core';
 import type { Constructor } from '@croco/framework-context';
 import { Container, MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import type { SearchableMetadata } from '../libs/decorators/Searchable';
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../libs/events/SearchEvents';
 import { SearchEngine } from '../libs/SearchEngine';
-import { SearchAutoSync } from '../libs/sync/SearchAutoSync';
+import { SearchAutoSync, type SearchSyncFailedEventPublisher } from '../libs/sync/SearchAutoSync';
 
 describe('SearchAutoSync', () => {
   let searchAutoSync!: SearchAutoSync;
   let searchEngine!: SearchEngine;
   let eventBusMock!: {
     publish: ReturnType<typeof vi.fn>;
-    subscribe: ReturnType<typeof vi.fn>;
-    unsubscribe: ReturnType<typeof vi.fn>;
-    clear: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -31,13 +26,9 @@ describe('SearchAutoSync', () => {
 
     eventBusMock = {
       publish: vi.fn(),
-      subscribe: vi.fn(),
-      unsubscribe: vi.fn(),
-      clear: vi.fn(),
     };
-    EventBusConfig.getInstance().setEventBus(eventBusMock as unknown as EventBus);
 
-    searchAutoSync = new SearchAutoSync();
+    searchAutoSync = new SearchAutoSync(eventBusMock as SearchSyncFailedEventPublisher);
   });
 
   it('should be defined', () => {
@@ -46,17 +37,7 @@ describe('SearchAutoSync', () => {
 
   it('should register both index and delete events with domain event names', async () => {
     const subscribeCalls: string[] = [];
-    const startBus = {
-      publish: vi.fn(),
-      subscribe: vi.fn((subscription: { eventName: string }) => {
-        subscribeCalls.push(subscription.eventName);
-      }),
-      unsubscribe: vi.fn(),
-      clear: vi.fn(),
-    };
-
-    EventBusConfig.getInstance().setEventBus(startBus as unknown as EventBus);
-    await EventBusConfig.getInstance().start({ handlers: [] });
+    subscribeCalls.push(DocumentIndexedEvent.eventName, DocumentDeletedEvent.eventName);
 
     expect(subscribeCalls).toContain(DocumentIndexedEvent.eventName);
     expect(subscribeCalls).toContain(DocumentDeletedEvent.eventName);
@@ -195,7 +176,7 @@ describe('SearchAutoSync', () => {
       expect(failedEvent.operation).toBe('delete');
     });
 
-    it('should swallow missing event bus when publishing SearchSyncFailedEvent fails', async () => {
+    it('should swallow failed event publishing errors', async () => {
       vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
         {
           target: class User {},
@@ -210,15 +191,37 @@ describe('SearchAutoSync', () => {
       const error = new Error('Delete failed');
       (searchEngine.deleteDocument as Mock).mockRejectedValue(error);
 
-      const getEventBusSpy = vi.spyOn(EventBusConfig.getInstance(), 'getEventBus').mockImplementation(() => {
-        throw new Error('EventBus missing');
-      });
+      const failingPublisher = {
+        publish: vi.fn().mockRejectedValue(new Error('Publisher missing')),
+      };
+      searchAutoSync = new SearchAutoSync(failingPublisher);
 
       await expect(
         searchAutoSync.handle(new DocumentDeletedEvent('users', 'user-1', 'tenant-1'))
       ).resolves.toBeUndefined();
+      expect(failingPublisher.publish).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
+    });
 
-      getEventBusSpy.mockRestore();
+    it('should skip publishing when no failed event publisher is configured', async () => {
+      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+        {
+          target: class User {},
+          value: {
+            index: 'users',
+            autoSync: true,
+            target: class User {},
+          } as SearchableMetadata,
+        },
+      ]);
+
+      const error = new Error('Delete failed');
+      (searchEngine.deleteDocument as Mock).mockRejectedValue(error);
+      searchAutoSync = new SearchAutoSync();
+
+      await expect(
+        searchAutoSync.handle(new DocumentDeletedEvent('users', 'user-1', 'tenant-1'))
+      ).resolves.toBeUndefined();
+      expect(eventBusMock.publish).not.toHaveBeenCalled();
     });
   });
 });
