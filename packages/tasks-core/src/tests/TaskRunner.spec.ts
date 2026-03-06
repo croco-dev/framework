@@ -1,20 +1,20 @@
 import type { ExecutionManager } from '@croco/execution-core';
 import { Container, MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TASK_METADATA_KEY, Task } from '../libs/decorators/Task';
+import { Task } from '../libs/decorators/Task';
 import { TaskRegistry } from '../libs/TaskRegistry';
 import { TaskRunner } from '../libs/TaskRunner';
 import type { TaskMetadata } from '../libs/types';
 
 describe('TaskRunner', () => {
   let mockExecutionManager!: ExecutionManager;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let testClassInstance!: any;
+  let registry!: TaskRegistry;
 
   beforeEach(() => {
     Container.reset();
     MetadataStorage.clear();
     TaskRegistry.getInstance().reset();
+    registry = new TaskRegistry();
 
     mockExecutionManager = {
       create: vi.fn().mockResolvedValue({
@@ -41,17 +41,17 @@ describe('TaskRunner', () => {
       }
 
       @Task({ name: 'failing-task', maxAttempts: 3 })
-      async fail(payload: unknown): Promise<string> {
+      async fail(_payload: unknown): Promise<string> {
         throw new Error('Task failed');
       }
     }
 
-    testClassInstance = new TestTaskHandler();
-    TaskRegistry.getInstance().collectFromMetadata();
+    new TestTaskHandler();
+    registry.collectFromMetadata();
   });
 
   it('should execute task and return result', async () => {
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     const result = await runner.execute('test-task', { data: 'test' });
 
@@ -68,7 +68,7 @@ describe('TaskRunner', () => {
   });
 
   it('should pass task options to execution manager', async () => {
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     await expect(runner.execute('failing-task', { test: 'data' })).rejects.toThrow('Task failed');
 
@@ -82,13 +82,13 @@ describe('TaskRunner', () => {
   });
 
   it('should throw error for non-existent task', async () => {
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     await expect(runner.execute('non-existent-task', {})).rejects.toThrow("Task not found: 'non-existent-task'");
   });
 
   it('should handle task execution failure', async () => {
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     await expect(runner.execute('failing-task', {})).rejects.toThrow('Task failed');
 
@@ -111,8 +111,7 @@ describe('TaskRunner', () => {
       }
     }
 
-    const handlerInstance = new RetryableTaskHandler();
-    const registry = TaskRegistry.getInstance();
+    new RetryableTaskHandler();
     registry.register(
       'retryable-fail',
       RetryableTaskHandler,
@@ -125,7 +124,7 @@ describe('TaskRunner', () => {
         } as TaskMetadata)
     );
 
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     await expect(runner.execute('retryable-fail', {})).rejects.toThrow('Retryable error');
 
@@ -148,9 +147,7 @@ describe('TaskRunner', () => {
       }
     }
 
-    const handlerInstance = new TaskWithCodeError();
-    const registry = TaskRegistry.getInstance();
-
+    new TaskWithCodeError();
     registry.register(
       'code-error-task',
       TaskWithCodeError,
@@ -163,7 +160,7 @@ describe('TaskRunner', () => {
         } as TaskMetadata)
     );
 
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     await expect(runner.execute('code-error-task', {})).rejects.toThrow('Error with code');
 
@@ -183,9 +180,9 @@ describe('TaskRunner', () => {
       }
     }
 
-    TaskRegistry.getInstance().collectFromMetadata();
+    registry.collectFromMetadata();
     const getSpy = vi.spyOn(Container, 'get');
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     const result = await runner.execute('stateless-task', { value: 21 });
 
@@ -201,9 +198,7 @@ describe('TaskRunner', () => {
       }
     }
 
-    const handlerInstance = new NonErrorTaskHandler();
-    const registry = TaskRegistry.getInstance();
-
+    new NonErrorTaskHandler();
     registry.register(
       'non-error-task',
       NonErrorTaskHandler,
@@ -216,7 +211,7 @@ describe('TaskRunner', () => {
         } as TaskMetadata)
     );
 
-    const runner = new TaskRunner(mockExecutionManager);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
     await expect(runner.execute('non-error-task', {})).rejects.toThrow('String error');
 
