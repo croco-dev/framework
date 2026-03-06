@@ -10,16 +10,24 @@ import { MembershipConstraintProblem } from '../libs/problems/MembershipConstrai
 describe('MembershipService', () => {
   let service!: MembershipService;
   let store!: InMemoryMembershipStore;
+  let publish!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     Container.reset();
 
     store = new InMemoryMembershipStore();
+    publish = vi.fn();
 
     service = new MembershipService(store, {
-      publish: vi.fn(),
+      publish,
       publishMany: vi.fn(),
     } as unknown as EventPublisher);
+  });
+
+  it('should propagate event publication failures when adding a member', async () => {
+    publish.mockRejectedValueOnce(new Error('publish failed'));
+
+    await expect(service.addMember('tenant-1', 'user-1', 'member')).rejects.toThrow('publish failed');
   });
 
   it('BUG-10 마지막 오너는 삭제할 수 없다', async () => {
