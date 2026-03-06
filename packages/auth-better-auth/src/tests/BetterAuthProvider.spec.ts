@@ -196,6 +196,49 @@ describe('BetterAuthProvider', () => {
       expect(Array.isArray(result?.permissions)).toBe(true);
     });
 
+    it('should preserve roles and permissions from user fields', async () => {
+      const mockSession = {
+        user: {
+          id: 'user-rbac',
+          email: 'rbac@example.com',
+          roles: ['admin', 'member'],
+          permissions: ['project:read', 'project:write'],
+        },
+      };
+
+      mockFactory = createMockBetterAuthFactory(mockSession);
+      provider = new BetterAuthProvider(mockFactory);
+
+      const result = await provider.authenticate(createMockRequest());
+
+      expect(result?.roles).toEqual(['admin', 'member']);
+      expect(result?.permissions).toEqual(['project:read', 'project:write']);
+    });
+
+    it('should preserve role and permissions from nested metadata fields', async () => {
+      const mockSession = {
+        user: {
+          id: 'user-metadata-rbac',
+          email: 'metadata-rbac@example.com',
+          metadata: {
+            role: 'owner',
+            permissions: ['tenant:manage'],
+          },
+          publicMetadata: {
+            roles: ['owner', 'billing-admin'],
+          },
+        },
+      };
+
+      mockFactory = createMockBetterAuthFactory(mockSession);
+      provider = new BetterAuthProvider(mockFactory);
+
+      const result = await provider.authenticate(createMockRequest());
+
+      expect(result?.roles).toEqual(['owner', 'billing-admin']);
+      expect(result?.permissions).toEqual(['tenant:manage']);
+    });
+
     it('should implement AuthProvider interface', () => {
       mockFactory = createMockBetterAuthFactory(null);
       provider = new BetterAuthProvider(mockFactory);
