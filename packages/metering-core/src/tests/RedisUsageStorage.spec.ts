@@ -13,6 +13,7 @@ describe('RedisUsageStorage', () => {
       zadd: vi.fn().mockResolvedValue(1),
       zrangebyscore: vi.fn().mockResolvedValue([]),
       set: vi.fn().mockResolvedValue('OK'),
+      eval: vi.fn(),
     };
     storage = new RedisUsageStorage(mockRedis);
   });
@@ -155,6 +156,81 @@ describe('RedisUsageStorage', () => {
       const result = await storage.fetchUsageRecords(options);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('checkAndRecordWithinQuota', () => {
+    it('should call redis.eval with atomic quota script arguments', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([0, 8]);
+
+      const usage: UsageRecord = {
+        id: 'usage-123',
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 5,
+        timestamp: new Date('2024-01-15T10:30:00Z'),
+        idempotencyKey: 'key-123',
+      };
+
+      const result = await storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: usage.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord: usage,
+      });
+
+      expect(result).toEqual({ exceeded: false, newUsage: 8 });
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("redis.call('ZRANGEBYSCORE'"),
+        ['usage:tenant-1:api_calls:2024-01'],
+        [10, 5, usage.timestamp.getTime(), 'usage-123:5', 0]
+      );
+    });
+
+    it('should map exceeded result from redis.eval', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, 12]);
+
+      const result = await storage.checkAndRecordWithinQuota({
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 4,
+        quota: 10,
+        allowOverQuota: true,
+        usageRecord: {
+          id: 'usage-123',
+          tenantId: 'tenant-1',
+          meterId: 'api_calls',
+          value: 4,
+          timestamp: new Date('2024-01-15T10:30:00Z'),
+          idempotencyKey: 'key-123',
+        },
+      });
+
+      expect(result).toEqual({ exceeded: true, newUsage: 12 });
+    });
+
+    it('should throw RedisProblem on eval error', async () => {
+      vi.mocked(mockRedis.eval).mockRejectedValue(new Error('Script failed'));
+
+      await expect(
+        storage.checkAndRecordWithinQuota({
+          tenantId: 'tenant-1',
+          meterId: 'api_calls',
+          value: 4,
+          quota: 10,
+          allowOverQuota: false,
+          usageRecord: {
+            id: 'usage-123',
+            tenantId: 'tenant-1',
+            meterId: 'api_calls',
+            value: 4,
+            timestamp: new Date('2024-01-15T10:30:00Z'),
+            idempotencyKey: 'key-123',
+          },
+        })
+      ).rejects.toThrow(RedisProblem);
     });
   });
 
