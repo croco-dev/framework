@@ -6,6 +6,13 @@ import type { Receiver } from '@upstash/qstash';
 
 type ServiceResolver = (targetClass: Constructor) => unknown;
 
+class DefaultServiceResolverError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DefaultServiceResolverError';
+  }
+}
+
 /**
  * Configuration options for QStashTriggerHandler.
  */
@@ -130,14 +137,20 @@ export class QStashTriggerHandler {
   private readonly receiver: Receiver;
   private readonly executionManager: ExecutionManager;
   private readonly serviceResolver: ServiceResolver;
+  private readonly usesDefaultServiceResolver: boolean;
 
   constructor(options: QStashTriggerHandlerOptions) {
     this.receiver = options.receiver;
     this.executionManager = options.executionManager;
+    this.usesDefaultServiceResolver = !options.serviceResolver;
     this.serviceResolver =
       options.serviceResolver ??
       ((targetClass: Constructor) => {
-        return Container.get(targetClass);
+        try {
+          return Container.get(targetClass);
+        } catch (error) {
+          throw new DefaultServiceResolverError(error instanceof Error ? error.message : String(error));
+        }
       });
   }
 
@@ -185,11 +198,16 @@ export class QStashTriggerHandler {
     try {
       const result = await this.dispatchExecution(payload);
       return result;
-    } catch {
+    } catch (error) {
+      const body =
+        this.usesDefaultServiceResolver && error instanceof DefaultServiceResolverError
+          ? { error: 'Execution failed', details: error.message }
+          : { error: 'Execution failed' };
+
       return {
         success: false,
         statusCode: 500,
-        body: { error: 'Execution failed' },
+        body,
       };
     }
   }
