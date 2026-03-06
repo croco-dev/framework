@@ -34,6 +34,17 @@ export class UpstashRedisClient implements RedisClient {
     const result = await this.redis.set(key, value, { nx: true, ex: expire });
     return result;
   }
+
+  /**
+   * Lua 스크립트 실행
+   */
+  async eval<TResult extends unknown[]>(
+    script: string,
+    keys: string[],
+    args: Array<string | number>
+  ): Promise<TResult> {
+    return this.redis.eval(script, keys, args) as Promise<TResult>;
+  }
 }
 
 /**

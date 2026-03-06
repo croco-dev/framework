@@ -11,6 +11,7 @@ describe('UpstashRedisClient', () => {
       zadd: vi.fn(),
       zrange: vi.fn(),
       set: vi.fn(),
+      eval: vi.fn(),
     } as unknown as Redis;
 
     client = new UpstashRedisClient(mockRedis);
@@ -86,6 +87,17 @@ describe('UpstashRedisClient', () => {
       const result = await client.set('existing-key', 'value', 'NX', 'EX', 3600);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('eval', () => {
+    it('should call redis.eval with script, keys, and args', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([0, 8]);
+
+      const result = await client.eval<[number, number]>('return {0, 8}', ['key-1'], [10, 5]);
+
+      expect(mockRedis.eval).toHaveBeenCalledWith('return {0, 8}', ['key-1'], [10, 5]);
+      expect(result).toEqual([0, 8]);
     });
   });
 

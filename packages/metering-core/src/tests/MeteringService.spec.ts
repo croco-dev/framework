@@ -45,6 +45,7 @@ describe('MeteringService', () => {
       getUsage: vi.fn().mockResolvedValue(0),
       isIdempotent: vi.fn().mockResolvedValue(true),
       fetchUsageRecords: vi.fn().mockResolvedValue([]),
+      checkAndRecordWithinQuota: vi.fn().mockResolvedValue({ exceeded: false, newUsage: 5 }),
     };
 
     mockIdempotency = {
@@ -81,7 +82,7 @@ describe('MeteringService', () => {
       expect(result.meterId).toBe('api_calls');
       expect(result.value).toBe(5);
       expect(result.idempotencyKey).toBe('generated-key');
-      expect(mockStorage.record).toHaveBeenCalled();
+      expect(mockStorage.checkAndRecordWithinQuota).toHaveBeenCalledTimes(1);
     });
 
     it('should use default value of 1', async () => {
@@ -128,25 +129,38 @@ describe('MeteringService', () => {
 
     it('should throw QuotaExceededProblem when quota exceeded and allowOverQuota is false', async () => {
       const meter = createMeter({ quota: 100, allowOverQuota: false });
+      const checkAndRecordWithinQuota = mockStorage.checkAndRecordWithinQuota;
+
+      if (!checkAndRecordWithinQuota) {
+        throw new Error('Expected atomic quota check support');
+      }
+
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(mockStorage.getUsage).mockResolvedValue(99);
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
 
       await expect(service.record({ tenantId: 'tenant-1', meterId: 'api_calls', value: 5 })).rejects.toThrow(
         QuotaExceededProblem
       );
     });
 
-    it('BUG-11 동시 할당량 소진에서 정확한 임계값 도달', async () => {
+    it('BUG-11 동시 할당량 소진에서 atomic storage 결과를 그대로 반영한다', async () => {
       const meter = createMeter({ quota: 10, allowOverQuota: false });
-      let consumedUsage = 0;
+      let invocationCount = 0;
+      const checkAndRecordWithinQuota = mockStorage.checkAndRecordWithinQuota;
+
+      if (!checkAndRecordWithinQuota) {
+        throw new Error('Expected atomic quota check support');
+      }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(mockStorage.getUsage).mockImplementation(async () => {
-        await Promise.resolve();
-        return consumedUsage;
-      });
-      vi.mocked(mockStorage.record).mockImplementation(async (usage) => {
-        consumedUsage += usage.value;
+      vi.mocked(checkAndRecordWithinQuota).mockImplementation(async () => {
+        invocationCount += 1;
+
+        if (invocationCount <= 2) {
+          return { exceeded: false, newUsage: invocationCount * 4 };
+        }
+
+        return { exceeded: true, newUsage: 12 };
       });
 
       const first = service.record({
@@ -171,18 +185,28 @@ describe('MeteringService', () => {
       const settled = await Promise.allSettled([first, second, third]);
       const successCount = settled.filter((result) => result.status === 'fulfilled').length;
       const failedResults = settled.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+      const firstFailedResult = failedResults[0];
+
+      if (!firstFailedResult) {
+        throw new Error('Expected one rejected result');
+      }
 
       expect(successCount).toBe(2);
       expect(failedResults).toHaveLength(1);
-      expect(failedResults[0].reason).toBeInstanceOf(QuotaExceededProblem);
-      expect(consumedUsage).toBe(8);
-      expect(mockStorage.record).toHaveBeenCalledTimes(2);
+      expect(firstFailedResult.reason).toBeInstanceOf(QuotaExceededProblem);
+      expect(checkAndRecordWithinQuota).toHaveBeenCalledTimes(3);
     });
 
     it('should allow over quota when allowOverQuota is true', async () => {
       const meter = createMeter({ quota: 100, allowOverQuota: true });
+      const checkAndRecordWithinQuota = mockStorage.checkAndRecordWithinQuota;
+
+      if (!checkAndRecordWithinQuota) {
+        throw new Error('Expected atomic quota check support');
+      }
+
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(mockStorage.getUsage).mockResolvedValue(99);
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
 
       const result = await service.record({
         tenantId: 'tenant-1',
@@ -222,8 +246,14 @@ describe('MeteringService', () => {
 
     it('should publish QuotaExceededEvent when quota exceeded', async () => {
       const meter = createMeter({ quota: 100, allowOverQuota: true });
+      const checkAndRecordWithinQuota = mockStorage.checkAndRecordWithinQuota;
+
+      if (!checkAndRecordWithinQuota) {
+        throw new Error('Expected atomic quota check support');
+      }
+
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(mockStorage.getUsage).mockResolvedValue(99);
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
 
       await service.record({
         tenantId: 'tenant-1',

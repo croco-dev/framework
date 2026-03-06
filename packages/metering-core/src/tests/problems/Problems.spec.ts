@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AtomicQuotaNotSupportedProblem } from '../../libs/problems/AtomicQuotaNotSupportedProblem';
 import { DuplicateRecordProblem } from '../../libs/problems/DuplicateRecordProblem';
 import { InvalidMeterProblem } from '../../libs/problems/InvalidMeterProblem';
 import { QuotaExceededProblem } from '../../libs/problems/QuotaExceededProblem';
@@ -18,6 +19,16 @@ describe('Problems', () => {
       expect(json.meterId).toBe('api_calls');
       expect(json.currentUsage).toBe(150);
       expect(json.quota).toBe(100);
+    });
+  });
+
+  describe('AtomicQuotaNotSupportedProblem', () => {
+    it('should create with correct properties', () => {
+      const problem = new AtomicQuotaNotSupportedProblem();
+
+      expect(problem.code).toBe('metering/atomic-quota-not-supported');
+      expect(problem.status).toBe(500);
+      expect(problem.detail).toContain('atomic quota checks');
     });
   });
 

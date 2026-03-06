@@ -16,4 +16,9 @@ export interface RedisClient {
    * 키 설정 (NX: 존재하지 않을 때만, EX: TTL)
    */
   set(key: string, value: string, mode: 'NX', expireMode: 'EX', expire: number): Promise<string | null>;
+
+  /**
+   * Lua 스크립트 실행
+   */
+  eval<TResult extends unknown[]>(script: string, keys: string[], args: Array<string | number>): Promise<TResult>;
 }
