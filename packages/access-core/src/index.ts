@@ -8,8 +8,9 @@ export { ACCESS_METADATA_KEY, ACCESS_PROVIDER_TOKEN, MAX_TRAVERSAL_DEPTH } from 
 export { Access } from './libs/decorators/Access.js';
 // Guards
 export { AccessGuard, BadRequestProblem, ForbiddenProblem } from './libs/guards/AccessGuard.js';
-// Interfaces
 export type { AccessProvider } from './libs/interfaces/AccessProvider.js';
+// Interfaces
+export type { AccessExecutionContext, AccessHttpContext, Guard } from './libs/interfaces/Guard.js';
 export type {
   CheckRequest,
   CheckResult,
