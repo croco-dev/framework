@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActiveUserProvider, MetricsRepository, MRRMovement } from '..';
 import { CarryingCapacityCalculator } from '../libs/CarryingCapacityCalculator';
+import { RetentionMetricsUnavailableProblem } from '../libs/problems/MetricsProblems';
 
 describe('CarryingCapacityCalculator', () => {
   let calculator!: CarryingCapacityCalculator;
@@ -182,6 +183,19 @@ describe('CarryingCapacityCalculator', () => {
 
       expect(result.current).toBe(0);
       expect(result.headroom).toBeCloseTo(expectedCapacity, 0);
+    });
+  });
+
+  describe('retention failures', () => {
+    it('should propagate retention metric failures instead of using fabricated values', async () => {
+      vi.spyOn(mockUserProvider, 'getNewUsersCount').mockResolvedValue(1000);
+      vi.spyOn(mockMetricsRepository, 'getRetentionMetrics').mockRejectedValue(
+        new RetentionMetricsUnavailableProblem()
+      );
+
+      await expect(calculator.calculateUserCC({ lookbackDays: 30 })).rejects.toBeInstanceOf(
+        RetentionMetricsUnavailableProblem
+      );
     });
   });
 

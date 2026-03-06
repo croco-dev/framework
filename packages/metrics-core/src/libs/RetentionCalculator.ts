@@ -1,5 +1,5 @@
 import type { MRRMovement, Percentage } from '../types';
-import { LogoChurnDataRequiredProblem } from './problems/MetricsProblems';
+import { LogoChurnDataRequiredProblem, RetentionMetricsUnavailableProblem } from './problems/MetricsProblems';
 
 /**
  * Calculator for customer and revenue retention metrics.
@@ -91,15 +91,11 @@ export class RetentionCalculator {
     logoChurn: Percentage | null;
     revenueChurn: Percentage | null;
   }> {
-    const grr = await this.calculateGRR(startingMRR, movement);
-    const nrr = await this.calculateNRR(startingMRR, movement);
-    const revenueChurn = await this.calculateChurn(startingMRR, movement, 'revenue');
+    void startingMRR;
+    void movement;
 
-    return {
-      grr,
-      nrr,
-      logoChurn: null,
-      revenueChurn,
-    };
+    throw new RetentionMetricsUnavailableProblem(
+      'RetentionCalculator.calculateRetention() cannot produce complete retention metrics because logo churn inputs are unavailable'
+    );
   }
 }
