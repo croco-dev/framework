@@ -1,5 +1,22 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
+export class LlmMeteringRecordFailedProblem extends Problem {
+  constructor(operation: string, meterIds: string[], cause: unknown) {
+    super(
+      'llm-metering/record-failed',
+      ProblemCategory.InternalServerError,
+      `Failed to record LLM metering for operation '${operation}'`,
+      {
+        extensions: {
+          operation,
+          meterIds,
+          cause: cause instanceof Error ? cause.message : String(cause),
+        },
+      }
+    );
+  }
+}
+
 export class LlmQuotaExceededProblem extends Problem {
   constructor(meterId: string, currentUsage: number, quota: number) {
     super(

@@ -4,6 +4,7 @@ import type { MeteringService } from '@croco/metering-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiMetered, setLlmMeteringService } from '../../libs/decorators/AiMetered';
 import { LlmMeteringService } from '../../libs/LlmMeteringService';
+import { LlmMeteringRecordFailedProblem } from '../../libs/problems/LlmMeteringProblems';
 
 describe('@AiMetered decorator', () => {
   let mockMeteringService!: MeteringService;
@@ -275,8 +276,8 @@ describe('@AiMetered decorator', () => {
     });
   });
 
-  describe('fail-safe behavior', () => {
-    it('should not throw when metering fails', async () => {
+  describe('metering failure behavior', () => {
+    it('should throw when metering fails', async () => {
       class TestService {
         @AiMetered()
         async generate() {
@@ -292,10 +293,7 @@ describe('@AiMetered decorator', () => {
       vi.mocked(mockMeteringService.record).mockRejectedValue(new Error('Metering failed'));
 
       const service = new TestService();
-      const result = await service.generate();
-
-      // Should still return result despite metering error
-      expect(result.text).toBe('Response');
+      await expect(service.generate()).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
 
     it('should work when LlmMeteringService is not set', async () => {

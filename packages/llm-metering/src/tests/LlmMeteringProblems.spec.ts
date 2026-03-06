@@ -2,6 +2,7 @@ import { ProblemCategory } from '@croco/problems-core';
 import { describe, expect, it } from 'vitest';
 import {
   LlmCostLimitExceededProblem,
+  LlmMeteringRecordFailedProblem,
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
 } from '../libs/problems/LlmMeteringProblems';
@@ -60,6 +61,24 @@ describe('LlmMeteringProblems', () => {
       expect(problem.status).toBe(404);
       expect(problem.detail).toContain("provider 'openai'");
       expect(problem.detail).toContain("model 'gpt-4'");
+    });
+  });
+
+  describe('LlmMeteringRecordFailedProblem', () => {
+    it('should expose failed operation and meter ids', () => {
+      const problem = new LlmMeteringRecordFailedProblem(
+        'generate',
+        ['llm.prompt_tokens', 'llm.cost_usd'],
+        new Error('boom')
+      );
+
+      expect(problem.code).toBe('llm-metering/record-failed');
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
+      expect(problem.status).toBe(500);
+      expect(problem.detail).toContain("operation 'generate'");
+      expect(problem.extensions?.operation).toBe('generate');
+      expect(problem.extensions?.meterIds).toEqual(['llm.prompt_tokens', 'llm.cost_usd']);
+      expect(problem.extensions?.cause).toBe('boom');
     });
   });
 });
