@@ -1,5 +1,6 @@
 import type { BillingAccount, Order, ProcessedWebhook, Subscription } from '../types';
 import type { BillingStore } from './BillingStore';
+import { WebhookAlreadyProcessedProblem } from './problems/BillingProblems';
 
 /**
  * In-memory billing store for testing and development.
@@ -54,6 +55,10 @@ export class InMemoryBillingStore implements BillingStore {
   }
 
   async markWebhookProcessed(webhook: ProcessedWebhook): Promise<void> {
+    if (this.processedWebhooks.has(webhook.eventId)) {
+      throw new WebhookAlreadyProcessedProblem(webhook.eventId);
+    }
+
     this.processedWebhooks.add(webhook.eventId);
   }
 
