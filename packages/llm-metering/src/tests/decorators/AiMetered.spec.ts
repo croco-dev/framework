@@ -145,6 +145,54 @@ describe('@AiMetered decorator', () => {
       );
     });
 
+    it('should generate stable default idempotency keys for identical inputs', async () => {
+      class TestService {
+        @AiMetered()
+        async generate(prompt: string, options: { temperature: number }) {
+          return {
+            text: prompt,
+            usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            options,
+          };
+        }
+      }
+
+      const service = new TestService();
+
+      await service.generate('hello', { temperature: 0.7 });
+      await service.generate('hello', { temperature: 0.7 });
+
+      const firstKey = vi.mocked(mockMeteringService.record).mock.calls[0]?.[0]?.idempotencyKey;
+      const secondKey = vi.mocked(mockMeteringService.record).mock.calls[3]?.[0]?.idempotencyKey;
+
+      expect(firstKey).toBe(secondKey);
+    });
+
+    it('should ignore object key order when generating default idempotency keys', async () => {
+      class TestService {
+        @AiMetered()
+        async generate(payload: Record<string, unknown>) {
+          return {
+            text: 'Response',
+            usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            payload,
+          };
+        }
+      }
+
+      const service = new TestService();
+
+      await service.generate({ a: 1, b: 2, nested: { x: 1, y: 2 } });
+      await service.generate({ b: 2, a: 1, nested: { y: 2, x: 1 } });
+
+      const firstKey = vi.mocked(mockMeteringService.record).mock.calls[0]?.[0]?.idempotencyKey;
+      const secondKey = vi.mocked(mockMeteringService.record).mock.calls[3]?.[0]?.idempotencyKey;
+
+      expect(firstKey).toBe(secondKey);
+    });
+
     it('BUG-07 스트림 결과의 토큰 사용량 기록', async () => {
       class TestService {
         @AiMetered()
