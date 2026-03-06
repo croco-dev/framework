@@ -2,21 +2,20 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { Container, Context as FrameworkContext } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
+import { Problem } from '@croco/problems-core';
 import { createYoga } from 'graphql-yoga';
+import {
+  GraphQLRequestBodyAbortedProblem,
+  GraphQLRequestBodyTooLargeProblem,
+  GraphQLSchemaNotConfiguredProblem,
+  GraphQLServerNotInitializedProblem,
+} from './problems/GraphQLTransportProblems';
 import { SchemaCompiler } from './SchemaCompiler';
 import type { GraphQLServerOptions } from './types';
 
 type YogaHandler = (request: Request) => Promise<Response>;
 
 const DEFAULT_MAX_BODY_SIZE_BYTES = 1024 * 1024;
-
-class RequestBodyTooLargeError extends Error {
-  readonly statusCode = 413;
-
-  constructor(maxBodySizeBytes: number) {
-    super(`Payload Too Large (max ${maxBodySizeBytes} bytes)`);
-  }
-}
 
 export class GraphQLServer {
   private yogaHandler: YogaHandler | null = null;
@@ -37,7 +36,7 @@ export class GraphQLServer {
     }
 
     if (!graphqlSchema) {
-      throw new Error('No schema provided. Provide either schema or schemaOptions.');
+      throw new GraphQLSchemaNotConfiguredProblem();
     }
 
     const yoga = createYoga({
@@ -60,7 +59,7 @@ export class GraphQLServer {
 
   getHandler(): YogaHandler {
     if (!this.yogaHandler) {
-      throw new Error('Server not initialized. Call initialize() first.');
+      throw new GraphQLServerNotInitializedProblem();
     }
     const yoga = this.yogaHandler;
     return async (request: Request) => {
@@ -73,7 +72,7 @@ export class GraphQLServer {
     await this.initialize();
 
     if (!this.yogaHandler) {
-      throw new Error('Server not initialized.');
+      throw new GraphQLServerNotInitializedProblem('Server not initialized.');
     }
 
     const handler = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -86,9 +85,10 @@ export class GraphQLServer {
         try {
           body = await this.getBody(req);
         } catch (error) {
-          if (error instanceof RequestBodyTooLargeError) {
-            res.statusCode = error.statusCode;
-            res.end(error.message);
+          if (error instanceof Problem) {
+            res.statusCode = error.status;
+            res.setHeader('content-type', 'application/problem+json');
+            res.end(JSON.stringify(error.toJSON()));
             return;
           }
 
@@ -103,8 +103,10 @@ export class GraphQLServer {
       });
 
       if (!this.yogaHandler) {
-        res.statusCode = 500;
-        res.end('Server not initialized');
+        const problem = new GraphQLServerNotInitializedProblem('Server not initialized.');
+        res.statusCode = problem.status;
+        res.setHeader('content-type', 'application/problem+json');
+        res.end(JSON.stringify(problem.toJSON()));
         return;
       }
 
@@ -152,7 +154,7 @@ export class GraphQLServer {
         const parsedContentLength = Number(contentLength);
 
         if (Number.isFinite(parsedContentLength) && parsedContentLength > maxBodySizeBytes) {
-          reject(new RequestBodyTooLargeError(maxBodySizeBytes));
+          reject(new GraphQLRequestBodyTooLargeProblem(maxBodySizeBytes));
           return;
         }
       }
@@ -173,7 +175,7 @@ export class GraphQLServer {
         if (totalBytes > maxBodySizeBytes) {
           cleanup();
           req.pause();
-          reject(new RequestBodyTooLargeError(maxBodySizeBytes));
+          reject(new GraphQLRequestBodyTooLargeProblem(maxBodySizeBytes));
           return;
         }
 
@@ -192,7 +194,7 @@ export class GraphQLServer {
 
       const onAborted = () => {
         cleanup();
-        reject(new Error('Request body aborted'));
+        reject(new GraphQLRequestBodyAbortedProblem());
       };
 
       req.on('data', onData);
