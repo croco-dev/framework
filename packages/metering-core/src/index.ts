@@ -289,6 +289,7 @@ export type { MeterRepository } from './libs/MeterRepository';
 
 // ==================== Problems ====================
 
+export { AtomicQuotaNotSupportedProblem } from './libs/problems/AtomicQuotaNotSupportedProblem';
 /**
  * 중복 사용량 기록 시 발생하는 문제 타입입니다.
  *
