@@ -3,9 +3,12 @@ import { PricingTable } from '../libs/PricingTable';
 import type { LlmEmbeddingUsageRecord, LlmUsageRecord } from '../libs/types';
 
 describe('PricingTable', () => {
+  const createPricingTable = (): PricingTable => new PricingTable();
+
   describe('getPrice', () => {
     it('should return pricing for GPT-4', () => {
-      const pricing = PricingTable.getPrice('openai', 'gpt-4');
+      const pricingTable = createPricingTable();
+      const pricing = pricingTable.getPrice('openai', 'gpt-4');
 
       expect(pricing).not.toBeNull();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
@@ -14,7 +17,7 @@ describe('PricingTable', () => {
     });
 
     it('should return pricing for GPT-3.5-turbo', () => {
-      const pricing = PricingTable.getPrice('openai', 'gpt-3.5-turbo');
+      const pricing = createPricingTable().getPrice('openai', 'gpt-3.5-turbo');
 
       expect(pricing).not.toBeNull();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
@@ -23,7 +26,7 @@ describe('PricingTable', () => {
     });
 
     it('should return pricing for Claude-3 Opus', () => {
-      const pricing = PricingTable.getPrice('anthropic', 'claude-3-opus-20240229');
+      const pricing = createPricingTable().getPrice('anthropic', 'claude-3-opus-20240229');
 
       expect(pricing).not.toBeNull();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
@@ -32,7 +35,7 @@ describe('PricingTable', () => {
     });
 
     it('should return pricing for Claude-3 Sonnet', () => {
-      const pricing = PricingTable.getPrice('anthropic', 'claude-3-sonnet-20240229');
+      const pricing = createPricingTable().getPrice('anthropic', 'claude-3-sonnet-20240229');
 
       expect(pricing).not.toBeNull();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
@@ -41,7 +44,7 @@ describe('PricingTable', () => {
     });
 
     it('should return pricing for text-embedding-ada-002', () => {
-      const pricing = PricingTable.getPrice('openai', 'text-embedding-ada-002');
+      const pricing = createPricingTable().getPrice('openai', 'text-embedding-ada-002');
 
       expect(pricing).not.toBeNull();
       expect(pricing?.inputPricePerToken).toBeGreaterThan(0);
@@ -49,13 +52,13 @@ describe('PricingTable', () => {
     });
 
     it('should return null for unknown provider', () => {
-      const pricing = PricingTable.getPrice('unknown', 'gpt-4');
+      const pricing = createPricingTable().getPrice('unknown', 'gpt-4');
 
       expect(pricing).toBeNull();
     });
 
     it('should return null for unknown model', () => {
-      const pricing = PricingTable.getPrice('openai', 'unknown-model');
+      const pricing = createPricingTable().getPrice('openai', 'unknown-model');
 
       expect(pricing).toBeNull();
     });
@@ -63,6 +66,7 @@ describe('PricingTable', () => {
 
   describe('calculateCost', () => {
     it('should calculate cost for completion usage', () => {
+      const pricingTable = createPricingTable();
       const usage: LlmUsageRecord = {
         promptTokens: 1000,
         completionTokens: 500,
@@ -74,12 +78,12 @@ describe('PricingTable', () => {
         timestamp: new Date(),
       };
 
-      const pricing = PricingTable.getPrice('openai', 'gpt-4');
+      const pricing = pricingTable.getPrice('openai', 'gpt-4');
       if (!pricing) {
         throw new Error('Pricing not found');
       }
 
-      const cost = PricingTable.calculateCost(usage, pricing);
+      const cost = pricingTable.calculateCost(usage, pricing);
 
       const expectedCost =
         usage.promptTokens * pricing.inputPricePerToken + usage.completionTokens * pricing.outputPricePerToken;
@@ -89,6 +93,7 @@ describe('PricingTable', () => {
     });
 
     it('should calculate cost for embedding usage', () => {
+      const pricingTable = createPricingTable();
       const usage: LlmEmbeddingUsageRecord = {
         embeddingTokens: 1000,
         modelId: 'text-embedding-ada-002',
@@ -99,12 +104,12 @@ describe('PricingTable', () => {
         timestamp: new Date(),
       };
 
-      const pricing = PricingTable.getPrice('openai', 'text-embedding-ada-002');
+      const pricing = pricingTable.getPrice('openai', 'text-embedding-ada-002');
       if (!pricing) {
         throw new Error('Pricing not found');
       }
 
-      const cost = PricingTable.calculateCost(usage, pricing);
+      const cost = pricingTable.calculateCost(usage, pricing);
 
       const expectedCost = usage.embeddingTokens * pricing.inputPricePerToken;
 
@@ -113,6 +118,7 @@ describe('PricingTable', () => {
     });
 
     it('should return zero for zero usage', () => {
+      const pricingTable = createPricingTable();
       const usage: LlmUsageRecord = {
         promptTokens: 0,
         completionTokens: 0,
@@ -124,12 +130,12 @@ describe('PricingTable', () => {
         timestamp: new Date(),
       };
 
-      const pricing = PricingTable.getPrice('openai', 'gpt-4');
+      const pricing = pricingTable.getPrice('openai', 'gpt-4');
       if (!pricing) {
         throw new Error('Pricing not found');
       }
 
-      const cost = PricingTable.calculateCost(usage, pricing);
+      const cost = pricingTable.calculateCost(usage, pricing);
 
       expect(cost).toBe(0);
     });
@@ -137,8 +143,9 @@ describe('PricingTable', () => {
 
   describe('pricing accuracy', () => {
     it('should have GPT-4 pricing higher than GPT-3.5-turbo', () => {
-      const gpt4Pricing = PricingTable.getPrice('openai', 'gpt-4');
-      const gpt35Pricing = PricingTable.getPrice('openai', 'gpt-3.5-turbo');
+      const pricingTable = createPricingTable();
+      const gpt4Pricing = pricingTable.getPrice('openai', 'gpt-4');
+      const gpt35Pricing = pricingTable.getPrice('openai', 'gpt-3.5-turbo');
 
       expect(gpt4Pricing).not.toBeNull();
       expect(gpt35Pricing).not.toBeNull();
@@ -152,8 +159,9 @@ describe('PricingTable', () => {
     });
 
     it('should have Claude-3 Opus pricing higher than Sonnet', () => {
-      const opusPricing = PricingTable.getPrice('anthropic', 'claude-3-opus-20240229');
-      const sonnetPricing = PricingTable.getPrice('anthropic', 'claude-3-sonnet-20240229');
+      const pricingTable = createPricingTable();
+      const opusPricing = pricingTable.getPrice('anthropic', 'claude-3-opus-20240229');
+      const sonnetPricing = pricingTable.getPrice('anthropic', 'claude-3-sonnet-20240229');
 
       expect(opusPricing).not.toBeNull();
       expect(sonnetPricing).not.toBeNull();
@@ -169,21 +177,22 @@ describe('PricingTable', () => {
 
   describe('setPrice', () => {
     it('should allow setting custom pricing for new model', () => {
+      const pricingTable = createPricingTable();
       const customPricing = {
         inputPricePerToken: 0.00001,
         outputPricePerToken: 0.00002,
         currency: 'USD',
       };
 
-      PricingTable.setPrice('custom', 'custom-model', customPricing);
+      pricingTable.setPrice('custom', 'custom-model', customPricing);
 
-      const pricing = PricingTable.getPrice('custom', 'custom-model');
+      const pricing = pricingTable.getPrice('custom', 'custom-model');
 
       expect(pricing).toEqual(customPricing);
     });
 
     it('should allow overriding existing pricing', () => {
-      const originalPricing = PricingTable.getPrice('openai', 'gpt-4');
+      const pricingTable = createPricingTable();
 
       const customPricing = {
         inputPricePerToken: 0.00001,
@@ -191,15 +200,26 @@ describe('PricingTable', () => {
         currency: 'USD',
       };
 
-      PricingTable.setPrice('openai', 'gpt-4', customPricing);
+      pricingTable.setPrice('openai', 'gpt-4', customPricing);
 
-      const pricing = PricingTable.getPrice('openai', 'gpt-4');
+      const pricing = pricingTable.getPrice('openai', 'gpt-4');
 
       expect(pricing).toEqual(customPricing);
+    });
 
-      if (originalPricing) {
-        PricingTable.setPrice('openai', 'gpt-4', originalPricing);
-      }
+    it('should isolate pricing mutations per instance', () => {
+      const pricingTable = createPricingTable();
+      const untouchedPricingTable = createPricingTable();
+      const customPricing = {
+        inputPricePerToken: 0.123,
+        outputPricePerToken: 0.456,
+        currency: 'USD',
+      };
+
+      pricingTable.setPrice('openai', 'gpt-4', customPricing);
+
+      expect(pricingTable.getPrice('openai', 'gpt-4')).toEqual(customPricing);
+      expect(untouchedPricingTable.getPrice('openai', 'gpt-4')).not.toEqual(customPricing);
     });
   });
 });

@@ -4,6 +4,7 @@ import type { MeteringService } from '@croco/metering-core';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { LlmUsageRecordedEvent } from '../libs/events/LlmUsageRecordedEvent';
 import { LlmMeteringService } from '../libs/LlmMeteringService';
+import { PricingTable } from '../libs/PricingTable';
 import { LlmMeteringRecordFailedProblem, LlmQuotaExceededProblem } from '../libs/problems/LlmMeteringProblems';
 
 describe('LlmMeteringService', () => {
@@ -306,6 +307,37 @@ describe('LlmMeteringService', () => {
       // Should still return a cost record with default pricing
       expect(costRecord).not.toBeNull();
       expect(costRecord.costUsd).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should prefer an injected pricing table over the shared default table', async () => {
+      const pricingTable = new PricingTable();
+      pricingTable.setPrice('openai', 'gpt-4', {
+        inputPricePerToken: 1,
+        outputPricePerToken: 2,
+        currency: 'USD',
+      });
+
+      const isolatedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        eventBus: mockEventBus,
+        pricingTable,
+      });
+
+      const usageEvent = {
+        tenantId: 'tenant-123',
+        modelId: 'gpt-4',
+        provider: 'openai',
+        usage: {
+          promptTokens: 2,
+          completionTokens: 3,
+          totalTokens: 5,
+        },
+        idempotencyKey: 'cost-key-override',
+      };
+
+      const costRecord = await isolatedMeteringService.trackCost(usageEvent);
+
+      expect(costRecord.costUsd).toBe(8);
     });
 
     it('should throw when cost metering fails', async () => {
