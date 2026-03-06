@@ -12,6 +12,7 @@ describe('IdempotencyManager', () => {
       zadd: vi.fn(),
       zrangebyscore: vi.fn(),
       set: vi.fn(),
+      eval: vi.fn(),
     };
     manager = new IdempotencyManager(mockRedis);
   });
