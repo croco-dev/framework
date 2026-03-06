@@ -1,7 +1,8 @@
+import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
 import { EventField } from '../libs/decorators/EventField';
-import { EventRegistry, globalEventRegistry } from '../libs/EventRegistry';
+import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/EventRegistry';
 import { DefaultEventSerializer, type SerializedEvent } from '../libs/EventSerializer';
 import { EventDeserializationError } from '../libs/problems/EventsProblems';
 
@@ -79,6 +80,8 @@ describe('DefaultEventSerializer', () => {
   beforeEach(() => {
     registry = new EventRegistry();
     serializer = new DefaultEventSerializer(registry);
+    MetadataStorage.clear();
+    globalEventRegistry.clear();
   });
 
   describe('serialize', () => {
@@ -253,8 +256,39 @@ describe('DefaultEventSerializer', () => {
   });
 
   describe('with global registry', () => {
-    it('should use global registry by default', () => {
+    it('should use metadata-derived registry by default', () => {
+      @RegisterEvent()
+      class DefaultRegisteredEvent extends DomainEvent {
+        static eventName = 'registered.event';
+
+        @EventField()
+        public readonly data: string;
+
+        constructor(data: string) {
+          super();
+          this.data = data;
+        }
+      }
+
       const defaultSerializer = new DefaultEventSerializer();
+
+      const data: SerializedEvent = {
+        eventType: 'registered.event',
+        eventId: 'evt_global_123',
+        occurredAt: new Date().toISOString(),
+        payload: {
+          data: 'registered',
+        },
+      };
+
+      const event = defaultSerializer.deserialize<DefaultRegisteredEvent>(data);
+
+      expect(event).toBeInstanceOf(DefaultRegisteredEvent);
+      expect(event.data).toBe('registered');
+    });
+
+    it('should still support explicit global registry injection', () => {
+      const defaultSerializer = new DefaultEventSerializer(globalEventRegistry);
 
       globalEventRegistry.register(RegisteredEvent);
 

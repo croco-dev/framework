@@ -1,6 +1,14 @@
+import { MetadataStorage } from '@croco/framework-context';
 import type { DomainEvent } from './DomainEvent';
+import { EventDefinitionProblem } from './problems/EventsProblems';
 
-type EventClass<T extends DomainEvent = DomainEvent> = new (...args: any[]) => T;
+type EventClass<T extends DomainEvent = DomainEvent> = (new (
+  ...args: any[]
+) => T) & {
+  eventName: string;
+};
+
+export const REGISTERED_EVENT_KEY = Symbol('REGISTERED_EVENT');
 
 /**
  * 이벤트 타입 레지스트리
@@ -15,8 +23,12 @@ export class EventRegistry {
    * @returns 체이닝을 위해 this 반환
    */
   register<T extends DomainEvent>(eventClass: EventClass<T>): this {
-    this.events.set(eventClass.name, eventClass);
+    this.events.set(this.getEventType(eventClass), eventClass);
     return this;
+  }
+
+  static fromMetadata(eventClasses: EventClass[] = EventRegistry.getMetadataEventClasses()): EventRegistry {
+    return new EventRegistry().registerMany(eventClasses);
   }
 
   /**
@@ -51,6 +63,26 @@ export class EventRegistry {
   clear(): void {
     this.events.clear();
   }
+
+  private registerMany(eventClasses: EventClass[]): this {
+    for (const eventClass of eventClasses) {
+      this.register(eventClass);
+    }
+
+    return this;
+  }
+
+  private getEventType<T extends DomainEvent>(eventClass: EventClass<T>): string {
+    if (!eventClass.eventName) {
+      throw new EventDefinitionProblem();
+    }
+
+    return eventClass.eventName;
+  }
+
+  private static getMetadataEventClasses(): EventClass[] {
+    return MetadataStorage.getAll<boolean>(REGISTERED_EVENT_KEY).map((entry) => entry.target as EventClass);
+  }
 }
 
 /**
@@ -64,6 +96,11 @@ export const globalEventRegistry = new EventRegistry();
  */
 export function RegisterEvent(registry: EventRegistry = globalEventRegistry) {
   return <T extends DomainEvent>(target: EventClass<T>): EventClass<T> => {
+    if (registry === globalEventRegistry) {
+      MetadataStorage.define(REGISTERED_EVENT_KEY, target, true);
+      return target;
+    }
+
     registry.register(target);
     return target;
   };

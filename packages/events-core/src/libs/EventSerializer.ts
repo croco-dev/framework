@@ -1,6 +1,6 @@
 import type { DomainEvent } from './DomainEvent';
 import { getEventFields } from './decorators/EventField';
-import { globalEventRegistry } from './EventRegistry';
+import { EventRegistry } from './EventRegistry';
 import { EventDeserializationError, UnknownEventTypeProblem } from './problems/EventsProblems';
 
 type EventFromPayload = (payload: Record<string, unknown>) => DomainEvent;
@@ -34,7 +34,7 @@ export interface EventSerializer {
  * 기본 이벤트 직렬화 구현체
  */
 export class DefaultEventSerializer implements EventSerializer {
-  constructor(private readonly registry = globalEventRegistry) {}
+  constructor(private readonly registry = EventRegistry.fromMetadata()) {}
 
   serialize<T extends DomainEvent>(event: T): SerializedEvent {
     return {
