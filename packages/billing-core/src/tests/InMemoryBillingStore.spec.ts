@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { InMemoryBillingStore } from '../libs/InMemoryBillingStore';
+import { WebhookAlreadyProcessedProblem } from '../libs/problems/BillingProblems';
 import type { BillingAccount, Order, ProcessedWebhook, Subscription } from '../types';
 
 describe('InMemoryBillingStore', () => {
@@ -180,7 +181,7 @@ describe('InMemoryBillingStore', () => {
       expect(result).toBe(true);
     });
 
-    it('should handle idempotency correctly', async () => {
+    it('should reject duplicate webhook claims', async () => {
       const webhook: ProcessedWebhook = {
         eventId: 'event-1',
         eventType: 'subscription.created',
@@ -188,7 +189,7 @@ describe('InMemoryBillingStore', () => {
       };
 
       await store.markWebhookProcessed(webhook);
-      await store.markWebhookProcessed(webhook);
+      await expect(store.markWebhookProcessed(webhook)).rejects.toBeInstanceOf(WebhookAlreadyProcessedProblem);
 
       const result = await store.isWebhookProcessed('event-1');
       expect(result).toBe(true);
