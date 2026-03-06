@@ -3,6 +3,11 @@ import { Container } from '@croco/framework-context';
 import { Field, ObjectType, Query, Resolver } from '@croco/protocols-graphql';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GraphQLServer } from '../libs/GraphQLServer';
+import {
+  GraphQLResolversNotConfiguredProblem,
+  GraphQLSchemaNotConfiguredProblem,
+  GraphQLServerNotInitializedProblem,
+} from '../libs/problems/GraphQLTransportProblems';
 
 @ObjectType()
 class User {
@@ -172,6 +177,28 @@ describe('GraphQLServer integration', () => {
     await testServer.stop();
   });
 
+  it('should throw a typed problem when no schema is configured', async () => {
+    const testServer = new GraphQLServer();
+
+    await expect(testServer.initialize()).rejects.toBeInstanceOf(GraphQLSchemaNotConfiguredProblem);
+  });
+
+  it('should throw a typed problem when handler is requested before initialize', () => {
+    const testServer = new GraphQLServer();
+
+    expect(() => testServer.getHandler()).toThrow(GraphQLServerNotInitializedProblem);
+  });
+
+  it('should throw a typed problem when schema compilation has no resolvers', async () => {
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        autoDiscover: false,
+      },
+    });
+
+    await expect(testServer.initialize()).rejects.toBeInstanceOf(GraphQLResolversNotConfiguredProblem);
+  });
+
   it('should reject oversized request bodies with 413', async () => {
     const testServer = new GraphQLServer({
       schemaOptions: {
@@ -194,7 +221,13 @@ describe('GraphQLServer integration', () => {
     });
 
     expect(response.status).toBe(413);
-    await expect(response.text()).resolves.toContain('Payload Too Large');
+    expect(response.headers.get('content-type')).toContain('application/problem+json');
+
+    const problem = (await response.json()) as { code: string; detail: string; title: string };
+
+    expect(problem.code).toBe('transports-graphql/request-body-too-large');
+    expect(problem.title).toBe('Payload Too Large');
+    expect(problem.detail).toContain('Payload Too Large');
 
     await testServer.stop();
   });
