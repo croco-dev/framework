@@ -22,9 +22,6 @@
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*"
   },
-  "peerDependencies": {
-    "@croco/protocols-rest": "workspace:*"
-  },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
