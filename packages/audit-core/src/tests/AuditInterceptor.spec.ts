@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 import { Container, Context } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
-import type { CallHandler, ExecutionContext } from '@croco/protocols-rest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuditInterceptor } from '../libs/AuditInterceptor';
 import type { AuditLogRepository } from '../libs/AuditLogRepository';
 import { AUDIT_METADATA_KEY } from '../libs/constants';
+import type { AuditExecutionContext, CallHandler } from '../libs/interfaces/Interceptor';
 import type { AuditLogEntry } from '../libs/types';
 
 type RequestContextStub = {
@@ -38,14 +38,14 @@ function createPersistedEntry(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): A
   };
 }
 
-function createExecutionContext(input: ExecutionContextInput): ExecutionContext {
+function createExecutionContext(input: ExecutionContextInput): AuditExecutionContext {
   return {
     getRequest: () => input.request as unknown as Request,
     getClass: () => input.controller as never,
     getHandler: () => input.handler,
     getPath: () => input.path,
     getMethod: () => input.method,
-  } as unknown as ExecutionContext;
+  } as AuditExecutionContext;
 }
 
 function createCallHandler(result: unknown): CallHandler {
