@@ -39,6 +39,7 @@ export {
  */
 export {
   getAllResolvers,
+  getAllResolversFromRegistry,
   getResolverMetadata,
   isResolver,
 } from './libs/metadata/MetadataReader';
