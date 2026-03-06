@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { Context } from '@croco/framework-context';
 import { Problem, ProblemCategory } from '@croco/problems-core';
-import type { ExecutionContext, Guard } from '@croco/protocols-rest';
 import type { AccessEngine } from '../AccessEngine';
 import { ACCESS_METADATA_KEY } from '../constants';
+import type { AccessExecutionContext, Guard } from '../interfaces/Guard';
 
 export class BadRequestProblem extends Problem {
   constructor(detail = 'Bad request') {
@@ -17,10 +17,10 @@ export class ForbiddenProblem extends Problem {
   }
 }
 
-export class AccessGuard implements Guard<ExecutionContext> {
+export class AccessGuard implements Guard<AccessExecutionContext> {
   constructor(private accessEngine: AccessEngine) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  async canActivate(context: AccessExecutionContext): Promise<boolean> {
     const target = context.getClass();
     const handler = context.getHandler();
 
@@ -74,7 +74,7 @@ export class AccessGuard implements Guard<ExecutionContext> {
     return typeof userRecord.id === 'string' ? ({ id: userRecord.id } as { id: string }) : null;
   }
 
-  private resolveTenantId(context: ExecutionContext, request: RequestWithAccessData): string | null {
+  private resolveTenantId(context: AccessExecutionContext, request: RequestWithAccessData): string | null {
     if (typeof request.tenantId === 'string' && request.tenantId.length > 0) {
       return request.tenantId;
     }
@@ -96,7 +96,7 @@ export class AccessGuard implements Guard<ExecutionContext> {
   }
 
   private resolveObjectId(
-    context: ExecutionContext,
+    context: AccessExecutionContext,
     request: RequestWithAccessData,
     objectType: string
   ): string | undefined {
@@ -116,13 +116,12 @@ export class AccessGuard implements Guard<ExecutionContext> {
     return httpContext.param('id') ?? httpContext.param(objectTypeIdKey);
   }
 
-  private getHttpContext(context: ExecutionContext): CrocoHttpContextLike | null {
-    const contextWithHttp = context as ExecutionContextWithHttp;
-    if (typeof contextWithHttp.getHttpContext !== 'function') {
+  private getHttpContext(context: AccessExecutionContext): CrocoHttpContextLike | null {
+    if (typeof context.getHttpContext !== 'function') {
       return null;
     }
 
-    return contextWithHttp.getHttpContext();
+    return context.getHttpContext();
   }
 }
 
@@ -138,8 +137,4 @@ type CrocoHttpContextLike = {
   };
   param(name: string): string | undefined;
   get<T>(key: string): T | undefined;
-};
-
-type ExecutionContextWithHttp = ExecutionContext & {
-  getHttpContext?: () => CrocoHttpContextLike;
 };
