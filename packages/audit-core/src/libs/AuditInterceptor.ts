@@ -2,9 +2,9 @@ import 'reflect-metadata';
 import type { Constructor } from '@croco/framework-context';
 import { Container, Context } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
-import type { CallHandler, ExecutionContext, Interceptor } from '@croco/protocols-rest';
 import { AuditLogRepository } from './AuditLogRepository';
 import { AUDIT_METADATA_KEY } from './constants';
+import type { AuditExecutionContext, CallHandler, Interceptor } from './interfaces/Interceptor';
 import type { AuditLogEntry } from './types';
 
 type HttpMetadata = {
@@ -73,7 +73,7 @@ function extractRequestBody(request: Request): unknown {
   return requestLike.body;
 }
 
-function toHttpMetadata(context: ExecutionContext): HttpMetadata {
+function toHttpMetadata(context: AuditExecutionContext): HttpMetadata {
   const request = context.getRequest();
   const method = context.getMethod();
   const path = context.getPath();
@@ -114,7 +114,7 @@ function resolveResourceId(path: string): string {
   return path;
 }
 
-export class AuditInterceptor implements Interceptor<ExecutionContext> {
+export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
   constructor(
     private readonly repository: AuditLogRepository = Container.get(
       AuditLogRepository as unknown as Constructor<AuditLogRepository>
@@ -130,7 +130,7 @@ export class AuditInterceptor implements Interceptor<ExecutionContext> {
     });
   }
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<unknown> {
+  async intercept(context: AuditExecutionContext, next: CallHandler): Promise<unknown> {
     const target = context.getClass();
     const handler = context.getHandler();
     const http = toHttpMetadata(context);
