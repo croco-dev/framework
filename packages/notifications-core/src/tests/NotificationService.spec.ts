@@ -2,6 +2,10 @@ import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationProviderRegistry } from '../libs/NotificationProviderRegistry';
 import { NotificationService } from '../libs/NotificationService';
+import {
+  NotificationProviderNotConfiguredProblem,
+  NotificationProviderNotRegisteredProblem,
+} from '../libs/problems/NotificationProblems';
 import { NotificationChannel } from '../libs/types';
 
 // Mock TaskRunner
@@ -114,8 +118,8 @@ describe('NotificationService', () => {
         content: 'Test Content',
       };
 
-      await expect(service.send(NotificationChannel.EMAIL, payload, 'non-existent')).rejects.toThrow(
-        'Provider non-existent is not registered'
+      await expect(service.send(NotificationChannel.EMAIL, payload, 'non-existent')).rejects.toBeInstanceOf(
+        NotificationProviderNotRegisteredProblem
       );
     });
   });
@@ -135,8 +139,8 @@ describe('NotificationService', () => {
         content: 'Test Content',
       };
 
-      await expect(service.send(NotificationChannel.EMAIL, payload)).rejects.toThrow(
-        'No provider found for channel EMAIL'
+      await expect(service.send(NotificationChannel.EMAIL, payload)).rejects.toBeInstanceOf(
+        NotificationProviderNotConfiguredProblem
       );
     });
   });
