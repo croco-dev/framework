@@ -60,7 +60,11 @@ export { MrrCalculator } from './libs/MrrCalculator';
 /**
  * 운영 capacity 계산 과정에서 발생하는 Problem 하위 타입들입니다.
  */
-export { CarryingCapacitySimulationProblem, LogoChurnDataRequiredProblem } from './libs/problems/MetricsProblems';
+export {
+  CarryingCapacitySimulationProblem,
+  LogoChurnDataRequiredProblem,
+  RetentionMetricsUnavailableProblem,
+} from './libs/problems/MetricsProblems';
 
 /**
  * churn, GRR, NRR 등 리텐션 지표를 계산하는 계산기입니다.
