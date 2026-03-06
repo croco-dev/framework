@@ -46,7 +46,7 @@
  * ```
  */
 export * from './libs/NotificationService';
-
+export * from './libs/problems/NotificationProblems';
 /**
  * SendNotificationTask - Background task for async notification processing.
  *
