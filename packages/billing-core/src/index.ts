@@ -201,7 +201,11 @@ export type { PlanRegistry } from './libs/PlanRegistry';
  * throw new SubscriptionNotFoundProblem('sub-456');
  * ```
  */
-export { BillingAccountNotFoundProblem, SubscriptionNotFoundProblem } from './libs/problems/BillingProblems';
+export {
+  BillingAccountNotFoundProblem,
+  SubscriptionNotFoundProblem,
+  WebhookAlreadyProcessedProblem,
+} from './libs/problems/BillingProblems';
 
 // Types
 /**
