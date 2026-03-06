@@ -1,6 +1,7 @@
+import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
-import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/EventRegistry';
+import { EventRegistry, globalEventRegistry, REGISTERED_EVENT_KEY, RegisterEvent } from '../libs/EventRegistry';
 
 class FirstEvent extends DomainEvent {
   static eventName = 'FirstEvent';
@@ -16,11 +17,20 @@ class SecondEvent extends DomainEvent {
   }
 }
 
+class RenamedEventClass extends DomainEvent {
+  static eventName = 'stable.event_name';
+
+  constructor(public readonly value: string) {
+    super();
+  }
+}
+
 describe('EventRegistry', () => {
   let registry!: EventRegistry;
 
   beforeEach(() => {
     registry = new EventRegistry();
+    MetadataStorage.clear();
   });
 
   describe('register', () => {
@@ -36,6 +46,13 @@ describe('EventRegistry', () => {
       expect(result).toBe(registry);
       expect(registry.has('FirstEvent')).toBe(true);
       expect(registry.has('SecondEvent')).toBe(true);
+    });
+
+    it('should use static eventName instead of class.name', () => {
+      registry.register(RenamedEventClass);
+
+      expect(registry.has('stable.event_name')).toBe(true);
+      expect(registry.has('RenamedEventClass')).toBe(false);
     });
 
     it('should allow registering multiple events', () => {
@@ -130,17 +147,22 @@ describe('EventRegistry', () => {
 describe('RegisterEvent decorator', () => {
   beforeEach(() => {
     globalEventRegistry.clear();
+    MetadataStorage.clear();
   });
 
   it('should register event class to global registry', () => {
     @RegisterEvent()
     class DecoratedEvent extends DomainEvent {
+      static eventName = 'decorated.event';
+
       constructor(public readonly value: string) {
         super();
       }
     }
 
-    expect(globalEventRegistry.has('DecoratedEvent')).toBe(true);
+    expect(globalEventRegistry.has('decorated.event')).toBe(false);
+    expect(MetadataStorage.get<boolean>(REGISTERED_EVENT_KEY, DecoratedEvent)).toBe(true);
+    expect(EventRegistry.fromMetadata().has('decorated.event')).toBe(true);
   });
 
   it('should register to custom registry when provided', () => {
@@ -148,17 +170,21 @@ describe('RegisterEvent decorator', () => {
 
     @RegisterEvent(customRegistry)
     class CustomEvent extends DomainEvent {
+      static eventName = 'custom.event';
+
       constructor(public readonly data: number) {
         super();
       }
     }
 
-    expect(globalEventRegistry.has('CustomEvent')).toBe(false);
-    expect(customRegistry.has('CustomEvent')).toBe(true);
+    expect(globalEventRegistry.has('custom.event')).toBe(false);
+    expect(customRegistry.has('custom.event')).toBe(true);
   });
 
   it('should return the event class', () => {
     class ReturnedEvent extends DomainEvent {
+      static eventName = 'returned.event';
+
       constructor(public readonly value: string) {
         super();
       }
