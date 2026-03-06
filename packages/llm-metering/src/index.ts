@@ -51,6 +51,7 @@ export { PricingTable } from './libs/PricingTable';
 // Problem Classes (RFC 7807)
 export {
   LlmCostLimitExceededProblem,
+  LlmMeteringRecordFailedProblem,
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
 } from './libs/problems/LlmMeteringProblems';

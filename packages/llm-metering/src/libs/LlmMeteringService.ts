@@ -4,8 +4,17 @@ import type { LlmMetadata, LlmUsage } from '@croco/llm-core';
 import type { MeteringService } from '@croco/metering-core';
 import { LlmUsageRecordedEvent } from './events/LlmUsageRecordedEvent';
 import { PricingTable } from './PricingTable';
-import { LlmQuotaExceededProblem, PricingNotFoundProblem } from './problems/LlmMeteringProblems';
+import {
+  LlmMeteringRecordFailedProblem,
+  LlmQuotaExceededProblem,
+  PricingNotFoundProblem,
+} from './problems/LlmMeteringProblems';
 import type { LlmEmbeddingUsageRecord, LlmUsageRecord } from './types';
+
+type MeterRecordAttempt = {
+  meterId: string;
+  promise: Promise<unknown>;
+};
 
 export type LlmUsageEvent = {
   tenantId: string;
@@ -107,52 +116,45 @@ export class LlmMeteringService {
       ...metadata,
     };
 
-    const recordPromises = [
+    const recordAttempts: MeterRecordAttempt[] = [
       // Prompt tokens
-      this.meteringService
-        .record({
+      {
+        meterId: 'llm.prompt_tokens',
+        promise: this.meteringService.record({
           tenantId,
           meterId: 'llm.prompt_tokens',
           value: usage.promptTokens,
           idempotencyKey: `${idempotencyKey}:prompt`,
           metadata: baseMetadata,
-        })
-        .catch((error) => {
-          // Fail-safe: 기록 실패 시 로그만 남기고 계속 진행
-          console.error(`Failed to record prompt tokens: ${error}`);
-          return null;
         }),
+      },
 
       // Completion tokens
-      this.meteringService
-        .record({
+      {
+        meterId: 'llm.completion_tokens',
+        promise: this.meteringService.record({
           tenantId,
           meterId: 'llm.completion_tokens',
           value: usage.completionTokens,
           idempotencyKey: `${idempotencyKey}:completion`,
           metadata: baseMetadata,
-        })
-        .catch((error) => {
-          console.error(`Failed to record completion tokens: ${error}`);
-          return null;
         }),
+      },
 
       // Cost USD
-      this.meteringService
-        .record({
+      {
+        meterId: 'llm.cost_usd',
+        promise: this.meteringService.record({
           tenantId,
           meterId: 'llm.cost_usd',
           value: costUsd,
           idempotencyKey: `${idempotencyKey}:cost`,
           metadata: baseMetadata,
-        })
-        .catch((error) => {
-          console.error(`Failed to record cost: ${error}`);
-          return null;
         }),
+      },
     ];
 
-    await Promise.allSettled(recordPromises);
+    await this.assertRecordAttempts(recordAttempts, baseMetadata.operationType);
 
     // 4. LlmUsageRecord 생성
     const usageRecord: LlmUsageRecord = {
@@ -221,33 +223,31 @@ export class LlmMeteringService {
       operationType: 'embed',
     };
 
-    await Promise.allSettled([
-      this.meteringService
-        .record({
-          tenantId,
+    await this.assertRecordAttempts(
+      [
+        {
           meterId: 'llm.embedding_tokens',
-          value: embeddingTokens,
-          idempotencyKey: `${idempotencyKey}:tokens`,
-          metadata: baseMetadata,
-        })
-        .catch((error) => {
-          console.error(`Failed to record embedding tokens: ${error}`);
-          return null;
-        }),
-
-      this.meteringService
-        .record({
-          tenantId,
+          promise: this.meteringService.record({
+            tenantId,
+            meterId: 'llm.embedding_tokens',
+            value: embeddingTokens,
+            idempotencyKey: `${idempotencyKey}:tokens`,
+            metadata: baseMetadata,
+          }),
+        },
+        {
           meterId: 'llm.cost_usd',
-          value: costUsd,
-          idempotencyKey: `${idempotencyKey}:cost`,
-          metadata: baseMetadata,
-        })
-        .catch((error) => {
-          console.error(`Failed to record embedding cost: ${error}`);
-          return null;
-        }),
-    ]);
+          promise: this.meteringService.record({
+            tenantId,
+            meterId: 'llm.cost_usd',
+            value: costUsd,
+            idempotencyKey: `${idempotencyKey}:cost`,
+            metadata: baseMetadata,
+          }),
+        },
+      ],
+      baseMetadata.operationType
+    );
 
     // 4. LlmEmbeddingUsageRecord 생성
     const usageRecord: LlmEmbeddingUsageRecord = {
@@ -297,22 +297,26 @@ export class LlmMeteringService {
     );
 
     // 3. cost_usd meter 기록
-    await this.meteringService
-      .record({
-        tenantId,
-        meterId: 'llm.cost_usd',
-        value: costUsd,
-        idempotencyKey: `${idempotencyKey}:cost`,
-        metadata: {
-          provider,
-          model: modelId,
-          accuracy: usage.accuracy ?? 'UNKNOWN',
-          operationType: 'cost_tracking',
+    await this.assertRecordAttempts(
+      [
+        {
+          meterId: 'llm.cost_usd',
+          promise: this.meteringService.record({
+            tenantId,
+            meterId: 'llm.cost_usd',
+            value: costUsd,
+            idempotencyKey: `${idempotencyKey}:cost`,
+            metadata: {
+              provider,
+              model: modelId,
+              accuracy: usage.accuracy ?? 'UNKNOWN',
+              operationType: 'cost_tracking',
+            },
+          }),
         },
-      })
-      .catch((error) => {
-        console.error(`Failed to record cost: ${error}`);
-      });
+      ],
+      'cost_tracking'
+    );
 
     return {
       tenantId,
@@ -344,5 +348,23 @@ export class LlmMeteringService {
     }
 
     return true;
+  }
+
+  private async assertRecordAttempts(attempts: MeterRecordAttempt[], operation: string): Promise<void> {
+    const results = await Promise.allSettled(attempts.map((attempt) => attempt.promise));
+    const firstRejectedIndex = results.findIndex((result) => result.status === 'rejected');
+
+    if (firstRejectedIndex === -1) {
+      return;
+    }
+
+    const failedMeterIds = results.flatMap((result, index) =>
+      result.status === 'rejected' ? [attempts[index]?.meterId ?? 'unknown'] : []
+    );
+    const firstError = results[firstRejectedIndex];
+
+    if (firstError.status === 'rejected') {
+      throw new LlmMeteringRecordFailedProblem(operation, failedMeterIds, firstError.reason);
+    }
   }
 }

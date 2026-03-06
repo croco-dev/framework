@@ -4,7 +4,7 @@ import type { MeteringService } from '@croco/metering-core';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { LlmUsageRecordedEvent } from '../libs/events/LlmUsageRecordedEvent';
 import { LlmMeteringService } from '../libs/LlmMeteringService';
-import { LlmQuotaExceededProblem } from '../libs/problems/LlmMeteringProblems';
+import { LlmMeteringRecordFailedProblem, LlmQuotaExceededProblem } from '../libs/problems/LlmMeteringProblems';
 
 describe('LlmMeteringService', () => {
   let meteringService!: LlmMeteringService;
@@ -98,7 +98,7 @@ describe('LlmMeteringService', () => {
       expect(mockEventBus.publish).toHaveBeenCalledWith(expect.any(LlmUsageRecordedEvent));
     });
 
-    it('should handle idempotency correctly - duplicate calls should not record again', async () => {
+    it('should throw when any metering record fails', async () => {
       const usageEvent = {
         tenantId: 'tenant-123',
         modelId: 'gpt-4',
@@ -121,11 +121,35 @@ describe('LlmMeteringService', () => {
       // Simulate idempotency check failure for prompt tokens
       (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error('Duplicate idempotency key'));
 
-      // Should not throw, returns the usage record even with partial failures
-      const result = await meteringService.recordUsage(usageEvent);
-      expect(result).not.toBeNull();
-      expect(result.promptTokens).toBe(100);
-      expect(result.completionTokens).toBe(50);
+      await expect(meteringService.recordUsage(usageEvent)).rejects.toThrow(LlmMeteringRecordFailedProblem);
+    });
+
+    it('should expose failed meter ids when metering fails', async () => {
+      const usageEvent = {
+        tenantId: 'tenant-123',
+        modelId: 'gpt-4',
+        provider: 'openai',
+        usage: {
+          promptTokens: 100,
+          completionTokens: 50,
+          totalTokens: 150,
+        },
+        idempotencyKey: 'test-key-123',
+      };
+
+      (mockMeteringCore.record as Mock)
+        .mockRejectedValueOnce(new Error('Duplicate idempotency key'))
+        .mockResolvedValueOnce({ id: 'completion', tenantId: 'tenant-123' })
+        .mockRejectedValueOnce(new Error('Cost persistence failed'));
+
+      await expect(meteringService.recordUsage(usageEvent)).rejects.toMatchObject({
+        code: 'llm-metering/record-failed',
+        extensions: {
+          operation: 'generate',
+          meterIds: ['llm.prompt_tokens', 'llm.cost_usd'],
+          cause: 'Duplicate idempotency key',
+        },
+      });
     });
 
     it('should handle estimated usage accuracy flag', async () => {
@@ -185,6 +209,20 @@ describe('LlmMeteringService', () => {
           idempotencyKey: 'embed-key-123:cost',
         })
       );
+    });
+
+    it('should throw when embedding metering fails', async () => {
+      (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error('Embedding metering failed'));
+
+      await expect(
+        meteringService.recordEmbeddingUsage({
+          tenantId: 'tenant-123',
+          modelId: 'text-embedding-3-small',
+          provider: 'openai',
+          embeddingTokens: 100,
+          idempotencyKey: 'embed-key-123',
+        })
+      ).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
   });
 
@@ -268,6 +306,24 @@ describe('LlmMeteringService', () => {
       // Should still return a cost record with default pricing
       expect(costRecord).not.toBeNull();
       expect(costRecord.costUsd).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should throw when cost metering fails', async () => {
+      const usageEvent = {
+        tenantId: 'tenant-123',
+        modelId: 'gpt-4',
+        provider: 'openai',
+        usage: {
+          promptTokens: 1000,
+          completionTokens: 500,
+          totalTokens: 1500,
+        },
+        idempotencyKey: 'cost-key-123',
+      };
+
+      (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error('Cost metering failed'));
+
+      await expect(meteringService.trackCost(usageEvent)).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
   });
 });
