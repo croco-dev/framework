@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { RetentionMetricsUnavailableProblem } from '../libs/problems/MetricsProblems';
 import { RetentionCalculator } from '../libs/RetentionCalculator';
 import type { MRRMovement } from '../types';
 
@@ -201,7 +202,7 @@ describe('RetentionCalculator', () => {
   });
 
   describe('calculateRetention: 모든 메트릭 한 번에 계산', () => {
-    it('should return all metrics with starting MRR of 100k', async () => {
+    it('should throw when complete retention metrics are unavailable', async () => {
       const startingMRR = 100000;
       const movement = createMovement({
         new: { amount: 15000, currency: 'USD' },
@@ -212,14 +213,9 @@ describe('RetentionCalculator', () => {
         net: { amount: 19000, currency: 'USD' },
       });
 
-      const result = await calculator.calculateRetention(startingMRR, movement);
-
-      expect(result).toEqual({
-        grr: 95,
-        nrr: 103,
-        logoChurn: null,
-        revenueChurn: 3,
-      });
+      await expect(calculator.calculateRetention(startingMRR, movement)).rejects.toBeInstanceOf(
+        RetentionMetricsUnavailableProblem
+      );
     });
   });
 
@@ -298,7 +294,7 @@ describe('RetentionCalculator', () => {
   });
 
   describe('Golden Fixture: 종합 시나리오', () => {
-    it('should calculate all metrics correctly for complex scenario', async () => {
+    it('should reject partial retention results for complex scenario', async () => {
       const startingMRR = 50000;
       const movement = createMovement({
         new: { amount: 10000, currency: 'USD' },
@@ -309,12 +305,9 @@ describe('RetentionCalculator', () => {
         net: { amount: 11500, currency: 'USD' },
       });
 
-      const result = await calculator.calculateRetention(startingMRR, movement);
-
-      expect(result.grr).toBe(85);
-      expect(result.nrr).toBe(100);
-      expect(result.revenueChurn).toBe(10);
-      expect(result.logoChurn).toBeNull();
+      await expect(calculator.calculateRetention(startingMRR, movement)).rejects.toBeInstanceOf(
+        RetentionMetricsUnavailableProblem
+      );
     });
   });
 });
