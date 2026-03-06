@@ -4,6 +4,8 @@ export interface CacheEvictOptions<V = unknown> {
   /** Cache store instance */
   store: CacheStore<V>;
 
+  namespace?: string;
+
   /** Specific key to evict (supports * wildcard at the end) */
   key?: string;
 
@@ -11,10 +13,22 @@ export interface CacheEvictOptions<V = unknown> {
   allEntries?: boolean;
 }
 
+function resolveEvictionPattern(options: CacheEvictOptions<unknown>, methodName: string): string {
+  if (options.namespace === undefined) {
+    throw new Error(`@CacheEvict requires "namespace" when "key" is not provided (method: ${methodName})`);
+  }
+
+  return `${options.namespace}:${methodName}:*`;
+}
+
 export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDecorator {
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
     const originalMethod = descriptor.value;
     const methodName = String(propertyKey);
+    const pattern =
+      options.key === undefined && options.allEntries !== true
+        ? resolveEvictionPattern(options, methodName)
+        : undefined;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const result = await originalMethod.apply(this, args);
@@ -33,10 +47,7 @@ export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDe
         return result;
       }
 
-      const className = (this as object).constructor.name;
-      const pattern = `${className}:${methodName}:*`;
-
-      if (options.store.deleteByPattern) {
+      if (pattern !== undefined && options.store.deleteByPattern) {
         await options.store.deleteByPattern(pattern);
       }
 

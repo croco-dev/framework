@@ -14,7 +14,7 @@ describe('@Cacheable', () => {
     let callCount = 0;
 
     class TestService {
-      @Cacheable({ store: cache })
+      @Cacheable({ store: cache, namespace: 'test-service' })
       async getData(id: string): Promise<string> {
         callCount++;
         return `data-${id}`;
@@ -35,7 +35,7 @@ describe('@Cacheable', () => {
     let callCount = 0;
 
     class TestService {
-      @Cacheable({ store: cache })
+      @Cacheable({ store: cache, namespace: 'test-service' })
       async getData(id: string): Promise<string> {
         callCount++;
         return `data-${id}`;
@@ -55,7 +55,7 @@ describe('@Cacheable', () => {
     let callCount = 0;
 
     class TestService {
-      @Cacheable({ store: cache, ttl: 1000 })
+      @Cacheable({ store: cache, namespace: 'test-service', ttl: 1000 })
       async getData(id: string): Promise<string> {
         callCount++;
         return `data-${id}`;
@@ -95,7 +95,7 @@ describe('@Cacheable', () => {
     class TestService {
       private prefix = 'result:';
 
-      @Cacheable({ store: cache })
+      @Cacheable({ store: cache, namespace: 'test-service' })
       async getData(id: string): Promise<string> {
         return `${this.prefix}${id}`;
       }
@@ -105,6 +105,48 @@ describe('@Cacheable', () => {
     const result = await service.getData('123');
 
     expect(result).toBe('result:123');
+  });
+
+  it('uses namespace for default cache keys', async () => {
+    class TestService {
+      @Cacheable({ store: cache, namespace: 'stable-service' })
+      async getData(id: string): Promise<string> {
+        return `data-${id}`;
+      }
+    }
+
+    const service = new TestService();
+    await service.getData('123');
+
+    expect(await cache.get('stable-service:getData:["123"]')).toBe('data-123');
+  });
+
+  it('prefers keyPrefix over namespace', async () => {
+    class TestService {
+      @Cacheable({ store: cache, namespace: 'stable-service', keyPrefix: 'custom:prefix' })
+      async getData(id: string): Promise<string> {
+        return `data-${id}`;
+      }
+    }
+
+    const service = new TestService();
+    await service.getData('123');
+
+    expect(await cache.get('custom:prefix:["123"]')).toBe('data-123');
+    expect(await cache.get('stable-service:getData:["123"]')).toBeUndefined();
+  });
+
+  it('throws when neither namespace nor keyPrefix is provided', () => {
+    expect(() => {
+      class TestService {
+        @Cacheable({ store: cache })
+        async getData(id: string): Promise<string> {
+          return `data-${id}`;
+        }
+      }
+
+      return TestService;
+    }).toThrow('@Cacheable requires "namespace" when "keyPrefix" is not provided (method: getData)');
   });
 });
 
@@ -116,20 +158,20 @@ describe('@CacheEvict', () => {
   });
 
   it('evicts cache by pattern after method execution', async () => {
-    await cache.set('TestService:updateData:["123"]', 'cached');
-    await cache.set('TestService:updateData:["456"]', 'cached2');
+    await cache.set('test-service:updateData:["123"]', 'cached');
+    await cache.set('test-service:updateData:["456"]', 'cached2');
     await cache.set('OtherService:getData:["123"]', 'other');
 
     class TestService {
-      @CacheEvict({ store: cache })
-      async updateData(id: string): Promise<void> {}
+      @CacheEvict({ store: cache, namespace: 'test-service' })
+      async updateData(_id: string): Promise<void> {}
     }
 
     const service = new TestService();
     await service.updateData('123');
 
-    expect(await cache.get('TestService:updateData:["123"]')).toBeUndefined();
-    expect(await cache.get('TestService:updateData:["456"]')).toBeUndefined();
+    expect(await cache.get('test-service:updateData:["123"]')).toBeUndefined();
+    expect(await cache.get('test-service:updateData:["456"]')).toBeUndefined();
     expect(await cache.get('OtherService:getData:["123"]')).toBe('other');
   });
 
@@ -183,6 +225,33 @@ describe('@CacheEvict', () => {
     expect(await cache.get('key2')).toBeUndefined();
   });
 
+  it('uses namespace for default eviction patterns', async () => {
+    await cache.set('stable-service:updateData:["123"]', 'cached');
+    await cache.set('stable-service:updateData:["456"]', 'cached2');
+
+    class TestService {
+      @CacheEvict({ store: cache, namespace: 'stable-service' })
+      async updateData(): Promise<void> {}
+    }
+
+    const service = new TestService();
+    await service.updateData();
+
+    expect(await cache.get('stable-service:updateData:["123"]')).toBeUndefined();
+    expect(await cache.get('stable-service:updateData:["456"]')).toBeUndefined();
+  });
+
+  it('throws when neither namespace nor key is provided', () => {
+    expect(() => {
+      class TestService {
+        @CacheEvict({ store: cache })
+        async updateData(): Promise<void> {}
+      }
+
+      return TestService;
+    }).toThrow('@CacheEvict requires "namespace" when "key" is not provided (method: updateData)');
+  });
+
   it('executes method before evicting', async () => {
     let methodCalled = false;
 
@@ -216,14 +285,14 @@ describe('@Cacheable with @CacheEvict integration', () => {
     let fetchCount = 0;
 
     class UserService {
-      @Cacheable({ store: cache })
+      @Cacheable({ store: cache, namespace: 'user-service' })
       async getUser(id: string): Promise<string> {
         fetchCount++;
         return `user-${id}`;
       }
 
-      @CacheEvict({ store: cache, key: 'UserService:getUser:*' })
-      async updateUser(id: string): Promise<void> {}
+      @CacheEvict({ store: cache, key: 'user-service:getUser:*' })
+      async updateUser(_id: string): Promise<void> {}
     }
 
     const service = new UserService();

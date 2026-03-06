@@ -4,15 +4,27 @@ export interface CacheableOptions<V = unknown> {
   /** Cache store instance */
   store: CacheStore<V>;
 
+  namespace?: string;
+
   /** Time to live in milliseconds */
   ttl?: number;
 
-  /** Key prefix (default: className:methodName) */
   keyPrefix?: string;
 }
 
-function generateCacheKey(className: string, methodName: string, args: unknown[], keyPrefix?: string): string {
-  const prefix = keyPrefix ?? `${className}:${methodName}`;
+function resolveCachePrefix(options: CacheableOptions<unknown>, methodName: string): string {
+  if (options.keyPrefix !== undefined) {
+    return options.keyPrefix;
+  }
+
+  if (options.namespace === undefined) {
+    throw new Error(`@Cacheable requires "namespace" when "keyPrefix" is not provided (method: ${methodName})`);
+  }
+
+  return `${options.namespace}:${methodName}`;
+}
+
+function generateCacheKey(prefix: string, args: unknown[]): string {
   const argsKey = JSON.stringify(args);
   return `${prefix}:${argsKey}`;
 }
@@ -21,10 +33,10 @@ export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDeco
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
     const originalMethod = descriptor.value;
     const methodName = String(propertyKey);
+    const prefix = resolveCachePrefix(options, methodName);
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      const className = (this as object).constructor.name;
-      const cacheKey = generateCacheKey(className, methodName, args, options.keyPrefix);
+      const cacheKey = generateCacheKey(prefix, args);
 
       const cachedValue = await options.store.get(cacheKey);
       if (cachedValue !== undefined) {
