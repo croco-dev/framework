@@ -6,8 +6,7 @@ export function createEnv<T extends z.ZodRawShape>(
 ): z.infer<z.ZodObject<T>> {
   const result = z.object(schema).safeParse(env);
   if (!result.success) {
-    console.error('❌ Invalid environment variables:', result.error.flatten().fieldErrors);
-    process.exit(1);
+    throw result.error;
   }
   return result.data;
 }
