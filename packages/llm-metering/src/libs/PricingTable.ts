@@ -1,93 +1,108 @@
 import type { LlmEmbeddingUsageRecord, LlmUsageRecord, ModelPricing } from './types';
 
-class PricingTableClass {
-  private static pricing: Map<string, Map<string, ModelPricing>> = new Map([
+const DEFAULT_PRICING_ENTRIES: Array<[string, Array<[string, ModelPricing]>]> = [
+  [
+    'openai',
     [
-      'openai',
-      new Map([
-        [
-          'gpt-4',
-          {
-            inputPricePerToken: 0.00003,
-            outputPricePerToken: 0.00006,
-            currency: 'USD',
-          },
-        ],
-        [
-          'gpt-4-turbo',
-          {
-            inputPricePerToken: 0.00001,
-            outputPricePerToken: 0.00003,
-            currency: 'USD',
-          },
-        ],
-        [
-          'gpt-3.5-turbo',
-          {
-            inputPricePerToken: 0.0000005,
-            outputPricePerToken: 0.0000015,
-            currency: 'USD',
-          },
-        ],
-        [
-          'text-embedding-ada-002',
-          {
-            inputPricePerToken: 0.0000001,
-            outputPricePerToken: 0,
-            currency: 'USD',
-          },
-        ],
-        [
-          'text-embedding-3-small',
-          {
-            inputPricePerToken: 0.00000002,
-            outputPricePerToken: 0,
-            currency: 'USD',
-          },
-        ],
-        [
-          'text-embedding-3-large',
-          {
-            inputPricePerToken: 0.00000013,
-            outputPricePerToken: 0,
-            currency: 'USD',
-          },
-        ],
-      ]),
+      [
+        'gpt-4',
+        {
+          inputPricePerToken: 0.00003,
+          outputPricePerToken: 0.00006,
+          currency: 'USD',
+        },
+      ],
+      [
+        'gpt-4-turbo',
+        {
+          inputPricePerToken: 0.00001,
+          outputPricePerToken: 0.00003,
+          currency: 'USD',
+        },
+      ],
+      [
+        'gpt-3.5-turbo',
+        {
+          inputPricePerToken: 0.0000005,
+          outputPricePerToken: 0.0000015,
+          currency: 'USD',
+        },
+      ],
+      [
+        'text-embedding-ada-002',
+        {
+          inputPricePerToken: 0.0000001,
+          outputPricePerToken: 0,
+          currency: 'USD',
+        },
+      ],
+      [
+        'text-embedding-3-small',
+        {
+          inputPricePerToken: 0.00000002,
+          outputPricePerToken: 0,
+          currency: 'USD',
+        },
+      ],
+      [
+        'text-embedding-3-large',
+        {
+          inputPricePerToken: 0.00000013,
+          outputPricePerToken: 0,
+          currency: 'USD',
+        },
+      ],
     ],
+  ],
+  [
+    'anthropic',
     [
-      'anthropic',
-      new Map([
-        [
-          'claude-3-opus-20240229',
-          {
-            inputPricePerToken: 0.000015,
-            outputPricePerToken: 0.000075,
-            currency: 'USD',
-          },
-        ],
-        [
-          'claude-3-sonnet-20240229',
-          {
-            inputPricePerToken: 0.000003,
-            outputPricePerToken: 0.000015,
-            currency: 'USD',
-          },
-        ],
-        [
-          'claude-3-haiku-20240307',
-          {
-            inputPricePerToken: 0.00000025,
-            outputPricePerToken: 0.00000125,
-            currency: 'USD',
-          },
-        ],
-      ]),
+      [
+        'claude-3-opus-20240229',
+        {
+          inputPricePerToken: 0.000015,
+          outputPricePerToken: 0.000075,
+          currency: 'USD',
+        },
+      ],
+      [
+        'claude-3-sonnet-20240229',
+        {
+          inputPricePerToken: 0.000003,
+          outputPricePerToken: 0.000015,
+          currency: 'USD',
+        },
+      ],
+      [
+        'claude-3-haiku-20240307',
+        {
+          inputPricePerToken: 0.00000025,
+          outputPricePerToken: 0.00000125,
+          currency: 'USD',
+        },
+      ],
     ],
-  ]);
+  ],
+];
+
+function createDefaultPricing(): Map<string, Map<string, ModelPricing>> {
+  return new Map(
+    DEFAULT_PRICING_ENTRIES.map(([provider, entries]) => [
+      provider,
+      new Map(entries.map(([modelId, pricing]) => [modelId, { ...pricing }])),
+    ])
+  );
+}
+
+export class PricingTable {
+  private readonly pricing: Map<string, Map<string, ModelPricing>>;
+
+  constructor(pricing: Map<string, Map<string, ModelPricing>> = createDefaultPricing()) {
+    this.pricing = pricing;
+  }
 
   public getPrice(provider: string, modelId: string): ModelPricing | null {
-    const providerPricing = PricingTableClass.pricing.get(provider);
+    const providerPricing = this.pricing.get(provider);
     if (!providerPricing) {
       return null;
     }
@@ -100,17 +115,19 @@ class PricingTableClass {
     if ('embeddingTokens' in usage) {
       return usage.embeddingTokens * pricing.inputPricePerToken;
     }
+
     return usage.promptTokens * pricing.inputPricePerToken + usage.completionTokens * pricing.outputPricePerToken;
   }
 
   public setPrice(provider: string, modelId: string, pricing: ModelPricing): void {
-    let providerPricing = PricingTableClass.pricing.get(provider);
+    let providerPricing = this.pricing.get(provider);
     if (!providerPricing) {
       providerPricing = new Map();
-      PricingTableClass.pricing.set(provider, providerPricing);
+      this.pricing.set(provider, providerPricing);
     }
+
     providerPricing.set(modelId, pricing);
   }
 }
 
-export const PricingTable = new PricingTableClass();
+export const defaultPricingTable = new PricingTable();

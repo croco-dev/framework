@@ -46,7 +46,7 @@ export type { LlmCostRecord, LlmMeteringServiceOptions, LlmUsageEvent } from './
 export { LlmMeteringService } from './libs/LlmMeteringService';
 
 // Pricing
-export { PricingTable } from './libs/PricingTable';
+export { defaultPricingTable, PricingTable } from './libs/PricingTable';
 
 // Problem Classes (RFC 7807)
 export {

@@ -3,7 +3,7 @@ import { Token } from '@croco/framework-context';
 import type { LlmMetadata, LlmUsage } from '@croco/llm-core';
 import type { MeteringService } from '@croco/metering-core';
 import { LlmUsageRecordedEvent } from './events/LlmUsageRecordedEvent';
-import { PricingTable } from './PricingTable';
+import { defaultPricingTable, type PricingTable } from './PricingTable';
 import {
   LlmMeteringRecordFailedProblem,
   LlmQuotaExceededProblem,
@@ -40,6 +40,7 @@ export type LlmCostRecord = {
 export type LlmMeteringServiceOptions = {
   meteringService: MeteringService;
   eventBus?: EventBus;
+  pricingTable?: PricingTable;
   defaultPricing?: {
     inputPricePerToken: number;
     outputPricePerToken: number;
@@ -62,11 +63,13 @@ export class LlmMeteringService {
 
   private readonly meteringService: MeteringService;
   private readonly eventBus?: EventBus;
+  private readonly pricingTable: PricingTable;
   private readonly defaultPricing: LlmMeteringServiceOptions['defaultPricing'];
 
   constructor(options: LlmMeteringServiceOptions) {
     this.meteringService = options.meteringService;
     this.eventBus = options.eventBus;
+    this.pricingTable = options.pricingTable ?? defaultPricingTable;
     this.defaultPricing = options.defaultPricing ?? {
       inputPricePerToken: 0.000001,
       outputPricePerToken: 0.000002,
@@ -86,13 +89,13 @@ export class LlmMeteringService {
     const { tenantId, modelId, provider, usage, idempotencyKey, metadata } = event;
 
     // 1. Pricing 조회
-    const pricing = PricingTable.getPrice(provider, modelId) ?? this.defaultPricing;
+    const pricing = this.pricingTable.getPrice(provider, modelId) ?? this.defaultPricing;
 
     // 2. 비용 계산
     if (!pricing) {
       throw new PricingNotFoundProblem(provider, modelId);
     }
-    const costUsd = PricingTable.calculateCost(
+    const costUsd = this.pricingTable.calculateCost(
       {
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
@@ -195,13 +198,13 @@ export class LlmMeteringService {
     const { tenantId, modelId, provider, embeddingTokens, idempotencyKey, accuracy } = event;
 
     // 1. Pricing 조회
-    const pricing = PricingTable.getPrice(provider, modelId) ?? this.defaultPricing;
+    const pricing = this.pricingTable.getPrice(provider, modelId) ?? this.defaultPricing;
 
     // 2. 비용 계산
     if (!pricing) {
       throw new PricingNotFoundProblem(provider, modelId);
     }
-    const costUsd = PricingTable.calculateCost(
+    const costUsd = this.pricingTable.calculateCost(
       {
         embeddingTokens,
         modelId,
@@ -275,13 +278,13 @@ export class LlmMeteringService {
     const { tenantId, modelId, provider, usage, idempotencyKey } = event;
 
     // 1. Pricing 조회
-    const pricing = PricingTable.getPrice(provider, modelId) ?? this.defaultPricing;
+    const pricing = this.pricingTable.getPrice(provider, modelId) ?? this.defaultPricing;
 
     // 2. 비용 계산
     if (!pricing) {
       throw new PricingNotFoundProblem(provider, modelId);
     }
-    const costUsd = PricingTable.calculateCost(
+    const costUsd = this.pricingTable.calculateCost(
       {
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
