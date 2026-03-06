@@ -1,7 +1,8 @@
-import { triggerRegistry } from '../TriggerRegistry';
+import { MetadataStorage } from '@croco/framework-context';
+import { EVENT_METADATA_KEY } from '../metadataKeys';
 import type { EventOptions, EventTriggerMetadata } from '../types';
 
-export const EVENT_METADATA_KEY = Symbol('EVENT_METADATA');
+export { EVENT_METADATA_KEY } from '../metadataKeys';
 
 /**
  * OnEvent decorator for handling domain events.
@@ -31,7 +32,7 @@ export function OnEvent(event: string, options: EventOptions = {}): MethodDecora
       target,
     };
 
-    triggerRegistry.register(metadata);
+    MetadataStorage.define(EVENT_METADATA_KEY, target, metadata, propertyKey);
 
     return descriptor;
   };
