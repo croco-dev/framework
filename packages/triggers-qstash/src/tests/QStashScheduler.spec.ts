@@ -90,8 +90,77 @@ describe('QStashScheduler', () => {
         cron: '*/5 * * * *',
         destination: 'https://api.example.com/webhooks/qstash',
         method: 'POST',
+        body: expect.any(String),
+        headers: expect.objectContaining({
+          'X-Schedule-Id': 'croco-trigger:processQueue:processQueue',
+        }),
       })
     );
+
+    const payload = JSON.parse(create.mock.calls[0]?.[0]?.body as string) as {
+      scheduleId: string;
+      triggerName?: string;
+      methodName: string;
+    };
+
+    expect(payload).toMatchObject({
+      scheduleId: 'croco-trigger:processQueue:processQueue',
+      triggerName: 'processQueue',
+      methodName: 'processQueue',
+    });
     expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it('명시적 cron name을 schedule 식별자로 사용해야 한다', async () => {
+    class NamedScheduleJob {
+      async processQueue(): Promise<void> {}
+    }
+
+    const metadata: CronTriggerMetadata = {
+      type: 'cron',
+      expression: '*/10 * * * *',
+      methodName: 'processQueue',
+      target: NamedScheduleJob.prototype,
+      options: {
+        name: 'queue-drain',
+      },
+    };
+    triggerRegistry.register(metadata);
+
+    const create = vi.fn().mockResolvedValue({});
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create,
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: 'https://api.example.com/webhooks/qstash',
+    });
+
+    await scheduler.sync();
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'X-Schedule-Id': 'croco-trigger:queue-drain:processQueue',
+        }),
+      })
+    );
+
+    const payload = JSON.parse(create.mock.calls[0]?.[0]?.body as string) as {
+      scheduleId: string;
+      triggerName?: string;
+      className?: string;
+    };
+
+    expect(payload).toMatchObject({
+      scheduleId: 'croco-trigger:queue-drain:processQueue',
+      triggerName: 'queue-drain',
+      className: 'NamedScheduleJob',
+    });
   });
 });

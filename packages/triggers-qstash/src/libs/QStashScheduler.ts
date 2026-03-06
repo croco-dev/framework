@@ -215,9 +215,9 @@ export class QStashScheduler {
    * Generate a unique schedule ID for a cron trigger.
    */
   private generateScheduleId(trigger: CronTriggerMetadata): string {
-    const className = trigger.target.constructor.name;
     const methodName = String(trigger.methodName);
-    return `${this.schedulePrefix}:${className}:${methodName}`;
+    const triggerName = this.getTriggerIdentifier(trigger);
+    return `${this.schedulePrefix}:${triggerName}:${methodName}`;
   }
 
   /**
@@ -252,13 +252,13 @@ export class QStashScheduler {
     metadata: CronTriggerMetadata,
     existing?: { cron: string }
   ): Promise<ScheduleSyncDetail> {
-    const className = metadata.target.constructor.name;
     const methodName = String(metadata.methodName);
+    const triggerName = this.getTriggerIdentifier(metadata);
     const baseDetail: ScheduleSyncDetail = {
       name: scheduleId,
       action: 'skipped',
       expression: metadata.expression,
-      target: className,
+      target: triggerName,
       method: methodName,
     };
 
@@ -332,17 +332,22 @@ export class QStashScheduler {
    * to dispatch the execution to the correct target method.
    */
   private buildPayload(metadata: CronTriggerMetadata): Record<string, unknown> {
-    const className = metadata.target.constructor.name;
     const methodName = String(metadata.methodName);
+    const triggerName = this.getTriggerIdentifier(metadata);
 
     return {
       scheduleId: this.generateScheduleId(metadata),
-      className,
+      className: metadata.target.constructor.name,
       methodName,
+      triggerName,
       cronExpression: metadata.expression,
       timestamp: new Date().toISOString(),
       options: metadata.options ?? {},
     };
+  }
+
+  private getTriggerIdentifier(metadata: CronTriggerMetadata): string {
+    return metadata.options?.name ?? String(metadata.methodName);
   }
 
   /**
