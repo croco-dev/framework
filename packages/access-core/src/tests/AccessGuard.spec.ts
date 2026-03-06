@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import { Context } from '@croco/framework-context';
-import type { ExecutionContext } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccessEngine } from '../libs/AccessEngine';
 import { Access } from '../libs/decorators/Access';
 import { AccessGuard, BadRequestProblem, ForbiddenProblem } from '../libs/guards/AccessGuard';
+import type { AccessExecutionContext } from '../libs/interfaces/Guard';
 
 describe('AccessGuard', () => {
   let accessGuard!: AccessGuard;
@@ -14,12 +14,12 @@ describe('AccessGuard', () => {
   const mockTenantId = 'tenant-1';
 
   const createMockContext = (
-    target: any,
+    target: object,
     handlerName: string,
-    user?: any,
+    user?: unknown,
     tenantId?: string,
     params?: Record<string, string>
-  ) => {
+  ): AccessExecutionContext => {
     const request = {
       headers: new Headers(),
       user,
@@ -33,11 +33,11 @@ describe('AccessGuard', () => {
       getHandler: () => handlerName,
       getPath: () => '/test',
       getMethod: () => 'GET',
-    } as unknown as ExecutionContext;
+    } as AccessExecutionContext;
   };
 
   const createMockContextWithHttp = (
-    target: unknown,
+    target: object,
     handlerName: string,
     options: {
       user?: unknown;
@@ -46,7 +46,7 @@ describe('AccessGuard', () => {
       rawParams?: Record<string, string>;
       ctxTenantId?: string;
     } = {}
-  ): ExecutionContext => {
+  ): AccessExecutionContext => {
     const request = {
       headers: new Headers(),
       user: options.user,
@@ -69,12 +69,12 @@ describe('AccessGuard', () => {
 
     return {
       getRequest: () => request,
-      getClass: () => target as never,
+      getClass: () => target,
       getHandler: () => handlerName,
       getPath: () => '/test',
       getMethod: () => 'GET',
       getHttpContext: () => httpContext,
-    } as unknown as ExecutionContext;
+    } as AccessExecutionContext;
   };
 
   beforeEach(() => {
