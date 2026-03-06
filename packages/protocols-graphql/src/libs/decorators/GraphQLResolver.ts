@@ -1,9 +1,8 @@
 import 'reflect-metadata';
 import type { Scope } from '@croco/framework-context';
-import { Container } from '@croco/framework-context';
+import { Container, MetadataStorage } from '@croco/framework-context';
 import { Resolver } from 'type-graphql';
-import { RESOLVER_KEY } from '../constants';
-import { resolverRegistry } from '../metadata/ResolverRegistry';
+import { RESOLVER_KEY, RESOLVERS_KEY } from '../constants';
 import type { ClassType, GraphQLResolverMetadata } from '../types';
 
 export type GraphQLResolverOptions = {
@@ -30,6 +29,6 @@ export function GraphQLResolver<T extends object = object>(
     const metadata: GraphQLResolverMetadata = { target };
     Reflect.defineMetadata(RESOLVER_KEY, metadata, target);
 
-    resolverRegistry.register(target);
+    MetadataStorage.define(RESOLVERS_KEY, target, true);
   };
 }

@@ -1,12 +1,20 @@
 import 'reflect-metadata';
+import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { RESOLVERS_KEY } from '../libs/constants';
 import { GraphQLResolver } from '../libs/decorators';
-import { getAllResolvers, getResolverMetadata, isResolver } from '../libs/metadata/MetadataReader';
-import { resolverRegistry } from '../libs/metadata/ResolverRegistry';
+import {
+  getAllResolvers,
+  getAllResolversFromRegistry,
+  getResolverMetadata,
+  isResolver,
+} from '../libs/metadata/MetadataReader';
+import { ResolverRegistry, resolverRegistry } from '../libs/metadata/ResolverRegistry';
 
 describe('MetadataReader.getAllResolvers', () => {
   beforeEach(() => {
     resolverRegistry.clear();
+    MetadataStorage.clear();
   });
 
   it('should return empty array when no resolvers registered', () => {
@@ -42,11 +50,22 @@ describe('MetadataReader.getAllResolvers', () => {
     expect(serverBResolvers).toContain(ResolverA);
     expect(serverBResolvers).not.toContain(NotRegisteredResolver);
   });
+
+  it('should allow isolated resolver registries', () => {
+    @GraphQLResolver()
+    class ResolverA {}
+
+    const isolatedRegistry = ResolverRegistry.fromMetadata([ResolverA]);
+
+    expect(getAllResolversFromRegistry(isolatedRegistry)).toContain(ResolverA);
+    expect(getAllResolversFromRegistry(resolverRegistry)).toHaveLength(0);
+  });
 });
 
 describe('GraphQLResolver decorator', () => {
   beforeEach(() => {
     resolverRegistry.clear();
+    MetadataStorage.clear();
   });
 
   it('should define resolver metadata with target', () => {
@@ -56,6 +75,8 @@ describe('GraphQLResolver decorator', () => {
     const meta = getResolverMetadata(TestResolver);
     expect(meta).not.toBeUndefined();
     expect(meta?.target).toBe(TestResolver);
+    expect(MetadataStorage.get<boolean>(RESOLVERS_KEY, TestResolver)).toBe(true);
+    expect(getAllResolversFromRegistry(resolverRegistry)).toHaveLength(0);
   });
 
   it('should work with different scopes', () => {
@@ -71,6 +92,7 @@ describe('GraphQLResolver decorator', () => {
 describe('MetadataReader.isResolver', () => {
   beforeEach(() => {
     resolverRegistry.clear();
+    MetadataStorage.clear();
   });
 
   it('should return true for classes decorated with @GraphQLResolver', () => {
