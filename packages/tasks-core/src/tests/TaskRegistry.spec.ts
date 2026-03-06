@@ -1,6 +1,6 @@
 import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { TASK_METADATA_KEY, Task } from '../libs/decorators/Task';
+import { Task } from '../libs/decorators/Task';
 import { TaskRegistry } from '../libs/TaskRegistry';
 import type { TaskMetadata } from '../libs/types';
 
@@ -19,7 +19,7 @@ describe('TaskRegistry', () => {
 
   it('should register task manually', () => {
     class TestTaskHandler {
-      async handle(payload: unknown): Promise<string> {
+      async handle(_payload: unknown): Promise<string> {
         return 'done';
       }
     }
@@ -30,14 +30,15 @@ describe('TaskRegistry', () => {
       methodName: 'handle',
     };
 
-    TaskRegistry.getInstance().register('manual-task', TestTaskHandler, 'handle', metadata);
+    const registry = new TaskRegistry();
+    registry.register('manual-task', TestTaskHandler, 'handle', metadata);
 
-    expect(TaskRegistry.getInstance().has('manual-task')).toBe(true);
+    expect(registry.has('manual-task')).toBe(true);
   });
 
   it('should retrieve registered task', () => {
     class TestTaskHandler {
-      async process(payload: unknown): Promise<void> {}
+      async process(_payload: unknown): Promise<void> {}
     }
 
     const metadata: TaskMetadata = {
@@ -46,9 +47,10 @@ describe('TaskRegistry', () => {
       methodName: 'process',
     };
 
-    TaskRegistry.getInstance().register('retrievable-task', TestTaskHandler, 'process', metadata);
+    const registry = new TaskRegistry();
+    registry.register('retrievable-task', TestTaskHandler, 'process', metadata);
 
-    const task = TaskRegistry.getInstance().get('retrievable-task');
+    const task = registry.get('retrievable-task');
 
     expect(task).not.toBeUndefined();
     expect(task?.name).toBe('retrievable-task');
@@ -57,7 +59,7 @@ describe('TaskRegistry', () => {
   });
 
   it('should return undefined for non-existent task', () => {
-    const task = TaskRegistry.getInstance().get('non-existent-task');
+    const task = new TaskRegistry().get('non-existent-task');
     expect(task).toBeUndefined();
   });
 
@@ -73,10 +75,11 @@ describe('TaskRegistry', () => {
     const metadata1: TaskMetadata = { name: 'task-1', target: Handler1, methodName: 'task1' };
     const metadata2: TaskMetadata = { name: 'task-2', target: Handler2, methodName: 'task2' };
 
-    TaskRegistry.getInstance().register('task-1', Handler1, 'task1', metadata1);
-    TaskRegistry.getInstance().register('task-2', Handler2, 'task2', metadata2);
+    const registry = new TaskRegistry();
+    registry.register('task-1', Handler1, 'task1', metadata1);
+    registry.register('task-2', Handler2, 'task2', metadata2);
 
-    const allTasks = TaskRegistry.getInstance().getAll();
+    const allTasks = registry.getAll();
 
     expect(allTasks).toHaveLength(2);
     expect(allTasks.map((t) => t.name)).toContain('task-1');
@@ -88,14 +91,15 @@ describe('TaskRegistry', () => {
       async work(): Promise<void> {}
     }
 
-    TaskRegistry.getInstance().register('work-task', Handler, 'work', {
+    const registry = new TaskRegistry();
+    registry.register('work-task', Handler, 'work', {
       name: 'work-task',
       target: Handler,
       methodName: 'work',
     });
 
-    expect(TaskRegistry.getInstance().has('work-task')).toBe(true);
-    expect(TaskRegistry.getInstance().has('non-existent')).toBe(false);
+    expect(registry.has('work-task')).toBe(true);
+    expect(registry.has('non-existent')).toBe(false);
   });
 
   it('should collect tasks from MetadataStorage', () => {
@@ -103,6 +107,8 @@ describe('TaskRegistry', () => {
       @Task({ name: 'decorated-task' })
       async handle(): Promise<void> {}
     }
+
+    expect(TaskHandler).toBeDefined();
 
     const registry = TaskRegistry.getInstance();
     registry.collectFromMetadata();
@@ -119,6 +125,8 @@ describe('TaskRegistry', () => {
       async handle(): Promise<void> {}
     }
 
+    expect(TaskHandler).toBeDefined();
+
     const registry = TaskRegistry.getInstance();
 
     // First collection
@@ -132,22 +140,40 @@ describe('TaskRegistry', () => {
     expect(existingTasks).toHaveLength(1);
   });
 
+  it('should create a registry from provided metadata without global singleton state', () => {
+    class TaskHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const metadata: TaskMetadata = {
+      name: 'bootstrap-task',
+      target: TaskHandler,
+      methodName: 'handle',
+    };
+
+    const registry = TaskRegistry.fromMetadata([metadata]);
+
+    expect(registry.has('bootstrap-task')).toBe(true);
+    expect(TaskRegistry.getInstance().has('bootstrap-task')).toBe(false);
+  });
+
   it('should reset all tasks', () => {
     class Handler {
       async task(): Promise<void> {}
     }
 
-    TaskRegistry.getInstance().register('task', Handler, 'task', {
+    const registry = new TaskRegistry();
+    registry.register('task', Handler, 'task', {
       name: 'task',
       target: Handler,
       methodName: 'task',
     });
 
-    expect(TaskRegistry.getInstance().has('task')).toBe(true);
+    expect(registry.has('task')).toBe(true);
 
-    TaskRegistry.getInstance().reset();
+    registry.reset();
 
-    expect(TaskRegistry.getInstance().has('task')).toBe(false);
-    expect(TaskRegistry.getInstance().getAll()).toHaveLength(0);
+    expect(registry.has('task')).toBe(false);
+    expect(registry.getAll()).toHaveLength(0);
   });
 });

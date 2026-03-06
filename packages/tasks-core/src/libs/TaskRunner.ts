@@ -6,11 +6,10 @@ import { TaskRegistry } from './TaskRegistry';
 type Constructor<T = object> = new (...args: unknown[]) => T;
 
 export class TaskRunner {
-  constructor(private executionManager: ExecutionManager) {
-    this.registry = TaskRegistry.getInstance();
-  }
-
-  private registry: TaskRegistry;
+  constructor(
+    private executionManager: ExecutionManager,
+    private registry: TaskRegistry = TaskRegistry.fromMetadata()
+  ) {}
 
   async execute(taskId: string, payload: unknown): Promise<unknown> {
     const task = this.registry.get(taskId);
