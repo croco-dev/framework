@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { getAllResolvers } from '@croco/protocols-graphql';
 import type { GraphQLSchema } from 'graphql';
 import { type BuildSchemaOptions, buildSchema, type NonEmptyArray } from 'type-graphql';
+import { GraphQLResolversNotConfiguredProblem } from './problems/GraphQLTransportProblems';
 import type { SchemaCompileOptions } from './types';
 
 export class SchemaCompiler {
@@ -18,7 +19,7 @@ export class SchemaCompiler {
     const [firstResolver, ...remainingResolvers] = resolvers;
 
     if (!firstResolver) {
-      throw new Error('No resolvers provided. Provide resolvers manually or enable autoDiscover.');
+      throw new GraphQLResolversNotConfiguredProblem();
     }
 
     const schemaResolvers: NonEmptyArray<Function> = [firstResolver, ...remainingResolvers];
