@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import 'reflect-metadata';
 import type { LlmMeteringService } from '../LlmMeteringService';
 import { createMeteredAsyncIterable, isAsyncIterable } from '../streamMetering';
@@ -49,6 +50,61 @@ export type AiMeteredMetadata = {
 
 // LlmMeteringService 인스턴스를 저장할 전역 변수
 let llmMeteringServiceInstance: LlmMeteringService | null = null;
+
+function normalizeForIdempotency(value: unknown, seen: WeakSet<object>): unknown {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (typeof value === 'undefined') {
+    return '[undefined]';
+  }
+
+  if (typeof value === 'function') {
+    return '[function]';
+  }
+
+  if (typeof value === 'symbol') {
+    return value.toString();
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeForIdempotency(item, seen));
+  }
+
+  if (typeof value !== 'object') {
+    return String(value);
+  }
+
+  if (seen.has(value)) {
+    return '[circular]';
+  }
+
+  seen.add(value);
+
+  const normalizedEntries = Object.entries(value)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, nestedValue]) => [key, normalizeForIdempotency(nestedValue, seen)]);
+
+  seen.delete(value);
+
+  return Object.fromEntries(normalizedEntries);
+}
+
+function createDefaultIdempotencyKey(propertyKey: string | symbol, args: unknown[]): string {
+  const normalizedArgs = normalizeForIdempotency(args, new WeakSet<object>());
+  const hash = createHash('sha256').update(JSON.stringify(normalizedArgs)).digest('hex');
+
+  return `${String(propertyKey)}:${hash}`;
+}
 
 /**
  * LlmMeteringService 인스턴스 설정 (앱 부트스트랩에서 호출)
@@ -115,7 +171,7 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
       }
 
       const tenantId = metadata.tenantId ?? (this as { tenantId?: string }).tenantId ?? 'default';
-      const idempotencyKey = metadata.idempotencyKeyExtractor?.(args) ?? `${String(propertyKey)}:${Date.now()}`;
+      const idempotencyKey = metadata.idempotencyKeyExtractor?.(args) ?? createDefaultIdempotencyKey(propertyKey, args);
       const additionalMetadata = metadata.metadataExtractor?.(args, result);
 
       if (isAsyncIterable(result)) {
