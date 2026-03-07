@@ -1,5 +1,6 @@
 import type { EventBus } from '@croco/events-core';
 import { Token } from '@croco/framework-context';
+import { Trace } from '@croco/telemetry-api';
 import { LlmGeneratedEvent } from './events/LlmGeneratedEvent';
 import { LlmStreamCompletedEvent } from './events/LlmStreamCompletedEvent';
 import type { LlmRegistry } from './LlmRegistry';
@@ -27,6 +28,7 @@ export class LlmService {
     private readonly eventBus: EventBus
   ) {}
 
+  @Trace({ name: 'llm.generate' })
   async generate(params: GenerateParams): Promise<GenerateResult> {
     try {
       const modelId = params.modelId ?? 'default';
@@ -82,6 +84,7 @@ export class LlmService {
     }
   }
 
+  @Trace({ name: 'llm.embed' })
   async embed(params: EmbedParams): Promise<EmbedResult> {
     try {
       const model = params.model ?? 'default';
@@ -92,6 +95,7 @@ export class LlmService {
     }
   }
 
+  @Trace({ name: 'llm.embed_many' })
   async embedMany(params: EmbedManyParams): Promise<EmbedManyResult> {
     try {
       const model = params.model ?? 'default';
@@ -102,6 +106,7 @@ export class LlmService {
     }
   }
 
+  @Trace({ name: 'llm.generate_object' })
   async generateObject<T>(params: GenerateObjectParams<T>): Promise<T> {
     try {
       const modelId = params.modelId ?? 'default';
@@ -112,6 +117,7 @@ export class LlmService {
     }
   }
 
+  @Trace({ name: 'llm.call_tool' })
   async callTool(params: ToolCallParams): Promise<ToolCallResult> {
     try {
       const modelId = params.modelId ?? 'default';

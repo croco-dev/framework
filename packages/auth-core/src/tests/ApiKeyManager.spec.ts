@@ -1,4 +1,5 @@
 import type { EventBus } from '@croco/events-core';
+import * as telemetry from '@croco/telemetry-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiKeyGenerator } from '../libs/apikey/ApiKeyGenerator';
 import { ApiKeyHasher } from '../libs/apikey/ApiKeyHasher';
@@ -173,8 +174,6 @@ describe('ApiKeyManager', () => {
 
   describe('verify', () => {
     let createdKey!: { key: string; id: string; keyStart: string };
-    let _keyData!: ApiKey;
-
     beforeEach(async () => {
       const options: CreateApiKeyOptions = {
         name: 'Test Key',
@@ -182,8 +181,6 @@ describe('ApiKeyManager', () => {
         permissions: ['read:users', 'write:users'],
       };
       createdKey = await manager.create(options);
-      const keys = mockStore._getKeys();
-      _keyData = Array.from(keys.values())[0];
     });
 
     it('should return ApiKeyPrincipal for valid key', async () => {
@@ -252,10 +249,17 @@ describe('ApiKeyManager', () => {
     });
 
     it('should not throw when updateLastUsed fails', async () => {
+      const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
       mockStore.updateLastUsed.mockRejectedValueOnce(new Error('DB error'));
 
       const principal = await manager.verify(createdKey.key);
+
+      await Promise.resolve();
+
       expect(principal).not.toBeNull();
+      expect(recordErrorSpy).toHaveBeenCalled();
+
+      recordErrorSpy.mockRestore();
     });
 
     it('should not publish event when verification fails', async () => {
@@ -345,7 +349,7 @@ describe('ApiKeyManager', () => {
     });
 
     it('should preserve original key properties', async () => {
-      const _result = await manager.rotate(originalKey.id);
+      await manager.rotate(originalKey.id);
 
       const savedCall = mockStore.save.mock.calls[mockStore.save.mock.calls.length - 1][0];
       expect(savedCall.name).toBe('Production Key');
@@ -384,6 +388,21 @@ describe('ApiKeyManager', () => {
 
       expect(result.key).not.toBe(createdKey.key);
       expect(result.id).not.toBe(createdKey.id);
+    });
+
+    it('should record publish failures during rotation without failing the request', async () => {
+      const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
+      mockEventBus.publish.mockReset();
+      mockEventBus.publish.mockRejectedValueOnce(new Error('publish failed'));
+
+      const result = await manager.rotate(originalKey.id);
+
+      await Promise.resolve();
+
+      expect(result.id).toBeDefined();
+      expect(recordErrorSpy).toHaveBeenCalled();
+
+      recordErrorSpy.mockRestore();
     });
   });
 

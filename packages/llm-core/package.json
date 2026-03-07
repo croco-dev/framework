@@ -17,6 +17,7 @@
     "@croco/events-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
     "ai": "^4.0.0"
   },
   "peerDependencies": {

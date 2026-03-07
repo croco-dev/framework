@@ -1,4 +1,5 @@
 import { Context } from '@croco/framework-context';
+import { recordEvent } from '@croco/telemetry-api';
 import { TenantRequiredProblem } from './problems/TenantRequiredProblem';
 
 /**
@@ -11,6 +12,10 @@ export class TenantManager {
    * The tenant context will be available to all async operations within.
    */
   async run<T>(tenantId: string, fn: () => Promise<T>): Promise<T> {
+    recordEvent('tenant.context.enter', {
+      'tenant.id': tenantId,
+    });
+
     return Context.run(
       {
         ...(Context.get() ?? { requestId: 'tenant-context' }),
