@@ -1,6 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { ProblemFactory } from '@croco/problems-core';
-import { trace } from '@opentelemetry/api';
 import type { Constructor, LifecycleHooks, Middleware, RequestContext } from './types';
 
 interface ContextData {
@@ -57,31 +56,17 @@ export class Context {
   }
 
   /**
-   * Get active trace ID from OpenTelemetry context
-   * Falls back to RequestContext.traceId for propagation
+   * Get active trace ID from request context propagation
    */
   static getActiveTraceId(): string | null {
-    const activeSpan = trace.getActiveSpan();
-    if (activeSpan) {
-      const spanContext = activeSpan.spanContext();
-      return spanContext.traceId;
-    }
-
-    // Fallback to RequestContext.traceId for propagation
     const context = Context.get();
     return context?.traceId ?? null;
   }
 
   /**
-   * Get active span ID from OpenTelemetry context
+   * Framework context does not resolve span IDs directly.
    */
   static getActiveSpanId(): string | null {
-    const activeSpan = trace.getActiveSpan();
-    if (activeSpan) {
-      const spanContext = activeSpan.spanContext();
-      return spanContext.spanId;
-    }
-
     return null;
   }
 
