@@ -16,6 +16,7 @@ import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../
  * CREATE TABLE mrr_movements (
  *   id BIGSERIAL PRIMARY KEY,
  *   tenant_id VARCHAR(255) NOT NULL,
+ *   event_key VARCHAR(255),
  *   timestamp TIMESTAMPTZ NOT NULL,
  *   new_mrr_amount BIGINT NOT NULL,
  *   new_mrr_currency VARCHAR(3) NOT NULL,
@@ -36,6 +37,9 @@ import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../
  *
  * -- 인덱스 생성
  * CREATE INDEX idx_mrr_movements_tenant_timestamp ON mrr_movements (tenant_id, timestamp DESC);
+ * CREATE UNIQUE INDEX uq_mrr_movements_tenant_event_key
+ *   ON mrr_movements (tenant_id, event_key)
+ *   WHERE event_key IS NOT NULL;
  *
  * -- 메트릭 스냅샷 테이블
  * CREATE TABLE metrics_snapshots (
@@ -63,8 +67,9 @@ export interface MetricsRepository {
    * @param tenantId - 테넌트 ID
    * @param movement - MRR 변동 데이터
    * @param timestamp - 변동 발생 시각
+   * @param eventKey - 이벤트 기반 멱등성 키 (선택)
    */
-  recordMRRMovement(tenantId: string, movement: MRRMovement, timestamp: Date): Promise<void>;
+  recordMRRMovement(tenantId: string, movement: MRRMovement, timestamp: Date, eventKey?: string): Promise<void>;
 
   /**
    * 메트릭 스냅샷 기록 (Upsert)

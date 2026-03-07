@@ -36,8 +36,21 @@ export class TimescaleMetricsStore implements MetricsRepository {
 
   constructor(private readonly db: PostgresClient) {}
 
-  async recordMRRMovement(tenantId: string, movement: MRRMovement, timestamp: Date): Promise<void> {
-    const sql = `
+  async recordMRRMovement(tenantId: string, movement: MRRMovement, timestamp: Date, eventKey?: string): Promise<void> {
+    const sql = eventKey
+      ? `
+      INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
+        tenant_id, event_key, timestamp,
+        new_mrr_amount, new_mrr_currency,
+        expansion_mrr_amount, expansion_mrr_currency,
+        contraction_mrr_amount, contraction_mrr_currency,
+        churned_mrr_amount, churned_mrr_currency,
+        reactivation_mrr_amount, reactivation_mrr_currency,
+        net_mrr_amount, net_mrr_currency
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ON CONFLICT (tenant_id, event_key) DO NOTHING
+    `
+      : `
       INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
         tenant_id, timestamp,
         new_mrr_amount, new_mrr_currency,
@@ -49,22 +62,40 @@ export class TimescaleMetricsStore implements MetricsRepository {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     `;
 
-    const params = [
-      tenantId,
-      timestamp,
-      movement.new.amount,
-      movement.new.currency,
-      movement.expansion.amount,
-      movement.expansion.currency,
-      movement.contraction.amount,
-      movement.contraction.currency,
-      movement.churned.amount,
-      movement.churned.currency,
-      movement.reactivation.amount,
-      movement.reactivation.currency,
-      movement.net.amount,
-      movement.net.currency,
-    ];
+    const params = eventKey
+      ? [
+          tenantId,
+          eventKey,
+          timestamp,
+          movement.new.amount,
+          movement.new.currency,
+          movement.expansion.amount,
+          movement.expansion.currency,
+          movement.contraction.amount,
+          movement.contraction.currency,
+          movement.churned.amount,
+          movement.churned.currency,
+          movement.reactivation.amount,
+          movement.reactivation.currency,
+          movement.net.amount,
+          movement.net.currency,
+        ]
+      : [
+          tenantId,
+          timestamp,
+          movement.new.amount,
+          movement.new.currency,
+          movement.expansion.amount,
+          movement.expansion.currency,
+          movement.contraction.amount,
+          movement.contraction.currency,
+          movement.churned.amount,
+          movement.churned.currency,
+          movement.reactivation.amount,
+          movement.reactivation.currency,
+          movement.net.amount,
+          movement.net.currency,
+        ];
 
     await this.db.query(sql, params);
   }
