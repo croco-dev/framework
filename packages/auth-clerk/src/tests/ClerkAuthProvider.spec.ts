@@ -1,6 +1,7 @@
 import { verifyToken } from '@clerk/backend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkAuthProvider } from '../libs/ClerkAuthProvider';
+import { ClerkTokenVerificationProblem } from '../libs/problems/ClerkProblems';
 import type { AuthorizationHeaderCarrier } from '../libs/types';
 
 type VerifiedToken = Awaited<ReturnType<typeof verifyToken>>;
@@ -41,12 +42,11 @@ describe('ClerkAuthProvider', () => {
     expect(result).toBeNull();
   });
 
-  it('should return null if token verification fails', async () => {
+  it('should throw a problem if token verification fails', async () => {
     const request = createRequest('Bearer invalid-token');
     vi.mocked(verifyToken).mockRejectedValue(new Error('Invalid token'));
 
-    const result = await authProvider.authenticate(request);
-    expect(result).toBeNull();
+    await expect(authProvider.authenticate(request)).rejects.toBeInstanceOf(ClerkTokenVerificationProblem);
   });
 
   it('should return AuthUser on successful verification', async () => {
