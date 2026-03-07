@@ -36,6 +36,7 @@ class TxManagerRegistryClass {
 
   clear(): void {
     this.managers.clear();
+    Container.remove(TRANSACTION_CONTEXT_TOKEN as never);
   }
 }
 

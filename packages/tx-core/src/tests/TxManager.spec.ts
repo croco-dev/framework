@@ -2,6 +2,7 @@ import { TRANSACTION_CONTEXT_TOKEN } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type TxAdapter, TxManager } from '../index';
+import { TxManagerRegistry } from '../libs/TxManagerRegistry';
 
 function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAdapter<{ id: string }> {
   return {
@@ -32,6 +33,17 @@ describe('TxManager', () => {
 
     expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(firstManager);
     expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).not.toBe(secondManager);
+  });
+
+  it('should register a new manager after registry clear removes stale token', () => {
+    const firstManager = txManager;
+
+    TxManagerRegistry.clear();
+
+    const secondManager = new TxManager(createMockAdapter());
+
+    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).not.toBe(firstManager);
+    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(secondManager);
   });
 
   describe('run', () => {
