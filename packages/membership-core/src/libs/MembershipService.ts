@@ -7,9 +7,7 @@ import { MembershipUpdatedEvent } from './events/MembershipUpdatedEvent';
 import { MembershipOwnerGuard } from './MembershipOwnerGuard';
 import type { MembershipStore } from './MembershipStore';
 import { AlreadyMemberProblem, InvalidRoleProblem, MembershipNotFoundProblem } from './problems/MembershipProblems';
-import type { Membership, MembershipRole } from './types';
-
-const VALID_ROLES: MembershipRole[] = ['owner', 'admin', 'member', 'viewer'];
+import { isMembershipRole, type Membership, type MembershipRole } from './types';
 
 @Component()
 export class MembershipService {
@@ -112,7 +110,7 @@ export class MembershipService {
   }
 
   private ensureValidRole(role: string): void {
-    if (!VALID_ROLES.includes(role as MembershipRole)) {
+    if (!isMembershipRole(role)) {
       throw new InvalidRoleProblem(role);
     }
   }

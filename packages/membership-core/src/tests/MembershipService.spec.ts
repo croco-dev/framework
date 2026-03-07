@@ -6,6 +6,7 @@ import { InMemoryMembershipStore } from '../libs/InMemoryMembershipStore';
 import { MembershipService } from '../libs/MembershipService';
 import { LastOwnerCannotBeRemovedProblem } from '../libs/problems/LastOwnerCannotBeRemovedProblem';
 import { MembershipConstraintProblem } from '../libs/problems/MembershipConstraintProblem';
+import { InvalidRoleProblem } from '../libs/problems/MembershipProblems';
 
 describe('MembershipService', () => {
   let service!: MembershipService;
@@ -28,6 +29,12 @@ describe('MembershipService', () => {
     publish.mockRejectedValueOnce(new Error('publish failed'));
 
     await expect(service.addMember('tenant-1', 'user-1', 'member')).rejects.toThrow('publish failed');
+  });
+
+  it('should throw InvalidRoleProblem when adding a member with invalid role', async () => {
+    await expect(service.addMember('tenant-1', 'user-1', 'invalid' as never)).rejects.toBeInstanceOf(
+      InvalidRoleProblem
+    );
   });
 
   it('BUG-10 마지막 오너는 삭제할 수 없다', async () => {
@@ -53,6 +60,19 @@ describe('MembershipService', () => {
 
     await expect(service.updateRole('tenant-1', 'user-owner', 'member')).rejects.toBeInstanceOf(
       MembershipConstraintProblem
+    );
+  });
+
+  it('should throw InvalidRoleProblem when updating to invalid role', async () => {
+    await store.save({
+      id: 'mem-member',
+      tenantId: 'tenant-1',
+      userId: 'user-member',
+      role: 'member',
+    });
+
+    await expect(service.updateRole('tenant-1', 'user-member', 'invalid' as never)).rejects.toBeInstanceOf(
+      InvalidRoleProblem
     );
   });
 });

@@ -7,17 +7,21 @@ export type Permission = {
 
 const VALID_ACTIONS = ['read', 'write', 'delete', 'manage'] as const;
 
+function isPermissionAction(action: string): action is Permission['action'] {
+  return VALID_ACTIONS.some((validAction) => validAction === action);
+}
+
 export function parsePermission(permission: string): Permission {
   const [resource, action] = permission.split(':');
   if (!resource || !action) {
     throw new InvalidPermissionFormatProblem(permission);
   }
 
-  if (!VALID_ACTIONS.includes(action as Permission['action'])) {
+  if (!isPermissionAction(action)) {
     throw new InvalidPermissionActionProblem(action);
   }
 
-  return { resource, action: action as Permission['action'] };
+  return { resource, action };
 }
 
 export function formatPermission(permission: Permission): string {
