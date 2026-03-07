@@ -1,6 +1,10 @@
 import { ProblemCategory } from '@croco/problems-core';
 import { describe, expect, it } from 'vitest';
-import { InvalidWebhookPayloadProblem, WebhookVerificationProblem } from '../libs/problems/ClerkProblems';
+import {
+  ClerkTokenVerificationProblem,
+  InvalidWebhookPayloadProblem,
+  WebhookVerificationProblem,
+} from '../libs/problems/ClerkProblems';
 
 describe('ClerkProblems', () => {
   describe('WebhookVerificationProblem', () => {
@@ -24,6 +28,21 @@ describe('ClerkProblems', () => {
       const problem = new InvalidWebhookPayloadProblem('user.created');
 
       expect(problem.detail).toContain('user.created');
+    });
+  });
+
+  describe('ClerkTokenVerificationProblem', () => {
+    it('has correct code and category', () => {
+      const problem = new ClerkTokenVerificationProblem();
+
+      expect(problem.code).toBe('auth-clerk/token-verification-failed');
+      expect(problem.category).toBe(ProblemCategory.Unauthorized);
+    });
+
+    it('uses the provided detail message', () => {
+      const problem = new ClerkTokenVerificationProblem('jwt expired');
+
+      expect(problem.detail).toBe('jwt expired');
     });
   });
 });

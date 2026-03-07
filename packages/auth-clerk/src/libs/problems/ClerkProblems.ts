@@ -14,3 +14,13 @@ export class InvalidWebhookPayloadProblem extends Problem {
     super('auth-clerk/invalid-webhook-payload', ProblemCategory.ValidationError, message);
   }
 }
+
+export class ClerkTokenVerificationProblem extends Problem {
+  constructor(detail?: string) {
+    super(
+      'auth-clerk/token-verification-failed',
+      ProblemCategory.Unauthorized,
+      detail ?? 'Clerk token verification failed'
+    );
+  }
+}
