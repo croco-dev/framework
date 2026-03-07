@@ -35,3 +35,9 @@ export type WebhookEventHandler = {
   'organizationMembership.created'?: (data: ClerkMembershipEvent) => Promise<void>;
   'organizationMembership.deleted'?: (data: ClerkMembershipEvent) => Promise<void>;
 };
+
+export type AuthorizationHeaderCarrier = {
+  headers: {
+    get(name: string): string | null;
+  };
+};

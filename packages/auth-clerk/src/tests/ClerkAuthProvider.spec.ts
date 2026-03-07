@@ -1,6 +1,7 @@
 import { verifyToken } from '@clerk/backend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkAuthProvider } from '../libs/ClerkAuthProvider';
+import type { AuthorizationHeaderCarrier } from '../libs/types';
 
 type VerifiedToken = Awaited<ReturnType<typeof verifyToken>>;
 
@@ -18,14 +19,14 @@ describe('ClerkAuthProvider', () => {
     authProvider = new ClerkAuthProvider(options);
   });
 
-  const createRequest = (authHeader?: string) => {
+  const createRequest = (authHeader?: string): AuthorizationHeaderCarrier => {
     const headers = new Headers();
     if (authHeader) {
       headers.set('Authorization', authHeader);
     }
     return {
       headers,
-    } as unknown as Request;
+    };
   };
 
   it('should return null if Authorization header is missing', async () => {

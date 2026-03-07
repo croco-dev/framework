@@ -1,5 +1,6 @@
-import { type ClerkClient, createClerkClient, verifyToken } from '@clerk/backend';
+import { verifyToken } from '@clerk/backend';
 import type { AuthProvider, AuthUser } from '@croco/auth-core';
+import type { AuthorizationHeaderCarrier } from './types';
 
 export type ClerkAuthOptions = {
   secretKey: string;
@@ -32,14 +33,10 @@ function getStrictStringArrayClaim(payload: Record<string, unknown>, key: string
   return parsed;
 }
 
-export class ClerkAuthProvider implements AuthProvider<Request> {
-  private clerkClient: ClerkClient;
+export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrier> {
+  constructor(private options: ClerkAuthOptions) {}
 
-  constructor(private options: ClerkAuthOptions) {
-    this.clerkClient = createClerkClient({ secretKey: options.secretKey, publishableKey: options.publishableKey });
-  }
-
-  async authenticate(request: Request): Promise<AuthUser | null> {
+  async authenticate(request: AuthorizationHeaderCarrier): Promise<AuthUser | null> {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return null;

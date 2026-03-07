@@ -23,7 +23,6 @@
     "@croco/auth-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
-    "@croco/protocols-rest": "workspace:*",
     "@croco/tenant-core": "workspace:*",
     "reflect-metadata": "^0.2.2"
   },
