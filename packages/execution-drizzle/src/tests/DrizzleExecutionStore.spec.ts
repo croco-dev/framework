@@ -40,6 +40,9 @@ function createMockDb(): MockDb {
 
     insert: vi.fn(() => ({
       values: vi.fn((data: unknown) => ({
+        onConflictDoNothing: vi.fn(() => ({
+          returning: async () => [data as Execution],
+        })),
         returning: async () => [data as Execution],
       })),
     })),
@@ -146,13 +149,10 @@ describe('DrizzleExecutionStore', () => {
 
       mockDb.insert = vi.fn(() => ({
         values: vi.fn(() => ({
-          returning: vi.fn(() => {
-            throw {
-              code: '23505',
-              constraint: 'executions_idempotency_key_idx',
-              message: 'duplicate key value violates unique constraint',
-            };
-          }),
+          onConflictDoNothing: vi.fn(() => ({
+            returning: vi.fn(() => Promise.resolve([])),
+          })),
+          returning: vi.fn(() => Promise.resolve([])),
         })),
       }));
 
@@ -172,13 +172,10 @@ describe('DrizzleExecutionStore', () => {
 
       mockDb.insert = vi.fn(() => ({
         values: vi.fn(() => ({
-          returning: vi.fn(() => {
-            throw {
-              code: '23505',
-              constraint: 'executions_idempotency_key_idx',
-              message: 'duplicate key value violates unique constraint',
-            };
-          }),
+          onConflictDoNothing: vi.fn(() => ({
+            returning: vi.fn(() => Promise.resolve([])),
+          })),
+          returning: vi.fn(() => Promise.resolve([])),
         })),
       }));
 
@@ -188,6 +185,25 @@ describe('DrizzleExecutionStore', () => {
           idempotencyKey: 'race-key-456',
         })
       ).rejects.toThrow("Execution with idempotency key 'race-key-456' already exists");
+    });
+
+    it('should propagate insert errors when idempotency key is not provided', async () => {
+      mockDb.insert = vi.fn(() => ({
+        values: vi.fn(() => ({
+          onConflictDoNothing: vi.fn(() => ({
+            returning: vi.fn(() => Promise.resolve([])),
+          })),
+          returning: vi.fn(() => {
+            throw new Error('insert failed');
+          }),
+        })),
+      }));
+
+      await expect(
+        store.create({
+          type: 'task',
+        })
+      ).rejects.toThrow('insert failed');
     });
   });
 
