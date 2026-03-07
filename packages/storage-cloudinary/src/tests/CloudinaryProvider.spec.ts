@@ -135,7 +135,39 @@ describe('CloudinaryProvider', () => {
         {
           public_id: 'test-key',
           resource_type: 'auto',
-          context: 'alt=test image|author=test',
+          context: 'alt=test%20image|author=test',
+        },
+        expect.any(Function)
+      );
+    });
+
+    it('should escape metadata values containing separators', async () => {
+      const mockUploadStream = vi.fn(
+        (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
+          callback(undefined, { public_id: 'test-key' });
+          return {
+            end: vi.fn(),
+          };
+        }
+      );
+
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
+
+      const buffer = Buffer.from('test data');
+      const options: PutOptions = {
+        metadata: {
+          alt: 'value=with|separators',
+          'special|key': 'hello=world',
+        },
+      };
+
+      await expect(provider.put('test-key', buffer, options)).resolves.not.toThrow();
+
+      expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
+        {
+          public_id: 'test-key',
+          resource_type: 'auto',
+          context: 'alt=value%3Dwith%7Cseparators|special%7Ckey=hello%3Dworld',
         },
         expect.any(Function)
       );
@@ -397,6 +429,29 @@ describe('CloudinaryProvider', () => {
       };
 
       expect(metadata).toEqual(expectedMetadata);
+    });
+
+    it('should decode escaped metadata values', async () => {
+      const mockResource = {
+        bytes: 1024,
+        format: 'jpg',
+        created_at: '2024-01-01T00:00:00Z',
+        context: {
+          custom: {
+            alt: 'value%3Dwith%7Cseparators',
+            'special%7Ckey': 'hello%3Dworld',
+          },
+        },
+      };
+
+      vi.mocked(cloudinary.api.resource).mockResolvedValue(mockResource);
+
+      const metadata = await provider.getMetadata('test-key');
+
+      expect(metadata.metadata).toEqual({
+        alt: 'value=with|separators',
+        'special|key': 'hello=world',
+      });
     });
 
     it('should handle missing optional metadata fields', async () => {
