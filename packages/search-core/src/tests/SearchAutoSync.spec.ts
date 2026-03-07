@@ -176,7 +176,7 @@ describe('SearchAutoSync', () => {
       expect(failedEvent.operation).toBe('delete');
     });
 
-    it('should swallow failed event publishing errors', async () => {
+    it('should log failed event publishing errors instead of silently swallowing them', async () => {
       vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
         {
           target: class User {},
@@ -194,12 +194,21 @@ describe('SearchAutoSync', () => {
       const failingPublisher = {
         publish: vi.fn().mockRejectedValue(new Error('Publisher missing')),
       };
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       searchAutoSync = new SearchAutoSync(failingPublisher);
 
       await expect(
         searchAutoSync.handle(new DocumentDeletedEvent('users', 'user-1', 'tenant-1'))
       ).resolves.toBeUndefined();
       expect(failingPublisher.publish).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
+      expect(warnSpy).toHaveBeenCalledWith('SearchAutoSync failed to publish SearchSyncFailedEvent', {
+        indexName: 'users',
+        documentId: 'user-1',
+        tenantId: 'tenant-1',
+        operation: 'delete',
+        error: 'Publisher missing',
+      });
+      warnSpy.mockRestore();
     });
 
     it('should skip publishing when no failed event publisher is configured', async () => {
