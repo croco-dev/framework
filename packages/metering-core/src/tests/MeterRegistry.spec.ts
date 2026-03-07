@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MeterRegistry } from '../libs/MeterRegistry';
 import type { MeterRepository } from '../libs/MeterRepository';
 import { InvalidMeterProblem } from '../libs/problems/InvalidMeterProblem';
@@ -29,6 +29,10 @@ describe('MeterRegistry', () => {
       saveUsageRecords: vi.fn(),
     };
     registry = new MeterRegistry(mockRepository);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('loadAll', () => {
@@ -124,6 +128,23 @@ describe('MeterRegistry', () => {
       expect(result1?.quota).toBe(1000);
       expect(result2?.quota).toBe(2000);
     });
+
+    it('should refresh stale tenant cache before returning cached meter', async () => {
+      vi.useFakeTimers();
+      const initialMeter = createMeter({ quota: 1000 });
+      vi.mocked(mockRepository.findAll).mockResolvedValue([initialMeter]);
+      await registry.loadAll();
+
+      vi.setSystemTime(Date.now() + 61_000);
+      const refreshedMeter = createMeter({ quota: 2000 });
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([refreshedMeter]);
+
+      const result = await registry.get('tenant-1', 'api_calls');
+
+      expect(mockRepository.findByTenant).toHaveBeenCalledWith('tenant-1');
+      expect(result?.quota).toBe(2000);
+      expect(mockRepository.findByMeterIdAndTenant).not.toHaveBeenCalled();
+    });
   });
 
   describe('getOrThrow', () => {
@@ -199,6 +220,22 @@ describe('MeterRegistry', () => {
 
       expect(result).toEqual(meters);
       expect(mockRepository.findByTenant).toHaveBeenCalledWith('tenant-1');
+    });
+
+    it('should refetch tenant meters when cached data becomes stale', async () => {
+      vi.useFakeTimers();
+      const initialMeters = [createMeter({ meterId: 'meter1' })];
+      vi.mocked(mockRepository.findAll).mockResolvedValue(initialMeters);
+      await registry.loadAll();
+
+      vi.setSystemTime(Date.now() + 61_000);
+      const refreshedMeters = [createMeter({ meterId: 'meter1', quota: 2000 })];
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue(refreshedMeters);
+
+      const result = await registry.getByTenant('tenant-1');
+
+      expect(mockRepository.findByTenant).toHaveBeenCalledWith('tenant-1');
+      expect(result[0]?.quota).toBe(2000);
     });
   });
 
