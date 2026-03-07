@@ -21,3 +21,13 @@ export class WebhookAlreadyProcessedProblem extends Problem {
     );
   }
 }
+
+export class BillingCheckoutCreationProblem extends Problem {
+  constructor(billingAccountId: string, detail?: string) {
+    super(
+      'billing/checkout-creation-failed',
+      ProblemCategory.InternalServerError,
+      detail ?? `Failed to create checkout for tenant ${billingAccountId}: unknown error`
+    );
+  }
+}

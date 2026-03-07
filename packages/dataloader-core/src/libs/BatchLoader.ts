@@ -1,4 +1,5 @@
 import { context, trace } from '@opentelemetry/api';
+import { BatchResultLengthMismatchProblem } from './problems/BatchLoaderProblems';
 import type { BatchLoader, BatchLoaderOptions } from './types';
 
 export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
@@ -106,7 +107,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
         const results = await this.options.batchFn(keys);
 
         if (results.length !== keys.length) {
-          throw new Error(`BatchLoader: batch function returned ${results.length} results, expected ${keys.length}`);
+          throw new BatchResultLengthMismatchProblem(keys.length, results.length);
         }
 
         results.forEach((result, index) => {

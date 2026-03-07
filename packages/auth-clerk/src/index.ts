@@ -25,7 +25,11 @@ export { ClerkWebhookHandler } from './libs/ClerkWebhookHandler';
 /**
  * Clerk 웹훅 서명 검증 실패 시 발생하는 Problem 하위 타입입니다.
  */
-export { InvalidWebhookPayloadProblem, WebhookVerificationProblem } from './libs/problems/ClerkProblems';
+export {
+  ClerkTokenVerificationProblem,
+  InvalidWebhookPayloadProblem,
+  WebhookVerificationProblem,
+} from './libs/problems/ClerkProblems';
 
 /**
  * Clerk 웹훅 페이로드와 이벤트 핸들러 선언에 사용하는 공개 타입들입니다.

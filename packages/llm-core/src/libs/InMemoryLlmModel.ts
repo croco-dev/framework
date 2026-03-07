@@ -1,5 +1,6 @@
 import { LlmModel } from './LlmModel';
 import { InvalidLlmResponseProblem } from './problems/LlmProblems';
+import { LlmToolExecutionProblem } from './problems/LlmServiceProblem';
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -124,8 +125,11 @@ export class InMemoryLlmModel extends LlmModel {
             name,
             arguments: JSON.parse(argsStr) as Record<string, unknown>,
           };
-        } catch {
-          return null;
+        } catch (error) {
+          throw new LlmToolExecutionProblem(
+            `Failed to parse tool arguments for '${name}'`,
+            error instanceof Error ? error : undefined
+          );
         }
       })
       .filter((call): call is { name: string; arguments: Record<string, unknown> } => call !== null);

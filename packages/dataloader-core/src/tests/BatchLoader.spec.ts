@@ -2,6 +2,7 @@ import { Context } from '@croco/framework-context';
 import * as otelApi from '@opentelemetry/api';
 import { ROOT_CONTEXT } from '@opentelemetry/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BatchResultLengthMismatchProblem } from '../index';
 import { createBatchLoader } from '../libs/createBatchLoader';
 
 describe('BatchLoader', () => {
@@ -190,5 +191,17 @@ describe('BatchLoader', () => {
 
     activeSpy.mockRestore();
     withSpy.mockRestore();
+  });
+
+  it('should reject with a Problem when batch result length does not match keys', async () => {
+    const loader = createBatchLoader<number, string>({
+      name: 'mismatch-loader',
+      batchFn: async () => ['only-one-result'],
+    });
+
+    const results = await loader.loadMany([1, 2]);
+
+    expect(results[0]).toBeInstanceOf(BatchResultLengthMismatchProblem);
+    expect(results[1]).toBeInstanceOf(BatchResultLengthMismatchProblem);
   });
 });

@@ -1,5 +1,6 @@
 import { verifyToken } from '@clerk/backend';
 import type { AuthProvider, AuthUser } from '@croco/auth-core';
+import { ClerkTokenVerificationProblem } from './problems/ClerkProblems';
 import type { AuthorizationHeaderCarrier } from './types';
 
 export type ClerkAuthOptions = {
@@ -69,8 +70,8 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
           sessionId: getStringClaim(payload, 'sid'),
         },
       };
-    } catch {
-      return null;
+    } catch (error) {
+      throw new ClerkTokenVerificationProblem(error instanceof Error ? error.message : undefined);
     }
   }
 }

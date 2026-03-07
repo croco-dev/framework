@@ -203,6 +203,7 @@ export type { PlanRegistry } from './libs/PlanRegistry';
  */
 export {
   BillingAccountNotFoundProblem,
+  BillingCheckoutCreationProblem,
   SubscriptionNotFoundProblem,
   WebhookAlreadyProcessedProblem,
 } from './libs/problems/BillingProblems';

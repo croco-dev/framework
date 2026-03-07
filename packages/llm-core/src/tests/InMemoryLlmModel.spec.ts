@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { InMemoryLlmModel } from '../libs/InMemoryLlmModel';
+import { LlmToolExecutionProblem } from '../libs/problems/LlmServiceProblem';
 import type {
   EmbedManyParams,
   EmbedParams,
@@ -268,6 +269,25 @@ describe('InMemoryLlmModel', () => {
       const result = await toolModel.callTool(params);
 
       expect(result.toolCalls).toEqual([]);
+    });
+
+    it('should throw when tool arguments are malformed JSON', async () => {
+      const toolModel = new InMemoryLlmModel('tool-model', {
+        'Malformed tool args': 'weather:{invalid-json}',
+      });
+
+      const params: ToolCallParams = {
+        prompt: 'Malformed tool args',
+        tools: [
+          {
+            name: 'weather',
+            description: 'Get weather information',
+            parameters: { location: 'string' },
+          },
+        ],
+      };
+
+      await expect(toolModel.callTool(params)).rejects.toBeInstanceOf(LlmToolExecutionProblem);
     });
   });
 
