@@ -3,6 +3,7 @@ import type { NotificationPayload } from '@croco/notifications-core';
 import { NotificationChannel } from '@croco/notifications-core';
 import type { CreateEmailResponse } from 'resend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ResendNotificationProblem } from '../libs/problems/ResendNotificationProblem';
 import { ResendProvider } from '../libs/ResendProvider';
 
 type MockResendClient = InstanceType<typeof import('resend')['Resend']>;
@@ -132,7 +133,7 @@ describe('ResendProvider', () => {
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(Error);
+      expect(result.error).toBeInstanceOf(ResendNotificationProblem);
       expect(result.error?.message).toBe('Invalid API key');
       expect(result.providerResponse).toEqual(mockErrorResponse);
     });
@@ -150,7 +151,14 @@ describe('ResendProvider', () => {
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe(networkError);
+      expect(result.error).toBeInstanceOf(ResendNotificationProblem);
+      expect(result.error?.message).toBe('Network connection failed');
+
+      if (!(result.error instanceof ResendNotificationProblem)) {
+        throw new Error('Expected ResendNotificationProblem');
+      }
+
+      expect(result.error.cause).toBe(networkError);
     });
 
     it('should include providerResponse in success result', async () => {

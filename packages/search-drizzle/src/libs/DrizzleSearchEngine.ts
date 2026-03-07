@@ -10,6 +10,7 @@ import {
   StrategyUnavailableProblem,
 } from '@croco/search-core';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { InvalidSearchRowProblem } from './problems/InvalidSearchRowProblem';
 import { DRIZZLE_TOKEN, type SearchResultRow, type SearchStrategy } from './types';
 
 function isSearchResultRow(value: unknown): value is SearchResultRow {
@@ -41,7 +42,7 @@ export class DrizzleSearchEngine extends SearchEngine {
 
     const hits = result.rows.map((row) => {
       if (!isSearchResultRow(row)) {
-        throw new Error('Invalid search row: expected object result');
+        throw new InvalidSearchRowProblem();
       }
 
       const mappedDocument = this.strategy.mapSearchRow?.<T>(row) ?? (row as unknown as T);

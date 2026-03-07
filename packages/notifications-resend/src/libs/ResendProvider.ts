@@ -6,6 +6,7 @@ import {
   type NotificationResult,
 } from '@croco/notifications-core';
 import { type CreateEmailOptions, Resend } from 'resend';
+import { ResendNotificationProblem } from './problems/ResendNotificationProblem';
 
 export interface ResendConfig {
   apiKey: string;
@@ -44,7 +45,7 @@ export class ResendProvider implements NotificationProvider {
       if (data.error) {
         return {
           success: false,
-          error: new Error(data.error.message),
+          error: new ResendNotificationProblem(data.error.message),
           providerResponse: data,
         };
       }
@@ -55,9 +56,11 @@ export class ResendProvider implements NotificationProvider {
         providerResponse: data,
       };
     } catch (error: unknown) {
+      const cause = error instanceof Error ? error : new Error(String(error));
+
       return {
         success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: new ResendNotificationProblem(cause.message, cause),
       };
     }
   }
