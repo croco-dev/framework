@@ -225,4 +225,186 @@ describe('TriggerRegistry', () => {
     expect(symbolClassTriggers).not.toBeUndefined();
     expect(symbolClassTriggers?.has(methodSymbol)).toBe(true);
   });
+
+  it('should isolate stored metadata from later caller mutations', () => {
+    type MutableCronMetadata = {
+      type: 'cron';
+      expression: string;
+      methodName: string | symbol;
+      options?: {
+        name?: string;
+        timezone?: string;
+      };
+      target: object;
+    };
+
+    class ManualHandler {
+      async run(): Promise<void> {}
+    }
+
+    const metadata: CronTriggerMetadata = {
+      type: 'cron',
+      expression: '0 0 * * *',
+      methodName: 'run',
+      options: {
+        name: 'before-mutation',
+        timezone: 'UTC',
+      },
+      target: ManualHandler.prototype,
+    };
+
+    TriggerRegistryClass.getInstance().register(metadata);
+
+    const mutableMetadata = metadata as unknown as MutableCronMetadata;
+
+    mutableMetadata.expression = '*/5 * * * *';
+    mutableMetadata.options = {
+      name: 'after-mutation',
+      timezone: 'Asia/Seoul',
+    };
+
+    const stored = TriggerRegistryClass.getInstance()
+      .getTriggers(ManualHandler.prototype)
+      .get('run') as CronTriggerMetadata;
+
+    expect(stored.expression).toBe('0 0 * * *');
+    expect(stored.options).toEqual({
+      name: 'before-mutation',
+      timezone: 'UTC',
+    });
+  });
+
+  it('should isolate registry state from returned metadata mutations', () => {
+    type MutableWebhookMetadata = {
+      type: 'webhook';
+      path: string;
+      options?: {
+        cors?: {
+          origin?: string[];
+          methods?: string[];
+          allowedHeaders?: string[];
+        };
+      };
+    };
+
+    class WebhookHandler {
+      @OnWebhook('/webhooks/test', 'POST', {
+        cors: {
+          origin: ['https://app1.com'],
+          methods: ['POST'],
+          allowedHeaders: ['content-type'],
+        },
+      })
+      async handle(): Promise<void> {}
+    }
+
+    const firstRead = TriggerRegistryClass.getInstance().getTriggers(WebhookHandler.prototype).get('handle');
+    if (!firstRead || firstRead.type !== 'webhook' || !firstRead.options?.cors) {
+      throw new Error('Expected webhook metadata to exist');
+    }
+
+    const mutableFirstRead = firstRead as unknown as MutableWebhookMetadata;
+
+    mutableFirstRead.path = '/mutated';
+    mutableFirstRead.options ??= {};
+    mutableFirstRead.options.cors ??= {};
+    mutableFirstRead.options.cors.origin = ['https://mutated.example.com'];
+    mutableFirstRead.options.cors.methods = ['GET'];
+
+    const secondRead = TriggerRegistryClass.getInstance().getTriggers(WebhookHandler.prototype).get('handle');
+    expect(secondRead).toMatchObject({
+      type: 'webhook',
+      path: '/webhooks/test',
+      options: {
+        cors: {
+          origin: ['https://app1.com'],
+          methods: ['POST'],
+          allowedHeaders: ['content-type'],
+        },
+      },
+    });
+  });
+
+  it('should return cloned metadata for getTriggers', () => {
+    class MutableMetadataHandler {
+      @Cron('0 0 * * *', {
+        name: 'original-name',
+        description: 'original description',
+        enabled: true,
+        timezone: 'UTC',
+      })
+      async task(): Promise<void> {}
+    }
+
+    const registry = TriggerRegistryClass.getInstance();
+    const triggers = registry.getTriggers(MutableMetadataHandler.prototype);
+
+    const metadata = Array.from(triggers.values())[0] as Record<string, unknown>;
+    metadata.type = 'event';
+    const options = (metadata.options as Record<string, unknown>) ?? {};
+    options.name = 'mutated-name';
+
+    const stored = MetadataStorage.get(CRON_METADATA_KEY, MutableMetadataHandler.prototype, 'task') as
+      | Record<string, unknown>
+      | undefined;
+
+    expect(stored?.type).toBe('cron');
+    expect((stored?.options as Record<string, unknown>)?.name).toBe('original-name');
+  });
+
+  it('should return cloned metadata in getTriggersByType', () => {
+    class MutableCronHandler {
+      @Cron('*/10 * * * *', { name: 'event-target' })
+      async cronTask(): Promise<void> {}
+    }
+
+    const registry = TriggerRegistryClass.getInstance();
+    const cronTriggers = registry.getTriggersByType(MutableCronHandler.prototype, 'cron');
+
+    const metadata = cronTriggers.get('cronTask') as Record<string, unknown>;
+    const options = (metadata.options as Record<string, unknown>) ?? {};
+    options.timezone = 'Europe/Paris';
+
+    const stored = MetadataStorage.get(CRON_METADATA_KEY, MutableCronHandler.prototype, 'cronTask') as
+      | Record<string, unknown>
+      | undefined;
+
+    expect((stored?.options as Record<string, unknown>)?.name).toBe('event-target');
+    expect((stored?.options as Record<string, unknown>)?.timezone).toBeUndefined();
+  });
+
+  it('should return deep-cloned metadata in getAllTriggers', () => {
+    class NestedWebhookHandler {
+      @OnWebhook('/webhooks/sample', 'POST', {
+        name: 'webhook-original',
+        cors: {
+          origin: 'https://original.example',
+          methods: ['POST'],
+          allowedHeaders: ['Content-Type'],
+        },
+      })
+      async hook(): Promise<void> {}
+    }
+
+    const allTriggers = TriggerRegistryClass.getInstance().getAllTriggers();
+    const targetMap = allTriggers.get(NestedWebhookHandler.prototype);
+
+    expect(targetMap).not.toBeUndefined();
+
+    const metadata = targetMap?.get('hook') as Record<string, unknown> | undefined;
+    const options = metadata?.options as Record<string, unknown>;
+    const cors = options?.cors as Record<string, unknown>;
+    const methods = cors?.methods as string[];
+
+    methods?.push('GET');
+
+    const stored = MetadataStorage.get(WEBHOOK_METADATA_KEY, NestedWebhookHandler.prototype, 'hook') as
+      | Record<string, unknown>
+      | undefined;
+    const storedCors = stored?.options as Record<string, unknown>;
+    const storedMethods = (storedCors?.cors as Record<string, unknown>)?.methods as string[];
+
+    expect(storedMethods).toEqual(['POST']);
+    expect(metadata?.type).toBe('webhook');
+  });
 });
