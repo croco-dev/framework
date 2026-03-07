@@ -47,4 +47,38 @@ describe('PostHog Integration', () => {
       );
     });
   });
+
+  it('should use request-scoped anonymous distinctId when user context is missing', async () => {
+    const spy = vi.spyOn(postHogClient.getClient(), 'capture');
+
+    await Context.run({ requestId: 'req-anon', tenantId: 'tenant-xyz' }, async () => {
+      analyticsManager.capture('anonymous-event');
+    });
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distinctId: 'anonymous:req-anon',
+        groups: { tenant: 'tenant-xyz' },
+        event: 'anonymous-event',
+      })
+    );
+  });
+
+  it('should generate a non-static anonymous distinctId outside Context', () => {
+    const spy = vi.spyOn(postHogClient.getClient(), 'capture');
+
+    analyticsManager.capture('anonymous-event');
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distinctId: expect.stringMatching(/^anonymous:/),
+        event: 'anonymous-event',
+      })
+    );
+
+    const lastCall = spy.mock.calls[spy.mock.calls.length - 1];
+    const distinctId = lastCall?.[0]?.distinctId;
+
+    expect(distinctId).not.toBe('anonymous');
+  });
 });
