@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateExecutionParams, Execution, ExecutionError, ExecutionStore } from '../index';
 import { ExecutionManagerImpl } from '../index';
 
@@ -71,6 +71,10 @@ describe('ExecutionManagerImpl', () => {
     manager = new ExecutionManagerImpl(store);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('create', () => {
     it('creates execution with pending status', async () => {
       const execution = await manager.create({ type: 'task' });
@@ -121,6 +125,40 @@ describe('ExecutionManagerImpl', () => {
 
       expect(restarted.status).toBe('running');
       expect(restarted.attempts).toBe(2);
+    });
+
+    it('resets startedAt when restarting from retrying', async () => {
+      vi.useFakeTimers();
+      const firstAttemptAt = new Date('2026-01-01T00:00:00.000Z');
+      vi.setSystemTime(firstAttemptAt);
+
+      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+      const started = await manager.start(execution.id);
+      await manager.fail(execution.id, { message: 'error', retryable: true });
+
+      const retryAttemptAt = new Date('2026-01-01T00:00:05.000Z');
+      vi.setSystemTime(retryAttemptAt);
+
+      const restarted = await manager.start(execution.id);
+
+      expect(started.startedAt?.toISOString()).toBe(firstAttemptAt.toISOString());
+      expect(restarted.startedAt?.toISOString()).toBe(retryAttemptAt.toISOString());
+    });
+
+    it('measures timeout per retry attempt instead of cumulative elapsed time', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+
+      const execution = await manager.create({ type: 'task', maxAttempts: 3, timeout: 1000 });
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: 'timeout retry', retryable: true });
+
+      vi.setSystemTime(new Date('2026-01-01T00:00:03.000Z'));
+
+      const restarted = await manager.start(execution.id);
+
+      expect(restarted.status).toBe('running');
+      expect(restarted.startedAt?.toISOString()).toBe('2026-01-01T00:00:03.000Z');
     });
 
     it('throws for completed execution', async () => {

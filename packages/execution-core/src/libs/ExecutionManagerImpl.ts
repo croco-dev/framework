@@ -92,7 +92,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
     validateTransition(execution.status, targetStatus);
 
     const now = new Date();
-    const startedAt = execution.status === 'pending' ? now : execution.startedAt;
+    const startedAt = now;
     const attempts = execution.attempts + 1;
 
     // Check if timeout exceeded
