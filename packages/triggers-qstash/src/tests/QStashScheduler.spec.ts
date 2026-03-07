@@ -244,4 +244,99 @@ describe('QStashScheduler', () => {
       }),
     ]);
   });
+
+  it('cron 변경 시 delete 없이 같은 scheduleId로 갱신해야 한다', async () => {
+    class UpdatedScheduleJob {
+      async processQueue(): Promise<void> {}
+    }
+
+    const metadata: CronTriggerMetadata = {
+      type: 'cron',
+      expression: '*/10 * * * *',
+      methodName: 'processQueue',
+      target: UpdatedScheduleJob.prototype,
+      options: {},
+    };
+    triggerRegistry.register(metadata);
+
+    const create = vi.fn().mockResolvedValue({});
+    const deleteSchedule = vi.fn();
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId: 'croco-trigger:processQueue:processQueue',
+            cron: '*/5 * * * *',
+          },
+        ]),
+        create,
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: 'https://api.example.com/webhooks/qstash',
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.updated).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId: 'croco-trigger:processQueue:processQueue',
+        cron: '*/10 * * * *',
+      })
+    );
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it('cron 변경 갱신 실패 시 기존 스케줄 삭제를 시도하지 않아야 한다', async () => {
+    class FailingUpdateScheduleJob {
+      async processQueue(): Promise<void> {}
+    }
+
+    const metadata: CronTriggerMetadata = {
+      type: 'cron',
+      expression: '*/10 * * * *',
+      methodName: 'processQueue',
+      target: FailingUpdateScheduleJob.prototype,
+      options: {},
+    };
+    triggerRegistry.register(metadata);
+
+    const create = vi.fn().mockRejectedValue(new Error('update failed'));
+    const deleteSchedule = vi.fn();
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId: 'croco-trigger:processQueue:processQueue',
+            cron: '*/5 * * * *',
+          },
+        ]),
+        create,
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: 'https://api.example.com/webhooks/qstash',
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.updated).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: 'croco-trigger:processQueue:processQueue',
+        action: 'failed',
+        error: 'update failed',
+      }),
+    ]);
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
 });
