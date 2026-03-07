@@ -1,5 +1,6 @@
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
+import { ProblemFactory } from '@croco/problems-core';
 import {
   type Constructor,
   type ControllerMetadata,
@@ -41,7 +42,20 @@ function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<
   }
   // If it's a constructor, instantiate it
   const Ctor = provider as Constructor<T>;
-  return container?.get(Ctor) ?? new Ctor();
+
+  if (!container) {
+    return new Ctor();
+  }
+
+  const resolved = container.get(Ctor) as T | null | undefined;
+  if (resolved == null) {
+    throw ProblemFactory.internalServerError(
+      'transports-http/provider-resolution-failed',
+      `Container did not return an instance for provider ${Ctor.name}`
+    );
+  }
+
+  return resolved;
 }
 
 export class RouteCompiler {

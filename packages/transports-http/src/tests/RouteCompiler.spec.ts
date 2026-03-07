@@ -203,4 +203,48 @@ describe('RouteCompiler', () => {
     expect(requestedTypes.filter((type) => type === RouteLevelInterceptor)).toHaveLength(2);
     expect(requestedTypes.filter((type) => type === RouteLevelFilter)).toHaveLength(2);
   });
+
+  it('should fail fast when a provider cannot be resolved in container mode', async () => {
+    class GuardDependency {
+      readonly allowed = true;
+    }
+
+    class RouteLevelGuard implements Guard {
+      constructor(private readonly dependency: GuardDependency) {}
+
+      canActivate() {
+        return this.dependency.allowed;
+      }
+    }
+
+    const RouteLevelGuardCtor = RouteLevelGuard as unknown as GuardConstructor;
+
+    @Controller('/secured')
+    class SecuredController {
+      @Get('/resource')
+      @UseGuards(RouteLevelGuardCtor)
+      getResource() {
+        return { ok: true };
+      }
+    }
+
+    const container = {
+      get<T>(type: Constructor<T>): T {
+        if (type === SecuredController) {
+          return new SecuredController() as T;
+        }
+
+        return undefined as T;
+      },
+    };
+
+    const compiler = new RouteCompiler();
+    const [route] = compiler.compile([SecuredController], {
+      container,
+    });
+
+    await expect(route.handler(createMockHttpContext())).rejects.toThrow(
+      'Container did not return an instance for provider RouteLevelGuard'
+    );
+  });
 });
