@@ -113,9 +113,9 @@ export class Context {
 
           return result;
         } catch (error) {
-          if (error instanceof Error) {
-            await hooks.onRequestError?.(context, error);
-          }
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+
+          await hooks.onRequestError?.(context, normalizedError);
           throw error;
         }
       }
