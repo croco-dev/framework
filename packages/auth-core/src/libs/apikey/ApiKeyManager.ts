@@ -1,5 +1,6 @@
 import type { EventBus } from '@croco/events-core';
 import type { Logger } from '@croco/framework-logger';
+import { recordError } from '@croco/telemetry-api';
 import { ApiKeyCreatedEvent, ApiKeyRevokedEvent, ApiKeyRotatedEvent, ApiKeyUsedEvent } from '../events/ApiKeyEvents';
 import type { ApiKey, CreateApiKeyOptions, CreateApiKeyResult, RotateApiKeyResult } from '../interfaces/ApiKey';
 import type { ApiKeyPrincipal } from '../interfaces/Principal';
@@ -39,6 +40,7 @@ export class ApiKeyManager {
     this.eventBus
       ?.publish(new ApiKeyCreatedEvent({ keyId: key.id, tenantId: key.tenantId, name: key.name }))
       .catch((err: unknown) => {
+        recordError(err);
         this.logger?.warn('ApiKeyCreatedEvent publish failed', {
           error: err instanceof Error ? err.message : String(err),
         });
@@ -65,12 +67,14 @@ export class ApiKeyManager {
     if (keyData.expiresAt && keyData.expiresAt < new Date()) return null;
 
     this.store.updateLastUsed(keyData.id).catch((err: unknown) => {
+      recordError(err);
       this.logger?.warn('ApiKey updateLastUsed failed', { error: err instanceof Error ? err.message : String(err) });
     });
 
     this.eventBus
       ?.publish(new ApiKeyUsedEvent({ keyId: keyData.id, tenantId: keyData.tenantId, timestamp: new Date() }))
       .catch((err: unknown) => {
+        recordError(err);
         this.logger?.warn('ApiKeyUsedEvent publish failed', {
           error: err instanceof Error ? err.message : String(err),
         });
@@ -96,6 +100,7 @@ export class ApiKeyManager {
       this.eventBus
         ?.publish(new ApiKeyRevokedEvent({ keyId: id, tenantId: keyData.tenantId, revokedAt: new Date() }))
         .catch((err: unknown) => {
+          recordError(err);
           this.logger?.warn('ApiKeyRevokedEvent publish failed', {
             error: err instanceof Error ? err.message : String(err),
           });
@@ -132,6 +137,7 @@ export class ApiKeyManager {
     this.eventBus
       ?.publish(new ApiKeyRotatedEvent({ oldKeyId: id, newKeyId: newKey.id, tenantId: existingKey.tenantId }))
       .catch((err: unknown) => {
+        recordError(err);
         this.logger?.warn('ApiKeyRotatedEvent publish failed', {
           error: err instanceof Error ? err.message : String(err),
         });
