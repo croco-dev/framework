@@ -14,6 +14,9 @@ type AwaitableQueryResult = PromiseLike<unknown>;
 
 type InsertQuery = {
   values(values: unknown): {
+    onConflictDoNothing(config: { target: unknown }): {
+      returning(): AwaitableQueryResult;
+    };
     returning(): AwaitableQueryResult;
   };
 };
@@ -90,23 +93,26 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> implements Execution
       progress: null,
     };
 
-    let result: ExecutionRow[];
+    if (params.idempotencyKey) {
+      const result = (await this.dbOp
+        .insert(executions)
+        .values(newExecution)
+        .onConflictDoNothing({ target: executions.idempotencyKey })
+        .returning()) as ExecutionRow[];
 
-    try {
-      result = (await this.dbOp.insert(executions).values(newExecution).returning()) as ExecutionRow[];
-    } catch (error) {
-      if (params.idempotencyKey && this.isIdempotencyConstraintError(error)) {
-        const duplicated = await this.findByIdempotencyKey(params.idempotencyKey);
-        if (duplicated) {
-          return duplicated;
-        }
-
-        throw ExecutionProblems.conflict(`Execution with idempotency key '${params.idempotencyKey}' already exists`);
+      if (result.length > 0) {
+        return this.mapToExecution(result[0]);
       }
 
-      throw error;
+      const duplicated = await this.findByIdempotencyKey(params.idempotencyKey);
+      if (duplicated) {
+        return duplicated;
+      }
+
+      throw ExecutionProblems.conflict(`Execution with idempotency key '${params.idempotencyKey}' already exists`);
     }
 
+    const result = (await this.dbOp.insert(executions).values(newExecution).returning()) as ExecutionRow[];
     return this.mapToExecution(result[0]);
   }
 
@@ -220,23 +226,5 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> implements Execution
 
   private generateId(): string {
     return ulid();
-  }
-
-  private isIdempotencyConstraintError(error: unknown): boolean {
-    if (typeof error === 'object' && error !== null) {
-      const code = Reflect.get(error, 'code');
-      const constraint = Reflect.get(error, 'constraint');
-
-      if (code === '23505' && typeof constraint === 'string' && constraint.includes('idempotency_key')) {
-        return true;
-      }
-    }
-
-    if (error instanceof Error) {
-      const message = error.message.toLowerCase();
-      return message.includes('idempotency') || message.includes('duplicate key');
-    }
-
-    return false;
   }
 }
