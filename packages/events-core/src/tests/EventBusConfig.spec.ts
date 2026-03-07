@@ -34,7 +34,11 @@ class MockEventBus implements EventBus {
     this.subscriptions.push(subscription);
   }
 
-  unsubscribe(): void {}
+  unsubscribe(subscription: EventSubscription): void {
+    this.subscriptions = this.subscriptions.filter(
+      (entry) => entry.eventName !== subscription.eventName || entry.handlerClass !== subscription.handlerClass
+    );
+  }
 
   clear(): void {
     this.subscriptions = [];
@@ -137,6 +141,41 @@ describe('EventBusConfig', () => {
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
       expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].eventName).toBe('TestEvent');
+    });
+  });
+
+  describe('resource cleanup', () => {
+    it('should unsubscribe started subscriptions', async () => {
+      const config = EventBusConfig.getInstance();
+      const mockBus = new MockEventBus();
+      const subscription: EventSubscription = {
+        eventName: 'CleanupEvent',
+        handlerClass: TestHandler as EventHandlerClass,
+      };
+
+      config.setEventBus(mockBus as EventBus);
+      config.subscribe(subscription);
+      await config.start({ handlers: [] });
+
+      config.unsubscribe(subscription);
+
+      expect(mockBus.subscriptions.find((entry) => entry.eventName === 'CleanupEvent')).toBeUndefined();
+    });
+
+    it('should clear tracked subscriptions and event bus state', async () => {
+      const config = EventBusConfig.getInstance();
+      const mockBus = new MockEventBus();
+
+      config.setEventBus(mockBus as EventBus);
+      config.subscribe({
+        eventName: 'ClearEvent',
+        handlerClass: TestHandler as EventHandlerClass,
+      });
+      await config.start({ handlers: [] });
+
+      config.clear();
+
+      expect(mockBus.subscriptions).toEqual([]);
     });
   });
 
