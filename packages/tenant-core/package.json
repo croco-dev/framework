@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*"

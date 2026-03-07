@@ -1,5 +1,6 @@
 import { Context } from '@croco/framework-context';
-import { beforeEach, describe, expect, it } from 'vitest';
+import * as telemetry from '@croco/telemetry-api';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TenantRequiredProblem } from '../libs/problems/TenantRequiredProblem';
 import { TenantManager } from '../libs/TenantManager';
 
@@ -33,6 +34,20 @@ describe('TenantManager', () => {
       });
 
       expect(result).toEqual({ data: 'test' });
+    });
+
+    it('should record tenant context entry event', async () => {
+      const recordEventSpy = vi.spyOn(telemetry, 'recordEvent').mockImplementation(() => {});
+
+      await manager.run('tenant-observe', async () => {
+        expect(manager.getTenantId()).toBe('tenant-observe');
+      });
+
+      expect(recordEventSpy).toHaveBeenCalledWith('tenant.context.enter', {
+        'tenant.id': 'tenant-observe',
+      });
+
+      recordEventSpy.mockRestore();
     });
 
     it('should support nested runs with different tenants', async () => {
