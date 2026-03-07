@@ -1,9 +1,12 @@
 import { Container } from '@croco/framework-context';
 import type { NotificationPayload } from '@croco/notifications-core';
 import { NotificationChannel } from '@croco/notifications-core';
+import type { CreateEmailResponse } from 'resend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResendNotificationProblem } from '../libs/problems/ResendNotificationProblem';
 import { ResendProvider } from '../libs/ResendProvider';
+
+type MockResendClient = InstanceType<typeof import('resend')['Resend']>;
 
 // Mock resend package
 vi.mock('resend', () => {
@@ -18,7 +21,7 @@ vi.mock('resend', () => {
 
 describe('ResendProvider', () => {
   let provider!: ResendProvider;
-  let mockResendClient!: any;
+  let mockResendClient!: MockResendClient;
 
   const mockConfig = {
     apiKey: 're_test-key',
@@ -49,14 +52,14 @@ describe('ResendProvider', () => {
   });
 
   describe('send()', () => {
-    const mockSuccessResponse = {
+    const mockSuccessResponse: CreateEmailResponse = {
       data: { id: 'msg-123' },
       error: null,
     };
 
-    const mockErrorResponse = {
+    const mockErrorResponse: CreateEmailResponse = {
       data: null,
-      error: { message: 'Invalid API key' },
+      error: { message: 'Invalid API key', name: 'invalid_api_Key' },
     };
 
     it('should send email successfully with subject', async () => {

@@ -5,7 +5,7 @@ import {
   type NotificationProvider,
   type NotificationResult,
 } from '@croco/notifications-core';
-import { Resend } from 'resend';
+import { type CreateEmailOptions, Resend } from 'resend';
 import { ResendNotificationProblem } from './problems/ResendNotificationProblem';
 
 export interface ResendConfig {
@@ -31,19 +31,14 @@ export class ResendProvider implements NotificationProvider {
 
   async send(payload: NotificationPayload): Promise<NotificationResult> {
     try {
-      const { to, subject, content, templateId } = payload;
+      const { to, subject, content } = payload;
 
-      const emailOptions: any = {
+      const emailOptions: CreateEmailOptions = {
         from: this.config.from,
         to,
         subject: subject || 'No Subject',
+        html: content,
       };
-
-      if (templateId) {
-        emailOptions.html = content;
-      } else {
-        emailOptions.html = content;
-      }
 
       const data = await this.client.emails.send(emailOptions);
 
