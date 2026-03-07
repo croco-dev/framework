@@ -1,7 +1,6 @@
-import { Container } from '@croco/framework-context';
+import { Container, TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/framework-context';
 import type { DomainEvent } from './DomainEvent';
 import type { EventBusConfig } from './EventBusConfig';
-import { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from './TransactionContext';
 
 export type PublishResult<T extends DomainEvent> = {
   event: T;

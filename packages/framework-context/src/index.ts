@@ -68,6 +68,7 @@ export { Container } from './libs/Container';
  * ```
  */
 export { Context } from './libs/Context';
+export { TRANSACTION_CONTEXT_TOKEN } from './libs/TransactionContext';
 
 /**
  * 클래스를 Croco DI 컨테이너에 등록하는 컴포넌트 데코레이터입니다.
@@ -267,6 +268,7 @@ export type { Middleware } from './libs/types';
  * ```
  */
 export type { RequestContext } from './libs/types';
+export type { TransactionContext } from './libs/TransactionContext';
 
 /**
  * 컴포넌트 인스턴스 생명주기를 정의하는 scope 타입입니다.

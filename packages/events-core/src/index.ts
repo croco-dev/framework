@@ -90,4 +90,3 @@ export {
 /**
  * 트랜잭션 컨텍스트 DI 토큰과 컨텍스트 계약 타입입니다.
  */
-export { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from './libs/TransactionContext';

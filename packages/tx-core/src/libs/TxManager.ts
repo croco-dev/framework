@@ -1,6 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/events-core';
-import { Container } from '@croco/framework-context';
+import { Container, TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { TransactionContextProblem } from './problems/TransactionProblems';
 import type { TxAdapter } from './TxAdapter';

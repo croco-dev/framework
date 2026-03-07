@@ -1,5 +1,4 @@
-import { TRANSACTION_CONTEXT_TOKEN } from '@croco/events-core';
-import { Container } from '@croco/framework-context';
+import { Container, TRANSACTION_CONTEXT_TOKEN } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type TxAdapter, TxManager } from '../index';
 import { TxManagerRegistry } from '../libs/TxManagerRegistry';
