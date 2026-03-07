@@ -1,4 +1,5 @@
 import type { EventPublisher } from '@croco/events-core';
+import { Trace } from '@croco/telemetry-api';
 import type { Subscription, SubscriptionStatus } from '../types';
 import type { BillingGateway, CreateCheckoutParams } from './BillingGateway';
 import type { BillingStore } from './BillingStore';
@@ -57,6 +58,7 @@ export class BillingService {
   /**
    * Create a checkout session for a tenant.
    */
+  @Trace({ name: 'billing.checkout.create' })
   async createCheckout(params: CreateCheckoutParams): Promise<{ checkoutUrl: string }> {
     const account = await this.store.findAccountByTenantId(params.billingAccountId);
 
@@ -100,6 +102,7 @@ export class BillingService {
   /**
    * Cancel a subscription (at period end by default).
    */
+  @Trace({ name: 'billing.subscription.cancel' })
   async cancelSubscription(tenantId: string, immediate = false): Promise<void> {
     const subscription = await this.store.findSubscription(tenantId);
     if (!subscription) {
@@ -125,6 +128,7 @@ export class BillingService {
   /**
    * Resume a canceled subscription.
    */
+  @Trace({ name: 'billing.subscription.resume' })
   async resumeSubscription(tenantId: string): Promise<void> {
     const subscription = await this.store.findSubscription(tenantId);
     if (!subscription) {
@@ -143,6 +147,7 @@ export class BillingService {
   /**
    * Get customer portal URL.
    */
+  @Trace({ name: 'billing.portal.get' })
   async getCustomerPortalUrl(tenantId: string): Promise<string> {
     const account = await this.store.findAccountByTenantId(tenantId);
     if (!account) {

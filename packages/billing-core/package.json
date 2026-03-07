@@ -20,7 +20,8 @@
   "dependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/events-core": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
