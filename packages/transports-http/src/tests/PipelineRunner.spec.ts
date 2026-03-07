@@ -49,16 +49,23 @@ function createMockHttpContext(): CrocoHttpContext {
 }
 
 describe('PipelineRunner', () => {
+  let logger!: {
+    info: ReturnType<typeof vi.fn>;
+    warn: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+    debug: ReturnType<typeof vi.fn>;
+  };
+
   beforeEach(() => {
     Container.reset();
-    const logger = {
+    logger = {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
       debug: vi.fn(),
-    } as unknown as Logger;
-    Container.set(Logger, logger);
-    Container.set(ErrorHandler, new ErrorHandler(logger));
+    };
+    Container.set(Logger, logger as unknown as Logger);
+    Container.set(ErrorHandler, new ErrorHandler(logger as unknown as Logger));
   });
 
   it('BUG-03 Container 초기화 전 PipelineRunner 생성 가능', () => {
@@ -146,5 +153,44 @@ describe('PipelineRunner', () => {
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(500);
     expect(logger.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('should preserve the original business error when a filter throws', async () => {
+    const runner = new PipelineRunner();
+    const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');
+    const originalProblem = ProblemFactory.badRequest('BAD_REQUEST', 'original business error');
+
+    const brokenFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(() => {
+        throw new Error('filter failure');
+      }),
+    };
+
+    const result = await runner.run(
+      execContext,
+      async () => {
+        throw originalProblem;
+      },
+      {
+        guards: [],
+        interceptors: [],
+        filters: [brokenFilter],
+      }
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(400);
+    expect(await (result as Response).json()).toMatchObject({
+      code: 'BAD_REQUEST',
+      detail: 'original business error',
+      status: 400,
+    });
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Exception filter threw while handling an error; preserving original error',
+      {
+        originalError: 'original business error',
+        filterError: 'filter failure',
+      }
+    );
   });
 });

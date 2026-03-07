@@ -1,4 +1,5 @@
 import { Container } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import { ProblemFactory } from '@croco/problems-core';
 import type { CallHandler, ExceptionFilter, ExecutionContext, Guard, Interceptor } from '@croco/protocols-rest';
 import { ErrorHandler } from './ErrorHandler';
@@ -30,6 +31,10 @@ export interface PipelineConfig {
 export class PipelineRunner {
   private get errorHandler() {
     return Container.get(ErrorHandler);
+  }
+
+  private get logger() {
+    return Container.get(Logger);
   }
 
   async run(
@@ -82,7 +87,7 @@ export class PipelineRunner {
     context: HttpExecutionContext,
     filters: ExceptionFilter<unknown, HttpExecutionContext>[]
   ): unknown {
-    let nextError = error;
+    const nextError = error;
 
     for (const filter of filters) {
       try {
@@ -103,7 +108,10 @@ export class PipelineRunner {
         }
         return result;
       } catch (caughtError) {
-        nextError = caughtError;
+        this.logger.warn('Exception filter threw while handling an error; preserving original error', {
+          originalError: nextError instanceof Error ? nextError.message : String(nextError),
+          filterError: caughtError instanceof Error ? caughtError.message : String(caughtError),
+        });
       }
     }
 
