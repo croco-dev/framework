@@ -126,6 +126,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
       '@croco/integrations-posthog':
         specifier: workspace:*
         version: link:../integrations-posthog

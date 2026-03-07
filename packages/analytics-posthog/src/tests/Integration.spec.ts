@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import type { AnalyticsManager } from '@croco/analytics-core';
 import { Context } from '@croco/framework-context';
+import type { Logger } from '@croco/framework-logger';
 import { PostHogClient } from '@croco/integrations-posthog';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostHogAnalyticsManager } from '../libs/PostHogAnalyticsManager';
@@ -23,10 +24,14 @@ vi.mock('posthog-node', () => {
 describe('PostHog Integration', () => {
   let analyticsManager!: AnalyticsManager;
   let postHogClient!: PostHogClient;
+  let logger!: Pick<Logger, 'warn'>;
 
   beforeEach(() => {
     postHogClient = new PostHogClient({ apiKey: 'test-api-key' });
-    analyticsManager = new PostHogAnalyticsManager(postHogClient);
+    logger = {
+      warn: vi.fn(),
+    };
+    analyticsManager = new PostHogAnalyticsManager(postHogClient, logger as Logger);
   });
 
   it('should resolve analytics manager', () => {
@@ -45,6 +50,24 @@ describe('PostHog Integration', () => {
           event: 'test-event',
         })
       );
+    });
+  });
+
+  it('should log capture failures without throwing to callers', async () => {
+    const spy = vi.spyOn(postHogClient.getClient(), 'capture').mockRejectedValueOnce(new Error('network failed'));
+
+    expect(() => analyticsManager.capture('failed-event')).not.toThrow();
+
+    await Promise.resolve();
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'failed-event',
+      })
+    );
+    expect(logger.warn).toHaveBeenCalledWith('PostHog capture failed', {
+      event: 'failed-event',
+      error: 'network failed',
     });
   });
 });
