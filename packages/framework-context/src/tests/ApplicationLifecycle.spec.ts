@@ -1,8 +1,8 @@
-import { validateConfig } from '@croco/framework-config';
-import type { HealthIndicator } from '@croco/health-core';
-import { HealthCheckService } from '@croco/health-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { validateConfig } from '../../../framework-config/src';
+import type { HealthIndicator } from '../../../health-core/src';
+import { HealthCheckService } from '../../../health-core/src';
 import { ShutdownManager } from '../libs/ShutdownManager';
 
 type ShutdownManagerStatic = {
