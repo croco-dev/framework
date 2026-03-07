@@ -52,7 +52,7 @@ export * from './libs/problems/NotificationProblems';
  *
  * @description
  * Job queue task that handles actual notification delivery with retry capability.
- * Registered as 'send-notification' task with maxAttempts: 3 for resilient delivery.
+ * Registered as 'send-notification' task with configurable maxAttempts (default: 3) for resilient delivery.
  * Integrates with TaskRunner for background processing.
  *
  * @example

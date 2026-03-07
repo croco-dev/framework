@@ -66,4 +66,21 @@ describe('TelemetryRuntime', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('should prefer OTEL_EXPORTER_OTLP_TRACES_ENDPOINT over OTEL_EXPORTER_OTLP_ENDPOINT', async () => {
+    const tracesEndpoint = 'http://collector:4318/v1/traces-custom';
+    const genericEndpoint = 'http://collector:4318/v1/traces-generic';
+
+    vi.stubEnv('OTEL_EXPORTER_OTLP_TRACES_ENDPOINT', tracesEndpoint);
+    vi.stubEnv('OTEL_EXPORTER_OTLP_ENDPOINT', genericEndpoint);
+
+    await runtime.init({
+      serviceName: 'trace-endpoint-test',
+      enabled: false,
+    });
+
+    expect(runtime.getConfig()?.trace?.exporterUrl).toBeUndefined();
+
+    vi.unstubAllEnvs();
+  });
 });

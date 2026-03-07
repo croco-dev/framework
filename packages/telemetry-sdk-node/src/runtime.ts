@@ -49,7 +49,10 @@ class TelemetryRuntime {
 
     if (traceConfig.enabled !== false) {
       const exporterUrl =
-        traceConfig.exporterUrl ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4318/v1/traces';
+        traceConfig.exporterUrl ??
+        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
+        process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
+        'http://localhost:4318/v1/traces';
       const exporter = new OTLPTraceExporter({
         url: exporterUrl,
         headers: traceConfig.exporterHeaders,

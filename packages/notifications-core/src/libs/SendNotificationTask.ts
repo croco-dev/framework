@@ -8,6 +8,8 @@ import {
 } from './problems/NotificationProblems';
 import type { NotificationJobPayload, NotificationProvider } from './types';
 
+const SEND_NOTIFICATION_MAX_ATTEMPTS = Number(process.env.NOTIFICATIONS_SEND_MAX_ATTEMPTS ?? 3);
+
 @Component()
 export class SendNotificationTask {
   constructor(private registry: NotificationProviderRegistry) {}
@@ -18,7 +20,7 @@ export class SendNotificationTask {
 
   @Task({
     name: 'send-notification',
-    maxAttempts: 3,
+    maxAttempts: SEND_NOTIFICATION_MAX_ATTEMPTS,
   })
   async handle(payload: NotificationJobPayload): Promise<void> {
     const { providerName, ...notificationPayload } = payload;

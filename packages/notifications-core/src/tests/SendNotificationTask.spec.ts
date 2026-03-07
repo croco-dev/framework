@@ -1,5 +1,6 @@
-import { Container } from '@croco/framework-context';
+import { Container, MetadataStorage } from '@croco/framework-context';
 import { Problem } from '@croco/problems-core';
+import { TASK_METADATA_KEY, type TaskMetadata } from '@croco/tasks-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationProviderRegistry } from '../libs/NotificationProviderRegistry';
 import { NotificationService } from '../libs/NotificationService';
@@ -17,6 +18,7 @@ describe('SendNotificationTask', () => {
 
   beforeEach(() => {
     Container.reset();
+    MetadataStorage.clear();
     vi.clearAllMocks();
 
     registry = new NotificationProviderRegistry();
@@ -226,6 +228,28 @@ describe('SendNotificationTask', () => {
         to: 'test@example.com',
         content: 'Test Content',
       });
+    });
+  });
+
+  describe('task metadata', () => {
+    it('should use env-configured maxAttempts when present', async () => {
+      vi.stubEnv('NOTIFICATIONS_SEND_MAX_ATTEMPTS', '5');
+
+      const { SendNotificationTask: ReloadedTask } = await import(
+        `../libs/SendNotificationTask?attempts=${Date.now()}`
+      );
+      const metadata = MetadataStorage.getAll<TaskMetadata>(TASK_METADATA_KEY).find((entry) => {
+        const value = entry.value as TaskMetadata;
+
+        return value.target === ReloadedTask && value.methodName === 'handle';
+      });
+
+      const value = metadata?.value as TaskMetadata | undefined;
+      const maxAttempts = value?.options?.maxAttempts;
+
+      expect(maxAttempts).toBe(5);
+
+      vi.unstubAllEnvs();
     });
   });
 });

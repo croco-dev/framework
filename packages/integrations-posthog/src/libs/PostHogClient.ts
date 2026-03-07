@@ -11,8 +11,10 @@ export class PostHogClient {
   private client: PostHog;
 
   constructor(config: PostHogConfig) {
+    const host = config.host ?? process.env.POSTHOG_HOST ?? 'https://app.posthog.com';
+
     this.client = new PostHog(config.apiKey, {
-      host: config.host || 'https://app.posthog.com',
+      host,
     });
   }
 
