@@ -1,6 +1,8 @@
 /**
  * Cloudflare R2 기반 스토리지 제공자 구현체입니다.
  */
+
+export { MissingR2ConfigProblem } from './libs/problems/MissingR2ConfigProblem';
 export { R2StorageProvider } from './libs/R2StorageProvider';
 
 /**
