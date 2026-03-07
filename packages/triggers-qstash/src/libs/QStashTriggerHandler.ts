@@ -1,6 +1,7 @@
 import type { ExecutionManager } from '@croco/execution-core';
 import type { Constructor } from '@croco/framework-context';
 import { Container } from '@croco/framework-context';
+import { Problem, ProblemCategory, ProblemCategoryMapper } from '@croco/problems-core';
 import { triggerRegistry } from '@croco/triggers-core';
 import type { Receiver } from '@upstash/qstash';
 
@@ -12,6 +13,9 @@ class DefaultServiceResolverError extends Error {
     this.name = 'DefaultServiceResolverError';
   }
 }
+
+const GENERIC_EXECUTION_ERROR_CODE = 'triggers-qstash/execution-failed';
+const SERVICE_RESOLUTION_ERROR_CODE = 'triggers-qstash/service-resolution-failed';
 
 /**
  * Configuration options for QStashTriggerHandler.
@@ -104,6 +108,12 @@ export type HandleResult = {
    * Response body.
    */
   readonly body: unknown;
+};
+
+type ErrorResponse = {
+  readonly error: 'Execution failed';
+  readonly code: string;
+  readonly category: ProblemCategory;
 };
 
 /**
@@ -201,17 +211,44 @@ export class QStashTriggerHandler {
       const result = await this.dispatchExecution(payload);
       return result;
     } catch (error) {
-      const body =
-        this.usesDefaultServiceResolver && error instanceof DefaultServiceResolverError
-          ? { error: 'Execution failed', details: error.message }
-          : { error: 'Execution failed' };
-
       return {
         success: false,
-        statusCode: 500,
-        body,
+        ...this.toErrorResult(error),
       };
     }
+  }
+
+  private toErrorResult(error: unknown): Pick<HandleResult, 'statusCode' | 'body'> {
+    if (error instanceof Problem) {
+      return {
+        statusCode: error.status,
+        body: {
+          error: 'Execution failed',
+          code: error.code,
+          category: error.category,
+        } satisfies ErrorResponse,
+      };
+    }
+
+    if (this.usesDefaultServiceResolver && error instanceof DefaultServiceResolverError) {
+      return {
+        statusCode: 500,
+        body: {
+          error: 'Execution failed',
+          code: SERVICE_RESOLUTION_ERROR_CODE,
+          category: ProblemCategory.InternalServerError,
+        } satisfies ErrorResponse,
+      };
+    }
+
+    return {
+      statusCode: ProblemCategoryMapper.toHttpStatus(ProblemCategory.InternalServerError),
+      body: {
+        error: 'Execution failed',
+        code: GENERIC_EXECUTION_ERROR_CODE,
+        category: ProblemCategory.InternalServerError,
+      } satisfies ErrorResponse,
+    };
   }
 
   /**
