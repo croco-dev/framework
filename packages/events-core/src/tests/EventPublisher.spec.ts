@@ -1,11 +1,10 @@
-import { Container } from '@croco/framework-context';
+import { Container, TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AggregateRoot } from '../libs/AggregateRoot';
 import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
 import { EventPublisher } from '../libs/EventPublisher';
-import { TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '../libs/TransactionContext';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';

@@ -1,5 +1,4 @@
-import { TRANSACTION_CONTEXT_TOKEN } from '@croco/events-core';
-import { Container } from '@croco/framework-context';
+import { Container, TRANSACTION_CONTEXT_TOKEN } from '@croco/framework-context';
 import { TxManagerNotRegisteredError } from './errors';
 import type { TxManager } from './TxManager';
 import { DEFAULT_TX_MANAGER_KEY, type TxManagerKey } from './types';
