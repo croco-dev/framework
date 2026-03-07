@@ -80,8 +80,8 @@ export class BillingService {
     };
 
     try {
-      const result = await this.gateway.createCheckout(params);
       await this.store.saveAccount(accountDraft);
+      const result = await this.gateway.createCheckout(params);
       return { checkoutUrl: result.checkoutUrl };
     } catch (error) {
       throw this.createCheckoutError(params.billingAccountId, error);
