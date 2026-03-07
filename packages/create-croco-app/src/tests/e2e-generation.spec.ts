@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { generate } from '../generator.js';
@@ -109,6 +109,19 @@ describe('E2E: generate()', () => {
 
     // GraphQL API
     expect(existsSync(join(testDir, 'apps', 'graphql-api'))).toBe(true);
+    const handlerContent = readFileSync(join(testDir, 'apps', 'graphql-api', 'src', 'handler.ts'), 'utf8');
+    const schemaContent = readFileSync(join(testDir, 'apps', 'graphql-api', 'src', 'schema.ts'), 'utf8');
+    const packageJsonContent = readFileSync(join(testDir, 'apps', 'graphql-api', 'package.json'), 'utf8');
+
+    expect(handlerContent).toContain("from '@croco/telemetry-sdk-node';");
+    expect(handlerContent).toContain("import { createSchema } from './schema.js';");
+    expect(handlerContent).toContain('const telemetryReady = telemetry.init(');
+    expect(handlerContent).toContain('await telemetryReady;');
+    expect(handlerContent).toContain('const lambdaHandler = await lambdaHandlerPromise;');
+    expect(handlerContent).toContain('await telemetry.forceFlush();');
+    expect(schemaContent).toContain('export async function createSchema()');
+    expect(packageJsonContent).toContain('"@croco/telemetry-sdk-node": "workspace:*"');
+
     // Lambda SST
     expect(existsSync(join(testDir, 'sst.config.ts'))).toBe(true);
     // MongoDB provider
