@@ -6,6 +6,7 @@ import { FileNotFoundProblem } from '@croco/storage-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmptyR2BodyProblem } from '../libs/problems/EmptyR2BodyProblem';
 import { MissingR2ConfigProblem } from '../libs/problems/MissingR2ConfigProblem';
+import { R2ObjectTooLargeProblem } from '../libs/problems/R2ObjectTooLargeProblem';
 import { R2StorageProvider } from '../libs/R2StorageProvider';
 
 const mockSend = vi.fn();
@@ -146,6 +147,32 @@ describe('R2StorageProvider', () => {
 
       await expect(streamPromise).rejects.toBeInstanceOf(EmptyR2BodyProblem);
       await expect(streamPromise).rejects.toThrow('Empty response body');
+    });
+  });
+
+  describe('get', () => {
+    it('should buffer a small object into a Buffer', async () => {
+      mockSend.mockResolvedValue({
+        Body: Readable.from([Buffer.from('hello '), Buffer.from('world')]),
+      });
+
+      const buffer = await provider.get('test/file.txt');
+
+      expect(buffer).toEqual(Buffer.from('hello world'));
+    });
+
+    it('should throw R2ObjectTooLargeProblem when buffered bytes exceed the limit', async () => {
+      const oversizedChunk = Buffer.alloc(6 * 1024 * 1024, 'a');
+      mockSend.mockResolvedValue({
+        Body: Readable.from([oversizedChunk, oversizedChunk]),
+      });
+
+      const getPromise = provider.get('test/file.txt');
+
+      await expect(getPromise).rejects.toThrow(R2ObjectTooLargeProblem);
+      await expect(getPromise).rejects.toThrow(
+        "R2 object 'test/file.txt' exceeds the in-memory download limit of 10485760 bytes"
+      );
     });
   });
 });
