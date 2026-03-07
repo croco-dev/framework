@@ -32,6 +32,7 @@
  * ```
  */
 export * from './libs/DrizzleSearchEngine';
+export * from './libs/problems/InvalidSearchRowProblem';
 
 /**
  * @description

@@ -1,10 +1,17 @@
 import type { ExecutionManager } from '@croco/execution-core';
 import { Container, MetadataStorage } from '@croco/framework-context';
+import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { CronTriggerMetadata } from '@croco/triggers-core';
 import { triggerRegistry } from '@croco/triggers-core';
 import type { Receiver } from '@upstash/qstash';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QStashTriggerHandler } from '../libs/QStashTriggerHandler';
+
+class TestTriggerProblem extends Problem {
+  constructor() {
+    super('trigger/test-problem', ProblemCategory.Conflict, 'trigger failed');
+  }
+}
 
 describe('QStashTriggerHandler', () => {
   beforeEach(() => {
@@ -244,8 +251,67 @@ describe('QStashTriggerHandler', () => {
     expect(result.statusCode).toBe(500);
     expect(result.body).toEqual({
       error: 'Execution failed',
+      code: 'triggers-qstash/execution-failed',
+      category: ProblemCategory.InternalServerError,
     });
     expect(executionManager.create).not.toHaveBeenCalled();
+  });
+
+  it('Problem 예외는 안전한 code/category와 statusCode를 유지해야 한다', async () => {
+    class ProblemHandler {
+      async execute(): Promise<string> {
+        throw new TestTriggerProblem();
+      }
+    }
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'execute',
+      target: ProblemHandler.prototype,
+      options: {},
+    });
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const executionManager = {
+      create: vi.fn().mockResolvedValue({ id: 'exec-problem' }),
+      start: vi.fn().mockResolvedValue({}),
+      complete: vi.fn().mockResolvedValue({}),
+      fail: vi.fn().mockResolvedValue({}),
+      cancel: vi.fn().mockResolvedValue({}),
+      retry: vi.fn().mockResolvedValue({}),
+      updateProgress: vi.fn().mockResolvedValue({}),
+      checkpoint: vi.fn().mockResolvedValue({}),
+      timeout: vi.fn().mockResolvedValue({}),
+    } as unknown as ExecutionManager;
+
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+      serviceResolver: () => new ProblemHandler(),
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: 'schedule-problem',
+        className: 'ProblemHandler',
+        methodName: 'execute',
+        cronExpression: '* * * * *',
+        timestamp: new Date().toISOString(),
+      }),
+      'valid-signature'
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toEqual({
+      error: 'Execution failed',
+      code: 'trigger/test-problem',
+      category: ProblemCategory.Conflict,
+    });
   });
 
   it('기본 serviceResolver는 DI 해석 실패를 숨기지 않고 500으로 반환해야 한다', async () => {
@@ -304,7 +370,8 @@ describe('QStashTriggerHandler', () => {
     expect(result.statusCode).toBe(500);
     expect(result.body).toEqual({
       error: 'Execution failed',
-      details: 'Container resolution failed',
+      code: 'triggers-qstash/service-resolution-failed',
+      category: ProblemCategory.InternalServerError,
     });
     expect(executionManager.create).not.toHaveBeenCalled();
   });

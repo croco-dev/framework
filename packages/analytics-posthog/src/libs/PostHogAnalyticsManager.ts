@@ -1,10 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { AnalyticsManager } from '@croco/analytics-core';
-import { Component, Context } from '@croco/framework-context';
+import { Component, Container, Context } from '@croco/framework-context';
+import { Logger } from '@croco/framework-logger';
 import type { PostHogClient } from '@croco/integrations-posthog';
 
 @Component()
 export class PostHogAnalyticsManager extends AnalyticsManager {
-  constructor(private readonly posthogClient: PostHogClient) {
+  constructor(
+    private readonly posthogClient: PostHogClient,
+    private readonly logger: Logger = Container.get(Logger)
+  ) {
     super();
   }
 
@@ -12,12 +17,20 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     const distinctId = this.getDistinctId(properties);
     const groups = this.getGroups(properties);
 
-    this.posthogClient.getClient().capture({
-      distinctId,
-      event,
-      properties,
-      groups,
-    });
+    try {
+      const result = this.posthogClient.getClient().capture({
+        distinctId,
+        event,
+        properties,
+        groups,
+      });
+
+      Promise.resolve(result).catch((error: unknown) => {
+        this.logCaptureFailure(event, error);
+      });
+    } catch (error) {
+      this.logCaptureFailure(event, error);
+    }
   }
 
   identify(distinctId: string, properties?: Record<string, unknown>): void {
@@ -41,10 +54,13 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     const user = Context.getCurrentUser();
     if (user?.id) return user.id;
 
+    const requestId = Context.getRequestId();
+    if (requestId) return `anonymous:${requestId}`;
+
     const tenantId = Context.getTenantId();
     if (tenantId) return `tenant:${tenantId}`;
 
-    return 'anonymous';
+    return `anonymous:${randomUUID()}`;
   }
 
   private getGroups(properties?: Record<string, unknown>): Record<string, string> | undefined {
@@ -56,5 +72,12 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     }
 
     return undefined;
+  }
+
+  private logCaptureFailure(event: string, error: unknown): void {
+    this.logger.warn('PostHog capture failed', {
+      event,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }

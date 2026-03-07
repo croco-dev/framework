@@ -1,11 +1,17 @@
-import { Service, Container as TypeDIContainer } from 'typedi';
+import {
+  type Service,
+  type ServiceIdentifier,
+  type Token,
+  Container as TypeDIContainer,
+  type ContainerInstance as TypeDIContainerInstance,
+} from 'typedi';
 import 'reflect-metadata';
 import { ProblemFactory } from '@croco/problems-core';
 import { Context } from './Context';
 import { MetadataStorage } from './MetadataStorage';
 import type { ComponentMetadata, Constructor, Scope } from './types';
 
-export type TokenIdentifier<T> = Constructor<T> | import('typedi').Token<T>;
+export type TokenIdentifier<T> = Constructor<T> | Token<T> | string;
 
 const COMPONENT_METADATA_KEY = Symbol('component:metadata');
 
@@ -14,6 +20,10 @@ export class Container {
 
   static get<T>(token: TokenIdentifier<T>): T {
     if (!(token instanceof Function)) {
+      if (typeof token === 'string') {
+        return TypeDIContainer.get(token);
+      }
+
       return TypeDIContainer.get(token);
     }
 
@@ -154,9 +164,36 @@ export class Container {
   }
 
   private static createTransientInstance<T>(token: Constructor<T>): T {
-    const paramTypes = (Reflect.getMetadata('design:paramtypes', token) as Constructor[] | undefined) ?? [];
-    const dependencies = paramTypes.map((paramType: Constructor) => Container.get(paramType));
+    const dependencies = Container.resolveDependencies(token);
     return new token(...dependencies);
+  }
+
+  private static resolveDependencies<T>(token: Constructor<T>): unknown[] {
+    const paramTypes = (Reflect.getMetadata('design:paramtypes', token) as Constructor[] | undefined) ?? [];
+    const handlerContainer = Container.createHandlerContainer();
+
+    return paramTypes.map((paramType: Constructor, index: number) => {
+      const handler = TypeDIContainer.handlers.find(
+        (candidate) =>
+          (candidate.object === token || candidate.object === Object.getPrototypeOf(token)) && candidate.index === index
+      );
+
+      if (handler) {
+        return handler.value(handlerContainer);
+      }
+
+      return Container.get(paramType);
+    });
+  }
+
+  private static createHandlerContainer(): TypeDIContainerInstance {
+    const containerLike = {
+      get<T>(id: ServiceIdentifier<T>): T {
+        return Container.get(id as TokenIdentifier<T>);
+      },
+    };
+
+    return containerLike as unknown as TypeDIContainerInstance;
   }
 
   private static getRequestScoped<T>(token: Constructor<T>): T {
@@ -180,4 +217,4 @@ export class Container {
   }
 }
 
-export { Service };
+export type { Service };
