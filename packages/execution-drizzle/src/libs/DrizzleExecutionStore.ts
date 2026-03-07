@@ -133,23 +133,25 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> implements Execution
   }
 
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
+    const updateData = {
+      ...(data.status !== undefined ? { status: data.status } : {}),
+      ...(data.payload !== undefined ? { payload: data.payload } : {}),
+      ...(data.result !== undefined ? { result: data.result } : {}),
+      ...(data.error !== undefined ? { error: data.error } : {}),
+      ...(data.attempts !== undefined ? { attempts: data.attempts } : {}),
+      ...(data.maxAttempts !== undefined ? { maxAttempts: data.maxAttempts } : {}),
+      ...(data.startedAt !== undefined ? { startedAt: data.startedAt } : {}),
+      ...(data.completedAt !== undefined ? { completedAt: data.completedAt } : {}),
+      ...(data.scheduledFor !== undefined ? { scheduledFor: data.scheduledFor } : {}),
+      ...(data.timeout !== undefined ? { timeout: data.timeout } : {}),
+      ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
+      ...(data.checkpoints !== undefined ? { checkpoints: data.checkpoints } : {}),
+      ...(data.progress !== undefined ? { progress: data.progress } : {}),
+    };
+
     const result = (await this.dbOp
       .update(executions)
-      .set({
-        status: data.status,
-        payload: data.payload ?? null,
-        result: data.result ?? null,
-        error: data.error ?? null,
-        attempts: data.attempts,
-        maxAttempts: data.maxAttempts,
-        startedAt: data.startedAt ?? null,
-        completedAt: data.completedAt ?? null,
-        scheduledFor: data.scheduledFor ?? null,
-        timeout: data.timeout ?? null,
-        metadata: data.metadata ?? null,
-        checkpoints: data.checkpoints ?? null,
-        progress: data.progress ?? null,
-      })
+      .set(updateData)
       .where(eq(executions.id, id))
       .returning()) as ExecutionRow[];
 
