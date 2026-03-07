@@ -12,9 +12,7 @@ import {
   LastOwnerProblem,
   MembershipNotFoundProblem,
 } from './problems/MembershipProblems';
-import type { Membership, MembershipRole } from './types';
-
-const VALID_ROLES: MembershipRole[] = ['owner', 'admin', 'member', 'viewer'];
+import { isMembershipRole, type Membership, type MembershipRole } from './types';
 
 @Component()
 export class MembershipManager {
@@ -119,7 +117,7 @@ export class MembershipManager {
   }
 
   private ensureValidRole(role: string): void {
-    if (!VALID_ROLES.includes(role as MembershipRole)) {
+    if (!isMembershipRole(role)) {
       throw new InvalidRoleProblem(role);
     }
   }
