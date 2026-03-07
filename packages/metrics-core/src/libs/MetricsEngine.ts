@@ -1,7 +1,16 @@
-import type { PlanRegistry, Subscription } from '@croco/billing-core';
-import type { CCComparisonResult, CCResult, Money, MRRMovement, MRRMovementType, Percentage, Period } from '../types';
+import type {
+  CCComparisonResult,
+  CCResult,
+  Money,
+  MRRMovement,
+  MRRMovementType,
+  Percentage,
+  Period,
+  SubscriptionSnapshot,
+} from '../types';
 import type { CarryingCapacityCalculator, SimulationConfig, UserCCConfig } from './CarryingCapacityCalculator';
 import type { GrowthCalculator } from './GrowthCalculator';
+import type { PlanProvider } from './interfaces/PlanProvider';
 import type { LtvCalculator, LtvConfig } from './LtvCalculator';
 import type { MrrCalculator } from './MrrCalculator';
 import type { RetentionCalculator } from './RetentionCalculator';
@@ -40,8 +49,8 @@ export class MetricsEngine {
    * @param planRegistry - Registry to look up plan pricing details
    * @returns Total MRR as Money value
    */
-  async calculateMRR(subscriptions: Subscription[], planRegistry: PlanRegistry): Promise<Money> {
-    return this.mrrCalculator.calculateMRR(subscriptions, planRegistry);
+  async calculateMRR(subscriptions: SubscriptionSnapshot[], planProvider: PlanProvider): Promise<Money> {
+    return this.mrrCalculator.calculateMRR(subscriptions, planProvider);
   }
 
   /**

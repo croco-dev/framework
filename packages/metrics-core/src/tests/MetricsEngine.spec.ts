@@ -1,13 +1,13 @@
-import type { PlanRegistry, Subscription } from '@croco/billing-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CarryingCapacityCalculator, SimulationConfig, UserCCConfig } from '../libs/CarryingCapacityCalculator';
 import type { GrowthCalculator } from '../libs/GrowthCalculator';
+import type { PlanProvider } from '../libs/interfaces/PlanProvider';
 import type { LtvCalculator, LtvConfig } from '../libs/LtvCalculator';
 import { MetricsEngine } from '../libs/MetricsEngine';
 import type { MrrCalculator } from '../libs/MrrCalculator';
 import type { RetentionCalculator } from '../libs/RetentionCalculator';
 import type { SnapshotInput, SnapshotScheduler } from '../libs/SnapshotScheduler';
-import type { Money, MRRMovement } from '../types';
+import type { Money, MRRMovement, SubscriptionSnapshot } from '../types';
 
 describe('MetricsEngine', () => {
   let engine!: MetricsEngine;
@@ -60,26 +60,20 @@ describe('MetricsEngine', () => {
 
   describe('MRR Methods', () => {
     it('should delegate calculateMRR to MrrCalculator', async () => {
-      const subscriptions: Subscription[] = [
+      const subscriptions: SubscriptionSnapshot[] = [
         {
           id: 'sub_1',
-          billingAccountId: 'ba_1',
-          externalSubscriptionId: 'ext_1',
           planId: 'plan_monthly_10',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01'),
-          cancelAtPeriodEnd: false,
-          lastSyncedAt: new Date(),
         },
       ];
-      const planRegistry = {} as PlanRegistry;
+      const planProvider = {} as PlanProvider;
       const expected: Money = { amount: 1000, currency: 'USD' };
       vi.mocked(mockMrrCalculator.calculateMRR).mockResolvedValue(expected);
 
-      const result = await engine.calculateMRR(subscriptions, planRegistry);
+      const result = await engine.calculateMRR(subscriptions, planProvider);
 
       expect(result).toEqual(expected);
-      expect(mockMrrCalculator.calculateMRR).toHaveBeenCalledWith(subscriptions, planRegistry);
+      expect(mockMrrCalculator.calculateMRR).toHaveBeenCalledWith(subscriptions, planProvider);
     });
 
     it('should delegate getMRRMovement to MrrCalculator', () => {
@@ -218,7 +212,7 @@ describe('MetricsEngine', () => {
     it('should delegate captureSnapshot to SnapshotScheduler without tenantId', async () => {
       const input: SnapshotInput = {
         subscriptions: [],
-        planRegistry: {} as PlanRegistry,
+        planProvider: {} as PlanProvider,
         activeCustomers: 100,
       };
       const date = new Date('2026-02-01');
@@ -232,7 +226,7 @@ describe('MetricsEngine', () => {
     it('should delegate captureSnapshot to SnapshotScheduler with tenantId', async () => {
       const input: SnapshotInput = {
         subscriptions: [],
-        planRegistry: {} as PlanRegistry,
+        planProvider: {} as PlanProvider,
         activeCustomers: 100,
       };
       const date = new Date('2026-02-01');
@@ -247,7 +241,7 @@ describe('MetricsEngine', () => {
     it('should delegate captureSnapshot to SnapshotScheduler with default date', async () => {
       const input: SnapshotInput = {
         subscriptions: [],
-        planRegistry: {} as PlanRegistry,
+        planProvider: {} as PlanProvider,
         activeCustomers: 100,
       };
       vi.mocked(mockSnapshotScheduler.captureSnapshot).mockResolvedValue(undefined);

@@ -1,5 +1,5 @@
-import type { PlanInterval, PlanRegistry, Subscription } from '@croco/billing-core';
-import type { Money } from '../types';
+import type { Money, SubscriptionSnapshot } from '../types';
+import type { PlanProvider } from './interfaces/PlanProvider';
 
 /**
  * Calculator for Monthly Recurring Revenue (MRR).
@@ -15,12 +15,12 @@ export class MrrCalculator {
    * @param planRegistry - Registry to look up plan pricing details
    * @returns Total MRR as Money value
    */
-  async calculateMRR(subscriptions: Subscription[], planRegistry: PlanRegistry): Promise<Money> {
+  async calculateMRR(subscriptions: SubscriptionSnapshot[], planProvider: PlanProvider): Promise<Money> {
     let totalAmount = 0;
     let currency = 'USD';
 
     for (const subscription of subscriptions) {
-      const plan = await planRegistry.getPlan(subscription.planId);
+      const plan = await planProvider.getPlan(subscription.planId);
       if (plan === null) {
         continue;
       }
@@ -42,7 +42,7 @@ export class MrrCalculator {
    * @param intervalCount - Number of intervals per billing cycle
    * @returns Normalized monthly MRR amount
    */
-  normalizeMRR(amount: number, interval: PlanInterval, intervalCount: number): number {
+  normalizeMRR(amount: number, interval: 'month' | 'year', intervalCount: number): number {
     if (interval === 'year') {
       return amount / intervalCount / 12;
     }

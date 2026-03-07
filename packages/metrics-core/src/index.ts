@@ -20,14 +20,10 @@ export { CarryingCapacityCalculator } from './libs/CarryingCapacityCalculator';
 export { GrowthCalculator } from './libs/GrowthCalculator';
 
 /**
- * 결제 이벤트를 수신해 메트릭 갱신 흐름으로 연결하는 핸들러입니다.
- */
-export { BillingEventHandler } from './libs/handlers/BillingEventHandler';
-
-/**
  * 활성 사용자 수 조회를 위한 데이터 소스 계약입니다.
  */
 export type { ActiveUserProvider } from './libs/interfaces/ActiveUserProvider';
+export type { PlanProvider } from './libs/interfaces/PlanProvider';
 // Interfaces
 
 /**
@@ -106,5 +102,7 @@ export type {
   MRRMovementType,
   Percentage,
   Period,
+  PlanSnapshot,
   RetentionMetrics,
+  SubscriptionSnapshot,
 } from './types';

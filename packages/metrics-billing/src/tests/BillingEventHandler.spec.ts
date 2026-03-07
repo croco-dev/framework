@@ -1,9 +1,8 @@
 import type { BillingStore, Plan, PlanRegistry } from '@croco/billing-core';
 import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from '@croco/billing-core';
+import type { MetricsRepository, MRRMovement } from '@croco/metrics-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BillingEventHandler } from '../libs/handlers/BillingEventHandler';
-import type { MetricsRepository } from '../libs/interfaces/MetricsRepository';
-import type { MRRMovement } from '../types';
+import { BillingEventHandler } from '../libs/BillingEventHandler';
 
 describe('BillingEventHandler', () => {
   let handler!: BillingEventHandler;
@@ -157,7 +156,7 @@ describe('BillingEventHandler', () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id) => {
+      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
         if (id === 'plan-basic') return Promise.resolve(basicPlan);
         if (id === 'plan-pro') return Promise.resolve(mockPlan);
         return Promise.resolve(null);
@@ -186,7 +185,7 @@ describe('BillingEventHandler', () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id) => {
+      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
         if (id === 'plan-basic') return Promise.resolve(basicPlan);
         if (id === 'plan-pro') return Promise.resolve(mockPlan);
         return Promise.resolve(null);
@@ -215,7 +214,7 @@ describe('BillingEventHandler', () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id) => {
+      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
         if (id === 'plan-basic') return Promise.resolve(basicPlan);
         if (id === 'plan-pro') return Promise.resolve(mockPlan);
         return Promise.resolve(null);

@@ -1,6 +1,6 @@
-import type { PlanRegistry, Subscription } from '@croco/billing-core';
-import type { MetricsSnapshot, MRRMovement } from '../types';
+import type { MetricsSnapshot, MRRMovement, SubscriptionSnapshot } from '../types';
 import type { MetricsRepository } from './interfaces/MetricsRepository';
+import type { PlanProvider } from './interfaces/PlanProvider';
 import { MrrCalculator } from './MrrCalculator';
 
 export type SnapshotSchedulerConfig = {
@@ -9,8 +9,8 @@ export type SnapshotSchedulerConfig = {
 };
 
 export type SnapshotInput = {
-  subscriptions: Subscription[];
-  planRegistry: PlanRegistry;
+  subscriptions: SubscriptionSnapshot[];
+  planProvider: PlanProvider;
   activeCustomers: number;
 };
 
@@ -23,10 +23,10 @@ export class SnapshotScheduler {
     config?: SnapshotSchedulerConfig
   ): Promise<void> {
     const { tenantId, retentionLookbackDays = 30 } = config ?? {};
-    const { subscriptions, planRegistry, activeCustomers } = input;
+    const { subscriptions, planProvider, activeCustomers } = input;
 
     const mrrCalculator = new MrrCalculator();
-    const totalMRR = await mrrCalculator.calculateMRR(subscriptions, planRegistry);
+    const totalMRR = await mrrCalculator.calculateMRR(subscriptions, planProvider);
 
     const snapshotDate = new Date(date);
     snapshotDate.setHours(0, 0, 0, 0);

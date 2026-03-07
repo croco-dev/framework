@@ -1,5 +1,5 @@
 {
-  "name": "@croco/metrics-core",
+  "name": "@croco/metrics-billing",
   "version": "0.1.0",
   "type": "commonjs",
   "main": "./dist/index.js",
@@ -19,9 +19,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/billing-core": "workspace:*",
     "@croco/events-core": "workspace:*",
-    "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/metrics-core": "workspace:*"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

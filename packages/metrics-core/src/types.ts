@@ -166,3 +166,16 @@ export type MetricsSnapshot = {
   /** Optional: MRR movement breakdown for this period */
   movement?: MRRMovement;
 };
+
+export type SubscriptionSnapshot = {
+  id: string;
+  planId: string;
+};
+
+export type PlanSnapshot = {
+  id: string;
+  amount: number;
+  currency: string;
+  interval: 'month' | 'year';
+  intervalCount: number;
+};

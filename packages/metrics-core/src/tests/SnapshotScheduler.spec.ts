@@ -1,24 +1,18 @@
-import type { PlanRegistry, Subscription } from '@croco/billing-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRepository } from '../libs/interfaces/MetricsRepository';
+import type { PlanProvider } from '../libs/interfaces/PlanProvider';
 import { SnapshotScheduler } from '../libs/SnapshotScheduler';
-import type { MRRMovement } from '../types';
+import type { MRRMovement, SubscriptionSnapshot } from '../types';
 
 describe('SnapshotScheduler', () => {
   let scheduler!: SnapshotScheduler;
   let mockRepository!: MetricsRepository;
-  let mockPlanRegistry!: PlanRegistry;
+  let mockPlanProvider!: PlanProvider;
 
-  const mockSubscriptions: Subscription[] = [
+  const mockSubscriptions: SubscriptionSnapshot[] = [
     {
       id: 'sub_1',
-      billingAccountId: 'ba_1',
-      externalSubscriptionId: 'ext_1',
       planId: 'plan_pro',
-      status: 'active',
-      currentPeriodEnd: new Date('2025-02-01'),
-      cancelAtPeriodEnd: false,
-      lastSyncedAt: new Date('2025-01-01'),
     },
   ];
 
@@ -40,17 +34,14 @@ describe('SnapshotScheduler', () => {
       getRetentionMetrics: vi.fn(),
     };
 
-    mockPlanRegistry = {
+    mockPlanProvider = {
       getPlan: vi.fn().mockResolvedValue({
         id: 'plan_pro',
-        name: 'Pro Plan',
         amount: 2900,
         currency: 'USD',
         interval: 'month',
         intervalCount: 1,
       }),
-      getAllPlans: vi.fn(),
-      getPlanAtDate: vi.fn(),
     };
 
     scheduler = new SnapshotScheduler(mockRepository);
@@ -64,7 +55,7 @@ describe('SnapshotScheduler', () => {
 
     const input = {
       subscriptions: mockSubscriptions,
-      planRegistry: mockPlanRegistry,
+      planProvider: mockPlanProvider,
       activeCustomers: 10,
     };
 
@@ -82,7 +73,7 @@ describe('SnapshotScheduler', () => {
 
     const input = {
       subscriptions: mockSubscriptions,
-      planRegistry: mockPlanRegistry,
+      planProvider: mockPlanProvider,
       activeCustomers: 10,
     };
 
@@ -105,7 +96,7 @@ describe('SnapshotScheduler', () => {
 
     const input = {
       subscriptions: mockSubscriptions,
-      planRegistry: mockPlanRegistry,
+      planProvider: mockPlanProvider,
       activeCustomers: 5,
     };
 
@@ -123,7 +114,7 @@ describe('SnapshotScheduler', () => {
 
     const input = {
       subscriptions: mockSubscriptions,
-      planRegistry: mockPlanRegistry,
+      planProvider: mockPlanProvider,
       activeCustomers: 10,
     };
 
@@ -142,7 +133,7 @@ describe('SnapshotScheduler', () => {
 
     const input = {
       subscriptions: mockSubscriptions,
-      planRegistry: mockPlanRegistry,
+      planProvider: mockPlanProvider,
       activeCustomers: 10,
     };
 

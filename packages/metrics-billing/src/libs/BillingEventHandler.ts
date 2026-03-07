@@ -1,33 +1,51 @@
 import type { BillingStore, PlanRegistry } from '@croco/billing-core';
 import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from '@croco/billing-core';
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from '@croco/events-core';
-import type { Money, MRRMovement } from '../../types';
-import type { MetricsRepository } from '../interfaces/MetricsRepository';
-import { MrrCalculator } from '../MrrCalculator';
+import type { MetricsRepository, Money, PlanProvider } from '@croco/metrics-core';
+import { MrrCalculator } from '@croco/metrics-core';
 
 @RegisterEventHandler(OrderPaidEvent)
 @RegisterEventHandler(PlanChangedEvent)
 @RegisterEventHandler(SubscriptionCanceledEvent)
 export class BillingEventHandler
-  implements EventHandler<OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent>
+  implements EventHandler<OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent>, PlanProvider
 {
-  private readonly calculator: MrrCalculator;
+  private readonly calculator = new MrrCalculator();
   private readonly processedEventIds: Set<string> = new Set();
 
   constructor(
     private readonly planRegistry: PlanRegistry,
     private readonly billingStore: BillingStore,
     private readonly metricsRepository: MetricsRepository
-  ) {
-    this.calculator = new MrrCalculator();
+  ) {}
+
+  async getPlan(planId: string) {
+    const plan = await this.planRegistry.getPlan(planId);
+    if (plan === null) {
+      return null;
+    }
+
+    return {
+      id: plan.id,
+      amount: plan.amount,
+      currency: plan.currency,
+      interval: plan.interval,
+      intervalCount: plan.intervalCount,
+    };
   }
 
   async handle(event: DomainEvent): Promise<void> {
     if (event instanceof OrderPaidEvent) {
       await this.handleOrderPaid(event);
-    } else if (event instanceof PlanChangedEvent) {
+      return;
+    }
+
+    if (event instanceof PlanChangedEvent) {
       await this.handlePlanChanged(event);
-    } else if (event instanceof SubscriptionCanceledEvent) {
+      return;
+    }
+
+    if (event instanceof SubscriptionCanceledEvent) {
       await this.handleSubscriptionCanceled(event);
     }
   }
@@ -48,18 +66,16 @@ export class BillingEventHandler
       return;
     }
 
-    const plan = await this.planRegistry.getPlan(subscription.planId);
+    const plan = await this.getPlan(subscription.planId);
     if (plan === null) {
       return;
     }
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
-
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, 'new');
 
     await this.metricsRepository.recordMRRMovement(event.tenantId, movement, new Date());
-
     this.processedEventIds.add(eventId);
   }
 
@@ -79,9 +95,8 @@ export class BillingEventHandler
       return;
     }
 
-    const previousPlan = await this.planRegistry.getPlan(event.previousPlanId);
-    const newPlan = await this.planRegistry.getPlan(event.newPlanId);
-
+    const previousPlan = await this.getPlan(event.previousPlanId);
+    const newPlan = await this.getPlan(event.newPlanId);
     if (previousPlan === null || newPlan === null) {
       return;
     }
@@ -91,9 +106,7 @@ export class BillingEventHandler
       previousPlan.interval,
       previousPlan.intervalCount
     );
-
     const newMrrAmount = this.calculator.normalizeMRR(newPlan.amount, newPlan.interval, newPlan.intervalCount);
-
     const movementType = this.calculator.classifyMRRMovement(true, false, previousMrrAmount, newMrrAmount);
 
     const mrrDiff = Math.abs(newMrrAmount - previousMrrAmount);
@@ -101,7 +114,6 @@ export class BillingEventHandler
     const movement = this.createMRRMovement(mrr, movementType);
 
     await this.metricsRepository.recordMRRMovement(event.tenantId, movement, new Date());
-
     this.processedEventIds.add(eventId);
   }
 
@@ -116,25 +128,20 @@ export class BillingEventHandler
       return;
     }
 
-    const plan = await this.planRegistry.getPlan(subscription.planId);
+    const plan = await this.getPlan(subscription.planId);
     if (plan === null) {
       return;
     }
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
-
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, 'churned');
 
     await this.metricsRepository.recordMRRMovement(event.tenantId, movement, new Date());
-
     this.processedEventIds.add(eventId);
   }
 
-  private createMRRMovement(
-    mrr: Money,
-    type: 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation'
-  ): MRRMovement {
+  private createMRRMovement(mrr: Money, type: 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation') {
     const empty: Money = { amount: 0, currency: mrr.currency };
 
     switch (type) {
