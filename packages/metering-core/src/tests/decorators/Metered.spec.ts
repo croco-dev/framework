@@ -1,12 +1,20 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getMeteredMetadata, getMeteringService, Metered, setMeteringService } from '../../libs/decorators/Metered';
+import {
+  clearMeteringService,
+  getMeteredMetadata,
+  getMeteringService,
+  Metered,
+  runWithMeteringService,
+  setMeteringService,
+} from '../../libs/decorators/Metered';
 import type { MeteringService } from '../../libs/MeteringService';
 
 describe('@Metered decorator', () => {
   let mockService!: MeteringService;
 
   beforeEach(() => {
+    clearMeteringService();
     mockService = {
       record: vi.fn().mockResolvedValue({ id: 'usage-123' }),
       getUsage: vi.fn().mockResolvedValue(0),
@@ -169,7 +177,7 @@ describe('@Metered decorator', () => {
 
   describe('without MeteringService', () => {
     it('should work without MeteringService set', async () => {
-      setMeteringService(null as unknown as MeteringService);
+      clearMeteringService();
 
       class TestService {
         @Metered({ meterId: 'api_calls' })
@@ -214,6 +222,59 @@ describe('@Metered decorator', () => {
       setMeteringService(mockService);
 
       expect(getMeteringService()).toBe(mockService);
+    });
+  });
+
+  describe('runWithMeteringService', () => {
+    it('should prefer scoped service over global default', async () => {
+      const scopedService = {
+        record: vi.fn().mockResolvedValue({ id: 'usage-scoped' }),
+        getUsage: vi.fn().mockResolvedValue(0),
+      } as unknown as MeteringService;
+
+      class TestService {
+        tenantId = 'tenant-1';
+
+        @Metered({ meterId: 'api_calls' })
+        async doSomething(): Promise<string> {
+          return 'result';
+        }
+      }
+
+      const service = new TestService();
+
+      await runWithMeteringService(scopedService, async () => {
+        await service.doSomething();
+      });
+
+      expect(scopedService.record).toHaveBeenCalledTimes(1);
+      expect(mockService.record).not.toHaveBeenCalled();
+    });
+
+    it('should restore the global default after scoped execution ends', async () => {
+      const scopedService = {
+        record: vi.fn().mockResolvedValue({ id: 'usage-scoped' }),
+        getUsage: vi.fn().mockResolvedValue(0),
+      } as unknown as MeteringService;
+
+      class TestService {
+        tenantId = 'tenant-1';
+
+        @Metered({ meterId: 'api_calls' })
+        async doSomething(): Promise<string> {
+          return 'result';
+        }
+      }
+
+      const service = new TestService();
+
+      await runWithMeteringService(scopedService, async () => {
+        await service.doSomething();
+      });
+      await service.doSomething();
+
+      expect(scopedService.record).toHaveBeenCalledTimes(1);
+      expect(mockService.record).toHaveBeenCalledTimes(1);
     });
   });
 });

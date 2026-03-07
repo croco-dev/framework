@@ -117,10 +117,12 @@ export type { MeteredMetadata, MeteredOptions } from './libs/decorators/Metered'
  * ```
  */
 export {
+  clearMeteringService,
   getMeteredMetadata,
   getMeteringService,
   METERED_METADATA_KEY,
   Metered,
+  runWithMeteringService,
   setMeteringService,
 } from './libs/decorators/Metered';
 
