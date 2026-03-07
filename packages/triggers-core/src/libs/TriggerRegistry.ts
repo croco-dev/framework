@@ -19,7 +19,7 @@ export class TriggerRegistry {
   }
 
   register(metadata: AnyTriggerMetadata): void {
-    MetadataStorage.define(TRIGGER_METADATA_KEY, metadata.target, metadata, metadata.methodName);
+    MetadataStorage.define(TRIGGER_METADATA_KEY, metadata.target, this.cloneMetadata(metadata), metadata.methodName);
   }
 
   getTriggers(target: object): Map<string | symbol, AnyTriggerMetadata> {
@@ -51,7 +51,7 @@ export class TriggerRegistry {
 
       const targetMap = result.get(target);
       if (targetMap && entry.propertyKey) {
-        targetMap.set(entry.propertyKey, entry.value);
+        targetMap.set(entry.propertyKey, this.cloneMetadata(entry.value));
       }
     }
 
@@ -64,7 +64,10 @@ export class TriggerRegistry {
       ...MetadataStorage.getAllForTarget<AnyTriggerMetadata>(CRON_METADATA_KEY, target),
       ...MetadataStorage.getAllForTarget<AnyTriggerMetadata>(EVENT_METADATA_KEY, target),
       ...MetadataStorage.getAllForTarget<AnyTriggerMetadata>(WEBHOOK_METADATA_KEY, target),
-    ];
+    ].map((entry) => ({
+      propertyKey: entry.propertyKey,
+      value: this.cloneMetadata(entry.value),
+    }));
   }
 
   private getAllEntries(): Array<{ target: object; propertyKey?: string | symbol; value: AnyTriggerMetadata }> {
@@ -76,7 +79,7 @@ export class TriggerRegistry {
     ].map((entry) => ({
       target: entry.target as object,
       propertyKey: entry.propertyKey,
-      value: entry.value,
+      value: this.cloneMetadata(entry.value),
     }));
   }
 
@@ -87,11 +90,39 @@ export class TriggerRegistry {
 
     for (const entry of entries) {
       if (entry.propertyKey) {
-        map.set(entry.propertyKey, entry.value);
+        map.set(entry.propertyKey, this.cloneMetadata(entry.value));
       }
     }
 
     return map;
+  }
+
+  private cloneMetadata<T>(value: T): T {
+    if (value === null || value === undefined || typeof value !== 'object') {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.cloneMetadata(item)) as T;
+    }
+
+    if (value instanceof Date) {
+      return new Date(value.getTime()) as T;
+    }
+
+    const cloned = {} as Record<string | symbol, unknown>;
+    const source = value as Record<string | symbol, unknown>;
+
+    for (const key of Reflect.ownKeys(value)) {
+      if (key === 'target') {
+        cloned[key] = source[key];
+        continue;
+      }
+
+      cloned[key] = this.cloneMetadata(source[key]);
+    }
+
+    return cloned as T;
   }
 }
 
