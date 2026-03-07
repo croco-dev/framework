@@ -73,6 +73,20 @@ export class InMemoryCacheStore<V = unknown> implements CacheStore<V> {
     this.store.clear();
   }
 
+  async pruneExpired(): Promise<number> {
+    const now = Date.now();
+    let deletedCount = 0;
+
+    for (const [key, entry] of this.store.entries()) {
+      if (entry.expiresAt !== null && now > entry.expiresAt) {
+        this.store.delete(key);
+        deletedCount++;
+      }
+    }
+
+    return deletedCount;
+  }
+
   /**
    * Delete all keys matching a pattern.
    * Supports * as wildcard at the end of the pattern.
