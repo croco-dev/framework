@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
-  "include": ["src/**/*"],
+  "extends": "@croco/utils-tsconfig/tsconfig.node.json",
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

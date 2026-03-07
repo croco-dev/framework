@@ -31,7 +31,7 @@ function createMockEventPublisher(): EventPublisher {
 
 const mockValidateEvent = vi.fn();
 
-vi.mock('@polar-sh/sdk/dist/esm/webhooks.js', () => ({
+vi.mock('@polar-sh/sdk/webhooks', () => ({
   get validateEvent() {
     return mockValidateEvent;
   },
