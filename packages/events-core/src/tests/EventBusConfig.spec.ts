@@ -1,8 +1,9 @@
+import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus, EventSubscription } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
-import type { EventHandler, EventHandlerClass } from '../libs/EventHandler';
+import { type EventHandler, type EventHandlerClass, RegisterEventHandler } from '../libs/EventHandler';
 import type { HandlerResolver } from '../libs/HandlerResolver';
 
 class TestEvent extends DomainEvent {
@@ -43,6 +44,7 @@ class MockEventBus implements EventBus {
 describe('EventBusConfig', () => {
   beforeEach(() => {
     EventBusConfig.setInstance(new EventBusConfig());
+    MetadataStorage.clear();
   });
 
   describe('singleton pattern', () => {
@@ -148,23 +150,23 @@ describe('EventBusConfig', () => {
       );
     });
 
-    it('should register subscriptions from handlers array', async () => {
+    it('should register subscriptions from handlers array metadata', async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
-      config.subscribe({
-        eventName: 'TestEvent',
-        handlerClass: TestHandler as EventHandlerClass,
-      });
+      @RegisterEventHandler(TestEvent)
+      class DecoratedHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {}
+      }
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [DecoratedHandler] });
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
       const lastSub = mockBus.subscriptions[mockBus.subscriptions.length - 1];
       expect(lastSub.eventName).toBe('TestEvent');
-      expect(lastSub.handlerClass).toBe(TestHandler);
+      expect(lastSub.handlerClass).toBe(DecoratedHandler);
     });
 
     it('should use DefaultHandlerResolver when no resolver provided', async () => {
@@ -264,15 +266,15 @@ describe('EventBusConfig', () => {
 
       config.setEventBus(mockBus as EventBus);
 
-      config.subscribe({
-        eventName: 'TestEvent',
-        handlerClass: TestHandler as EventHandlerClass,
-      });
+      @RegisterEventHandler(TestEvent)
+      class DecoratedHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {}
+      }
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [DecoratedHandler] });
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
-      expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].handler).toBeInstanceOf(TestHandler);
+      expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].handler).toBeInstanceOf(DecoratedHandler);
     });
   });
 

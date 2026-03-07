@@ -1,3 +1,4 @@
+import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   AggregateRoot,
@@ -108,6 +109,7 @@ describe('EventBusConfig', () => {
   let config!: EventBusConfig;
 
   beforeEach(() => {
+    MetadataStorage.clear();
     config = EventBusConfig.getInstance();
   });
 
@@ -129,13 +131,28 @@ describe('EventBusConfig', () => {
     expect(config.getEventBus()).toBe(mockEventBus);
   });
 
-  it('should subscribe handlers via decorator', () => {
+  it('should subscribe handlers via decorator on start', async () => {
+    const subscriptions: { eventName: string; handlerClass: unknown }[] = [];
+    const mockEventBus = {
+      publish: async () => {},
+      subscribe: (sub: { eventName: string; handlerClass: unknown }) => {
+        subscriptions.push(sub);
+      },
+      unsubscribe: () => {},
+      clear: () => {},
+    };
+
     @RegisterEventHandler(TestEvent)
     class DecoratorTestHandler implements EventHandler<TestEvent> {
       async handle(): Promise<void> {}
     }
 
-    expect(DecoratorTestHandler).not.toBeUndefined();
+    config.setEventBus(mockEventBus);
+    await config.start({ handlers: [DecoratorTestHandler] });
+
+    expect(subscriptions).toHaveLength(1);
+    expect(subscriptions[0]?.eventName).toBe('TestEvent');
+    expect(subscriptions[0]?.handlerClass).toBe(DecoratorTestHandler);
   });
 
   it('should start event bus with subscriptions', async () => {
