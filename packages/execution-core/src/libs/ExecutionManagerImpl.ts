@@ -186,7 +186,6 @@ export class ExecutionManagerImpl implements ExecutionManager {
 
     return this.store.update(id, {
       status: targetStatus,
-      attempts: execution.attempts + 1,
       error: undefined, // Clear previous error
     });
   }

@@ -116,7 +116,7 @@ describe('ExecutionManagerImpl', () => {
       expect(started.startedAt).not.toBeUndefined();
     });
 
-    it('transitions retrying to running without incrementing attempts', async () => {
+    it('transitions retrying to running and increments attempts for the new run', async () => {
       const execution = await manager.create({ type: 'task', maxAttempts: 3 });
       await manager.start(execution.id);
       await manager.fail(execution.id, { message: 'error', retryable: true });
@@ -254,7 +254,7 @@ describe('ExecutionManagerImpl', () => {
   });
 
   describe('retry', () => {
-    it('transitions failed to retrying and increments attempts', async () => {
+    it('transitions failed to retrying without incrementing attempts', async () => {
       const execution = await manager.create({ type: 'task', maxAttempts: 3 });
       await manager.start(execution.id);
       await manager.fail(execution.id, { message: 'error', retryable: false });
@@ -262,7 +262,7 @@ describe('ExecutionManagerImpl', () => {
       const retrying = await manager.retry(execution.id);
 
       expect(retrying.status).toBe('retrying');
-      expect(retrying.attempts).toBe(2);
+      expect(retrying.attempts).toBe(1);
       expect(retrying.error).toBeUndefined();
     });
 
@@ -274,6 +274,19 @@ describe('ExecutionManagerImpl', () => {
       const retrying = await manager.retry(execution.id);
 
       expect(retrying.status).toBe('retrying');
+      expect(retrying.attempts).toBe(1);
+    });
+
+    it('increments attempts only once across retry and restart', async () => {
+      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: 'error', retryable: false });
+
+      const retrying = await manager.retry(execution.id);
+      const restarted = await manager.start(execution.id);
+
+      expect(retrying.attempts).toBe(1);
+      expect(restarted.attempts).toBe(2);
     });
 
     it('throws when max attempts exceeded', async () => {
