@@ -229,7 +229,7 @@ describe('BillingService', () => {
       expect(result).toEqual({ checkoutUrl: 'https://checkout.example.com/abc123' });
     });
 
-    it('BUG-09 should rollback created account when checkout creation fails', async () => {
+    it('BUG-09 should keep the created account when checkout creation fails after customer creation', async () => {
       const params = {
         billingAccountId: 'tenant-bug-09',
         email: 'bug09@example.com',
@@ -241,13 +241,20 @@ describe('BillingService', () => {
       vi.mocked(mockGateway.ensureCustomer).mockResolvedValue('ext-cust-bug-09');
       vi.mocked(mockGateway.createCheckout).mockRejectedValue(new Error('payment failed'));
 
-      await expect(service.createCheckout(params)).rejects.toBeInstanceOf(BillingCheckoutCreationProblem);
-      await expect(service.createCheckout(params)).rejects.toThrow(
+      const checkoutPromise = service.createCheckout(params);
+
+      await expect(checkoutPromise).rejects.toBeInstanceOf(BillingCheckoutCreationProblem);
+      await expect(checkoutPromise).rejects.toThrow(
         'Failed to create checkout for tenant tenant-bug-09: payment failed'
       );
 
       const account = await store.findAccountByTenantId('tenant-bug-09');
-      expect(account).toBeNull();
+      expect(account).toEqual({
+        id: 'tenant-bug-09',
+        externalCustomerId: 'ext-cust-bug-09',
+        email: 'bug09@example.com',
+        createdAt: expect.any(Date),
+      });
     });
   });
 
