@@ -13,7 +13,14 @@ export type AuthGuardOptions = {
 
 class AuthGuardProblem extends Problem {
   constructor(status: number, code: string, detail: string) {
-    super(code, status === 400 ? ProblemCategory.BadRequest : ProblemCategory.Unauthorized, detail);
+    const category =
+      status === 400
+        ? ProblemCategory.BadRequest
+        : status === 500
+          ? ProblemCategory.InternalServerError
+          : ProblemCategory.Unauthorized;
+
+    super(code, category, detail);
   }
 }
 
@@ -23,6 +30,29 @@ function unauthorized(code: string, detail: string): AuthGuardProblem {
 
 function badRequest(code: string, detail: string): AuthGuardProblem {
   return new AuthGuardProblem(400, code, detail);
+}
+
+function verifierUnavailable(detail: string): AuthGuardProblem {
+  return new AuthGuardProblem(500, 'AUTH_VERIFIER_UNAVAILABLE', detail);
+}
+
+function isTokenVerificationError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const name = error.name.toUpperCase();
+  const message = error.message.toLowerCase();
+
+  return (
+    name.startsWith('ERR_JWT_') ||
+    name.startsWith('ERR_JWS_') ||
+    name.startsWith('ERR_JWE_') ||
+    message.includes('token expired') ||
+    message.includes('invalid token') ||
+    message.includes('jwt expired') ||
+    message.includes('token invalid')
+  );
 }
 
 export class AuthGuard implements Guard<ExecutionContext> {
@@ -64,8 +94,12 @@ export class AuthGuard implements Guard<ExecutionContext> {
       }
 
       return true;
-    } catch {
-      throw unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired token');
+    } catch (error) {
+      if (isTokenVerificationError(error)) {
+        throw unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired token');
+      }
+
+      throw verifierUnavailable('Authentication verifier is unavailable');
     }
   }
 

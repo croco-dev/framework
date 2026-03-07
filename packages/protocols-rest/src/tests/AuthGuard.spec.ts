@@ -52,7 +52,8 @@ describe('AuthGuard', () => {
 
   it('should deny access with invalid token', async () => {
     const mockRequest = { headers: { authorization: 'Bearer invalid-token' } };
-    (mockVerifier as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Token expired'));
+    const tokenError = Object.assign(new Error('Token expired'), { name: 'ERR_JWT_EXPIRED' });
+    (mockVerifier as ReturnType<typeof vi.fn>).mockRejectedValue(tokenError);
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow('Invalid or expired token');
@@ -61,6 +62,18 @@ describe('AuthGuard', () => {
       code: 'AUTH_INVALID_TOKEN',
     });
     expect(mockVerifier).toHaveBeenCalledWith('invalid-token');
+  });
+
+  it('should surface verifier outages separately from invalid tokens', async () => {
+    const mockRequest = { headers: { authorization: 'Bearer service-token' } };
+    (mockVerifier as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('ECONNRESET'));
+    mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
+
+    await expect(guard.canActivate(mockContext)).rejects.toThrow('Authentication verifier is unavailable');
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
+      status: 500,
+      code: 'AUTH_VERIFIER_UNAVAILABLE',
+    });
   });
 
   it('should extract Bearer token correctly', async () => {
