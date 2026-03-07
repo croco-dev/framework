@@ -292,6 +292,31 @@ describe('DrizzleExecutionStore', () => {
       expect(result.status).toBe('completed');
     });
 
+    it('should not null out omitted fields during partial updates', async () => {
+      const execution = createMockExecution({
+        payload: { task: 'keep-me' },
+        result: { ok: true },
+        metadata: { source: 'api' },
+      });
+      const updated = { ...execution, status: 'completed' as ExecutionStatus };
+
+      const setMock = vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve([updated])),
+        })),
+      }));
+      const updateMock = vi.fn(() => ({
+        set: setMock,
+      }));
+      mockDb.update = updateMock;
+
+      await store.update(execution.id, { status: 'completed' });
+
+      expect(setMock).toHaveBeenCalledWith({
+        status: 'completed',
+      });
+    });
+
     it('should throw error when execution not found', async () => {
       const updateMock = vi.fn(() => ({
         set: vi.fn(() => ({
