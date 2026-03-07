@@ -59,6 +59,8 @@ export type ScheduleSyncResult = {
    */
   skipped: number;
 
+  failed: number;
+
   /**
    * Details of all schedules processed.
    */
@@ -74,10 +76,7 @@ export type ScheduleSyncDetail = {
    */
   readonly name: string;
 
-  /**
-   * Action performed: 'created' | 'updated' | 'deleted' | 'skipped'.
-   */
-  readonly action: 'created' | 'updated' | 'deleted' | 'skipped';
+  readonly action: 'created' | 'updated' | 'deleted' | 'skipped' | 'failed';
 
   /**
    * Cron expression.
@@ -143,6 +142,7 @@ export class QStashScheduler {
       updated: 0,
       deleted: 0,
       skipped: 0,
+      failed: 0,
       details: [],
     };
 
@@ -162,6 +162,9 @@ export class QStashScheduler {
         case 'skipped':
           result.skipped++;
           break;
+        case 'failed':
+          result.failed++;
+          break;
       }
     }
 
@@ -170,7 +173,13 @@ export class QStashScheduler {
       if (!scheduleMap.has(scheduleId)) {
         const detail = await this.deleteSchedule(scheduleId);
         result.details.push(detail);
-        result.deleted++;
+
+        if (detail.action === 'deleted') {
+          result.deleted++;
+          continue;
+        }
+
+        result.failed++;
       }
     }
 
@@ -300,7 +309,7 @@ export class QStashScheduler {
       return baseDetail;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      return { ...baseDetail, error: errorMessage };
+      return { ...baseDetail, action: 'failed', error: errorMessage };
     }
   }
 
@@ -321,7 +330,7 @@ export class QStashScheduler {
       return baseDetail;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      return { ...baseDetail, error: errorMessage };
+      return { ...baseDetail, action: 'failed', error: errorMessage };
     }
   }
 

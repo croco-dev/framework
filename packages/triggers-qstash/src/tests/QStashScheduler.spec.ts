@@ -84,6 +84,7 @@ describe('QStashScheduler', () => {
     expect(result.updated).toBe(0);
     expect(result.deleted).toBe(0);
     expect(result.skipped).toBe(0);
+    expect(result.failed).toBe(0);
     expect(create).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -162,5 +163,85 @@ describe('QStashScheduler', () => {
       triggerName: 'queue-drain',
       className: 'NamedScheduleJob',
     });
+  });
+
+  it('스케줄 생성 실패를 failed로 집계해야 한다', async () => {
+    class FailingScheduleJob {
+      async processQueue(): Promise<void> {}
+    }
+
+    const metadata: CronTriggerMetadata = {
+      type: 'cron',
+      expression: '*/5 * * * *',
+      methodName: 'processQueue',
+      target: FailingScheduleJob.prototype,
+      options: {},
+    };
+    triggerRegistry.register(metadata);
+
+    const create = vi.fn().mockRejectedValue(new Error('create failed'));
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create,
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: 'https://api.example.com/webhooks/qstash',
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.created).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.deleted).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: 'croco-trigger:processQueue:processQueue',
+        action: 'failed',
+        error: 'create failed',
+      }),
+    ]);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('삭제 실패를 deleted가 아니라 failed로 집계해야 한다', async () => {
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId: 'croco-trigger:orphan:run',
+            cron: '* * * * *',
+          },
+        ]),
+        create: vi.fn(),
+        delete: vi.fn().mockRejectedValue(new Error('delete failed')),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: 'https://api.example.com/webhooks/qstash',
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.created).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.deleted).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: 'croco-trigger:orphan:run',
+        action: 'failed',
+        error: 'delete failed',
+      }),
+    ]);
   });
 });
