@@ -87,23 +87,6 @@ const scheduler = new SnapshotScheduler(engine, store, {
 await scheduler.scheduleMonthly();
 ```
 
-### BillingEventHandler
-
-결제 이벤트를 수신하여 메트릭을 자동 업데이트합니다.
-
-```ts
-import { BillingEventHandler } from '@croco/metrics-core';
-
-const handler = new BillingEventHandler(engine, store);
-
-await handler.handle({
-  type: 'subscription.created',
-  customerId: 'cust_123',
-  amount: { amount: 5000, currency: 'USD' },
-  period: { start: '2026-01-01', end: '2026-01-31' },
-});
-```
-
 ## API
 
 ### Types
@@ -164,3 +147,7 @@ class TimescaleMetricsStore implements MetricsRepository {
 - `@croco/events-core` - 이벤트 기반 아키텍처
 - `@croco/framework-context` - DI 컨테이너
 - `drizzle-orm` - DB ORM
+
+## Billing 연동
+
+billing 도메인 이벤트를 metrics 흐름으로 연결하는 구현체는 `@croco/metrics-billing` 패키지에서 제공합니다.
