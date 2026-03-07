@@ -121,5 +121,5 @@ export interface ShutdownHook {
   /**
    * Called during graceful shutdown process
    */
-  onShutdown(): Promise<void>;
+  onShutdown(signal?: AbortSignal): Promise<void>;
 }

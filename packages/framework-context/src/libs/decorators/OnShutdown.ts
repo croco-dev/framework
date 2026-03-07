@@ -16,9 +16,9 @@ function applyMethodDecorator(
   }
 
   const hook: ShutdownHook = {
-    onShutdown: async (): Promise<void> => {
+    onShutdown: async (signal?: AbortSignal): Promise<void> => {
       const instance = Container.get(target);
-      await originalMethod.call(instance);
+      await originalMethod.call(instance, signal);
     },
   };
 
@@ -33,10 +33,10 @@ function applyClassDecorator(target: Constructor): void {
   }
 
   const hook: ShutdownHook = {
-    onShutdown: async (): Promise<void> => {
+    onShutdown: async (signal?: AbortSignal): Promise<void> => {
       const instance = Container.get(target);
       if (typeof (instance as ShutdownHook).onShutdown === 'function') {
-        await (instance as ShutdownHook).onShutdown();
+        await (instance as ShutdownHook).onShutdown(signal);
       }
     },
   };

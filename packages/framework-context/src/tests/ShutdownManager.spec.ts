@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Container } from '../libs/Container';
-import { Component } from '../libs/decorators/Component';
 import { OnShutdown } from '../libs/decorators/OnShutdown';
 import { ShutdownTimeoutProblem } from '../libs/problems/ShutdownProblems';
 import { ShutdownManager } from '../libs/ShutdownManager';
@@ -188,6 +187,34 @@ describe('ShutdownManager', () => {
       errorSpy.mockRestore();
       exitSpy.mockRestore();
     });
+
+    it('should abort active hooks when timeout is exceeded', async () => {
+      vi.useFakeTimers();
+
+      const manager = ShutdownManager.getInstance(100);
+      const abortStates: boolean[] = [];
+
+      const hook: ShutdownHook = {
+        onShutdown: async (signal?: AbortSignal) => {
+          signal?.addEventListener('abort', () => {
+            abortStates.push(signal.aborted);
+          });
+
+          await new Promise(() => {});
+        },
+      };
+
+      manager.register(hook);
+
+      const rejected = expect(manager.shutdown()).rejects.toBeInstanceOf(ShutdownTimeoutProblem);
+
+      await vi.advanceTimersByTimeAsync(100);
+
+      await rejected;
+      expect(abortStates).toEqual([true]);
+
+      vi.useRealTimers();
+    });
   });
 });
 
@@ -208,9 +235,11 @@ describe('OnShutdown decorator', () => {
       @OnShutdown()
       class MyService implements ShutdownHook {
         shutdownCalled = false;
+        receivedSignal: AbortSignal | undefined;
 
-        async onShutdown(): Promise<void> {
+        async onShutdown(signal?: AbortSignal): Promise<void> {
           this.shutdownCalled = true;
+          this.receivedSignal = signal;
         }
       }
 
@@ -221,6 +250,7 @@ describe('OnShutdown decorator', () => {
 
       const instance = Container.get(MyService);
       expect(instance.shutdownCalled).toBe(true);
+      expect(instance.receivedSignal).toBeInstanceOf(AbortSignal);
     });
   });
 
@@ -231,7 +261,7 @@ describe('OnShutdown decorator', () => {
 
       class MyService {
         @OnShutdown()
-        async cleanup(): Promise<void> {}
+        async cleanup(_signal?: AbortSignal): Promise<void> {}
       }
 
       void MyService;
