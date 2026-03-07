@@ -3,6 +3,7 @@ import { StrategyUnavailableProblem } from '@croco/search-core';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { DrizzleSearchEngine } from '../libs/DrizzleSearchEngine';
+import { InvalidSearchRowProblem } from '../libs/problems/InvalidSearchRowProblem';
 import type { SearchStrategy } from '../libs/types';
 
 // Mock external dependencies
@@ -106,9 +107,10 @@ describe('DrizzleSearchEngine', () => {
 
     engine = new DrizzleSearchEngine(mockDb, strategy);
 
-    await expect(engine.search('users', { query: 'test' })).rejects.toThrow(
-      'Invalid search row: expected object result'
-    );
+    const searchPromise = engine.search('users', { query: 'test' });
+
+    await expect(searchPromise).rejects.toBeInstanceOf(InvalidSearchRowProblem);
+    await expect(searchPromise).rejects.toThrow('Invalid search row: expected object result');
   });
 
   it('should map search rows through strategy mapper when provided', async () => {
