@@ -280,6 +280,34 @@ describe('MetadataStorage', () => {
     ]);
     expect(inspectableStorage.makeKey(TEST_KEY, SecondTarget)).toContain('::1::');
   });
+
+  it('should keep distinct symbols with same description isolated', () => {
+    type InspectableMetadataStorage = {
+      define: <T>(key: symbol, target: object, value: T, propertyKey?: string | symbol) => void;
+      get: <T>(key: symbol, target: object, propertyKey?: string | symbol) => T | undefined;
+      getAll: <T>(key: symbol) => Array<{ target: object; propertyKey?: string | symbol; value: T }>;
+      makeKey: (key: symbol, target: object, propertyKey?: string | symbol) => string;
+    };
+
+    class Target {}
+
+    const firstKey = Symbol('duplicate');
+    const secondKey = Symbol('duplicate');
+    const inspectableStorage = MetadataStorage as unknown as InspectableMetadataStorage;
+
+    inspectableStorage.define(firstKey, Target, 'first-value');
+    inspectableStorage.define(secondKey, Target, 'second-value');
+
+    expect(inspectableStorage.get(firstKey, Target)).toBe('first-value');
+    expect(inspectableStorage.get(secondKey, Target)).toBe('second-value');
+    expect(inspectableStorage.getAll<string>(firstKey)).toEqual([
+      { target: Target, propertyKey: undefined, value: 'first-value' },
+    ]);
+    expect(inspectableStorage.getAll<string>(secondKey)).toEqual([
+      { target: Target, propertyKey: undefined, value: 'second-value' },
+    ]);
+    expect(inspectableStorage.makeKey(firstKey, Target)).not.toBe(inspectableStorage.makeKey(secondKey, Target));
+  });
 });
 
 describe('Component decorator', () => {

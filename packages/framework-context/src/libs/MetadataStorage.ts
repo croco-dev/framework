@@ -11,8 +11,20 @@ interface MetadataEntry {
 class MetadataStorageImpl {
   private static INSTANCE: MetadataStorageImpl;
   private readonly storage = new Map<string, MetadataEntry>();
+  private keyIds = new Map<MetadataKey, number>();
+  private keyIdCounter = 0;
   private targetIds = new WeakMap<object, number>();
   private targetIdCounter = 0;
+
+  private getKeyId(key: MetadataKey): number {
+    let id = this.keyIds.get(key);
+    if (id === undefined) {
+      id = ++this.keyIdCounter;
+      this.keyIds.set(key, id);
+    }
+
+    return id;
+  }
 
   private getTargetId(target: object): number {
     let id = this.targetIds.get(target);
@@ -31,10 +43,10 @@ class MetadataStorageImpl {
   }
 
   private makeKey(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): string {
-    const keyStr = typeof key === 'symbol' ? key.toString() : key;
+    const keyId = String(this.getKeyId(key));
     const targetId = String(this.getTargetId(target as object));
     const propStr = propertyKey ? String(propertyKey) : '';
-    return `${keyStr}::${targetId}::${propStr}`;
+    return `${keyId}::${targetId}::${propStr}`;
   }
 
   define<T>(key: MetadataKey, target: MetadataTarget, value: T, propertyKey?: string | symbol): void {
@@ -75,6 +87,8 @@ class MetadataStorageImpl {
 
   clear(): void {
     this.storage.clear();
+    this.keyIds = new Map<MetadataKey, number>();
+    this.keyIdCounter = 0;
     this.targetIds = new WeakMap<object, number>();
     this.targetIdCounter = 0;
   }
