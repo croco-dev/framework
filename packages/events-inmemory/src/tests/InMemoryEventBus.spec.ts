@@ -1,6 +1,7 @@
 import { DomainEvent, type EventHandler, type EventSubscription } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import * as telemetryApi from '@croco/telemetry-api';
+import * as otelApi from '@opentelemetry/api';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryEventBus } from '../index';
@@ -214,6 +215,36 @@ describe('InMemoryEventBus', () => {
       expect(handler.traceContextSpanIds).toEqual(['span-1', 'span-1']);
       expect(sharedTraceContext.spanId).toBe('span-1');
       traceInfoSpy.mockRestore();
+    });
+
+    it('should restore trace context before starting handler spans', async () => {
+      const handler = new TestHandler();
+      Container.set(TestHandler, handler);
+      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: TestHandler });
+
+      const traceInfoSpy = vi.spyOn(telemetryApi, 'getActiveTraceInfo').mockReturnValue({
+        traceId: '0123456789abcdef0123456789abcdef',
+        spanId: '0123456789abcdef',
+        traceFlags: 1,
+        isValid: true,
+      });
+
+      const contextWithSpy = vi.spyOn(otelApi.context, 'with');
+      const setSpanContextSpy = vi.spyOn(otelApi.trace, 'setSpanContext');
+
+      await eventBus.publish(new TestEvent('restore-trace-context'));
+
+      expect(setSpanContextSpy).toHaveBeenCalledWith(expect.anything(), {
+        traceId: '0123456789abcdef0123456789abcdef',
+        spanId: '0123456789abcdef',
+        traceFlags: 1,
+        isRemote: true,
+      });
+      expect(contextWithSpy).toHaveBeenCalled();
+
+      traceInfoSpy.mockRestore();
+      contextWithSpy.mockRestore();
+      setSpanContextSpy.mockRestore();
     });
 
     it('should pass Error object to recordException', async () => {

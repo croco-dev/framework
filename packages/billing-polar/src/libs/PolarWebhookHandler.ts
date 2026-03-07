@@ -1,6 +1,7 @@
 import type { BillingStore, Subscription } from '@croco/billing-core';
 import type { EventPublisher } from '@croco/events-core';
-import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/dist/esm/webhooks.js';
+import { Trace } from '@croco/telemetry-api';
+import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks';
 import type { PolarConfig, WebhookHandlerResult } from '../types';
 import { PolarEventMapper } from './PolarEventMapper';
 import { BillingStatusMappingProblem } from './problems/BillingStatusMappingProblem';
@@ -66,11 +67,7 @@ export class PolarWebhookHandler {
     this.eventMapper = new PolarEventMapper();
   }
 
-  /**
-   * Handle an incoming webhook request.
-   * @param body - Raw request body (Buffer or string)
-   * @param headers - Request headers
-   */
+  @Trace({ name: 'polar.webhook.handle' })
   async handle(body: Buffer | string, headers: Record<string, string>): Promise<WebhookHandlerResult> {
     let event: unknown;
     try {

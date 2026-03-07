@@ -1,4 +1,4 @@
-import { trace } from '@opentelemetry/api';
+import { context, trace } from '@opentelemetry/api';
 import type { BatchLoader, BatchLoaderOptions } from './types';
 
 export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
@@ -69,10 +69,10 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
     if (this.scheduled) return;
 
     this.scheduled = true;
+    const activeContext = context.active();
 
-    // Use process.nextTick to batch execution within the same event loop tick
     process.nextTick(() => {
-      this.dispatch();
+      void context.with(activeContext, () => this.dispatch());
     });
   }
 
