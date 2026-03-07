@@ -79,6 +79,7 @@
  * ```
  */
 export { createBatchLoader } from './libs/createBatchLoader';
+export { BatchResultLengthMismatchProblem } from './libs/problems/BatchLoaderProblems';
 /**
  * Batch function type for loading multiple values.
  *
