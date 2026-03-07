@@ -688,9 +688,6 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
-      '@opentelemetry/api':
-        specifier: ^1.9.0
-        version: 1.9.0
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2
