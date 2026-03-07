@@ -10,10 +10,12 @@
  *
  * @example
  * ```typescript
+ * import type { BillingGateway } from '@croco/billing-core';
  * import { BillingService, InMemoryBillingStore } from '@croco/billing-core';
  *
  * const store = new InMemoryBillingStore();
- * const service = new BillingService(store);
+ * const gateway = {} as BillingGateway;
+ * const service = new BillingService({ store, gateway });
  * ```
  */
 
@@ -44,12 +46,20 @@ export type { BillingServiceDependencies } from './libs/BillingService';
  *
  * @example
  * ```typescript
+ * import type { BillingGateway } from '@croco/billing-core';
  * import { BillingService, InMemoryBillingStore } from '@croco/billing-core';
  *
  * const store = new InMemoryBillingStore();
- * const service = new BillingService(store);
+ * const gateway = {} as BillingGateway;
+ * const service = new BillingService({ store, gateway });
  *
- * const account = await service.createAccount('user-123', 'pro-plan');
+ * const checkout = await service.createCheckout({
+ *   billingAccountId: 'billing-account-123',
+ *   email: 'owner@example.com',
+ *   successUrl: 'https://example.com/billing/success',
+ *   cancelUrl: 'https://example.com/billing/cancel',
+ * });
+ * console.log(checkout.checkoutUrl);
  * ```
  */
 export { BillingService } from './libs/BillingService';
