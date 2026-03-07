@@ -6,6 +6,7 @@ import { Component } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions } from '@croco/storage-core';
 import { BaseStorageProvider } from '@croco/storage-core';
+import { MissingR2ConfigProblem } from './problems/MissingR2ConfigProblem';
 import type { R2Options } from './types';
 
 /**
@@ -17,6 +18,12 @@ import type { R2Options } from './types';
 export class R2StorageProvider extends BaseStorageProvider {
   private readonly client: S3Client;
   private readonly options: R2Options;
+  private static readonly REQUIRED_CONFIG_KEYS = [
+    'R2_ACCOUNT_ID',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+    'R2_BUCKET',
+  ] as const;
 
   constructor(
     private readonly config: ConfigService,
@@ -24,10 +31,10 @@ export class R2StorageProvider extends BaseStorageProvider {
   ) {
     super();
     this.options = {
-      accountId: this.config.get('R2_ACCOUNT_ID') ?? '',
-      accessKeyId: this.config.get('R2_ACCESS_KEY_ID') ?? '',
-      secretAccessKey: this.config.get('R2_SECRET_ACCESS_KEY') ?? '',
-      bucket: this.config.get('R2_BUCKET') ?? '',
+      accountId: this.validateRequiredConfig('R2_ACCOUNT_ID'),
+      accessKeyId: this.validateRequiredConfig('R2_ACCESS_KEY_ID'),
+      secretAccessKey: this.validateRequiredConfig('R2_SECRET_ACCESS_KEY'),
+      bucket: this.validateRequiredConfig('R2_BUCKET'),
       publicUrlBase: this.config.get('R2_PUBLIC_URL_BASE'),
     };
 
@@ -39,6 +46,16 @@ export class R2StorageProvider extends BaseStorageProvider {
         secretAccessKey: this.options.secretAccessKey,
       },
     });
+  }
+
+  private validateRequiredConfig(configKey: (typeof R2StorageProvider.REQUIRED_CONFIG_KEYS)[number]): string {
+    const value = this.config.get(configKey);
+
+    if (!value) {
+      throw new MissingR2ConfigProblem(configKey);
+    }
+
+    return value;
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {

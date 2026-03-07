@@ -1,7 +1,10 @@
 import { Readable } from 'node:stream';
 import type { ConfigService } from '@croco/framework-config';
 import { Container } from '@croco/framework-context';
+import type { Logger } from '@croco/framework-logger';
+import { FileNotFoundProblem } from '@croco/storage-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MissingR2ConfigProblem } from '../libs/problems/MissingR2ConfigProblem';
 import { R2StorageProvider } from '../libs/R2StorageProvider';
 
 const mockSend = vi.fn();
@@ -16,24 +19,28 @@ vi.mock('@aws-sdk/client-s3', () => ({
   HeadObjectCommand: class {},
 }));
 
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn().mockResolvedValue('https://signed-url.example.com'),
+}));
+
 describe('R2StorageProvider', () => {
   let provider!: R2StorageProvider;
   let configService!: ConfigService;
-  let logger!: import('@croco/framework-logger').Logger;
+  let logger!: Logger;
+
+  const defaultEnvs: Record<string, string> = {
+    R2_ACCOUNT_ID: 'test-account-id',
+    R2_ACCESS_KEY_ID: 'test-access-key',
+    R2_SECRET_ACCESS_KEY: 'test-secret-key',
+    R2_BUCKET: 'test-bucket',
+  };
 
   beforeEach(() => {
     Container.reset();
+    mockSend.mockReset();
 
     configService = {
-      get: vi.fn((key: string) => {
-        const envs: Record<string, string> = {
-          R2_ACCOUNT_ID: 'test-account-id',
-          R2_ACCESS_KEY_ID: 'test-access-key',
-          R2_SECRET_ACCESS_KEY: 'test-secret-key',
-          R2_BUCKET: 'test-bucket',
-        };
-        return envs[key];
-      }),
+      get: vi.fn((key: string) => defaultEnvs[key]),
     } as unknown as ConfigService;
 
     logger = {
@@ -41,9 +48,31 @@ describe('R2StorageProvider', () => {
       warn: vi.fn(),
       error: vi.fn(),
       debug: vi.fn(),
-    } as unknown as import('@croco/framework-logger').Logger;
+    } as unknown as Logger;
 
     provider = new R2StorageProvider(configService, logger);
+  });
+
+  describe('constructor', () => {
+    it.each([
+      ['R2_ACCOUNT_ID'],
+      ['R2_ACCESS_KEY_ID'],
+      ['R2_SECRET_ACCESS_KEY'],
+      ['R2_BUCKET'],
+    ])('should throw MissingR2ConfigProblem when %s is missing', (missingKey) => {
+      vi.mocked(configService.get).mockImplementation((key: string) => {
+        if (key === missingKey) {
+          return undefined;
+        }
+
+        return defaultEnvs[key];
+      });
+
+      expect(() => new R2StorageProvider(configService, logger)).toThrow(MissingR2ConfigProblem);
+      expect(() => new R2StorageProvider(configService, logger)).toThrow(
+        `Missing required R2 configuration: ${missingKey}`
+      );
+    });
   });
 
   describe('getPublicUrl', () => {
@@ -67,10 +96,6 @@ describe('R2StorageProvider', () => {
 
   describe('getSignedUrl', () => {
     it('should generate signed URL with expiration', async () => {
-      vi.mock('@aws-sdk/s3-request-presigner', () => ({
-        getSignedUrl: vi.fn().mockResolvedValue('https://signed-url.example.com'),
-      }));
-
       const url = await provider.getSignedUrl('test/file.txt', { expiresIn: 3600 });
       expect(url).toBe('https://signed-url.example.com');
     });
@@ -103,14 +128,12 @@ describe('R2StorageProvider', () => {
     });
 
     it('should throw FileNotFoundProblem when S3 returns 404', async () => {
-      const mockError = {
+      mockSend.mockRejectedValue({
         $metadata: { httpStatusCode: 404 },
         name: 'NotFound',
-      };
+      });
 
-      mockSend.mockRejectedValue(mockError);
-
-      await expect(provider.getStream('test/file.txt')).rejects.toThrow();
+      await expect(provider.getStream('test/file.txt')).rejects.toThrow(FileNotFoundProblem);
     });
 
     it('should throw error when response body is empty', async () => {
