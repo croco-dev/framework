@@ -1093,6 +1093,9 @@ importers:
       '@croco/notifications-core':
         specifier: workspace:*
         version: link:../notifications-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       resend:
         specifier: ^4.0.0
         version: 4.8.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -1329,6 +1332,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/search-core':
         specifier: workspace:*
         version: link:../search-core
@@ -1645,6 +1651,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/triggers-core':
         specifier: workspace:*
         version: link:../triggers-core

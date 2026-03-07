@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { AnalyticsManager } from '@croco/analytics-core';
 import { Component, Container, Context } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
@@ -53,10 +54,13 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     const user = Context.getCurrentUser();
     if (user?.id) return user.id;
 
+    const requestId = Context.getRequestId();
+    if (requestId) return `anonymous:${requestId}`;
+
     const tenantId = Context.getTenantId();
     if (tenantId) return `tenant:${tenantId}`;
 
-    return 'anonymous';
+    return `anonymous:${randomUUID()}`;
   }
 
   private getGroups(properties?: Record<string, unknown>): Record<string, string> | undefined {

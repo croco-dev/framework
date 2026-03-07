@@ -11,7 +11,6 @@
  * import type { HealthIndicator } from '@croco/health-core';
  * import { HealthCheckService } from '@croco/health-core';
  *
- * // Create health check service
  * const healthService = new HealthCheckService({ timeout: 5000 });
  *
  * class ApiHealthIndicator implements HealthIndicator {

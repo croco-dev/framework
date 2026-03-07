@@ -6,7 +6,6 @@ import { PostHogClient } from '@croco/integrations-posthog';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostHogAnalyticsManager } from '../libs/PostHogAnalyticsManager';
 
-// Mock PostHog Node
 vi.mock('posthog-node', () => {
   const PostHogMock = vi.fn();
   PostHogMock.prototype.isFeatureEnabled = vi.fn().mockResolvedValue(true);
@@ -69,5 +68,39 @@ describe('PostHog Integration', () => {
       event: 'failed-event',
       error: 'network failed',
     });
+  });
+
+  it('should use request-scoped anonymous distinctId when user context is missing', async () => {
+    const spy = vi.spyOn(postHogClient.getClient(), 'capture');
+
+    await Context.run({ requestId: 'req-anon', tenantId: 'tenant-xyz' }, async () => {
+      analyticsManager.capture('anonymous-event');
+    });
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distinctId: 'anonymous:req-anon',
+        groups: { tenant: 'tenant-xyz' },
+        event: 'anonymous-event',
+      })
+    );
+  });
+
+  it('should generate a non-static anonymous distinctId outside Context', () => {
+    const spy = vi.spyOn(postHogClient.getClient(), 'capture');
+
+    analyticsManager.capture('anonymous-event');
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distinctId: expect.stringMatching(/^anonymous:/),
+        event: 'anonymous-event',
+      })
+    );
+
+    const lastCall = spy.mock.calls[spy.mock.calls.length - 1];
+    const distinctId = lastCall?.[0]?.distinctId;
+
+    expect(distinctId).not.toBe('anonymous');
   });
 });

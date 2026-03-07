@@ -22,7 +22,6 @@ pnpm add @croco/metering-core
 ### 1. 설정
 
 ```typescript
-import { Container } from 'typedi';
 import {
   MeteringService,
   MeterRegistry,

@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { EventPublisher } from '@croco/events-core';
 import { Component } from '@croco/framework-context';
-import type { Logger } from '@croco/framework-logger';
 import { MembershipCreatedEvent } from './events/MembershipCreatedEvent';
 import { MembershipRemovedEvent } from './events/MembershipRemovedEvent';
 import { MembershipUpdatedEvent } from './events/MembershipUpdatedEvent';
@@ -18,8 +17,7 @@ import { isMembershipRole, type Membership, type MembershipRole } from './types'
 export class MembershipManager {
   constructor(
     private readonly store: MembershipStore,
-    private readonly eventPublisher: EventPublisher,
-    private readonly logger?: Logger
+    private readonly eventPublisher: EventPublisher
   ) {}
   async addMember(tenantId: string, userId: string, role: MembershipRole): Promise<Membership> {
     this.ensureValidRole(role);
@@ -125,12 +123,6 @@ export class MembershipManager {
   private async publishSafely(
     event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent
   ): Promise<void> {
-    try {
-      await this.eventPublisher.publish(event);
-    } catch (err: unknown) {
-      this.logger?.warn('MembershipManager event publish failed', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+    await this.eventPublisher.publish(event);
   }
 }

@@ -1,5 +1,17 @@
 import { createBatchLoader } from '@croco/dataloader-core';
 
+type BatchKeyedRecord = Record<string, unknown>;
+
+type BatchLoadableRepository<TKey, TValue extends BatchKeyedRecord> = {
+  findByIds?: (ids: TKey[]) => Promise<ReadonlyArray<TValue>>;
+};
+
+type BatchLoadMethod<TKey, TValue> = (this: object, arg: TKey) => Promise<TValue | null>;
+
+function hasBatchKey(value: unknown, key: string): value is BatchKeyedRecord {
+  return typeof value === 'object' && value !== null && key in value;
+}
+
 export type BatchLoadOptions = {
   /**
    * The field name to use as the key for mapping results.
@@ -16,24 +28,22 @@ export type BatchLoadOptions = {
 };
 
 export function BatchLoad(options: BatchLoadOptions): MethodDecorator {
-  return (target: Object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    const originalMethod = descriptor.value;
+  return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
+    const originalMethod = descriptor.value as BatchLoadMethod<unknown, unknown>;
     const className = target.constructor.name;
     const methodName = String(propertyKey);
     const loaderName = options.name || `${className}:${methodName}`;
 
-    descriptor.value = async function (this: any, arg: any) {
-      const batchFn = async (keys: readonly any[]) => {
+    descriptor.value = async function (this: BatchLoadableRepository<unknown, BatchKeyedRecord>, arg: unknown) {
+      const batchFn = async (keys: ReadonlyArray<unknown>) => {
         // 1. Try to use findByIds if it exists (Optimization)
         if (typeof this.findByIds === 'function') {
-          // Assume findByIds returns T[]
-          const results = await this.findByIds(keys as any[]);
+          const results = await this.findByIds([...keys]);
 
           // Map results by the 'by' key to ensure order matches 'keys'
-          // We cast results to any[] to access the 'by' property dynamically
-          const resultMap = new Map();
+          const resultMap = new Map<unknown, BatchKeyedRecord>();
           for (const item of results) {
-            if (item && typeof item === 'object' && options.by in item) {
+            if (hasBatchKey(item, options.by)) {
               resultMap.set(item[options.by], item);
             }
           }
