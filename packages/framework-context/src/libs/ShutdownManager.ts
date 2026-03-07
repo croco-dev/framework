@@ -58,10 +58,11 @@ export class ShutdownManager {
     this.isShuttingDown = true;
 
     const reversedHooks = [...this.hooks].reverse();
+    const controller = new AbortController();
     const hookExecution = (async (): Promise<void> => {
       for (const hook of reversedHooks) {
         try {
-          await hook.onShutdown();
+          await hook.onShutdown(controller.signal);
         } catch (error) {
           console.error('[ShutdownManager] Hook execution failed:', error);
         }
@@ -71,6 +72,7 @@ export class ShutdownManager {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
+        controller.abort();
         console.error('[ShutdownManager] Shutdown timeout exceeded.');
         reject(new ShutdownTimeoutProblem(this.timeoutMs));
       }, this.timeoutMs);
