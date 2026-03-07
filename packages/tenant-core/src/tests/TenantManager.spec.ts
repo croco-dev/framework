@@ -1,3 +1,4 @@
+import { Context } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TenantRequiredProblem } from '../libs/problems/TenantRequiredProblem';
 import { TenantManager } from '../libs/TenantManager';
@@ -57,6 +58,12 @@ describe('TenantManager', () => {
         expect(manager.getTenantId()).toBe('test-tenant');
       });
     });
+
+    it('should read tenant ID from framework context', async () => {
+      await Context.run({ requestId: 'req-1', tenantId: 'context-tenant' }, async () => {
+        expect(manager.getTenantId()).toBe('context-tenant');
+      });
+    });
   });
 
   describe('requireTenantId', () => {
@@ -108,6 +115,30 @@ describe('TenantManager', () => {
 
         expect(manager.getTenantId()).toBe('original');
       });
+    });
+  });
+
+  describe('context synchronization', () => {
+    it('should expose tenant ID through framework context when using TenantManager', async () => {
+      await manager.run('tenant-from-manager', async () => {
+        expect(Context.getTenantId()).toBe('tenant-from-manager');
+      });
+    });
+
+    it('should preserve existing request context fields when overriding tenant', async () => {
+      await Context.run(
+        { requestId: 'req-2', user: { id: 'user-1' }, traceId: 'trace-1', tenantId: 'outer' },
+        async () => {
+          await manager.run('inner', async () => {
+            expect(Context.getRequestId()).toBe('req-2');
+            expect(Context.getCurrentUser()).toEqual({ id: 'user-1' });
+            expect(Context.getActiveTraceId()).toBe('trace-1');
+            expect(Context.getTenantId()).toBe('inner');
+          });
+
+          expect(Context.getTenantId()).toBe('outer');
+        }
+      );
     });
   });
 });
