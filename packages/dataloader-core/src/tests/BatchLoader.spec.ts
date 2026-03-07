@@ -1,4 +1,6 @@
 import { Context } from '@croco/framework-context';
+import * as otelApi from '@opentelemetry/api';
+import { ROOT_CONTEXT } from '@opentelemetry/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBatchLoader } from '../libs/createBatchLoader';
 
@@ -166,5 +168,27 @@ describe('BatchLoader', () => {
 
       expect(fn).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('should preserve active OpenTelemetry context across nextTick dispatch', async () => {
+    const activeContext = ROOT_CONTEXT;
+    const activeSpy = vi.spyOn(otelApi.context, 'active').mockReturnValue(activeContext);
+    const originalWith = otelApi.context.with.bind(otelApi.context);
+    const withSpy = vi.spyOn(otelApi.context, 'with').mockImplementation((context, fn, thisArg, ...args) => {
+      return originalWith(context, fn, thisArg, ...args);
+    });
+
+    const loader = createBatchLoader<number, string>({
+      name: 'otel-context-loader',
+      batchFn,
+    });
+
+    await loader.load(1);
+
+    expect(activeSpy).toHaveBeenCalled();
+    expect(withSpy).toHaveBeenCalledWith(activeContext, expect.any(Function));
+
+    activeSpy.mockRestore();
+    withSpy.mockRestore();
   });
 });
