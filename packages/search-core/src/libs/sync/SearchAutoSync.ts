@@ -90,8 +90,15 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
 
     try {
       await this.failedEventPublisher.publish(event);
-    } catch {
-      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn('SearchAutoSync failed to publish SearchSyncFailedEvent', {
+        indexName: event.indexName,
+        documentId: event.documentId,
+        tenantId: event.tenantId,
+        operation: event.operation,
+        error: message,
+      });
     }
   }
 
