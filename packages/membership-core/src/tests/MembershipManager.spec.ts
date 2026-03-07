@@ -45,6 +45,12 @@ describe('MembershipManager', () => {
     } as unknown as EventPublisher);
   });
 
+  it('should propagate event publication failures when adding a member', async () => {
+    publish.mockRejectedValueOnce(new Error('publish failed'));
+
+    await expect(manager.addMember('tenant-1', 'user-1', 'member')).rejects.toThrow('publish failed');
+  });
+
   it('should add member and publish MembershipCreatedEvent', async () => {
     const membership = await manager.addMember('tenant-1', 'user-1', 'member');
 
