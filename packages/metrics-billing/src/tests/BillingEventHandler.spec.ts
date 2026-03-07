@@ -46,6 +46,28 @@ describe('BillingEventHandler', () => {
     lastSyncedAt: new Date(),
   };
 
+  const createMetricsRepository = (): MetricsRepository => {
+    const processedEventKeys = new Set<string>();
+
+    return {
+      recordMRRMovement: vi.fn(
+        async (_tenantId: string, _movement: MRRMovement, _timestamp: Date, eventKey?: string) => {
+          if (eventKey) {
+            if (processedEventKeys.has(eventKey)) {
+              return;
+            }
+
+            processedEventKeys.add(eventKey);
+          }
+        }
+      ),
+      recordSnapshot: vi.fn(),
+      getSnapshot: vi.fn(),
+      getMRRHistory: vi.fn(),
+      getRetentionMetrics: vi.fn(),
+    } as unknown as MetricsRepository;
+  };
+
   beforeEach(() => {
     planRegistry = {
       getPlan: vi.fn(),
@@ -66,13 +88,7 @@ describe('BillingEventHandler', () => {
       markWebhookProcessed: vi.fn(),
     } as unknown as BillingStore;
 
-    metricsRepository = {
-      recordMRRMovement: vi.fn(),
-      recordSnapshot: vi.fn(),
-      getSnapshot: vi.fn(),
-      getMRRHistory: vi.fn(),
-      getRetentionMetrics: vi.fn(),
-    } as unknown as MetricsRepository;
+    metricsRepository = createMetricsRepository();
 
     handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
   });
@@ -96,7 +112,12 @@ describe('BillingEventHandler', () => {
         net: { amount: 2900, currency: 'USD' },
       };
 
-      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith('tenant-1', expectedMovement, expect.any(Date));
+      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
+        'tenant-1',
+        expectedMovement,
+        event.timestamp,
+        `billing.order_paid_${event.timestamp.getTime()}`
+      );
     });
 
     it('should normalize yearly plan to monthly MRR', async () => {
@@ -117,17 +138,23 @@ describe('BillingEventHandler', () => {
       expect(movement.new.amount).toBeCloseTo(2416.67, 2);
     });
 
-    it('should be idempotent - ignore duplicate events', async () => {
+    it('should delegate duplicate prevention to repository across handler instances', async () => {
       const event = new OrderPaidEvent('tenant-1', 'order-1', 2900, 'USD');
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
 
-      await handler.handle(event);
-      await handler.handle(event);
+      const firstHandler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
+      const secondHandler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
 
-      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledTimes(1);
+      await firstHandler.handle(event);
+      await secondHandler.handle(event);
+
+      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledTimes(2);
+      const calls = vi.mocked(metricsRepository.recordMRRMovement).mock.calls;
+      expect(calls[0]?.[3]).toBe(`billing.order_paid_${event.timestamp.getTime()}`);
+      expect(calls[1]?.[3]).toBe(`billing.order_paid_${event.timestamp.getTime()}`);
     });
 
     it('should skip if account not found', async () => {
@@ -200,7 +227,7 @@ describe('BillingEventHandler', () => {
       expect(movement.net.amount).toBe(-2000);
     });
 
-    it('should be idempotent', async () => {
+    it('should pass event key to repository for plan changes', async () => {
       const event = new PlanChangedEvent('tenant-1', 'plan-basic', 'plan-pro', 'sub-stripe');
 
       const basicPlan: Plan = {
@@ -221,9 +248,13 @@ describe('BillingEventHandler', () => {
       });
 
       await handler.handle(event);
-      await handler.handle(event);
 
-      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledTimes(1);
+      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
+        'tenant-1',
+        expect.any(Object),
+        event.timestamp,
+        `billing.plan_changed_${event.timestamp.getTime()}`
+      );
     });
   });
 
@@ -245,19 +276,28 @@ describe('BillingEventHandler', () => {
         net: { amount: -2900, currency: 'USD' },
       };
 
-      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith('tenant-1', expectedMovement, expect.any(Date));
+      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
+        'tenant-1',
+        expectedMovement,
+        event.timestamp,
+        `billing.subscription_canceled_${event.timestamp.getTime()}`
+      );
     });
 
-    it('should be idempotent', async () => {
+    it('should pass event key to repository for cancellation events', async () => {
       const event = new SubscriptionCanceledEvent('tenant-1', 'sub-stripe', false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
 
       await handler.handle(event);
-      await handler.handle(event);
 
-      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledTimes(1);
+      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
+        'tenant-1',
+        expect.any(Object),
+        event.timestamp,
+        `billing.subscription_canceled_${event.timestamp.getTime()}`
+      );
     });
 
     it('should skip if subscription not found', async () => {

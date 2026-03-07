@@ -11,7 +11,6 @@ export class BillingEventHandler
   implements EventHandler<OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent>, PlanProvider
 {
   private readonly calculator = new MrrCalculator();
-  private readonly processedEventIds: Set<string> = new Set();
 
   constructor(
     private readonly planRegistry: PlanRegistry,
@@ -51,11 +50,6 @@ export class BillingEventHandler
   }
 
   private async handleOrderPaid(event: OrderPaidEvent): Promise<void> {
-    const eventId = this.getEventId(event);
-    if (this.processedEventIds.has(eventId)) {
-      return;
-    }
-
     const account = await this.billingStore.findAccountByTenantId(event.tenantId);
     if (account === null) {
       return;
@@ -75,16 +69,10 @@ export class BillingEventHandler
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, 'new');
 
-    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, new Date());
-    this.processedEventIds.add(eventId);
+    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, event.timestamp, this.getEventId(event));
   }
 
   private async handlePlanChanged(event: PlanChangedEvent): Promise<void> {
-    const eventId = this.getEventId(event);
-    if (this.processedEventIds.has(eventId)) {
-      return;
-    }
-
     const account = await this.billingStore.findAccountByTenantId(event.tenantId);
     if (account === null) {
       return;
@@ -113,16 +101,10 @@ export class BillingEventHandler
     const mrr: Money = { amount: mrrDiff, currency: newPlan.currency };
     const movement = this.createMRRMovement(mrr, movementType);
 
-    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, new Date());
-    this.processedEventIds.add(eventId);
+    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, event.timestamp, this.getEventId(event));
   }
 
   private async handleSubscriptionCanceled(event: SubscriptionCanceledEvent): Promise<void> {
-    const eventId = this.getEventId(event);
-    if (this.processedEventIds.has(eventId)) {
-      return;
-    }
-
     const subscription = await this.billingStore.findSubscriptionByExternalId(event.externalSubscriptionId);
     if (subscription === null) {
       return;
@@ -137,8 +119,7 @@ export class BillingEventHandler
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, 'churned');
 
-    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, new Date());
-    this.processedEventIds.add(eventId);
+    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, event.timestamp, this.getEventId(event));
   }
 
   private createMRRMovement(mrr: Money, type: 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation') {
