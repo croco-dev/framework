@@ -254,6 +254,32 @@ describe('MetadataStorage', () => {
 
     expect(MetadataStorage.has(TEST_KEY, Target)).toBe(false);
   });
+
+  it('should reset target indexes when clearing metadata', () => {
+    type InspectableMetadataStorage = {
+      define: <T>(key: symbol, target: object, value: T, propertyKey?: string | symbol) => void;
+      clear: () => void;
+      getAll: <T>(key: symbol) => Array<{ target: object; propertyKey?: string | symbol; value: T }>;
+      makeKey: (key: symbol, target: object, propertyKey?: string | symbol) => string;
+    };
+
+    class FirstTarget {}
+    class SecondTarget {}
+
+    const inspectableStorage = MetadataStorage as unknown as InspectableMetadataStorage;
+
+    inspectableStorage.define(TEST_KEY, FirstTarget, 'first');
+    expect(inspectableStorage.makeKey(TEST_KEY, FirstTarget)).toContain('::1::');
+
+    inspectableStorage.clear();
+
+    inspectableStorage.define(TEST_KEY, SecondTarget, 'second');
+
+    expect(inspectableStorage.getAll<string>(TEST_KEY)).toEqual([
+      { target: SecondTarget, propertyKey: undefined, value: 'second' },
+    ]);
+    expect(inspectableStorage.makeKey(TEST_KEY, SecondTarget)).toContain('::1::');
+  });
 });
 
 describe('Component decorator', () => {

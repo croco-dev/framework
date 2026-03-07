@@ -75,6 +75,8 @@ class MetadataStorageImpl {
 
   clear(): void {
     this.storage.clear();
+    this.targetIds = new WeakMap<object, number>();
+    this.targetIdCounter = 0;
   }
 }
 
