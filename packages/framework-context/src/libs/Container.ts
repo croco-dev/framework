@@ -6,6 +6,7 @@ import {
   type ContainerInstance as TypeDIContainerInstance,
 } from 'typedi';
 import 'reflect-metadata';
+import { ProblemFactory } from '@croco/problems-core';
 import { Context } from './Context';
 import { MetadataStorage } from './MetadataStorage';
 import type { ComponentMetadata, Constructor, Scope } from './types';
@@ -199,8 +200,10 @@ export class Container {
     const cache = Context.getCache();
 
     if (!cache) {
-      console.warn('[Container] getRequestScoped called outside Context.run(). Returning transient instance.');
-      return Container.createTransientInstance(token);
+      throw ProblemFactory.internalServerError(
+        'framework-context/request-scope-outside-context',
+        'Request-scoped dependencies must be resolved inside Context.run().'
+      );
     }
 
     const cached = cache.get(token);
