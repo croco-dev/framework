@@ -134,6 +134,16 @@ describe('TxManagerRegistry', () => {
       TxManagerRegistry.register(txManager);
       expect(TxManagerRegistry.has()).toBe(true);
     });
+
+    it('should remove transaction context token from Container on clear', () => {
+      TxManagerRegistry.register(txManager);
+
+      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(txManager);
+
+      TxManagerRegistry.clear();
+
+      expect(() => Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toThrow();
+    });
   });
 });
 
