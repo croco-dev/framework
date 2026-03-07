@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { Container } from './Container';
 import { Context } from './Context';
 import { Component } from './decorators/Component';
@@ -47,44 +47,34 @@ describe('Container.getRequestScoped', () => {
     expect(instance1).not.toBe(instance2);
   });
 
-  it('should warn and return transient when called outside Context', () => {
+  it('should fail fast when request-scoped service is resolved outside Context', () => {
     class MyService {
       public value = Math.random();
     }
 
     Component({ scope: 'request' })(MyService);
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
-      // Mock console.warn to avoid output
-    });
-
-    const instance = Container.get(MyService);
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[Container] getRequestScoped called outside Context.run(). Returning transient instance.'
+    expect(() => Container.get(MyService)).toThrow(
+      'Request-scoped dependencies must be resolved inside Context.run().'
     );
-    expect(instance).toBeDefined();
-
-    warnSpy.mockRestore();
   });
 
-  it('should return different instances when called outside Context for request-scoped services', () => {
+  it('should continue returning the same instance within Context.run() for request-scoped services', () => {
     class MyService {
       public value = Math.random();
     }
 
     Component({ scope: 'request' })(MyService);
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
-      // Mock console.warn to avoid output
+    let instance1!: MyService;
+    let instance2!: MyService;
+
+    Context.run({ requestId: 'req-outside-guard' }, () => {
+      instance1 = Container.get(MyService);
+      instance2 = Container.get(MyService);
     });
 
-    const instance1 = Container.get(MyService);
-    const instance2 = Container.get(MyService);
-
-    expect(instance1).not.toBe(instance2);
-
-    warnSpy.mockRestore();
+    expect(instance1).toBe(instance2);
   });
 
   it('should work with nested Context.run() calls', () => {
