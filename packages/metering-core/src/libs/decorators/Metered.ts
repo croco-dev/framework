@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import 'reflect-metadata';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
@@ -19,14 +20,22 @@ export type MeteredMetadata = {
   metadataExtractor?: (args: unknown[], result: unknown) => Record<string, unknown> | undefined;
 };
 
-// MeteringService 인스턴스를 저장할 전역 변수 (DI 컨테이너에서 설정)
 let meteringServiceInstance: MeteringService | null = null;
+const meteringServiceScope = new AsyncLocalStorage<MeteringService | null>();
 
 /**
  * MeteringService 인스턴스 설정 (앱 부트스트랩에서 호출)
  */
-export function setMeteringService(service: MeteringService): void {
+export function setMeteringService(service: MeteringService | null): void {
   meteringServiceInstance = service;
+}
+
+export function clearMeteringService(): void {
+  meteringServiceInstance = null;
+}
+
+export function runWithMeteringService<T>(service: MeteringService | null, fn: () => T): T {
+  return meteringServiceScope.run(service, fn);
 }
 
 /**
@@ -34,6 +43,11 @@ export function setMeteringService(service: MeteringService): void {
  */
 export function getMeteringService(): MeteringService | null {
   return meteringServiceInstance;
+}
+
+function resolveMeteringService(): MeteringService | null {
+  const scopedService = meteringServiceScope.getStore();
+  return scopedService ?? meteringServiceInstance;
 }
 
 /**
@@ -80,7 +94,7 @@ export function Metered(options: MeteredOptions): MethodDecorator {
       const result = await originalMethod.apply(this, args);
 
       // MeteringService가 설정되어 있으면 기록
-      const service = getMeteringService();
+      const service = resolveMeteringService();
       if (service) {
         const tenantId = (this as { tenantId?: string }).tenantId ?? 'default';
 
