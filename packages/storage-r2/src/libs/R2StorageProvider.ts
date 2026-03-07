@@ -6,6 +6,7 @@ import { Component } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions } from '@croco/storage-core';
 import { BaseStorageProvider } from '@croco/storage-core';
+import { EmptyR2BodyProblem } from './problems/EmptyR2BodyProblem';
 import { MissingR2ConfigProblem } from './problems/MissingR2ConfigProblem';
 import type { R2Options } from './types';
 
@@ -93,7 +94,7 @@ export class R2StorageProvider extends BaseStorageProvider {
       const response = await this.client.send(command);
 
       if (!response.Body) {
-        throw new Error('Empty response body');
+        throw new EmptyR2BodyProblem(key);
       }
 
       const chunks: Uint8Array[] = [];

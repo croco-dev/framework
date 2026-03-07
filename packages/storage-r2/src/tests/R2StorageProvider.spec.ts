@@ -4,6 +4,7 @@ import { Container } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
 import { FileNotFoundProblem } from '@croco/storage-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EmptyR2BodyProblem } from '../libs/problems/EmptyR2BodyProblem';
 import { MissingR2ConfigProblem } from '../libs/problems/MissingR2ConfigProblem';
 import { R2StorageProvider } from '../libs/R2StorageProvider';
 
@@ -141,7 +142,10 @@ describe('R2StorageProvider', () => {
         Body: undefined,
       });
 
-      await expect(provider.getStream('test/file.txt')).rejects.toThrow('Empty response body');
+      const streamPromise = provider.getStream('test/file.txt');
+
+      await expect(streamPromise).rejects.toBeInstanceOf(EmptyR2BodyProblem);
+      await expect(streamPromise).rejects.toThrow('Empty response body');
     });
   });
 });
