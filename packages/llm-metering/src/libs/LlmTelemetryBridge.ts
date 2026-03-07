@@ -1,5 +1,9 @@
-import type { Span } from '@opentelemetry/api';
 import type { LlmUsageRecord } from './types';
+
+export interface LlmTelemetrySpanAdapter {
+  setAttribute(key: string, value: string | number): void;
+  addEvent(name: string, attributes: Record<string, unknown>): void;
+}
 
 /**
  * OTel GenAI Semantic Conventions 상수
@@ -25,7 +29,7 @@ export class LlmTelemetryBridge {
    * - Span에 attributes 설정
    * - recordEvent를 사용하여 llm.usage 이벤트 기록
    */
-  async recordLlmUsage(usageRecord: LlmUsageRecord, span: Span): Promise<void> {
+  async recordLlmUsage(usageRecord: LlmUsageRecord, span: LlmTelemetrySpanAdapter): Promise<void> {
     const attributes = this.mapToGenAiAttributes(usageRecord);
 
     (Object.entries(attributes) as Array<[string, string | number]>).forEach(([key, value]) => {

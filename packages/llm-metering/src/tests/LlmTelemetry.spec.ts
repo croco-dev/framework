@@ -1,40 +1,26 @@
-import type { Attributes, Span } from '@opentelemetry/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LlmTelemetryBridge } from '../libs/LlmTelemetryBridge';
+import { LlmTelemetryBridge, type LlmTelemetrySpanAdapter } from '../libs/LlmTelemetryBridge';
 import type { LlmUsageRecord } from '../libs/types';
 
 describe('LlmTelemetryBridge', () => {
   let bridge!: LlmTelemetryBridge;
-  let mockSpan!: Span;
+  let mockSpan!: LlmTelemetrySpanAdapter;
   let capturedAttributes!: Record<string, unknown>;
-  let capturedEvents!: Array<{ name: string; attributes: Attributes }>;
+  let capturedEvents!: Array<{ name: string; attributes: Record<string, unknown> }>;
 
   beforeEach(() => {
     bridge = new LlmTelemetryBridge();
     capturedAttributes = {};
     capturedEvents = [];
 
-    // Mock Span 생성
     mockSpan = {
       setAttribute: vi.fn((key: string, value: unknown) => {
         capturedAttributes[key] = value;
       }),
-      setAttributes: vi.fn(),
-      addEvent: vi.fn((name: string, attributes?: Attributes) => {
+      addEvent: vi.fn((name: string, attributes: Record<string, unknown>) => {
         capturedEvents.push({ name, attributes: attributes ?? {} });
       }),
-      addLink: vi.fn(),
-      addLinks: vi.fn(),
-      recordException: vi.fn(),
-      setStatus: vi.fn(),
-      updateName: vi.fn(),
-      end: vi.fn(),
-      isRecording: vi.fn(() => true),
-      dropLinks: vi.fn(),
-      spanContext: vi.fn(),
-      setStartTime: vi.fn(),
-      setParent: vi.fn(),
-    } as unknown as Span;
+    };
   });
 
   describe('recordLlmUsage', () => {
