@@ -3,7 +3,11 @@ import type { Subscription, SubscriptionStatus } from '../types';
 import type { BillingGateway, CreateCheckoutParams } from './BillingGateway';
 import type { BillingStore } from './BillingStore';
 import { SubscriptionCanceledEvent } from './events/SubscriptionCanceledEvent';
-import { BillingAccountNotFoundProblem, SubscriptionNotFoundProblem } from './problems/BillingProblems';
+import {
+  BillingAccountNotFoundProblem,
+  BillingCheckoutCreationProblem,
+  SubscriptionNotFoundProblem,
+} from './problems/BillingProblems';
 
 export type BillingServiceDependencies = {
   store: BillingStore;
@@ -82,14 +86,15 @@ export class BillingService {
     }
   }
 
-  private createCheckoutError(billingAccountId: string, error: unknown): Error {
+  private createCheckoutError(billingAccountId: string, error: unknown): BillingCheckoutCreationProblem {
     if (error instanceof Error) {
-      const checkoutError = new Error(`Failed to create checkout for tenant ${billingAccountId}: ${error.message}`);
-      Object.assign(checkoutError, { cause: error });
-      return checkoutError;
+      return new BillingCheckoutCreationProblem(
+        billingAccountId,
+        `Failed to create checkout for tenant ${billingAccountId}: ${error.message}`
+      );
     }
 
-    return new Error(`Failed to create checkout for tenant ${billingAccountId}: unknown error`);
+    return new BillingCheckoutCreationProblem(billingAccountId);
   }
 
   /**

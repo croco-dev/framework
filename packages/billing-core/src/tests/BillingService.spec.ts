@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BillingGateway, CheckoutResult } from '../libs/BillingGateway';
 import { BillingService } from '../libs/BillingService';
 import { InMemoryBillingStore } from '../libs/InMemoryBillingStore';
+import { BillingCheckoutCreationProblem } from '../libs/problems/BillingProblems';
 import type { Subscription } from '../types';
 
 describe('BillingService', () => {
@@ -240,6 +241,7 @@ describe('BillingService', () => {
       vi.mocked(mockGateway.ensureCustomer).mockResolvedValue('ext-cust-bug-09');
       vi.mocked(mockGateway.createCheckout).mockRejectedValue(new Error('payment failed'));
 
+      await expect(service.createCheckout(params)).rejects.toBeInstanceOf(BillingCheckoutCreationProblem);
       await expect(service.createCheckout(params)).rejects.toThrow(
         'Failed to create checkout for tenant tenant-bug-09: payment failed'
       );
