@@ -118,12 +118,10 @@ export class DefaultEventSerializer implements EventSerializer {
     try {
       return new EventClass();
     } catch {
-      const instance = Object.create(EventClass.prototype) as T;
-      const obj = instance as unknown as Record<string, unknown>;
-      obj.eventName = data.eventType;
-      obj.timestamp = new Date(data.occurredAt);
-      obj.metadata = {};
-      return instance;
+      throw new EventDeserializationError(
+        EventClass.name,
+        'Events with required constructor arguments must provide a static fromPayload() method for deserialization.'
+      );
     }
   }
 }
