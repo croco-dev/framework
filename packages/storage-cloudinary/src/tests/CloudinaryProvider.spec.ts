@@ -566,6 +566,17 @@ describe('CloudinaryProvider', () => {
     it('should throw InvalidKeyProblem for invalid key', async () => {
       await expect(provider.getUploadIntent('')).rejects.toThrow(InvalidKeyProblem);
     });
+
+    it('should allow custom upload base URL', async () => {
+      const customProvider = new CloudinaryProvider({
+        ...mockConfig,
+        uploadBaseUrl: 'https://uploads.example.com/cloudinary',
+      });
+
+      const intent = await customProvider.getUploadIntent('test-key');
+
+      expect(intent.uploadUrl).toBe('https://uploads.example.com/v1_1/test-cloud/image/upload');
+    });
   });
 
   describe('fit mode mapping', () => {

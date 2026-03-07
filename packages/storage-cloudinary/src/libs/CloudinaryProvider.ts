@@ -16,11 +16,13 @@ import type { CloudinaryConfig, CloudinaryTransformOptions } from './types';
 export class CloudinaryProvider extends BaseStorageProvider implements ImageProvider {
   private readonly cloudName: string;
   private readonly secure: boolean;
+  private readonly uploadBaseUrl: string;
 
   constructor(config: CloudinaryConfig) {
     super();
     this.cloudName = config.cloudName;
     this.secure = config.secure ?? true;
+    this.uploadBaseUrl = config.uploadBaseUrl ?? 'https://api.cloudinary.com';
 
     cloudinary.config({
       cloud_name: config.cloudName,
@@ -180,7 +182,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   async getUploadIntent(key: string): Promise<UploadIntent> {
     this.validateKey(key);
 
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${this.cloudName}/image/upload`;
+    const uploadUrl = new URL(`/v1_1/${this.cloudName}/image/upload`, this.uploadBaseUrl).toString();
     const publicUrl = this.getPublicUrl(key);
     const expiresAt = new Date(Date.now() + 3600 * 1000);
 

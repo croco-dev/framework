@@ -21,6 +21,8 @@ export type CloudinaryConfig = {
    * HTTPS 사용 여부 (기본값: true)
    */
   secure?: boolean;
+
+  uploadBaseUrl?: string;
 };
 
 /**
