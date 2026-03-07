@@ -1642,6 +1642,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/triggers-core':
         specifier: workspace:*
         version: link:../triggers-core
