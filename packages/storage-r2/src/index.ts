@@ -3,6 +3,7 @@
  */
 
 export { MissingR2ConfigProblem } from './libs/problems/MissingR2ConfigProblem';
+export { R2ObjectTooLargeProblem } from './libs/problems/R2ObjectTooLargeProblem';
 export { R2StorageProvider } from './libs/R2StorageProvider';
 
 /**

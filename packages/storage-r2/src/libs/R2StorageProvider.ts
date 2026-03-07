@@ -7,6 +7,7 @@ import type { Logger } from '@croco/framework-logger';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions } from '@croco/storage-core';
 import { BaseStorageProvider } from '@croco/storage-core';
 import { MissingR2ConfigProblem } from './problems/MissingR2ConfigProblem';
+import { R2ObjectTooLargeProblem } from './problems/R2ObjectTooLargeProblem';
 import type { R2Options } from './types';
 
 /**
@@ -16,6 +17,7 @@ import type { R2Options } from './types';
  */
 @Component()
 export class R2StorageProvider extends BaseStorageProvider {
+  private static readonly MAX_BUFFERED_GET_BYTES = 10 * 1024 * 1024;
   private readonly client: S3Client;
   private readonly options: R2Options;
   private static readonly REQUIRED_CONFIG_KEYS = [
@@ -98,8 +100,15 @@ export class R2StorageProvider extends BaseStorageProvider {
 
       const chunks: Uint8Array[] = [];
       const stream = response.Body as Readable;
+      let totalBytes = 0;
 
       for await (const chunk of stream) {
+        totalBytes += chunk.byteLength;
+
+        if (totalBytes > R2StorageProvider.MAX_BUFFERED_GET_BYTES) {
+          throw new R2ObjectTooLargeProblem(key, R2StorageProvider.MAX_BUFFERED_GET_BYTES);
+        }
+
         chunks.push(chunk);
       }
 
