@@ -293,15 +293,51 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
   private formatContext(metadata: Record<string, string>): string {
     return Object.entries(metadata)
-      .map(([key, value]) => `${key}=${value}`)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
       .join('|');
   }
 
-  private parseContext(context: Record<string, any>): Record<string, string> {
-    if (context && typeof context === 'object' && 'custom' in context) {
-      return context.custom as Record<string, string>;
+  private parseContext(context: unknown): Record<string, string> {
+    if (typeof context === 'string') {
+      return context.split('|').reduce<Record<string, string>>((acc, pair) => {
+        const separatorIndex = pair.indexOf('=');
+
+        if (separatorIndex === -1) {
+          return acc;
+        }
+
+        const rawKey = pair.slice(0, separatorIndex);
+        const rawValue = pair.slice(separatorIndex + 1);
+
+        acc[decodeURIComponent(rawKey)] = decodeURIComponent(rawValue);
+        return acc;
+      }, {});
     }
-    return context as Record<string, string>;
+
+    if (context && typeof context === 'object' && 'custom' in context) {
+      const custom = Reflect.get(context, 'custom');
+      if (custom && typeof custom === 'object') {
+        return Object.entries(custom).reduce<Record<string, string>>((acc, [key, value]) => {
+          if (typeof value === 'string') {
+            acc[decodeURIComponent(key)] = decodeURIComponent(value);
+          }
+
+          return acc;
+        }, {});
+      }
+    }
+
+    if (context && typeof context === 'object') {
+      return Object.entries(context).reduce<Record<string, string>>((acc, [key, value]) => {
+        if (typeof value === 'string') {
+          acc[decodeURIComponent(key)] = decodeURIComponent(value);
+        }
+
+        return acc;
+      }, {});
+    }
+
+    return {};
   }
 
   private isNotFoundError(error: unknown): boolean {
