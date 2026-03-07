@@ -142,4 +142,23 @@ describe('InMemoryCacheStore', () => {
       expect(deleted).toBe(0);
     });
   });
+
+  describe('pruneExpired', () => {
+    it('removes expired entries without reads', async () => {
+      vi.useFakeTimers();
+
+      await cache.set('expired', 'value', 1000);
+      await cache.set('active', 'value', 5000);
+
+      vi.advanceTimersByTime(1001);
+
+      const deleted = await cache.pruneExpired();
+
+      expect(deleted).toBe(1);
+      expect(await cache.get('expired')).toBeUndefined();
+      expect(await cache.get('active')).toBe('value');
+
+      vi.useRealTimers();
+    });
+  });
 });

@@ -12,6 +12,7 @@ export class Bootstrap {
   private static app: Application | null = null;
   private static config: BootstrapConfig | null = null;
   private static isInitialized = false;
+  private static shutdownHandler?: () => Promise<void>;
 
   private static ensureReflectMetadata() {
     if (!Reflect || !Reflect.defineMetadata) {
@@ -93,6 +94,11 @@ export class Bootstrap {
       console.log(`🔗 Health check: http://localhost:${port}/health`);
     });
 
+    if (Bootstrap.shutdownHandler) {
+      process.off('SIGTERM', Bootstrap.shutdownHandler);
+      process.off('SIGINT', Bootstrap.shutdownHandler);
+    }
+
     const shutdown = async () => {
       console.log('\n📦 Shutting down gracefully...');
       server.close(() => {
@@ -103,6 +109,7 @@ export class Bootstrap {
       }
     };
 
+    Bootstrap.shutdownHandler = shutdown;
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
   }
@@ -115,6 +122,12 @@ export class Bootstrap {
   }
 
   static reset() {
+    if (Bootstrap.shutdownHandler) {
+      process.off('SIGTERM', Bootstrap.shutdownHandler);
+      process.off('SIGINT', Bootstrap.shutdownHandler);
+      Bootstrap.shutdownHandler = undefined;
+    }
+
     Bootstrap.app = null;
     Bootstrap.config = null;
     Bootstrap.isInitialized = false;

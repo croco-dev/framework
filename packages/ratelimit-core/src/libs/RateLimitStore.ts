@@ -12,4 +12,6 @@ export interface RateLimitStore {
    * @returns Rate limit result with success status and metadata
    */
   check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult>;
+
+  pruneExpired?(): Promise<number>;
 }

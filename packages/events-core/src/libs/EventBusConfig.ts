@@ -15,8 +15,6 @@ export class EventBusConfig {
   private readonly startedSubscriptionKeys: Set<string> = new Set();
   private eventBus?: EventBus;
 
-  constructor() {}
-
   public static getInstance(): EventBusConfig {
     if (!EventBusConfig.instance) {
       EventBusConfig.instance = new EventBusConfig();
@@ -42,6 +40,28 @@ export class EventBusConfig {
 
   public subscribe(subscription: EventSubscription): void {
     this.subscriptions.add(subscription);
+  }
+
+  public unsubscribe(subscription: EventSubscription): void {
+    this.subscriptions.delete(subscription);
+
+    if (!this.eventBus) {
+      return;
+    }
+
+    const subscriptionKey = this.createSubscriptionKey(subscription);
+    if (!this.startedSubscriptionKeys.has(subscriptionKey)) {
+      return;
+    }
+
+    this.eventBus.unsubscribe(subscription);
+    this.startedSubscriptionKeys.delete(subscriptionKey);
+  }
+
+  public clear(): void {
+    this.subscriptions.clear();
+    this.startedSubscriptionKeys.clear();
+    this.eventBus?.clear();
   }
 
   public async start(options: EventBusStartOptions): Promise<void> {

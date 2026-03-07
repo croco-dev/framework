@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryRateLimitStore } from '../libs/InMemoryRateLimitStore';
 import type { RateLimitPolicy } from '../libs/types';
 
@@ -64,5 +64,22 @@ describe('InMemoryRateLimitStore', () => {
 
     const result = await store.check('user:1', policy);
     expect(result.remaining).toBe(2);
+  });
+
+  it('should prune expired buckets without new checks', async () => {
+    vi.useFakeTimers();
+
+    await store.check('user:1', policy);
+    await store.check('user:2', policy);
+
+    vi.advanceTimersByTime(policy.windowMs + 1);
+
+    const deleted = await store.pruneExpired();
+    const result = await store.check('user:1', policy);
+
+    expect(deleted).toBe(2);
+    expect(result.remaining).toBe(2);
+
+    vi.useRealTimers();
   });
 });

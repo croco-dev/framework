@@ -36,4 +36,6 @@ export interface CacheStore<V = unknown> {
    * @param pattern - The pattern to match (supports * as wildcard)
    */
   deleteByPattern?(pattern: string): Promise<number>;
+
+  pruneExpired?(): Promise<number>;
 }

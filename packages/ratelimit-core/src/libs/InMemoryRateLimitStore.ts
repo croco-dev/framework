@@ -4,6 +4,7 @@ import type { RateLimitPolicy, RateLimitResult } from './types';
 type BucketEntry = {
   count: number;
   windowStart: number;
+  windowMs: number;
 };
 
 /**
@@ -21,7 +22,7 @@ export class InMemoryRateLimitStore implements RateLimitStore {
     let bucket = this.buckets.get(key);
 
     if (!bucket || bucket.windowStart < windowStart) {
-      bucket = { count: 0, windowStart: now };
+      bucket = { count: 0, windowStart: now, windowMs: policy.windowMs };
     }
 
     if (bucket.count >= policy.limit) {
@@ -50,5 +51,19 @@ export class InMemoryRateLimitStore implements RateLimitStore {
    */
   reset(): void {
     this.buckets.clear();
+  }
+
+  async pruneExpired(): Promise<number> {
+    const now = Date.now();
+    let deletedCount = 0;
+
+    for (const [key, bucket] of this.buckets.entries()) {
+      if (bucket.windowStart + bucket.windowMs <= now) {
+        this.buckets.delete(key);
+        deletedCount++;
+      }
+    }
+
+    return deletedCount;
   }
 }
