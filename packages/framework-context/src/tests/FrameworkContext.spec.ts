@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import 'reflect-metadata';
 import { Component, Container, Context, MetadataStorage } from '../index';
 import { getComponentScope } from '../libs/decorators/Component';
@@ -200,6 +200,40 @@ describe('Context', () => {
     await Context.run(ctx, async () => {
       const spanId = Context.getActiveSpanId();
       expect(spanId).toBeNull();
+    });
+  });
+
+  describe('runWithMiddleware', () => {
+    it('should call onRequestError for non-Error throws with a normalized Error', async () => {
+      const onRequestError = vi.fn();
+      const thrownValue = 'non-error failure';
+
+      await expect(
+        Context.runWithMiddleware({ requestId: 'middleware-err-1' }, [], { onRequestError }, async () => {
+          throw thrownValue;
+        })
+      ).rejects.toBe(thrownValue);
+
+      expect(onRequestError).toHaveBeenCalledWith(
+        { requestId: 'middleware-err-1' },
+        expect.objectContaining({
+          message: 'non-error failure',
+        })
+      );
+      expect(onRequestError.mock.calls[0]?.[1]).toBeInstanceOf(Error);
+    });
+
+    it('should preserve the original Error instance for onRequestError', async () => {
+      const onRequestError = vi.fn();
+      const originalError = new Error('boom');
+
+      await expect(
+        Context.runWithMiddleware({ requestId: 'middleware-err-2' }, [], { onRequestError }, async () => {
+          throw originalError;
+        })
+      ).rejects.toBe(originalError);
+
+      expect(onRequestError).toHaveBeenCalledWith({ requestId: 'middleware-err-2' }, originalError);
     });
   });
 });
