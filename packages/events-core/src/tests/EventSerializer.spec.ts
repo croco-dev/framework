@@ -73,6 +73,22 @@ class ConstructorSensitiveEvent extends DomainEvent {
   }
 }
 
+class ConstructorSensitiveEventWithFactory extends DomainEvent {
+  static eventName = 'ConstructorSensitiveEventWithFactory';
+
+  @EventField()
+  public readonly message: string;
+
+  constructor(message: string) {
+    super();
+    this.message = message.toUpperCase();
+  }
+
+  static fromPayload(payload: Record<string, unknown>): ConstructorSensitiveEventWithFactory {
+    return new ConstructorSensitiveEventWithFactory(String(payload.message ?? ''));
+  }
+}
+
 describe('DefaultEventSerializer', () => {
   let registry!: EventRegistry;
   let serializer!: DefaultEventSerializer;
@@ -143,6 +159,7 @@ describe('DefaultEventSerializer', () => {
       registry.register(TestEvent);
       registry.register(TestEventWithAggregate);
       registry.register(ConstructorSensitiveEvent);
+      registry.register(ConstructorSensitiveEventWithFactory);
     });
 
     it('should deserialize event successfully', () => {
@@ -192,7 +209,7 @@ describe('DefaultEventSerializer', () => {
       expect(() => serializer.deserialize(data)).toThrow("Unknown event type: 'UnknownEvent'");
     });
 
-    it('BUG-79 생성자 인자가 필수인 @EventField 이벤트도 역직렬화할 수 있어야 한다', () => {
+    it('BUG-79 생성자 인자가 필수인 @EventField 이벤트는 static fromPayload 없이 역직렬화되면 안 된다', () => {
       const data: SerializedEvent = {
         eventType: 'ConstructorSensitiveEvent',
         eventId: 'evt_bug_79',
@@ -202,12 +219,26 @@ describe('DefaultEventSerializer', () => {
         },
       };
 
-      const event = serializer.deserialize<ConstructorSensitiveEvent>(data);
+      expect(() => serializer.deserialize<ConstructorSensitiveEvent>(data)).toThrow(EventDeserializationError);
+      expect(() => serializer.deserialize<ConstructorSensitiveEvent>(data)).toThrow(
+        "Cannot deserialize event 'ConstructorSensitiveEvent': Events with required constructor arguments must provide a static fromPayload() method for deserialization."
+      );
+    });
 
-      expect(event).toBeInstanceOf(ConstructorSensitiveEvent);
-      expect(event.message).toBe('safe payload');
-      expect(event.eventName).toBe('ConstructorSensitiveEvent');
-      expect(event.timestamp).toBeInstanceOf(Date);
+    it('should deserialize constructor-sensitive events through static fromPayload', () => {
+      const data: SerializedEvent = {
+        eventType: 'ConstructorSensitiveEventWithFactory',
+        eventId: 'evt_factory_174',
+        occurredAt: new Date().toISOString(),
+        payload: {
+          message: 'safe payload',
+        },
+      };
+
+      const event = serializer.deserialize<ConstructorSensitiveEventWithFactory>(data);
+
+      expect(event).toBeInstanceOf(ConstructorSensitiveEventWithFactory);
+      expect(event.message).toBe('SAFE PAYLOAD');
     });
   });
 
