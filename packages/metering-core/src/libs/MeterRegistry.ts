@@ -12,12 +12,18 @@ import type { MeterDefinition, MeterRegistrationOptions } from './types';
  * - 테넌트별 격리된 조회
  */
 export class MeterRegistry {
+  private static readonly DEFAULT_CACHE_TTL_MS = 60_000;
+
   /**
    * 캐시: Map<tenantId, Map<meterId, MeterDefinition>>
    */
   private readonly cache = new Map<string, Map<string, MeterDefinition>>();
+  private readonly cacheUpdatedAt = new Map<string, number>();
 
-  constructor(private readonly repository: MeterRepository) {}
+  constructor(
+    private readonly repository: MeterRepository,
+    private readonly cacheTtlMs: number = MeterRegistry.DEFAULT_CACHE_TTL_MS
+  ) {}
 
   /**
    * 앱 시작 시 모든 Meter 로드
@@ -37,6 +43,10 @@ export class MeterRegistry {
    */
   async get(tenantId: string, meterId: string): Promise<MeterDefinition | null> {
     // 캐시에서 먼저 확인
+    if (this.isCacheStale(tenantId)) {
+      await this.refreshTenantCache(tenantId);
+    }
+
     const cached = this.getFromCache(tenantId, meterId);
     if (cached) {
       return cached;
@@ -77,15 +87,11 @@ export class MeterRegistry {
    */
   async getByTenant(tenantId: string): Promise<MeterDefinition[]> {
     const tenantCache = this.cache.get(tenantId);
-    if (tenantCache && tenantCache.size > 0) {
+    if (tenantCache && tenantCache.size > 0 && !this.isCacheStale(tenantId)) {
       return Array.from(tenantCache.values());
     }
 
-    const meters = await this.repository.findByTenant(tenantId);
-    for (const meter of meters) {
-      this.addToCache(meter);
-    }
-    return meters;
+    return this.refreshTenantCache(tenantId);
   }
 
   /**
@@ -93,6 +99,7 @@ export class MeterRegistry {
    */
   clearCache(): void {
     this.cache.clear();
+    this.cacheUpdatedAt.clear();
   }
 
   private addToCache(meter: MeterDefinition): void {
@@ -102,9 +109,33 @@ export class MeterRegistry {
       this.cache.set(meter.tenantId, tenantCache);
     }
     tenantCache.set(meter.meterId, meter);
+    this.cacheUpdatedAt.set(meter.tenantId, Date.now());
   }
 
   private getFromCache(tenantId: string, meterId: string): MeterDefinition | null {
     return this.cache.get(tenantId)?.get(meterId) ?? null;
+  }
+
+  private async refreshTenantCache(tenantId: string): Promise<MeterDefinition[]> {
+    const meters = await this.repository.findByTenant(tenantId);
+    const tenantCache = new Map<string, MeterDefinition>();
+
+    for (const meter of meters) {
+      tenantCache.set(meter.meterId, meter);
+    }
+
+    this.cache.set(tenantId, tenantCache);
+    this.cacheUpdatedAt.set(tenantId, Date.now());
+
+    return meters;
+  }
+
+  private isCacheStale(tenantId: string): boolean {
+    const updatedAt = this.cacheUpdatedAt.get(tenantId);
+    if (updatedAt === undefined) {
+      return false;
+    }
+
+    return Date.now() - updatedAt >= this.cacheTtlMs;
   }
 }
