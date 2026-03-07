@@ -19,11 +19,6 @@ export { TenantRequiredProblem } from './libs/problems/TenantRequiredProblem';
 export { JwtTenantResolver } from './libs/resolvers/JwtTenantResolver';
 
 /**
- * Row-level security policy helper and option type.
- */
-export { createRlsPolicy, type RlsPolicyOptions } from './libs/rlsUtils';
-
-/**
  * Manages tenant context across async boundaries.
  */
 export { TenantManager } from './libs/TenantManager';
