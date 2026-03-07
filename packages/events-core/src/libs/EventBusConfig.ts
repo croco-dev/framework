@@ -1,5 +1,5 @@
 import type { EventBus, EventSubscription } from './EventBus';
-import type { EventHandlerClass } from './EventHandler';
+import { type EventHandlerClass, getEventHandlerSubscriptions } from './EventHandler';
 import type { HandlerResolver } from './HandlerResolver';
 import { DefaultHandlerResolver } from './HandlerResolver';
 import { EventBusNotSetProblem } from './problems/EventsProblems';
@@ -50,6 +50,12 @@ export class EventBusConfig {
     }
 
     const resolver = options.resolver ?? new DefaultHandlerResolver();
+
+    for (const handlerClass of options.handlers) {
+      for (const subscription of getEventHandlerSubscriptions(handlerClass)) {
+        this.subscribe(subscription);
+      }
+    }
 
     for (const subscription of this.subscriptions) {
       const subscriptionKey = this.createSubscriptionKey(subscription);
