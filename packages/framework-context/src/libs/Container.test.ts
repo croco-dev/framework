@@ -1,3 +1,4 @@
+import { Token, Container as TypeDIContainer } from 'typedi';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Container } from './Container';
 import { Context } from './Context';
@@ -106,5 +107,50 @@ describe('Container.getRequestScoped', () => {
     });
 
     expect(outerInstance).not.toBe(innerInstance);
+  });
+
+  it('should respect @Inject token metadata for transient services', () => {
+    const configToken = new Token<string>('config.token');
+
+    class ConfigConsumer {
+      constructor(public readonly config: string) {}
+    }
+
+    Reflect.defineMetadata('design:paramtypes', [String], ConfigConsumer);
+    TypeDIContainer.registerHandler({
+      object: ConfigConsumer,
+      index: 0,
+      value: (container) => container.get(configToken),
+    });
+    Component({ scope: 'transient' })(ConfigConsumer);
+    Container.set(configToken, 'token-value');
+
+    const instance = Container.get(ConfigConsumer);
+
+    expect(instance.config).toBe('token-value');
+  });
+
+  it('should respect @Inject token metadata for request-scoped services', () => {
+    const configToken = new Token<string>('request.config.token');
+
+    class RequestConfigConsumer {
+      constructor(public readonly config: string) {}
+    }
+
+    Reflect.defineMetadata('design:paramtypes', [String], RequestConfigConsumer);
+    TypeDIContainer.registerHandler({
+      object: RequestConfigConsumer,
+      index: 0,
+      value: (container) => container.get(configToken),
+    });
+    Component({ scope: 'request' })(RequestConfigConsumer);
+    Container.set(configToken, 'request-token-value');
+
+    let instance!: RequestConfigConsumer;
+    Context.run({ requestId: 'request-1' }, () => {
+      instance = Container.get(RequestConfigConsumer);
+    });
+
+    expect(instance.config).toBe('request-token-value');
   });
 });
