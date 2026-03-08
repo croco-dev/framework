@@ -1,10 +1,11 @@
 import { Component, Inject } from '@croco/framework-context';
-import type { DrizzleDb } from '@croco/tx-drizzle';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import * as schema from './schema';
 
 export const DRIZZLE_TOKEN = 'DRIZZLE_TOKEN';
+
+type BetterAuthDatabase = Parameters<typeof drizzleAdapter>[0];
 
 export interface BetterAuthConfig {
   baseURL: string; // e.g., http://localhost:3000
@@ -16,7 +17,7 @@ export class BetterAuthFactory {
   private auth: ReturnType<typeof betterAuth>;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleDb,
+    @Inject(DRIZZLE_TOKEN) private readonly db: BetterAuthDatabase,
     config: BetterAuthConfig
   ) {
     this.auth = betterAuth({
