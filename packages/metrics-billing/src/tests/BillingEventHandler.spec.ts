@@ -256,6 +256,41 @@ describe('BillingEventHandler', () => {
         `billing.plan_changed_${event.timestamp.getTime()}`
       );
     });
+
+    it('should record unchanged movement when the normalized MRR delta is zero', async () => {
+      const event = new PlanChangedEvent('tenant-1', 'plan-pro', 'plan-pro-yearly', 'sub-stripe');
+
+      const equivalentMonthlyPlan: Plan = {
+        id: 'plan-pro-yearly',
+        name: 'Pro Plan Yearly Equivalent',
+        amount: 34800,
+        currency: 'USD',
+        interval: 'year',
+        intervalCount: 1,
+      };
+
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
+      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
+        if (id === 'plan-pro') return Promise.resolve(mockPlan);
+        if (id === 'plan-pro-yearly') return Promise.resolve(equivalentMonthlyPlan);
+        return Promise.resolve(null);
+      });
+
+      await handler.handle(event);
+
+      const callArgs = vi.mocked(metricsRepository.recordMRRMovement).mock.calls[0];
+      const movement = callArgs?.[1];
+
+      expect(movement).toEqual({
+        new: { amount: 0, currency: 'USD' },
+        expansion: { amount: 0, currency: 'USD' },
+        contraction: { amount: 0, currency: 'USD' },
+        churned: { amount: 0, currency: 'USD' },
+        reactivation: { amount: 0, currency: 'USD' },
+        net: { amount: 0, currency: 'USD' },
+      });
+    });
   });
 
   describe('SubscriptionCanceledEvent', () => {
