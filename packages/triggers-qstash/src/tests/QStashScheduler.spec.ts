@@ -93,7 +93,7 @@ describe('QStashScheduler', () => {
         method: 'POST',
         body: expect.any(String),
         headers: expect.objectContaining({
-          'X-Schedule-Id': 'croco-trigger:processQueue:processQueue',
+          'X-Schedule-Id': 'croco-trigger:NewScheduleJob:processQueue:processQueue',
         }),
       })
     );
@@ -105,7 +105,7 @@ describe('QStashScheduler', () => {
     };
 
     expect(payload).toMatchObject({
-      scheduleId: 'croco-trigger:processQueue:processQueue',
+      scheduleId: 'croco-trigger:NewScheduleJob:processQueue:processQueue',
       triggerName: 'processQueue',
       methodName: 'processQueue',
     });
@@ -147,7 +147,7 @@ describe('QStashScheduler', () => {
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: expect.objectContaining({
-          'X-Schedule-Id': 'croco-trigger:queue-drain:processQueue',
+          'X-Schedule-Id': 'croco-trigger:NamedScheduleJob:queue-drain:processQueue',
         }),
       })
     );
@@ -159,7 +159,7 @@ describe('QStashScheduler', () => {
     };
 
     expect(payload).toMatchObject({
-      scheduleId: 'croco-trigger:queue-drain:processQueue',
+      scheduleId: 'croco-trigger:NamedScheduleJob:queue-drain:processQueue',
       triggerName: 'queue-drain',
       className: 'NamedScheduleJob',
     });
@@ -202,7 +202,7 @@ describe('QStashScheduler', () => {
     expect(result.failed).toBe(1);
     expect(result.details).toEqual([
       expect.objectContaining({
-        name: 'croco-trigger:processQueue:processQueue',
+        name: 'croco-trigger:FailingScheduleJob:processQueue:processQueue',
         action: 'failed',
         error: 'create failed',
       }),
@@ -215,7 +215,7 @@ describe('QStashScheduler', () => {
       schedules: {
         list: vi.fn().mockResolvedValue([
           {
-            scheduleId: 'croco-trigger:orphan:run',
+            scheduleId: 'croco-trigger:OrphanJob:orphan:run',
             cron: '* * * * *',
           },
         ]),
@@ -238,7 +238,7 @@ describe('QStashScheduler', () => {
     expect(result.failed).toBe(1);
     expect(result.details).toEqual([
       expect.objectContaining({
-        name: 'croco-trigger:orphan:run',
+        name: 'croco-trigger:OrphanJob:orphan:run',
         action: 'failed',
         error: 'delete failed',
       }),
@@ -265,7 +265,7 @@ describe('QStashScheduler', () => {
       schedules: {
         list: vi.fn().mockResolvedValue([
           {
-            scheduleId: 'croco-trigger:processQueue:processQueue',
+            scheduleId: 'croco-trigger:UpdatedScheduleJob:processQueue:processQueue',
             cron: '*/5 * * * *',
           },
         ]),
@@ -285,7 +285,7 @@ describe('QStashScheduler', () => {
     expect(result.failed).toBe(0);
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduleId: 'croco-trigger:processQueue:processQueue',
+        scheduleId: 'croco-trigger:UpdatedScheduleJob:processQueue:processQueue',
         cron: '*/10 * * * *',
       })
     );
@@ -312,7 +312,7 @@ describe('QStashScheduler', () => {
       schedules: {
         list: vi.fn().mockResolvedValue([
           {
-            scheduleId: 'croco-trigger:processQueue:processQueue',
+            scheduleId: 'croco-trigger:FailingUpdateScheduleJob:processQueue:processQueue',
             cron: '*/5 * * * *',
           },
         ]),
@@ -332,11 +332,58 @@ describe('QStashScheduler', () => {
     expect(result.failed).toBe(1);
     expect(result.details).toEqual([
       expect.objectContaining({
-        name: 'croco-trigger:processQueue:processQueue',
+        name: 'croco-trigger:FailingUpdateScheduleJob:processQueue:processQueue',
         action: 'failed',
         error: 'update failed',
       }),
     ]);
     expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it('should fail fast when two triggers resolve to the same schedule id', async () => {
+    const FirstDuplicateScheduleJob = class DuplicateScheduleJob {
+      async run(): Promise<void> {}
+    };
+
+    const SecondDuplicateScheduleJob = class DuplicateScheduleJob {
+      async run(): Promise<void> {}
+    };
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'run',
+      target: FirstDuplicateScheduleJob.prototype,
+      options: {
+        name: 'shared',
+      },
+    });
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '*/5 * * * *',
+      methodName: 'run',
+      target: SecondDuplicateScheduleJob.prototype,
+      options: {
+        name: 'shared',
+      },
+    });
+
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: 'https://api.example.com/webhooks/qstash',
+    });
+
+    await expect(scheduler.sync()).rejects.toThrow(
+      'Duplicate QStash schedule ID detected: croco-trigger:DuplicateScheduleJob:shared:run'
+    );
   });
 });
