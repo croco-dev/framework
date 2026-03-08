@@ -50,6 +50,28 @@ describe('InMemoryBillingStore', () => {
       const result = await store.findAccountByExternalId('non-existent');
       expect(result).toBeNull();
     });
+
+    it('should remove stale external ID mappings when an account is re-saved with a new external ID', async () => {
+      const originalAccount: BillingAccount = {
+        id: 'tenant-1',
+        tenantId: 'tenant-1',
+        externalCustomerId: 'ext-cust-1',
+        email: 'test@example.com',
+        createdAt: new Date(),
+      };
+
+      await store.saveAccount(originalAccount);
+
+      const updatedAccount: BillingAccount = {
+        ...originalAccount,
+        externalCustomerId: 'ext-cust-2',
+      };
+
+      await store.saveAccount(updatedAccount);
+
+      expect(await store.findAccountByExternalId('ext-cust-1')).toBeNull();
+      expect(await store.findAccountByExternalId('ext-cust-2')).toEqual(updatedAccount);
+    });
   });
 
   describe('findSubscription', () => {
