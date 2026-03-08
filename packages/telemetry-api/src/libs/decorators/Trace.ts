@@ -45,9 +45,7 @@ export function Trace(options: TraceDecoratorOptions = {}): MethodDecorator {
 
       return await context.with(spanContext, async () => {
         try {
-          const result = await originalMethod.apply(this, args);
-          span.setStatus({ code: SpanStatusCode.OK });
-          return result;
+          return await originalMethod.apply(this, args);
         } catch (error) {
           span.setStatus({
             code: SpanStatusCode.ERROR,

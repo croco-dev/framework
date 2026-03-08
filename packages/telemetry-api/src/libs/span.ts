@@ -29,9 +29,7 @@ export async function withSpan<T>(fn: (span: Span) => Promise<T> | T, options: S
         span.setAttribute(key, value as Parameters<Span['setAttribute']>[1]);
       }
 
-      const result = await fn(span);
-      span.setStatus({ code: SpanStatusCode.OK });
-      return result;
+      return await fn(span);
     } catch (error) {
       recordError(error, span);
       throw error;

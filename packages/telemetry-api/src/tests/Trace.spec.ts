@@ -1,9 +1,10 @@
-import { context, trace } from '@opentelemetry/api';
+import { context, type SpanOptions as OtelSpanOptions, type Span, type Tracer, trace } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { TraceDecoratorOptions } from '../libs/decorators/Trace';
 import { getTraceOptions, Trace } from '../libs/decorators/Trace';
 import { getActiveTraceInfo, recordEvent, withSpan } from '../libs/span';
+import * as tracerModule from '../libs/tracer';
 import { getTracer } from '../libs/tracer';
 
 const asyncContextManager = new AsyncLocalStorageContextManager().enable();
@@ -19,6 +20,10 @@ afterAll(() => {
   }
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 function decorateMethodWithTrace(target: object, methodName: string, options: TraceDecoratorOptions): void {
   const descriptor = Object.getOwnPropertyDescriptor(target, methodName);
   if (!descriptor) {
@@ -27,6 +32,47 @@ function decorateMethodWithTrace(target: object, methodName: string, options: Tr
 
   const decoratedDescriptor = Trace(options)(target, methodName, descriptor) ?? descriptor;
   Object.defineProperty(target, methodName, decoratedDescriptor);
+}
+
+function createMockSpan() {
+  const setAttribute = vi.fn();
+  const setStatus = vi.fn();
+  const end = vi.fn();
+
+  const spanContext = () => ({
+    traceId: '00000000000000000000000000000001',
+    spanId: '0000000000000001',
+    traceFlags: 1,
+    isRemote: false,
+  });
+
+  const span: Span = {
+    spanContext,
+    setAttribute,
+    setAttributes: vi.fn(),
+    addEvent: vi.fn(),
+    addLink: vi.fn(),
+    addLinks: vi.fn(),
+    setStatus,
+    updateName: vi.fn(),
+    end,
+    isRecording: vi.fn(() => true),
+    recordException: vi.fn(),
+  } as unknown as Span;
+
+  return {
+    span,
+    setAttribute,
+    setStatus,
+    end,
+  };
+}
+
+function createMockTracer(mockSpan: Span): Tracer {
+  return {
+    startSpan: () => mockSpan,
+    startActiveSpan: async <T>(_name: string, fn: (span: Span) => T, _options?: OtelSpanOptions) => fn(mockSpan),
+  } as Tracer;
 }
 
 describe('Trace', () => {
@@ -92,6 +138,26 @@ describe('Trace', () => {
     const service = new TestService();
 
     await expect(service.failingMethod()).rejects.toThrow('Test error');
+  });
+
+  it('should not set span status on successful completion', async () => {
+    const mockSpan = createMockSpan();
+
+    vi.spyOn(tracerModule, 'getTracer').mockReturnValue(createMockTracer(mockSpan.span));
+
+    class TestService {
+      async succeed(): Promise<string> {
+        return 'ok';
+      }
+    }
+
+    decorateMethodWithTrace(TestService.prototype, 'succeed', { name: 'success-without-status' });
+
+    const service = new TestService();
+    await expect(service.succeed()).resolves.toBe('ok');
+
+    expect(mockSpan.setStatus).not.toHaveBeenCalled();
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
   });
 
   it('should expose decorator options via getTraceOptions', () => {
@@ -174,6 +240,17 @@ describe('withSpan', () => {
         throw new Error('Test error');
       })
     ).rejects.toThrow('Test error');
+  });
+
+  it('should not set span status on successful completion', async () => {
+    const mockSpan = createMockSpan();
+
+    vi.spyOn(tracerModule, 'getTracer').mockReturnValue(createMockTracer(mockSpan.span));
+
+    await expect(withSpan(async () => 'ok', { name: 'with-span-success' })).resolves.toBe('ok');
+
+    expect(mockSpan.setStatus).not.toHaveBeenCalled();
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
   });
 });
 
