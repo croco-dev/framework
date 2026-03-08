@@ -84,6 +84,7 @@ export {
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,
+  EventTransactionContextUnavailableProblem,
   UnknownEventTypeProblem,
 } from './libs/problems/EventsProblems';
 

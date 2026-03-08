@@ -1,6 +1,7 @@
 import { Container, TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/framework-context';
 import type { DomainEvent } from './DomainEvent';
 import type { EventBusConfig } from './EventBusConfig';
+import { EventTransactionContextUnavailableProblem } from './problems/EventsProblems';
 
 export type PublishResult<T extends DomainEvent> = {
   event: T;
@@ -9,29 +10,18 @@ export type PublishResult<T extends DomainEvent> = {
 };
 
 export class EventPublisher {
-  private hasWarnedAboutTransactionContextFallback = false;
-
   constructor(private readonly config: EventBusConfig) {}
 
-  private warnTransactionContextFallback(error: unknown): void {
-    if (this.hasWarnedAboutTransactionContextFallback) {
-      return;
+  private tryGetTransactionContext(): TransactionContext | null {
+    if (!Container.has(TRANSACTION_CONTEXT_TOKEN as never)) {
+      return null;
     }
 
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(
-      `[EventPublisher] Transaction context unavailable; falling back to immediate publish. ` +
-        `after-commit delivery is not guaranteed. Cause: ${message}`
-    );
-    this.hasWarnedAboutTransactionContextFallback = true;
-  }
-
-  private tryGetTransactionContext(): TransactionContext | null {
     try {
       return Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN as never);
     } catch (error) {
-      this.warnTransactionContextFallback(error);
-      return null;
+      const message = error instanceof Error ? error.message : String(error);
+      throw new EventTransactionContextUnavailableProblem(message);
     }
   }
 

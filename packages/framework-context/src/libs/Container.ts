@@ -57,6 +57,18 @@ export class Container {
     return instance;
   }
 
+  static has<T>(token: TokenIdentifier<T>): boolean {
+    if (token instanceof Function) {
+      return TypeDIContainer.has(token);
+    }
+
+    if (typeof token === 'string') {
+      return TypeDIContainer.has(token);
+    }
+
+    return TypeDIContainer.has(token);
+  }
+
   static remove<T>(token: TokenIdentifier<T>): void {
     TypeDIContainer.remove(token);
   }
