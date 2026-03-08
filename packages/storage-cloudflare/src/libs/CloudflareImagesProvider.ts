@@ -14,15 +14,17 @@ const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 @Component()
 export class CloudflareImagesProvider extends BaseStorageProvider implements ImageProvider {
   private readonly options: CloudflareImagesOptions;
-  private readonly baseUrl: string;
+  private readonly imageBaseUrl: string;
+  private readonly transformBaseUrl: string;
   private readonly apiBaseUrl: string;
 
   constructor(options: CloudflareImagesOptions) {
     super();
     this.options = options;
-    this.baseUrl = options.customDomain
+    this.imageBaseUrl = options.customDomain
       ? `https://${options.customDomain}/cdn-cgi/imagedelivery`
-      : `https://imagedelivery.net`;
+      : 'https://imagedelivery.net';
+    this.transformBaseUrl = options.customDomain ? `https://${options.customDomain}` : 'https://imagedelivery.net';
     this.apiBaseUrl = `https://api.cloudflare.com/client/v4/accounts/${options.accountId}/images/v1`;
   }
 
@@ -229,7 +231,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private buildImageUrl(key: string, variant: string): string {
-    return `${this.baseUrl}/${this.options.accountHash}/${key}/${variant}`;
+    return `${this.imageBaseUrl}/${this.options.accountHash}/${key}/${variant}`;
   }
 
   private buildTransformUrlDefault(key: string, options: TransformOptions): string {
@@ -240,7 +242,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       return this.buildImageUrl(key, this.options.defaultVariant ?? 'public');
     }
 
-    return `${this.baseUrl}/${this.options.accountHash}/${key}/cdn-cgi/image/${params}`;
+    return this.buildTransformUrl(key, params);
   }
 
   private buildTransformUrlCustomDomain(key: string, options: TransformOptions): string {
@@ -251,7 +253,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       return this.buildImageUrl(key, this.options.defaultVariant ?? 'public');
     }
 
-    return `https://${this.options.customDomain}/cdn-cgi/image/${params}/${this.options.accountHash}/${key}`;
+    return this.buildTransformUrl(key, params);
+  }
+
+  private buildTransformUrl(key: string, params: string): string {
+    return `${this.transformBaseUrl}/cdn-cgi/image/${params}/${this.options.accountHash}/${key}/${this.options.defaultVariant ?? 'public'}`;
   }
 
   private buildTransformParams(options: CloudflareTransformOptions): string {

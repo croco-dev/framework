@@ -478,7 +478,7 @@ describe('CloudflareImagesProvider', () => {
     it('should return URL with width transformation', () => {
       const url = provider.getTransformUrl('test-image-id', { width: 800 });
 
-      expect(url).toContain('width=800');
+      expect(url).toBe('https://imagedelivery.net/cdn-cgi/image/width=800/test-account-hash/test-image-id/public');
     });
 
     it('should return URL with height transformation', () => {
@@ -553,9 +553,20 @@ describe('CloudflareImagesProvider', () => {
       const providerWithCustomDomain = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
       const url = providerWithCustomDomain.getTransformUrl('test-image-id', { width: 800 });
 
-      expect(url).toContain('cdn.example.com');
-      expect(url).toContain('/cdn-cgi/image/');
-      expect(url).not.toContain('imagedelivery.net');
+      expect(url).toBe('https://cdn.example.com/cdn-cgi/image/width=800/test-account-hash/test-image-id/public');
+    });
+
+    it('should keep the same transform path shape across default and custom domains', () => {
+      const providerWithCustomDomain = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
+      const defaultUrl = provider.getTransformUrl('test-image-id', { width: 800, quality: 85 });
+      const customUrl = providerWithCustomDomain.getTransformUrl('test-image-id', { width: 800, quality: 85 });
+
+      expect(defaultUrl).toBe(
+        'https://imagedelivery.net/cdn-cgi/image/width=800,quality=85/test-account-hash/test-image-id/public'
+      );
+      expect(customUrl).toBe(
+        'https://cdn.example.com/cdn-cgi/image/width=800,quality=85/test-account-hash/test-image-id/public'
+      );
     });
   });
 
