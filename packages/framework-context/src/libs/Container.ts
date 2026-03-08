@@ -54,6 +54,7 @@ export class Container {
 
   static set<T>(token: TokenIdentifier<T>, instance: T): T {
     TypeDIContainer.set({ id: token, value: instance });
+    Container.validated = false;
     return instance;
   }
 
@@ -71,6 +72,7 @@ export class Container {
 
   static remove<T>(token: TokenIdentifier<T>): void {
     TypeDIContainer.remove(token);
+    Container.validated = false;
   }
 
   static reset(): void {
