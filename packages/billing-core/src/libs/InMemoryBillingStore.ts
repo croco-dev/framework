@@ -24,6 +24,12 @@ export class InMemoryBillingStore implements BillingStore {
   }
 
   async saveAccount(account: BillingAccount): Promise<void> {
+    const existingAccount = this.accounts.get(account.id);
+
+    if (existingAccount && existingAccount.externalCustomerId !== account.externalCustomerId) {
+      this.accountsByExternalId.delete(existingAccount.externalCustomerId);
+    }
+
     this.accounts.set(account.id, account);
     this.accountsByTenantId.set(account.tenantId, account);
     this.accountsByExternalId.set(account.externalCustomerId, account);
