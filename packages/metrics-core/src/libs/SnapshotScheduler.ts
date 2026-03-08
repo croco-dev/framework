@@ -1,10 +1,11 @@
+import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { MetricsSnapshot, MRRMovement, SubscriptionSnapshot } from '../types';
 import type { MetricsRepository } from './interfaces/MetricsRepository';
 import type { PlanProvider } from './interfaces/PlanProvider';
 import { MrrCalculator } from './MrrCalculator';
 
 export type SnapshotSchedulerConfig = {
-  tenantId?: string;
+  tenantId: string;
   retentionLookbackDays?: number;
 };
 
@@ -14,19 +15,35 @@ export type SnapshotInput = {
   activeCustomers: number;
 };
 
+export class SnapshotTenantRequiredProblem extends Problem {
+  constructor() {
+    super(
+      'metrics-core/snapshot-tenant-required',
+      ProblemCategory.ValidationError,
+      'tenantId is required for snapshot capture'
+    );
+  }
+}
+
 export class SnapshotScheduler {
-  constructor(private readonly metricsRepository: MetricsRepository) {}
+  constructor(
+    private readonly metricsRepository: MetricsRepository,
+    private readonly mrrCalculator: MrrCalculator = new MrrCalculator()
+  ) {}
 
   async captureSnapshot(
     input: SnapshotInput,
     date: Date = this.getYesterday(),
     config?: SnapshotSchedulerConfig
   ): Promise<void> {
-    const { tenantId, retentionLookbackDays = 30 } = config ?? {};
+    if (!config?.tenantId) {
+      throw new SnapshotTenantRequiredProblem();
+    }
+
+    const { tenantId, retentionLookbackDays = 30 } = config;
     const { subscriptions, planProvider, activeCustomers } = input;
 
-    const mrrCalculator = new MrrCalculator();
-    const totalMRR = await mrrCalculator.calculateMRR(subscriptions, planProvider);
+    const totalMRR = await this.mrrCalculator.calculateMRR(subscriptions, planProvider);
 
     const snapshotDate = new Date(date);
     snapshotDate.setHours(0, 0, 0, 0);
@@ -34,7 +51,7 @@ export class SnapshotScheduler {
     const periodStart = new Date(snapshotDate);
     periodStart.setDate(periodStart.getDate() - retentionLookbackDays);
 
-    const mrrHistory = await this.metricsRepository.getMRRHistory(tenantId ?? 'default', {
+    const mrrHistory = await this.metricsRepository.getMRRHistory(tenantId, {
       from: periodStart,
       to: snapshotDate,
       granularity: 'day',
@@ -53,7 +70,7 @@ export class SnapshotScheduler {
       movement,
     };
 
-    await this.metricsRepository.recordSnapshot(tenantId ?? 'default', snapshot, snapshotDate);
+    await this.metricsRepository.recordSnapshot(tenantId, snapshot, snapshotDate);
   }
 
   private getYesterday(): Date {

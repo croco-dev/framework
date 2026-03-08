@@ -72,11 +72,10 @@ export { RetentionCalculator } from './libs/RetentionCalculator';
  * 메트릭 스냅샷 캡처에 사용하는 입력/설정 타입입니다.
  */
 export type { SnapshotInput, SnapshotSchedulerConfig } from './libs/SnapshotScheduler';
-
 /**
  * 주기적 메트릭 스냅샷 캡처를 담당하는 스케줄러입니다.
  */
-export { SnapshotScheduler } from './libs/SnapshotScheduler';
+export { SnapshotScheduler, SnapshotTenantRequiredProblem } from './libs/SnapshotScheduler';
 
 /**
  * Timescale 스토어가 요구하는 Postgres 클라이언트 계약입니다.
