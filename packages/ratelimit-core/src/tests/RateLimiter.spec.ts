@@ -21,6 +21,7 @@ describe('RateLimiter', () => {
 
   const successResult: RateLimitResult = {
     success: true,
+    degraded: false,
     limit: 10,
     remaining: 9,
     resetAtMs: Date.now() + 60000,
@@ -28,6 +29,7 @@ describe('RateLimiter', () => {
 
   const failedResult: RateLimitResult = {
     success: false,
+    degraded: false,
     limit: 10,
     remaining: 0,
     resetAtMs: Date.now() + 60000,
@@ -82,6 +84,7 @@ describe('RateLimiter', () => {
       const result = await rateLimiter.check(context, policy);
 
       expect(result.success).toBe(true);
+      expect(result.degraded).toBe(true);
       expect(result.remaining).toBe(10);
     });
 
@@ -93,6 +96,7 @@ describe('RateLimiter', () => {
       const result = await rateLimiter.check(context, policy);
 
       expect(result.success).toBe(false);
+      expect(result.degraded).toBe(true);
       expect(result.remaining).toBe(0);
     });
 

@@ -14,6 +14,7 @@ describe('createRateLimitMiddleware', () => {
 
   const successResult: RateLimitResult = {
     success: true,
+    degraded: false,
     limit: 100,
     remaining: 99,
     resetAtMs: Date.now() + 3600000,
@@ -21,6 +22,7 @@ describe('createRateLimitMiddleware', () => {
 
   const failedResult: RateLimitResult = {
     success: false,
+    degraded: false,
     limit: 100,
     remaining: 0,
     resetAtMs: Date.now() + 3600000,

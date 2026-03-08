@@ -22,6 +22,7 @@ describe('RateLimitGuard', () => {
 
   const successResult: RateLimitResult = {
     success: true,
+    degraded: false,
     limit: 10,
     remaining: 9,
     resetAtMs: Date.now() + 60000,
@@ -29,6 +30,7 @@ describe('RateLimitGuard', () => {
 
   const failedResult: RateLimitResult = {
     success: false,
+    degraded: false,
     limit: 10,
     remaining: 0,
     resetAtMs: Date.now() + 60000,

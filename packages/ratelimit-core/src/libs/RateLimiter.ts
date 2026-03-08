@@ -60,6 +60,7 @@ export class RateLimiter {
       // Allow request when store fails
       return {
         success: true,
+        degraded: true,
         limit: policy.limit,
         remaining: policy.limit,
         resetAtMs: Date.now() + policy.windowMs,
@@ -69,6 +70,7 @@ export class RateLimiter {
     // Fail-closed: reject request when store fails
     return {
       success: false,
+      degraded: true,
       limit: policy.limit,
       remaining: 0,
       resetAtMs: Date.now() + policy.windowMs,
