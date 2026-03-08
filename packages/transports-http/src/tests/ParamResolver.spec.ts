@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Body } from '@croco/protocols-rest';
+import { Body, REST_PARAMS_KEY } from '@croco/protocols-rest';
 import { describe, expect, it, vi } from 'vitest';
 import { ParamResolver } from '../libs/ParamResolver';
 import type { CrocoHttpContext } from '../libs/types';
@@ -81,5 +81,26 @@ describe('ParamResolver', () => {
 
     expect(args).toEqual([parsedBody, parsedBody]);
     expect(json).toHaveBeenCalledTimes(1);
+  });
+
+  it('같은 인자 슬롯에 중복된 parameter metadata가 있으면 fail fast', async () => {
+    class TestController {
+      create(_value: unknown) {}
+    }
+
+    const params = new Map<string | symbol, Array<{ type: string; index: number; name?: string }>>();
+    params.set('create', [
+      { type: 'body', index: 0 },
+      { type: 'user', index: 0 },
+    ]);
+
+    Reflect.defineMetadata(REST_PARAMS_KEY, params, TestController);
+
+    const resolver = new ParamResolver();
+    const ctx = createMockHttpContext(vi.fn(async () => ({ ok: true })) as CrocoHttpContext['json']);
+
+    await expect(resolver.resolveParams(ctx, TestController, 'create')).rejects.toThrow(
+      'Duplicate parameter metadata detected for create at index 0'
+    );
   });
 });
