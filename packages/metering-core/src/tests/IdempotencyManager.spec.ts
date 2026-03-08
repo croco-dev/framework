@@ -47,7 +47,7 @@ describe('IdempotencyManager', () => {
       const result = await manager.checkAndMark('tenant-1', 'api_calls', 'key-123');
 
       expect(result).toBe(true);
-      expect(mockRedis.set).toHaveBeenCalledWith('idem:tenant-1:api_calls:key-123', '1', 'NX', 'EX', 86400);
+      expect(mockRedis.set).toHaveBeenCalledWith('idem:tenant-1:api_calls:key-123', 'COMPLETED', 'NX', 'EX', 86400);
     });
 
     it('should return false for duplicate key', async () => {
@@ -64,7 +64,7 @@ describe('IdempotencyManager', () => {
 
       await customManager.checkAndMark('tenant-1', 'api_calls', 'key-123');
 
-      expect(mockRedis.set).toHaveBeenCalledWith('idem:tenant-1:api_calls:key-123', '1', 'NX', 'EX', 3600);
+      expect(mockRedis.set).toHaveBeenCalledWith('idem:tenant-1:api_calls:key-123', 'COMPLETED', 'NX', 'EX', 3600);
     });
 
     it('should include tenant and meter in key for isolation', async () => {
@@ -73,8 +73,83 @@ describe('IdempotencyManager', () => {
       await manager.checkAndMark('tenant-A', 'meter-X', 'same-key');
       await manager.checkAndMark('tenant-B', 'meter-X', 'same-key');
 
-      expect(mockRedis.set).toHaveBeenNthCalledWith(1, 'idem:tenant-A:meter-X:same-key', '1', 'NX', 'EX', 86400);
-      expect(mockRedis.set).toHaveBeenNthCalledWith(2, 'idem:tenant-B:meter-X:same-key', '1', 'NX', 'EX', 86400);
+      expect(mockRedis.set).toHaveBeenNthCalledWith(
+        1,
+        'idem:tenant-A:meter-X:same-key',
+        'COMPLETED',
+        'NX',
+        'EX',
+        86400
+      );
+      expect(mockRedis.set).toHaveBeenNthCalledWith(
+        2,
+        'idem:tenant-B:meter-X:same-key',
+        'COMPLETED',
+        'NX',
+        'EX',
+        86400
+      );
+    });
+  });
+
+  describe('beginProcessing', () => {
+    it('should return true for new in-progress key', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1]);
+
+      const result = await manager.beginProcessing('tenant-1', 'api_calls', 'key-123');
+
+      expect(result).toBe(true);
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])"),
+        ['idem:tenant-1:api_calls:key-123'],
+        ['IN_PROGRESS', '86400']
+      );
+    });
+
+    it('should return false for duplicate key', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([0]);
+
+      const result = await manager.beginProcessing('tenant-1', 'api_calls', 'existing-key');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('beginProcessingOrThrow', () => {
+    it('should throw DuplicateRecordProblem for duplicate key', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([0]);
+
+      await expect(manager.beginProcessingOrThrow('tenant-1', 'api_calls', 'duplicate-key')).rejects.toThrow(
+        DuplicateRecordProblem
+      );
+    });
+  });
+
+  describe('completeProcessing', () => {
+    it('should mark in-progress key as completed', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1]);
+
+      await manager.completeProcessing('tenant-1', 'api_calls', 'key-123');
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])"),
+        ['idem:tenant-1:api_calls:key-123'],
+        ['IN_PROGRESS', 'COMPLETED', '86400']
+      );
+    });
+  });
+
+  describe('abortProcessing', () => {
+    it('should delete in-progress key', async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1]);
+
+      await manager.abortProcessing('tenant-1', 'api_calls', 'key-123');
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("redis.call('DEL', KEYS[1])"),
+        ['idem:tenant-1:api_calls:key-123'],
+        ['IN_PROGRESS']
+      );
     });
   });
 
@@ -101,7 +176,7 @@ describe('IdempotencyManager', () => {
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(DuplicateRecordProblem);
-        expect((error as DuplicateRecordProblem).detail).toContain('my-dup-key');
+        expect((error as Error).message).toContain('my-dup-key');
       }
     });
   });

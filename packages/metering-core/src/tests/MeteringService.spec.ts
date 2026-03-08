@@ -52,6 +52,10 @@ describe('MeteringService', () => {
       ensureIdempotencyKey: vi.fn().mockReturnValue('generated-key'),
       checkAndMark: vi.fn().mockResolvedValue(true),
       checkAndMarkOrThrow: vi.fn().mockResolvedValue(undefined),
+      beginProcessing: vi.fn().mockResolvedValue(true),
+      beginProcessingOrThrow: vi.fn().mockResolvedValue(undefined),
+      completeProcessing: vi.fn().mockResolvedValue(undefined),
+      abortProcessing: vi.fn().mockResolvedValue(undefined),
     } as unknown as IdempotencyManager;
 
     mockEventBus = {
@@ -82,6 +86,8 @@ describe('MeteringService', () => {
       expect(result.meterId).toBe('api_calls');
       expect(result.value).toBe(5);
       expect(result.idempotencyKey).toBe('generated-key');
+      expect(mockIdempotency.beginProcessingOrThrow).toHaveBeenCalledWith('tenant-1', 'api_calls', 'generated-key');
+      expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith('tenant-1', 'api_calls', 'generated-key');
       expect(mockStorage.checkAndRecordWithinQuota).toHaveBeenCalledTimes(1);
     });
 
@@ -120,7 +126,7 @@ describe('MeteringService', () => {
     it('should throw DuplicateRecordProblem for duplicate key', async () => {
       const meter = createMeter();
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(mockIdempotency.checkAndMarkOrThrow).mockRejectedValue(new DuplicateRecordProblem('dup-key'));
+      vi.mocked(mockIdempotency.beginProcessingOrThrow).mockRejectedValue(new DuplicateRecordProblem('dup-key'));
 
       await expect(service.record({ tenantId: 'tenant-1', meterId: 'api_calls' })).rejects.toThrow(
         DuplicateRecordProblem
@@ -141,6 +147,9 @@ describe('MeteringService', () => {
       await expect(service.record({ tenantId: 'tenant-1', meterId: 'api_calls', value: 5 })).rejects.toThrow(
         QuotaExceededProblem
       );
+
+      expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith('tenant-1', 'api_calls', 'generated-key');
+      expect(mockIdempotency.abortProcessing).not.toHaveBeenCalled();
     });
 
     it('BUG-11 동시 할당량 소진에서 atomic storage 결과를 그대로 반영한다', async () => {
@@ -228,6 +237,20 @@ describe('MeteringService', () => {
       });
 
       expect(result.value).toBe(1000000);
+      expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith('tenant-1', 'api_calls', 'generated-key');
+    });
+
+    it('should abort in-progress idempotency key when storage fails before completion', async () => {
+      const meter = createMeter({ quota: undefined });
+      const storageError = new Error('storage failure');
+
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
+      vi.mocked(mockStorage.record).mockRejectedValue(storageError);
+
+      await expect(service.record({ tenantId: 'tenant-1', meterId: 'api_calls' })).rejects.toThrow(storageError);
+
+      expect(mockIdempotency.abortProcessing).toHaveBeenCalledWith('tenant-1', 'api_calls', 'generated-key');
+      expect(mockIdempotency.completeProcessing).not.toHaveBeenCalled();
     });
 
     it('should publish UsageRecordedEvent', async () => {

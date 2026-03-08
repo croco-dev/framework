@@ -13,6 +13,8 @@ import type { RedisClient } from './RedisClient';
 export class IdempotencyManager {
   private static readonly DEFAULT_TTL_SECONDS = 86400; // 24시간
   private static readonly KEY_PREFIX = 'idem';
+  private static readonly STATUS_IN_PROGRESS = 'IN_PROGRESS';
+  private static readonly STATUS_COMPLETED = 'COMPLETED';
 
   constructor(
     private readonly redis: RedisClient,
@@ -32,8 +34,61 @@ export class IdempotencyManager {
    */
   async checkAndMark(tenantId: string, meterId: string, idempotencyKey: string): Promise<boolean> {
     const key = this.buildKey(tenantId, meterId, idempotencyKey);
-    const result = await this.redis.set(key, '1', 'NX', 'EX', this.ttlSeconds);
+    const result = await this.redis.set(key, IdempotencyManager.STATUS_COMPLETED, 'NX', 'EX', this.ttlSeconds);
     return result === 'OK';
+  }
+
+  async beginProcessing(tenantId: string, meterId: string, idempotencyKey: string): Promise<boolean> {
+    const key = this.buildKey(tenantId, meterId, idempotencyKey);
+    const [result] = await this.redis.eval<[number]>(
+      `
+        if redis.call('EXISTS', KEYS[1]) == 1 then
+          return 0
+        end
+
+        redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
+        return 1
+      `,
+      [key],
+      [IdempotencyManager.STATUS_IN_PROGRESS, String(this.ttlSeconds)]
+    );
+
+    return result === 1;
+  }
+
+  async beginProcessingOrThrow(tenantId: string, meterId: string, idempotencyKey: string): Promise<void> {
+    const isNew = await this.beginProcessing(tenantId, meterId, idempotencyKey);
+    if (!isNew) {
+      throw new DuplicateRecordProblem(idempotencyKey);
+    }
+  }
+
+  async completeProcessing(tenantId: string, meterId: string, idempotencyKey: string): Promise<void> {
+    const key = this.buildKey(tenantId, meterId, idempotencyKey);
+    await this.redis.eval<[number]>(
+      `
+        if redis.call('GET', KEYS[1]) == ARGV[1] then
+          redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
+        end
+        return 1
+      `,
+      [key],
+      [IdempotencyManager.STATUS_IN_PROGRESS, IdempotencyManager.STATUS_COMPLETED, String(this.ttlSeconds)]
+    );
+  }
+
+  async abortProcessing(tenantId: string, meterId: string, idempotencyKey: string): Promise<void> {
+    const key = this.buildKey(tenantId, meterId, idempotencyKey);
+    await this.redis.eval<[number]>(
+      `
+        if redis.call('GET', KEYS[1]) == ARGV[1] then
+          redis.call('DEL', KEYS[1])
+        end
+        return 1
+      `,
+      [key],
+      [IdempotencyManager.STATUS_IN_PROGRESS]
+    );
   }
 
   /**

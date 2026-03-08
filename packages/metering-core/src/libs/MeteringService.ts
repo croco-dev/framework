@@ -48,12 +48,10 @@ export class MeteringService {
   async record(options: RecordOptions): Promise<UsageRecord> {
     const { tenantId, meterId, value = 1, metadata } = options;
 
-    // 1. Meter 정의 조회
     const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
 
-    // 2. Idempotency key 확보 및 중복 체크
     const idempotencyKey = this.idempotencyManager.ensureIdempotencyKey(options.idempotencyKey);
-    await this.idempotencyManager.checkAndMarkOrThrow(tenantId, meterId, idempotencyKey);
+    await this.idempotencyManager.beginProcessingOrThrow(tenantId, meterId, idempotencyKey);
 
     const usageRecord: UsageRecord = {
       id: ulid(),
@@ -65,41 +63,51 @@ export class MeteringService {
       metadata,
     };
 
-    if (meter.quota !== undefined) {
-      const allowOverQuota = meter.allowOverQuota ?? false;
-      const quotaResult = await this.quotaManager.checkAndRecord({
-        tenantId,
-        meterId,
-        value,
-        quota: meter.quota,
-        allowOverQuota,
-        usageRecord,
-      });
+    let idempotencyCompleted = false;
 
-      if (quotaResult.exceeded) {
-        // QuotaExceeded 이벤트 발행
-        if (this.eventBus) {
+    try {
+      if (meter.quota !== undefined) {
+        const allowOverQuota = meter.allowOverQuota ?? false;
+        const quotaResult = await this.quotaManager.checkAndRecord({
+          tenantId,
+          meterId,
+          value,
+          quota: meter.quota,
+          allowOverQuota,
+          usageRecord,
+        });
+
+        await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
+        idempotencyCompleted = true;
+
+        if (quotaResult.exceeded && this.eventBus) {
           await this.eventBus.publish(new QuotaExceededEvent(tenantId, meterId, quotaResult.newUsage, meter.quota));
         }
+
+        this.quotaManager.validateOrThrow({
+          meterId,
+          quota: meter.quota,
+          allowOverQuota,
+          exceeded: quotaResult.exceeded,
+          newUsage: quotaResult.newUsage,
+        });
+      } else {
+        await this.usageStorage.record(usageRecord);
+        await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
+        idempotencyCompleted = true;
       }
 
-      this.quotaManager.validateOrThrow({
-        meterId,
-        quota: meter.quota,
-        allowOverQuota,
-        exceeded: quotaResult.exceeded,
-        newUsage: quotaResult.newUsage,
-      });
-    } else {
-      await this.usageStorage.record(usageRecord);
-    }
+      if (this.eventBus) {
+        await this.eventBus.publish(new UsageRecordedEvent(tenantId, meterId, value, idempotencyKey, metadata));
+      }
 
-    // 5. UsageRecorded 이벤트 발행
-    if (this.eventBus) {
-      await this.eventBus.publish(new UsageRecordedEvent(tenantId, meterId, value, idempotencyKey, metadata));
+      return usageRecord;
+    } catch (error) {
+      if (!idempotencyCompleted) {
+        await this.idempotencyManager.abortProcessing(tenantId, meterId, idempotencyKey);
+      }
+      throw error;
     }
-
-    return usageRecord;
   }
 
   /**
