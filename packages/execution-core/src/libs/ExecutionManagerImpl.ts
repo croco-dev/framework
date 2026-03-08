@@ -91,17 +91,8 @@ export class ExecutionManagerImpl implements ExecutionManager {
     const targetStatus: ExecutionStatus = 'running';
     validateTransition(execution.status, targetStatus);
 
-    const now = new Date();
-    const startedAt = now;
+    const startedAt = new Date();
     const attempts = execution.attempts + 1;
-
-    // Check if timeout exceeded
-    if (execution.timeout && startedAt) {
-      const elapsed = now.getTime() - startedAt.getTime();
-      if (elapsed > execution.timeout) {
-        return this.timeout(id);
-      }
-    }
 
     return this.store.update(id, {
       status: targetStatus,
