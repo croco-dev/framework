@@ -28,5 +28,6 @@ export class InMemoryLlmRegistry extends LlmRegistry {
 
   registerProvider(providerId: string, factory: () => LlmModel): void {
     this.providers.set(providerId, factory);
+    this.models.delete(providerId);
   }
 }
