@@ -133,7 +133,7 @@ describe('MetricsEngine', () => {
 
   describe('Carrying Capacity Methods', () => {
     it('should delegate getCarryingCapacity to CarryingCapacityCalculator', async () => {
-      const config: UserCCConfig = { lookbackDays: 30 };
+      const config: UserCCConfig = { lookbackDays: 30, tenantId: 'tenant-123' };
       const expected = {
         capacity: 50000,
         current: 10000,
@@ -151,7 +151,7 @@ describe('MetricsEngine', () => {
     });
 
     it('should delegate simulateCapacity to CarryingCapacityCalculator', async () => {
-      const changes: SimulationConfig = { churnChange: -20 };
+      const changes: SimulationConfig = { tenantId: 'tenant-123', churnChange: -20 };
       const expected = {
         baseline: {
           capacity: 50000,

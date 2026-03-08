@@ -58,6 +58,7 @@ export { MrrCalculator } from './libs/MrrCalculator';
  */
 export {
   CarryingCapacitySimulationProblem,
+  CarryingCapacityTenantRequiredProblem,
   GrossMarginRequiredProblem,
   LogoChurnDataRequiredProblem,
   RetentionMetricsUnavailableProblem,

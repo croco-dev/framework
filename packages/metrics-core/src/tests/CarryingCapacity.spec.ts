@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActiveUserProvider, MetricsRepository, MRRMovement } from '..';
 import { CarryingCapacityCalculator } from '../libs/CarryingCapacityCalculator';
-import { RetentionMetricsUnavailableProblem } from '../libs/problems/MetricsProblems';
+import {
+  CarryingCapacityTenantRequiredProblem,
+  RetentionMetricsUnavailableProblem,
+} from '../libs/problems/MetricsProblems';
+
+const TENANT_ID = 'tenant-123';
 
 describe('CarryingCapacityCalculator', () => {
   let calculator!: CarryingCapacityCalculator;
@@ -38,7 +43,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 98,
       });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30 });
+      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
       expect(result).not.toBeNull();
       if (!result) return;
@@ -60,7 +65,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 100,
       });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30 });
+      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
       expect(result).toBeNull();
     });
@@ -76,7 +81,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 98,
       });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30 });
+      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
       expect(result).not.toBeNull();
       if (!result) return;
@@ -95,7 +100,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 98,
       });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: 'tenant-123' });
+      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
       expect(mockUserProvider.getNewUsersCount).toHaveBeenCalledWith(expect.any(Date), 'tenant-123');
       expect(result).not.toBeNull();
@@ -136,7 +141,7 @@ describe('CarryingCapacityCalculator', () => {
         activeCustomers: 5000,
       });
 
-      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2 });
+      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2, tenantId: TENANT_ID });
 
       expect(result).not.toBeNull();
       if (!result) return;
@@ -158,7 +163,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 100,
       });
 
-      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2 });
+      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2, tenantId: TENANT_ID });
 
       expect(result).toBeNull();
     });
@@ -173,7 +178,7 @@ describe('CarryingCapacityCalculator', () => {
       });
       vi.spyOn(mockMetricsRepository, 'getSnapshot').mockResolvedValue(null);
 
-      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2 });
+      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2, tenantId: TENANT_ID });
 
       expect(result).not.toBeNull();
       if (!result) return;
@@ -193,9 +198,18 @@ describe('CarryingCapacityCalculator', () => {
         new RetentionMetricsUnavailableProblem()
       );
 
-      await expect(calculator.calculateUserCC({ lookbackDays: 30 })).rejects.toBeInstanceOf(
+      await expect(calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID })).rejects.toBeInstanceOf(
         RetentionMetricsUnavailableProblem
       );
+    });
+
+    it('should fail fast when tenantId is missing', async () => {
+      await expect(
+        calculator.calculateUserCC({
+          lookbackDays: 30,
+          tenantId: '' as string,
+        })
+      ).rejects.toBeInstanceOf(CarryingCapacityTenantRequiredProblem);
     });
   });
 
@@ -213,7 +227,7 @@ describe('CarryingCapacityCalculator', () => {
     });
 
     it('should simulate churn reduction by 20%', async () => {
-      const result = await calculator.simulate({ churnChange: -20 });
+      const result = await calculator.simulate({ tenantId: TENANT_ID, churnChange: -20 });
 
       const expectedBaseline = 1000 / (-Math.log(0.98) / 30);
 
@@ -224,7 +238,7 @@ describe('CarryingCapacityCalculator', () => {
     });
 
     it('should simulate inflow increase by 50%', async () => {
-      const result = await calculator.simulate({ inflowChange: 50 });
+      const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: 50 });
 
       const expectedBaseline = 1000 / (-Math.log(0.98) / 30);
       const expectedSimulated = 1500 / (-Math.log(0.98) / 30);
@@ -236,7 +250,7 @@ describe('CarryingCapacityCalculator', () => {
     });
 
     it('should simulate both churn and inflow changes', async () => {
-      const result = await calculator.simulate({ inflowChange: 20, churnChange: -20 });
+      const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: 20, churnChange: -20 });
 
       expect(result.simulated.capacity).toBeGreaterThan(result.baseline.capacity);
       expect(result.headroomDelta).toBeGreaterThan(0);
@@ -251,15 +265,19 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 100,
       });
 
-      await expect(calculator.simulate({ churnChange: -20 })).rejects.toThrow('Cannot simulate: baseline CC is null');
+      await expect(calculator.simulate({ tenantId: TENANT_ID, churnChange: -20 })).rejects.toThrow(
+        'Cannot simulate: baseline CC is null'
+      );
     });
 
     it('should throw error when simulated churn rate is zero', async () => {
-      await expect(calculator.simulate({ churnChange: -100 })).rejects.toThrow('Simulated churn rate is zero');
+      await expect(calculator.simulate({ tenantId: TENANT_ID, churnChange: -100 })).rejects.toThrow(
+        'Simulated churn rate is zero'
+      );
     });
 
     it('should calculate correct headroom percent delta', async () => {
-      const result = await calculator.simulate({ churnChange: -20 });
+      const result = await calculator.simulate({ tenantId: TENANT_ID, churnChange: -20 });
 
       const expectedBaseline = 1000 / (-Math.log(0.98) / 30);
       const baselineHeadroomPercent = ((expectedBaseline - 10000) / expectedBaseline) * 100;
@@ -286,7 +304,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 98,
       });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30 });
+      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
       expect(result).not.toBeNull();
       if (!result) return;
@@ -308,7 +326,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 98,
       });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30 });
+      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
       expect(result).not.toBeNull();
       if (!result) return;
@@ -326,7 +344,7 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 98,
       });
 
-      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2 });
+      const result = await calculator.calculateRevenueCC({ lookbackMonths: 2, tenantId: TENANT_ID });
 
       expect(result).not.toBeNull();
       if (!result) return;
@@ -345,7 +363,9 @@ describe('CarryingCapacityCalculator', () => {
         nrr: 98,
       });
 
-      await expect(calculator.simulate({ churnChange: -100 })).rejects.toThrow('Simulated churn rate is zero');
+      await expect(calculator.simulate({ tenantId: TENANT_ID, churnChange: -100 })).rejects.toThrow(
+        'Simulated churn rate is zero'
+      );
     });
   });
 });
