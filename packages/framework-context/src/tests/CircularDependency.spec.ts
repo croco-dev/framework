@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import 'reflect-metadata';
 import { Container, MetadataStorage } from '../index';
+import { CircularDependencyProblem } from '../libs/problems/CircularDependencyProblem';
 
 describe('Container.validate', () => {
   beforeEach(() => {
@@ -28,6 +29,10 @@ describe('Container.validate', () => {
     Container.register(ServiceA, 'transient');
     Container.register(ServiceB, 'transient');
     Container.register(ServiceC, 'transient');
+
+    expect(() => {
+      Container.validate();
+    }).toThrow(CircularDependencyProblem);
 
     expect(() => {
       Container.validate();
@@ -65,6 +70,10 @@ describe('Container.validate', () => {
 
     Reflect.defineMetadata('design:paramtypes', [SelfReferencing], SelfReferencing);
     Container.register(SelfReferencing, 'transient');
+
+    expect(() => {
+      Container.validate();
+    }).toThrow(CircularDependencyProblem);
 
     expect(() => {
       Container.validate();

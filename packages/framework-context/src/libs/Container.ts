@@ -9,6 +9,7 @@ import 'reflect-metadata';
 import { ProblemFactory } from '@croco/problems-core';
 import { Context } from './Context';
 import { MetadataStorage } from './MetadataStorage';
+import { CircularDependencyProblem } from './problems/CircularDependencyProblem';
 import type { ComponentMetadata, Constructor, Scope } from './types';
 
 export type TokenIdentifier<T> = Constructor<T> | Token<T> | string;
@@ -157,7 +158,7 @@ export class Container {
         if (state === 1) {
           const cycleStartIndex = stackIndex.get(dep) ?? 0;
           const cycle = stack.slice(cycleStartIndex).concat(dep);
-          throw new Error(`Circular dependency detected: ${cycle.map((t) => t.name).join(' → ')}`);
+          throw new CircularDependencyProblem(cycle.map((t) => t.name));
         }
       }
 
