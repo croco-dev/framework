@@ -71,3 +71,13 @@ export class LlmServiceNotInitializedProblem extends Problem {
     );
   }
 }
+
+export class InvalidLlmPromptProblem extends Problem {
+  constructor(actualType: string) {
+    super(
+      'llm-core/invalid-llm-prompt',
+      ProblemCategory.BadRequest,
+      `@Llm decorated methods require the first argument to be a string prompt, received: ${actualType}`
+    );
+  }
+}
