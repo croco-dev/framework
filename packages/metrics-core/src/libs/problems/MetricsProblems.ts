@@ -41,3 +41,13 @@ export class GrossMarginRequiredProblem extends Problem {
     );
   }
 }
+
+export class MixedCurrencyMRRProblem extends Problem {
+  constructor(expectedCurrency: string, actualCurrency: string) {
+    super(
+      'metrics-core/mixed-currency-mrr',
+      ProblemCategory.ValidationError,
+      `Cannot aggregate MRR across multiple currencies: expected '${expectedCurrency}' but received '${actualCurrency}'`
+    );
+  }
+}

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PlanProvider } from '../libs/interfaces/PlanProvider';
 import { MrrCalculator } from '../libs/MrrCalculator';
+import { MixedCurrencyMRRProblem } from '../libs/problems/MetricsProblems';
 import type { PlanSnapshot, SubscriptionSnapshot } from '../types';
 
 describe('MrrCalculator', () => {
@@ -38,6 +39,13 @@ describe('MrrCalculator', () => {
             id: 'plan_monthly_5',
             amount: 500,
             currency: 'USD',
+            interval: 'month',
+            intervalCount: 1,
+          },
+          plan_monthly_krw: {
+            id: 'plan_monthly_krw',
+            amount: 15000,
+            currency: 'KRW',
             interval: 'month',
             intervalCount: 1,
           },
@@ -193,6 +201,26 @@ describe('MrrCalculator', () => {
       const result = calculator.classifyMRRMovement(true, false, null, 1000);
 
       expect(result).toBe('new');
+    });
+
+    it('should fail fast when subscriptions contain mixed currencies', async () => {
+      const subscriptions: SubscriptionSnapshot[] = [
+        {
+          id: 'sub_usd',
+          planId: 'plan_monthly_10',
+        },
+        {
+          id: 'sub_krw',
+          planId: 'plan_monthly_krw',
+        },
+      ];
+
+      await expect(calculator.calculateMRR(subscriptions, mockPlanProvider)).rejects.toBeInstanceOf(
+        MixedCurrencyMRRProblem
+      );
+      await expect(calculator.calculateMRR(subscriptions, mockPlanProvider)).rejects.toThrow(
+        "Cannot aggregate MRR across multiple currencies: expected 'USD' but received 'KRW'"
+      );
     });
   });
 });

@@ -1,5 +1,7 @@
 import type { Money, SubscriptionSnapshot } from '../types';
+
 import type { PlanProvider } from './interfaces/PlanProvider';
+import { MixedCurrencyMRRProblem } from './problems/MetricsProblems';
 
 /**
  * Calculator for Monthly Recurring Revenue (MRR).
@@ -17,7 +19,7 @@ export class MrrCalculator {
    */
   async calculateMRR(subscriptions: SubscriptionSnapshot[], planProvider: PlanProvider): Promise<Money> {
     let totalAmount = 0;
-    let currency = 'USD';
+    let currency: string | null = null;
 
     for (const subscription of subscriptions) {
       const plan = await planProvider.getPlan(subscription.planId);
@@ -27,11 +29,15 @@ export class MrrCalculator {
 
       const normalizedAmount = this.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
 
+      if (currency !== null && currency !== plan.currency) {
+        throw new MixedCurrencyMRRProblem(currency, plan.currency);
+      }
+
       totalAmount += normalizedAmount;
       currency = plan.currency;
     }
 
-    return { amount: totalAmount, currency };
+    return { amount: totalAmount, currency: currency ?? 'USD' };
   }
 
   /**
