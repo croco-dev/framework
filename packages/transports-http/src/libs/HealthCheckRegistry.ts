@@ -1,4 +1,5 @@
 import { Component } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 
 export type HealthCheckStatus = 'up' | 'down';
 
@@ -18,6 +19,13 @@ export class HealthCheckRegistry {
   private checks = new Map<string, { fn: HealthCheckFunction; options: HealthCheckOptions }>();
 
   register(name: string, check: HealthCheckFunction, options: HealthCheckOptions = {}): void {
+    if (this.checks.has(name)) {
+      throw ProblemFactory.internalServerError(
+        'transports-http/duplicate-health-check',
+        `Duplicate health check registration detected for '${name}'`
+      );
+    }
+
     this.checks.set(name, { fn: check, options });
   }
 

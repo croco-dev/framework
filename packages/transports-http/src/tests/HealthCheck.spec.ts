@@ -119,5 +119,25 @@ describe('HealthCheck', () => {
 
       vi.useRealTimers();
     });
+
+    it('should fail fast when a health check name is registered twice', async () => {
+      registry.register('db', async () => ({ status: 'up', latency: 10 }));
+
+      expect(() => {
+        registry.register('db', async () => ({ status: 'down' }));
+      }).toThrow("Duplicate health check registration detected for 'db'");
+
+      const app = createApp({ controllers: [] });
+      const response = await app.fetch(new Request('http://localhost/ready'));
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json).toEqual({
+        status: 'ok',
+        checks: {
+          db: { status: 'up', latency: 10 },
+        },
+      });
+    });
   });
 });
