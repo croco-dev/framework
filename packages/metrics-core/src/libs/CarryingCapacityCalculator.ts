@@ -1,7 +1,7 @@
 import type { CCComparisonResult, CCResult } from '../types';
 import type { ActiveUserProvider } from './interfaces/ActiveUserProvider';
 import type { MetricsRepository } from './interfaces/MetricsRepository';
-import { CarryingCapacitySimulationProblem } from './problems/MetricsProblems';
+import { CarryingCapacitySimulationProblem, CarryingCapacityTenantRequiredProblem } from './problems/MetricsProblems';
 
 /**
  * Configuration for User Carrying Capacity calculation.
@@ -9,8 +9,7 @@ import { CarryingCapacitySimulationProblem } from './problems/MetricsProblems';
 export type UserCCConfig = {
   /** Number of days to look back for calculating average daily inflow/churn */
   lookbackDays: number;
-  /** Optional tenant ID for tenant-specific calculation */
-  tenantId?: string;
+  tenantId: string;
 };
 
 /**
@@ -19,14 +18,14 @@ export type UserCCConfig = {
 export type RevenueCCConfig = {
   /** Number of months to look back for calculating monthly averages */
   lookbackMonths: number;
-  /** Optional tenant ID for tenant-specific calculation */
-  tenantId?: string;
+  tenantId: string;
 };
 
 /**
  * Configuration for Carrying Capacity simulation.
  */
 export type SimulationConfig = {
+  tenantId: string;
   /** Percentage change in daily inflow (-100 to +∞, e.g., 20 = +20%) */
   inflowChange?: number;
   /** Percentage change in churn rate (-100 to +100, e.g., -20 = -20% churn) */
@@ -71,6 +70,8 @@ export class CarryingCapacityCalculator {
    */
   async calculateUserCC(config: UserCCConfig): Promise<CCResult | null> {
     const { lookbackDays, tenantId } = config;
+    this.assertTenantId(tenantId);
+
     const now = new Date();
 
     let totalNewUsers = 0;
@@ -83,7 +84,7 @@ export class CarryingCapacityCalculator {
 
     const periodStart = new Date(now);
     periodStart.setDate(periodStart.getDate() - lookbackDays);
-    const retention = await this.metricsRepository.getRetentionMetrics(tenantId ?? 'default', {
+    const retention = await this.metricsRepository.getRetentionMetrics(tenantId, {
       from: periodStart,
       to: now,
       granularity: 'day',
@@ -109,12 +110,14 @@ export class CarryingCapacityCalculator {
    */
   async calculateRevenueCC(config: RevenueCCConfig): Promise<CCResult | null> {
     const { lookbackMonths, tenantId } = config;
+    this.assertTenantId(tenantId);
+
     const now = new Date();
 
     const periodStart = new Date(now);
     periodStart.setMonth(periodStart.getMonth() - lookbackMonths);
 
-    const movements = await this.metricsRepository.getMRRHistory(tenantId ?? 'default', {
+    const movements = await this.metricsRepository.getMRRHistory(tenantId, {
       from: periodStart,
       to: now,
       granularity: 'month',
@@ -123,7 +126,7 @@ export class CarryingCapacityCalculator {
     const totalNewMRR = movements.reduce((sum, m) => sum + m.new.amount, 0);
     const monthlyNewMRR = totalNewMRR / lookbackMonths;
 
-    const retention = await this.metricsRepository.getRetentionMetrics(tenantId ?? 'default', {
+    const retention = await this.metricsRepository.getRetentionMetrics(tenantId, {
       from: periodStart,
       to: now,
       granularity: 'month',
@@ -135,7 +138,7 @@ export class CarryingCapacityCalculator {
     }
 
     const capacity = monthlyNewMRR / churnFactor;
-    const snapshot = await this.metricsRepository.getSnapshot(tenantId ?? 'default', now);
+    const snapshot = await this.metricsRepository.getSnapshot(tenantId, this.toSnapshotDate(now));
     const current = snapshot?.totalMRR.amount ?? 0;
 
     const dailyInflow = monthlyNewMRR / 30;
@@ -155,7 +158,7 @@ export class CarryingCapacityCalculator {
    * @returns Comparison between baseline and simulated CC
    */
   async simulate(changes: SimulationConfig): Promise<CCComparisonResult> {
-    const baseline = await this.calculateUserCC({ lookbackDays: 30 });
+    const baseline = await this.calculateUserCC({ lookbackDays: 30, tenantId: changes.tenantId });
 
     if (!baseline) {
       throw new CarryingCapacitySimulationProblem('Cannot simulate: baseline CC is null (infinite capacity)');
@@ -208,5 +211,17 @@ export class CarryingCapacityCalculator {
       dailyInflow,
       dailyChurnRate,
     };
+  }
+
+  private assertTenantId(tenantId: string): void {
+    if (!tenantId) {
+      throw new CarryingCapacityTenantRequiredProblem();
+    }
+  }
+
+  private toSnapshotDate(date: Date): Date {
+    const snapshotDate = new Date(date);
+    snapshotDate.setHours(0, 0, 0, 0);
+    return snapshotDate;
   }
 }
