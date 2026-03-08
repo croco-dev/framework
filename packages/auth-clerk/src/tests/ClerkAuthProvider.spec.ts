@@ -1,7 +1,7 @@
 import { verifyToken } from '@clerk/backend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClerkAuthProvider } from '../libs/ClerkAuthProvider';
-import { ClerkTokenVerificationProblem } from '../libs/problems/ClerkProblems';
+import { ClerkMalformedClaimProblem, ClerkTokenVerificationProblem } from '../libs/problems/ClerkProblems';
 import type { AuthorizationHeaderCarrier } from '../libs/types';
 
 type VerifiedToken = Awaited<ReturnType<typeof verifyToken>>;
@@ -82,7 +82,7 @@ describe('ClerkAuthProvider', () => {
     expect(verifyToken).toHaveBeenCalledWith('valid-token', { secretKey: options.secretKey });
   });
 
-  it('should discard org_permissions when it contains non-string values', async () => {
+  it('should fail when org_permissions contains non-string values', async () => {
     const request = createRequest('Bearer valid-token');
     const mockVerifiedToken = {
       sub: 'user_123',
@@ -92,13 +92,10 @@ describe('ClerkAuthProvider', () => {
 
     vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as unknown as VerifiedToken);
 
-    const result = await authProvider.authenticate(request);
-
-    expect(result?.roles).toEqual(['admin']);
-    expect(result?.permissions).toEqual([]);
+    await expect(authProvider.authenticate(request)).rejects.toBeInstanceOf(ClerkMalformedClaimProblem);
   });
 
-  it('should discard org_permissions when claim is not an array', async () => {
+  it('should fail when org_permissions claim is not an array', async () => {
     const request = createRequest('Bearer valid-token');
     const mockVerifiedToken = {
       sub: 'user_123',
@@ -107,9 +104,7 @@ describe('ClerkAuthProvider', () => {
 
     vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as unknown as VerifiedToken);
 
-    const result = await authProvider.authenticate(request);
-
-    expect(result?.permissions).toEqual([]);
+    await expect(authProvider.authenticate(request)).rejects.toBeInstanceOf(ClerkMalformedClaimProblem);
   });
 
   it('should handle missing optional fields correctly', async () => {

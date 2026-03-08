@@ -25,6 +25,16 @@ export class ClerkTokenVerificationProblem extends Problem {
   }
 }
 
+export class ClerkMalformedClaimProblem extends Problem {
+  constructor(claimName: string) {
+    super(
+      'auth-clerk/malformed-claim',
+      ProblemCategory.Unauthorized,
+      `Clerk token contained a malformed '${claimName}' claim`
+    );
+  }
+}
+
 export class DuplicateTenantMappingProblem extends Problem {
   constructor(externalOrgId: string, existingTenantId: string, nextTenantId: string) {
     super(

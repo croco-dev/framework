@@ -1,6 +1,6 @@
 import { verifyToken } from '@clerk/backend';
 import type { AuthProvider, AuthUser } from '@croco/auth-core';
-import { ClerkTokenVerificationProblem } from './problems/ClerkProblems';
+import { ClerkMalformedClaimProblem, ClerkTokenVerificationProblem } from './problems/ClerkProblems';
 import type { AuthorizationHeaderCarrier } from './types';
 
 export type ClerkAuthOptions = {
@@ -19,14 +19,18 @@ function getStringClaim(payload: Record<string, unknown>, key: string): string |
 
 function getStrictStringArrayClaim(payload: Record<string, unknown>, key: string): string[] {
   const value = payload[key];
-  if (!Array.isArray(value)) {
+  if (value === undefined) {
     return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new ClerkMalformedClaimProblem(key);
   }
 
   const parsed: string[] = [];
   for (const item of value) {
     if (typeof item !== 'string') {
-      return [];
+      throw new ClerkMalformedClaimProblem(key);
     }
     parsed.push(item);
   }
@@ -71,6 +75,10 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
         },
       };
     } catch (error) {
+      if (error instanceof ClerkMalformedClaimProblem) {
+        throw error;
+      }
+
       throw new ClerkTokenVerificationProblem(error instanceof Error ? error.message : undefined);
     }
   }

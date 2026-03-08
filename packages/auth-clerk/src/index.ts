@@ -26,6 +26,7 @@ export { ClerkWebhookHandler } from './libs/ClerkWebhookHandler';
  * Clerk 웹훅 서명 검증 실패 시 발생하는 Problem 하위 타입입니다.
  */
 export {
+  ClerkMalformedClaimProblem,
   ClerkTokenVerificationProblem,
   DuplicateTenantMappingProblem,
   InvalidWebhookPayloadProblem,
