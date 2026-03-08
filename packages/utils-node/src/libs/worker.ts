@@ -1,28 +1,31 @@
 import 'reflect-metadata';
+import { randomUUID } from 'node:crypto';
 import type { SQSEvent } from 'aws-lambda';
-import { Container } from 'typedi';
+import { Container, type ContainerInstance } from 'typedi';
 import { BootstrapError, ContainerInitializationError } from './errors';
 import type { WorkerConfig } from './types';
 
 /**
  * SQS-based worker bootstrap utility (provider-agnostic)
  */
-export class Worker {
-  private static config: WorkerConfig | null = null;
-  private static isInitialized = false;
+class WorkerRuntime<TD = unknown, TR = unknown> {
+  private config: WorkerConfig<TD, TR> | null = null;
+  private isInitialized = false;
+  private containerId = randomUUID();
+  private container: ContainerInstance = Container.of(this.containerId);
 
-  private static ensureReflectMetadata() {
+  private ensureReflectMetadata() {
     if (!Reflect || !Reflect.defineMetadata) {
       throw new BootstrapError('reflect-metadata is not loaded. Please import it before using Worker.');
     }
   }
 
-  private static async initializeContainer<TD = unknown, TR = unknown>(config: WorkerConfig<TD, TR>) {
+  private async initializeContainer(config: WorkerConfig<TD, TR>) {
     try {
-      Container.reset();
+      this.container.reset({ strategy: 'resetValue' });
       if (config.containerSetup) {
         for (const setup of config.containerSetup) {
-          await setup();
+          await setup(this.container);
         }
       }
     } catch (error) {
@@ -30,8 +33,8 @@ export class Worker {
     }
   }
 
-  static async bootstrap<TD = unknown, TR = unknown>(config: WorkerConfig<TD, TR>): Promise<void> {
-    if (Worker.isInitialized) {
+  async bootstrap(config: WorkerConfig<TD, TR>): Promise<void> {
+    if (this.isInitialized) {
       throw new BootstrapError('Worker has already been initialized');
     }
 
@@ -40,26 +43,24 @@ export class Worker {
     }
 
     try {
-      Worker.ensureReflectMetadata();
-      Worker.config = config as unknown as WorkerConfig;
-      await Worker.initializeContainer(config);
+      this.ensureReflectMetadata();
+      this.config = config;
+      await this.initializeContainer(config);
       if (config.onWorkerBootstrap) {
-        await config.onWorkerBootstrap(Container);
+        await config.onWorkerBootstrap(this.container);
       }
-      Worker.isInitialized = true;
+      this.isInitialized = true;
     } catch (error) {
       throw new BootstrapError('Failed to bootstrap worker', error);
     }
   }
 
-  static async processEvent<TD = unknown, TR = unknown>(
-    event: SQSEvent
-  ): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
-    if (!Worker.isInitialized) {
+  async processEvent(event: SQSEvent): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
+    if (!this.isInitialized || !this.config) {
       throw new BootstrapError('Worker not initialized. Call bootstrap() first.');
     }
 
-    const config = Worker.config as unknown as WorkerConfig<TD, TR>;
+    const config = this.config;
 
     const results = await Promise.allSettled(
       event.Records.map(async (record) => {
@@ -74,7 +75,7 @@ export class Worker {
           }
 
           const JobRunner = config.getJob(job);
-          const jobInstance = Container.get(JobRunner);
+          const jobInstance = this.container.get(JobRunner);
           const result = (await jobInstance.execute(data)) as TR;
 
           if (config.afterJobExecution) {
@@ -110,16 +111,61 @@ export class Worker {
     return { batchItemFailures };
   }
 
+  reset() {
+    this.config = null;
+    this.isInitialized = false;
+    Container.reset(this.containerId);
+    this.containerId = randomUUID();
+    this.container = Container.of(this.containerId);
+  }
+}
+
+export class Worker<TD = unknown, TR = unknown> {
+  private static defaultProcessEvent:
+    | ((event: SQSEvent) => Promise<{ batchItemFailures: { itemIdentifier: string }[] }>)
+    | null = null;
+  private static defaultReset: (() => void) | null = null;
+  private readonly runtime = new WorkerRuntime<TD, TR>();
+
+  async bootstrap(config: WorkerConfig<TD, TR>): Promise<void> {
+    await this.runtime.bootstrap(config);
+  }
+
+  async processEvent(event: SQSEvent): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
+    return this.runtime.processEvent(event);
+  }
+
+  reset(): void {
+    this.runtime.reset();
+  }
+
+  static async bootstrap<TD = unknown, TR = unknown>(config: WorkerConfig<TD, TR>): Promise<void> {
+    const worker = new Worker<TD, TR>();
+    await worker.bootstrap(config);
+    Worker.defaultProcessEvent = (event: SQSEvent) => worker.processEvent(event);
+    Worker.defaultReset = () => worker.reset();
+  }
+
+  static async processEvent(event: SQSEvent): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
+    if (!Worker.defaultProcessEvent) {
+      throw new BootstrapError('Worker not initialized. Call bootstrap() first.');
+    }
+
+    return Worker.defaultProcessEvent(event);
+  }
+
   static reset() {
-    Worker.config = null;
-    Worker.isInitialized = false;
-    Container.reset();
+    Worker.defaultReset?.();
+    Worker.defaultProcessEvent = null;
+    Worker.defaultReset = null;
   }
 }
 
 export async function createWorker<TD = unknown, TR = unknown>(config: WorkerConfig<TD, TR>) {
-  await Worker.bootstrap<TD, TR>(config);
+  const worker = new Worker<TD, TR>();
+  await worker.bootstrap(config);
+
   return async (event: SQSEvent) => {
-    return Worker.processEvent<TD, TR>(event);
+    return worker.processEvent(event);
   };
 }
