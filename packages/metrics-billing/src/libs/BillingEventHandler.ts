@@ -122,7 +122,10 @@ export class BillingEventHandler
     await this.metricsRepository.recordMRRMovement(event.tenantId, movement, event.timestamp, this.getEventId(event));
   }
 
-  private createMRRMovement(mrr: Money, type: 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation') {
+  private createMRRMovement(
+    mrr: Money,
+    type: 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation' | 'unchanged'
+  ) {
     const empty: Money = { amount: 0, currency: mrr.currency };
 
     switch (type) {
@@ -170,6 +173,15 @@ export class BillingEventHandler
           churned: empty,
           reactivation: mrr,
           net: mrr,
+        };
+      case 'unchanged':
+        return {
+          new: empty,
+          expansion: empty,
+          contraction: empty,
+          churned: empty,
+          reactivation: empty,
+          net: empty,
         };
     }
   }
