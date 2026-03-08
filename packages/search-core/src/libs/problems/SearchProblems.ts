@@ -39,3 +39,16 @@ export class IndexNotFoundProblem extends Problem {
     });
   }
 }
+
+export class SearchCapabilityUnavailableProblem extends Problem {
+  constructor(capability: string, engineName: string) {
+    super(
+      'SEARCH_CAPABILITY_UNAVAILABLE',
+      ProblemCategory.NotImplemented,
+      `Search engine '${engineName}' does not support capability: ${capability}`,
+      {
+        extensions: { capability, engineName },
+      }
+    );
+  }
+}

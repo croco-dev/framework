@@ -1,5 +1,5 @@
 import { Container, Context } from '@croco/framework-context';
-import { StrategyUnavailableProblem } from '@croco/search-core';
+import { SearchCapabilityUnavailableProblem, StrategyUnavailableProblem } from '@croco/search-core';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { DrizzleSearchEngine } from '../libs/DrizzleSearchEngine';
@@ -149,5 +149,21 @@ describe('DrizzleSearchEngine', () => {
 
     expect(mockStrategy.buildDeleteQuery).toHaveBeenCalledWith('users', '1', 'tenant-123');
     expect(executeMock).toHaveBeenCalled();
+  });
+
+  it('should fail fast for unsupported createIndex capability', async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(
+      engine.createIndex({
+        name: 'users',
+      })
+    ).rejects.toBeInstanceOf(SearchCapabilityUnavailableProblem);
+  });
+
+  it('should fail fast for unsupported deleteIndex capability', async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(engine.deleteIndex('users')).rejects.toBeInstanceOf(SearchCapabilityUnavailableProblem);
   });
 });
