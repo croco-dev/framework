@@ -1,3 +1,4 @@
+import { DuplicateTenantManagerRegistrationProblem } from './problems/DuplicateTenantManagerRegistrationProblem';
 import { TenantManagerNotRegisteredProblem } from './problems/TenantManagerNotRegisteredProblem';
 import type { TenantManager } from './TenantManager';
 
@@ -31,7 +32,13 @@ export class TenantManagerRegistry {
   }
 
   register(manager: TenantManager, key?: string | symbol): void {
-    this.managers.set(key ?? TenantManagerRegistry.DEFAULT_KEY, manager);
+    const managerKey = key ?? TenantManagerRegistry.DEFAULT_KEY;
+
+    if (this.managers.has(managerKey)) {
+      throw new DuplicateTenantManagerRegistrationProblem(key === undefined ? undefined : String(key));
+    }
+
+    this.managers.set(managerKey, manager);
   }
 
   /**

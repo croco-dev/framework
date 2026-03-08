@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { DuplicateTenantManagerRegistrationProblem } from '../libs/problems/DuplicateTenantManagerRegistrationProblem';
 import { TenantManagerNotRegisteredProblem } from '../libs/problems/TenantManagerNotRegisteredProblem';
 import { TenantManager } from '../libs/TenantManager';
 import { TenantManagerRegistry } from '../libs/TenantManagerRegistry';
@@ -35,6 +36,28 @@ describe('TenantManagerRegistry', () => {
 
     expect(registry.get('custom')).toBe(manager);
     expect(registry.has('custom')).toBe(true);
+  });
+
+  it('should fail fast when the default manager is registered twice', () => {
+    const registry = new TenantManagerRegistry();
+    const firstManager = new TenantManager();
+    const secondManager = new TenantManager();
+
+    registry.register(firstManager);
+
+    expect(() => registry.register(secondManager)).toThrow(DuplicateTenantManagerRegistrationProblem);
+    expect(registry.get()).toBe(firstManager);
+  });
+
+  it('should fail fast when the same key is registered twice', () => {
+    const registry = new TenantManagerRegistry();
+    const firstManager = new TenantManager();
+    const secondManager = new TenantManager();
+
+    registry.register(firstManager, 'custom');
+
+    expect(() => registry.register(secondManager, 'custom')).toThrow(DuplicateTenantManagerRegistrationProblem);
+    expect(registry.get('custom')).toBe(firstManager);
   });
 
   it('should throw when an isolated registry has no manager', () => {
