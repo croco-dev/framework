@@ -19,6 +19,7 @@ describe('InMemoryBillingStore', () => {
     it('should return account when it exists', async () => {
       const account: BillingAccount = {
         id: 'tenant-1',
+        tenantId: 'tenant-1',
         externalCustomerId: 'ext-cust-1',
         email: 'test@example.com',
         createdAt: new Date(),
@@ -34,6 +35,7 @@ describe('InMemoryBillingStore', () => {
     it('should save account and find by external ID', async () => {
       const account: BillingAccount = {
         id: 'tenant-1',
+        tenantId: 'tenant-1',
         externalCustomerId: 'ext-cust-1',
         email: 'test@example.com',
         createdAt: new Date(),
@@ -200,6 +202,7 @@ describe('InMemoryBillingStore', () => {
     it('should clear all data', async () => {
       const account: BillingAccount = {
         id: 'tenant-1',
+        tenantId: 'tenant-1',
         externalCustomerId: 'ext-cust-1',
         email: 'test@example.com',
         createdAt: new Date(),

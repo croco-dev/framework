@@ -2,6 +2,7 @@ export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'revoked' 
 
 export type BillingAccount = {
   id: string;
+  tenantId: string;
   externalCustomerId: string;
   email: string;
   createdAt: Date;

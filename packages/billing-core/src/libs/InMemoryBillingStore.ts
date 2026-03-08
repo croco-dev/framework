@@ -8,6 +8,7 @@ import { WebhookAlreadyProcessedProblem } from './problems/BillingProblems';
  */
 export class InMemoryBillingStore implements BillingStore {
   private readonly accounts = new Map<string, BillingAccount>();
+  private readonly accountsByTenantId = new Map<string, BillingAccount>();
   private readonly accountsByExternalId = new Map<string, BillingAccount>();
   private readonly subscriptions = new Map<string, Subscription>();
   private readonly subscriptionsByExternalId = new Map<string, Subscription>();
@@ -15,7 +16,7 @@ export class InMemoryBillingStore implements BillingStore {
   private readonly processedWebhooks = new Set<string>();
 
   async findAccountByTenantId(tenantId: string): Promise<BillingAccount | null> {
-    return this.accounts.get(tenantId) ?? null;
+    return this.accountsByTenantId.get(tenantId) ?? null;
   }
 
   async findAccountByExternalId(externalCustomerId: string): Promise<BillingAccount | null> {
@@ -24,6 +25,7 @@ export class InMemoryBillingStore implements BillingStore {
 
   async saveAccount(account: BillingAccount): Promise<void> {
     this.accounts.set(account.id, account);
+    this.accountsByTenantId.set(account.tenantId, account);
     this.accountsByExternalId.set(account.externalCustomerId, account);
   }
 
@@ -67,6 +69,7 @@ export class InMemoryBillingStore implements BillingStore {
    */
   reset(): void {
     this.accounts.clear();
+    this.accountsByTenantId.clear();
     this.accountsByExternalId.clear();
     this.subscriptions.clear();
     this.subscriptionsByExternalId.clear();

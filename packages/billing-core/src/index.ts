@@ -38,7 +38,7 @@ export type { BillingGateway, CheckoutResult, CreateCheckoutParams } from './lib
 /**
  * Dependencies required for billing service initialization.
  */
-export type { BillingServiceDependencies } from './libs/BillingService';
+export type { BillingServiceDependencies, CreateBillingCheckoutParams } from './libs/BillingService';
 
 // Service
 /**
@@ -54,7 +54,7 @@ export type { BillingServiceDependencies } from './libs/BillingService';
  * const service = new BillingService({ store, gateway });
  *
  * const checkout = await service.createCheckout({
- *   billingAccountId: 'billing-account-123',
+ *   tenantId: 'tenant-123',
  *   email: 'owner@example.com',
  *   successUrl: 'https://example.com/billing/success',
  *   cancelUrl: 'https://example.com/billing/cancel',
