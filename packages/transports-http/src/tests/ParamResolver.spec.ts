@@ -103,4 +103,42 @@ describe('ParamResolver', () => {
       'Duplicate parameter metadata detected for create at index 0'
     );
   });
+
+  it('pipe가 container에서 resolve되지 않으면 fail fast', async () => {
+    class MissingPipe {
+      transform(value: unknown): unknown {
+        return value;
+      }
+    }
+
+    class TestController {
+      create(_value: unknown) {}
+    }
+
+    const params = new Map<
+      string | symbol,
+      Array<{
+        type: string;
+        index: number;
+        name?: string;
+        pipes?: Array<new (...args: any[]) => { transform(value: unknown): unknown }>;
+      }>
+    >();
+    params.set('create', [
+      {
+        type: 'body',
+        index: 0,
+        pipes: [MissingPipe],
+      },
+    ]);
+
+    Reflect.defineMetadata(REST_PARAMS_KEY, params, TestController);
+
+    const resolver = new ParamResolver();
+    const ctx = createMockHttpContext(vi.fn(async () => ({ ok: true })) as CrocoHttpContext['json']);
+
+    await expect(resolver.resolveParams(ctx, TestController, 'create')).rejects.toThrow(
+      'Container did not return an instance for pipe MissingPipe'
+    );
+  });
 });

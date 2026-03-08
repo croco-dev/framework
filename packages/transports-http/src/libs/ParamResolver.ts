@@ -1,4 +1,5 @@
 import { Container } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 import {
   type ArgumentMetadata,
   type Constructor,
@@ -106,8 +107,11 @@ export class ParamResolver {
   private resolvePipe(PipeClass: PipeTransformConstructor): PipeTransform {
     try {
       return Container.get(PipeClass);
-    } catch {
-      return new PipeClass();
+    } catch (error) {
+      throw ProblemFactory.internalServerError(
+        'transports-http/pipe-resolution-failed',
+        `Container did not return an instance for pipe ${PipeClass.name}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }
