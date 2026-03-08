@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import type { LlmService } from '../LlmService';
-import { LlmServiceNotInitializedProblem } from '../problems/LlmProblems';
+import { InvalidLlmPromptProblem, LlmServiceNotInitializedProblem } from '../problems/LlmProblems';
 import type { GenerateParams, GenerateResult, LlmMetadata } from '../types';
 
 export const LLM_METADATA_KEY = Symbol('llm:llm');
@@ -57,8 +57,6 @@ export function getLlmService(): LlmService | null {
  */
 export function Llm(options: LlmOptions = {}): MethodDecorator {
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
-    const _originalMethod = descriptor.value;
-
     const metadata: LlmMethodMetadata = {
       modelId: options.modelId ?? 'default',
     };
@@ -72,10 +70,15 @@ export function Llm(options: LlmOptions = {}): MethodDecorator {
         throw new LlmServiceNotInitializedProblem();
       }
 
+      const prompt = args[0];
+      if (typeof prompt !== 'string') {
+        throw new InvalidLlmPromptProblem(prompt === undefined ? 'undefined' : typeof prompt);
+      }
+
       // GenerateParams 구성
       const params: GenerateParams = {
         modelId: metadata.modelId,
-        prompt: args[0] as string,
+        prompt,
         systemPrompt: options.systemPrompt,
         temperature: options.temperature,
         maxTokens: options.maxTokens,

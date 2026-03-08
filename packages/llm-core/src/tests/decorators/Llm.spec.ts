@@ -3,6 +3,7 @@ import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LLM_METADATA_KEY, Llm, setLlmService } from '../../libs/decorators/Llm';
 import type { LlmService } from '../../libs/LlmService';
+import { InvalidLlmPromptProblem } from '../../libs/problems/LlmProblems';
 import type { LlmMetadata } from '../../libs/types';
 
 describe('@Llm Decorator', () => {
@@ -103,6 +104,18 @@ describe('@Llm Decorator', () => {
         modelId: 'default',
         prompt: 'Test',
       });
+    });
+
+    it('should fail fast when the first argument is not a string', async () => {
+      await expect(testService.generateText(123 as unknown as string)).rejects.toBeInstanceOf(InvalidLlmPromptProblem);
+      expect(mockLlmService.generate).not.toHaveBeenCalled();
+    });
+
+    it('should fail fast when the first argument is missing', async () => {
+      await expect(testService.generateText(undefined as unknown as string)).rejects.toBeInstanceOf(
+        InvalidLlmPromptProblem
+      );
+      expect(mockLlmService.generate).not.toHaveBeenCalled();
     });
   });
 

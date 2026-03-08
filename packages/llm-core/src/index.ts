@@ -41,6 +41,7 @@ export { LlmService } from './libs/LlmService';
 
 // Problem Classes (RFC 7807)
 export {
+  InvalidLlmPromptProblem,
   InvalidLlmResponseProblem,
   LlmProblem,
   LlmProviderNotFoundProblem,
