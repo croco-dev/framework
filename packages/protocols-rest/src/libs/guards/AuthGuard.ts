@@ -89,12 +89,18 @@ export class AuthGuard implements Guard<ExecutionContext> {
     try {
       const user = await this.verifier(token);
 
-      if (user) {
-        typedRequest.user = user;
+      if (!user) {
+        throw unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired token');
       }
+
+      typedRequest.user = user;
 
       return true;
     } catch (error) {
+      if (error instanceof Problem && error.code === 'AUTH_INVALID_TOKEN') {
+        throw error;
+      }
+
       if (isTokenVerificationError(error)) {
         throw unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired token');
       }

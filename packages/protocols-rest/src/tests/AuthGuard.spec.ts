@@ -161,14 +161,12 @@ describe('AuthGuard', () => {
     expect(request.user).toEqual({ id: 'headers-user' });
   });
 
-  it('should not set user if verifier returns falsy value', async () => {
+  it('should deny access if verifier returns falsy value', async () => {
     const mockRequest = { headers: { authorization: 'Bearer token' }, user: undefined };
     (mockVerifier as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
-    const result = await guard.canActivate(mockContext);
-
-    expect(result).toBe(true);
+    await expect(guard.canActivate(mockContext)).rejects.toThrow('Invalid or expired token');
     expect(mockRequest.user).toBeUndefined();
   });
 });
