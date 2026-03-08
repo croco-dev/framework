@@ -252,6 +252,48 @@ describe('@CacheEvict', () => {
     }).toThrow('@CacheEvict requires "namespace" when "key" is not provided (method: updateData)');
   });
 
+  it('fails fast when namespace eviction is used with a store that does not support deleteByPattern', async () => {
+    const unsupportedStore = {
+      get: async () => undefined,
+      set: async () => undefined,
+      delete: async () => undefined,
+      has: async () => false,
+      clear: async () => undefined,
+    };
+
+    class TestService {
+      @CacheEvict({ store: unsupportedStore, namespace: 'stable-service' })
+      async updateData(): Promise<void> {}
+    }
+
+    const service = new TestService();
+
+    await expect(service.updateData()).rejects.toThrow(
+      'Cache store does not support deleteByPattern for namespace eviction: stable-service:updateData:*'
+    );
+  });
+
+  it('fails fast when wildcard key eviction is used with a store that does not support deleteByPattern', async () => {
+    const unsupportedStore = {
+      get: async () => undefined,
+      set: async () => undefined,
+      delete: async () => undefined,
+      has: async () => false,
+      clear: async () => undefined,
+    };
+
+    class TestService {
+      @CacheEvict({ store: unsupportedStore, key: 'user:*' })
+      async clearUserCache(): Promise<void> {}
+    }
+
+    const service = new TestService();
+
+    await expect(service.clearUserCache()).rejects.toThrow(
+      'Cache store does not support deleteByPattern for wildcard eviction: user:*'
+    );
+  });
+
   it('executes method before evicting', async () => {
     let methodCalled = false;
 
