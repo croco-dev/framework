@@ -1,6 +1,6 @@
 import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../../types';
 import type { MetricsRepository } from '../interfaces/MetricsRepository';
-import { RetentionMetricsUnavailableProblem } from '../problems/MetricsProblems';
+import { RetentionCalculator } from '../RetentionCalculator';
 
 /**
  * PostgreSQL 클라이언트 인터페이스 (pg 또는 호환 라이브러리)
@@ -33,6 +33,8 @@ export interface PostgresClient {
 export class TimescaleMetricsStore implements MetricsRepository {
   private static readonly MRR_MOVEMENTS_TABLE = 'mrr_movements';
   private static readonly SNAPSHOTS_TABLE = 'metrics_snapshots';
+
+  private readonly retentionCalculator = new RetentionCalculator();
 
   constructor(private readonly db: PostgresClient) {}
 
@@ -205,9 +207,97 @@ export class TimescaleMetricsStore implements MetricsRepository {
     );
   }
 
-  async getRetentionMetrics(_tenantId: string, _period: Period): Promise<RetentionMetrics> {
-    throw new RetentionMetricsUnavailableProblem(
-      'TimescaleMetricsStore.getRetentionMetrics() is not implemented yet; returning fabricated retention values is unsafe'
-    );
+  async getRetentionMetrics(tenantId: string, period: Period): Promise<RetentionMetrics> {
+    const [startingSnapshot, endingSnapshot, movements] = await Promise.all([
+      this.getLatestSnapshotOnOrBefore(tenantId, period.from),
+      this.getLatestSnapshotOnOrBefore(tenantId, new Date(period.to.getTime() - 1)),
+      this.getMRRHistory(tenantId, period),
+    ]);
+
+    const movement = this.aggregateMovements(movements, startingSnapshot?.totalMRR.currency ?? 'USD');
+    const startingMRR = startingSnapshot?.totalMRR.amount ?? 0;
+
+    const [revenueChurn, grr, nrr] = await Promise.all([
+      this.retentionCalculator.calculateChurn(startingMRR, movement, 'revenue'),
+      this.retentionCalculator.calculateGRR(startingMRR, movement),
+      this.retentionCalculator.calculateNRR(startingMRR, movement),
+    ]);
+
+    return {
+      logoChurn: this.calculateLogoChurn(startingSnapshot, endingSnapshot),
+      revenueChurn: revenueChurn ?? 0,
+      grr: grr ?? 100,
+      nrr: nrr ?? 100,
+    };
+  }
+
+  private async getLatestSnapshotOnOrBefore(tenantId: string, date: Date): Promise<MetricsSnapshot | null> {
+    const sql = `
+      SELECT
+        snapshot_date as "date",
+        total_mrr_amount,
+        total_mrr_currency,
+        active_customers as "activeCustomers"
+      FROM ${TimescaleMetricsStore.SNAPSHOTS_TABLE}
+      WHERE tenant_id = $1 AND snapshot_date <= $2
+      ORDER BY snapshot_date DESC
+      LIMIT 1
+    `;
+
+    const result = await this.db.query<{
+      date: Date;
+      total_mrr_amount: number;
+      total_mrr_currency: string;
+      activeCustomers: number;
+    }>(sql, [tenantId, date]);
+
+    const row = result.rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      date: row.date,
+      totalMRR: {
+        amount: row.total_mrr_amount,
+        currency: row.total_mrr_currency,
+      },
+      activeCustomers: row.activeCustomers,
+    };
+  }
+
+  private aggregateMovements(movements: MRRMovement[], currency: string): MRRMovement {
+    const aggregate = (): { amount: number; currency: string } => ({ amount: 0, currency });
+
+    const totals: MRRMovement = {
+      new: aggregate(),
+      expansion: aggregate(),
+      contraction: aggregate(),
+      churned: aggregate(),
+      reactivation: aggregate(),
+      net: aggregate(),
+    };
+
+    for (const movement of movements) {
+      totals.new.amount += movement.new.amount;
+      totals.expansion.amount += movement.expansion.amount;
+      totals.contraction.amount += movement.contraction.amount;
+      totals.churned.amount += movement.churned.amount;
+      totals.reactivation.amount += movement.reactivation.amount;
+      totals.net.amount += movement.net.amount;
+    }
+
+    return totals;
+  }
+
+  private calculateLogoChurn(startingSnapshot: MetricsSnapshot | null, endingSnapshot: MetricsSnapshot | null): number {
+    if (!startingSnapshot || !endingSnapshot || startingSnapshot.activeCustomers === 0) {
+      return 0;
+    }
+
+    const churnedCustomers = Math.max(startingSnapshot.activeCustomers - endingSnapshot.activeCustomers, 0);
+
+    return (churnedCustomers / startingSnapshot.activeCustomers) * 100;
   }
 }
