@@ -106,6 +106,30 @@ describe('LlmService', () => {
         })
       ).rejects.toThrow();
     });
+
+    it('should invalidate cached models when a provider is re-registered', async () => {
+      const first = await service.generate({
+        prompt: 'Hello',
+        modelId: 'test-model',
+      });
+
+      expect(first.text).toBe('Hi there!');
+
+      registry.registerProvider(
+        'test-model',
+        () =>
+          new InMemoryLlmModel('test-model', {
+            Hello: 'Updated response',
+          })
+      );
+
+      const second = await service.generate({
+        prompt: 'Hello',
+        modelId: 'test-model',
+      });
+
+      expect(second.text).toBe('Updated response');
+    });
   });
 
   describe('stream', () => {
