@@ -4,7 +4,7 @@
  * @package @croco/notifications-core
  *
  * @description
- * Core package for multi-channel notification delivery with provider abstraction and async job processing.
+ * Core package for multi-channel notification delivery with provider abstraction and task-based delivery processing.
  * Supports EMAIL, SMS, PUSH, SLACK, and IN_APP channels with extensible provider architecture.
  *
  * @example
@@ -27,7 +27,7 @@
  * NotificationService - Core service for notification management and provider registration.
  *
  * @description
- * Manages notification providers and orchestrates notification delivery through async job queue.
+ * Manages notification providers and orchestrates notification delivery through task execution.
  * Supports provider registration, default provider assignment per channel, and multi-channel delivery.
  *
  * @example
@@ -48,12 +48,12 @@
 export * from './libs/NotificationService';
 export * from './libs/problems/NotificationProblems';
 /**
- * SendNotificationTask - Background task for async notification processing.
+ * SendNotificationTask - Task handler for notification delivery processing.
  *
  * @description
- * Job queue task that handles actual notification delivery with retry capability.
- * Registered as 'send-notification' task with configurable maxAttempts (default: 3) for resilient delivery.
- * Integrates with TaskRunner for background processing.
+ * Task handler that performs actual notification delivery with retry capability.
+ * Registered as 'send-notification' with configurable maxAttempts (default: 3) for resilient delivery.
+ * Integrates with TaskRunner for task-based execution.
  *
  * @example
  * ```typescript
@@ -78,7 +78,7 @@ export * from './libs/SendNotificationTask';
  * - {@link NotificationPayload}: Input payload for sending notifications
  * - {@link NotificationResult}: Result from provider send operation
  * - {@link NotificationProvider}: Interface for implementing custom providers
- * - {@link NotificationJobPayload}: Internal job queue payload format
+ * - {@link NotificationJobPayload}: Internal task payload format
  *
  * @example
  * ```typescript

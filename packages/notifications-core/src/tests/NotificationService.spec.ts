@@ -62,7 +62,7 @@ describe('NotificationService', () => {
       service.registerProvider(mockProvider as never, true);
     });
 
-    it('should send notification via job queue with default provider', async () => {
+    it('should send notification via task execution with default provider', async () => {
       const payload = {
         to: 'test@example.com',
         subject: 'Test Subject',
@@ -150,7 +150,7 @@ describe('NotificationService', () => {
       service.registerProvider(mockProvider as never, true);
     });
 
-    it('should send notification via job queue with default provider', async () => {
+    it('should send notification via task execution with default provider', async () => {
       const payload = {
         to: 'test@example.com',
         subject: 'Test Subject',
