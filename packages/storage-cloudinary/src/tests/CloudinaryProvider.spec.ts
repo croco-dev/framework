@@ -42,6 +42,10 @@ describe('CloudinaryProvider', () => {
     provider = new CloudinaryProvider(mockConfig);
   });
 
+  it('should not mutate global cloudinary config during construction', () => {
+    expect(cloudinary.config).not.toHaveBeenCalled();
+  });
+
   describe('put()', () => {
     it('should upload buffer data successfully', async () => {
       const mockUploadStream = vi.fn(
@@ -362,6 +366,7 @@ describe('CloudinaryProvider', () => {
 
       expect(url).toBe('https://res.cloudinary.com/test-cloud/image/upload/test-key');
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
       });
     });
@@ -373,6 +378,7 @@ describe('CloudinaryProvider', () => {
       httpProvider.getPublicUrl('test-key');
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: false,
       });
     });
@@ -393,6 +399,8 @@ describe('CloudinaryProvider', () => {
 
       const now = Date.now() / 1000;
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
+        api_secret: 'test-api-secret',
         secure: true,
         sign_url: true,
         expiration: Math.floor(now) + 3600,
@@ -510,6 +518,7 @@ describe('CloudinaryProvider', () => {
 
       expect(url).toBe('https://res.cloudinary.com/test-cloud/image/upload/w_200,h_200/test-key');
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'w_200,h_200',
       });
@@ -522,6 +531,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', options);
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'c_fill',
       });
@@ -534,6 +544,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', options);
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'q_80',
       });
@@ -546,6 +557,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', options);
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'f_webp',
       });
@@ -558,6 +570,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', options);
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: undefined,
       });
@@ -570,6 +583,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', options);
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'dpr_2',
       });
@@ -589,6 +603,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', options);
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'w_200,h_200,c_fill,q_80',
       });
@@ -641,6 +656,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', { fit: 'cover' });
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'c_fill',
       });
@@ -652,6 +668,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', { fit: 'contain' });
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'c_fit',
       });
@@ -663,6 +680,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', { fit: 'fill' });
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'c_pad',
       });
@@ -674,6 +692,7 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', { fit: 'inside' });
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'c_limit',
       });
@@ -685,8 +704,27 @@ describe('CloudinaryProvider', () => {
       provider.getTransformUrl('test-key', { fit: 'outside' });
 
       expect(cloudinary.url).toHaveBeenCalledWith('test-key', {
+        cloud_name: 'test-cloud',
         secure: true,
         transformation: 'c_crop',
+      });
+    });
+
+    it('should generate URLs with each provider own cloud name', () => {
+      const otherProvider = new CloudinaryProvider({
+        cloudName: 'other-cloud',
+        apiKey: 'other-api-key',
+        apiSecret: 'other-api-secret',
+        secure: true,
+      });
+
+      vi.mocked(cloudinary.url).mockReturnValue('https://res.cloudinary.com/other-cloud/image/upload/test-key');
+
+      otherProvider.getPublicUrl('test-key');
+
+      expect(cloudinary.url).toHaveBeenLastCalledWith('test-key', {
+        cloud_name: 'other-cloud',
+        secure: true,
       });
     });
   });

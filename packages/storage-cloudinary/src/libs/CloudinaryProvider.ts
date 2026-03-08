@@ -14,22 +14,22 @@ import type { CloudinaryConfig, CloudinaryTransformOptions } from './types';
 
 @Component()
 export class CloudinaryProvider extends BaseStorageProvider implements ImageProvider {
+  private static operationInFlight = false;
+  private static operationWaiters: Array<() => void> = [];
+
   private readonly cloudName: string;
+  private readonly apiKey: string;
+  private readonly apiSecret: string;
   private readonly secure: boolean;
   private readonly uploadBaseUrl: string;
 
   constructor(config: CloudinaryConfig) {
     super();
     this.cloudName = config.cloudName;
+    this.apiKey = config.apiKey;
+    this.apiSecret = config.apiSecret;
     this.secure = config.secure ?? true;
     this.uploadBaseUrl = config.uploadBaseUrl ?? 'https://api.cloudinary.com';
-
-    cloudinary.config({
-      cloud_name: config.cloudName,
-      api_key: config.apiKey,
-      api_secret: config.apiSecret,
-      secure: this.secure,
-    });
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
@@ -44,36 +44,38 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
       uploadOptions.context = this.formatContext(options.metadata);
     }
 
-    return new Promise<void>((resolve, reject) => {
-      let uploadStream: ReturnType<typeof cloudinary.uploader.upload_stream>;
+    return this.withConfiguredCloudinary(async () => {
+      await new Promise<void>((resolve, reject) => {
+        let uploadStream: ReturnType<typeof cloudinary.uploader.upload_stream>;
 
-      try {
-        uploadStream = cloudinary.uploader.upload_stream(
-          uploadOptions,
-          (error: Error | undefined, _result: unknown) => {
-            if (error) {
-              reject(error);
-              return;
+        try {
+          uploadStream = cloudinary.uploader.upload_stream(
+            uploadOptions,
+            (error: Error | undefined, _result: unknown) => {
+              if (error) {
+                reject(error);
+                return;
+              }
+
+              resolve();
             }
+          );
+        } catch (error) {
+          reject(error);
+          return;
+        }
 
-            resolve();
-          }
-        );
-      } catch (error) {
-        reject(error);
-        return;
-      }
+        if (Buffer.isBuffer(data)) {
+          uploadStream.end(data);
+          return;
+        }
 
-      if (Buffer.isBuffer(data)) {
-        uploadStream.end(data);
-        return;
-      }
+        data.once('error', (error) => {
+          reject(error);
+        });
 
-      data.once('error', (error) => {
-        reject(error);
+        data.pipe(uploadStream);
       });
-
-      data.pipe(uploadStream);
     }).catch((error) => {
       this.throwUploadFailed(key, this.getErrorMessage(error, 'Unknown upload error'));
     });
@@ -109,9 +111,11 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.validateKey(key);
 
     try {
-      const result = await cloudinary.uploader.destroy(key, {
-        resource_type: 'image',
-      });
+      const result = (await this.withConfiguredCloudinary(() =>
+        cloudinary.uploader.destroy(key, {
+          resource_type: 'image',
+        })
+      )) as { result?: string };
 
       if (result.result !== 'ok' && result.result !== 'not found') {
         this.throwDeleteFailed(key, `Delete failed: ${result.result}`);
@@ -127,6 +131,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   getPublicUrl(key: string): string {
     this.validateKey(key);
     return cloudinary.url(key, {
+      cloud_name: this.cloudName,
       secure: this.secure,
     });
   }
@@ -135,6 +140,8 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.validateKey(key);
 
     const url = cloudinary.url(key, {
+      cloud_name: this.cloudName,
+      api_secret: this.apiSecret,
       secure: this.secure,
       sign_url: true,
       expiration: Math.floor(Date.now() / 1000) + options.expiresIn,
@@ -147,9 +154,17 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.validateKey(key);
 
     try {
-      const resource = await cloudinary.api.resource(key, {
-        resource_type: 'image',
-      });
+      const resource = (await this.withConfiguredCloudinary(() =>
+        cloudinary.api.resource(key, {
+          resource_type: 'image',
+        })
+      )) as {
+        bytes?: number;
+        format?: string;
+        created_at: string;
+        etag?: string;
+        context?: unknown;
+      };
 
       return {
         size: resource.bytes ?? 0,
@@ -174,6 +189,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     const params = this.buildTransformParams(transformOptions);
 
     return cloudinary.url(key, {
+      cloud_name: this.cloudName,
       secure: this.secure,
       transformation: params,
     });
@@ -196,6 +212,55 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   private buildDeliveryUrl(key: string, resourceType: string): string {
     const protocol = this.secure ? 'https' : 'http';
     return `${protocol}://res.cloudinary.com/${this.cloudName}/${resourceType}/upload/${key}`;
+  }
+
+  private getCloudinaryConfig() {
+    return {
+      cloud_name: this.cloudName,
+      api_key: this.apiKey,
+      api_secret: this.apiSecret,
+      secure: this.secure,
+    };
+  }
+
+  private async withConfiguredCloudinary<T>(operation: () => Promise<T>): Promise<T> {
+    const release = CloudinaryProvider.operationInFlight
+      ? await this.waitForCloudinaryLock()
+      : this.acquireCloudinaryLock();
+    const previousConfig = { ...(cloudinary.config() ?? {}) };
+
+    cloudinary.config(this.getCloudinaryConfig());
+
+    try {
+      return await operation();
+    } finally {
+      cloudinary.config(previousConfig);
+      release();
+    }
+  }
+
+  private acquireCloudinaryLock(): () => void {
+    CloudinaryProvider.operationInFlight = true;
+    return () => this.releaseCloudinaryLock();
+  }
+
+  private async waitForCloudinaryLock(): Promise<() => void> {
+    await new Promise<void>((resolve) => {
+      CloudinaryProvider.operationWaiters.push(resolve);
+    });
+
+    return () => this.releaseCloudinaryLock();
+  }
+
+  private releaseCloudinaryLock(): void {
+    const nextWaiter = CloudinaryProvider.operationWaiters.shift();
+
+    if (nextWaiter) {
+      nextWaiter();
+      return;
+    }
+
+    CloudinaryProvider.operationInFlight = false;
   }
 
   private buildTransformParams(options: CloudinaryTransformOptions): string | undefined {
