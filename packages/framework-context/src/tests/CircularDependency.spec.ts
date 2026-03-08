@@ -70,4 +70,54 @@ describe('Container.validate', () => {
       Container.validate();
     }).toThrowError(/Circular dependency detected: SelfReferencing → SelfReferencing/);
   });
+
+  it('should re-run validation after removing a dependency registration', () => {
+    class Dependency {}
+
+    class Consumer {
+      constructor(_dependency: Dependency) {}
+    }
+
+    Reflect.defineMetadata('design:paramtypes', [], Dependency);
+    Reflect.defineMetadata('design:paramtypes', [Dependency], Consumer);
+
+    Container.register(Dependency, 'singleton');
+    Container.register(Consumer, 'singleton');
+
+    expect(() => {
+      Container.validate();
+    }).not.toThrow();
+
+    Container.remove(Dependency);
+
+    expect(() => {
+      Container.get(Consumer);
+      Container.validate();
+    }).toThrow();
+  });
+
+  it('should re-run validation after setting a dependency registration', () => {
+    class Dependency {}
+
+    class Consumer {
+      constructor(_dependency: Dependency) {}
+    }
+
+    Reflect.defineMetadata('design:paramtypes', [], Dependency);
+    Reflect.defineMetadata('design:paramtypes', [Dependency], Consumer);
+
+    Container.register(Dependency, 'singleton');
+    Container.register(Consumer, 'singleton');
+
+    expect(() => {
+      Container.validate();
+    }).not.toThrow();
+
+    Container.remove(Dependency);
+    Container.set(Dependency, new Dependency());
+
+    expect(() => {
+      Container.validate();
+    }).not.toThrow();
+  });
 });
