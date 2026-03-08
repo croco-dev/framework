@@ -1,4 +1,5 @@
 import { MetadataStorage } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 import { CRON_METADATA_KEY, EVENT_METADATA_KEY, TRIGGER_METADATA_KEY, WEBHOOK_METADATA_KEY } from './metadataKeys';
 import type { AnyTriggerMetadata, TriggerType } from './types';
 
@@ -51,6 +52,13 @@ export class TriggerRegistry {
 
       const targetMap = result.get(target);
       if (targetMap && entry.propertyKey) {
+        if (targetMap.has(entry.propertyKey)) {
+          throw ProblemFactory.internalServerError(
+            'triggers-core/duplicate-trigger-metadata',
+            `Multiple trigger metadata entries are registered for method '${String(entry.propertyKey)}'`
+          );
+        }
+
         targetMap.set(entry.propertyKey, this.cloneMetadata(entry.value));
       }
     }
@@ -90,6 +98,13 @@ export class TriggerRegistry {
 
     for (const entry of entries) {
       if (entry.propertyKey) {
+        if (map.has(entry.propertyKey)) {
+          throw ProblemFactory.internalServerError(
+            'triggers-core/duplicate-trigger-metadata',
+            `Multiple trigger metadata entries are registered for method '${String(entry.propertyKey)}'`
+          );
+        }
+
         map.set(entry.propertyKey, this.cloneMetadata(entry.value));
       }
     }
