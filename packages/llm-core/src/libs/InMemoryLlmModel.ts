@@ -17,6 +17,9 @@ import type {
 } from './types';
 
 export class InMemoryLlmModel extends LlmModel {
+  private static readonly EMBEDDING_DIMENSION = 1536;
+  private static readonly MAX_EMBEDDING_CACHE_SIZE = 1000;
+
   readonly modelId: string;
   readonly capabilities: LlmCapabilities = {
     streaming: true,
@@ -146,15 +149,10 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async embed(params: EmbedParams): Promise<EmbedResult> {
-    let embedding = this.embeddingCache.get(params.text);
-
-    if (!embedding) {
-      embedding = Array.from({ length: 1536 }, () => Math.random());
-      this.embeddingCache.set(params.text, embedding);
-    }
+    const embedding = this.getOrCreateEmbedding(params.text);
 
     return {
-      embedding,
+      embedding: [...embedding],
       usage: {
         promptTokens: params.text.length,
         completionTokens: 0,
@@ -165,16 +163,7 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async embedMany(params: EmbedManyParams): Promise<EmbedManyResult> {
-    const embeddings = params.texts.map((text) => {
-      let embedding = this.embeddingCache.get(text);
-
-      if (!embedding) {
-        embedding = Array.from({ length: 1536 }, () => Math.random());
-        this.embeddingCache.set(text, embedding);
-      }
-
-      return embedding;
-    });
+    const embeddings = params.texts.map((text) => [...this.getOrCreateEmbedding(text)]);
 
     const totalTokens = params.texts.reduce((sum, text) => sum + text.length, 0);
 
@@ -187,5 +176,39 @@ export class InMemoryLlmModel extends LlmModel {
         accuracy: 'ESTIMATED',
       },
     };
+  }
+
+  private getOrCreateEmbedding(text: string): number[] {
+    const cached = this.embeddingCache.get(text);
+
+    if (cached) {
+      return cached;
+    }
+
+    const embedding = this.createDeterministicEmbedding(text);
+    this.embeddingCache.set(text, embedding);
+
+    if (this.embeddingCache.size > InMemoryLlmModel.MAX_EMBEDDING_CACHE_SIZE) {
+      const oldestKey = this.embeddingCache.keys().next().value;
+      if (oldestKey) {
+        this.embeddingCache.delete(oldestKey);
+      }
+    }
+
+    return embedding;
+  }
+
+  private createDeterministicEmbedding(text: string): number[] {
+    let state = 2166136261;
+
+    for (let i = 0; i < text.length; i++) {
+      state ^= text.charCodeAt(i);
+      state = Math.imul(state, 16777619);
+    }
+
+    return Array.from({ length: InMemoryLlmModel.EMBEDDING_DIMENSION }, () => {
+      state = Math.imul(state, 1664525) + 1013904223;
+      return (state >>> 0) / 4294967296;
+    });
   }
 }

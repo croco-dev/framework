@@ -321,6 +321,33 @@ describe('InMemoryLlmModel', () => {
 
       expect(result1.embedding).not.toEqual(result2.embedding);
     });
+
+    it('should return a defensive copy for cached embeddings', async () => {
+      const embedModel = new InMemoryLlmModel('embed-model');
+
+      const first = await embedModel.embed({ text: 'Mutable' });
+      first.embedding[0] = 999;
+
+      const second = await embedModel.embed({ text: 'Mutable' });
+
+      expect(second.embedding[0]).not.toBe(999);
+    });
+
+    it('should evict the oldest cached embedding when the cache limit is exceeded', async () => {
+      const embedModel = new InMemoryLlmModel('embed-model');
+      const getEmbeddingCache = (model: InMemoryLlmModel): Map<string, number[]> =>
+        Reflect.get(model, 'embeddingCache') as Map<string, number[]>;
+
+      for (let i = 0; i <= 1000; i++) {
+        await embedModel.embed({ text: `text-${i}` });
+      }
+
+      const embeddingCache = getEmbeddingCache(embedModel);
+
+      expect(embeddingCache.size).toBe(1000);
+      expect(embeddingCache.has('text-0')).toBe(false);
+      expect(embeddingCache.has('text-1000')).toBe(true);
+    });
   });
 
   describe('embedMany', () => {
@@ -354,6 +381,28 @@ describe('InMemoryLlmModel', () => {
       const result2 = await embedModel.embedMany(params);
 
       expect(result1.embeddings).toEqual(result2.embeddings);
+    });
+
+    it('should return defensive copies for batch embeddings', async () => {
+      const embedModel = new InMemoryLlmModel('embed-model');
+
+      const first = await embedModel.embedMany({ texts: ['A'] });
+      const [firstEmbedding] = first.embeddings;
+
+      if (!firstEmbedding) {
+        throw new Error('Expected a batch embedding result');
+      }
+
+      firstEmbedding[0] = 999;
+
+      const second = await embedModel.embedMany({ texts: ['A'] });
+      const [secondEmbedding] = second.embeddings;
+
+      if (!secondEmbedding) {
+        throw new Error('Expected a batch embedding result');
+      }
+
+      expect(secondEmbedding[0]).not.toBe(999);
     });
   });
 });
