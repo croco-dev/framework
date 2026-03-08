@@ -24,3 +24,13 @@ export class ClerkTokenVerificationProblem extends Problem {
     );
   }
 }
+
+export class DuplicateTenantMappingProblem extends Problem {
+  constructor(externalOrgId: string, existingTenantId: string, nextTenantId: string) {
+    super(
+      'auth-clerk/duplicate-tenant-mapping',
+      ProblemCategory.Conflict,
+      `Clerk org '${externalOrgId}' is already mapped to tenant '${existingTenantId}' and cannot be remapped to '${nextTenantId}'`
+    );
+  }
+}

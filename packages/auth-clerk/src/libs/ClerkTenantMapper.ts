@@ -1,6 +1,8 @@
 import type { AuthUser, TenantMappingProvider } from '@croco/auth-core';
 import type { TenantResolver } from '@croco/tenant-core';
 
+import { DuplicateTenantMappingProblem } from './problems/ClerkProblems';
+
 export interface TenantMappingStore {
   get(externalOrgId: string): Promise<string | null>;
   set(externalOrgId: string, tenantId: string): Promise<void>;
@@ -24,11 +26,22 @@ export class ClerkTenantMapper implements TenantMappingProvider, TenantResolver<
   }
 
   async register(externalOrgId: string, tenantId: string): Promise<void> {
+    const existingTenantId = await this.resolveByOrgId(externalOrgId);
+
+    if (existingTenantId) {
+      if (existingTenantId === tenantId) {
+        return;
+      }
+
+      throw new DuplicateTenantMappingProblem(externalOrgId, existingTenantId, tenantId);
+    }
+
     if (this.store) {
       await this.store.set(externalOrgId, tenantId);
-    } else {
-      this.inMemoryStore.set(externalOrgId, tenantId);
+      return;
     }
+
+    this.inMemoryStore.set(externalOrgId, tenantId);
   }
 
   async remove(externalOrgId: string): Promise<void> {
