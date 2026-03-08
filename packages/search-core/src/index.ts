@@ -79,6 +79,7 @@ export * from './libs/events';
 export {
   IndexNotFoundProblem,
   MissingTenantProblem,
+  SearchCapabilityUnavailableProblem,
   StrategyUnavailableProblem,
   TransformNotFoundProblem,
 } from './libs/problems/SearchProblems';

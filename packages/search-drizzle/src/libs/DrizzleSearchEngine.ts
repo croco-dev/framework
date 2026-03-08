@@ -2,6 +2,7 @@ import { Component, Context, Inject } from '@croco/framework-context';
 import {
   type IndexConfig,
   MissingTenantProblem,
+  SearchCapabilityUnavailableProblem,
   type SearchDocument,
   SearchEngine,
   type SearchEngineCapabilities,
@@ -87,10 +88,12 @@ export class DrizzleSearchEngine extends SearchEngine {
 
   async createIndex(_config: IndexConfig): Promise<void> {
     await this.ensureCapable();
+    throw new SearchCapabilityUnavailableProblem('createIndex', 'DrizzleSearchEngine');
   }
 
   async deleteIndex(_name: string): Promise<void> {
     await this.ensureCapable();
+    throw new SearchCapabilityUnavailableProblem('deleteIndex', 'DrizzleSearchEngine');
   }
 
   private async checkStrategy(): Promise<void> {
