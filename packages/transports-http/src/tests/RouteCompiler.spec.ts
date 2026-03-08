@@ -247,4 +247,49 @@ describe('RouteCompiler', () => {
       'Container did not return an instance for provider RouteLevelGuard'
     );
   });
+
+  it('should fail fast when duplicate routes resolve to the same method and path', () => {
+    @Controller('/users')
+    class DuplicateRouteController {
+      @Get('/:id')
+      getById() {
+        return { ok: true };
+      }
+
+      @Get(':id')
+      getByIdWithoutLeadingSlash() {
+        return { ok: true };
+      }
+    }
+
+    const compiler = new RouteCompiler();
+
+    expect(() => {
+      compiler.compile([DuplicateRouteController]);
+    }).toThrow('Duplicate route detected for GET /users/:id');
+  });
+
+  it('should fail fast when duplicate routes are contributed by different controllers', () => {
+    @Controller('/users')
+    class FirstController {
+      @Get('/:id')
+      first() {
+        return { ok: true };
+      }
+    }
+
+    @Controller('/users')
+    class SecondController {
+      @Get('/:id')
+      second() {
+        return { ok: true };
+      }
+    }
+
+    const compiler = new RouteCompiler();
+
+    expect(() => {
+      compiler.compile([FirstController, SecondController]);
+    }).toThrow('Duplicate route detected for GET /users/:id');
+  });
 });
