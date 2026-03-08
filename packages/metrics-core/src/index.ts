@@ -61,6 +61,7 @@ export {
   CarryingCapacityTenantRequiredProblem,
   GrossMarginRequiredProblem,
   LogoChurnDataRequiredProblem,
+  MixedCurrencyMRRProblem,
   RetentionMetricsUnavailableProblem,
 } from './libs/problems/MetricsProblems';
 
