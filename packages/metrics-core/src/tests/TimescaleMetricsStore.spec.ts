@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MRRMovement } from '../../src/types';
+import type { MetricsSnapshot, MRRMovement } from '../../src/types';
 import { type PostgresClient, TimescaleMetricsStore } from '../libs/stores/TimescaleMetricsStore';
 
 describe('TimescaleMetricsStore', () => {
@@ -73,5 +73,84 @@ describe('TimescaleMetricsStore', () => {
       1000,
       'USD',
     ]);
+  });
+
+  it('should calculate retention metrics from snapshots and movement history', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            date: new Date('2026-03-01T00:00:00.000Z'),
+            total_mrr_amount: 100000,
+            total_mrr_currency: 'USD',
+            activeCustomers: 100,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            date: new Date('2026-03-31T00:00:00.000Z'),
+            total_mrr_amount: 103000,
+            total_mrr_currency: 'USD',
+            activeCustomers: 95,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            new_mrr_amount: 15000,
+            new_mrr_currency: 'USD',
+            expansion_mrr_amount: 8000,
+            expansion_mrr_currency: 'USD',
+            contraction_mrr_amount: 2000,
+            contraction_mrr_currency: 'USD',
+            churned_mrr_amount: 3000,
+            churned_mrr_currency: 'USD',
+            reactivation_mrr_amount: 1000,
+            reactivation_mrr_currency: 'USD',
+            net_mrr_amount: 19000,
+            net_mrr_currency: 'USD',
+          },
+        ],
+      });
+
+    const period = {
+      from: new Date('2026-03-01T00:00:00.000Z'),
+      to: new Date('2026-04-01T00:00:00.000Z'),
+      granularity: 'month' as const,
+    };
+
+    const result = await store.getRetentionMetrics('tenant-1', period);
+
+    expect(result).toEqual({
+      logoChurn: 5,
+      revenueChurn: 3,
+      grr: 95,
+      nrr: 103,
+    });
+  });
+
+  it('should fall back to neutral retention values when baseline snapshot is missing', async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const period = {
+      from: new Date('2026-03-01T00:00:00.000Z'),
+      to: new Date('2026-04-01T00:00:00.000Z'),
+      granularity: 'month' as const,
+    };
+
+    const result = await store.getRetentionMetrics('tenant-1', period);
+
+    expect(result).toEqual({
+      logoChurn: 0,
+      revenueChurn: 0,
+      grr: 100,
+      nrr: 100,
+    });
   });
 });
