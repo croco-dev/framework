@@ -1,3 +1,5 @@
+import { ProblemFactory } from '@croco/problems-core';
+
 import type { CacheStore } from '../CacheStore';
 
 export interface CacheEvictOptions<V = unknown> {
@@ -41,13 +43,25 @@ export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDe
       if (options.key !== undefined) {
         if (options.key.endsWith('*') && options.store.deleteByPattern) {
           await options.store.deleteByPattern(options.key);
+        } else if (options.key.endsWith('*')) {
+          throw ProblemFactory.internalServerError(
+            'cache-core/delete-by-pattern-not-supported',
+            `Cache store does not support deleteByPattern for wildcard eviction: ${options.key}`
+          );
         } else {
           await options.store.delete(options.key);
         }
         return result;
       }
 
-      if (pattern !== undefined && options.store.deleteByPattern) {
+      if (pattern !== undefined) {
+        if (!options.store.deleteByPattern) {
+          throw ProblemFactory.internalServerError(
+            'cache-core/delete-by-pattern-not-supported',
+            `Cache store does not support deleteByPattern for namespace eviction: ${pattern}`
+          );
+        }
+
         await options.store.deleteByPattern(pattern);
       }
 

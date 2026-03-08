@@ -11,6 +11,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@croco/problems-core": "workspace:*"
+  },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*",
     "vitest": "^4.0.0"

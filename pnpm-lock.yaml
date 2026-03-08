@@ -390,6 +390,10 @@ importers:
         version: 2.1.9(@types/node@25.2.0)
 
   packages/cache-core:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
