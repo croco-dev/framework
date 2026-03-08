@@ -1,11 +1,19 @@
 import 'reflect-metadata';
 
+import { DuplicateEventFieldProblem } from '../problems/EventsProblems';
+
 const EVENT_FIELDS_META_KEY = '@croco/events-core:event-fields';
 
 export function EventField(options?: { name?: string }): PropertyDecorator {
   return (target: object, propertyKey: string | symbol): void => {
     const existing: EventFieldMeta[] = Reflect.getMetadata(EVENT_FIELDS_META_KEY, target.constructor) ?? [];
-    existing.push({ propertyKey: String(propertyKey), serializedKey: options?.name ?? String(propertyKey) });
+    const serializedKey = options?.name ?? String(propertyKey);
+
+    if (existing.some((field) => field.serializedKey === serializedKey)) {
+      throw new DuplicateEventFieldProblem(target.constructor.name, serializedKey);
+    }
+
+    existing.push({ propertyKey: String(propertyKey), serializedKey });
     Reflect.defineMetadata(EVENT_FIELDS_META_KEY, existing, target.constructor);
   };
 }
