@@ -8,6 +8,10 @@ type CacheEntry<V> = {
   expiresAt: number | null;
 };
 
+export type InMemoryCacheStoreOptions = {
+  maxEntries?: number;
+};
+
 /**
  * In-memory cache store implementation with TTL support.
  * Uses lazy expiration - entries are checked for expiration on get/has operations.
@@ -23,6 +27,11 @@ type CacheEntry<V> = {
  */
 export class InMemoryCacheStore<V = unknown> implements CacheStore<V> {
   private readonly store: Map<string, CacheEntry<V>> = new Map();
+  private readonly maxEntries: number | null;
+
+  constructor(options: InMemoryCacheStoreOptions = {}) {
+    this.maxEntries = options.maxEntries ?? null;
+  }
 
   async get(key: string): Promise<V | undefined> {
     const entry = this.store.get(key);
@@ -41,12 +50,16 @@ export class InMemoryCacheStore<V = unknown> implements CacheStore<V> {
   }
 
   async set(key: string, value: V, ttlMs?: number): Promise<void> {
+    this.pruneExpiredSync();
+
     const expiresAt = ttlMs !== undefined ? Date.now() + ttlMs : null;
 
     this.store.set(key, {
       value,
       expiresAt,
     });
+
+    this.evictOverflow();
   }
 
   async delete(key: string): Promise<void> {
@@ -74,17 +87,7 @@ export class InMemoryCacheStore<V = unknown> implements CacheStore<V> {
   }
 
   async pruneExpired(): Promise<number> {
-    const now = Date.now();
-    let deletedCount = 0;
-
-    for (const [key, entry] of this.store.entries()) {
-      if (entry.expiresAt !== null && now > entry.expiresAt) {
-        this.store.delete(key);
-        deletedCount++;
-      }
-    }
-
-    return deletedCount;
+    return this.pruneExpiredSync();
   }
 
   /**
@@ -116,5 +119,35 @@ export class InMemoryCacheStore<V = unknown> implements CacheStore<V> {
     }
 
     return deletedCount;
+  }
+
+  private pruneExpiredSync(): number {
+    const now = Date.now();
+    let deletedCount = 0;
+
+    for (const [key, entry] of this.store.entries()) {
+      if (entry.expiresAt !== null && now > entry.expiresAt) {
+        this.store.delete(key);
+        deletedCount++;
+      }
+    }
+
+    return deletedCount;
+  }
+
+  private evictOverflow(): void {
+    if (this.maxEntries === null) {
+      return;
+    }
+
+    while (this.store.size > this.maxEntries) {
+      const oldestKey = this.store.keys().next().value;
+
+      if (oldestKey === undefined) {
+        return;
+      }
+
+      this.store.delete(oldestKey);
+    }
   }
 }

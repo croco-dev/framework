@@ -161,4 +161,37 @@ describe('InMemoryCacheStore', () => {
       vi.useRealTimers();
     });
   });
+
+  describe('capacity management', () => {
+    it('should evict the oldest entry when maxEntries is exceeded', async () => {
+      const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 2 });
+
+      await boundedCache.set('key1', 'value1');
+      await boundedCache.set('key2', 'value2');
+      await boundedCache.set('key3', 'value3');
+
+      expect(await boundedCache.get('key1')).toBeUndefined();
+      expect(await boundedCache.get('key2')).toBe('value2');
+      expect(await boundedCache.get('key3')).toBe('value3');
+    });
+
+    it('should prune expired entries before evicting active ones on set', async () => {
+      vi.useFakeTimers();
+
+      const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 2 });
+
+      await boundedCache.set('expired', 'value1', 1000);
+      await boundedCache.set('active', 'value2');
+
+      vi.advanceTimersByTime(1001);
+
+      await boundedCache.set('fresh', 'value3');
+
+      expect(await boundedCache.get('expired')).toBeUndefined();
+      expect(await boundedCache.get('active')).toBe('value2');
+      expect(await boundedCache.get('fresh')).toBe('value3');
+
+      vi.useRealTimers();
+    });
+  });
 });
