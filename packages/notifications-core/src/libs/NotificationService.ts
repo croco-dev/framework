@@ -19,7 +19,11 @@ export class NotificationService {
   }
 
   /**
-   * Send a notification asynchronously via Job Queue
+   * Send a notification via task execution.
+   *
+   * This method waits for the configured TaskRunner to execute the
+   * `send-notification` task, so task and provider failures are propagated
+   * back to the caller.
    */
   async send(channel: NotificationChannel, payload: NotificationPayload, providerName?: string): Promise<void> {
     const targetProviderName = providerName || this.registry.getDefaultProviderName(channel);
