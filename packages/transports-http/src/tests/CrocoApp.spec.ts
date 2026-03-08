@@ -4,6 +4,7 @@ import { Logger } from '@croco/framework-logger';
 import { Body, Controller, Get, Param, Post, Raw } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
+import { CrocoRouteRegistrar } from '../libs/CrocoRouteRegistrar';
 import { ErrorHandler } from '../libs/ErrorHandler';
 import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
 
@@ -143,6 +144,38 @@ describe('CrocoApp', () => {
 
     const decoded = Buffer.from(response.body ?? '', 'base64');
     expect(Buffer.compare(decoded, binaryBody)).toBe(0);
+  });
+
+  it('should fail fast for unsupported route methods instead of registering all routes', () => {
+    const hono = {
+      all: () => {
+        throw new Error('should not register unsupported methods as all');
+      },
+      get: () => {},
+      post: () => {},
+      put: () => {},
+      patch: () => {},
+      delete: () => {},
+      options: () => {},
+    };
+
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    } as unknown as Logger;
+
+    const registrar = new CrocoRouteRegistrar(hono as never, new ErrorHandler(logger), []);
+
+    expect(() => {
+      registrar.register({
+        method: 'TRACE',
+        path: '/trace',
+        methodName: 'trace',
+        handler: async () => undefined,
+      });
+    }).toThrow('Unsupported route method: TRACE');
   });
 
   it('should keep json lambda response behavior unchanged', async () => {

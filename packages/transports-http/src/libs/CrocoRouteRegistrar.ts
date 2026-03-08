@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Context as FrameworkContext } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 import type { Hono, Context as HonoContext } from 'hono';
 import type { ErrorHandler } from './ErrorHandler';
 import { HttpContext } from './HttpContext';
@@ -76,7 +77,10 @@ export class CrocoRouteRegistrar {
         this.hono.all(route.path, honoHandler);
         break;
       default:
-        this.hono.all(route.path, honoHandler);
+        throw ProblemFactory.internalServerError(
+          'transports-http/unsupported-route-method',
+          `Unsupported route method: ${route.method}`
+        );
     }
   }
 
