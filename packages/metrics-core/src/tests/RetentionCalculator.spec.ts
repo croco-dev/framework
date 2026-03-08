@@ -235,15 +235,6 @@ describe('RetentionCalculator', () => {
       expect(churn).toBeNull();
     });
 
-    it('should throw error for logo churn type', async () => {
-      const startingMRR = 100000;
-      const movement = createMovement();
-
-      await expect(calculator.calculateChurn(startingMRR, movement, 'logo')).rejects.toThrow(
-        'Logo churn calculation requires customer count data'
-      );
-    });
-
     it('should cap GRR at 100% maximum', async () => {
       const startingMRR = 100000;
       const movement = createMovement({

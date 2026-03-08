@@ -73,19 +73,7 @@ export class MetricsEngine {
 
   // ========== Retention Methods ==========
 
-  /**
-   * Calculate churn rate for a period.
-   *
-   * @param startingMRR - MRR at the start of the period
-   * @param movement - MRR movement data for the period
-   * @param type - 'logo' for customer churn or 'revenue' for revenue churn
-   * @returns Churn rate as percentage (0-100), or null if starting MRR is zero
-   */
-  async calculateChurn(
-    startingMRR: number,
-    movement: MRRMovement,
-    type: 'logo' | 'revenue'
-  ): Promise<Percentage | null> {
+  async calculateChurn(startingMRR: number, movement: MRRMovement, type: 'revenue'): Promise<Percentage | null> {
     return this.retentionCalculator.calculateChurn(startingMRR, movement, type);
   }
 
