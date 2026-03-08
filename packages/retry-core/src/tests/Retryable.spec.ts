@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { describe, expect, it, vi } from 'vitest';
 import { NoBackoff } from '../libs/BackoffPolicy';
 import { InMemoryCircuitBreakerStateStore } from '../libs/CircuitBreakerState';
-import { CircuitBreakerOpenProblem, RetryExhaustedProblem } from '../libs/errors';
+import { CircuitBreakerOpenProblem, DuplicateRecoverHandlerProblem, RetryExhaustedProblem } from '../libs/errors';
 import { setLambdaContext } from '../libs/LambdaTimeoutGuard';
 import { Recover } from '../libs/Recover';
 import { Retryable } from '../libs/Retryable';
@@ -337,6 +337,48 @@ describe('@Retryable', () => {
 
     await expect(service.doWork(true)).resolves.toBe('recovered');
     await expect(service.doWork(false)).rejects.toBeInstanceOf(OtherError);
+  });
+
+  it('fails fast when duplicate typed recover handlers are registered', () => {
+    class SpecificError extends Error {
+      constructor(..._args: unknown[]) {
+        super('specific');
+      }
+    }
+
+    expect(() => {
+      class TestService {
+        @Recover(SpecificError)
+        async handleFirst(_error: SpecificError): Promise<string> {
+          return 'first';
+        }
+
+        @Recover(SpecificError)
+        async handleSecond(_error: SpecificError): Promise<string> {
+          return 'second';
+        }
+      }
+
+      return TestService;
+    }).toThrow(DuplicateRecoverHandlerProblem);
+  });
+
+  it('fails fast when duplicate catch-all recover handlers are registered', () => {
+    expect(() => {
+      class TestService {
+        @Recover()
+        async handleFirst(_error: Error): Promise<string> {
+          return 'first';
+        }
+
+        @Recover()
+        async handleSecond(_error: Error): Promise<string> {
+          return 'second';
+        }
+      }
+
+      return TestService;
+    }).toThrow(DuplicateRecoverHandlerProblem);
   });
 
   it('uses lambdaTimeoutReserveMs when lambda context provided', async () => {
