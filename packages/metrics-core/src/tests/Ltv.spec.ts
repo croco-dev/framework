@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LtvCalculator } from '../libs/LtvCalculator';
+import { GrossMarginRequiredProblem } from '../libs/problems/MetricsProblems';
 import type { Money, Period } from '../types';
 
 describe('LtvCalculator', () => {
@@ -153,6 +154,16 @@ describe('LtvCalculator', () => {
         amount: 0, // ($100 × 0) / 0.02 = $0
         currency: 'USD',
       });
+    });
+
+    it('should fail fast when includeMargin is true but grossMargin is missing', async () => {
+      const config = {
+        arpa: { amount: 10000, currency: 'USD' },
+        monthlyChurnRate: 2,
+        includeMargin: true,
+      };
+
+      await expect(calculator.calculateLTV(config)).rejects.toBeInstanceOf(GrossMarginRequiredProblem);
     });
   });
 

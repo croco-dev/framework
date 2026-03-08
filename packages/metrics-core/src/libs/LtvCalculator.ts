@@ -1,5 +1,7 @@
 import type { Money, Period } from '../types';
 
+import { GrossMarginRequiredProblem } from './problems/MetricsProblems';
+
 export type LtvConfig = {
   arpa: Money;
   monthlyChurnRate: number;
@@ -28,6 +30,10 @@ export class LtvCalculator {
 
     if (monthlyChurnRate === 0) {
       return null;
+    }
+
+    if (includeMargin && grossMargin === undefined) {
+      throw new GrossMarginRequiredProblem();
     }
 
     const churnRateAsDecimal = monthlyChurnRate / 100;
