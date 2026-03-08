@@ -41,7 +41,7 @@ export type Percentage = number;
 /**
  * MRR movement type classification.
  */
-export type MRRMovementType = 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation';
+export type MRRMovementType = 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation' | 'unchanged';
 
 /**
  * Monthly Recurring Revenue (MRR) movement breakdown.
