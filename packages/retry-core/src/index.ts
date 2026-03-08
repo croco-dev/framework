@@ -37,7 +37,7 @@ export {
 /**
  * Problem types raised when retry execution is blocked or fully exhausted.
  */
-export { CircuitBreakerOpenProblem, RetryExhaustedProblem } from './libs/errors';
+export { CircuitBreakerOpenProblem, DuplicateRecoverHandlerProblem, RetryExhaustedProblem } from './libs/errors';
 
 /**
  * Lambda timeout guard types for integrating retry logic with AWS Lambda execution limits.

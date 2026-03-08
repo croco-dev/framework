@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 
+import { DuplicateRecoverHandlerProblem } from './errors';
+
 const RECOVER_METADATA_KEY = Symbol('retry:recover');
 
 /**
@@ -37,6 +39,12 @@ export function Recover(exceptionType?: new (...args: unknown[]) => Error): Meth
 
     // Get existing recover methods or create new array
     const recoverMethods: RecoverMetadata[] = Reflect.getMetadata(RECOVER_METADATA_KEY, target) || [];
+
+    const duplicateRecover = recoverMethods.find((recoverMethod) => recoverMethod.exceptionType === exceptionType);
+
+    if (duplicateRecover) {
+      throw new DuplicateRecoverHandlerProblem(methodName, exceptionType?.name ?? 'catch-all');
+    }
 
     // Add this method
     recoverMethods.push({
