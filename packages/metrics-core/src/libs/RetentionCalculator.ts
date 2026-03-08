@@ -1,38 +1,12 @@
 import type { MRRMovement, Percentage } from '../types';
-import { LogoChurnDataRequiredProblem } from './problems/MetricsProblems';
 
-/**
- * Calculator for customer and revenue retention metrics.
- *
- * Measures how well a business retains its customers and revenue:
- * - Logo Churn: Customer loss rate
- * - Revenue Churn: Revenue loss rate
- * - GRR (Gross Revenue Retention): Retention excluding expansion (≤100%)
- * - NRR (Net Revenue Retention): Retention including expansion (>100% possible)
- */
 export class RetentionCalculator {
-  /**
-   * Calculate churn rate for a period.
-   *
-   * @param startingMRR - MRR at the start of the period
-   * @param movement - MRR movement data for the period
-   * @param type - 'logo' for customer churn or 'revenue' for revenue churn
-   * @returns Churn rate as percentage (0-100), or null if starting MRR is zero
-   */
-  async calculateChurn(
-    startingMRR: number,
-    movement: MRRMovement,
-    type: 'logo' | 'revenue'
-  ): Promise<Percentage | null> {
+  async calculateChurn(startingMRR: number, movement: MRRMovement, type: 'revenue'): Promise<Percentage | null> {
     if (startingMRR === 0) {
       return null;
     }
 
-    if (type === 'revenue') {
-      return (movement.churned.amount / startingMRR) * 100;
-    }
-
-    throw new LogoChurnDataRequiredProblem();
+    return (movement.churned.amount / startingMRR) * 100;
   }
 
   /**
