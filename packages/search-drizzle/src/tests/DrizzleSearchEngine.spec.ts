@@ -64,10 +64,11 @@ describe('DrizzleSearchEngine', () => {
     executeMock.mockResolvedValue({ rows: [] });
   });
 
-  it('should initialize and pass capability check', async () => {
+  it('should check capability on first use', async () => {
     engine = new DrizzleSearchEngine(mockDb, strategy);
 
-    // Since check is async, we verify it eventually called
+    await engine.search('users', { query: 'test' });
+
     expect(mockStrategy.checkCapability).toHaveBeenCalledWith(mockDb);
   });
 
@@ -76,6 +77,23 @@ describe('DrizzleSearchEngine', () => {
     engine = new DrizzleSearchEngine(mockDb, strategy);
 
     await expect(engine.search('users', { query: 'test' })).rejects.toThrow(StrategyUnavailableProblem);
+  });
+
+  it('should retry capability checks after a transient failure', async () => {
+    mockStrategy.checkCapability.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(engine.search('users', { query: 'test' })).rejects.toThrow(StrategyUnavailableProblem);
+
+    await expect(engine.search('users', { query: 'test' })).resolves.toEqual({
+      hits: [],
+      total: 0,
+      query: { query: 'test' },
+      processingTimeMs: 0,
+    });
+
+    expect(mockStrategy.checkCapability).toHaveBeenCalledTimes(2);
   });
 
   it('should use tenantId from Context in search', async () => {

@@ -20,14 +20,13 @@ function isSearchResultRow(value: unknown): value is SearchResultRow {
 
 @Component()
 export class DrizzleSearchEngine extends SearchEngine {
-  private readonly capabilityCheck: Promise<void>;
+  private capabilityCheck: Promise<void> | null = null;
 
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: NodePgDatabase<Record<string, never>>,
     private readonly strategy: SearchStrategy
   ) {
     super();
-    this.capabilityCheck = this.checkStrategy();
   }
 
   get capabilities(): SearchEngineCapabilities {
@@ -108,8 +107,14 @@ export class DrizzleSearchEngine extends SearchEngine {
 
   private async ensureCapable(): Promise<void> {
     try {
+      if (!this.capabilityCheck) {
+        this.capabilityCheck = this.checkStrategy();
+      }
+
       await this.capabilityCheck;
     } catch (error) {
+      this.capabilityCheck = null;
+
       if (error instanceof StrategyUnavailableProblem) {
         throw error;
       }
