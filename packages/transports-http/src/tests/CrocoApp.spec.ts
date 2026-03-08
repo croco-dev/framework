@@ -96,6 +96,16 @@ describe('CrocoApp', () => {
     expect(json).toEqual({ id: '123', name: 'Test User' });
   });
 
+  it('should return headers without a response body for HEAD requests', async () => {
+    const app = createApp({ controllers: [TestController] });
+
+    const response = await app.fetch(new Request('http://localhost/api/hello', { method: 'HEAD' }));
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('');
+    expect(response.headers.get('content-type')).toContain('application/json');
+  });
+
   it('should handle POST with body', async () => {
     const app = createApp({ controllers: [TestController] });
 

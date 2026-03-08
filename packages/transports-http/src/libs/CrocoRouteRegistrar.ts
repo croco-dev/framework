@@ -51,6 +51,15 @@ export class CrocoRouteRegistrar {
       });
     };
 
+    const headHandler = async (c: HonoContext) => {
+      const response = await honoHandler(c);
+
+      return new Response(null, {
+        status: response.status,
+        headers: response.headers,
+      });
+    };
+
     switch (method) {
       case 'get':
         this.hono.get(route.path, honoHandler);
@@ -71,7 +80,7 @@ export class CrocoRouteRegistrar {
         this.hono.options(route.path, honoHandler);
         break;
       case 'head':
-        this.hono.get(route.path, honoHandler);
+        this.hono.on('HEAD', route.path, headHandler);
         break;
       case 'all':
         this.hono.all(route.path, honoHandler);
