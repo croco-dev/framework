@@ -17,3 +17,13 @@ export class ConfigValidationProblem extends Problem {
     super('framework-config/config-validation-failed', ProblemCategory.ValidationError, `Missing required: ${missing}`);
   }
 }
+
+export class InvalidBooleanEnvProblem extends Problem {
+  constructor(envName: string, value: string) {
+    super(
+      'framework-config/invalid-boolean-env',
+      ProblemCategory.ValidationError,
+      `Invalid boolean env value for '${envName}': '${value}'`
+    );
+  }
+}
