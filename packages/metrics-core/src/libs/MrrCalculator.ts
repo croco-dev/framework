@@ -65,7 +65,7 @@ export class MrrCalculator {
     wasChurned: boolean,
     previousAmount: number | null,
     newAmount: number
-  ): 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation' {
+  ): 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation' | 'unchanged' {
     if (!hasPreviousSubscription) {
       return 'new';
     }
@@ -86,6 +86,6 @@ export class MrrCalculator {
       return 'contraction';
     }
 
-    return 'new';
+    return 'unchanged';
   }
 }

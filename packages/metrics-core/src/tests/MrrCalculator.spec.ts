@@ -183,10 +183,10 @@ describe('MrrCalculator', () => {
       expect(result.amount).toBe(0);
     });
 
-    it('should classify equal amounts as new', () => {
+    it('should classify equal amounts as unchanged', () => {
       const result = calculator.classifyMRRMovement(true, false, 1000, 1000);
 
-      expect(result).toBe('new');
+      expect(result).toBe('unchanged');
     });
 
     it('should handle null previous amount as new', () => {
