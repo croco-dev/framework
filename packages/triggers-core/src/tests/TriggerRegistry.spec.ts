@@ -189,6 +189,18 @@ describe('TriggerRegistry', () => {
     expect(metadata2.expression).toBe('*/5 * * * *');
   });
 
+  it('should fail fast when multiple trigger metadata entries target the same method', () => {
+    class MultiDecoratedHandler {
+      @Cron('0 0 * * *')
+      @OnEvent('EventA')
+      async execute(): Promise<void> {}
+    }
+
+    expect(() => {
+      TriggerRegistryClass.getInstance().getTriggers(MultiDecoratedHandler.prototype);
+    }).toThrow("Multiple trigger metadata entries are registered for method 'execute'");
+  });
+
   it('should preserve trigger options', () => {
     class HandlerWithOptions {
       @Cron('0 0 * * *', {
