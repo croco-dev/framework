@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { RetentionMetricsUnavailableProblem } from '../libs/problems/MetricsProblems';
 import { RetentionCalculator } from '../libs/RetentionCalculator';
 import type { MRRMovement } from '../types';
 
@@ -202,7 +201,7 @@ describe('RetentionCalculator', () => {
   });
 
   describe('calculateRetention: 모든 메트릭 한 번에 계산', () => {
-    it('should throw when complete retention metrics are unavailable', async () => {
+    it('should return partial retention metrics when logo churn data is unavailable', async () => {
       const startingMRR = 100000;
       const movement = createMovement({
         new: { amount: 15000, currency: 'USD' },
@@ -213,9 +212,12 @@ describe('RetentionCalculator', () => {
         net: { amount: 19000, currency: 'USD' },
       });
 
-      await expect(calculator.calculateRetention(startingMRR, movement)).rejects.toBeInstanceOf(
-        RetentionMetricsUnavailableProblem
-      );
+      await expect(calculator.calculateRetention(startingMRR, movement)).resolves.toEqual({
+        grr: 95,
+        nrr: 103,
+        logoChurn: null,
+        revenueChurn: 3,
+      });
     });
   });
 
@@ -294,7 +296,7 @@ describe('RetentionCalculator', () => {
   });
 
   describe('Golden Fixture: 종합 시나리오', () => {
-    it('should reject partial retention results for complex scenario', async () => {
+    it('should return partial retention results for complex scenario', async () => {
       const startingMRR = 50000;
       const movement = createMovement({
         new: { amount: 10000, currency: 'USD' },
@@ -305,9 +307,12 @@ describe('RetentionCalculator', () => {
         net: { amount: 11500, currency: 'USD' },
       });
 
-      await expect(calculator.calculateRetention(startingMRR, movement)).rejects.toBeInstanceOf(
-        RetentionMetricsUnavailableProblem
-      );
+      await expect(calculator.calculateRetention(startingMRR, movement)).resolves.toEqual({
+        grr: 85,
+        nrr: 100,
+        logoChurn: null,
+        revenueChurn: 10,
+      });
     });
   });
 });
