@@ -1,3 +1,4 @@
+export { DuplicateTenantManagerRegistrationProblem } from './libs/problems/DuplicateTenantManagerRegistrationProblem';
 /**
  * Thrown when a tenant manager has not been registered.
  */
