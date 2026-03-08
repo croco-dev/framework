@@ -6,6 +6,7 @@ import type { RateLimitResult } from '../libs/types';
 describe('RateLimitExceededProblem', () => {
   const createResult = (resetAtMs: number): RateLimitResult => ({
     success: false,
+    degraded: false,
     limit: 100,
     remaining: 0,
     resetAtMs,

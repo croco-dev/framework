@@ -18,6 +18,7 @@ export type RateLimitPolicy = {
 export type RateLimitResult = {
   /** Whether the request is allowed */
   success: boolean;
+  degraded?: boolean;
   /** Maximum requests allowed in the window */
   limit: number;
   /** Remaining requests in current window */
