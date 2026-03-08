@@ -133,14 +133,14 @@ describe('PostHogFeatureManager', () => {
       });
     });
 
-    it('should use Context.getTenantId() for distinctId when no user', async () => {
+    it('should use request-scoped anonymous distinctId when no user is present', async () => {
       mockPostHog.isFeatureEnabled.mockResolvedValue(true);
 
       await Context.run({ requestId: 'req-1', tenantId: 'tenant-456' }, async () => {
         const result = await featureManager.isEnabled('feature');
 
         expect(result).toBe(true);
-        expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith('feature', 'tenant:tenant-456', expect.any(Object));
+        expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith('feature', 'anonymous:req-1', expect.any(Object));
       });
     });
 
@@ -153,7 +153,7 @@ describe('PostHogFeatureManager', () => {
         expect(result).toBe(true);
         expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith(
           'feature',
-          'tenant:tenant-789',
+          'anonymous:req-1',
           expect.objectContaining({ groups: { tenant: 'tenant-789' } })
         );
       });

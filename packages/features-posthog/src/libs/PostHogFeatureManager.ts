@@ -46,6 +46,9 @@ export class PostHogFeatureManager extends FeatureManager {
     const user = Context.getCurrentUser();
     if (user?.id) return user.id;
 
+    const requestId = Context.getRequestId();
+    if (requestId) return `anonymous:${requestId}`;
+
     const tenantId = Context.getTenantId();
     if (tenantId) return `tenant:${tenantId}`;
 
