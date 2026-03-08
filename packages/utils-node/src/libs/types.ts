@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import type { Application } from 'express';
-import type { Container } from 'typedi';
+import type { Container, ContainerInstance } from 'typedi';
 
 export interface BootstrapConfig {
   configureApp?: (app: Application) => void | Promise<void>;
@@ -24,8 +24,8 @@ export type JobConstructor<TData = unknown, TResult = unknown> = new (
 };
 
 export interface WorkerConfig<TData = unknown, TResult = unknown> {
-  containerSetup?: Array<() => void | Promise<void>>;
-  onWorkerBootstrap?: (container: typeof Container) => void | Promise<void>;
+  containerSetup?: Array<(container: ContainerInstance) => void | Promise<void>>;
+  onWorkerBootstrap?: (container: ContainerInstance) => void | Promise<void>;
   onWorkerShutdown?: () => void | Promise<void>;
   beforeJobExecution?: (job: string, data: TData) => void | Promise<void>;
   afterJobExecution?: (job: string, data: TData, result?: TResult) => void | Promise<void>;
