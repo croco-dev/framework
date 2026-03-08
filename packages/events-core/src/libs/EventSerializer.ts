@@ -1,7 +1,11 @@
 import type { DomainEvent } from './DomainEvent';
 import { getEventFields } from './decorators/EventField';
 import { EventRegistry } from './EventRegistry';
-import { EventDeserializationError, UnknownEventTypeProblem } from './problems/EventsProblems';
+import {
+  DuplicateEventFieldProblem,
+  EventDeserializationError,
+  UnknownEventTypeProblem,
+} from './problems/EventsProblems';
 
 type EventFromPayload = (payload: Record<string, unknown>) => DomainEvent;
 
@@ -73,6 +77,7 @@ export class DefaultEventSerializer implements EventSerializer {
     const obj = event as unknown as Record<string, unknown>;
 
     if (fields) {
+      this.assertNoDuplicateSerializedKeys(event.constructor.name, fields);
       const result: Record<string, unknown> = {};
       for (const { propertyKey, serializedKey } of fields) {
         result[serializedKey] = obj[propertyKey];
@@ -99,6 +104,7 @@ export class DefaultEventSerializer implements EventSerializer {
     const fields = getEventFields(EventClass as new (...args: unknown[]) => unknown);
 
     if (fields && fields.length > 0) {
+      this.assertNoDuplicateSerializedKeys(EventClass.name, fields);
       const instance = this.createInstance(EventClass, data);
       const obj = instance as unknown as Record<string, unknown>;
       for (const { propertyKey, serializedKey } of fields) {
@@ -122,6 +128,18 @@ export class DefaultEventSerializer implements EventSerializer {
         EventClass.name,
         'Events with required constructor arguments must provide a static fromPayload() method for deserialization.'
       );
+    }
+  }
+
+  private assertNoDuplicateSerializedKeys(eventClassName: string, fields: { serializedKey: string }[]): void {
+    const seenKeys = new Set<string>();
+
+    for (const field of fields) {
+      if (seenKeys.has(field.serializedKey)) {
+        throw new DuplicateEventFieldProblem(eventClassName, field.serializedKey);
+      }
+
+      seenKeys.add(field.serializedKey);
     }
   }
 }

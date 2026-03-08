@@ -36,6 +36,16 @@ export class EventDeserializationError extends Problem {
   }
 }
 
+export class DuplicateEventFieldProblem extends Problem {
+  constructor(eventClassName: string, serializedKey: string) {
+    super(
+      'events-core/duplicate-event-field',
+      ProblemCategory.InternalServerError,
+      `Duplicate event field mapping detected for '${eventClassName}' with serialized key '${serializedKey}'`
+    );
+  }
+}
+
 export class EventTransactionContextUnavailableProblem extends Problem {
   constructor(reason: string) {
     super(

@@ -4,7 +4,7 @@ import { DomainEvent } from '../libs/DomainEvent';
 import { EventField } from '../libs/decorators/EventField';
 import { EventRegistry, globalEventRegistry, RegisterEvent } from '../libs/EventRegistry';
 import { DefaultEventSerializer, type SerializedEvent } from '../libs/EventSerializer';
-import { EventDeserializationError } from '../libs/problems/EventsProblems';
+import { DuplicateEventFieldProblem, EventDeserializationError } from '../libs/problems/EventsProblems';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';
@@ -89,6 +89,28 @@ class ConstructorSensitiveEventWithFactory extends DomainEvent {
   }
 }
 
+class DuplicateSerializedKeyEvent extends DomainEvent {
+  static eventName = 'DuplicateSerializedKeyEvent';
+
+  public readonly first: string;
+  public readonly second: string;
+
+  constructor(first: string, second: string) {
+    super();
+    this.first = first;
+    this.second = second;
+  }
+}
+
+Reflect.defineMetadata(
+  '@croco/events-core:event-fields',
+  [
+    { propertyKey: 'first', serializedKey: 'shared' },
+    { propertyKey: 'second', serializedKey: 'shared' },
+  ],
+  DuplicateSerializedKeyEvent
+);
+
 describe('DefaultEventSerializer', () => {
   let registry!: EventRegistry;
   let serializer!: DefaultEventSerializer;
@@ -151,6 +173,15 @@ describe('DefaultEventSerializer', () => {
       const serialized2 = serializer.serialize(event2);
 
       expect(serialized1.eventId).not.toBe(serialized2.eventId);
+    });
+
+    it('should fail fast when duplicate serialized keys are detected during serialization', () => {
+      const event = new DuplicateSerializedKeyEvent('a', 'b');
+
+      expect(() => serializer.serialize(event)).toThrow(DuplicateEventFieldProblem);
+      expect(() => serializer.serialize(event)).toThrow(
+        "Duplicate event field mapping detected for 'DuplicateSerializedKeyEvent' with serialized key 'shared'"
+      );
     });
   });
 
@@ -239,6 +270,24 @@ describe('DefaultEventSerializer', () => {
 
       expect(event).toBeInstanceOf(ConstructorSensitiveEventWithFactory);
       expect(event.message).toBe('SAFE PAYLOAD');
+    });
+
+    it('should fail fast when duplicate serialized keys are detected during deserialization', () => {
+      registry.register(DuplicateSerializedKeyEvent);
+
+      const data: SerializedEvent = {
+        eventType: 'DuplicateSerializedKeyEvent',
+        eventId: 'evt_dup_1',
+        occurredAt: new Date().toISOString(),
+        payload: {
+          shared: 'value',
+        },
+      };
+
+      expect(() => serializer.deserialize(data)).toThrow(DuplicateEventFieldProblem);
+      expect(() => serializer.deserialize(data)).toThrow(
+        "Duplicate event field mapping detected for 'DuplicateSerializedKeyEvent' with serialized key 'shared'"
+      );
     });
   });
 

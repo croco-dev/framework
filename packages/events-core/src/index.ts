@@ -81,6 +81,7 @@ export { DefaultHandlerResolver } from './libs/HandlerResolver';
  * 이벤트 코어에서 사용하는 Problem 하위 타입들입니다.
  */
 export {
+  DuplicateEventFieldProblem,
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,
