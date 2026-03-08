@@ -214,6 +214,11 @@ export class QStashScheduler {
 
     for (const trigger of triggers) {
       const scheduleId = this.generateScheduleId(trigger);
+
+      if (map.has(scheduleId)) {
+        throw new Error(`Duplicate QStash schedule ID detected: ${scheduleId}`);
+      }
+
       map.set(scheduleId, trigger);
     }
 
@@ -226,7 +231,8 @@ export class QStashScheduler {
   private generateScheduleId(trigger: CronTriggerMetadata): string {
     const methodName = String(trigger.methodName);
     const triggerName = this.getTriggerIdentifier(trigger);
-    return `${this.schedulePrefix}:${triggerName}:${methodName}`;
+    const className = trigger.target.constructor.name;
+    return `${this.schedulePrefix}:${className}:${triggerName}:${methodName}`;
   }
 
   /**
