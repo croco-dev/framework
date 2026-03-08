@@ -27,6 +27,7 @@ export { ClerkWebhookHandler } from './libs/ClerkWebhookHandler';
  */
 export {
   ClerkTokenVerificationProblem,
+  DuplicateTenantMappingProblem,
   InvalidWebhookPayloadProblem,
   WebhookVerificationProblem,
 } from './libs/problems/ClerkProblems';
