@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { ProblemFactory } from '@croco/problems-core';
 import {
   REST_CONTROLLER_KEY,
   REST_FILTERS_KEY,
@@ -29,7 +30,21 @@ export function getRouteMeta(target: Constructor): RouteMetadata[] {
 
 export function getParamsMeta(target: Constructor, methodName: string | symbol): ParamMetadata[] {
   const paramsMap: Map<string | symbol, ParamMetadata[]> = Reflect.getMetadata(REST_PARAMS_KEY, target) || new Map();
-  return paramsMap.get(methodName) || [];
+  const params = paramsMap.get(methodName) || [];
+  const seenIndexes = new Set<number>();
+
+  for (const param of params) {
+    if (seenIndexes.has(param.index)) {
+      throw ProblemFactory.internalServerError(
+        'protocols-rest/duplicate-parameter-index',
+        `Duplicate parameter metadata detected for ${String(methodName)} at index ${param.index}`
+      );
+    }
+
+    seenIndexes.add(param.index);
+  }
+
+  return params;
 }
 
 export function getGuards(target: Constructor, methodName?: string | symbol): GuardConstructor[] {
