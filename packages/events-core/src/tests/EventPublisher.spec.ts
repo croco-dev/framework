@@ -5,6 +5,7 @@ import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
 import { EventPublisher } from '../libs/EventPublisher';
+import { EventTransactionContextUnavailableProblem } from '../libs/problems/EventsProblems';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';
@@ -49,7 +50,6 @@ describe('EventPublisher', () => {
   beforeEach(() => {
     Container.reset();
     vi.restoreAllMocks();
-    mockEventBus = new MockEventBus();
     mockEventBus = new MockEventBus();
     config = EventBusConfig.getInstance();
     config.setEventBus(mockEventBus);
@@ -269,34 +269,51 @@ describe('EventPublisher', () => {
     });
   });
   describe('tx-aware publishing', () => {
-    it('트랜잭션 외부에서는 즉시 발행', async () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      vi.spyOn(Container, 'get').mockImplementation(() => {
-        throw new Error('Not found');
-      });
-
+    it('트랜잭션 컨텍스트가 없으면 즉시 발행한다', async () => {
       const event = new TestEvent('no-tx');
+
       await publisher.publish(event);
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(event);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Transaction context unavailable; falling back to immediate publish')
-      );
     });
 
-    it('트랜잭션 컨텍스트 조회 실패 경고는 한 번만 출력', async () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('등록된 트랜잭션 컨텍스트가 비활성 상태면 즉시 발행한다', async () => {
+      Container.set(
+        TRANSACTION_CONTEXT_TOKEN as never,
+        {
+          isInTransaction: () => false,
+          onAfterCommit: () => {},
+        } satisfies TransactionContext as never
+      );
+
+      const event = new TestEvent('inactive-tx');
+      await publisher.publish(event);
+
+      expect(mockEventBus.publishedEvents).toHaveLength(1);
+      expect(mockEventBus.publishedEvents[0]).toBe(event);
+    });
+
+    it('등록된 트랜잭션 컨텍스트 조회 실패 시 명시적 오류를 던진다', async () => {
+      Container.set(
+        TRANSACTION_CONTEXT_TOKEN as never,
+        {
+          isInTransaction: () => false,
+          onAfterCommit: () => {},
+        } satisfies TransactionContext as never
+      );
 
       vi.spyOn(Container, 'get').mockImplementation(() => {
-        throw new Error('Not found');
+        throw new Error('Broken transaction context');
       });
 
-      await publisher.publish(new TestEvent('first-no-tx'));
-      await publisher.publish(new TestEvent('second-no-tx'));
+      const event = new TestEvent('no-tx');
+      await expect(publisher.publish(event)).rejects.toThrow(EventTransactionContextUnavailableProblem);
+      await expect(publisher.publish(event)).rejects.toThrow(
+        'Transaction context unavailable during event publication: Broken transaction context'
+      );
 
-      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(mockEventBus.publishedEvents).toHaveLength(0);
     });
 
     it('트랜잭션 내부에서는 onAfterCommit에 등록', async () => {

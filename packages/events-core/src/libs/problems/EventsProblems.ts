@@ -35,3 +35,13 @@ export class EventDeserializationError extends Problem {
     );
   }
 }
+
+export class EventTransactionContextUnavailableProblem extends Problem {
+  constructor(reason: string) {
+    super(
+      'events-core/transaction-context-unavailable',
+      ProblemCategory.InternalServerError,
+      `Transaction context unavailable during event publication: ${reason}`
+    );
+  }
+}
