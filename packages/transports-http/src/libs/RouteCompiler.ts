@@ -81,7 +81,27 @@ export class RouteCompiler {
       }
     }
 
+    this.assertNoDuplicateRoutes(routes);
+
     return routes;
+  }
+
+  private assertNoDuplicateRoutes(routes: CompiledRoute[]): void {
+    const seenRoutes = new Map<string, CompiledRoute>();
+
+    for (const route of routes) {
+      const routeKey = `${route.method.toUpperCase()} ${route.path}`;
+      const existingRoute = seenRoutes.get(routeKey);
+
+      if (existingRoute) {
+        throw ProblemFactory.internalServerError(
+          'transports-http/duplicate-route-definition',
+          `Duplicate route detected for ${routeKey}`
+        );
+      }
+
+      seenRoutes.set(routeKey, route);
+    }
   }
 
   private compileRoute(
