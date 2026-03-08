@@ -88,6 +88,24 @@ describe('MeilisearchEngine', () => {
         })
       );
     });
+
+    it('should escape quotes and backslashes in string filters and tenant filters', async () => {
+      vi.spyOn(Context, 'getTenantId').mockReturnValue('tenant-"one"\\x');
+
+      await engine.search('index', {
+        query: 'test',
+        filters: {
+          status: 'active"\\flag',
+        },
+      });
+
+      expect(mocks.indexMock.search).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          filter: expect.arrayContaining(['_tenantId = "tenant-\\"one\\"\\\\x"', 'status = "active\\"\\\\flag"']),
+        })
+      );
+    });
   });
 
   describe('indexDocument', () => {
@@ -136,6 +154,20 @@ describe('MeilisearchEngine', () => {
       expect(token).toBe('token');
     });
 
+    it('should escape tenant ids in tenant token filters', async () => {
+      await engine.generateTenantToken('tenant-"one"\\x');
+
+      expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
+        options.tenantTokenOptions?.apiKeyUid,
+        {
+          '*': {
+            filter: '_tenantId = "tenant-\\"one\\"\\\\x"',
+          },
+        },
+        expect.anything()
+      );
+    });
+
     it('should compute expiresAt when expiresIn is 0', async () => {
       const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
 
@@ -162,6 +194,18 @@ describe('MeilisearchEngine', () => {
       );
 
       dateNowSpy.mockRestore();
+    });
+  });
+
+  describe('deleteDocument', () => {
+    it('should escape tenant and document ids in delete filters', async () => {
+      vi.spyOn(Context, 'getTenantId').mockReturnValue('tenant-"one"\\x');
+
+      await engine.deleteDocument('index', 'doc-"id"\\x');
+
+      expect(mocks.indexMock.deleteDocuments).toHaveBeenCalledWith({
+        filter: '_tenantId = "tenant-\\"one\\"\\\\x" AND id = "doc-\\"id\\"\\\\x"',
+      });
     });
   });
 });

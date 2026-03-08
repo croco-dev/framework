@@ -14,6 +14,7 @@ import type { MeilisearchEngineOptions } from './types';
 @Component()
 export class MeilisearchEngine extends SearchEngine {
   private readonly client: MeiliSearch;
+  private static readonly FILTER_ESCAPE_REGEXP = /([\\"])/g;
 
   readonly capabilities: SearchEngineCapabilities = {
     facetedSearch: true,
@@ -34,7 +35,7 @@ export class MeilisearchEngine extends SearchEngine {
     const tenantId = this.getTenantId('search');
 
     const filterArray = this.transformFilters(query.filters);
-    filterArray.push(`_tenantId = "${tenantId}"`);
+    filterArray.push(`_tenantId = "${this.escapeFilterValue(tenantId)}"`);
 
     const sortArray = this.transformSort(query.sort);
 
@@ -72,7 +73,7 @@ export class MeilisearchEngine extends SearchEngine {
     const index = this.client.index(indexName);
 
     await index.deleteDocuments({
-      filter: `_tenantId = "${tenantId}" AND id = "${documentId}"`,
+      filter: `_tenantId = "${this.escapeFilterValue(tenantId)}" AND id = "${this.escapeFilterValue(documentId)}"`,
     });
   }
 
@@ -103,7 +104,7 @@ export class MeilisearchEngine extends SearchEngine {
 
     const searchRules = {
       '*': {
-        filter: `_tenantId = "${tenantId}"`,
+        filter: `_tenantId = "${this.escapeFilterValue(tenantId)}"`,
       },
     };
 
@@ -123,9 +124,13 @@ export class MeilisearchEngine extends SearchEngine {
   private transformFilters(filters?: Record<string, unknown>): string[] {
     if (!filters) return [];
     return Object.entries(filters).map(([key, value]) => {
-      if (typeof value === 'string') return `${key} = "${value}"`;
+      if (typeof value === 'string') return `${key} = "${this.escapeFilterValue(value)}"`;
       return `${key} = ${value}`;
     });
+  }
+
+  private escapeFilterValue(value: string): string {
+    return value.replace(MeilisearchEngine.FILTER_ESCAPE_REGEXP, '\\$1');
   }
 
   private transformSort(sort?: { field: string; order: 'asc' | 'desc' }[]): string[] | undefined {
