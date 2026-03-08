@@ -138,7 +138,7 @@ describe('BatchLoader', () => {
     });
   });
 
-  it('should cache results outside request context for the same loader instance', async () => {
+  it('should not cache results outside request context for the same loader instance', async () => {
     const loader = createBatchLoader<number, string>({
       name: 'outside-context-loader',
       batchFn,
@@ -147,7 +147,7 @@ describe('BatchLoader', () => {
     await loader.load(1);
     await loader.load(1);
 
-    expect(batchFn).toHaveBeenCalledTimes(1);
+    expect(batchFn).toHaveBeenCalledTimes(2);
   });
 
   it('should clear cache when batch function throws so next load can retry', async () => {
