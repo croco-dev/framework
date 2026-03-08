@@ -21,3 +21,13 @@ export class RetentionMetricsUnavailableProblem extends Problem {
     super('metrics-core/retention-metrics-unavailable', ProblemCategory.NotImplemented, detail);
   }
 }
+
+export class GrossMarginRequiredProblem extends Problem {
+  constructor() {
+    super(
+      'metrics-core/gross-margin-required',
+      ProblemCategory.ValidationError,
+      'grossMargin is required when includeMargin is true'
+    );
+  }
+}
