@@ -69,7 +69,7 @@ export { findRecoverMethod, getRecoverMethods, Recover } from './libs/Recover';
 /**
  * Options for configuring the `@Retryable` method decorator.
  */
-export type { RetryableOptions } from './libs/Retryable';
+export type { CircuitIdResolverContext, RetryableOptions } from './libs/Retryable';
 
 /**
  * Method decorator that applies declarative retry behavior.

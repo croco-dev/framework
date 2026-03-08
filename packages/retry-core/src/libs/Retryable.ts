@@ -44,9 +44,19 @@ export interface RetryableOptions extends RetryPolicyOptions {
     halfOpenAttempts?: number;
   };
 
+  circuitIdResolver?: (context: CircuitIdResolverContext) => string;
+
   /** Reserve time for Lambda timeout (ms) */
   lambdaTimeoutReserveMs?: number;
 }
+
+export type CircuitIdResolverContext = {
+  args: unknown[];
+  instance: unknown;
+  methodName: string;
+  targetName: string;
+  defaultCircuitId: string;
+};
 
 /**
  * Retry decorator for methods.
@@ -70,8 +80,18 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
     const originalMethod = descriptor.value;
     const methodName = String(propertyKey);
     const targetName = (_target as { constructor?: { name?: string } }).constructor?.name ?? 'UnknownTarget';
-    const circuitId = `${targetName}.${methodName}`;
+    const defaultCircuitId = `${targetName}.${methodName}`;
+
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+      const circuitId =
+        options.circuitIdResolver?.({
+          args,
+          instance: this,
+          methodName,
+          targetName,
+          defaultCircuitId,
+        }) ?? defaultCircuitId;
+
       const halfOpenRequests = options.circuitBreaker?.successThreshold ?? options.circuitBreaker?.halfOpenAttempts;
       const circuitBreaker =
         options.circuitBreaker !== undefined
@@ -153,27 +173,27 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
 
       const recovery = hasRecover
         ? async (context: RetryContext): Promise<unknown> => {
-            const lastError =
-              context.lastError ??
-              new RetryExhaustedProblem(
-                `Retry exhausted after ${maxAttempts} attempts for '${methodName}'`,
-                null,
-                maxAttempts,
-                methodName
-              );
+            const fallbackError = new RetryExhaustedProblem(
+              `Retry exhausted after ${maxAttempts} attempts for '${methodName}'`,
+              null,
+              maxAttempts,
+              methodName
+            );
+            const lastError = context.lastError ?? fallbackError;
+            const recoverableError = context.lastError ?? fallbackError.getOriginalError();
 
-            const recoverMeta = findRecoverMethod(prototype, lastError);
+            const recoverMeta = findRecoverMethod(prototype, recoverableError);
             if (recoverMeta) {
               const recoverMethod = (this as Record<string, unknown>)[recoverMeta.methodName];
               if (typeof recoverMethod === 'function') {
-                return await recoverMethod.call(this, lastError, ...args);
+                return await recoverMethod.call(this, recoverableError, ...args);
               }
             }
 
             if (options.recover) {
               const recoverMethod = (this as Record<string, unknown>)[options.recover];
               if (typeof recoverMethod === 'function') {
-                return await recoverMethod.call(this, lastError, ...args);
+                return await recoverMethod.call(this, recoverableError, ...args);
               }
             }
 

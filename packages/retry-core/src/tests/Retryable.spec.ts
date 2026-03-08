@@ -253,6 +253,61 @@ describe('@Retryable', () => {
     }
   });
 
+  it('keeps the default circuit id shared across different arguments', async () => {
+    const attempts: string[] = [];
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 3,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 1,
+          successThreshold: 1,
+          timeout: 1000,
+        },
+      })
+      async doWork(tenantId: string): Promise<void> {
+        attempts.push(tenantId);
+        throw new Error(`fail:${tenantId}`);
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.doWork('tenant-a')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    await expect(service.doWork('tenant-b')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+
+    expect(attempts).toEqual(['tenant-a', 'tenant-b']);
+  });
+
+  it('allows custom circuit ids to isolate circuit breaker state', async () => {
+    const attempts: string[] = [];
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 3,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 1,
+          successThreshold: 1,
+          timeout: 1000,
+        },
+        circuitIdResolver: ({ args, defaultCircuitId }) => `${defaultCircuitId}:${String(args[0])}`,
+      })
+      async doWork(tenantId: string): Promise<void> {
+        attempts.push(tenantId);
+        throw new Error(`fail:${tenantId}`);
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.doWork('tenant-a')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    await expect(service.doWork('tenant-b')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+
+    expect(attempts).toEqual(['tenant-a', 'tenant-b']);
+  });
+
   it('calls recover only when error matches recover type', async () => {
     class SpecificError extends Error {
       constructor(..._args: unknown[]) {
