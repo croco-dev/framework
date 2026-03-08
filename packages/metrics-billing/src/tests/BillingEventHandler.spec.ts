@@ -30,6 +30,7 @@ describe('BillingEventHandler', () => {
 
   const mockAccount = {
     id: 'account-1',
+    tenantId: 'tenant-1',
     externalCustomerId: 'cus-stripe',
     email: 'test@example.com',
     createdAt: new Date(),

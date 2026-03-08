@@ -4,7 +4,7 @@ import type { BillingGateway, CheckoutResult } from '../libs/BillingGateway';
 import { BillingService } from '../libs/BillingService';
 import { InMemoryBillingStore } from '../libs/InMemoryBillingStore';
 import { BillingCheckoutCreationProblem } from '../libs/problems/BillingProblems';
-import type { Subscription } from '../types';
+import type { BillingAccount, Subscription } from '../types';
 
 describe('BillingService', () => {
   let store!: InMemoryBillingStore;
@@ -26,6 +26,19 @@ describe('BillingService', () => {
     });
   });
 
+  async function saveBillingAccount(tenantId: string, billingAccountId = tenantId, email = 'test@example.com') {
+    const account: BillingAccount = {
+      id: billingAccountId,
+      tenantId,
+      externalCustomerId: `ext-${billingAccountId}`,
+      email,
+      createdAt: new Date(),
+    };
+
+    await store.saveAccount(account);
+    return account;
+  }
+
   describe('hasActiveSubscription', () => {
     it('should return false when no subscription exists', async () => {
       const result = await service.hasActiveSubscription('tenant-1');
@@ -33,6 +46,8 @@ describe('BillingService', () => {
     });
 
     it('should return true when subscription status is active', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -50,6 +65,8 @@ describe('BillingService', () => {
     });
 
     it('should return true when subscription status is trialing', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -67,6 +84,8 @@ describe('BillingService', () => {
     });
 
     it('should return false when subscription status is canceled', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -84,6 +103,8 @@ describe('BillingService', () => {
     });
 
     it('should return false when subscription status is past_due', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -101,6 +122,8 @@ describe('BillingService', () => {
     });
 
     it('should return false when subscription status is revoked', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -125,6 +148,8 @@ describe('BillingService', () => {
     });
 
     it('should return subscription status when subscription exists', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -149,6 +174,8 @@ describe('BillingService', () => {
     });
 
     it('should return subscription when it exists', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -169,7 +196,7 @@ describe('BillingService', () => {
   describe('createCheckout', () => {
     it('should create new customer and return checkout URL', async () => {
       const params = {
-        billingAccountId: 'tenant-1',
+        tenantId: 'tenant-1',
         email: 'test@example.com',
         productId: 'product-1',
         successUrl: 'https://example.com/success',
@@ -187,12 +214,19 @@ describe('BillingService', () => {
       const result = await service.createCheckout(params);
 
       expect(mockGateway.ensureCustomer).toHaveBeenCalledWith('tenant-1', 'test@example.com');
-      expect(mockGateway.createCheckout).toHaveBeenCalledWith(params);
+      expect(mockGateway.createCheckout).toHaveBeenCalledWith({
+        billingAccountId: 'tenant-1',
+        email: 'test@example.com',
+        productId: 'product-1',
+        successUrl: 'https://example.com/success',
+        cancelUrl: 'https://example.com/cancel',
+      });
       expect(result).toEqual({ checkoutUrl: 'https://checkout.example.com/abc123' });
 
       const account = await store.findAccountByTenantId('tenant-1');
       expect(account).toEqual({
         id: 'tenant-1',
+        tenantId: 'tenant-1',
         externalCustomerId: 'ext-cust-1',
         email: 'test@example.com',
         createdAt: expect.any(Date),
@@ -201,14 +235,15 @@ describe('BillingService', () => {
 
     it('should use existing customer and return checkout URL', async () => {
       await store.saveAccount({
-        id: 'tenant-1',
+        id: 'account-1',
+        tenantId: 'tenant-1',
         externalCustomerId: 'ext-cust-1',
         email: 'test@example.com',
         createdAt: new Date(),
       });
 
       const params = {
-        billingAccountId: 'tenant-1',
+        tenantId: 'tenant-1',
         email: 'test@example.com',
         productId: 'product-1',
         successUrl: 'https://example.com/success',
@@ -225,13 +260,19 @@ describe('BillingService', () => {
       const result = await service.createCheckout(params);
 
       expect(mockGateway.ensureCustomer).not.toHaveBeenCalled();
-      expect(mockGateway.createCheckout).toHaveBeenCalledWith(params);
+      expect(mockGateway.createCheckout).toHaveBeenCalledWith({
+        billingAccountId: 'account-1',
+        email: 'test@example.com',
+        productId: 'product-1',
+        successUrl: 'https://example.com/success',
+        cancelUrl: 'https://example.com/cancel',
+      });
       expect(result).toEqual({ checkoutUrl: 'https://checkout.example.com/abc123' });
     });
 
     it('BUG-09 should keep the created account when checkout creation fails after customer creation', async () => {
       const params = {
-        billingAccountId: 'tenant-bug-09',
+        tenantId: 'tenant-bug-09',
         email: 'bug09@example.com',
         productId: 'product-1',
         successUrl: 'https://example.com/success',
@@ -251,15 +292,45 @@ describe('BillingService', () => {
       const account = await store.findAccountByTenantId('tenant-bug-09');
       expect(account).toEqual({
         id: 'tenant-bug-09',
+        tenantId: 'tenant-bug-09',
         externalCustomerId: 'ext-cust-bug-09',
         email: 'bug09@example.com',
         createdAt: expect.any(Date),
+      });
+    });
+
+    it('should resolve subscription state through the billing account id linked to a tenant', async () => {
+      await store.saveAccount({
+        id: 'account-2',
+        tenantId: 'tenant-2',
+        externalCustomerId: 'ext-cust-2',
+        email: 'tenant2@example.com',
+        createdAt: new Date(),
+      });
+
+      await store.saveSubscription({
+        id: 'sub-2',
+        billingAccountId: 'account-2',
+        externalSubscriptionId: 'ext-sub-2',
+        planId: 'plan-pro',
+        status: 'active',
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      });
+
+      expect(await service.hasActiveSubscription('tenant-2')).toBe(true);
+      expect(await service.getSubscriptionStatus('tenant-2')).toBe('active');
+      expect(await service.getSubscription('tenant-2')).toMatchObject({
+        billingAccountId: 'account-2',
       });
     });
   });
 
   describe('cancelSubscription', () => {
     it('should cancel subscription at period end and update status', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -283,6 +354,8 @@ describe('BillingService', () => {
     });
 
     it('should cancel subscription immediately and update status', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -323,6 +396,8 @@ describe('BillingService', () => {
         eventPublisher: mockEventPublisher as unknown as EventPublisher,
       });
 
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -349,6 +424,8 @@ describe('BillingService', () => {
 
   describe('resumeSubscription', () => {
     it('should resume subscription and set cancelAtPeriodEnd to false', async () => {
+      await saveBillingAccount('tenant-1');
+
       const subscription: Subscription = {
         id: 'sub-1',
         billingAccountId: 'tenant-1',
@@ -379,18 +456,13 @@ describe('BillingService', () => {
 
   describe('getCustomerPortalUrl', () => {
     it('should return customer portal URL', async () => {
-      await store.saveAccount({
-        id: 'tenant-1',
-        externalCustomerId: 'ext-cust-1',
-        email: 'test@example.com',
-        createdAt: new Date(),
-      });
+      await saveBillingAccount('tenant-1');
 
       vi.mocked(mockGateway.getCustomerPortalUrl).mockResolvedValue('https://portal.example.com/customer');
 
       const result = await service.getCustomerPortalUrl('tenant-1');
 
-      expect(mockGateway.getCustomerPortalUrl).toHaveBeenCalledWith('ext-cust-1');
+      expect(mockGateway.getCustomerPortalUrl).toHaveBeenCalledWith('ext-tenant-1');
       expect(result).toBe('https://portal.example.com/customer');
     });
 

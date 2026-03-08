@@ -16,6 +16,10 @@ export type BillingServiceDependencies = {
   eventPublisher?: EventPublisher;
 };
 
+export type CreateBillingCheckoutParams = Omit<CreateCheckoutParams, 'billingAccountId'> & {
+  tenantId: string;
+};
+
 /**
  * Billing service for subscription management.
  * Orchestrates store and gateway operations.
@@ -35,7 +39,7 @@ export class BillingService {
    * Check if a tenant has an active subscription.
    */
   async hasActiveSubscription(tenantId: string): Promise<boolean> {
-    const subscription = await this.store.findSubscription(tenantId);
+    const subscription = await this.findSubscriptionByTenantId(tenantId);
     if (!subscription) return false;
     return subscription.status === 'active' || subscription.status === 'trialing';
   }
@@ -44,7 +48,7 @@ export class BillingService {
    * Get subscription status for a tenant.
    */
   async getSubscriptionStatus(tenantId: string): Promise<SubscriptionStatus | null> {
-    const subscription = await this.store.findSubscription(tenantId);
+    const subscription = await this.findSubscriptionByTenantId(tenantId);
     return subscription?.status ?? null;
   }
 
@@ -52,28 +56,32 @@ export class BillingService {
    * Get full subscription details.
    */
   async getSubscription(tenantId: string): Promise<Subscription | null> {
-    return this.store.findSubscription(tenantId);
+    return this.findSubscriptionByTenantId(tenantId);
   }
 
   /**
    * Create a checkout session for a tenant.
    */
   @Trace({ name: 'billing.checkout.create' })
-  async createCheckout(params: CreateCheckoutParams): Promise<{ checkoutUrl: string }> {
-    const account = await this.store.findAccountByTenantId(params.billingAccountId);
+  async createCheckout(params: CreateBillingCheckoutParams): Promise<{ checkoutUrl: string }> {
+    const account = await this.store.findAccountByTenantId(params.tenantId);
 
     if (account) {
-      const result = await this.gateway.createCheckout(params);
+      const result = await this.gateway.createCheckout(this.toGatewayCheckoutParams(params, account.id));
       return { checkoutUrl: result.checkoutUrl };
     }
 
     return this.createCheckoutWithAccountTransaction(params);
   }
 
-  private async createCheckoutWithAccountTransaction(params: CreateCheckoutParams): Promise<{ checkoutUrl: string }> {
-    const externalCustomerId = await this.gateway.ensureCustomer(params.billingAccountId, params.email);
+  private async createCheckoutWithAccountTransaction(
+    params: CreateBillingCheckoutParams
+  ): Promise<{ checkoutUrl: string }> {
+    const billingAccountId = params.tenantId;
+    const externalCustomerId = await this.gateway.ensureCustomer(billingAccountId, params.email);
     const accountDraft = {
-      id: params.billingAccountId,
+      id: billingAccountId,
+      tenantId: params.tenantId,
       externalCustomerId,
       email: params.email,
       createdAt: new Date(),
@@ -81,11 +89,21 @@ export class BillingService {
 
     try {
       await this.store.saveAccount(accountDraft);
-      const result = await this.gateway.createCheckout(params);
+      const result = await this.gateway.createCheckout(this.toGatewayCheckoutParams(params, billingAccountId));
       return { checkoutUrl: result.checkoutUrl };
     } catch (error) {
-      throw this.createCheckoutError(params.billingAccountId, error);
+      throw this.createCheckoutError(params.tenantId, error);
     }
+  }
+
+  private toGatewayCheckoutParams(params: CreateBillingCheckoutParams, billingAccountId: string): CreateCheckoutParams {
+    return {
+      billingAccountId,
+      email: params.email,
+      productId: params.productId,
+      successUrl: params.successUrl,
+      cancelUrl: params.cancelUrl,
+    };
   }
 
   private createCheckoutError(billingAccountId: string, error: unknown): BillingCheckoutCreationProblem {
@@ -104,7 +122,7 @@ export class BillingService {
    */
   @Trace({ name: 'billing.subscription.cancel' })
   async cancelSubscription(tenantId: string, immediate = false): Promise<void> {
-    const subscription = await this.store.findSubscription(tenantId);
+    const subscription = await this.findSubscriptionByTenantId(tenantId);
     if (!subscription) {
       throw new SubscriptionNotFoundProblem(tenantId);
     }
@@ -130,7 +148,7 @@ export class BillingService {
    */
   @Trace({ name: 'billing.subscription.resume' })
   async resumeSubscription(tenantId: string): Promise<void> {
-    const subscription = await this.store.findSubscription(tenantId);
+    const subscription = await this.findSubscriptionByTenantId(tenantId);
     if (!subscription) {
       throw new SubscriptionNotFoundProblem(tenantId);
     }
@@ -155,5 +173,14 @@ export class BillingService {
     }
 
     return this.gateway.getCustomerPortalUrl(account.externalCustomerId);
+  }
+
+  private async findSubscriptionByTenantId(tenantId: string): Promise<Subscription | null> {
+    const account = await this.store.findAccountByTenantId(tenantId);
+    if (!account) {
+      return null;
+    }
+
+    return this.store.findSubscription(account.id);
   }
 }
