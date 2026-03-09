@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import type { Constructor } from '@croco/framework-context';
 import { Container, Context } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
 import { AuditLogRepository } from './AuditLogRepository';
 import { AUDIT_METADATA_KEY } from './constants';
 import type { AuditExecutionContext, CallHandler, Interceptor } from './interfaces/Interceptor';
@@ -118,16 +117,11 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
   constructor(
     private readonly repository: AuditLogRepository = Container.get(
       AuditLogRepository as unknown as Constructor<AuditLogRepository>
-    ),
-    private readonly logger: Logger = Container.get(Logger)
+    )
   ) {}
 
-  private writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
-    void this.repository.create(entry).catch((error: unknown) => {
-      this.logger.warn('Audit log write failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    });
+  private async writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): Promise<void> {
+    await this.repository.create(entry);
   }
 
   async intercept(context: AuditExecutionContext, next: CallHandler): Promise<unknown> {
@@ -146,7 +140,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
     try {
       const result = await next.handle();
 
-      this.writeAuditLog({
+      await this.writeAuditLog({
         tenantId: contextData?.tenantId ?? 'unknown',
         actorId: contextData?.user?.id ?? 'unknown',
         action: resolveAction(controllerName, handler),
@@ -161,7 +155,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
 
       return result;
     } catch (error) {
-      this.writeAuditLog({
+      await this.writeAuditLog({
         tenantId: contextData?.tenantId ?? 'unknown',
         actorId: contextData?.user?.id ?? 'unknown',
         action: resolveAction(controllerName, handler),
