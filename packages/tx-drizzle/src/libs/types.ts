@@ -1,5 +1,12 @@
 type TransactionFn<TClient, TOptions> = <T>(fn: (tx: TClient) => Promise<T>, options?: TOptions) => Promise<T>;
 
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM method signatures are driver-specific
+export type DrizzleCallable = (...args: unknown[]) => any;
+export type DrizzleSelectFn = DrizzleCallable;
+export type DrizzleInsertFn = DrizzleCallable;
+export type DrizzleUpdateFn = DrizzleCallable;
+export type DrizzleDeleteFn = DrizzleCallable;
+
 export interface DrizzleDb<TClient = unknown, TOptions = unknown> {
   transaction: TransactionFn<TClient, TOptions>;
 }

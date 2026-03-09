@@ -1,14 +1,9 @@
 import { Component, Inject, Token } from '@croco/framework-context';
 import { type OnboardingState, OnboardingStore } from '@croco/onboarding-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
+import type { DrizzleDb, DrizzleInsertFn, DrizzleSelectFn } from '@croco/tx-drizzle';
 import { and, eq } from 'drizzle-orm';
 import { onboardingStates } from './schema';
-
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleSelectFn = (...args: unknown[]) => any;
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleInsertFn = (...args: unknown[]) => any;
 
 type DrizzleOnboardingClient = DrizzleDb & {
   select: DrizzleSelectFn;
