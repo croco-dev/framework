@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { Logger } from '@croco/framework-logger';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoggingInterceptor } from '../libs/interceptors/LoggingInterceptor';
 import type { CallHandler } from '../libs/interfaces/CallHandler';
@@ -8,10 +9,13 @@ describe('LoggingInterceptor', () => {
   let interceptor!: LoggingInterceptor;
   let mockContext!: ExecutionContext;
   let mockNext!: CallHandler;
+  let mockLogger!: Pick<Logger, 'info'>;
 
   beforeEach(() => {
-    interceptor = new LoggingInterceptor();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    mockLogger = {
+      info: vi.fn(),
+    };
+    interceptor = new LoggingInterceptor(mockLogger);
 
     mockContext = {
       getRequest: vi.fn(),
@@ -35,7 +39,10 @@ describe('LoggingInterceptor', () => {
 
     await interceptor.intercept(mockContext, mockNext);
 
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('GET /test/path'));
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'HTTP request completed',
+      expect.objectContaining({ method: 'GET', path: '/test/path' })
+    );
   });
 
   it('should log duration after handler completes', async () => {
@@ -45,8 +52,8 @@ describe('LoggingInterceptor', () => {
 
     await interceptor.intercept(mockContext, mockNext);
 
-    const logCall = vi.mocked(console.log).mock.calls[0][0] as string;
-    expect(logCall).toMatch(/\d+ ms/);
+    const logContext = vi.mocked(mockLogger.info).mock.calls[0]?.[1] as { durationMs: number };
+    expect(logContext.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it('should pass through handler result', async () => {
@@ -65,7 +72,10 @@ describe('LoggingInterceptor', () => {
 
     await interceptor.intercept(mockContext, mockNext);
 
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('POST /api/users'));
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'HTTP request completed',
+      expect.objectContaining({ method: 'POST', path: '/api/users' })
+    );
   });
 
   it('should handle long path strings', async () => {
@@ -75,7 +85,7 @@ describe('LoggingInterceptor', () => {
 
     await interceptor.intercept(mockContext, mockNext);
 
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining(longPath));
+    expect(mockLogger.info).toHaveBeenCalledWith('HTTP request completed', expect.objectContaining({ path: longPath }));
   });
 
   it('should work with different HTTP verbs', async () => {
@@ -87,7 +97,7 @@ describe('LoggingInterceptor', () => {
 
       await interceptor.intercept(mockContext, mockNext);
 
-      expect(console.log).toHaveBeenCalledWith(expect.stringContaining(method));
+      expect(mockLogger.info).toHaveBeenCalledWith('HTTP request completed', expect.objectContaining({ method }));
     }
   });
 
@@ -96,24 +106,20 @@ describe('LoggingInterceptor', () => {
 
     await interceptor.intercept(mockContext, mockNext);
 
-    const logCall = vi.mocked(console.log).mock.calls[0][0] as string;
-    const durationMatch = logCall.match(/(\d+) ms/);
-
-    expect(durationMatch).not.toBeNull();
-    if (!durationMatch || !durationMatch[1]) {
-      throw new Error('Duration match not found');
-    }
-    const duration = Number.parseInt(durationMatch[1], 10);
-    expect(Number.isInteger(duration)).toBe(true);
+    const logContext = vi.mocked(mockLogger.info).mock.calls[0]?.[1] as { durationMs: number };
+    expect(Number.isInteger(logContext.durationMs)).toBe(true);
   });
 
-  it('should maintain log format: [HTTP] METHOD PATH - DURATION ms', async () => {
+  it('should log structured method, path, and duration fields', async () => {
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     await interceptor.intercept(mockContext, mockNext);
 
-    const logCall = vi.mocked(console.log).mock.calls[0][0] as string;
-    expect(logCall).toMatch(/^\[HTTP\] \w+ .+ - \d+ ms$/);
+    expect(mockLogger.info).toHaveBeenCalledWith('HTTP request completed', {
+      method: 'GET',
+      path: '/test/path',
+      durationMs: expect.any(Number),
+    });
   });
 
   it('should work even when handler returns undefined', async () => {
@@ -122,7 +128,7 @@ describe('LoggingInterceptor', () => {
     const result = await interceptor.intercept(mockContext, mockNext);
 
     expect(result).toBeUndefined();
-    expect(console.log).toHaveBeenCalled();
+    expect(mockLogger.info).toHaveBeenCalled();
   });
 
   it('should log for DELETE method', async () => {
@@ -132,6 +138,9 @@ describe('LoggingInterceptor', () => {
 
     await interceptor.intercept(mockContext, mockNext);
 
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('DELETE /api/items/123'));
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'HTTP request completed',
+      expect.objectContaining({ method: 'DELETE', path: '/api/items/123' })
+    );
   });
 });

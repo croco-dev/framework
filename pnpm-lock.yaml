@@ -1210,6 +1210,12 @@ importers:
 
   packages/protocols-rest:
     dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
