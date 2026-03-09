@@ -35,10 +35,16 @@ export type CreateApiKeyResult = {
   key: string;
   id: string;
   keyStart: string;
+  degraded?: boolean;
 };
 
 export type RotateApiKeyResult = {
   key: string;
   id: string;
   keyStart: string;
+  degraded?: boolean;
+};
+
+export type RevokeApiKeyResult = {
+  degraded?: boolean;
 };

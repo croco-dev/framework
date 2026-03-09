@@ -2,7 +2,13 @@ import type { EventBus } from '@croco/events-core';
 import type { Logger } from '@croco/framework-logger';
 import { recordError } from '@croco/telemetry-api';
 import { ApiKeyCreatedEvent, ApiKeyRevokedEvent, ApiKeyRotatedEvent, ApiKeyUsedEvent } from '../events/ApiKeyEvents';
-import type { ApiKey, CreateApiKeyOptions, CreateApiKeyResult, RotateApiKeyResult } from '../interfaces/ApiKey';
+import type {
+  ApiKey,
+  CreateApiKeyOptions,
+  CreateApiKeyResult,
+  RevokeApiKeyResult,
+  RotateApiKeyResult,
+} from '../interfaces/ApiKey';
 import type { ApiKeyPrincipal } from '../interfaces/Principal';
 import { ApiKeyGenerator } from './ApiKeyGenerator';
 import { ApiKeyHasher } from './ApiKeyHasher';
@@ -17,6 +23,19 @@ export class ApiKeyManager {
     private readonly eventBus?: EventBus,
     private readonly logger?: Logger
   ) {}
+
+  private async runSideEffect(effectName: string, effect: Promise<void>): Promise<boolean> {
+    try {
+      await effect;
+      return false;
+    } catch (err: unknown) {
+      recordError(err);
+      this.logger?.warn(effectName, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return true;
+    }
+  }
 
   async create(options: CreateApiKeyOptions): Promise<CreateApiKeyResult> {
     const { prefix = 'sk', shortToken, longToken, fullKey } = this.generator.generate(options.prefix);
@@ -37,19 +56,18 @@ export class ApiKeyManager {
       allowedIps: options.allowedIps,
     });
 
-    this.eventBus
-      ?.publish(new ApiKeyCreatedEvent({ keyId: key.id, tenantId: key.tenantId, name: key.name }))
-      .catch((err: unknown) => {
-        recordError(err);
-        this.logger?.warn('ApiKeyCreatedEvent publish failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
+    const degraded = this.eventBus
+      ? await this.runSideEffect(
+          'ApiKeyCreatedEvent publish failed',
+          this.eventBus.publish(new ApiKeyCreatedEvent({ keyId: key.id, tenantId: key.tenantId, name: key.name }))
+        )
+      : false;
 
     return {
       key: fullKey,
       id: key.id,
       keyStart: `${prefix}_${shortToken.slice(0, 8)}...`,
+      degraded: degraded || undefined,
     };
   }
 
@@ -66,19 +84,19 @@ export class ApiKeyManager {
     if (keyData.revokedAt) return null;
     if (keyData.expiresAt && keyData.expiresAt < new Date()) return null;
 
-    this.store.updateLastUsed(keyData.id).catch((err: unknown) => {
-      recordError(err);
-      this.logger?.warn('ApiKey updateLastUsed failed', { error: err instanceof Error ? err.message : String(err) });
-    });
+    const degradedStates = await Promise.all([
+      this.runSideEffect('ApiKey updateLastUsed failed', this.store.updateLastUsed(keyData.id)),
+      this.eventBus
+        ? this.runSideEffect(
+            'ApiKeyUsedEvent publish failed',
+            this.eventBus.publish(
+              new ApiKeyUsedEvent({ keyId: keyData.id, tenantId: keyData.tenantId, timestamp: new Date() })
+            )
+          )
+        : Promise.resolve(false),
+    ]);
 
-    this.eventBus
-      ?.publish(new ApiKeyUsedEvent({ keyId: keyData.id, tenantId: keyData.tenantId, timestamp: new Date() }))
-      .catch((err: unknown) => {
-        recordError(err);
-        this.logger?.warn('ApiKeyUsedEvent publish failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
+    const degraded = degradedStates.some(Boolean);
 
     return {
       type: 'apikey',
@@ -88,24 +106,28 @@ export class ApiKeyManager {
       keyStart: `${keyData.prefix}_${keyData.shortToken.slice(0, 8)}...`,
       tenantId: keyData.tenantId,
       permissions: keyData.permissions,
-      metadata: { rateLimit: keyData.rateLimit },
+      metadata: degraded ? { rateLimit: keyData.rateLimit, degraded: true } : { rateLimit: keyData.rateLimit },
     };
   }
 
-  async revoke(id: string): Promise<void> {
+  async revoke(id: string): Promise<RevokeApiKeyResult> {
     const keyData = await this.store.findById(id);
     await this.store.revoke(id);
 
+    let degraded = false;
+
     if (keyData) {
-      this.eventBus
-        ?.publish(new ApiKeyRevokedEvent({ keyId: id, tenantId: keyData.tenantId, revokedAt: new Date() }))
-        .catch((err: unknown) => {
-          recordError(err);
-          this.logger?.warn('ApiKeyRevokedEvent publish failed', {
-            error: err instanceof Error ? err.message : String(err),
-          });
-        });
+      degraded = this.eventBus
+        ? await this.runSideEffect(
+            'ApiKeyRevokedEvent publish failed',
+            this.eventBus.publish(
+              new ApiKeyRevokedEvent({ keyId: id, tenantId: keyData.tenantId, revokedAt: new Date() })
+            )
+          )
+        : false;
     }
+
+    return degraded ? { degraded: true } : {};
   }
 
   async rotate(id: string): Promise<RotateApiKeyResult> {
@@ -134,19 +156,20 @@ export class ApiKeyManager {
 
     await this.store.revoke(id);
 
-    this.eventBus
-      ?.publish(new ApiKeyRotatedEvent({ oldKeyId: id, newKeyId: newKey.id, tenantId: existingKey.tenantId }))
-      .catch((err: unknown) => {
-        recordError(err);
-        this.logger?.warn('ApiKeyRotatedEvent publish failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
+    const degraded = this.eventBus
+      ? await this.runSideEffect(
+          'ApiKeyRotatedEvent publish failed',
+          this.eventBus.publish(
+            new ApiKeyRotatedEvent({ oldKeyId: id, newKeyId: newKey.id, tenantId: existingKey.tenantId })
+          )
+        )
+      : false;
 
     return {
       key: fullKey,
       id: newKey.id,
       keyStart: `${prefix}_${shortToken.slice(0, 8)}...`,
+      degraded: degraded || undefined,
     };
   }
 

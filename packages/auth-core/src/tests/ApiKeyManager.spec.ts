@@ -106,6 +106,7 @@ describe('ApiKeyManager', () => {
       expect(result).toHaveProperty('key');
       expect(result).toHaveProperty('id');
       expect(result).toHaveProperty('keyStart');
+      expect(result.degraded).toBeUndefined();
       expect(result.key).toMatch(/^sk_[a-zA-Z0-9_~-]+_[a-zA-Z0-9_~-]+$/);
       expect(result.keyStart).toMatch(/^sk_[a-zA-Z0-9_~-]{8}\.\.\.$/);
       expect(mockStore.save).toHaveBeenCalled();
@@ -169,6 +170,23 @@ describe('ApiKeyManager', () => {
 
       expect(result).toHaveProperty('key');
       expect(result).toHaveProperty('id');
+      expect(result.degraded).toBeUndefined();
+    });
+
+    it('should mark create as degraded when event publish fails', async () => {
+      const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
+      mockEventBus.publish.mockRejectedValueOnce(new Error('publish failed'));
+
+      const result = await manager.create({
+        name: 'Test Key',
+        tenantId: 'tenant_123',
+        permissions: ['read:users'],
+      });
+
+      expect(result.degraded).toBe(true);
+      expect(recordErrorSpy).toHaveBeenCalled();
+
+      recordErrorSpy.mockRestore();
     });
   });
 
@@ -194,6 +212,7 @@ describe('ApiKeyManager', () => {
       expect(principal?.tenantId).toBe('tenant_123');
       expect(principal?.permissions).toEqual(['read:users', 'write:users']);
       expect(principal?.keyStart).toBe(createdKey.keyStart);
+      expect(principal?.metadata).toEqual({ rateLimit: undefined });
     });
 
     it('should return null for invalid format', async () => {
@@ -248,7 +267,7 @@ describe('ApiKeyManager', () => {
       expect(publishedEvent.data.timestamp).toBeInstanceOf(Date);
     });
 
-    it('should not throw when updateLastUsed fails', async () => {
+    it('should mark verify result as degraded when updateLastUsed fails', async () => {
       const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
       mockStore.updateLastUsed.mockRejectedValueOnce(new Error('DB error'));
 
@@ -257,6 +276,7 @@ describe('ApiKeyManager', () => {
       await Promise.resolve();
 
       expect(principal).not.toBeNull();
+      expect(principal?.metadata).toEqual({ rateLimit: undefined, degraded: true });
       expect(recordErrorSpy).toHaveBeenCalled();
 
       recordErrorSpy.mockRestore();
@@ -288,6 +308,7 @@ describe('ApiKeyManager', () => {
       await manager.revoke(created.id);
 
       expect(mockStore.revoke).toHaveBeenCalledWith(created.id);
+      expect(await manager.revoke(created.id)).toEqual({});
     });
 
     it('should publish ApiKeyRevokedEvent on success', async () => {
@@ -317,9 +338,28 @@ describe('ApiKeyManager', () => {
       };
       const created = await managerWithoutBus.create(options);
 
-      await managerWithoutBus.revoke(created.id);
+      await expect(managerWithoutBus.revoke(created.id)).resolves.toEqual({});
 
       expect(mockStore.revoke).toHaveBeenCalledWith(created.id);
+    });
+
+    it('should mark revoke result as degraded when event publish fails', async () => {
+      const options: CreateApiKeyOptions = {
+        name: 'Test Key',
+        tenantId: 'tenant_123',
+        permissions: ['read:users'],
+      };
+      const created = await manager.create(options);
+      const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
+
+      mockEventBus.publish.mockRejectedValueOnce(new Error('publish failed'));
+
+      const result = await manager.revoke(created.id);
+
+      expect(result).toEqual({ degraded: true });
+      expect(recordErrorSpy).toHaveBeenCalled();
+
+      recordErrorSpy.mockRestore();
     });
   });
 
@@ -388,9 +428,10 @@ describe('ApiKeyManager', () => {
 
       expect(result.key).not.toBe(createdKey.key);
       expect(result.id).not.toBe(createdKey.id);
+      expect(result.degraded).toBeUndefined();
     });
 
-    it('should record publish failures during rotation without failing the request', async () => {
+    it('should mark rotate result as degraded when publish fails', async () => {
       const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
       mockEventBus.publish.mockReset();
       mockEventBus.publish.mockRejectedValueOnce(new Error('publish failed'));
@@ -400,6 +441,7 @@ describe('ApiKeyManager', () => {
       await Promise.resolve();
 
       expect(result.id).toBeDefined();
+      expect(result.degraded).toBe(true);
       expect(recordErrorSpy).toHaveBeenCalled();
 
       recordErrorSpy.mockRestore();
