@@ -3,6 +3,7 @@ import type { AuthProvider } from '@croco/auth-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BetterAuthFactory } from '../libs/BetterAuthFactory';
 import { BetterAuthProvider } from '../libs/BetterAuthProvider';
+import { BetterAuthInvalidSessionProblem } from '../libs/problems/BetterAuthInvalidSessionProblem';
 
 function createMockBetterAuthFactory(session: any): BetterAuthFactory {
   return {
@@ -277,7 +278,10 @@ describe('BetterAuthProvider', () => {
 
       const request = createMockRequest();
 
-      await expect(provider.authenticate(request)).rejects.toThrow();
+      await expect(provider.authenticate(request)).rejects.toBeInstanceOf(BetterAuthInvalidSessionProblem);
+      await expect(provider.authenticate(request)).rejects.toThrow(
+        'Better Auth session did not include a valid user payload'
+      );
     });
   });
 

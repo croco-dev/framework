@@ -210,6 +210,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/tx-drizzle':
         specifier: workspace:*
         version: link:../tx-drizzle
