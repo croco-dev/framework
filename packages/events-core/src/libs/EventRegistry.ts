@@ -96,12 +96,8 @@ export const globalEventRegistry = new EventRegistry();
  */
 export function RegisterEvent(registry: EventRegistry = globalEventRegistry) {
   return <T extends DomainEvent>(target: EventClass<T>): EventClass<T> => {
-    if (registry === globalEventRegistry) {
-      MetadataStorage.define(REGISTERED_EVENT_KEY, target, true);
-      return target;
-    }
-
-    registry.register(target);
+    void registry;
+    MetadataStorage.define(REGISTERED_EVENT_KEY, target, true);
     return target;
   };
 }
