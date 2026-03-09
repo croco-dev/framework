@@ -6,16 +6,9 @@ import {
   MembershipStore,
 } from '@croco/membership-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
+import type { DrizzleDb, DrizzleDeleteFn, DrizzleInsertFn, DrizzleSelectFn } from '@croco/tx-drizzle';
 import { and, count, eq } from 'drizzle-orm';
 import { memberships } from './schema';
-
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleSelectFn = (...args: unknown[]) => any;
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleInsertFn = (...args: unknown[]) => any;
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleDeleteFn = (...args: unknown[]) => any;
 
 type DrizzleMembershipClient = DrizzleDb & {
   select: DrizzleSelectFn;

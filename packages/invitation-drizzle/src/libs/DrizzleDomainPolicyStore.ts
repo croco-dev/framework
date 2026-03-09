@@ -1,16 +1,9 @@
 import { Component, Inject, Token } from '@croco/framework-context';
 import { type DomainPolicy, DomainPolicyStore } from '@croco/invitation-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
+import type { DrizzleDb, DrizzleDeleteFn, DrizzleInsertFn, DrizzleSelectFn } from '@croco/tx-drizzle';
 import { and, eq } from 'drizzle-orm';
 import { domainPolicies } from './schema';
-
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleSelectFn = (...args: unknown[]) => any;
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleInsertFn = (...args: unknown[]) => any;
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle ORM internal types
-type DrizzleDeleteFn = (...args: unknown[]) => any;
 
 export type DrizzleDomainPolicyClient = DrizzleDb & {
   select: DrizzleSelectFn;
