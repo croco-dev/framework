@@ -1,6 +1,7 @@
 import type { AuthProvider, AuthUser } from '@croco/auth-core';
 import { Component } from '@croco/framework-context';
 import type { BetterAuthFactory } from './BetterAuthFactory';
+import { BetterAuthInvalidSessionProblem } from './problems/BetterAuthInvalidSessionProblem';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -87,7 +88,7 @@ export class BetterAuthProvider implements AuthProvider<Request> {
     const userRecord = isRecord(user) ? user : null;
 
     if (!userRecord || typeof userRecord.id !== 'string') {
-      throw new Error('Better Auth session did not include a valid user payload');
+      throw new BetterAuthInvalidSessionProblem();
     }
 
     return {

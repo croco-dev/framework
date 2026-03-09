@@ -21,6 +21,7 @@
   "dependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/auth-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "better-auth": "^1.1.0",
     "drizzle-orm": "^0.30.0"
