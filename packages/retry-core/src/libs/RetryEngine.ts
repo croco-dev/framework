@@ -1,4 +1,5 @@
 import type { BackoffPolicy } from './BackoffPolicy';
+import { RetryAbortedProblem, RetryExhaustedProblem } from './errors';
 import type { RetryContext } from './RetryContext';
 import type { RetryPolicy } from './RetryPolicy';
 
@@ -25,7 +26,7 @@ export async function executeRetryLoop<T>(
 
   const shouldStart = (await retryHooks.onStart?.(context)) ?? true;
   if (!shouldStart) {
-    throw new Error('Retry aborted by listener');
+    throw RetryAbortedProblem.fromContext(context.methodName);
   }
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -70,7 +71,7 @@ export async function executeRetryLoop<T>(
   }
 
   const exhaustedError =
-    context.lastError ?? new Error(`Retry exhausted after ${maxAttempts} attempts for '${context.methodName}'`);
+    context.lastError ?? RetryExhaustedProblem.fromContext(context.methodName, maxAttempts, context.lastError);
   context.setExhausted();
   await retryHooks.onExhausted?.(exhaustedError, context);
   throw exhaustedError;
