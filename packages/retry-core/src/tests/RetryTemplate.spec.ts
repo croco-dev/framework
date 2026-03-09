@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { NoBackoff } from '../libs/BackoffPolicy';
-import { RetryExhaustedProblem } from '../libs/errors';
+import { RetryAbortedProblem, RetryExhaustedProblem } from '../libs/errors';
 import type { RetryListener } from '../libs/RetryListener';
 import { RetryTemplate } from '../libs/RetryTemplate';
 
@@ -175,7 +175,7 @@ describe('RetryTemplate', () => {
         listeners: [listener],
       });
 
-      await expect(template.execute(async () => 'success')).rejects.toThrow('Retry aborted by listener');
+      await expect(template.execute(async () => 'success')).rejects.toBeInstanceOf(RetryAbortedProblem);
     });
 
     it('복수의 리스너가 모두 호출되어야 한다', async () => {

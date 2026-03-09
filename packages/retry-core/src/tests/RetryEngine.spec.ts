@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BackoffPolicy } from '../libs/BackoffPolicy';
 import { NoBackoff } from '../libs/BackoffPolicy';
+import { RetryAbortedProblem, RetryExhaustedProblem } from '../libs/errors';
 import { RetryContext } from '../libs/RetryContext';
 import { executeRetryLoop } from '../libs/RetryEngine';
 import type { RetryPolicy } from '../libs/RetryPolicy';
@@ -162,7 +163,7 @@ describe('executeRetryLoop', () => {
           onStart: vi.fn().mockResolvedValue(false),
         }
       )
-    ).rejects.toThrow('Retry aborted by listener');
+    ).rejects.toBeInstanceOf(RetryAbortedProblem);
     expect(startCallback).not.toHaveBeenCalled();
 
     const waitSpy = vi.fn().mockResolvedValue(undefined);
@@ -234,5 +235,24 @@ describe('executeRetryLoop', () => {
     expect(stateContext.remainingAttempts).toBe(1);
     expect(stateContext.lastError?.message).toBe('first');
     expect(stateContext.elapsedTimeMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should surface RetryExhaustedProblem when maxAttempts is zero and no lastError exists', async () => {
+    const zeroAttemptContext = new RetryContext('execute', [], 0);
+
+    await expect(
+      executeRetryLoop(
+        async () => 'ok',
+        {
+          maxAttempts: 0,
+          retryPolicy,
+          backoffPolicy,
+          context: zeroAttemptContext,
+        },
+        {
+          onExhausted: vi.fn().mockResolvedValue(undefined),
+        }
+      )
+    ).rejects.toBeInstanceOf(RetryExhaustedProblem);
   });
 });
