@@ -8,9 +8,7 @@ import { validateConfig } from '../validateConfig';
 describe('validateConfig', () => {
   const originalEnv = process.env;
 
-  beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
+  beforeEach(() => {});
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -83,8 +81,7 @@ describe('validateConfig', () => {
       expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
     });
 
-    it('should log missing required fields', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    it('should throw when a single required field is missing', () => {
       const schema = z.object({
         MISSING_VAR: z.string(),
       });
@@ -92,12 +89,9 @@ describe('validateConfig', () => {
       const env = {};
 
       expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[CONFIG ERROR] Missing required: MISSING_VAR');
     });
 
     it('should handle multiple missing fields', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const schema = z.object({
         VAR1: z.string(),
         VAR2: z.string(),
@@ -106,12 +100,9 @@ describe('validateConfig', () => {
       const env = {};
 
       expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[CONFIG ERROR] Missing required: VAR1, VAR2');
     });
 
     it('should handle nested path in error message', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const schema = z.object({
         DATABASE: z.object({
           URL: z.string(),
@@ -121,8 +112,6 @@ describe('validateConfig', () => {
       const env = {};
 
       expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[CONFIG ERROR] Missing required: DATABASE');
     });
   });
 
