@@ -82,6 +82,7 @@ export { DefaultHandlerResolver } from './libs/HandlerResolver';
  */
 export {
   DuplicateEventFieldProblem,
+  DuplicateEventNameProblem,
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,

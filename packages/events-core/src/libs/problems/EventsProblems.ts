@@ -46,6 +46,16 @@ export class DuplicateEventFieldProblem extends Problem {
   }
 }
 
+export class DuplicateEventNameProblem extends Problem {
+  constructor(eventName: string) {
+    super(
+      'events-core/duplicate-event-name',
+      ProblemCategory.InternalServerError,
+      `Duplicate event registration detected for eventName '${eventName}'`
+    );
+  }
+}
+
 export class EventTransactionContextUnavailableProblem extends Problem {
   constructor(reason: string) {
     super(
