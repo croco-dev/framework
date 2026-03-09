@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import { Container, Context } from '@croco/framework-context';
-import type { Logger } from '@croco/framework-logger';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuditInterceptor } from '../libs/AuditInterceptor';
 import type { AuditLogRepository } from '../libs/AuditLogRepository';
@@ -58,8 +57,6 @@ describe('AuditInterceptor', () => {
   let interceptor!: AuditInterceptor;
   let repository!: AuditLogRepository;
   let createSpy!: ReturnType<typeof vi.fn>;
-  let logger!: Logger;
-  let warnSpy!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     Container.reset();
@@ -68,11 +65,7 @@ describe('AuditInterceptor', () => {
       create: createSpy,
       find: vi.fn(),
     } as unknown as AuditLogRepository;
-    warnSpy = vi.fn();
-    logger = {
-      warn: warnSpy,
-    } as unknown as Logger;
-    interceptor = new AuditInterceptor(repository, logger);
+    interceptor = new AuditInterceptor(repository);
   });
 
   afterEach(() => {
@@ -131,7 +124,7 @@ describe('AuditInterceptor', () => {
     );
   });
 
-  it('should log a warning when audit persistence fails', async () => {
+  it('should fail closed when audit persistence fails', async () => {
     createSpy.mockRejectedValueOnce(new Error('repository unavailable'));
     vi.spyOn(Context, 'get').mockReturnValue({
       requestId: 'req-2',
@@ -153,12 +146,9 @@ describe('AuditInterceptor', () => {
       },
     });
 
-    await interceptor.intercept(context, createCallHandler({ ok: true }));
-    await Promise.resolve();
-
-    expect(warnSpy).toHaveBeenCalledWith('Audit log write failed', {
-      error: 'repository unavailable',
-    });
+    await expect(interceptor.intercept(context, createCallHandler({ ok: true }))).rejects.toThrow(
+      'repository unavailable'
+    );
   });
 
   it('should skip creating a new audit entry when @Auditable metadata already exists', async () => {
