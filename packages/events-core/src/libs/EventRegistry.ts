@@ -1,6 +1,6 @@
 import { MetadataStorage } from '@croco/framework-context';
 import type { DomainEvent } from './DomainEvent';
-import { EventDefinitionProblem } from './problems/EventsProblems';
+import { DuplicateEventNameProblem, EventDefinitionProblem } from './problems/EventsProblems';
 
 type EventClass<T extends DomainEvent = DomainEvent> = (new (
   ...args: any[]
@@ -23,7 +23,13 @@ export class EventRegistry {
    * @returns 체이닝을 위해 this 반환
    */
   register<T extends DomainEvent>(eventClass: EventClass<T>): this {
-    this.events.set(this.getEventType(eventClass), eventClass);
+    const eventType = this.getEventType(eventClass);
+
+    if (this.events.has(eventType)) {
+      throw new DuplicateEventNameProblem(eventType);
+    }
+
+    this.events.set(eventType, eventClass);
     return this;
   }
 

@@ -2,6 +2,7 @@ import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
 import { EventRegistry, globalEventRegistry, REGISTERED_EVENT_KEY, RegisterEvent } from '../libs/EventRegistry';
+import { DuplicateEventNameProblem } from '../libs/problems/EventsProblems';
 
 class FirstEvent extends DomainEvent {
   static eventName = 'FirstEvent';
@@ -19,6 +20,14 @@ class SecondEvent extends DomainEvent {
 
 class RenamedEventClass extends DomainEvent {
   static eventName = 'stable.event_name';
+
+  constructor(public readonly value: string) {
+    super();
+  }
+}
+
+class DuplicateEventNameClass extends DomainEvent {
+  static eventName = 'FirstEvent';
 
   constructor(public readonly value: string) {
     super();
@@ -63,6 +72,16 @@ describe('EventRegistry', () => {
 
       expect(firstRetrieved).toBe(FirstEvent);
       expect(secondRetrieved).toBe(SecondEvent);
+    });
+
+    it('should fail fast when the same eventName is registered twice', () => {
+      registry.register(FirstEvent);
+
+      expect(() => {
+        registry.register(DuplicateEventNameClass);
+      }).toThrow(DuplicateEventNameProblem);
+
+      expect(registry.get('FirstEvent')).toBe(FirstEvent);
     });
   });
 
