@@ -33,7 +33,11 @@ describe('PostHogFeatureManager', () => {
       const result = await featureManager.isEnabled('new-feature');
 
       expect(result).toBe(true);
-      expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith('new-feature', 'anonymous', expect.any(Object));
+      expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith(
+        'new-feature',
+        expect.stringMatching(/^anonymous:/),
+        expect.any(Object)
+      );
     });
 
     it('should return false when feature flag is disabled', async () => {
@@ -165,7 +169,11 @@ describe('PostHogFeatureManager', () => {
       const result = await featureManager.isEnabled('feature');
 
       expect(result).toBe(false);
-      expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith('feature', 'anonymous', expect.any(Object));
+      expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith(
+        'feature',
+        expect.stringMatching(/^anonymous:/),
+        expect.any(Object)
+      );
     });
   });
 

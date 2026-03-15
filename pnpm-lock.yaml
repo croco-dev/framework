@@ -742,6 +742,9 @@ importers:
 
   packages/features-posthog:
     dependencies:
+      '@croco/analytics-posthog':
+        specifier: workspace:*
+        version: link:../analytics-posthog
       '@croco/features-core':
         specifier: workspace:*
         version: link:../features-core

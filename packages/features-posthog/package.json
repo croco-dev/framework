@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/analytics-posthog": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/features-core": "workspace:*",
     "@croco/integrations-posthog": "workspace:*"
