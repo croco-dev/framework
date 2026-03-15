@@ -13,12 +13,12 @@ export class EventPublisher {
   constructor(private readonly config: EventBusConfig) {}
 
   private tryGetTransactionContext(): TransactionContext | null {
-    if (!Container.has(TRANSACTION_CONTEXT_TOKEN as never)) {
+    if (!Container.has(TRANSACTION_CONTEXT_TOKEN)) {
       return null;
     }
 
     try {
-      return Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN as never);
+      return Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new EventTransactionContextUnavailableProblem(message);

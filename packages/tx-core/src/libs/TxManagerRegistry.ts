@@ -13,7 +13,7 @@ class TxManagerRegistryClass {
     this.managers.set(managerKey, manager);
 
     if (managerKey === DEFAULT_TX_MANAGER_KEY) {
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, manager as never);
+      Container.set(TRANSACTION_CONTEXT_TOKEN, manager);
     }
   }
 
@@ -35,7 +35,7 @@ class TxManagerRegistryClass {
 
   clear(): void {
     this.managers.clear();
-    Container.remove(TRANSACTION_CONTEXT_TOKEN as never);
+    Container.remove(TRANSACTION_CONTEXT_TOKEN);
   }
 }
 

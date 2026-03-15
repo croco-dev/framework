@@ -24,9 +24,9 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     this.defaultNesting = config.defaultNesting ?? 'join';
 
     try {
-      Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN as never);
+      Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN);
     } catch {
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, this);
+      Container.set(TRANSACTION_CONTEXT_TOKEN, this);
     }
   }
 
