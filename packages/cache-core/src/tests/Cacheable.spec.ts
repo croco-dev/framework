@@ -259,7 +259,9 @@ describe('@CacheEvict', () => {
       delete: async () => undefined,
       has: async () => false,
       clear: async () => undefined,
-    };
+      deleteByPattern: undefined,
+      pruneExpired: async () => 0,
+    } as any;
 
     class TestService {
       @CacheEvict({ store: unsupportedStore, namespace: 'stable-service' })
@@ -280,7 +282,9 @@ describe('@CacheEvict', () => {
       delete: async () => undefined,
       has: async () => false,
       clear: async () => undefined,
-    };
+      deleteByPattern: undefined,
+      pruneExpired: async () => 0,
+    } as any;
 
     class TestService {
       @CacheEvict({ store: unsupportedStore, key: 'user:*' })
