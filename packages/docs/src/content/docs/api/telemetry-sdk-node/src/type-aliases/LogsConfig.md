@@ -7,7 +7,7 @@ title: "LogsConfig"
 
 > **LogsConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:33](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-sdk-node/src/config.ts#L33)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:33](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L33)
 
 Main configuration for the OpenTelemetry SDK.
 
@@ -39,4 +39,4 @@ const config: TelemetryConfig = {
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:34](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-sdk-node/src/config.ts#L34)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:34](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L34)

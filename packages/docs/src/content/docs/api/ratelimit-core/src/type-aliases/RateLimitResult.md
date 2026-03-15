@@ -7,17 +7,25 @@ title: "RateLimitResult"
 
 > **RateLimitResult** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:18](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/types.ts#L18)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:18](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L18)
 
 Result of a rate limit check
 
 ## Properties
 
+### degraded?
+
+> `optional` **degraded**: `boolean`
+
+Defined in: [packages/ratelimit-core/src/libs/types.ts:21](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L21)
+
+***
+
 ### limit
 
 > **limit**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:22](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/types.ts#L22)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L23)
 
 Maximum requests allowed in the window
 
@@ -27,7 +35,7 @@ Maximum requests allowed in the window
 
 > **remaining**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:24](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/types.ts#L24)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L25)
 
 Remaining requests in current window
 
@@ -37,7 +45,7 @@ Remaining requests in current window
 
 > **resetAtMs**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/types.ts#L26)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:27](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L27)
 
 Unix epoch ms when the window resets
 
@@ -47,6 +55,6 @@ Unix epoch ms when the window resets
 
 > **success**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/types.ts#L20)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:20](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L20)
 
 Whether the request is allowed

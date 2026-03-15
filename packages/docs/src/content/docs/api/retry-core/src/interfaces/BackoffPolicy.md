@@ -5,7 +5,7 @@ prev: false
 title: "BackoffPolicy"
 ---
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:21](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/BackoffPolicy.ts#L21)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:21](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/BackoffPolicy.ts#L21)
 
 Backoff policy interface.
 
@@ -15,7 +15,7 @@ Backoff policy interface.
 
 > **getDelay**(`attempt`): `number`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:23](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/BackoffPolicy.ts#L23)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/BackoffPolicy.ts#L23)
 
 Calculate delay for the given attempt (0-based)
 
@@ -35,7 +35,7 @@ Calculate delay for the given attempt (0-based)
 
 > **reset**(): `void`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:29](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/BackoffPolicy.ts#L29)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:29](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/BackoffPolicy.ts#L29)
 
 Reset internal state if any
 
@@ -49,7 +49,7 @@ Reset internal state if any
 
 > **wait**(`attempt`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/BackoffPolicy.ts#L26)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:26](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/BackoffPolicy.ts#L26)
 
 Wait for the calculated delay
 

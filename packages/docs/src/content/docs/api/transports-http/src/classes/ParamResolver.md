@@ -5,7 +5,7 @@ prev: false
 title: "ParamResolver"
 ---
 
-Defined in: [packages/transports-http/src/libs/ParamResolver.ts:22](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/ParamResolver.ts#L22)
+Defined in: [packages/transports-http/src/libs/ParamResolver.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/ParamResolver.ts#L23)
 
 Croco HTTP 앱의 핵심 런타임 API입니다.
 
@@ -25,7 +25,7 @@ Croco HTTP 앱의 핵심 런타임 API입니다.
 
 > **resolveParams**(`ctx`, `controller`, `methodName`): `Promise`\<`unknown`[]\>
 
-Defined in: [packages/transports-http/src/libs/ParamResolver.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/ParamResolver.ts#L25)
+Defined in: [packages/transports-http/src/libs/ParamResolver.ts:26](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/ParamResolver.ts#L26)
 
 #### Parameters
 

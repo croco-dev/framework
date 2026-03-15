@@ -7,7 +7,7 @@ title: "parsePermission"
 
 > **parsePermission**(`permission`): [`Permission`](/api/auth-core/src/type-aliases/permission/)
 
-Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/Permission.ts#L10)
+Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/Permission.ts#L14)
 
 Permission utilities and permission type.
 

@@ -5,7 +5,7 @@ prev: false
 title: "RbacEngine"
 ---
 
-Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/RbacEngine.ts#L5)
+Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/RbacEngine.ts#L5)
 
 Role-based access control engine.
 
@@ -15,7 +15,7 @@ Role-based access control engine.
 
 > **new RbacEngine**(`roleRegistry`): `RbacEngine`
 
-Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/RbacEngine.ts#L6)
+Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/RbacEngine.ts#L6)
 
 #### Parameters
 
@@ -33,7 +33,7 @@ Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:6](https://github.co
 
 > **hasPermission**(`user`, `permission`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/RbacEngine.ts#L8)
+Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/RbacEngine.ts#L8)
 
 #### Parameters
 
@@ -55,7 +55,7 @@ Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:8](https://github.co
 
 > **hasRole**(`user`, `role`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:23](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/RbacEngine.ts#L23)
+Defined in: [packages/auth-core/src/libs/rbac/RbacEngine.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/RbacEngine.ts#L23)
 
 #### Parameters
 

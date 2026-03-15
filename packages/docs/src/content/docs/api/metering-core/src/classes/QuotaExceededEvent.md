@@ -5,7 +5,7 @@ prev: false
 title: "QuotaExceededEvent"
 ---
 
-Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L3)
+Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L3)
 
 quota 초과 시 발행되는 도메인 이벤트입니다.
 
@@ -35,7 +35,7 @@ eventBus.publish(new QuotaExceededEvent({
 
 > **new QuotaExceededEvent**(`tenantId`, `meterId`, `currentUsage`, `quota`): `QuotaExceededEvent`
 
-Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L6)
+Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L6)
 
 #### Parameters
 
@@ -69,7 +69,7 @@ Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:6](htt
 
 > `readonly` **currentUsage**: `number`
 
-Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L9)
+Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L9)
 
 ***
 
@@ -77,7 +77,7 @@ Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:9](htt
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L12)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L18)
 
 #### Inherited from
 
@@ -89,7 +89,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L14)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L20)
 
 #### Inherited from
 
@@ -101,7 +101,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:14](https://github.com
 
 > `readonly` **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L8)
+Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L8)
 
 ***
 
@@ -109,7 +109,7 @@ Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:8](htt
 
 > `readonly` **quota**: `number`
 
-Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L10)
+Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L10)
 
 ***
 
@@ -117,7 +117,7 @@ Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:10](ht
 
 > `readonly` **tenantId**: `string`
 
-Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L7)
+Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L7)
 
 ***
 
@@ -125,7 +125,7 @@ Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:7](htt
 
 > `readonly` **timestamp**: `Date`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L13)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L19)
 
 #### Inherited from
 
@@ -137,7 +137,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:13](https://github.com
 
 > `static` **eventName**: `string` = `'metering.quota_exceeded'`
 
-Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L4)
+Defined in: [packages/metering-core/src/libs/events/QuotaExceededEvent.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/QuotaExceededEvent.ts#L4)
 
 #### Overrides
 

@@ -7,7 +7,7 @@ title: "AtomicQuotaCheckOptions"
 
 > **AtomicQuotaCheckOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L3)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L3)
 
 사용량 저장소의 원자적 quota 체크 계약과 저장소 인터페이스입니다.
 
@@ -21,7 +21,7 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:3](https://github.c
 
 > **allowOverQuota**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L8)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L8)
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:8](https://github.c
 
 > **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L5)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L5)
 
 ***
 
@@ -37,7 +37,7 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:5](https://github.c
 
 > **quota**: `number`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L7)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L7)
 
 ***
 
@@ -45,7 +45,7 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:7](https://github.c
 
 > **tenantId**: `string`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L4)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L4)
 
 ***
 
@@ -53,7 +53,7 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:4](https://github.c
 
 > **usageRecord**: [`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L9)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L9)
 
 ***
 
@@ -61,4 +61,4 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:9](https://github.c
 
 > **value**: `number`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L6)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L6)

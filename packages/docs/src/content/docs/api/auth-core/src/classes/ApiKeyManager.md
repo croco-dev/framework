@@ -5,7 +5,7 @@ prev: false
 title: "ApiKeyManager"
 ---
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L11)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:18](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L18)
 
 Manages API key lifecycle operations.
 
@@ -15,7 +15,7 @@ Manages API key lifecycle operations.
 
 > **new ApiKeyManager**(`store`, `generator?`, `hasher?`, `eventBus?`, `logger?`): `ApiKeyManager`
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L12)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:19](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L19)
 
 #### Parameters
 
@@ -49,7 +49,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:12](https://git
 
 > **create**(`options`): `Promise`\<[`CreateApiKeyResult`](/api/auth-core/src/type-aliases/createapikeyresult/)\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L20)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:40](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L40)
 
 #### Parameters
 
@@ -67,7 +67,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:20](https://git
 
 > **list**(`tenantId`): `Promise`\<`Omit`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/), `"hash"`\>[]\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:147](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L147)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:176](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L176)
 
 #### Parameters
 
@@ -83,9 +83,9 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:147](https://gi
 
 ### revoke()
 
-> **revoke**(`id`): `Promise`\<`void`\>
+> **revoke**(`id`): `Promise`\<`RevokeApiKeyResult`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:91](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L91)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:113](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L113)
 
 #### Parameters
 
@@ -95,7 +95,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:91](https://git
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`RevokeApiKeyResult`\>
 
 ***
 
@@ -103,7 +103,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:91](https://git
 
 > **rotate**(`id`): `Promise`\<`RotateApiKeyResult`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:106](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L106)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:133](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L133)
 
 #### Parameters
 
@@ -121,7 +121,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:106](https://gi
 
 > **verify**(`rawKey`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/) \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:54](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L54)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyManager.ts:74](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyManager.ts#L74)
 
 #### Parameters
 

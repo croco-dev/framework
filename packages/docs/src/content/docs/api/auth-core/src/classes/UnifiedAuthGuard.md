@@ -5,13 +5,13 @@ prev: false
 title: "UnifiedAuthGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L20)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:24](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L24)
 
 Unified guard supporting principal and API key flows.
 
 ## Implements
 
-- `Guard`\<`ExecutionContext`\>
+- [`Guard`](/api/auth-core/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)\>
 
 ## Constructors
 
@@ -19,7 +19,7 @@ Unified guard supporting principal and API key flows.
 
 > **new UnifiedAuthGuard**(`authProvider`, `apiKeyProvider`): `UnifiedAuthGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:21](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L21)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L25)
 
 #### Parameters
 
@@ -41,13 +41,13 @@ Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:21](https://
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L26)
+Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:30](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts#L30)
 
 #### Parameters
 
 ##### context
 
-`ExecutionContext`
+[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)
 
 #### Returns
 
@@ -55,4 +55,4 @@ Defined in: [packages/auth-core/src/libs/guards/UnifiedAuthGuard.ts:26](https://
 
 #### Implementation of
 
-`Guard.canActivate`
+[`Guard`](/api/auth-core/src/interfaces/guard/).[`canActivate`](/api/auth-core/src/interfaces/guard/#canactivate)

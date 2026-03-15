@@ -5,9 +5,9 @@ prev: false
 title: "EventHandlerClass"
 ---
 
-> **EventHandlerClass**\<`T`\> = (...`args`) => [`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<`T`\>
+> **EventHandlerClass**\<`T`\> = [`Constructor`](/api/framework-context/src/type-aliases/constructor/)\<[`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<`T`\>\>
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventHandler.ts#L8)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:15](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventHandler.ts#L15)
 
 이벤트 핸들러 계약 타입과 핸들러 클래스 타입입니다.
 
@@ -16,13 +16,3 @@ Defined in: [packages/events-core/src/libs/EventHandler.ts:8](https://github.com
 ### T
 
 `T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
-
-## Parameters
-
-### args
-
-...`any`
-
-## Returns
-
-[`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<`T`\>

@@ -5,7 +5,7 @@ prev: false
 title: "ApiKeyStore"
 ---
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L4)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L4)
 
 Defines storage operations for API keys.
 
@@ -15,7 +15,7 @@ Defines storage operations for API keys.
 
 > **delete**(`id`): `Promise`\<`void`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L11)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L11)
 
 #### Parameters
 
@@ -33,7 +33,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:11](https://githu
 
 > **findById**(`id`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L5)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L5)
 
 #### Parameters
 
@@ -51,7 +51,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:5](https://github
 
 > **findByShortToken**(`shortToken`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L6)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L6)
 
 #### Parameters
 
@@ -69,7 +69,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:6](https://github
 
 > **listByTenant**(`tenantId`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)[]\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L10)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L10)
 
 #### Parameters
 
@@ -87,7 +87,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:10](https://githu
 
 > **revoke**(`id`): `Promise`\<`void`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L9)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L9)
 
 #### Parameters
 
@@ -105,7 +105,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:9](https://github
 
 > **save**(`key`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L7)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L7)
 
 #### Parameters
 
@@ -123,7 +123,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:7](https://github
 
 > **updateLastUsed**(`id`): `Promise`\<`void`\>
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L8)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyStore.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyStore.ts#L8)
 
 #### Parameters
 

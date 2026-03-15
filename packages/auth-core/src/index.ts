@@ -97,6 +97,11 @@ export type { AuthRequest } from './libs/interfaces/AuthRequest';
 export type { AuthUser } from './libs/interfaces/AuthUser';
 
 /**
+ * Guard interface and execution context type.
+ */
+export type { Guard, RouteExecutionContext } from './libs/interfaces/Guard';
+
+/**
  * Principal types used by guards and authorization.
  */
 export type { ApiKeyPrincipal, Principal, PrincipalType, UserPrincipal } from './libs/interfaces/Principal';

@@ -7,7 +7,7 @@ title: "EmbedManyParams"
 
 > **EmbedManyParams** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:194](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L194)
+Defined in: [packages/llm-core/src/libs/types.ts:194](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/types.ts#L194)
 
 배치 임베딩 파라미터
 
@@ -17,7 +17,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:194](https://github.com/croco-d
 
 > `optional` **model**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:203](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L203)
+Defined in: [packages/llm-core/src/libs/types.ts:203](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/types.ts#L203)
 
 모델 ID (선택)
 
@@ -27,6 +27,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:203](https://github.com/croco-d
 
 > **texts**: `string`[]
 
-Defined in: [packages/llm-core/src/libs/types.ts:198](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/types.ts#L198)
+Defined in: [packages/llm-core/src/libs/types.ts:198](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/types.ts#L198)
 
 임베딩할 텍스트 목록

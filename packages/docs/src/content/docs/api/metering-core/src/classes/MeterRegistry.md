@@ -5,7 +5,7 @@ prev: false
 title: "MeterRegistry"
 ---
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L14)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L14)
 
 Meter 정의 레지스트리
 
@@ -20,15 +20,19 @@ DB에서 Meter 정의를 로드하고 메모리 캐싱합니다.
 
 ### Constructor
 
-> **new MeterRegistry**(`repository`): `MeterRegistry`
+> **new MeterRegistry**(`repository`, `cacheTtlMs?`): `MeterRegistry`
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L20)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L23)
 
 #### Parameters
 
 ##### repository
 
 [`MeterRepository`](/api/metering-core/src/interfaces/meterrepository/)
+
+##### cacheTtlMs?
+
+`number` = `MeterRegistry.DEFAULT_CACHE_TTL_MS`
 
 #### Returns
 
@@ -40,7 +44,7 @@ Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:20](https://github
 
 > **clearCache**(): `void`
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:94](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L94)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:100](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L100)
 
 캐시 초기화 (테스트용)
 
@@ -54,7 +58,7 @@ Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:94](https://github
 
 > **get**(`tenantId`, `meterId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/) \| `null`\>
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:38](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L38)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:44](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L44)
 
 Meter 조회 (캐시 우선)
 
@@ -80,7 +84,7 @@ MeterDefinition 또는 null
 
 > **getByTenant**(`tenantId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)[]\>
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:78](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L78)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:88](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L88)
 
 테넌트별 모든 Meter 조회
 
@@ -100,7 +104,7 @@ Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:78](https://github
 
 > **getOrThrow**(`tenantId`, `meterId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)\>
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:58](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L58)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:68](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L68)
 
 Meter 조회 (없으면 throw)
 
@@ -128,7 +132,7 @@ InvalidMeterProblem
 
 > **loadAll**(): `Promise`\<`void`\>
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L25)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:31](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L31)
 
 앱 시작 시 모든 Meter 로드
 
@@ -142,7 +146,7 @@ Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:25](https://github
 
 > **register**(`options`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)\>
 
-Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:69](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeterRegistry.ts#L69)
+Defined in: [packages/metering-core/src/libs/MeterRegistry.ts:79](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeterRegistry.ts#L79)
 
 새 Meter 등록
 

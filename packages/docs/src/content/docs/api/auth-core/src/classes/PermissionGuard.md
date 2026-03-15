@@ -5,13 +5,13 @@ prev: false
 title: "PermissionGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/PermissionGuard.ts#L13)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:16](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/PermissionGuard.ts#L16)
 
 Guard for permission-based authorization checks.
 
 ## Implements
 
-- `Guard`\<`ExecutionContext`\>
+- [`Guard`](/api/auth-core/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)\>
 
 ## Constructors
 
@@ -19,7 +19,7 @@ Guard for permission-based authorization checks.
 
 > **new PermissionGuard**(`rbacEngine`): `PermissionGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/PermissionGuard.ts#L14)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:17](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/PermissionGuard.ts#L17)
 
 #### Parameters
 
@@ -37,13 +37,13 @@ Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:14](https://g
 
 > **canActivate**(`context`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:16](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/PermissionGuard.ts#L16)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:19](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/PermissionGuard.ts#L19)
 
 #### Parameters
 
 ##### context
 
-`ExecutionContext`
+[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)
 
 #### Returns
 
@@ -51,4 +51,4 @@ Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:16](https://g
 
 #### Implementation of
 
-`Guard.canActivate`
+[`Guard`](/api/auth-core/src/interfaces/guard/).[`canActivate`](/api/auth-core/src/interfaces/guard/#canactivate)

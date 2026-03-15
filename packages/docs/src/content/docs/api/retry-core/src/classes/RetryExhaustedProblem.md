@@ -5,7 +5,7 @@ prev: false
 title: "RetryExhaustedProblem"
 ---
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L3)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L3)
 
 Problem types raised when retry execution is blocked or fully exhausted.
 
@@ -19,7 +19,7 @@ Problem types raised when retry execution is blocked or fully exhausted.
 
 > **new RetryExhaustedProblem**(`message`, `lastError?`, `attempts?`, `methodName?`): `RetryExhaustedProblem`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L7)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L7)
 
 #### Parameters
 
@@ -53,7 +53,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:7](htt
 
 > `readonly` **attempts**: `number` = `0`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L10)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L10)
 
 ***
 
@@ -61,7 +61,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:10](ht
 
 > `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:5](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L5)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L5)
 
 HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
@@ -73,9 +73,9 @@ HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
 ### cause?
 
-> `optional` **cause**: `unknown`
+> `readonly` `optional` **cause**: `Error`
 
-Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
+Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Inherited from
 
@@ -87,7 +87,7 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 > `readonly` **code**: `"RETRY_EXHAUSTED"` = `'RETRY_EXHAUSTED'`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L4)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L4)
 
 도메인에서 문제를 식별하는 고유 코드입니다.
 
@@ -101,7 +101,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:4](htt
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L23)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L24)
 
 문제의 상세 설명입니다.
 
@@ -115,7 +115,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/c
 
 > `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L27)
 
 Problem Details 확장 필드입니다.
 
@@ -129,7 +129,7 @@ Problem Details 확장 필드입니다.
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L26)
 
 특정 에러 발생 인스턴스를 식별하는 URI입니다.
 
@@ -143,7 +143,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/c
 
 > `readonly` **lastError**: `Error` \| `null` = `null`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L9)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L9)
 
 ***
 
@@ -163,7 +163,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 > `readonly` `optional` **methodName**: `string`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L11)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L11)
 
 ***
 
@@ -195,7 +195,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L25)
 
 문제 유형 식별자 URI입니다.
 
@@ -233,7 +233,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L50)
+Defined in: [packages/problems-core/src/libs/Problem.ts:61](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L61)
 
 ##### Returns
 
@@ -251,7 +251,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L46)
+Defined in: [packages/problems-core/src/libs/Problem.ts:57](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L57)
 
 ##### Returns
 
@@ -267,7 +267,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/c
 
 > **getOriginalError**(): `Error`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:27](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L27)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:27](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L27)
 
 #### Returns
 
@@ -279,7 +279,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:27](ht
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L54)
+Defined in: [packages/problems-core/src/libs/Problem.ts:65](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L65)
 
 #### Returns
 
@@ -365,7 +365,7 @@ a();
 
 > `static` **fromContext**(`methodName`, `attempts`, `lastError`): `RetryExhaustedProblem`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:22](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L22)
+Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L22)
 
 #### Parameters
 

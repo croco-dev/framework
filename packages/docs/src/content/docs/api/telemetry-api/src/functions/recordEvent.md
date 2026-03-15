@@ -7,7 +7,7 @@ title: "recordEvent"
 
 > **recordEvent**(`name`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:44](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/telemetry-api/src/libs/span.ts#L44)
+Defined in: [packages/telemetry-api/src/libs/span.ts:42](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-api/src/libs/span.ts#L42)
 
 ## Parameters
 

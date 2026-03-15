@@ -7,7 +7,7 @@ title: "MeteringServiceOptions"
 
 > **MeteringServiceOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeteringService.ts#L11)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeteringService.ts#L11)
 
 MeteringService 생성 옵션 타입입니다.
 
@@ -21,7 +21,7 @@ MeteringService 인스턴스 생성 시 필요한 의존성들을 정의합니�
 
 > `optional` **eventBus**: [`EventBus`](/api/events-core/src/interfaces/eventbus/)
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:15](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeteringService.ts#L15)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:15](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeteringService.ts#L15)
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: [packages/metering-core/src/libs/MeteringService.ts:15](https://gith
 
 > **idempotencyManager**: [`IdempotencyManager`](/api/metering-core/src/classes/idempotencymanager/)
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeteringService.ts#L14)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeteringService.ts#L14)
 
 ***
 
@@ -37,7 +37,7 @@ Defined in: [packages/metering-core/src/libs/MeteringService.ts:14](https://gith
 
 > **meterRegistry**: [`MeterRegistry`](/api/metering-core/src/classes/meterregistry/)
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeteringService.ts#L12)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeteringService.ts#L12)
 
 ***
 
@@ -45,4 +45,4 @@ Defined in: [packages/metering-core/src/libs/MeteringService.ts:12](https://gith
 
 > **usageStorage**: [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/)
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/MeteringService.ts#L13)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/MeteringService.ts#L13)

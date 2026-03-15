@@ -7,7 +7,7 @@ title: "hasPermission"
 
 > **hasPermission**(`userPermissions`, `required`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:27](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/rbac/Permission.ts#L27)
+Defined in: [packages/auth-core/src/libs/rbac/Permission.ts:31](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/Permission.ts#L31)
 
 Permission utilities and permission type.
 

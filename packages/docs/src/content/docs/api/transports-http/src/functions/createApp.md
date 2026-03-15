@@ -7,7 +7,7 @@ title: "createApp"
 
 > **createApp**(`config`): [`CrocoApp`](/api/transports-http/src/classes/crocoapp/)
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:246](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/transports-http/src/libs/CrocoApp.ts#L246)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:94](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/CrocoApp.ts#L94)
 
 Croco HTTP 앱의 핵심 런타임 API입니다.
 

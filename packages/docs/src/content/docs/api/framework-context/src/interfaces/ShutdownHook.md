@@ -5,7 +5,7 @@ prev: false
 title: "ShutdownHook"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:120](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/types.ts#L120)
+Defined in: [packages/framework-context/src/libs/types.ts:120](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/types.ts#L120)
 
 Shutdown hook interface for graceful shutdown
 
@@ -13,11 +13,17 @@ Shutdown hook interface for graceful shutdown
 
 ### onShutdown()
 
-> **onShutdown**(): `Promise`\<`void`\>
+> **onShutdown**(`signal?`): `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:124](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/types.ts#L124)
+Defined in: [packages/framework-context/src/libs/types.ts:124](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/types.ts#L124)
 
 Called during graceful shutdown process
+
+#### Parameters
+
+##### signal?
+
+`AbortSignal`
 
 #### Returns
 

@@ -442,6 +442,47 @@ importers:
         specifier: ^4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(yaml@2.8.1)
 
+  packages/customer-health-core:
+    dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.2.0)
+
+  packages/customer-health-drizzle:
+    dependencies:
+      '@croco/customer-health-core':
+        specifier: workspace:*
+        version: link:../customer-health-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      drizzle-orm:
+        specifier: 0.44.2
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.11)
+
   packages/dataloader-core:
     dependencies:
       '@croco/framework-context':
@@ -525,6 +566,28 @@ importers:
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.2.0)
+
+  packages/entitlements-drizzle:
+    dependencies:
+      '@croco/billing-core':
+        specifier: workspace:*
+        version: link:../billing-core
+      '@croco/entitlements-core':
+        specifier: workspace:*
+        version: link:../entitlements-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
+    devDependencies:
+      '@croco/utils-tsconfig':
+        specifier: workspace:*
+        version: link:../shared/utils-tsconfig
+      drizzle-orm:
+        specifier: 0.44.2
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.6.1)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.11)
 
   packages/esbuild-plugin:
     devDependencies:
@@ -780,6 +843,40 @@ importers:
       '@croco/utils-tsconfig':
         specifier: workspace:*
         version: link:../shared/utils-tsconfig
+
+  packages/impersonation-core:
+    dependencies:
+      '@croco/audit-core':
+        specifier: workspace:*
+        version: link:../audit-core
+      '@croco/auth-core':
+        specifier: workspace:*
+        version: link:../auth-core
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/gid-core':
+        specifier: workspace:*
+        version: link:../gid-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+    devDependencies:
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.2.0)
 
   packages/integrations-posthog:
     dependencies:

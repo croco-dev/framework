@@ -5,7 +5,7 @@ prev: false
 title: "ProblemDetails"
 ---
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L10)
+Defined in: [packages/problems-core/src/libs/Problem.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L11)
 
 RFC 7807 Problem Details의 직렬화 타입과 옵션 타입입니다.
 
@@ -36,7 +36,7 @@ const details: ProblemDetails = {
 
 > **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:16](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L16)
+Defined in: [packages/problems-core/src/libs/Problem.ts:17](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L17)
 
 ***
 
@@ -44,7 +44,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:16](https://github.com/c
 
 > `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L14)
+Defined in: [packages/problems-core/src/libs/Problem.ts:15](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L15)
 
 ***
 
@@ -52,7 +52,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:14](https://github.com/c
 
 > `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:15](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L15)
+Defined in: [packages/problems-core/src/libs/Problem.ts:16](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L16)
 
 ***
 
@@ -60,7 +60,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:15](https://github.com/c
 
 > **status**: `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L13)
+Defined in: [packages/problems-core/src/libs/Problem.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L14)
 
 ***
 
@@ -68,7 +68,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:13](https://github.com/c
 
 > **title**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L12)
+Defined in: [packages/problems-core/src/libs/Problem.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L13)
 
 ***
 
@@ -76,4 +76,4 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:12](https://github.com/c
 
 > **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L11)
+Defined in: [packages/problems-core/src/libs/Problem.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L12)

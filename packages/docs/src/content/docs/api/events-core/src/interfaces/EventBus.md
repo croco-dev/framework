@@ -5,7 +5,7 @@ prev: false
 title: "EventBus"
 ---
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventBus.ts#L10)
+Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L10)
 
 이벤트 발행/구독 추상화와 구독 엔트리 타입입니다.
 
@@ -15,7 +15,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/cr
 
 > **clear**(): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventBus.ts#L14)
+Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L14)
 
 #### Returns
 
@@ -27,7 +27,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/cr
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventBus.ts#L11)
+Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L11)
 
 #### Parameters
 
@@ -45,7 +45,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/cr
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventBus.ts#L12)
+Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L12)
 
 #### Parameters
 
@@ -63,7 +63,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/cr
 
 > **unsubscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventBus.ts#L13)
+Defined in: [packages/events-core/src/libs/EventBus.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L13)
 
 #### Parameters
 

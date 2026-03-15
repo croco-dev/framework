@@ -5,7 +5,7 @@ prev: false
 title: "RedisUsageStorage"
 ---
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/RedisUsageStorage.ts#L13)
+Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/RedisUsageStorage.ts#L13)
 
 Redis 기반 UsageStorage 구현체
 
@@ -24,7 +24,7 @@ Redis 기반 UsageStorage 구현체
 
 > **new RedisUsageStorage**(`redis`): `RedisUsageStorage`
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:17](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/RedisUsageStorage.ts#L17)
+Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:43](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/RedisUsageStorage.ts#L43)
 
 #### Parameters
 
@@ -38,11 +38,33 @@ Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:17](https://gi
 
 ## Methods
 
+### checkAndRecordWithinQuota()
+
+> **checkAndRecordWithinQuota**(`options`): `Promise`\<[`AtomicQuotaCheckResult`](/api/metering-core/src/type-aliases/atomicquotacheckresult/)\>
+
+Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:85](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/RedisUsageStorage.ts#L85)
+
+#### Parameters
+
+##### options
+
+[`AtomicQuotaCheckOptions`](/api/metering-core/src/type-aliases/atomicquotacheckoptions/)
+
+#### Returns
+
+`Promise`\<[`AtomicQuotaCheckResult`](/api/metering-core/src/type-aliases/atomicquotacheckresult/)\>
+
+#### Implementation of
+
+[`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`checkAndRecordWithinQuota`](/api/metering-core/src/interfaces/usagestorage/#checkandrecordwithinquota)
+
+***
+
 ### fetchUsageRecords()
 
 > **fetchUsageRecords**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)[]\>
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:59](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/RedisUsageStorage.ts#L59)
+Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:105](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/RedisUsageStorage.ts#L105)
 
 Usage 데이터 조회 (배치 저장용)
 Redis에서 특정 기간의 usage records 조회
@@ -67,7 +89,7 @@ Redis에서 특정 기간의 usage records 조회
 
 > **getUsage**(`options`): `Promise`\<`number`\>
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/RedisUsageStorage.ts#L31)
+Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:57](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/RedisUsageStorage.ts#L57)
 
 Usage 조회 (특정 기간 합산)
 
@@ -91,7 +113,7 @@ Usage 조회 (특정 기간 합산)
 
 > **isIdempotent**(`tenantId`, `meterId`, `idempotencyKey`, `ttlSeconds`): `Promise`\<`boolean`\>
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:49](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/RedisUsageStorage.ts#L49)
+Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:75](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/RedisUsageStorage.ts#L75)
 
 Idempotency 체크 (SET NX 기반)
 
@@ -129,7 +151,7 @@ true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
 > **record**(`usage`): `Promise`\<`void`\>
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:19](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/RedisUsageStorage.ts#L19)
+Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:45](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/RedisUsageStorage.ts#L45)
 
 Usage 기록 (즉시 flush)
 Redis Sorted Set에 저장

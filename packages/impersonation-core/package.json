@@ -1,0 +1,46 @@
+{
+  "name": "@croco/impersonation-core",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": [
+    "dist/index.d.ts",
+    "dist/index.d.mts"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": [
+        "dist/index.d.ts",
+        "dist/index.d.mts"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/auth-core": "workspace:*",
+    "@croco/audit-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/events-core": "workspace:*",
+    "@croco/gid-core": "workspace:*",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ]
+}

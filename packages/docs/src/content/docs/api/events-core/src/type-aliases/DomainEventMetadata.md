@@ -7,7 +7,7 @@ title: "DomainEventMetadata"
 
 > **DomainEventMetadata** = `object`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L4)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L10)
 
 도메인 이벤트에 첨부할 수 있는 메타데이터 타입입니다.
 
@@ -19,6 +19,6 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:4](https://github.com/
 
 ### traceContext?
 
-> `optional` **traceContext**: [`TraceInfo`](/api/telemetry-api/src/type-aliases/traceinfo/)
+> `optional` **traceContext**: [`EventTraceContext`](/api/events-core/src/type-aliases/eventtracecontext/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L6)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L12)

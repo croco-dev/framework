@@ -5,7 +5,7 @@ prev: false
 title: "LlmStructuredOutputProblem"
 ---
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:47](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L47)
+Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:47](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L47)
 
 RFC 7807 Problem Details 형식을 제공하는 추상 에러 클래스입니다.
 
@@ -47,7 +47,7 @@ class UserNotFoundProblem extends Problem {
 
 > **new LlmStructuredOutputProblem**(`message`, `cause?`): `LlmStructuredOutputProblem`
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:50](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L50)
+Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:50](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L50)
 
 #### Parameters
 
@@ -73,7 +73,7 @@ Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:50](https:
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L22)
+Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L23)
 
 HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
@@ -85,9 +85,9 @@ HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
 ### cause?
 
-> `optional` **cause**: `unknown`
+> `readonly` `optional` **cause**: `Error`
 
-Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
+Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Inherited from
 
@@ -99,7 +99,7 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L21)
+Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L22)
 
 도메인에서 문제를 식별하는 고유 코드입니다.
 
@@ -113,7 +113,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/c
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L23)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L24)
 
 문제의 상세 설명입니다.
 
@@ -127,7 +127,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/c
 
 > `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L27)
 
 Problem Details 확장 필드입니다.
 
@@ -141,7 +141,7 @@ Problem Details 확장 필드입니다.
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L26)
 
 특정 에러 발생 인스턴스를 식별하는 URI입니다.
 
@@ -191,7 +191,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L25)
 
 문제 유형 식별자 URI입니다.
 
@@ -205,7 +205,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 
 > `readonly` `static` **CODE**: `"STRUCTURED_OUTPUT_ERROR"` = `'STRUCTURED_OUTPUT_ERROR'`
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:48](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L48)
+Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:48](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L48)
 
 ***
 
@@ -237,7 +237,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L50)
+Defined in: [packages/problems-core/src/libs/Problem.ts:61](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L61)
 
 ##### Returns
 
@@ -255,7 +255,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:50](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L46)
+Defined in: [packages/problems-core/src/libs/Problem.ts:57](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L57)
 
 ##### Returns
 
@@ -271,7 +271,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:46](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:54](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/Problem.ts#L54)
+Defined in: [packages/problems-core/src/libs/Problem.ts:65](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L65)
 
 #### Returns
 

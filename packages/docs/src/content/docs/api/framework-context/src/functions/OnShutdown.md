@@ -7,7 +7,7 @@ title: "OnShutdown"
 
 > **OnShutdown**(): `MethodDecorator` & `ClassDecorator`
 
-Defined in: [packages/framework-context/src/libs/decorators/OnShutdown.ts:47](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/decorators/OnShutdown.ts#L47)
+Defined in: [packages/framework-context/src/libs/decorators/OnShutdown.ts:47](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/decorators/OnShutdown.ts#L47)
 
 ## Returns
 

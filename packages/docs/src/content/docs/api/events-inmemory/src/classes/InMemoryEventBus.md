@@ -5,7 +5,7 @@ prev: false
 title: "InMemoryEventBus"
 ---
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L9)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L9)
 
 `@croco/events-core`의 EventBus 인터페이스를 인메모리로 구현한 EventBus입니다.
 
@@ -29,7 +29,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:9](https://gi
 
 > **clear**(): `void`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:119](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L119)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:177](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L177)
 
 #### Returns
 
@@ -45,7 +45,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:119](https://
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L13)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L13)
 
 #### Parameters
 
@@ -67,7 +67,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:13](https://g
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:111](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L111)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:169](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L169)
 
 #### Parameters
 
@@ -89,7 +89,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:111](https://
 
 > **unsubscribe**(`subscription`): `void`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:115](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L115)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:173](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L173)
 
 #### Parameters
 

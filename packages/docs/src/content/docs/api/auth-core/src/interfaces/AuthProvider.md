@@ -5,7 +5,7 @@ prev: false
 title: "AuthProvider"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L3)
 
 Contract for resolving authenticated user identities.
 
@@ -21,7 +21,7 @@ Contract for resolving authenticated user identities.
 
 > **authenticate**(`request`): `Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/) \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L4)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L4)
 
 #### Parameters
 

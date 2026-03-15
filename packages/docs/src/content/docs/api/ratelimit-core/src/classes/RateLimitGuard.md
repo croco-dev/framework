@@ -5,7 +5,7 @@ prev: false
 title: "RateLimitGuard"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:35](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L35)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:39](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L39)
 
 Guard that enforces rate limiting on decorated methods.
 Reads metadata from
@@ -24,7 +24,7 @@ decorator and checks against RateLimiter.
 
 > **new RateLimitGuard**(`rateLimiter`): `RateLimitGuard`
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:36](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L36)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:40](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L40)
 
 #### Parameters
 
@@ -42,7 +42,7 @@ Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:36](https
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:38](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L38)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:42](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L42)
 
 #### Parameters
 

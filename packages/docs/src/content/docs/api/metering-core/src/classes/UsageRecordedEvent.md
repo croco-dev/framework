@@ -5,7 +5,7 @@ prev: false
 title: "UsageRecordedEvent"
 ---
 
-Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L3)
+Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L3)
 
 사용량 기록 시 발행되는 도메인 이벤트입니다.
 
@@ -35,7 +35,7 @@ eventBus.publish(new UsageRecordedEvent({
 
 > **new UsageRecordedEvent**(`tenantId`, `meterId`, `value`, `idempotencyKey`, `metadata?`): `UsageRecordedEvent`
 
-Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:6](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L6)
+Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L6)
 
 #### Parameters
 
@@ -73,7 +73,7 @@ Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:6](htt
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L12)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L18)
 
 #### Inherited from
 
@@ -85,7 +85,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:12](https://github.com
 
 > `readonly` **idempotencyKey**: `string`
 
-Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L10)
+Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L10)
 
 ***
 
@@ -93,7 +93,7 @@ Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:10](ht
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L14)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L20)
 
 #### Inherited from
 
@@ -105,7 +105,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:14](https://github.com
 
 > `readonly` **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L8)
+Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L8)
 
 ***
 
@@ -113,7 +113,7 @@ Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:8](htt
 
 > `readonly` **tenantId**: `string`
 
-Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:7](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L7)
+Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L7)
 
 ***
 
@@ -121,7 +121,7 @@ Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:7](htt
 
 > `readonly` **timestamp**: `Date`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/DomainEvent.ts#L13)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L19)
 
 #### Inherited from
 
@@ -133,7 +133,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:13](https://github.com
 
 > `readonly` **value**: `number`
 
-Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L9)
+Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L9)
 
 ***
 
@@ -141,7 +141,7 @@ Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:9](htt
 
 > `static` **eventName**: `string` = `'metering.usage_recorded'`
 
-Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:4](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L4)
+Defined in: [packages/metering-core/src/libs/events/UsageRecordedEvent.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/events/UsageRecordedEvent.ts#L4)
 
 #### Overrides
 

@@ -7,7 +7,7 @@ title: "getMeteredMetadata"
 
 > **getMeteredMetadata**(`target`, `propertyKey`): [`MeteredMetadata`](/api/metering-core/src/type-aliases/meteredmetadata/) \| `undefined`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:116](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/decorators/Metered.ts#L116)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:130](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/decorators/Metered.ts#L130)
 
 메서드에서 Metered 메타데이터 조회
 

@@ -5,7 +5,7 @@ prev: false
 title: "Context"
 ---
 
-Defined in: [packages/framework-context/src/libs/Context.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L14)
+Defined in: [packages/framework-context/src/libs/Context.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L13)
 
 요청 단위 컨텍스트를 실행하고 조회하는 AsyncLocalStorage 기반 유틸리티 클래스입니다.
 
@@ -39,7 +39,7 @@ const requestId = await Context.run({ requestId: 'req-123' }, async () => {
 
 > `static` **get**(): [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) \| `null`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:26](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L26)
+Defined in: [packages/framework-context/src/libs/Context.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L25)
 
 #### Returns
 
@@ -51,9 +51,9 @@ Defined in: [packages/framework-context/src/libs/Context.ts:26](https://github.c
 
 > `static` **getActiveSpanId**(): `string` \| `null`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:78](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L78)
+Defined in: [packages/framework-context/src/libs/Context.ts:69](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L69)
 
-Get active span ID from OpenTelemetry context
+Framework context does not resolve span IDs directly.
 
 #### Returns
 
@@ -65,10 +65,9 @@ Get active span ID from OpenTelemetry context
 
 > `static` **getActiveTraceId**(): `string` \| `null`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:63](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L63)
+Defined in: [packages/framework-context/src/libs/Context.ts:61](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L61)
 
-Get active trace ID from OpenTelemetry context
-Falls back to RequestContext.traceId for propagation
+Get active trace ID from request context propagation
 
 #### Returns
 
@@ -80,7 +79,7 @@ Falls back to RequestContext.traceId for propagation
 
 > `static` **getCache**(): `Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\> \| `undefined`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:55](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L55)
+Defined in: [packages/framework-context/src/libs/Context.ts:54](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L54)
 
 #### Returns
 
@@ -92,7 +91,7 @@ Defined in: [packages/framework-context/src/libs/Context.ts:55](https://github.c
 
 > `static` **getCreatedAt**(): `number` \| `null`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:50](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L50)
+Defined in: [packages/framework-context/src/libs/Context.ts:49](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L49)
 
 #### Returns
 
@@ -104,7 +103,7 @@ Defined in: [packages/framework-context/src/libs/Context.ts:50](https://github.c
 
 > `static` **getCurrentUser**(): `UserContext` \| `null` \| `undefined`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:36](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L36)
+Defined in: [packages/framework-context/src/libs/Context.ts:35](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L35)
 
 #### Returns
 
@@ -116,7 +115,7 @@ Defined in: [packages/framework-context/src/libs/Context.ts:36](https://github.c
 
 > `static` **getRequestId**(): `string` \| `null`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L31)
+Defined in: [packages/framework-context/src/libs/Context.ts:30](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L30)
 
 #### Returns
 
@@ -128,7 +127,7 @@ Defined in: [packages/framework-context/src/libs/Context.ts:31](https://github.c
 
 > `static` **getTenantId**(): `string` \| `null`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:41](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L41)
+Defined in: [packages/framework-context/src/libs/Context.ts:40](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L40)
 
 #### Returns
 
@@ -140,7 +139,7 @@ Defined in: [packages/framework-context/src/libs/Context.ts:41](https://github.c
 
 > `static` **isActive**(): `boolean`
 
-Defined in: [packages/framework-context/src/libs/Context.ts:46](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L46)
+Defined in: [packages/framework-context/src/libs/Context.ts:45](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L45)
 
 #### Returns
 
@@ -152,7 +151,7 @@ Defined in: [packages/framework-context/src/libs/Context.ts:46](https://github.c
 
 > `static` **run**\<`T`\>(`context`, `fn`): `T` \| `Promise`\<`T`\>
 
-Defined in: [packages/framework-context/src/libs/Context.ts:17](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L17)
+Defined in: [packages/framework-context/src/libs/Context.ts:16](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L16)
 
 #### Type Parameters
 
@@ -180,7 +179,7 @@ Defined in: [packages/framework-context/src/libs/Context.ts:17](https://github.c
 
 > `static` **runWithMiddleware**\<`T`\>(`context`, `middlewares`, `hooks`, `fn`): `Promise`\<`T`\>
 
-Defined in: [packages/framework-context/src/libs/Context.ts:93](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/framework-context/src/libs/Context.ts#L93)
+Defined in: [packages/framework-context/src/libs/Context.ts:78](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/Context.ts#L78)
 
 Run a function with middleware chain and lifecycle hooks
 Execution order: onRequestStart -> middleware chain -> fn -> onRequestEnd

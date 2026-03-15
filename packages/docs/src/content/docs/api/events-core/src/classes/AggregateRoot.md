@@ -5,7 +5,7 @@ prev: false
 title: "AggregateRoot"
 ---
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:3](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/AggregateRoot.ts#L3)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/AggregateRoot.ts#L3)
 
 도메인 이벤트를 수집하고 발행할 수 있는 Aggregate Root 추상 클래스입니다.
 
@@ -25,7 +25,7 @@ Defined in: [packages/events-core/src/libs/AggregateRoot.ts:3](https://github.co
 
 > **clearDomainEvents**(): `void`
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:20](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/AggregateRoot.ts#L20)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:20](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/AggregateRoot.ts#L20)
 
 #### Returns
 
@@ -37,7 +37,7 @@ Defined in: [packages/events-core/src/libs/AggregateRoot.ts:20](https://github.c
 
 > **getDomainEvents**(): readonly [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/AggregateRoot.ts#L10)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/AggregateRoot.ts#L10)
 
 #### Returns
 
@@ -49,7 +49,7 @@ readonly [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
 > **hasDomainEvents**(): `boolean`
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:24](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/AggregateRoot.ts#L24)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:24](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/AggregateRoot.ts#L24)
 
 #### Returns
 
@@ -61,7 +61,7 @@ Defined in: [packages/events-core/src/libs/AggregateRoot.ts:24](https://github.c
 
 > **pullDomainEvents**(): readonly [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
-Defined in: [packages/events-core/src/libs/AggregateRoot.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/AggregateRoot.ts#L14)
+Defined in: [packages/events-core/src/libs/AggregateRoot.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/AggregateRoot.ts#L14)
 
 #### Returns
 

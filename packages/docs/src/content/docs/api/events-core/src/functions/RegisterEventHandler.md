@@ -5,17 +5,23 @@ prev: false
 title: "RegisterEventHandler"
 ---
 
-> **RegisterEventHandler**(`eventClass`, `options?`): \<`T`\>(`f`) => `T`
+> **RegisterEventHandler**\<`TArgs`\>(`eventClass`, `options?`): \<`T`\>(`f`) => `void`
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/events-core/src/libs/EventHandler.ts#L10)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventHandler.ts#L25)
 
 이벤트 타입과 핸들러를 연결하는 클래스 데코레이터입니다.
+
+## Type Parameters
+
+### TArgs
+
+`TArgs` *extends* `unknown`[]
 
 ## Parameters
 
 ### eventClass
 
-(...`args`) => [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`DomainEventClass`\<`TArgs`\>
 
 ### options?
 
@@ -25,7 +31,7 @@ Defined in: [packages/events-core/src/libs/EventHandler.ts:10](https://github.co
 
 ## Returns
 
-> \<`T`\>(`f`): `T`
+> \<`T`\>(`f`): `void`
 
 ### Type Parameters
 
@@ -41,4 +47,4 @@ Defined in: [packages/events-core/src/libs/EventHandler.ts:10](https://github.co
 
 ### Returns
 
-`T`
+`void`

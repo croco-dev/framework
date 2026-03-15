@@ -7,7 +7,7 @@ title: "ProblemCategoryMapper"
 
 > `const` **ProblemCategoryMapper**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L31)
+Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:31](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L31)
 
 ProblemCategory를 HTTP 응답용 status/title로 변환하는 매퍼입니다.
 

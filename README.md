@@ -6,7 +6,15 @@ Croco는 AWS Lambda와 API Gateway를 1급 시민(First-class Citizen)으로 지
 
 ---
 
-## 🚀 왜 Croco인가요?
+## ✨ 한 줄 소개
+
+AWS Lambda에 최적화된 Node.js 기반 **Opinionated(주견이 뚜렷한)** 프레임워크입니다. DDD(Domain-Driven Design) 패턴과 강력한 타입 안전성을 통해 빠르고 견고하게 서비스를 구축할 수 있습니다.
+
+---
+
+## 🎯 왜 Croco인가?
+
+Croco는 세계 최초의 **SaaS 비즈니스 로직 내장 TypeScript 프레임워크**입니다. 빌링, 메트릭(MRR/LTV/Churn), 멀티테넌시, 멤버십이 프레임워크 레벨에서 제공됩니다.
 
 기존의 Node.js 프레임워크들은 유연하지만, 대규모 프로젝트에서 아키텍처의 일관성을 유지하기 어렵습니다. Croco는 다음과 같은 문제를 해결합니다:
 
@@ -14,6 +22,18 @@ Croco는 AWS Lambda와 API Gateway를 1급 시민(First-class Citizen)으로 지
 - **서버리스 최적화**: 콜드 스타트를 최소화하고 AWS Lambda 환경에 최적화된 실행 어댑터를 제공합니다.
 - **복잡한 도메인 로직**: 이벤트 주도 아키텍처(EDA)와 트랜잭션 관리(UoW)가 기본 내장되어 있습니다.
 - **강력한 타입 안전성**: 코드 정의만으로 OpenAPI, GraphQL 스키마, gRPC 계약을 자동 생성합니다.
+
+### 🆚 비교
+
+| | Croco | NestJS | Hono | tRPC |
+|---|---|---|---|---|
+| Lambda 콜드스타트 | <100ms 🟢 | 500-2000ms 🔴 | <50ms 🟢 | N/A |
+| DI 컨테이너 | ✅ | ✅ | ❌ | ❌ |
+| DDD 이벤트 | ✅ 내장 | ❌ 별도 | ❌ | ❌ |
+| SaaS 모듈 (빌링/메트릭) | ✅ 내장 | ❌ | ❌ | ❌ |
+| LLM 통합 | ✅ 데코레이터 | ❌ | ❌ | ❌ |
+| 번들 사이즈 | 경량 | 무거움 | 14KB | 경량 |
+| 타입 안전성 | 엄격 | 느슨 | 보통 | 엄격 |
 
 ---
 
@@ -27,13 +47,28 @@ flowchart TD
 
   frameworkContext --> protocolsRest[protocols-rest]
   frameworkContext --> protocolsGraphql[protocols-graphql]
-  frameworkContext --> integrationsSlack[integrations-slack]
 
   frameworkContext --> transportsHttp[transports-http]
-  frameworkContext --> transportsWebsocket[transports-websocket]
+  frameworkContext --> transportsGraphql[transports-graphql]
 
   protocolsRest --> transportsHttp
-  transportsWebsocket --> protocolsGraphql
+  protocolsGraphql --> transportsGraphql
+```
+
+```mermaid
+graph LR
+  subgraph "💰 SaaS Business"
+    billing[billing-core] --> metrics[metrics-core]
+    membership[membership-core] --> invitation[invitation-core]
+    tenant[tenant-core] --> membership
+    metering[metering-core] --> billing
+    auth[auth-core] --> access[access-core]
+    onboarding[onboarding-core]
+    entitlements[entitlements-core] --> metering
+    entitlements --> billing
+    customer-health[customer-health-core] --> metering
+    impersonation[impersonation-core] --> auth
+  end
 ```
 
 ### 1. framework (기반 계층)
@@ -44,20 +79,19 @@ flowchart TD
 비즈니스 로직의 인터페이스를 정의합니다.
 - **protocols-rest**: `@Controller`, `@Get` 등 REST API 정의를 위한 데코레이터를 제공합니다.
 - **protocols-graphql**: **Yoga** 런타임을 활용한 Code-first GraphQL 정의를 지원합니다.
-- **protocols-grpc**: (계획 중) gRPC 서비스 계약 정의를 지원합니다.
 
 ### 3. Transports (실행 계층)
 정의된 프로토콜을 실제로 실행하는 어댑터입니다.
 - **transports-http**: **Hono** 기반의 고성능 실행 엔진입니다. AWS Lambda (API Gateway v2) 핸들러 생성기를 내장하고 있습니다.
-- **transports-websocket**: 실시간 양방향 통신을 위한 유틸리티를 제공합니다.
+- **transports-graphql**: GraphQL 프로토콜을 실제 런타임에 연결하는 실행 어댑터를 제공합니다.
 
 ### 4. Integrations (통합 계층)
 외부 시스템과의 연동을 추상화합니다.
-- **integrations-slack**: **Slack Bolt**와 통합되어 Slack 앱 개발을 가속화합니다.
+- **integrations-posthog**: **PostHog**와 통합되어 제품 분석 이벤트 수집을 지원합니다.
 
 ---
 
-## 🛠 주요 기능
+## ⚡ 주요 기능
 
 ### 도메인 이벤트 (DDD)
 Aggregate Root에서 이벤트를 발행하고, 타입 안전한 핸들러에서 이를 처리합니다.
@@ -90,86 +124,275 @@ throw Problem.notFound('user/not-found', '사용자를 찾을 수 없습니다.'
 
 ---
 
-## ⚡️ Quick Start
+## 🚀 시작하기
 
-### 1. REST API (Hono + AWS Lambda)
+### 설치
+
+```bash
+# 모노레포 클론
+git clone https://github.com/croco-dev/framework.git
+cd framework
+
+# 의존성 설치
+pnpm install
+
+# 빌드
+pnpm build
+```
+
+### 빠른 시작 - HTTP API 서버
+
 ```typescript
+import { createApp, Controller, Get, Post, Body } from '@croco/transports-http';
+import { Component } from '@croco/framework-context';
+import { Problem } from '@croco/problems-core';
+
+@Component()
 @Controller('/users')
 class UserController {
-  @Get('/:id')
-  async getUser(@Param('id') id: string) {
-    return { id, name: 'Croco' };
+  @Get('/')
+  async list() {
+    return [{ id: 1, name: 'John' }];
+  }
+
+  @Post('/')
+  async create(@Body() body: { name: string }) {
+    return { id: 2, name: body.name };
   }
 }
 
-// lambda.ts
-export const handler = createHttpHandler({
-  controllers: [UserController]
+const app = createApp({
+  controllers: [UserController],
 });
+
+export const handler = app.toLambdaHandler(); // AWS Lambda
+// app.listen(3000); // Node.js 서버
 ```
 
-### 2. GraphQL (Yoga + WebSocket)
+### 핵심 패키지 사용법
+
+#### 1. 의존성 주입 (@croco/framework-context)
+
 ```typescript
-@ObjectType()
-class User {
-  @Field() id: string;
+import { Component, Container } from '@croco/framework-context';
+
+@Component()
+class UserService {
+  async getUser(id: string) {
+    return { id, name: 'John' };
+  }
 }
 
-@Resolver(User)
-class UserResolver {
-  @Query(() => User)
-  async me() { return { id: '1' }; }
-}
+// 자동 singleton 등록, 생성자 주입 지원
 ```
 
-### 3. Slack Integration (Bolt)
+#### 2. 에러 처리 (@croco/problems-core)
+
 ```typescript
-@SlackAction('button_click')
-class ActionHandler {
-  async handle({ ack, body }) {
-    await ack();
-    // 처리 로직
+import { Problem, NotFoundProblem } from '@croco/problems-core';
+
+// RFC 7807 Problem 기반 에러
+throw new NotFoundProblem('User', userId);
+
+// 자동으로 404 + application/problem+json 응답
+```
+
+#### 3. 재시도 & 서킷브레이커 (@croco/retry-core)
+
+```typescript
+import { Retryable, Recover } from '@croco/retry-core';
+
+class ExternalApiService {
+  @Retryable({ maxAttempts: 3, backoff: 'exponential' })
+  async fetchData(): Promise<Data> {
+    return fetch('https://api.example.com/data');
+  }
+
+  @Recover
+  async recoverFromFailure(error: Error): Promise<Data> {
+    return { cached: true };
   }
 }
 ```
 
+#### 4. 분산 추적 (@croco/telemetry-api)
+
+```typescript
+import { Trace } from '@croco/telemetry-api';
+
+class OrderService {
+  @Trace({ name: 'order.create' })
+  async createOrder(dto: CreateOrderDto) {
+    // 자동으로 OpenTelemetry Span 생성
+  }
+}
+```
+
+## 🗺️ 로드맵 — SaaS-first를 향하여
+
+Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기능들입니다.
+
+### 🏗️ Phase 1: 인프라 강화 (Q2 2025)
+
+- [ ] **billing-core**: 다중 통화, 세금 계산, 프리 티어 지원
+- [ ] **subscription-drizzle**: Stripe + Drizzle 통합 구독 관리
+- [ ] **metering-drizzle**: Redis + Drizzle 하이브리드 사용량 추적
+
+### 🔐 Phase 2: 인증/인가 (Q3 2025)
+
+- [ ] **auth-clerk**: Clerk 통합 (소셜 로그인, 조직 관리)
+- [ ] **auth-better-auth**: Better Auth + Drizzle 셀프 호스팅 인증
+- [ ] **access-drizzle**: Fine-grained ACL 구현체
+
+### 🚀 Phase 3: 서버리스 확장 (Q4 2025)
+
+- [ ] **batch-qstash**: QStash 기반 비동기 배치 처리
+- [ ] **tasks-qstash**: QStash 태스크 큐
+- [ ] **notification-email**: Resend 이메일 발송
+
+### 🧠 Phase 4: AI/LLM (2026)
+
+- [ ] **llm-agent**: 에이전트 패턴, 도구 호출, 멀티턴 대화
+- [ ] **llm-rag**: 벡터 DB 통합, 문서 검색 증강
+- [ ] **llm-evals**: LLM 평가 프레임워크
+
 ---
 
-## 📦 패키지 현황
-
-현재 Croco 프레임워크는 모노레포로 구성되어 있으며, 다음 패키지들이 구현되어 있습니다.
-
-| 패키지 | 상태 | 설명 |
-| :--- | :--- | :--- |
-| `@croco/events-core` | ✅ 구현 | 도메인 이벤트 추상화 및 발행기 |
-| `@croco/events-inmemory` | ✅ 구현 | 인메모리 이벤트 버스 구현체 |
-| `@croco/tx-core` | ✅ 구현 | 트랜잭션 관리 코어 (`AsyncLocalStorage` 기반) |
-| `@croco/tx-drizzle` | ✅ 구현 | Drizzle ORM용 트랜잭션 어댑터 |
-| `@croco/problems-core` | ✅ 구현 | RFC 7807 표준 에러 처리 |
-| `@croco/framework-context` | ✅ 구현 | 공통 Context 인터페이스, DI 컨테이너, 메타데이터 저장소 |
-| `@croco/gid-core` | ✅ 구현 | Type-safe prefixed ID generation using ULID |
-| `@croco/esbuild-plugin` | ✅ 구현 | esbuild 빌드 플러그인 |
-| `@croco/utils-node` | ⚠️ Deprecated | Node.js 유틸리티 (더 이상 사용하지 않음) |
-| `protocols-*` | 🚧 계획 | REST/GraphQL/gRPC 인터페이스 정의 |
-| `transports-*` | 🚧 계획 | Hono 기반 Lambda 어댑터 및 WebSocket |
-| `integrations-*` | 🚧 계획 | 외부 시스템 통합 (Slack 등) |
+**기여 환영**: 각 패키지의 GitHub Issues에서 `good first issue`를 확인하세요!
 
 ---
 
-## 🔧 구현 상세 (`src/libs/`)
+## 📦 패키지 카탈로그
 
-각 패키지의 핵심 구현 파일 구조입니다.
+### 🔧 Core Infrastructure
 
-| 패키지 | 주요 파일 |
-| :--- | :--- |
-| `events-core` | `DomainEvent.ts`, `EventBus.ts`, `AggregateRoot.ts` |
-| `events-inmemory` | `InMemoryEventBus.ts` |
-| `tx-core` | `TransactionContext.ts`, `UnitOfWork.ts` |
-| `tx-drizzle` | `DrizzleTransactionAdapter.ts` |
-| `problems-core` | `Problem.ts`, `ProblemDetails.ts`, `ProblemCategory.ts` |
-| `framework-context` | `Context.ts`, `Container.ts`, `MetadataStorage.ts` |
-| `gid-core` | `GID.ts`, `PrefixRegistry.ts` |
-| `esbuild-plugin` | `CrocoPlugin.ts` |
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `framework-context` | DI 컨테이너, 요청 컨텍스트(AsyncLocalStorage), 데코레이터 기반 컴포넌트 등록 | 🟢 |
+| `problems-core` | RFC 7807 Problem Details 기반 구조화된 에러 처리 | 🟢 |
+| `events-core` | 도메인 이벤트 발행/구독, EDA 기반 아키텍처 | 🟢 |
+| `events-inmemory` | 인메모리 이벤트 버스 구현체 | 🟡 |
+| `events-tx` | 트랜잭션 연동 이벤트 발행 (outbox 패턴) | 🟡 |
+| `tx-core` | AsyncLocalStorage 기반 Unit of Work 트랜잭션 관리 | 🟢 |
+| `tx-drizzle` | Drizzle ORM 트랜잭션 어댑터 | 🟢 |
+| `retry-core` | 재시도 정책, 지수 백오프, 서킷브레이커 | 🟢 |
+| `cache-core` | 캐시 추상화 레이어 | 🟡 |
+| `pagination-core` | 커서/오프셋 기반 페이지네이션 유틸리티 | 🟡 |
+| `dataloader-core` | N+1 문제 해결을 위한 배치 로딩 | 🟡 |
+| `repository-core` | 리포지토리 패턴 인터페이스 및 기본 구현 | 🟡 |
+| `gid-core` | ULID 기반 타입 안전 Prefix ID 생성 | 🟡 |
+| `health-core` | 헬스체크 엔드포인트 및 의존성 상태 확인 | 🟡 |
+
+### 💰 SaaS Business Logic
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `billing-core` | 구독, 주문, 결제 도메인 모델 + DDD 이벤트 | 🟢 |
+| `billing-polar` | Polar 결제 플랫폼 연동 (checkout, webhook) | 🟢 |
+| `metering-core` | @Meter/@Metered 데코레이터, 사용량 측정, Quota, Redis 집계, 멱등성 | 🟢 |
+| `metering-upstash` | Upstash Redis 미터링 구현체 | 🔴 |
+| `metrics-core` | SaaS 핵심 지표 계산 엔진 — MRR, LTV, Churn, NRR, GRR, Quick Ratio, Carrying Capacity | 🟢 |
+| `metrics-billing` | Billing → Metrics 자동 파이프라인 | 🔴 |
+| `entitlements-core` | 기능 사용권 관리 — Boolean/Metered/Static entitlement, Guard, Plan 매핑 | 🟡 |
+| `entitlements-drizzle` | ↳ Drizzle 구현체 (PlanEntitlementRegistry, BillingStoreSubscriptionProvider) | 🔴 |
+| `customer-health-core` | 테넌트 건강 점수 — Signal 수집, 가중 평균, 상태 전이 이벤트 | 🟡 |
+| `customer-health-drizzle` | ↳ Drizzle 구현체 (HealthScoreStore, SignalProvider 어댑터) | 🔴 |
+| `impersonation-core` | 관리자 대리 접속 — 세션 관리, Guard, 감사 추적 | 🟡 |
+| `membership-core` | 팀/조직 멤버십 관리, 역할 할당 | 🟢 |
+| `membership-drizzle` | ↳ Drizzle 구현체 | 🔴 |
+| `invitation-core` | 이메일/링크 기반 멤버 초대, 토큰 관리, 도메인 정책 | 🟢 |
+| `invitation-drizzle` | ↳ Drizzle 구현체 | 🔴 |
+| `tenant-core` | 멀티테넌시 컨텍스트, 테넌트 격리 | 🟡 |
+| `onboarding-core` | 사용자/팀 온보딩 단계 추적 | 🟡 |
+| `onboarding-drizzle` | ↳ Drizzle 구현체 | 🔴 |
+| `ratelimit-core` | Rate Limiting 추상화 (고정 윈도우, 슬라이딩 윈도우, 토큰 버킷) | 🟢 |
+| `ratelimit-upstash` | Upstash Rate Limit 구현체 | 🔴 |
+
+### 🧠 AI / LLM
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `llm-core` | @Llm 데코레이터 기반 LLM 통합 — 생성, 스트리밍, 도구 호출, 임베딩, 구조화 출력 | 🟢 |
+| `llm-metering` | @AiMetered 데코레이터, LLM 토큰 사용량 추적 및 비용 계산 | 🟢 |
+
+### 🔍 Search & Data
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `search-core` | @Searchable 데코레이터, 검색 엔진 추상화, 한국어 초성/로마자 변환 | 🟢 |
+| `search-drizzle` | Drizzle 기반 DB 검색 구현체 | 🔴 |
+| `search-meilisearch` | Meilisearch 전문 검색 연동 | 🔴 |
+| `storage-core` | 파일 스토리지 추상화 (업로드, 다운로드, 삭제) | 🟡 |
+| `storage-r2` | Cloudflare R2 스토리지 구현체 | 🟡 |
+| `storage-cloudflare` | Cloudflare Images 연동 | 🔴 |
+| `storage-cloudinary` | Cloudinary 이미지/동영상 관리 | 🔴 |
+
+### 📊 Analytics & Observability
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `telemetry-api` | @Trace 데코레이터, withSpan, 분산 추적 API | 🟢 |
+| `telemetry-sdk-node` | Node.js OpenTelemetry SDK 초기화, Lambda 프리셋 | 🟢 |
+| `audit-core` | @Auditable 데코레이터, 감사 로그 추상화 | 🟢 |
+| `audit-drizzle` | Drizzle 기반 감사 로그 저장소 | 🔴 |
+| `logging-core` | 구조화된 로깅, 컨텍스트 로그, 포맷터 추상화 | 🟢 |
+| `logging-pino` | Pino 고성능 JSON 로거 구현체 | 🟢 |
+| `metering-core` | 사용량 계량 추상화, @Metered 데코레이터 | 🟢 |
+| `metering-drizzle` | Drizzle 기반 계량 데이터 저장소 | 🔴 |
+| `analytics-core` | 이벤트 추적, 분석 어댑터 추상화 | 🔴 |
+
+### 🔐 Auth & Access Control
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `auth-core` | RBAC 엔진, @RequirePermission 데코레이터, Guard 패턴 | 🟢 |
+| `auth-drizzle` | ↳ Drizzle 기반 권한 저장소 | 🔴 |
+| `auth-clerk` | Clerk 인증 연동 | 🔴 |
+| `auth-firebase` | Firebase Auth 연동 | 🔴 |
+| `ratelimit-core` | 분산 레이트 리밋 추상화, @RateLimit 데코레이터 | 🟢 |
+| `ratelimit-redis` | Redis 기반 토큰 버킷/슬라이딩 윈도우 | 🔴 |
+| `impersonation-core` | 사용자 가장(Impersonation) 감사 로그, 제한 기능 차단 | 🟢 |
+
+### ⚡ Serverless & Runtime
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `lambda-core` | Lambda 핸들러 추상화, 타임아웃 가드 | 🟢 |
+| `lambda-powertools` | Lambda용 로깅/트레이싱/미터링 유틸리티 | 🟡 |
+| `lambda-secrets` | AWS Secrets Manager, SSM Parameter Store 연동 | 🟡 |
+| `lambda-sqs` | SQS 이벤트 처리, 배치 실패 핸들링 | 🟡 |
+| `lambda-s3` | S3 이벤트 처리, 객체 변환 | 🟡 |
+| `lambda-dynamodb` | DynamoDB 스트림 처리 | 🟡 |
+| `lambda-eventbridge` | EventBridge 이벤트 핸들러 | 🔴 |
+| `lambda-ses` | SES 이메일 수신 처리 | 🔴 |
+| `lambda-websocket` | API Gateway WebSocket 메시지 처리 | 🔴 |
+| `lambda-bedrock` | Bedrock 응답 스트리밍 어댑터 | 🔴 |
+| `lambda-cloudformation` | CloudFormation 커스텀 리소스 | 🔴 |
+| `cloudflare-workers` | Cloudflare Workers용 유틸리티 | 🔴 |
+
+### 📢 Notifications
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `notification-core` | 알림 추상화, 채널 라우팅, 템플릿 엔진 | 🔴 |
+| `notification-email` | 이메일 발송 (SES, SendGrid, Resend) | 🔴 |
+| `notification-slack` | Slack Bot, Webhook 알림 | 🔴 |
+| `notification-discord` | Discord Webhook 알림 | 🔴 |
+
+### 🛠️ Developer Tools
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `docs` | Starlight 기반 API 문서 사이트 | 🟡 |
+| `eslint-config` | 공유 ESLint 설정 (deprecated — Biome으로 마이그레이션) | ⚠️ |
+
+### ⚠️ Deprecated / Archived
+
+| 패키지 | 설명 | 상태 |
+|--------|------|------|
+| `integrations-slack` | Slack 통합 (notification-slack으로 대체) | ⚠️ |
+| `transports-websocket` | WebSocket 전송 (미완성) | ⚠️ |
+| `protocols-grpc` | gRPC 프로토콜 (미완성) | ⚠️ |
 
 ---
 
@@ -210,5 +433,5 @@ pnpm run deploy -- --otp <otp>
 
 ---
 
-## 📄 License
+## 📄 라이선스
 MIT License. Copyright (c) 2026 Croco Team.

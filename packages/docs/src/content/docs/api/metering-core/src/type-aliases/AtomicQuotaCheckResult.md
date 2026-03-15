@@ -7,7 +7,7 @@ title: "AtomicQuotaCheckResult"
 
 > **AtomicQuotaCheckResult** = `object`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:12](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L12)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L12)
 
 사용량 저장소의 원자적 quota 체크 계약과 저장소 인터페이스입니다.
 
@@ -21,7 +21,7 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:12](https://github.
 
 > **exceeded**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:13](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L13)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L13)
 
 ***
 
@@ -29,4 +29,4 @@ Defined in: [packages/metering-core/src/libs/UsageStorage.ts:13](https://github.
 
 > **newUsage**: `number`
 
-Defined in: [packages/metering-core/src/libs/UsageStorage.ts:14](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/UsageStorage.ts#L14)
+Defined in: [packages/metering-core/src/libs/UsageStorage.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageStorage.ts#L14)

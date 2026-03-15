@@ -5,13 +5,13 @@ prev: false
 title: "AuthGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:18](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/AuthGuard.ts#L18)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/AuthGuard.ts#L22)
 
 Guard for user authentication and authorization.
 
 ## Implements
 
-- `Guard`\<`ExecutionContext`\>
+- [`Guard`](/api/auth-core/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)\>
 
 ## Constructors
 
@@ -19,7 +19,7 @@ Guard for user authentication and authorization.
 
 > **new AuthGuard**(`authProvider`): `AuthGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:19](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/AuthGuard.ts#L19)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/AuthGuard.ts#L23)
 
 #### Parameters
 
@@ -37,13 +37,13 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:19](https://github.
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:21](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/auth-core/src/libs/guards/AuthGuard.ts#L21)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/AuthGuard.ts#L25)
 
 #### Parameters
 
 ##### context
 
-`ExecutionContext`
+[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)
 
 #### Returns
 
@@ -51,4 +51,4 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:21](https://github.
 
 #### Implementation of
 
-`Guard.canActivate`
+[`Guard`](/api/auth-core/src/interfaces/guard/).[`canActivate`](/api/auth-core/src/interfaces/guard/#canactivate)

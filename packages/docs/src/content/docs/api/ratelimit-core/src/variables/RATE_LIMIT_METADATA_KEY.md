@@ -7,7 +7,7 @@ title: "RATE_LIMIT_METADATA_KEY"
 
 > `const` **RATE\_LIMIT\_METADATA\_KEY**: *typeof* `RATE_LIMIT_METADATA_KEY`
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L10)
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L13)
 
 Metadata key for
 

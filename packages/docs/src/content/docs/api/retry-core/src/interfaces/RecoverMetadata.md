@@ -5,7 +5,7 @@ prev: false
 title: "RecoverMetadata"
 ---
 
-Defined in: [packages/retry-core/src/libs/Recover.ts:8](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Recover.ts#L8)
+Defined in: [packages/retry-core/src/libs/Recover.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Recover.ts#L10)
 
 Metadata stored for
 
@@ -19,7 +19,7 @@ decorated methods.
 
 > `optional` **exceptionType**: (...`args`) => `Error`
 
-Defined in: [packages/retry-core/src/libs/Recover.ts:10](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Recover.ts#L10)
+Defined in: [packages/retry-core/src/libs/Recover.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Recover.ts#L12)
 
 #### Parameters
 
@@ -37,4 +37,4 @@ Defined in: [packages/retry-core/src/libs/Recover.ts:10](https://github.com/croc
 
 > **methodName**: `string`
 
-Defined in: [packages/retry-core/src/libs/Recover.ts:9](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Recover.ts#L9)
+Defined in: [packages/retry-core/src/libs/Recover.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Recover.ts#L11)

@@ -7,7 +7,7 @@ title: "UsageRecord"
 
 > **UsageRecord** = `object`
 
-Defined in: [packages/metering-core/src/libs/types.ts:32](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L32)
+Defined in: [packages/metering-core/src/libs/types.ts:32](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L32)
 
 사용량 기록
 
@@ -17,7 +17,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:32](https://github.com/cro
 
 > **id**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:33](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L33)
+Defined in: [packages/metering-core/src/libs/types.ts:33](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L33)
 
 ***
 
@@ -25,7 +25,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:33](https://github.com/cro
 
 > **idempotencyKey**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:38](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L38)
+Defined in: [packages/metering-core/src/libs/types.ts:38](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L38)
 
 ***
 
@@ -33,7 +33,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:38](https://github.com/cro
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/metering-core/src/libs/types.ts:39](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L39)
+Defined in: [packages/metering-core/src/libs/types.ts:39](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L39)
 
 ***
 
@@ -41,7 +41,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:39](https://github.com/cro
 
 > **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:35](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L35)
+Defined in: [packages/metering-core/src/libs/types.ts:35](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L35)
 
 ***
 
@@ -49,7 +49,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:35](https://github.com/cro
 
 > **tenantId**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:34](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L34)
+Defined in: [packages/metering-core/src/libs/types.ts:34](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L34)
 
 ***
 
@@ -57,7 +57,7 @@ Defined in: [packages/metering-core/src/libs/types.ts:34](https://github.com/cro
 
 > **timestamp**: `Date`
 
-Defined in: [packages/metering-core/src/libs/types.ts:37](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L37)
+Defined in: [packages/metering-core/src/libs/types.ts:37](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L37)
 
 ***
 
@@ -65,4 +65,4 @@ Defined in: [packages/metering-core/src/libs/types.ts:37](https://github.com/cro
 
 > **value**: `number`
 
-Defined in: [packages/metering-core/src/libs/types.ts:36](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/metering-core/src/libs/types.ts#L36)
+Defined in: [packages/metering-core/src/libs/types.ts:36](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/types.ts#L36)

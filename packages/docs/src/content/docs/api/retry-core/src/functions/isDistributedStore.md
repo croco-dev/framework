@@ -7,7 +7,7 @@ title: "isDistributedStore"
 
 > **isDistributedStore**(`_store`): `_store is CircuitBreakerStateStore`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:106](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/CircuitBreakerState.ts#L106)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:106](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/CircuitBreakerState.ts#L106)
 
 :::caution[Deprecated]
 All CircuitBreakerStateStore instances are now distributed-capable.

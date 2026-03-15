@@ -91,14 +91,25 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         payload.input = payloadInput;
       }
 
+      const impersonation =
+        context && 'impersonation' in context
+          ? ((context as Record<string, unknown>).impersonation as { impersonatorId: string; targetUserId: string })
+          : undefined;
+
       const auditEntryBase: Omit<AuditLogEntry, 'id' | 'createdAt' | 'payload'> = {
         tenantId: context?.tenantId ?? 'unknown',
-        actorId: context?.user?.id ?? 'unknown',
+        actorId: impersonation?.impersonatorId ?? context?.user?.id ?? 'unknown',
         action: options.action,
         resourceType: options.resourceType,
         resourceId: toResourceId(resourceIdValue, args),
         diff: extractDiff(payloadInput),
-        metadata: {},
+        metadata: impersonation
+          ? {
+              impersonation: true,
+              impersonatorId: impersonation.impersonatorId,
+              targetUserId: impersonation.targetUserId,
+            }
+          : {},
       };
 
       try {

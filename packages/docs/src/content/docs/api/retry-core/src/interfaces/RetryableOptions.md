@@ -5,7 +5,7 @@ prev: false
 title: "RetryableOptions"
 ---
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:17](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L17)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:17](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L17)
 
 Options for
 
@@ -23,7 +23,7 @@ decorator.
 
 > `optional` **backoff**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:19](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L19)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:19](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L19)
 
 Backoff configuration
 
@@ -33,7 +33,7 @@ Backoff configuration
 
 > `optional` **backoffPolicy**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L25)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L25)
 
 Custom backoff policy
 
@@ -43,7 +43,7 @@ Custom backoff policy
 
 > `optional` **circuitBreaker**: `object`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:40](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L40)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:40](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L40)
 
 CircuitBreaker options
 
@@ -65,11 +65,29 @@ CircuitBreaker options
 
 ***
 
+### circuitIdResolver()?
+
+> `optional` **circuitIdResolver**: (`context`) => `string`
+
+Defined in: [packages/retry-core/src/libs/Retryable.ts:47](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L47)
+
+#### Parameters
+
+##### context
+
+[`CircuitIdResolverContext`](/api/retry-core/src/type-aliases/circuitidresolvercontext/)
+
+#### Returns
+
+`string`
+
+***
+
 ### lambdaTimeoutReserveMs?
 
 > `optional` **lambdaTimeoutReserveMs**: `number`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:48](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L48)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:50](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L50)
 
 Reserve time for Lambda timeout (ms)
 
@@ -79,7 +97,7 @@ Reserve time for Lambda timeout (ms)
 
 > `optional` **listeners**: [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/)[]
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:37](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L37)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:37](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L37)
 
 Custom retry listeners
 
@@ -89,7 +107,7 @@ Custom retry listeners
 
 > `optional` **maxAttempts**: `number`
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/RetryPolicy.ts#L31)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:31](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/RetryPolicy.ts#L31)
 
 Maximum attempts (default: 3)
 
@@ -103,7 +121,7 @@ Maximum attempts (default: 3)
 
 > `optional` **noRetryFor**: (`message?`) => `Error`[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:25](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/RetryPolicy.ts#L25)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/RetryPolicy.ts#L25)
 
 Exception classes to never retry
 
@@ -127,7 +145,7 @@ Exception classes to never retry
 
 > `optional` **recover**: `string`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:31](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L31)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:31](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L31)
 
 Recovery method name on the same class
 
@@ -137,7 +155,7 @@ Recovery method name on the same class
 
 > `optional` **retryFor**: (`message?`) => `Error`[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:22](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/RetryPolicy.ts#L22)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/RetryPolicy.ts#L22)
 
 Exception classes to retry (empty = retry all except noRetryFor)
 
@@ -161,7 +179,7 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 > `optional` **retryForCategories**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:28](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/RetryPolicy.ts#L28)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:28](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/RetryPolicy.ts#L28)
 
 ProblemCategory values to retry (croco integration)
 
@@ -175,7 +193,7 @@ ProblemCategory values to retry (croco integration)
 
 > `optional` **retryPolicy**: [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:22](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L22)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L22)
 
 Custom retry policy
 
@@ -185,7 +203,7 @@ Custom retry policy
 
 > `optional` **trace**: `boolean`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:34](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L34)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:34](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L34)
 
 Disable telemetry (default: true)
 
@@ -195,6 +213,6 @@ Disable telemetry (default: true)
 
 > `optional` **wrapExhausted**: `boolean`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:28](https://github.com/croco-dev/shared/blob/e527eda2a2bdade5e61e156787935d7ae66c2fea/packages/retry-core/src/libs/Retryable.ts#L28)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:28](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L28)
 
 Wrap exhausted error instead of re-throwing last error
