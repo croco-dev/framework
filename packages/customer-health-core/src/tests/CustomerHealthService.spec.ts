@@ -183,9 +183,11 @@ describe('CustomerHealthService', () => {
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
+    const collectSpy = vi.spyOn(mockRegistry.getProviders()[0], 'collect');
+
     await service.calculateAndStore('tenant-1', profile);
 
-    const collectSpy = vi.spyOn(mockRegistry.getProviders()[0], 'collect');
+    collectSpy.mockClear();
 
     const latest = await service.getLatest('tenant-1');
 
