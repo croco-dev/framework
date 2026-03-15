@@ -1,14 +1,10 @@
 packages:
   - packages/**/*
 
-ignoredBuiltDependencies:
-  - '@apollo/protobufjs'
-
 onlyBuiltDependencies:
   - esbuild
   - lefthook
-  - sharp
-  - unrs-resolver
+  - better-sqlite3
 
 catalog:
   drizzle-orm: ^0.44.2
