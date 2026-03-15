@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { ProblemFactory } from '@croco/problems-core';
+import { MiddlewareChain } from './MiddlewareChain';
 import type { Constructor, LifecycleHooks, Middleware, RequestContext } from './types';
 
 interface ContextData {
@@ -91,8 +91,12 @@ export class Context {
         try {
           await hooks.onRequestStart?.(context);
 
-          const result =
-            middlewares.length > 0 ? await Context.executeMiddlewares(context, middlewares, fn) : await fn();
+          const chain = new MiddlewareChain<RequestContext>();
+          for (const middleware of middlewares) {
+            chain.use(middleware);
+          }
+
+          const result = middlewares.length > 0 ? await chain.execute(context, fn) : await fn();
 
           await hooks.onRequestEnd?.(context, result);
 
@@ -105,44 +109,5 @@ export class Context {
         }
       }
     );
-  }
-
-  private static async executeMiddlewares<T>(
-    context: RequestContext,
-    middlewares: Middleware[],
-    fn: () => Promise<T>
-  ): Promise<T> {
-    const NO_RESULT = Symbol('NO_RESULT');
-    let result: T | typeof NO_RESULT = NO_RESULT;
-    let index = -1;
-
-    const dispatch = async (i: number): Promise<void> => {
-      if (i <= index) {
-        throw ProblemFactory.internalServerError(
-          'context/middleware-multiple-next',
-          'Middleware called next() multiple times'
-        );
-      }
-      index = i;
-
-      if (i >= middlewares.length) {
-        result = await fn();
-        return;
-      }
-
-      const middleware = middlewares[i];
-      await middleware(context, async () => dispatch(i + 1));
-    };
-
-    await dispatch(0);
-
-    if (result === NO_RESULT) {
-      throw ProblemFactory.internalServerError(
-        'context/no-function-result',
-        'No result returned from function execution'
-      );
-    }
-
-    return result;
   }
 }

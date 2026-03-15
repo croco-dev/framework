@@ -17,7 +17,9 @@ export class MiddlewareChain<TContext = Record<string, unknown>> {
   /**
    * Execute middleware chain in onion pattern
    */
-  async execute(ctx: TContext): Promise<void> {
+  async execute<T>(ctx: TContext, finalFn?: () => Promise<T>): Promise<T> {
+    const NO_RESULT = Symbol('NO_RESULT');
+    let result: T | typeof NO_RESULT = NO_RESULT;
     let index = -1;
 
     const dispatch = async (i: number): Promise<void> => {
@@ -27,6 +29,9 @@ export class MiddlewareChain<TContext = Record<string, unknown>> {
       index = i;
 
       if (i >= this.middlewares.length) {
+        if (finalFn) {
+          result = await finalFn();
+        }
         return;
       }
 
@@ -35,6 +40,16 @@ export class MiddlewareChain<TContext = Record<string, unknown>> {
     };
 
     await dispatch(0);
+
+    if (result === NO_RESULT && finalFn) {
+      throw new Error('No result returned from function execution');
+    }
+
+    if (result === NO_RESULT) {
+      return undefined as T;
+    }
+
+    return result;
   }
 
   /**
