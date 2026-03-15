@@ -29,7 +29,7 @@ export type { PlanProvider } from './libs/interfaces/PlanProvider';
 /**
  * 메트릭 스토어 구현이 따라야 하는 저장/조회 계약입니다.
  */
-export type { MetricsRepository } from './libs/interfaces/MetricsRepository';
+export { MetricsRepository } from './libs/interfaces/MetricsRepository';
 
 /**
  * LTV 계산에 사용하는 입력 설정 타입입니다.

@@ -39,7 +39,7 @@ export type { KeyContext } from './libs/RateLimitKeyBuilder';
 export { RateLimitKeyBuilder } from './libs/RateLimitKeyBuilder';
 
 /** Store contract for custom rate limit persistence implementations. */
-export type { RateLimitStore } from './libs/RateLimitStore';
+export { RateLimitStore } from './libs/RateLimitStore';
 
 /** Core policy, decorator, and middleware option types. */
 export type {

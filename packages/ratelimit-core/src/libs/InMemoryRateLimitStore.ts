@@ -1,4 +1,4 @@
-import type { RateLimitStore } from './RateLimitStore';
+import { RateLimitStore } from './RateLimitStore';
 import type { RateLimitPolicy, RateLimitResult } from './types';
 
 type BucketEntry = {
@@ -12,8 +12,12 @@ type BucketEntry = {
  * Uses sliding window algorithm.
  * NOT suitable for production multi-instance deployments.
  */
-export class InMemoryRateLimitStore implements RateLimitStore {
+export class InMemoryRateLimitStore extends RateLimitStore {
   private readonly buckets = new Map<string, BucketEntry>();
+
+  constructor() {
+    super();
+  }
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     const now = Date.now();

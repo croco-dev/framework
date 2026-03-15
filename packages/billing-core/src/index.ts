@@ -79,7 +79,7 @@ export { BillingService } from './libs/BillingService';
  * }
  * ```
  */
-export type { BillingStore } from './libs/BillingStore';
+export { BillingStore } from './libs/BillingStore';
 
 // Events
 /**

@@ -16,7 +16,7 @@ export { ApiKeyManager } from './libs/apikey/ApiKeyManager';
 /**
  * Defines storage operations for API keys.
  */
-export type { ApiKeyStore } from './libs/apikey/ApiKeyStore';
+export { API_KEY_STORE_TOKEN, ApiKeyStore } from './libs/apikey/ApiKeyStore';
 
 /**
  * Metadata keys used by auth decorators and guards.

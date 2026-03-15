@@ -1,4 +1,4 @@
-import type { CacheStore } from './CacheStore';
+import { CacheStore } from './CacheStore';
 
 /**
  * Internal cache entry with optional expiration.
@@ -25,11 +25,12 @@ export type InMemoryCacheStoreOptions = {
  * const expired = await cache.get('key'); // undefined
  * ```
  */
-export class InMemoryCacheStore<V = unknown> implements CacheStore<V> {
+export class InMemoryCacheStore<V = unknown> extends CacheStore<V> {
   private readonly store: Map<string, CacheEntry<V>> = new Map();
   private readonly maxEntries: number | null;
 
   constructor(options: InMemoryCacheStoreOptions = {}) {
+    super();
     this.maxEntries = options.maxEntries ?? null;
   }
 

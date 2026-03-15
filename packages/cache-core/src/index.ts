@@ -1,7 +1,7 @@
 /**
  * Cache storage contract for get/set/delete/clear operations.
  */
-export type { CacheStore } from './libs/CacheStore';
+export { CacheStore } from './libs/CacheStore';
 
 /**
  * Method decorator that caches method return values.

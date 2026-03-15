@@ -1,5 +1,4 @@
-import type { CircuitBreakerStateStore } from '../CircuitBreakerState';
-import { CircuitState, InMemoryCircuitBreakerStateStore } from '../CircuitBreakerState';
+import { CircuitBreakerStateStore, CircuitState, InMemoryCircuitBreakerStateStore } from '../CircuitBreakerState';
 
 type UpstashRedisLike = {
   get: (key: string) => Promise<string | null>;
@@ -18,7 +17,7 @@ export type RedisCircuitBreakerStoreOptions = {
   onStoreError?: OnStoreError;
 };
 
-export class RedisCircuitBreakerStore implements CircuitBreakerStateStore {
+export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
   private readonly redis: UpstashRedisLike;
   private readonly ttlSeconds: number;
   private readonly onStoreError: OnStoreError;
@@ -27,6 +26,7 @@ export class RedisCircuitBreakerStore implements CircuitBreakerStateStore {
   private hasLoggedFallbackWarning = false;
 
   constructor(options: RedisCircuitBreakerStoreOptions) {
+    super();
     this.redis = options.redis;
     this.ttlSeconds = options.ttlSeconds ?? 60;
     this.onStoreError = options.onStoreError ?? 'throw';

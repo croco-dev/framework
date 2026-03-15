@@ -287,7 +287,7 @@ export { MeterRegistry } from './libs/MeterRegistry';
  * }
  * ```
  */
-export type { MeterRepository } from './libs/MeterRepository';
+export { MeterRepository } from './libs/MeterRepository';
 
 // ==================== Problems ====================
 

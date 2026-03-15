@@ -4,9 +4,9 @@ import type { CreateExecutionParams, Execution, ListExecutionsOptions } from '..
  * ExecutionStore defines the storage abstraction for execution records.
  *
  * Implementations (e.g., DrizzleExecutionStore) handle persistence
- * while ExecutionManager uses this interface for CRUD operations.
+ * while ExecutionManager uses this abstract class for CRUD operations.
  */
-export interface ExecutionStore {
+export abstract class ExecutionStore {
   /**
    * Create a new execution record.
    *
@@ -15,14 +15,14 @@ export interface ExecutionStore {
    *
    * @throws Error if creation fails (excluding idempotency conflicts)
    */
-  create(params: CreateExecutionParams): Promise<Execution>;
+  abstract create(params: CreateExecutionParams): Promise<Execution>;
 
   /**
    * Find an execution by its ID.
    *
    * @returns Execution or null if not found
    */
-  findById(id: string): Promise<Execution | null>;
+  abstract findById(id: string): Promise<Execution | null>;
 
   /**
    * Find an execution by idempotency key.
@@ -31,7 +31,7 @@ export interface ExecutionStore {
    *
    * @returns Execution or null if not found
    */
-  findByIdempotencyKey(key: string): Promise<Execution | null>;
+  abstract findByIdempotencyKey(key: string): Promise<Execution | null>;
 
   /**
    * Update an execution record.
@@ -42,19 +42,19 @@ export interface ExecutionStore {
    * @returns Updated execution
    * @throws Error if execution not found or update fails
    */
-  update(id: string, data: Partial<Execution>): Promise<Execution>;
+  abstract update(id: string, data: Partial<Execution>): Promise<Execution>;
 
   /**
    * List executions with optional filtering.
    *
    * @returns Array of executions matching the criteria
    */
-  list(options?: ListExecutionsOptions): Promise<Execution[]>;
+  abstract list(options?: ListExecutionsOptions): Promise<Execution[]>;
 
   /**
    * Delete an execution record.
    *
    * @throws Error if execution not found or deletion fails
    */
-  delete(id: string): Promise<void>;
+  abstract delete(id: string): Promise<void>;
 }

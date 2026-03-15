@@ -38,6 +38,7 @@ describe('RateLimiter', () => {
   beforeEach(() => {
     mockStore = {
       check: vi.fn().mockResolvedValue(successResult),
+      pruneExpired: vi.fn().mockResolvedValue(0),
     };
     keyBuilder = new RateLimitKeyBuilder(['tenant', 'user']);
     rateLimiter = new RateLimiter(mockStore, keyBuilder);

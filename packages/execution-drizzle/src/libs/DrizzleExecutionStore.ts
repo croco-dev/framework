@@ -2,7 +2,7 @@ import {
   type CreateExecutionParams,
   type Execution,
   ExecutionProblems,
-  type ExecutionStore,
+  ExecutionStore,
   type ListExecutionsOptions,
 } from '@croco/execution-core';
 import { and, asc, eq, isNull } from 'drizzle-orm';
@@ -59,8 +59,10 @@ type ExecutionDb = {
   delete(table: unknown): DeleteQuery;
 };
 
-export class DrizzleExecutionStore<TDb extends ExecutionDb> implements ExecutionStore {
-  constructor(private readonly db: TDb) {}
+export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionStore {
+  constructor(private readonly db: TDb) {
+    super();
+  }
 
   private get dbOp(): TDb {
     return this.db;

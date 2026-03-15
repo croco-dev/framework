@@ -12,19 +12,19 @@ export enum CircuitState {
 }
 
 /**
- * Circuit Breaker 상태 저장소 인터페이스.
+ * Circuit Breaker 상태 저장소 추상 클래스.
  *
  * 상태 저장소는 Circuit Breaker의 상태, 실패 카운트, 마지막 실패 시간을 저장합니다.
- * 이 인터페이스를 구현하여 InMemory 외에 Redis, DynamoDB 등 다양한 저장소를 지원할 수 있습니다.
+ * 이 추상 클래스를 상속하여 InMemory 외에 Redis, DynamoDB 등 다양한 저장소를 지원할 수 있습니다.
  */
-export interface CircuitBreakerStateStore {
+export abstract class CircuitBreakerStateStore {
   /**
    * 현재 회로 상태를 가져옵니다.
    *
    * @param circuitId 회로 식별자
    * @returns 현재 상태 (기본값: CLOSED)
    */
-  getState(circuitId: string): Promise<CircuitState>;
+  abstract getState(circuitId: string): Promise<CircuitState>;
 
   /**
    * 회로 상태를 설정합니다.
@@ -32,7 +32,7 @@ export interface CircuitBreakerStateStore {
    * @param circuitId 회로 식별자
    * @param state 설정할 상태
    */
-  setState(circuitId: string, state: CircuitState): Promise<void>;
+  abstract setState(circuitId: string, state: CircuitState): Promise<void>;
 
   /**
    * 현재 실패 카운트를 가져옵니다.
@@ -40,7 +40,7 @@ export interface CircuitBreakerStateStore {
    * @param circuitId 회로 식별자
    * @returns 실패 횟수 (기본값: 0)
    */
-  getFailureCount(circuitId: string): Promise<number>;
+  abstract getFailureCount(circuitId: string): Promise<number>;
 
   /**
    * 실패 카운트를 증가시키고 새 값을 반환합니다.
@@ -48,14 +48,14 @@ export interface CircuitBreakerStateStore {
    * @param circuitId 회로 식별자
    * @returns 증가된 실패 카운트
    */
-  incrementFailureCount(circuitId: string): Promise<number>;
+  abstract incrementFailureCount(circuitId: string): Promise<number>;
 
   /**
    * 실패 카운트를 초기화합니다.
    *
    * @param circuitId 회로 식별자
    */
-  resetFailureCount(circuitId: string): Promise<void>;
+  abstract resetFailureCount(circuitId: string): Promise<void>;
 
   /**
    * 마지막 실패 시간을 가져옵니다.
@@ -63,7 +63,7 @@ export interface CircuitBreakerStateStore {
    * @param circuitId 회로 식별자
    * @returns 타임스탬프 (ms) 또는 null (기본값: null)
    */
-  getLastFailureTime(circuitId: string): Promise<number | null>;
+  abstract getLastFailureTime(circuitId: string): Promise<number | null>;
 
   /**
    * 마지막 실패 시간을 설정합니다.
@@ -71,26 +71,26 @@ export interface CircuitBreakerStateStore {
    * @param circuitId 회로 식별자
    * @param time 타임스탬프 (ms)
    */
-  setLastFailureTime(circuitId: string, time: number): Promise<void>;
+  abstract setLastFailureTime(circuitId: string, time: number): Promise<void>;
 
-  withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T>;
+  abstract withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T>;
 
-  incrementFailureAndCheck(
+  abstract incrementFailureAndCheck(
     circuitId: string,
     failureThreshold: number
   ): Promise<{ failureCount: number; shouldOpen: boolean }>;
 
-  getHalfOpenActiveCount(circuitId: string): Promise<number>;
+  abstract getHalfOpenActiveCount(circuitId: string): Promise<number>;
 
-  setHalfOpenActiveCount(circuitId: string, count: number): Promise<void>;
+  abstract setHalfOpenActiveCount(circuitId: string, count: number): Promise<void>;
 
-  getHalfOpenSuccessCount(circuitId: string): Promise<number>;
+  abstract getHalfOpenSuccessCount(circuitId: string): Promise<number>;
 
-  setHalfOpenSuccessCount(circuitId: string, count: number): Promise<void>;
+  abstract setHalfOpenSuccessCount(circuitId: string, count: number): Promise<void>;
 
-  reset(circuitId: string): Promise<void>;
+  abstract reset(circuitId: string): Promise<void>;
 
-  resetAll(): Promise<void>;
+  abstract resetAll(): Promise<void>;
 }
 
 /**
@@ -114,7 +114,7 @@ export function isDistributedStore(_store: CircuitBreakerStateStore): _store is 
  * 여러 Lambda 인스턴스 간에는 상태 공유되지 않습니다.
  * 분산 환경에서는 Redis/DynamoDB 등의 구현체가 필요합니다.
  */
-export class InMemoryCircuitBreakerStateStore implements CircuitBreakerStateStore {
+export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
   private readonly states = new Map<string, CircuitState>();
   private readonly failures = new Map<string, number>();
   private readonly lastFailures = new Map<string, number>();

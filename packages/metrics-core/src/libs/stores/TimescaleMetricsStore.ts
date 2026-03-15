@@ -1,5 +1,5 @@
 import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../../types';
-import type { MetricsRepository } from '../interfaces/MetricsRepository';
+import { MetricsRepository } from '../interfaces/MetricsRepository';
 import { RetentionCalculator } from '../RetentionCalculator';
 
 /**
@@ -30,13 +30,15 @@ export interface PostgresClient {
  * **참고**: 실제 구현 시 쿼리 로직을 완성해야 합니다.
  * 이 파일은 인터페이스와 스켈레톤만 제공합니다.
  */
-export class TimescaleMetricsStore implements MetricsRepository {
+export class TimescaleMetricsStore extends MetricsRepository {
   private static readonly MRR_MOVEMENTS_TABLE = 'mrr_movements';
   private static readonly SNAPSHOTS_TABLE = 'metrics_snapshots';
 
   private readonly retentionCalculator = new RetentionCalculator();
 
-  constructor(private readonly db: PostgresClient) {}
+  constructor(private readonly db: PostgresClient) {
+    super();
+  }
 
   async recordMRRMovement(tenantId: string, movement: MRRMovement, timestamp: Date, eventKey?: string): Promise<void> {
     const sql = eventKey

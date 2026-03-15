@@ -27,7 +27,7 @@ export { CircuitBreakerRetryTemplate } from './libs/CircuitBreakerRetryTemplate'
  * Circuit breaker state contracts and helper types for shared state storage.
  */
 export {
-  type CircuitBreakerStateStore,
+  CircuitBreakerStateStore,
   CircuitState,
   type DistributedCircuitBreakerStateStore,
   InMemoryCircuitBreakerStateStore,

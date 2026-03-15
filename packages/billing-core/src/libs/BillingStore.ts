@@ -1,25 +1,25 @@
 import type { BillingAccount, Order, ProcessedWebhook, Subscription } from '../types';
 
 /**
- * Abstract storage interface for billing data.
+ * Abstract storage for billing data.
  * Implementations: InMemoryBillingStore, DrizzleBillingStore
  */
-export interface BillingStore {
+export abstract class BillingStore {
   // BillingAccount
-  findAccountByTenantId(tenantId: string): Promise<BillingAccount | null>;
-  findAccountByExternalId(externalCustomerId: string): Promise<BillingAccount | null>;
-  saveAccount(account: BillingAccount): Promise<void>;
+  abstract findAccountByTenantId(tenantId: string): Promise<BillingAccount | null>;
+  abstract findAccountByExternalId(externalCustomerId: string): Promise<BillingAccount | null>;
+  abstract saveAccount(account: BillingAccount): Promise<void>;
 
   // Subscription
-  findSubscription(billingAccountId: string): Promise<Subscription | null>;
-  findSubscriptionByExternalId(externalSubscriptionId: string): Promise<Subscription | null>;
-  saveSubscription(subscription: Subscription): Promise<void>;
+  abstract findSubscription(billingAccountId: string): Promise<Subscription | null>;
+  abstract findSubscriptionByExternalId(externalSubscriptionId: string): Promise<Subscription | null>;
+  abstract saveSubscription(subscription: Subscription): Promise<void>;
 
   // Order
-  saveOrder(order: Order): Promise<void>;
-  findOrdersByAccount(billingAccountId: string): Promise<Order[]>;
+  abstract saveOrder(order: Order): Promise<void>;
+  abstract findOrdersByAccount(billingAccountId: string): Promise<Order[]>;
 
   // Idempotency
-  isWebhookProcessed(eventId: string): Promise<boolean>;
-  markWebhookProcessed(webhook: ProcessedWebhook): Promise<void>;
+  abstract isWebhookProcessed(eventId: string): Promise<boolean>;
+  abstract markWebhookProcessed(webhook: ProcessedWebhook): Promise<void>;
 }

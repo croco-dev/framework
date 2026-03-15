@@ -1,7 +1,7 @@
 import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../../types';
 
 /**
- * Repository interface for storing and querying metrics data.
+ * Repository abstract class for storing and querying metrics data.
  *
  * @description
  * 구현체: TimescaleMetricsStore (TimescaleDB) 또는 사용자 커스텀
@@ -60,7 +60,7 @@ import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../
  * CREATE INDEX idx_snapshots_tenant_date ON metrics_snapshots (tenant_id, snapshot_date DESC);
  * ```
  */
-export interface MetricsRepository {
+export abstract class MetricsRepository {
   /**
    * MRR 변동 이력 기록
    *
@@ -69,7 +69,12 @@ export interface MetricsRepository {
    * @param timestamp - 변동 발생 시각
    * @param eventKey - 이벤트 기반 멱등성 키 (선택)
    */
-  recordMRRMovement(tenantId: string, movement: MRRMovement, timestamp: Date, eventKey?: string): Promise<void>;
+  abstract recordMRRMovement(
+    tenantId: string,
+    movement: MRRMovement,
+    timestamp: Date,
+    eventKey?: string
+  ): Promise<void>;
 
   /**
    * 메트릭 스냅샷 기록 (Upsert)
@@ -78,7 +83,7 @@ export interface MetricsRepository {
    * @param snapshot - 스냅샷 데이터
    * @param date - 스냅샷 날짜
    */
-  recordSnapshot(tenantId: string, snapshot: MetricsSnapshot, date: Date): Promise<void>;
+  abstract recordSnapshot(tenantId: string, snapshot: MetricsSnapshot, date: Date): Promise<void>;
 
   /**
    * 특정 날짜의 메트릭 스냅샷 조회
@@ -87,7 +92,7 @@ export interface MetricsRepository {
    * @param date - 조회할 날짜
    * @returns 스냅샷 데이터, 없으면 null
    */
-  getSnapshot(tenantId: string, date: Date): Promise<MetricsSnapshot | null>;
+  abstract getSnapshot(tenantId: string, date: Date): Promise<MetricsSnapshot | null>;
 
   /**
    * MRR 변동 이력 조회
@@ -96,7 +101,7 @@ export interface MetricsRepository {
    * @param period - 조회 기간
    * @returns MRR 변동 데이터 배열
    */
-  getMRRHistory(tenantId: string, period: Period): Promise<MRRMovement[]>;
+  abstract getMRRHistory(tenantId: string, period: Period): Promise<MRRMovement[]>;
 
   /**
    * 리텐션 메트릭 계산
@@ -105,5 +110,5 @@ export interface MetricsRepository {
    * @param period - 계산 기간
    * @returns 리텐션 메트릭 (GRR, NRR, Churn Rate 등)
    */
-  getRetentionMetrics(tenantId: string, period: Period): Promise<RetentionMetrics>;
+  abstract getRetentionMetrics(tenantId: string, period: Period): Promise<RetentionMetrics>;
 }

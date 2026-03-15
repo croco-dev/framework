@@ -1,12 +1,12 @@
 import type { BillingAccount, Order, ProcessedWebhook, Subscription } from '../types';
-import type { BillingStore } from './BillingStore';
+import { BillingStore } from './BillingStore';
 import { WebhookAlreadyProcessedProblem } from './problems/BillingProblems';
 
 /**
  * In-memory billing store for testing and development.
  * NOT suitable for production multi-instance deployments.
  */
-export class InMemoryBillingStore implements BillingStore {
+export class InMemoryBillingStore extends BillingStore {
   private readonly accounts = new Map<string, BillingAccount>();
   private readonly accountsByTenantId = new Map<string, BillingAccount>();
   private readonly accountsByExternalId = new Map<string, BillingAccount>();
@@ -14,6 +14,10 @@ export class InMemoryBillingStore implements BillingStore {
   private readonly subscriptionsByExternalId = new Map<string, Subscription>();
   private readonly orders = new Map<string, Order[]>();
   private readonly processedWebhooks = new Set<string>();
+
+  constructor() {
+    super();
+  }
 
   async findAccountByTenantId(tenantId: string): Promise<BillingAccount | null> {
     return this.accountsByTenantId.get(tenantId) ?? null;
