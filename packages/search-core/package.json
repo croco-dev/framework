@@ -30,7 +30,19 @@
     "vitest": "4.0.16"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      },
+      "./ko": {
+        "import": "./dist/ko/index.js",
+        "types": "./dist/ko/index.d.ts"
+      }
+    }
   },
   "files": [
     "dist"
