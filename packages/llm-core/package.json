@@ -9,7 +9,7 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
