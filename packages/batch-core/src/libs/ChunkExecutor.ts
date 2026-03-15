@@ -1,17 +1,6 @@
 import type { ExecutionManager } from '@croco/execution-core';
-import type { Checkpointable } from './interfaces/ItemReader';
+import { isCheckpointable } from './interfaces/ItemReader';
 import type { Step } from './Step';
-
-function isCheckpointable(obj: unknown): obj is Checkpointable {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'getCheckpoint' in obj &&
-    typeof (obj as Checkpointable).getCheckpoint === 'function' &&
-    'restoreCheckpoint' in obj &&
-    typeof (obj as Checkpointable).restoreCheckpoint === 'function'
-  );
-}
 
 export class ChunkExecutor {
   constructor(private executionManager: ExecutionManager) {}
