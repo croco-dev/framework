@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import type { AuthRequest, AuthUser } from '@croco/auth-core';
+import type { Guard } from '@croco/framework-context';
 import { ENTITLEMENT_REQUIRED_KEY } from './decorators/RequireEntitlement';
 import type { EntitlementManager } from './EntitlementManager';
 import { EntitlementDeniedProblem } from './problems/EntitlementProblems';
@@ -9,10 +10,6 @@ export type RouteExecutionContext = {
   getHandler(): string | symbol;
   getRequest(): AuthRequest & { tenantId?: string };
 };
-
-export interface Guard<TContext = unknown> {
-  canActivate(context: TContext): boolean | Promise<boolean>;
-}
 
 type EntitlementAuthUser = AuthUser & { tenantId?: string };
 

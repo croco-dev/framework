@@ -1,9 +1,10 @@
 import 'reflect-metadata';
+import type { Guard } from '@croco/framework-context';
 import { Context } from '@croco/framework-context';
 import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { AccessEngine } from '../AccessEngine';
 import { ACCESS_METADATA_KEY } from '../constants';
-import type { AccessExecutionContext, Guard } from '../interfaces/Guard';
+import type { AccessExecutionContext } from '../interfaces/AccessContext';
 
 export class BadRequestProblem extends Problem {
   constructor(detail = 'Bad request') {

@@ -5,7 +5,3 @@ export type RouteExecutionContext = {
   getHandler(): string | symbol;
   getRequest(): AuthRequest;
 };
-
-export interface Guard<TContext = unknown> {
-  canActivate(context: TContext): boolean | Promise<boolean>;
-}

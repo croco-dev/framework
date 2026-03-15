@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccessEngine } from '../libs/AccessEngine';
 import { Access } from '../libs/decorators/Access';
 import { AccessGuard, BadRequestProblem, ForbiddenProblem } from '../libs/guards/AccessGuard';
-import type { AccessExecutionContext } from '../libs/interfaces/Guard';
+import type { AccessExecutionContext } from '../libs/interfaces/AccessContext';
 
 describe('AccessGuard', () => {
   let accessGuard!: AccessGuard;

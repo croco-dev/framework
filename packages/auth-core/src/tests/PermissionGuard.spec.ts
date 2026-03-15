@@ -4,7 +4,7 @@ import { AUTH_PERMISSIONS_KEY } from '../libs/constants';
 import { PermissionGuard } from '../libs/guards/PermissionGuard';
 import type { AuthRequest } from '../libs/interfaces/AuthRequest';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
-import type { RouteExecutionContext } from '../libs/interfaces/Guard';
+import type { RouteExecutionContext } from '../libs/interfaces/RouteExecutionContext';
 import type { ApiKeyPrincipal, UserPrincipal } from '../libs/interfaces/Principal';
 import { ForbiddenProblem } from '../libs/problems/AuthProblems';
 import type { RbacEngine } from '../libs/rbac/RbacEngine';

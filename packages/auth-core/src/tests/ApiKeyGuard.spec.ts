@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiKeyGuard } from '../libs/guards/ApiKeyGuard';
 import type { ApiKeyProvider } from '../libs/interfaces/ApiKeyProvider';
 import type { AuthRequest } from '../libs/interfaces/AuthRequest';
-import type { RouteExecutionContext } from '../libs/interfaces/Guard';
+import type { RouteExecutionContext } from '../libs/interfaces/RouteExecutionContext';
 import type { ApiKeyPrincipal } from '../libs/interfaces/Principal';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 

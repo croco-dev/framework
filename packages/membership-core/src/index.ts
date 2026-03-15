@@ -12,23 +12,23 @@
  *
  * @example 기본 사용법
  * ```typescript
- * import { MembershipService, InMemoryMembershipStore } from '@croco/membership-core';
+ * import { MembershipManager, InMemoryMembershipStore } from '@croco/membership-core';
  *
  * const store = new InMemoryMembershipStore();
- * const service = new MembershipService(store, eventPublisher);
+ * const manager = new MembershipManager(store, eventPublisher);
  *
  * // 멤버 추가
- * const membership = await service.addMember('tenant-123', 'user-456', 'admin');
+ * const membership = await manager.addMember('tenant-123', 'user-456', 'admin');
  *
  * // 역할 변경
- * await service.updateRole('tenant-123', 'user-456', 'owner');
+ * await manager.updateRole('tenant-123', 'user-456', 'owner');
  *
  * // 멤버 제거
- * await service.removeMember('tenant-123', 'user-456');
+ * await manager.removeMember('tenant-123', 'user-456');
  * ```
  *
  * @description 이 패키지는 다음을 제공합니다:
- * - {@link MembershipService}: 멤버십 관리 서비스
+ * - {@link MembershipManager}: 멤버십 관리 서비스
  * - {@link MembershipStore}: 저장소 인터페이스
  * - {@link InMemoryMembershipStore}: 인메모리 저장소 구현체
  * - 도메인 이벤트: {@link MembershipCreatedEvent}, {@link MembershipRemovedEvent}, {@link MembershipUpdatedEvent}
@@ -145,27 +145,6 @@ export { MembershipManager } from './libs/MembershipManager';
  * ```
  */
 export { MembershipOwnerGuard } from './libs/MembershipOwnerGuard';
-
-/**
- * 멤버십 서비스
- *
- * @description 멤버십 라이프사이클을 관리하는 서비스입니다. {@link MembershipOwnerGuard}를 사용하여 소유자 제약 조건을 검증합니다.
- *
- * @example 서비스 사용
- * ```typescript
- * const service = new MembershipService(store, eventPublisher);
- *
- * // 멤버 추가
- * await service.addMember('tenant-123', 'user-456', 'admin');
- *
- * // 역할 변경
- * await service.updateRole('tenant-123', 'user-456', 'owner');
- *
- * // 멤버 제거
- * await service.removeMember('tenant-123', 'user-456');
- * ```
- */
-export { MembershipService } from './libs/MembershipService';
 
 /**
  * 멤버십 저장소 인터페이스

@@ -1,6 +1,6 @@
+import type { Guard } from '@croco/framework-context';
 import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { ExecutionContext } from '../interfaces/ExecutionContext';
-import type { Guard } from '../interfaces/Guard';
 import type { HttpRequestLike } from '../types';
 
 export type TokenVerifier = (token: string) => Promise<unknown> | unknown;

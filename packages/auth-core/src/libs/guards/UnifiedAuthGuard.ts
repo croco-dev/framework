@@ -1,8 +1,9 @@
 import 'reflect-metadata';
+import type { Guard } from '@croco/framework-context';
 import { AUTH_PUBLIC_KEY } from '../constants';
 import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
 import type { AuthProvider } from '../interfaces/AuthProvider';
-import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
+import type { RouteExecutionContext } from '../interfaces/RouteExecutionContext';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
 import { getHeaderValue } from './headerUtils';
 

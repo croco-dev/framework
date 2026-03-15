@@ -1,8 +1,9 @@
 import 'reflect-metadata';
+import type { Guard } from '@croco/framework-context';
 import { AUTH_PERMISSIONS_KEY } from '../constants';
 import type { AuthUser } from '../interfaces/AuthUser';
-import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
 import type { UserPrincipal } from '../interfaces/Principal';
+import type { RouteExecutionContext } from '../interfaces/RouteExecutionContext';
 import { ForbiddenProblem } from '../problems/AuthProblems';
 import { hasPermission } from '../rbac/Permission';
 import type { RbacEngine } from '../rbac/RbacEngine';

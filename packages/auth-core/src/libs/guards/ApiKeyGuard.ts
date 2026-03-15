@@ -1,6 +1,7 @@
 import 'reflect-metadata';
+import type { Guard } from '@croco/framework-context';
 import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
-import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
+import type { RouteExecutionContext } from '../interfaces/RouteExecutionContext';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
 import { getHeaderValue } from './headerUtils';
 

@@ -12,7 +12,3 @@ export type AccessExecutionContext = {
   getRequest(): Request;
   getHttpContext?(): AccessHttpContext;
 };
-
-export interface Guard<TContext = unknown> {
-  canActivate(context: TContext): boolean | Promise<boolean>;
-}

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
+import type { Guard } from '@croco/framework-context';
 import { REST_ROLES_KEY } from '../constants';
 import type { ExecutionContext } from '../interfaces/ExecutionContext';
-import type { Guard } from '../interfaces/Guard';
 
 export type UserWithRoles = {
   roles?: string[];

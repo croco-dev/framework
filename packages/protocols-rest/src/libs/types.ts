@@ -1,6 +1,6 @@
+import type { Guard } from '@croco/framework-context';
 import type { HttpMethod, ParamType } from './constants';
 import type { ExceptionFilter } from './interfaces/ExceptionFilter';
-import type { Guard } from './interfaces/Guard';
 import type { Interceptor } from './interfaces/Interceptor';
 import type { PipeTransform } from './interfaces/PipeTransform';
 
