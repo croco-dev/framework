@@ -1,7 +1,3 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
-export class TransactionStateProblem extends Problem {
-  constructor(detail: string) {
-    super('events-tx/transaction-state-error', ProblemCategory.InternalServerError, detail);
-  }
-}
+export class TransactionStateProblem extends Problem { readonly code = 'events-tx/transaction-state-error'; readonly category = ProblemCategory.InternalServerError; constructor(detail: string) { super(detail); } }
