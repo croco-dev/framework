@@ -21,11 +21,6 @@ export class Container {
 
   static get<T>(token: TokenIdentifier<T>): T {
     if (!(token instanceof Function)) {
-      if (typeof token === 'string') {
-        return TypeDIContainer.get(token);
-      }
-
-      // TypeDI runtime supports symbols despite type definition
       return TypeDIContainer.get(token as any);
     }
 
@@ -61,15 +56,6 @@ export class Container {
   }
 
   static has<T>(token: TokenIdentifier<T>): boolean {
-    if (token instanceof Function) {
-      return TypeDIContainer.has(token);
-    }
-
-    if (typeof token === 'string') {
-      return TypeDIContainer.has(token);
-    }
-
-    // symbol or Token - TypeDI runtime supports symbols
     return TypeDIContainer.has(token as any);
   }
 
