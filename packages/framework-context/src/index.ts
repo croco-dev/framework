@@ -157,7 +157,7 @@ export { MetadataStorage } from './libs/MetadataStorage';
  * await chain.execute({ requestId: 'req-123' });
  * ```
  */
-export { MiddlewareChain } from './libs/Middleware';
+export { MiddlewareChain } from './libs/MiddlewareChain';
 
 /**
  * 종료 훅을 등록하고 프로세스 시그널에서 graceful shutdown을 실행하는 매니저 클래스입니다.

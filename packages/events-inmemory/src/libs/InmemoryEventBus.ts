@@ -2,6 +2,7 @@ import type { DomainEvent, EventBus, EventHandlerClass, EventSubscription } from
 import { EventSubscriptionIndex } from '@croco/events-core';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
+import { normalizeError } from '@croco/problems-core';
 import type { TraceInfo } from '@croco/telemetry-api';
 import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
 import { type Context, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
@@ -59,7 +60,7 @@ export class InMemoryEventBus implements EventBus {
                       handleSpan.setStatus({ code: SpanStatusCode.OK });
                     } catch (error) {
                       hasHandlerFailure = true;
-                      const normalizedError = this.normalizeError(error);
+                      const normalizedError = normalizeError(error);
                       handleSpan.recordException(normalizedError);
                       handleSpan.setStatus({
                         code: SpanStatusCode.ERROR,
@@ -90,7 +91,7 @@ export class InMemoryEventBus implements EventBus {
             publishSpan.setStatus({ code: SpanStatusCode.OK });
           }
         } catch (error) {
-          const normalizedError = this.normalizeError(error);
+          const normalizedError = normalizeError(error);
           publishSpan.recordException(normalizedError);
           publishSpan.setStatus({
             code: SpanStatusCode.ERROR,
@@ -156,14 +157,6 @@ export class InMemoryEventBus implements EventBus {
     const clonedEntries = Object.entries(value).map(([key, entryValue]) => [key, this.cloneValue(entryValue)]);
 
     return Object.fromEntries(clonedEntries) as T;
-  }
-
-  private normalizeError(error: unknown): Error {
-    if (error instanceof Error) {
-      return error;
-    }
-
-    return new Error(String(error));
   }
 
   subscribe(subscription: EventSubscription): void {
