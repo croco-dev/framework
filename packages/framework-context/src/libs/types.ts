@@ -50,51 +50,6 @@ export interface RequestContext {
 export type Middleware<TContext = RequestContext> = (ctx: TContext, next: () => Promise<void>) => Promise<void>;
 
 /**
- * Middleware chain class for executing middleware in onion pattern
- */
-export class MiddlewareChain<TContext = RequestContext> {
-  private middlewares: Array<Middleware<TContext>> = [];
-
-  /**
-   * Add middleware to the chain
-   */
-  use(middleware: Middleware<TContext>): this {
-    this.middlewares.push(middleware);
-    return this;
-  }
-
-  /**
-   * Execute middleware chain in onion pattern
-   */
-  async execute(ctx: TContext): Promise<void> {
-    let index = -1;
-
-    const dispatch = async (i: number): Promise<void> => {
-      if (i <= index) {
-        throw new Error('Middleware called next() multiple times');
-      }
-      index = i;
-
-      if (i >= this.middlewares.length) {
-        return;
-      }
-
-      const middleware = this.middlewares[i];
-      await middleware(ctx, async () => dispatch(i + 1));
-    };
-
-    await dispatch(0);
-  }
-
-  /**
-   * Clear all middlewares
-   */
-  clear(): void {
-    this.middlewares = [];
-  }
-}
-
-/**
  * Lifecycle hooks for request scope
  */
 export interface LifecycleHooks<TContext = RequestContext> {

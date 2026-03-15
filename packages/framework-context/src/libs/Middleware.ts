@@ -1,5 +1,4 @@
 /**
- * Re-exports MiddlewareChain from types.ts for backward compatibility
- * MiddlewareChain type is defined in types.ts as it's part of the public API
+ * Re-exports MiddlewareChain from MiddlewareChain.ts for backward compatibility
  */
-export { MiddlewareChain } from './types';
+export { MiddlewareChain } from './MiddlewareChain';
