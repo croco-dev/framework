@@ -1,4 +1,4 @@
-import { Token } from 'typedi';
+import { Token } from '@croco/framework-context';
 import type { HealthSignal, SignalCategory, TenantHealthScore } from './types';
 
 export abstract class SignalProvider {

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
+
+import type { Container, ContainerInstance } from '@croco/framework-context';
 import type { Application } from 'express';
-import type { Container, ContainerInstance } from 'typedi';
 
 export interface BootstrapConfig {
   configureApp?: (app: Application) => void | Promise<void>;

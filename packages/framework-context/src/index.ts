@@ -53,6 +53,22 @@ export { Inject } from 'typedi';
 export { Container } from './libs/Container';
 
 /**
+ * TypeDI 컨테이너 인스턴스 타입입니다.
+ *
+ * @returns 개별 컨테이너 인스턴스의 타입 정의를 반환합니다.
+ *
+ * @example
+ * ```typescript
+ * import { ContainerInstance } from '@croco/framework-context';
+ *
+ * function setup(container: ContainerInstance) {
+ *   container.set('key', value);
+ * }
+ * ```
+ */
+export { ContainerInstance } from 'typedi';
+
+/**
  * 요청 단위 컨텍스트를 실행하고 조회하는 AsyncLocalStorage 기반 유틸리티 클래스입니다.
  *
  * @param context - `Context.run(context, fn)`에 전달할 요청 컨텍스트입니다.

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
+import { Container } from '@croco/framework-context';
 import express, { type Application } from 'express';
 import { useContainer, useExpressServer } from 'routing-controllers';
-import { Container } from 'typedi';
 import { BootstrapError, ContainerInitializationError } from './errors';
 import type { BootstrapConfig, ServerConfig } from './types';
 

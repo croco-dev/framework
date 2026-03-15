@@ -1,8 +1,8 @@
 import { ApolloServer } from '@apollo/server';
 import { handlers, startServerAndCreateLambdaHandler } from '@as-integrations/aws-lambda';
+import { Container } from '@croco/framework-context';
 import type { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { type AuthChecker, type BuildSchemaOptions, buildSchema, type NonEmptyArray } from 'type-graphql';
-import { Container } from 'typedi';
 import { BootstrapError, ContainerInitializationError } from './errors';
 
 function ensureReflectMetadata() {

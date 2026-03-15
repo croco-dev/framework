@@ -1,5 +1,5 @@
 import type { RequestContext } from '@croco/framework-context';
-import { Token } from 'typedi';
+import { Token } from '@croco/framework-context';
 
 export type ImpersonationState = {
   sessionId: string;
