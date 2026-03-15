@@ -12,7 +12,7 @@ import { MetadataStorage } from './MetadataStorage';
 import { CircularDependencyProblem } from './problems/CircularDependencyProblem';
 import type { ComponentMetadata, Constructor, Scope } from './types';
 
-export type TokenIdentifier<T> = Constructor<T> | Token<T> | string;
+export type TokenIdentifier<T> = Constructor<T> | Token<T> | string | symbol;
 
 const COMPONENT_METADATA_KEY = Symbol('component:metadata');
 
@@ -25,7 +25,8 @@ export class Container {
         return TypeDIContainer.get(token);
       }
 
-      return TypeDIContainer.get(token);
+      // TypeDI runtime supports symbols despite type definition
+      return TypeDIContainer.get(token as any);
     }
 
     const metadata = Container.getComponentMetadata(token);
@@ -54,7 +55,7 @@ export class Container {
   }
 
   static set<T>(token: TokenIdentifier<T>, instance: T): T {
-    TypeDIContainer.set({ id: token, value: instance });
+    TypeDIContainer.set({ id: token as ServiceIdentifier<T>, value: instance });
     Container.validated = false;
     return instance;
   }
@@ -68,11 +69,13 @@ export class Container {
       return TypeDIContainer.has(token);
     }
 
-    return TypeDIContainer.has(token);
+    // symbol or Token - TypeDI runtime supports symbols
+    return TypeDIContainer.has(token as any);
   }
 
   static remove<T>(token: TokenIdentifier<T>): void {
-    TypeDIContainer.remove(token);
+    // TypeDI runtime supports symbols despite type definition
+    TypeDIContainer.remove(token as any);
     Container.validated = false;
   }
 
