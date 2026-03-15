@@ -64,13 +64,6 @@ export class Context {
   }
 
   /**
-   * Framework context does not resolve span IDs directly.
-   */
-  static getActiveSpanId(): string | null {
-    return null;
-  }
-
-  /**
    * Run a function with middleware chain and lifecycle hooks
    * Execution order: onRequestStart -> middleware chain -> fn -> onRequestEnd
    * If error occurs: onRequestError is called instead of onRequestEnd

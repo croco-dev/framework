@@ -194,15 +194,6 @@ describe('Context', () => {
     });
   });
 
-  it('should return null for spanId when no active span', async () => {
-    const ctx = { requestId: 'test-789' };
-
-    await Context.run(ctx, async () => {
-      const spanId = Context.getActiveSpanId();
-      expect(spanId).toBeNull();
-    });
-  });
-
   describe('runWithMiddleware', () => {
     it('should call onRequestError for non-Error throws with a normalized Error', async () => {
       const onRequestError = vi.fn();
