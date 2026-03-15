@@ -48,7 +48,7 @@ describe('ApiKeyGuard', () => {
 
   beforeEach(() => {
     mockApiKeyProvider = {
-      authenticate: vi.fn(),
+      authenticate: vi.fn<(request: unknown) => Promise<ApiKeyPrincipal | null>>(),
     };
     guard = new ApiKeyGuard(mockApiKeyProvider);
   });

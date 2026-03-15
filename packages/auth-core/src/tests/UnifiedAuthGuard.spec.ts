@@ -67,10 +67,10 @@ describe('UnifiedAuthGuard', () => {
 
   beforeEach(() => {
     mockAuthProvider = {
-      authenticate: vi.fn(),
+      authenticate: vi.fn<(request: unknown) => Promise<AuthUser | null>>(),
     };
     mockApiKeyProvider = {
-      authenticate: vi.fn(),
+      authenticate: vi.fn<(request: unknown) => Promise<ApiKeyPrincipal | null>>(),
     };
     guard = new UnifiedAuthGuard(mockAuthProvider, mockApiKeyProvider);
   });
