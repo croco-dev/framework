@@ -16,6 +16,7 @@ export type TraceConfig = {
   exporterUrl?: string;
   exporterHeaders?: Record<string, string>;
   sampler?: Sampler;
+  probability?: number;
   batchTimeout?: number;
   batchCount?: number;
   batchSize?: number;

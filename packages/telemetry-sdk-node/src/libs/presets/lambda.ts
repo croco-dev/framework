@@ -1,5 +1,4 @@
 import type { TelemetryConfig } from '../../config';
-import { ProbabilitySampler } from '../samplers/ProbabilitySampler';
 
 type LambdaPresetOptions = {
   serviceName: string;
@@ -41,7 +40,7 @@ function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
         'X-Croco-Source': 'lambda',
         ...options.exporterHeaders,
       },
-      sampler: new ProbabilitySampler({ probability }),
+      probability,
       batchTimeout: 3000,
       batchCount: 512,
       batchSize: 256,
