@@ -10,18 +10,33 @@ const telemetryReady = telemetry.init(
   })
 );
 
-const lambdaHandlerPromise = createSchema().then((schema) => {
-  const server = new ApolloServer({ schema });
+let lambdaHandlerPromise: Promise<ReturnType<typeof startServerAndCreateLambdaHandler>> | null = null;
 
-  return startServerAndCreateLambdaHandler(server, handlers.createAPIGatewayProxyEventV2RequestHandler());
-});
+function getLambdaHandler(): Promise<ReturnType<typeof startServerAndCreateLambdaHandler>> {
+  if (!lambdaHandlerPromise) {
+    lambdaHandlerPromise = createSchema()
+      .then((schema) => {
+        const server = new ApolloServer({ schema });
+
+        return startServerAndCreateLambdaHandler(server, handlers.createAPIGatewayProxyEventV2RequestHandler());
+      })
+      .catch((error: unknown) => {
+        lambdaHandlerPromise = null;
+        throw error;
+      });
+  }
+
+  return lambdaHandlerPromise;
+}
+
+type GraphqlLambdaHandler = Awaited<ReturnType<typeof getLambdaHandler>>;
 
 export const handler = async (
-  ...args: Parameters<Awaited<typeof lambdaHandlerPromise>>
-): Promise<Awaited<ReturnType<Awaited<typeof lambdaHandlerPromise>>>> => {
+  ...args: Parameters<GraphqlLambdaHandler>
+): Promise<Awaited<ReturnType<GraphqlLambdaHandler>>> => {
   try {
     await telemetryReady;
-    const lambdaHandler = await lambdaHandlerPromise;
+    const lambdaHandler = await getLambdaHandler();
 
     return await lambdaHandler(...args);
   } finally {

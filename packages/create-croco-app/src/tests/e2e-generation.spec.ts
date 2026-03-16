@@ -116,8 +116,10 @@ describe('E2E: generate()', () => {
     expect(handlerContent).toContain("from '@croco/telemetry-sdk-node';");
     expect(handlerContent).toContain("import { createSchema } from './schema.js';");
     expect(handlerContent).toContain('const telemetryReady = telemetry.init(');
+    expect(handlerContent).toContain('let lambdaHandlerPromise');
+    expect(handlerContent).toContain('function getLambdaHandler()');
     expect(handlerContent).toContain('await telemetryReady;');
-    expect(handlerContent).toContain('const lambdaHandler = await lambdaHandlerPromise;');
+    expect(handlerContent).toContain('const lambdaHandler = await getLambdaHandler();');
     expect(handlerContent).toContain('await telemetry.forceFlush();');
     expect(schemaContent).toContain('export async function createSchema()');
     expect(packageJsonContent).toContain('"@croco/telemetry-sdk-node": "workspace:*"');
