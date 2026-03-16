@@ -108,7 +108,7 @@ AsyncLocalStorage를 사용해 트랜잭션 컨텍스트를 관리합니다.
 - `getClient()`: 현재 트랜잭션 클라이언트 반환 (없으면 `null`)
 - `isInTransaction()`: 현재 트랜잭션 내부인지 여부
 
-`onAfterCommit()`으로 등록한 훅은 root transaction commit 이후, 동일한 transaction context를 유지한 채 순차 실행됩니다. 훅 하나가 실패해도 나머지 훅은 계속 시도되며, 하나 이상 실패하면 `run()`은 `AfterCommitHooksProblem`으로 reject 됩니다. 즉 DB commit은 유지되지만 post-commit 작업 실패는 호출자에게 숨겨지지 않습니다.
+`onAfterCommit()`으로 등록한 훅은 root transaction commit 이후, **트랜잭션 컨텍스트 밖에서** 순차 실행됩니다. 따라서 훅 내부의 `isInTransaction()`은 `false`, `getClient()`는 `null`을 반환합니다. 훅 하나가 실패해도 나머지 훅은 계속 시도되며, 하나 이상 실패하면 `run()`은 `AfterCommitHooksProblem`으로 reject 됩니다. 즉 DB commit은 유지되지만 post-commit 작업 실패는 호출자에게 숨겨지지 않습니다.
 
 ### TxRunOptions<TOptions>
 
