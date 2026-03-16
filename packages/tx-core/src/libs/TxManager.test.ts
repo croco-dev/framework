@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AfterCommitHooksProblem } from './problems/TransactionProblems';
 import type { TxAdapter } from './TxAdapter';
 import { TxManager } from './TxManager';
 
@@ -90,11 +91,11 @@ describe('TxManager.onAfterCommit', () => {
     expect(hooks).toEqual(['outer', 'inner']);
   });
 
-  it('should continue executing hooks even if one fails', async () => {
+  it('should reject after commit when one or more hooks fail', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const hooks: string[] = [];
 
-    await txManager.run(async () => {
+    const execution = txManager.run(async () => {
       txManager.onAfterCommit(() => {
         hooks.push('first');
       });
@@ -107,8 +108,18 @@ describe('TxManager.onAfterCommit', () => {
       return 'result';
     });
 
+    await expect(execution).rejects.toThrow(AfterCommitHooksProblem);
     expect(hooks).toEqual(['first', 'third']);
-    expect(consoleSpy).toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    await expect(execution).rejects.toMatchObject({
+      code: 'tx-core/after-commit-hooks-failed',
+      detail: '1 afterCommit hook(s) failed after transaction commit',
+      extensions: {
+        committed: true,
+        failureCount: 1,
+        failures: [{ name: 'Error', message: 'Hook error' }],
+      },
+    });
     consoleSpy.mockRestore();
   });
 

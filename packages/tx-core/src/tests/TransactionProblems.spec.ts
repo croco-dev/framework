@@ -1,7 +1,11 @@
 import { ProblemCategory } from '@croco/problems-core';
 import { describe, expect, it } from 'vitest';
 import { TxManagerNotRegisteredError, TxPropagationError } from '../libs/errors';
-import { TransactionContextProblem, TransactionDecoratorProblem } from '../libs/problems/TransactionProblems';
+import {
+  AfterCommitHooksProblem,
+  TransactionContextProblem,
+  TransactionDecoratorProblem,
+} from '../libs/problems/TransactionProblems';
 
 describe('TransactionProblems', () => {
   it('should create TransactionDecoratorProblem with expected metadata', () => {
@@ -18,6 +22,30 @@ describe('TransactionProblems', () => {
     expect(problem.code).toBe('tx-core/missing-transaction-context');
     expect(problem.category).toBe(ProblemCategory.InternalServerError);
     expect(problem.detail).toBe('onAfterCommit must be called within a transaction');
+  });
+
+  it('should create AfterCommitHooksProblem with expected metadata', () => {
+    const cause = new Error('event publish failed');
+    const problem = new AfterCommitHooksProblem(
+      [
+        { name: cause.name, message: cause.message },
+        { name: 'CacheError', message: 'cache refresh failed' },
+      ],
+      cause
+    );
+
+    expect(problem.code).toBe('tx-core/after-commit-hooks-failed');
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe('2 afterCommit hook(s) failed after transaction commit');
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions).toEqual({
+      committed: true,
+      failureCount: 2,
+      failures: [
+        { name: 'Error', message: 'event publish failed' },
+        { name: 'CacheError', message: 'cache refresh failed' },
+      ],
+    });
   });
 
   it('should create TxManagerNotRegisteredError with expected metadata', () => {

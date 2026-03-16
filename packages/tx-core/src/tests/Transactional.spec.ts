@@ -1,6 +1,7 @@
 import { Container, TRANSACTION_CONTEXT_TOKEN } from '@croco/framework-context';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AfterCommitHooksProblem,
   Transactional,
   type TxAdapter,
   TxManager,
@@ -370,6 +371,32 @@ describe('@Transactional decorator', () => {
 
       await expect(service.outer()).rejects.toThrow('Inner error');
       expect(mockAdapter.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('should propagate afterCommit hook failures to decorated callers', async () => {
+      class TestService {
+        @Transactional({ propagation: 'REQUIRED' })
+        async execute() {
+          txManager.onAfterCommit(() => {
+            throw new Error('async projection failed');
+          });
+
+          return 'result';
+        }
+      }
+
+      const service = new TestService();
+
+      await expect(service.execute()).rejects.toThrow(AfterCommitHooksProblem);
+      await expect(service.execute()).rejects.toMatchObject({
+        code: 'tx-core/after-commit-hooks-failed',
+        extensions: {
+          committed: true,
+          failureCount: 1,
+          failures: [{ name: 'Error', message: 'async projection failed' }],
+        },
+      });
+      expect(mockAdapter.transaction).toHaveBeenCalledTimes(2);
     });
   });
 
