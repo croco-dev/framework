@@ -58,6 +58,7 @@ export {
   hasTimeForRetry,
   isLambdaEnvironment,
   LambdaTimeoutGuard,
+  runWithLambdaContext,
   setLambdaContext,
 } from './libs/LambdaTimeoutGuard';
 
