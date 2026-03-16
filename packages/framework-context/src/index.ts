@@ -157,7 +157,7 @@ export { MetadataStorage } from './libs/MetadataStorage';
  * await chain.execute({ requestId: 'req-123' });
  * ```
  */
-export { MiddlewareChain } from './libs/MiddlewareChain';
+export { MiddlewareChain } from './libs/Middleware';
 
 /**
  * 종료 훅을 등록하고 프로세스 시그널에서 graceful shutdown을 실행하는 매니저 클래스입니다.
@@ -320,20 +320,20 @@ export type { Scope } from './libs/types';
 export type { ShutdownHook } from './libs/types';
 
 /**
- * 라우트/메서드 실행 전 접근 제어를 검사하는 Guard 인터페이스입니다.
+ * 요청을 계속 처리할 수 있는지 판단하는 Guard 인터페이스입니다.
  *
- * @template TContext - Guard 실행 컨텍스트 타입입니다.
- * @returns `canActivate(context)` 메서드를 포함하는 Guard 인터페이스 타입을 반환합니다.
+ * @typeParam TContext - Guard 실행 컨텍스트 타입입니다.
+ * @returns 요청을 계속 진행하면 true를 반환합니다.
  *
  * @example
  * ```typescript
  * import type { Guard } from '@croco/framework-context';
  *
- * class AdminGuard implements Guard<RouteExecutionContext> {
- *   canActivate(context: RouteExecutionContext): boolean {
- *     return context.getRequest().user?.role === 'admin';
- *   }
- * }
+ * const guard: Guard<{ userId: string }> = {
+ *   canActivate(context) {
+ *     return context.userId !== undefined;
+ *   },
+ * };
  * ```
  */
 export type { Guard } from './libs/Guard';
