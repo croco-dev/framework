@@ -33,6 +33,58 @@ export class NotificationProviderNotRegisteredProblem extends Problem {
   }
 }
 
+export class NotificationProviderAlreadyRegisteredProblem extends Problem {
+  constructor(providerName: string) {
+    super(
+      'notifications-core/provider-already-registered',
+      ProblemCategory.InternalServerError,
+      `Provider ${providerName} is already registered`,
+      {
+        extensions: {
+          providerName,
+          retryable: false,
+        },
+      }
+    );
+  }
+}
+
+export class NotificationDefaultProviderConflictProblem extends Problem {
+  constructor(channel: NotificationChannel, existingProviderName: string, providerName: string) {
+    super(
+      'notifications-core/default-provider-conflict',
+      ProblemCategory.InternalServerError,
+      `Default provider for channel ${channel} is already registered as ${existingProviderName}`,
+      {
+        extensions: {
+          channel,
+          existingProviderName,
+          providerName,
+          retryable: false,
+        },
+      }
+    );
+  }
+}
+
+export class NotificationProviderChannelMismatchProblem extends Problem {
+  constructor(providerName: string, requestedChannel: NotificationChannel, actualChannel: NotificationChannel) {
+    super(
+      'notifications-core/provider-channel-mismatch',
+      ProblemCategory.InternalServerError,
+      `Provider ${providerName} supports channel ${actualChannel}, not ${requestedChannel}`,
+      {
+        extensions: {
+          providerName,
+          requestedChannel,
+          actualChannel,
+          retryable: false,
+        },
+      }
+    );
+  }
+}
+
 export class NotificationProviderNotFoundProblem extends Problem {
   constructor(providerName: string) {
     super(
