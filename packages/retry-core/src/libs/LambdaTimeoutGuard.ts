@@ -1,6 +1,8 @@
 /**
  * AWS Lambda context interface (minimal).
  */
+import { LambdaTimeoutProblem } from './errors/RetryInfrastructureProblem';
+
 export interface LambdaContext {
   getRemainingTimeInMillis(): number;
 }
@@ -109,7 +111,9 @@ export class LambdaTimeoutGuard {
       })
     ) {
       const remaining = this.getRemainingTime();
-      throw new Error(`Lambda timeout guard: ${remaining}ms remaining, need ${nextDelayMs + this.reserveTimeMs}ms`);
+      throw new LambdaTimeoutProblem(
+        `Lambda timeout guard: ${remaining}ms remaining, need ${nextDelayMs + this.reserveTimeMs}ms`
+      );
     }
   }
 

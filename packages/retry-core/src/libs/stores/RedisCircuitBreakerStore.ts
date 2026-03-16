@@ -1,4 +1,5 @@
 import { CircuitBreakerStateStore, CircuitState, InMemoryCircuitBreakerStateStore } from '../CircuitBreakerState';
+import { CircuitBreakerLockProblem } from '../errors/RetryInfrastructureProblem';
 
 type UpstashRedisLike = {
   get: (key: string) => Promise<string | null>;
@@ -276,7 +277,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     }
 
     if (!acquired) {
-      throw new Error(`Failed to acquire circuit breaker lock for ${circuitId}`);
+      throw new CircuitBreakerLockProblem(`Failed to acquire circuit breaker lock for ${circuitId}`);
     }
 
     try {
