@@ -25,7 +25,7 @@ export class NotificationProviderRegistry {
     const channel = provider.getChannel();
     const existingDefaultProvider = this.defaultProviders.get(channel);
 
-    if (existingDefaultProvider) {
+    if (existingDefaultProvider !== undefined) {
       throw new NotificationDefaultProviderConflictProblem(channel, existingDefaultProvider, providerName);
     }
 

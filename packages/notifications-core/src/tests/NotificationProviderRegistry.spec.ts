@@ -58,6 +58,14 @@ describe('NotificationProviderRegistry', () => {
     );
   });
 
+  it('should throw when an empty-name default provider is already configured for the same channel', () => {
+    registry.registerProvider(createProvider('', NotificationChannel.EMAIL), true);
+
+    expect(() => registry.registerProvider(createProvider('ses', NotificationChannel.EMAIL), true)).toThrow(
+      NotificationDefaultProviderConflictProblem
+    );
+  });
+
   it('should throw when the same default provider is registered twice for a channel', () => {
     const provider = createProvider('resend', NotificationChannel.EMAIL);
 
