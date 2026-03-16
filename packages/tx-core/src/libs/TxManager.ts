@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { TransactionContext } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
-import { TransactionContextProblem } from './problems/TransactionProblems';
+import { AfterCommitHooksProblem, TransactionContextProblem } from './problems/TransactionProblems';
 import type { TxAdapter } from './TxAdapter';
 import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
 
@@ -14,6 +14,12 @@ interface TxContext<TClient> {
 type NullableTxContext<TClient> = TxContext<TClient> | null;
 
 type TxManagerLogger = Pick<Logger, 'error' | 'warn'>;
+
+type AfterCommitHookFailure = {
+  error: Error;
+  name: string;
+  message: string;
+};
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
 
@@ -129,13 +135,36 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
   }
 
   private async executeAfterCommitHooks(hooks: AfterCommitHook[]): Promise<void> {
+    const failures: AfterCommitHookFailure[] = [];
+
     for (const hook of hooks) {
       try {
         await hook();
       } catch (error) {
-        this.safeLog('error', 'AfterCommit hook failed:', { error });
+        const normalizedError = this.normalizeError(error);
+        failures.push({
+          error: normalizedError,
+          name: normalizedError.name,
+          message: normalizedError.message,
+        });
+        this.safeLog('error', 'AfterCommit hook failed:', { error: normalizedError });
       }
     }
+
+    if (failures.length > 0) {
+      throw new AfterCommitHooksProblem(
+        failures.map(({ name, message }) => ({ name, message })),
+        failures[0].error
+      );
+    }
+  }
+
+  private normalizeError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    return new Error(String(error));
   }
 
   /**
