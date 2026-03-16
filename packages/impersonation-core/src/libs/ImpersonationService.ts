@@ -2,14 +2,14 @@ import type { RequestContext } from '@croco/framework-context';
 import { Component, Inject } from '@croco/framework-context';
 import { IdPrefix } from '@croco/gid-core';
 import { AuthProvider, ImpersonationStore } from './interfaces';
+import {
+  ImpersonationReasonRequiredProblem,
+  ImpersonationSessionNotFoundProblem,
+  NestedImpersonationProblem,
+  SelfImpersonationProblem,
+} from './problems/ImpersonationProblems';
 import type { ImpersonationConfig, ImpersonationContext, ImpersonationState } from './types';
 import { IMPERSONATION_CONFIG_TOKEN } from './types';
-
-// TODO: TASK 20 - Problem 클래스 구현 필요
-// throw new SelfImpersonationProblem();
-// throw new NestedImpersonationProblem();
-// throw new ImpersonationReasonRequiredProblem();
-// throw new ImpersonationSessionNotFoundProblem();
 
 // TODO: TASK 21 - Event 클래스 구현 필요
 // const event = new ImpersonationStartedEvent({ ... });
@@ -27,22 +27,16 @@ export class ImpersonationService {
 
   async start(impersonatorId: string, targetUserId: string, reason?: string): Promise<ImpersonationState> {
     if (impersonatorId === targetUserId) {
-      // TODO: TASK 20 - Problem 클래스 구현 필요
-      // throw new SelfImpersonationProblem();
-      throw new Error('Self impersonation is not allowed');
+      throw new SelfImpersonationProblem();
     }
 
     const existing = await this.store.findByImpersonator(impersonatorId);
     if (existing) {
-      // TODO: TASK 20 - Problem 클래스 구현 필요
-      // throw new NestedImpersonationProblem();
-      throw new Error('Nested impersonation is not allowed');
+      throw new NestedImpersonationProblem();
     }
 
     if (this.config.requireReason && !reason) {
-      // TODO: TASK 20 - Problem 클래스 구현 필요
-      // throw new ImpersonationReasonRequiredProblem();
-      throw new Error('Reason is required for impersonation');
+      throw new ImpersonationReasonRequiredProblem();
     }
 
     const sessionId = this.idPrefix.generate();
@@ -76,9 +70,7 @@ export class ImpersonationService {
   async end(sessionId: string): Promise<void> {
     const session = await this.store.find(sessionId);
     if (!session) {
-      // TODO: TASK 20 - Problem 클래스 구현 필요
-      // throw new ImpersonationSessionNotFoundProblem(sessionId);
-      throw new Error(`Impersonation session not found: ${sessionId}`);
+      throw new ImpersonationSessionNotFoundProblem(sessionId);
     }
 
     await this.store.revoke(sessionId);
