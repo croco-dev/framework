@@ -5,27 +5,8 @@ import {
   NotificationDefaultProviderConflictProblem,
   NotificationProviderAlreadyRegisteredProblem,
 } from '../libs/problems/NotificationProblems';
-import type { NotificationProvider, NotificationResult } from '../libs/types';
 import { NotificationChannel } from '../libs/types';
-
-type MockNotificationProvider = NotificationProvider & {
-  getName: ReturnType<typeof vi.fn>;
-  getChannel: ReturnType<typeof vi.fn>;
-  send: ReturnType<typeof vi.fn>;
-};
-
-const createProvider = (name: string, channel: NotificationChannel): MockNotificationProvider => {
-  const send = vi.fn<() => Promise<NotificationResult>>().mockResolvedValue({
-    success: true,
-    messageId: `${name}-message`,
-  });
-
-  return {
-    getName: vi.fn().mockReturnValue(name),
-    getChannel: vi.fn().mockReturnValue(channel),
-    send,
-  };
-};
+import { createProvider } from './__fixtures__/mockProvider';
 
 describe('NotificationProviderRegistry', () => {
   let registry!: NotificationProviderRegistry;
