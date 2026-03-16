@@ -27,9 +27,9 @@ export class NotificationService {
    * back to the caller.
    */
   async send(channel: NotificationChannel, payload: NotificationPayload, providerName?: string): Promise<void> {
-    const targetProviderName = providerName || this.registry.getDefaultProviderName(channel);
+    const targetProviderName = providerName ?? this.registry.getDefaultProviderName(channel);
 
-    if (!targetProviderName) {
+    if (targetProviderName === undefined) {
       throw new NotificationProviderNotConfiguredProblem(channel);
     }
 

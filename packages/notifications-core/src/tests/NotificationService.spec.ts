@@ -113,6 +113,45 @@ describe('NotificationService', () => {
       });
     });
 
+    it('should send notification with empty-string default provider name', async () => {
+      const unnamedProvider = createProvider('', NotificationChannel.EMAIL);
+
+      service.registerProvider(unnamedProvider, true);
+
+      const payload = {
+        to: 'test@example.com',
+        subject: 'Test Subject',
+        content: 'Test Content',
+      };
+
+      await service.send(NotificationChannel.EMAIL, payload);
+
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
+        ...payload,
+        providerName: '',
+      });
+    });
+
+    it('should use explicit empty-string provider name when it matches the requested channel', async () => {
+      const unnamedProvider = createProvider('', NotificationChannel.EMAIL);
+
+      service.registerProvider(emailProvider, true);
+      service.registerProvider(unnamedProvider);
+
+      const payload = {
+        to: 'test@example.com',
+        subject: 'Test Subject',
+        content: 'Test Content',
+      };
+
+      await service.send(NotificationChannel.EMAIL, payload, '');
+
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
+        ...payload,
+        providerName: '',
+      });
+    });
+
     it('should include metadata in job payload', async () => {
       service.registerProvider(emailProvider, true);
 
