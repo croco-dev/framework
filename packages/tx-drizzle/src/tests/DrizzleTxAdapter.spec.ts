@@ -1,9 +1,18 @@
 import type { TxAdapter } from '@croco/tx-core';
 import { describe, expect, it, vi } from 'vitest';
-import { createDrizzleTxAdapter, createRlsTxAdapter, RlsExecuteUnsupportedProblem } from '../index';
+import {
+  createDrizzleTxAdapter,
+  createRlsTxAdapter,
+  RlsExecuteUnsupportedProblem,
+  SavepointUnsupportedProblem,
+} from '../index';
 
 interface MockTx {
   id: string;
+}
+
+interface MockNestedTx extends MockTx {
+  transaction<T>(fn: (tx: MockNestedTx) => Promise<T>): Promise<T>;
 }
 
 interface MockRlsTx extends MockTx {
@@ -68,17 +77,37 @@ describe('DrizzleTxAdapter', () => {
   });
 
   describe('savepoint', () => {
-    it('should execute function with client', async () => {
+    it('should delegate to nested transaction client when savepoint is supported', async () => {
       const db = createMockDrizzleDb();
-      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockNestedTx>;
+      const nestedTransactionSpy = vi.fn();
 
-      const client: MockTx = { id: 'existing-tx' };
+      const client: MockNestedTx = {
+        id: 'existing-tx',
+        transaction: async <T>(fn: (tx: MockNestedTx) => Promise<T>): Promise<T> => {
+          nestedTransactionSpy();
+          return fn(client);
+        },
+      };
+
       const result = await adapter.savepoint(client, async (tx) => {
         expect(tx.id).toBe('existing-tx');
         return 'savepoint-result';
       });
 
       expect(result).toBe('savepoint-result');
+      expect(nestedTransactionSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fail fast when nested transaction client does not support savepoint', async () => {
+      const db = createMockDrizzleDb();
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
+
+      const client: MockTx = { id: 'existing-tx' };
+      const runQuery = vi.fn(async (tx: MockTx) => tx.id);
+
+      await expect(adapter.savepoint(client, runQuery)).rejects.toThrow(SavepointUnsupportedProblem);
+      expect(runQuery).not.toHaveBeenCalled();
     });
   });
 });
@@ -162,6 +191,21 @@ describe('RlsTxAdapter', () => {
       await expect(adapter.transaction(runQuery)).rejects.toThrow(RlsExecuteUnsupportedProblem);
       expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
       expect(dbWithoutExecute.transaction).toHaveBeenCalledTimes(1);
+      expect(runQuery).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('savepoint', () => {
+    it('should propagate savepoint support failures from base adapter', async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => 'tenant-123'),
+      };
+      const adapter = createRlsTxAdapter(db, tenantProvider) as TxAdapter<MockTx>;
+      const client: MockTx = { id: 'rls-client' };
+      const runQuery = vi.fn(async (tx: MockTx) => tx.id);
+
+      await expect(adapter.savepoint(client, runQuery)).rejects.toThrow(SavepointUnsupportedProblem);
       expect(runQuery).not.toHaveBeenCalled();
     });
   });
