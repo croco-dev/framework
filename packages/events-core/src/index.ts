@@ -82,6 +82,7 @@ export type { EventSubscribing } from './libs/interfaces/EventSubscribing';
 export {
   DuplicateEventFieldProblem,
   DuplicateEventNameProblem,
+  EventAfterCommitRequiresActiveTransactionProblem,
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,
