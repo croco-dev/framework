@@ -2,6 +2,7 @@ import { Component } from '@croco/framework-context';
 import type { TaskRunner } from '@croco/tasks-core';
 import type { NotificationProviderRegistry } from './NotificationProviderRegistry';
 import {
+  NotificationProviderChannelMismatchProblem,
   NotificationProviderNotConfiguredProblem,
   NotificationProviderNotRegisteredProblem,
 } from './problems/NotificationProblems';
@@ -32,8 +33,16 @@ export class NotificationService {
       throw new NotificationProviderNotConfiguredProblem(channel);
     }
 
-    if (!this.registry.hasProvider(targetProviderName)) {
+    const provider = this.registry.getProvider(targetProviderName);
+
+    if (!provider) {
       throw new NotificationProviderNotRegisteredProblem(targetProviderName);
+    }
+
+    const providerChannel = provider.getChannel();
+
+    if (providerChannel !== channel) {
+      throw new NotificationProviderChannelMismatchProblem(targetProviderName, channel, providerChannel);
     }
 
     const jobPayload: NotificationJobPayload = {

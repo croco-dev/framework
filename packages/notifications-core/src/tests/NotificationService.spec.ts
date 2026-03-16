@@ -1,68 +1,104 @@
+import type { ExecutionManager } from '@croco/execution-core';
 import { Container } from '@croco/framework-context';
+import { TaskRegistry, TaskRunner } from '@croco/tasks-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationProviderRegistry } from '../libs/NotificationProviderRegistry';
 import { NotificationService } from '../libs/NotificationService';
 import {
+  NotificationProviderChannelMismatchProblem,
   NotificationProviderNotConfiguredProblem,
   NotificationProviderNotRegisteredProblem,
 } from '../libs/problems/NotificationProblems';
+import type { NotificationProvider, NotificationResult } from '../libs/types';
 import { NotificationChannel } from '../libs/types';
 
-// Mock TaskRunner
-const mockTaskRunner = {
-  execute: vi.fn().mockResolvedValue(undefined),
+type MockNotificationProvider = NotificationProvider & {
+  getName: ReturnType<typeof vi.fn>;
+  getChannel: ReturnType<typeof vi.fn>;
+  send: ReturnType<typeof vi.fn>;
 };
+
+const createProvider = (name: string, channel: NotificationChannel): MockNotificationProvider => {
+  const send = vi.fn<() => Promise<NotificationResult>>().mockResolvedValue({
+    success: true,
+    messageId: `${name}-message`,
+  });
+
+  return {
+    getName: vi.fn().mockReturnValue(name),
+    getChannel: vi.fn().mockReturnValue(channel),
+    send,
+  };
+};
+
+const createExecutionManager = (): ExecutionManager => ({
+  create: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  start: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  complete: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  fail: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  cancel: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  retry: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  updateProgress: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  checkpoint: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+  timeout: vi.fn(async () => {
+    throw new Error('not used in NotificationService tests');
+  }),
+});
 
 describe('NotificationService', () => {
   let service!: NotificationService;
   let registry!: NotificationProviderRegistry;
-  let mockProvider!: {
-    getName: ReturnType<typeof vi.fn>;
-    getChannel: ReturnType<typeof vi.fn>;
-    send: ReturnType<typeof vi.fn>;
-  };
+  let taskRunner!: TaskRunner;
+  let executeSpy!: ReturnType<typeof vi.fn>;
+  let emailProvider!: MockNotificationProvider;
 
   beforeEach(() => {
     Container.reset();
     vi.clearAllMocks();
 
     registry = new NotificationProviderRegistry();
-    service = new NotificationService(mockTaskRunner as never, registry);
-
-    mockProvider = {
-      getName: vi.fn().mockReturnValue('test-provider'),
-      getChannel: vi.fn().mockReturnValue(NotificationChannel.EMAIL),
-      send: vi.fn().mockResolvedValue({ success: true, messageId: 'msg-123' }),
-    };
+    taskRunner = new TaskRunner(createExecutionManager(), new TaskRegistry());
+    executeSpy = vi.spyOn(taskRunner, 'execute').mockResolvedValue(undefined);
+    service = new NotificationService(taskRunner, registry);
+    emailProvider = createProvider('email-provider', NotificationChannel.EMAIL);
   });
 
   describe('registerProvider()', () => {
     it('should register provider successfully', () => {
-      service.registerProvider(mockProvider as never);
+      service.registerProvider(emailProvider);
 
-      expect(mockProvider.getName).toHaveBeenCalled();
+      expect(emailProvider.getName).toHaveBeenCalledTimes(1);
+      expect(emailProvider.getChannel).not.toHaveBeenCalled();
     });
 
     it('should register provider as default when isDefault is true', () => {
-      service.registerProvider(mockProvider as never, true);
+      service.registerProvider(emailProvider, true);
 
-      expect(mockProvider.getChannel).toHaveBeenCalled();
-    });
-
-    it('should not set default when isDefault is false', () => {
-      service.registerProvider(mockProvider as never, false);
-
-      // Should not throw when sending without providerName but no default
-      expect(mockProvider.getChannel).not.toHaveBeenCalled();
+      expect(emailProvider.getName).toHaveBeenCalledTimes(1);
+      expect(emailProvider.getChannel).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('send()', () => {
-    beforeEach(() => {
-      service.registerProvider(mockProvider as never, true);
-    });
-
     it('should send notification via task execution with default provider', async () => {
+      service.registerProvider(emailProvider, true);
+
       const payload = {
         to: 'test@example.com',
         subject: 'Test Subject',
@@ -71,47 +107,80 @@ describe('NotificationService', () => {
 
       await service.send(NotificationChannel.EMAIL, payload);
 
-      expect(mockTaskRunner.execute).toHaveBeenCalledWith('send-notification', {
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
         ...payload,
-        providerName: 'test-provider',
+        providerName: 'email-provider',
       });
     });
 
-    it('should send notification with specified provider name', async () => {
-      service.registerProvider(mockProvider as never, false);
+    it('should use specified provider name when it matches the requested channel', async () => {
+      const smsProvider = createProvider('sms-provider', NotificationChannel.SMS);
+
+      service.registerProvider(emailProvider, true);
+      service.registerProvider(smsProvider);
+
+      const payload = {
+        to: 'test@example.com',
+        content: 'Test Content',
+      };
+
+      await service.send(NotificationChannel.SMS, payload, 'sms-provider');
+
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
+        ...payload,
+        providerName: 'sms-provider',
+      });
+    });
+
+    it('should include metadata in job payload', async () => {
+      service.registerProvider(emailProvider, true);
 
       const payload = {
         to: 'test@example.com',
         subject: 'Test Subject',
         content: 'Test Content',
+        metadata: { userId: '123', category: 'promo' },
       };
 
-      await service.send(NotificationChannel.EMAIL, payload, 'test-provider');
+      await service.send(NotificationChannel.EMAIL, payload);
 
-      expect(mockTaskRunner.execute).toHaveBeenCalledWith('send-notification', {
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
         ...payload,
-        providerName: 'test-provider',
+        providerName: 'email-provider',
       });
     });
-    it('should send notification with specified provider name', async () => {
-      service.registerProvider(mockProvider as never, false);
+
+    it('should include templateId and variables in job payload', async () => {
+      service.registerProvider(emailProvider, true);
 
       const payload = {
         to: 'test@example.com',
-        subject: 'Test Subject',
+        content: 'Test Content',
+        templateId: 'welcome-email',
+        variables: { name: 'John' },
+      };
+
+      await service.send(NotificationChannel.EMAIL, payload);
+
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
+        ...payload,
+        providerName: 'email-provider',
+      });
+    });
+
+    it('should throw error when no default provider found for channel', async () => {
+      const payload = {
+        to: 'test@example.com',
         content: 'Test Content',
       };
 
-      await service.send(NotificationChannel.EMAIL, payload, 'test-provider');
-
-      expect(mockTaskRunner.execute).toHaveBeenCalledWith('send-notification', {
-        ...payload,
-        providerName: 'test-provider',
-      });
+      await expect(service.send(NotificationChannel.EMAIL, payload)).rejects.toBeInstanceOf(
+        NotificationProviderNotConfiguredProblem
+      );
     });
 
     it('should throw error when specified provider is not registered', async () => {
-      service.registerProvider(mockProvider as never, false);
+      service.registerProvider(emailProvider, true);
 
       const payload = {
         to: 'test@example.com',
@@ -122,109 +191,22 @@ describe('NotificationService', () => {
         NotificationProviderNotRegisteredProblem
       );
     });
-  });
 
-  describe('send() - error cases', () => {
-    it('should throw error when no default provider found for channel', async () => {
-      const smsProvider = {
-        getName: vi.fn().mockReturnValue('sms-provider'),
-        getChannel: vi.fn().mockReturnValue(NotificationChannel.SMS),
-        send: vi.fn().mockResolvedValue({ success: true }),
-      };
+    it('should throw error when specified provider channel does not match requested channel', async () => {
+      const smsProvider = createProvider('sms-provider', NotificationChannel.SMS);
 
-      service.registerProvider(smsProvider as never, true);
+      service.registerProvider(emailProvider, true);
+      service.registerProvider(smsProvider);
 
       const payload = {
         to: 'test@example.com',
         content: 'Test Content',
       };
 
-      await expect(service.send(NotificationChannel.EMAIL, payload)).rejects.toBeInstanceOf(
-        NotificationProviderNotConfiguredProblem
+      await expect(service.send(NotificationChannel.EMAIL, payload, 'sms-provider')).rejects.toBeInstanceOf(
+        NotificationProviderChannelMismatchProblem
       );
-    });
-  });
-
-  describe('send()', () => {
-    beforeEach(() => {
-      service.registerProvider(mockProvider as never, true);
-    });
-
-    it('should send notification via task execution with default provider', async () => {
-      const payload = {
-        to: 'test@example.com',
-        subject: 'Test Subject',
-        content: 'Test Content',
-      };
-
-      await service.send(NotificationChannel.EMAIL, payload);
-
-      expect(mockTaskRunner.execute).toHaveBeenCalledWith('send-notification', {
-        ...payload,
-        providerName: 'test-provider',
-      });
-    });
-
-    it('should send notification with specified provider name', async () => {
-      service.registerProvider(mockProvider as never, false);
-
-      const payload = {
-        to: 'test@example.com',
-        subject: 'Test Subject',
-        content: 'Test Content',
-      };
-
-      await service.send(NotificationChannel.EMAIL, payload, 'test-provider');
-
-      expect(mockTaskRunner.execute).toHaveBeenCalledWith('send-notification', {
-        ...payload,
-        providerName: 'test-provider',
-      });
-    });
-
-    it('should throw error when specified provider is not registered', async () => {
-      service.registerProvider(mockProvider as never, false);
-
-      const payload = {
-        to: 'test@example.com',
-        content: 'Test Content',
-      };
-
-      await expect(service.send(NotificationChannel.EMAIL, payload, 'non-existent')).rejects.toThrow(
-        'Provider non-existent is not registered'
-      );
-    });
-
-    it('should include metadata in job payload', async () => {
-      const payload = {
-        to: 'test@example.com',
-        subject: 'Test Subject',
-        content: 'Test Content',
-        metadata: { userId: '123', category: 'promo' },
-      };
-
-      await service.send(NotificationChannel.EMAIL, payload);
-
-      expect(mockTaskRunner.execute).toHaveBeenCalledWith('send-notification', {
-        ...payload,
-        providerName: 'test-provider',
-      });
-    });
-
-    it('should include templateId and variables in job payload', async () => {
-      const payload = {
-        to: 'test@example.com',
-        content: 'Test Content',
-        templateId: 'welcome-email',
-        variables: { name: 'John' },
-      };
-
-      await service.send(NotificationChannel.EMAIL, payload);
-
-      expect(mockTaskRunner.execute).toHaveBeenCalledWith('send-notification', {
-        ...payload,
-        providerName: 'test-provider',
-      });
+      expect(executeSpy).not.toHaveBeenCalled();
     });
   });
 });
