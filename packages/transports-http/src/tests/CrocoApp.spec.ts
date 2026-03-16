@@ -7,6 +7,7 @@ import { createApp } from '../libs/CrocoApp';
 import { CrocoRouteRegistrar } from '../libs/CrocoRouteRegistrar';
 import { ErrorHandler } from '../libs/ErrorHandler';
 import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
+import type { LambdaContext, LambdaEvent } from '../libs/types';
 
 describe('CrocoApp', () => {
   beforeEach(() => {
@@ -68,13 +69,82 @@ describe('CrocoApp', () => {
         traceFlags: context?.traceFlags ?? null,
       };
     }
+
+    @Get('/event-metadata')
+    getEventMetadata(@Raw() raw: unknown) {
+      const env =
+        typeof raw === 'object' && raw !== null && 'env' in raw
+          ? (
+              raw as {
+                env?: {
+                  event?: {
+                    cookies?: string[];
+                    requestContext?: {
+                      stage?: string;
+                      authorizer?: Record<string, unknown>;
+                    };
+                  };
+                  lambdaContext?: {
+                    awsRequestId?: string;
+                  };
+                };
+              }
+            ).env
+          : undefined;
+
+      return {
+        stage: env?.event?.requestContext?.stage ?? null,
+        cookies: env?.event?.cookies ?? [],
+        authorizer: env?.event?.requestContext?.authorizer ?? null,
+        awsRequestId: env?.lambdaContext?.awsRequestId ?? null,
+      };
+    }
   }
 
-  const lambdaContext = {
+  const lambdaContext: LambdaContext = {
+    callbackWaitsForEmptyEventLoop: false,
     functionName: 'test-function',
+    functionVersion: '$LATEST',
+    invokedFunctionArn: 'arn:aws:lambda:ap-northeast-2:123456789012:function:test-function',
+    logGroupName: '/aws/lambda/test-function',
+    logStreamName: '2026/03/17/[$LATEST]abcdef',
+    memoryLimitInMB: '128',
     awsRequestId: 'req-123',
+    done: () => undefined,
     getRemainingTimeInMillis: () => 5000,
+    fail: () => undefined,
+    succeed: () => undefined,
   };
+
+  function createLambdaEvent(overrides: Partial<LambdaEvent> = {}): LambdaEvent {
+    return {
+      version: '2.0',
+      routeKey: '$default',
+      rawPath: '/',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        accountId: '123456789012',
+        apiId: 'api-123',
+        domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
+        domainPrefix: 'example',
+        http: {
+          method: 'GET',
+          path: '/',
+          protocol: 'HTTP/1.1',
+          sourceIp: '127.0.0.1',
+          userAgent: 'vitest',
+        },
+        requestId: 'gateway-req-123',
+        routeKey: '$default',
+        stage: '$default',
+        time: '17/Mar/2026:12:00:00 +0000',
+        timeEpoch: 1710676800000,
+      },
+      isBase64Encoded: false,
+      ...overrides,
+    };
+  }
 
   it('should handle GET request', async () => {
     const app = createApp({ controllers: [TestController] });
@@ -137,14 +207,31 @@ describe('CrocoApp', () => {
     const binaryBody = Buffer.from([0xc3, 0x28, 0xff, 0xfe, 0x00, 0x61, 0x80]);
 
     const response = await handler(
-      {
-        requestContext: { http: { method: 'POST', path: '/lambda/binary-echo' } },
+      createLambdaEvent({
+        requestContext: {
+          accountId: '123456789012',
+          apiId: 'api-123',
+          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
+          domainPrefix: 'example',
+          http: {
+            method: 'POST',
+            path: '/lambda/binary-echo',
+            protocol: 'HTTP/1.1',
+            sourceIp: '127.0.0.1',
+            userAgent: 'vitest',
+          },
+          requestId: 'gateway-req-123',
+          routeKey: '$default',
+          stage: '$default',
+          time: '17/Mar/2026:12:00:00 +0000',
+          timeEpoch: 1710676800000,
+        },
         rawPath: '/lambda/binary-echo',
         rawQueryString: '',
         headers: { 'content-type': 'application/octet-stream' },
         body: binaryBody.toString('base64'),
         isBase64Encoded: true,
-      },
+      }),
       lambdaContext
     );
 
@@ -193,12 +280,29 @@ describe('CrocoApp', () => {
     const handler = app.lambdaHandler();
 
     const response = await handler(
-      {
-        requestContext: { http: { method: 'GET', path: '/api/hello' } },
+      createLambdaEvent({
+        requestContext: {
+          accountId: '123456789012',
+          apiId: 'api-123',
+          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
+          domainPrefix: 'example',
+          http: {
+            method: 'GET',
+            path: '/api/hello',
+            protocol: 'HTTP/1.1',
+            sourceIp: '127.0.0.1',
+            userAgent: 'vitest',
+          },
+          requestId: 'gateway-req-123',
+          routeKey: '$default',
+          stage: '$default',
+          time: '17/Mar/2026:12:00:00 +0000',
+          timeEpoch: 1710676800000,
+        },
         rawPath: '/api/hello',
         rawQueryString: '',
         headers: { 'content-type': 'application/json' },
-      },
+      }),
       lambdaContext
     );
 
@@ -217,14 +321,31 @@ describe('CrocoApp', () => {
     const expectedTraceFlags = 1; // Number.parseInt('01', 16)
 
     const response = await handler(
-      {
-        requestContext: { http: { method: 'GET', path: '/lambda/trace-context' } },
+      createLambdaEvent({
+        requestContext: {
+          accountId: '123456789012',
+          apiId: 'api-123',
+          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
+          domainPrefix: 'example',
+          http: {
+            method: 'GET',
+            path: '/lambda/trace-context',
+            protocol: 'HTTP/1.1',
+            sourceIp: '127.0.0.1',
+            userAgent: 'vitest',
+          },
+          requestId: 'gateway-req-123',
+          routeKey: '$default',
+          stage: '$default',
+          time: '17/Mar/2026:12:00:00 +0000',
+          timeEpoch: 1710676800000,
+        },
         rawPath: '/lambda/trace-context',
         rawQueryString: '',
         headers: {
           traceparent: `00-${traceId}-${spanId}-${traceFlagsHex}`,
         },
-      },
+      }),
       lambdaContext
     );
 
@@ -233,6 +354,67 @@ describe('CrocoApp', () => {
       traceId,
       spanId,
       traceFlags: expectedTraceFlags,
+    });
+  });
+
+  it('should preserve lambda event metadata in raw hono env', async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        version: '2.0',
+        routeKey: 'GET /lambda/event-metadata',
+        rawPath: '/lambda/event-metadata',
+        rawQueryString: '',
+        cookies: ['session=abc', 'theme=dark'],
+        headers: { 'content-type': 'application/json' },
+        requestContext: {
+          accountId: '123456789012',
+          apiId: 'api-123',
+          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
+          domainPrefix: 'example',
+          http: {
+            method: 'GET',
+            path: '/lambda/event-metadata',
+            protocol: 'HTTP/1.1',
+            sourceIp: '127.0.0.1',
+            userAgent: 'vitest',
+          },
+          requestId: 'gateway-req-123',
+          routeKey: 'GET /lambda/event-metadata',
+          stage: '$default',
+          time: '17/Mar/2026:12:00:00 +0000',
+          timeEpoch: 1710676800000,
+          authorizer: {
+            jwt: {
+              claims: {
+                sub: 'user-123',
+                tenantId: 'tenant-456',
+              },
+              scopes: ['read:users'],
+            },
+          },
+        },
+        isBase64Encoded: false,
+      }),
+      lambdaContext
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? '{}')).toEqual({
+      stage: '$default',
+      cookies: ['session=abc', 'theme=dark'],
+      authorizer: {
+        jwt: {
+          claims: {
+            sub: 'user-123',
+            tenantId: 'tenant-456',
+          },
+          scopes: ['read:users'],
+        },
+      },
+      awsRequestId: 'req-123',
     });
   });
 });

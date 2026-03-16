@@ -1,4 +1,10 @@
 import type { Constructor } from '@croco/protocols-rest';
+import type {
+  APIGatewayEventRequestContextV2,
+  APIGatewayEventRequestContextV2WithAuthorizer,
+  APIGatewayProxyEventV2WithRequestContext,
+  Context as AwsLambdaContext,
+} from 'aws-lambda';
 import type { Context as HonoContext } from 'hono';
 
 export type GuardProvider<T = unknown> = Constructor<T> | T;
@@ -54,22 +60,21 @@ export interface CompiledRoute {
   methodName: string | symbol;
 }
 
-export interface LambdaEvent {
-  requestContext?: {
-    http?: { method: string; path: string };
-  };
-  rawPath?: string;
-  rawQueryString?: string;
-  headers?: Record<string, string>;
-  body?: string;
-  isBase64Encoded?: boolean;
-}
+export type LambdaRequestContext = APIGatewayEventRequestContextV2 & {
+  authorizer?: Record<string, unknown>;
+};
 
-export interface LambdaContext {
-  functionName: string;
-  awsRequestId: string;
-  getRemainingTimeInMillis(): number;
-}
+export type LambdaRequestContextWithAuthorizer<TAuthorizer = Record<string, unknown>> =
+  APIGatewayEventRequestContextV2WithAuthorizer<TAuthorizer>;
+
+export type LambdaEvent<TRequestContext extends APIGatewayEventRequestContextV2 = LambdaRequestContext> =
+  APIGatewayProxyEventV2WithRequestContext<TRequestContext>;
+
+export type LambdaEventWithAuthorizer<TAuthorizer = Record<string, unknown>> = LambdaEvent<
+  LambdaRequestContextWithAuthorizer<TAuthorizer>
+>;
+
+export type LambdaContext = AwsLambdaContext;
 
 export type LambdaHandler = (event: LambdaEvent, context: LambdaContext) => Promise<LambdaResponse>;
 
