@@ -68,18 +68,19 @@ describe('TxManager characterization', () => {
     ]);
   });
 
-  it('should preserve after-commit hook timing and context', async () => {
+  it('should preserve after-commit hook timing without re-entering transaction context', async () => {
     const events: string[] = [];
     const txManager = new TxManager(createObservedAdapter(events));
 
     await txManager.run(async () => {
       events.push('fn');
       txManager.onAfterCommit(() => {
-        events.push(`hook:${txManager.getClient()?.id}`);
+        events.push(`hook:${txManager.getClient()}`);
       });
     });
 
-    expect(events).toEqual(['transaction:start', 'fn', 'transaction:commit', 'hook:root-client']);
+    expect(events).toEqual(['transaction:start', 'fn', 'transaction:commit', 'hook:null']);
+    expect(txManager.isInTransaction()).toBe(false);
     expect(txManager.getClient()).toBeNull();
   });
 

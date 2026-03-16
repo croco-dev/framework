@@ -195,32 +195,38 @@ describe('TxManager', () => {
       expect(savepointHook).toHaveBeenCalledTimes(1);
     });
 
-    it('should keep transaction context while running afterCommit hooks', async () => {
+    it('should clear transaction context before running afterCommit hooks', async () => {
       const observedClients: Array<{ id: string } | null> = [];
+      const observedTransactionStates: boolean[] = [];
 
       await txManager.run(async () => {
         txManager.onAfterCommit(async () => {
           observedClients.push(txManager.getClient());
+          observedTransactionStates.push(txManager.isInTransaction());
         });
       });
 
-      expect(observedClients).toEqual([{ id: 'tx-client' }]);
+      expect(observedClients).toEqual([null]);
+      expect(observedTransactionStates).toEqual([false]);
       expect(txManager.getClient()).toBeNull();
     });
 
     it('should reject after root commit when afterCommit hook fails', async () => {
       const observedClients: Array<{ id: string } | null> = [];
+      const observedTransactionStates: boolean[] = [];
 
       await expect(
         txManager.run(async () => {
           txManager.onAfterCommit(async () => {
             observedClients.push(txManager.getClient());
+            observedTransactionStates.push(txManager.isInTransaction());
             throw new Error('post-commit event publish failed');
           });
         })
       ).rejects.toThrow(AfterCommitHooksProblem);
 
-      expect(observedClients).toEqual([{ id: 'tx-client' }]);
+      expect(observedClients).toEqual([null]);
+      expect(observedTransactionStates).toEqual([false]);
       expect(txManager.getClient()).toBeNull();
     });
   });
