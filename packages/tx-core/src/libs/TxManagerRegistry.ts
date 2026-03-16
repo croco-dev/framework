@@ -1,5 +1,5 @@
 import { Container, TRANSACTION_CONTEXT_TOKEN } from '@croco/framework-context';
-import { TxManagerNotRegisteredError } from './errors';
+import { DuplicateTxManagerRegistrationProblem, TxManagerNotRegisteredError } from './errors';
 import type { TxManager } from './TxManager';
 import { DEFAULT_TX_MANAGER_KEY, type TxManagerKey } from './types';
 
@@ -10,6 +10,11 @@ class TxManagerRegistryClass {
 
   register(manager: TxManagerInstance, key?: TxManagerKey): void {
     const managerKey = key ?? DEFAULT_TX_MANAGER_KEY;
+
+    if (this.managers.has(managerKey)) {
+      throw new DuplicateTxManagerRegistrationProblem(key === undefined ? undefined : String(key));
+    }
+
     this.managers.set(managerKey, manager);
 
     if (managerKey === DEFAULT_TX_MANAGER_KEY) {

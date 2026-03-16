@@ -2,6 +2,7 @@ import { Container, TRANSACTION_CONTEXT_TOKEN } from '@croco/framework-context';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AfterCommitHooksProblem,
+  DuplicateTxManagerRegistrationProblem,
   Transactional,
   type TxAdapter,
   TxManager,
@@ -57,6 +58,36 @@ describe('TxManagerRegistry', () => {
 
       expect(TxManagerRegistry.get('key1')).toBe(txManager);
       expect(TxManagerRegistry.get('key2')).toBe(txManager2);
+    });
+
+    it('should fail fast when the default manager is registered twice', () => {
+      const txManager2 = new TxManager(createMockAdapter());
+
+      TxManagerRegistry.register(txManager);
+
+      expect(() => TxManagerRegistry.register(txManager2)).toThrow(DuplicateTxManagerRegistrationProblem);
+      expect(TxManagerRegistry.get()).toBe(txManager);
+      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(txManager);
+    });
+
+    it('should fail fast when the same custom key is registered twice', () => {
+      const txManager2 = new TxManager(createMockAdapter());
+
+      TxManagerRegistry.register(txManager, 'custom-key');
+
+      expect(() => TxManagerRegistry.register(txManager2, 'custom-key')).toThrow(DuplicateTxManagerRegistrationProblem);
+      expect(TxManagerRegistry.get('custom-key')).toBe(txManager);
+    });
+
+    it('should keep existing bindings unchanged when duplicate default registration fails', () => {
+      const txManager2 = new TxManager(createMockAdapter());
+
+      TxManagerRegistry.register(txManager);
+
+      expect(() => TxManagerRegistry.register(txManager2)).toThrow(DuplicateTxManagerRegistrationProblem);
+      expect(TxManagerRegistry.has()).toBe(true);
+      expect(TxManagerRegistry.get()).toBe(txManager);
+      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(txManager);
     });
   });
 
@@ -118,6 +149,17 @@ describe('TxManagerRegistry', () => {
 
       TxManagerRegistry.register(txManager);
       expect(TxManagerRegistry.has()).toBe(true);
+    });
+
+    it('should allow re-registering the same key after clear', () => {
+      const txManager2 = new TxManager(createMockAdapter());
+
+      TxManagerRegistry.register(txManager, 'custom-key');
+      TxManagerRegistry.clear();
+
+      TxManagerRegistry.register(txManager2, 'custom-key');
+
+      expect(TxManagerRegistry.get('custom-key')).toBe(txManager2);
     });
 
     it('should remove transaction context token from Container on clear', () => {
