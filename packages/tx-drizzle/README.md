@@ -93,8 +93,8 @@ const adapter = createDrizzleTxAdapter(db);
 
 반환된 어댑터는 다음을 지원합니다:
 - `transaction(fn, options?)`: `db.transaction` 호출
-- `savepoint(client, fn, options?)`: `tx.transaction` 호출 (중첩 트랜잭션)
-- `supportsSavepoint()`: 항상 `true` 반환
+- `savepoint(client, fn, options?)`: `tx.transaction` 호출 (중첩 트랜잭션). 런타임 transaction client가 `transaction()`을 제공하지 않으면 `SavepointUnsupportedProblem`으로 즉시 실패
+- `supportsSavepoint()`: `true` 반환. 단, 실제 중첩 트랜잭션 실행은 런타임 transaction client의 `transaction()` 지원이 필요
 
 ### 타입 유틸리티
 
@@ -117,6 +117,5 @@ type TxOptions = InferTxOptions<typeof db>;
 ## Peer Dependencies
 
 - `drizzle-orm` >=0.30.0
-
 
 
