@@ -11,7 +11,11 @@ export { TxManagerNotRegisteredError, TxPropagationError } from './libs/errors';
 /**
  * Problem thrown when transaction context is required but not available.
  */
-export { TransactionContextProblem, TransactionDecoratorProblem } from './libs/problems/TransactionProblems';
+export {
+  AfterCommitHooksProblem,
+  TransactionContextProblem,
+  TransactionDecoratorProblem,
+} from './libs/problems/TransactionProblems';
 
 /**
  * Method decorator that applies transaction propagation and nesting semantics.

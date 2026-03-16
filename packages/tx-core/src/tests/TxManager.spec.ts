@@ -1,7 +1,7 @@
-import { Container, TRANSACTION_CONTEXT_TOKEN } from '@croco/framework-context';
+import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type TxAdapter, TxManager } from '../index';
-import { TxManagerRegistry } from '../libs/TxManagerRegistry';
+import { AfterCommitHooksProblem } from '../libs/problems/TransactionProblems';
 
 function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAdapter<{ id: string }> {
   return {
@@ -203,6 +203,22 @@ describe('TxManager', () => {
           observedClients.push(txManager.getClient());
         });
       });
+
+      expect(observedClients).toEqual([{ id: 'tx-client' }]);
+      expect(txManager.getClient()).toBeNull();
+    });
+
+    it('should reject after root commit when afterCommit hook fails', async () => {
+      const observedClients: Array<{ id: string } | null> = [];
+
+      await expect(
+        txManager.run(async () => {
+          txManager.onAfterCommit(async () => {
+            observedClients.push(txManager.getClient());
+            throw new Error('post-commit event publish failed');
+          });
+        })
+      ).rejects.toThrow(AfterCommitHooksProblem);
 
       expect(observedClients).toEqual([{ id: 'tx-client' }]);
       expect(txManager.getClient()).toBeNull();
