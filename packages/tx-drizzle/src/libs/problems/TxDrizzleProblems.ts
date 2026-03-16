@@ -15,3 +15,15 @@ export class RlsExecuteUnsupportedProblem extends Problem {
     super(undefined, undefined, `Transaction client does not support execute(), cannot set RLS key '${configKey}'`);
   }
 }
+
+export class SavepointUnsupportedProblem extends Problem {
+  readonly code = 'tx-drizzle/savepoint-unsupported';
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(
+      undefined,
+      undefined,
+      'Transaction client does not support savepoint(), nested transaction requires client.transaction()'
+    );
+  }
+}

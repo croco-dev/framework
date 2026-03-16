@@ -1,4 +1,5 @@
 import type { TxAdapter } from '@croco/tx-core';
+import { SavepointUnsupportedProblem } from './problems/TxDrizzleProblems';
 import type { DrizzleDb, DrizzleTx, InferTxClient, InferTxOptions } from './types';
 
 export function createDrizzleTxAdapter<TDb extends DrizzleDb>(
@@ -16,7 +17,7 @@ export function createDrizzleTxAdapter<TDb extends DrizzleDb>(
       const txClient = client as unknown as DrizzleTx<TClient, TOptions>;
 
       if (typeof txClient.transaction !== 'function') {
-        return fn(client);
+        throw new SavepointUnsupportedProblem();
       }
 
       return txClient.transaction(fn as (tx: unknown) => Promise<T>, options) as Promise<T>;
