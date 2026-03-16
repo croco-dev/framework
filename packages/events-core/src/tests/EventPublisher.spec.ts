@@ -5,7 +5,10 @@ import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
 import { EventPublisher } from '../libs/EventPublisher';
-import { EventTransactionContextUnavailableProblem } from '../libs/problems/EventsProblems';
+import {
+  EventAfterCommitRequiresActiveTransactionProblem,
+  EventTransactionContextUnavailableProblem,
+} from '../libs/problems/EventsProblems';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';
@@ -49,6 +52,7 @@ describe('EventPublisher', () => {
 
   beforeEach(() => {
     Container.reset();
+    Container.remove(TRANSACTION_CONTEXT_TOKEN as never);
     vi.restoreAllMocks();
     mockEventBus = new MockEventBus();
     config = EventBusConfig.getInstance();
@@ -114,6 +118,87 @@ describe('EventPublisher', () => {
       config.setEventBus(errorEventBus);
 
       await expect(publisher.publish(new TestEvent('error'))).rejects.toThrow('Event bus error');
+    });
+
+    it('should keep deprecated tx-aware publish behavior inside transactions', async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+
+      const event = new TestEvent('deprecated-with-tx');
+
+      await publisher.publish(event);
+
+      expect(mockEventBus.publishedEvents).toHaveLength(0);
+      expect(registeredHook).not.toBeUndefined();
+
+      await registeredHook?.();
+
+      expect(mockEventBus.publishedEvents).toHaveLength(1);
+      expect(mockEventBus.publishedEvents[0]).toBe(event);
+    });
+  });
+
+  describe('publishNow', () => {
+    it('should publish immediately even inside an active transaction', async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+
+      const event = new TestEvent('publish-now');
+
+      await publisher.publishNow(event);
+
+      expect(mockEventBus.publishedEvents).toHaveLength(1);
+      expect(mockEventBus.publishedEvents[0]).toBe(event);
+      expect(registeredHook).toBeUndefined();
+    });
+  });
+
+  describe('publishAfterCommit', () => {
+    it('should require an active transaction', () => {
+      expect(() => publisher.publishAfterCommit(new TestEvent('missing-tx'))).toThrow(
+        EventAfterCommitRequiresActiveTransactionProblem
+      );
+      expect(() => publisher.publishAfterCommit(new TestEvent('missing-tx'))).toThrow(
+        'publishAfterCommit requires an active transaction.'
+      );
+    });
+
+    it('should register publish hook inside an active transaction', async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+
+      const event = new TestEvent('after-commit');
+
+      publisher.publishAfterCommit(event);
+
+      expect(mockEventBus.publishedEvents).toHaveLength(0);
+      expect(registeredHook).not.toBeUndefined();
+
+      await registeredHook?.();
+
+      expect(mockEventBus.publishedEvents).toHaveLength(1);
+      expect(mockEventBus.publishedEvents[0]).toBe(event);
     });
   });
 
@@ -325,10 +410,7 @@ describe('EventPublisher', () => {
         },
       };
 
-      vi.spyOn(Container, 'get').mockImplementation((token: any) => {
-        if (token === TRANSACTION_CONTEXT_TOKEN) return mockTxContext;
-        throw new Error('Not found');
-      });
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
 
       const event = new TestEvent('with-tx');
       await publisher.publish(event);
@@ -353,10 +435,7 @@ describe('EventPublisher', () => {
         },
       };
 
-      vi.spyOn(Container, 'get').mockImplementation((token: any) => {
-        if (token === TRANSACTION_CONTEXT_TOKEN) return mockTxContext;
-        throw new Error('Not found');
-      });
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
 
       const event = new TestEvent('rollback-tx');
       await publisher.publish(event);
@@ -374,10 +453,7 @@ describe('EventPublisher', () => {
         },
       };
 
-      vi.spyOn(Container, 'get').mockImplementation((token: any) => {
-        if (token === TRANSACTION_CONTEXT_TOKEN) return mockTxContext;
-        throw new Error('Not found');
-      });
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
 
       class TestAgg extends AggregateRoot {
         doWork() {

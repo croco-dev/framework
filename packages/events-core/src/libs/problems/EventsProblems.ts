@@ -59,3 +59,11 @@ export class EventTransactionContextUnavailableProblem extends Problem {
     super(undefined, undefined, `Transaction context unavailable during event publication: ${reason}`);
   }
 }
+
+export class EventAfterCommitRequiresActiveTransactionProblem extends Problem {
+  readonly code = 'events-core/after-commit-requires-active-transaction';
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(undefined, undefined, 'publishAfterCommit requires an active transaction.');
+  }
+}

@@ -1,7 +1,10 @@
 import { Container, TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/framework-context';
 import type { DomainEvent } from './DomainEvent';
 import type { EventBusConfig } from './EventBusConfig';
-import { EventTransactionContextUnavailableProblem } from './problems/EventsProblems';
+import {
+  EventAfterCommitRequiresActiveTransactionProblem,
+  EventTransactionContextUnavailableProblem,
+} from './problems/EventsProblems';
 
 export type PublishResult<T extends DomainEvent> = {
   event: T;
@@ -29,12 +32,28 @@ export class EventPublisher {
     return this.config.getEventBus();
   }
 
+  async publishNow(event: DomainEvent): Promise<void> {
+    await this.eventBus.publish(event);
+  }
+
+  publishAfterCommit(event: DomainEvent): void {
+    const txContext = this.tryGetTransactionContext();
+    if (!txContext?.isInTransaction()) {
+      throw new EventAfterCommitRequiresActiveTransactionProblem();
+    }
+
+    txContext.onAfterCommit(() => this.eventBus.publish(event));
+  }
+
+  /**
+   * @deprecated Use publishNow() for immediate publication or publishAfterCommit() for explicit after-commit scheduling.
+   */
   async publish(event: DomainEvent): Promise<void> {
     const txContext = this.tryGetTransactionContext();
     if (txContext?.isInTransaction()) {
-      txContext.onAfterCommit(() => this.eventBus.publish(event));
+      this.publishAfterCommit(event);
     } else {
-      await this.eventBus.publish(event);
+      await this.publishNow(event);
     }
   }
 
