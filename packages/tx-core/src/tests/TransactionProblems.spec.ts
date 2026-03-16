@@ -61,7 +61,15 @@ describe('TransactionProblems', () => {
 
     expect(error.code).toBe('tx-core/duplicate-tx-manager-registration');
     expect(error.category).toBe(ProblemCategory.InternalServerError);
-    expect(error.detail).toBe("TxManager is already registered for key: 'my-db'");
+    expect(error.detail).toBe('TxManager is already registered for key: my-db');
+  });
+
+  it('should create DuplicateTxManagerRegistrationProblem with default fallback metadata', () => {
+    const error = new DuplicateTxManagerRegistrationProblem(undefined);
+
+    expect(error.code).toBe('tx-core/duplicate-tx-manager-registration');
+    expect(error.category).toBe(ProblemCategory.InternalServerError);
+    expect(error.detail).toBe('TxManager is already registered for key: default');
   });
 
   it('should create TxPropagationError with expected metadata', () => {

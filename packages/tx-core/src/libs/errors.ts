@@ -5,7 +5,7 @@ export class DuplicateTxManagerRegistrationProblem extends Problem {
   readonly category = ProblemCategory.InternalServerError;
 
   constructor(key: string | undefined) {
-    super(undefined, undefined, `TxManager is already registered for key: '${String(key ?? 'default')}'`);
+    super(undefined, undefined, `TxManager is already registered for key: ${String(key ?? 'default')}`);
   }
 }
 
