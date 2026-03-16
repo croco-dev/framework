@@ -1,0 +1,19 @@
+import { Problem, ProblemCategory } from '@croco/problems-core';
+
+export class RateLimitKeyBuilderProblem extends Problem {
+  readonly code = 'RATE_LIMIT_KEY_BUILDER_ERROR';
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(detail: string) {
+    super(detail);
+  }
+}
+
+export class RateLimitWindowProblem extends Problem {
+  readonly code = 'RATE_LIMIT_WINDOW_ERROR';
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(detail: string) {
+    super(detail);
+  }
+}

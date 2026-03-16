@@ -52,12 +52,4 @@ export class LlmCostLimitExceededProblem extends Problem {
   }
 }
 
-export class PricingNotFoundProblem extends Problem {
-  constructor(provider: string, modelId: string) {
-    super(
-      'llm-metering/pricing-not-found',
-      ProblemCategory.NotFound,
-      `Pricing not found for provider '${provider}' and model '${modelId}'`
-    );
-  }
-}
+export class PricingNotFoundProblem extends Problem { readonly code = 'llm-metering/pricing-not-found'; readonly category = ProblemCategory.NotFound; constructor(provider: string, modelId: string) { super(`Pricing not found for provider '${provider}' and model '${modelId}'`); } }

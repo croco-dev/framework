@@ -1,4 +1,4 @@
-import type { ProblemCategory } from './ProblemCategory';
+import { ProblemCategory } from './ProblemCategory';
 import { ProblemCategoryMapper } from './ProblemCategoryMapper';
 
 export interface ProblemOptions {
@@ -27,11 +27,16 @@ export abstract class Problem extends Error {
   public readonly extensions?: Record<string, unknown>;
   public readonly cause?: Error;
 
-  protected constructor(code: string, category: ProblemCategory, detail?: string, options?: ProblemOptions) {
-    super(detail ?? code);
+  protected constructor(code?: string, category?: ProblemCategory, detail?: string, options?: ProblemOptions) {
+    super(detail ?? code ?? 'Unknown error');
 
-    this.code = code;
-    this.category = category;
+    if ((this as any).code === undefined) {
+      (this as any).code = code ?? 'UNKNOWN_ERROR';
+    }
+    if ((this as any).category === undefined) {
+      (this as any).category = category ?? ProblemCategory.InternalServerError;
+    }
+
     this.detail = detail;
     this.type = options?.type ?? 'about:blank';
     this.instance = options?.instance;

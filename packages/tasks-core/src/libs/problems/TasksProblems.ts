@@ -1,7 +1,3 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
-export class TaskNotFoundProblem extends Problem {
-  constructor(taskId: string) {
-    super('tasks-core/task-not-found', ProblemCategory.NotFound, `Task not found: '${taskId}'`);
-  }
-}
+export class TaskNotFoundProblem extends Problem {  readonly code = 'tasks-core/task-not-found'; readonly category = ProblemCategory.NotFound; constructor(taskId: string) { super(`Task not found: '${taskId}'`);  }  }

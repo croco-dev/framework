@@ -1,14 +1,6 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
-export class ConfigSchemaNotFoundProblem extends Problem {
-  constructor(targetName: string) {
-    super(
-      'framework-config/config-schema-not-found',
-      ProblemCategory.InternalServerError,
-      `No config schema found for '${targetName}'`
-    );
-  }
-}
+export class ConfigSchemaNotFoundProblem extends Problem { readonly code = 'framework-config/config-schema-not-found'; readonly category = ProblemCategory.InternalServerError; constructor(targetName: string) { super(`No config schema found for '${targetName}'`); } }
 
 export class ConfigValidationProblem extends Problem {
   constructor(missingPaths: string[]) {
@@ -18,12 +10,4 @@ export class ConfigValidationProblem extends Problem {
   }
 }
 
-export class InvalidBooleanEnvProblem extends Problem {
-  constructor(envName: string, value: string) {
-    super(
-      'framework-config/invalid-boolean-env',
-      ProblemCategory.ValidationError,
-      `Invalid boolean env value for '${envName}': '${value}'`
-    );
-  }
-}
+export class InvalidBooleanEnvProblem extends Problem { readonly code = 'framework-config/invalid-boolean-env'; readonly category = ProblemCategory.ValidationError; constructor(envName: string, value: string) { super(`Invalid boolean env value for '${envName}': '${value}'`); } }

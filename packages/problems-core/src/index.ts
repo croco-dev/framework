@@ -48,6 +48,7 @@ export type { ProblemDetails, ProblemOptions } from './libs/Problem';
  * ```
  */
 export { Problem } from './libs/Problem';
+
 /**
  * Problem의 도메인 분류와 HTTP 의미론을 연결하는 카테고리 열거형입니다.
  *
@@ -63,6 +64,7 @@ export { Problem } from './libs/Problem';
  * ```
  */
 export { ProblemCategory } from './libs/ProblemCategory';
+
 /**
  * ProblemCategory를 HTTP 응답용 status/title로 변환하는 매퍼입니다.
  *
@@ -78,6 +80,7 @@ export { ProblemCategory } from './libs/ProblemCategory';
  * ```
  */
 export { ProblemCategoryMapper } from './libs/ProblemCategoryMapper';
+
 /**
  * 카테고리별 기본 Problem 인스턴스를 생성하는 팩토리입니다.
  *
@@ -94,21 +97,3 @@ export { ProblemCategoryMapper } from './libs/ProblemCategoryMapper';
  * ```
  */
 export { ProblemFactory } from './libs/ProblemFactory';
-/**
- * unknown 타입의 에러를 Error 인스턴스로 정규화하는 유틸리티 함수입니다.
- *
- * @property normalizeError - unknown 타입의 에러를 Error 인스턴스로 변환합니다.
- *
- * @example
- * ```typescript
- * import { normalizeError } from '@croco/problems-core';
- *
- * try {
- *   await someOperation();
- * } catch (error) {
- *   const normalized = normalizeError(error);
- *   console.error(normalized.message);
- * }
- * ```
- */
-export { normalizeError } from './libs/utils/normalizeError';

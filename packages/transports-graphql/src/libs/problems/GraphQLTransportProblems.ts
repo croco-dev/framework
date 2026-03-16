@@ -1,30 +1,10 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
-export class GraphQLResolversNotConfiguredProblem extends Problem {
-  constructor() {
-    super(
-      'transports-graphql/resolvers-not-configured',
-      ProblemCategory.InternalServerError,
-      'No resolvers provided. Provide resolvers manually or enable autoDiscover.'
-    );
-  }
-}
+export class GraphQLResolversNotConfiguredProblem extends Problem {  readonly code = 'transports-graphql/resolvers-not-configured'; readonly category = ProblemCategory.InternalServerError; constructor() { super('No resolvers provided. Provide resolvers manually or enable autoDiscover.');  }  }
 
-export class GraphQLSchemaNotConfiguredProblem extends Problem {
-  constructor() {
-    super(
-      'transports-graphql/schema-not-configured',
-      ProblemCategory.InternalServerError,
-      'No schema provided. Provide either schema or schemaOptions.'
-    );
-  }
-}
+export class GraphQLSchemaNotConfiguredProblem extends Problem {  readonly code = 'transports-graphql/schema-not-configured'; readonly category = ProblemCategory.InternalServerError; constructor() { super('No schema provided. Provide either schema or schemaOptions.');  }  }
 
-export class GraphQLServerNotInitializedProblem extends Problem {
-  constructor(detail = 'Server not initialized. Call initialize() first.') {
-    super('transports-graphql/server-not-initialized', ProblemCategory.InternalServerError, detail);
-  }
-}
+export class GraphQLServerNotInitializedProblem extends Problem {  readonly code = 'transports-graphql/server-not-initialized'; readonly category = ProblemCategory.InternalServerError; constructor(detail = 'Server not initialized. Call initialize() first.') { super(detail);  }  }
 
 export class GraphQLRequestBodyTooLargeProblem extends Problem {
   constructor(maxBodySizeBytes: number) {
@@ -49,8 +29,4 @@ export class GraphQLRequestBodyTooLargeProblem extends Problem {
   }
 }
 
-export class GraphQLRequestBodyAbortedProblem extends Problem {
-  constructor() {
-    super('transports-graphql/request-body-aborted', ProblemCategory.BadRequest, 'Request body aborted');
-  }
-}
+export class GraphQLRequestBodyAbortedProblem extends Problem {  readonly code = 'transports-graphql/request-body-aborted'; readonly category = ProblemCategory.BadRequest; constructor() { super('Request body aborted');  }  }

@@ -1,10 +1,6 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
-export class WebhookVerificationProblem extends Problem {
-  constructor() {
-    super('auth-clerk/webhook-verification-failed', ProblemCategory.Unauthorized, 'Webhook verification failed');
-  }
-}
+export class WebhookVerificationProblem extends Problem { readonly code = 'auth-clerk/webhook-verification-failed'; readonly category = ProblemCategory.Unauthorized; constructor() { super('Webhook verification failed'); } }
 
 export class InvalidWebhookPayloadProblem extends Problem {
   constructor(eventType?: string) {
@@ -15,32 +11,8 @@ export class InvalidWebhookPayloadProblem extends Problem {
   }
 }
 
-export class ClerkTokenVerificationProblem extends Problem {
-  constructor(detail?: string) {
-    super(
-      'auth-clerk/token-verification-failed',
-      ProblemCategory.Unauthorized,
-      detail ?? 'Clerk token verification failed'
-    );
-  }
-}
+export class ClerkTokenVerificationProblem extends Problem { readonly code = 'auth-clerk/token-verification-failed'; readonly category = ProblemCategory.Unauthorized; constructor(detail?: string) { super(detail ?? 'Clerk token verification failed'); } }
 
-export class ClerkMalformedClaimProblem extends Problem {
-  constructor(claimName: string) {
-    super(
-      'auth-clerk/malformed-claim',
-      ProblemCategory.Unauthorized,
-      `Clerk token contained a malformed '${claimName}' claim`
-    );
-  }
-}
+export class ClerkMalformedClaimProblem extends Problem { readonly code = 'auth-clerk/malformed-claim'; readonly category = ProblemCategory.Unauthorized; constructor(claimName: string) { super(`Clerk token contained a malformed '${claimName}' claim`); } }
 
-export class DuplicateTenantMappingProblem extends Problem {
-  constructor(externalOrgId: string, existingTenantId: string, nextTenantId: string) {
-    super(
-      'auth-clerk/duplicate-tenant-mapping',
-      ProblemCategory.Conflict,
-      `Clerk org '${externalOrgId}' is already mapped to tenant '${existingTenantId}' and cannot be remapped to '${nextTenantId}'`
-    );
-  }
-}
+export class DuplicateTenantMappingProblem extends Problem { readonly code = 'auth-clerk/duplicate-tenant-mapping'; readonly category = ProblemCategory.Conflict; constructor(externalOrgId: string, existingTenantId: string, nextTenantId: string) { super(`Clerk org '${externalOrgId}' is already mapped to tenant '${existingTenantId}' and cannot be remapped to '${nextTenantId}'`); } }

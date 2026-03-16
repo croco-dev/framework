@@ -13,11 +13,7 @@ export class MissingTenantProblem extends Problem {
   }
 }
 
-export class TransformNotFoundProblem extends Problem {
-  constructor(id: string) {
-    super('search-core/transform-not-found', ProblemCategory.NotFound, `Transform not found: '${id}'`);
-  }
-}
+export class TransformNotFoundProblem extends Problem {  readonly code = 'search-core/transform-not-found'; readonly category = ProblemCategory.NotFound; constructor(id: string) { super(`Transform not found: '${id}'`);  }  }
 
 export class StrategyUnavailableProblem extends Problem {
   constructor(strategyName: string, reason: string) {

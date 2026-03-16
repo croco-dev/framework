@@ -1,14 +1,5 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
-export class EntitlementDeniedProblem extends Problem {
-  constructor(feature: string, reason?: string) {
-    const detail = reason ? `Entitlement '${feature}' denied: ${reason}` : `Entitlement '${feature}' denied`;
-    super('ENTITLEMENT_DENIED', ProblemCategory.Forbidden, detail);
-  }
-}
+export class EntitlementDeniedProblem extends Problem { readonly code = 'ENTITLEMENT_DENIED'; readonly category = ProblemCategory.Forbidden; constructor(feature: string, reason?: string) { const detail = reason ? `Entitlement '${feature}' denied: ${reason}` : `Entitlement '${feature}' denied`; super(detail); } }
 
-export class EntitlementNotFoundProblem extends Problem {
-  constructor(feature: string) {
-    super('ENTITLEMENT_NOT_FOUND', ProblemCategory.NotFound, `Entitlement '${feature}' not found`);
-  }
-}
+export class EntitlementNotFoundProblem extends Problem { readonly code = 'ENTITLEMENT_NOT_FOUND'; readonly category = ProblemCategory.NotFound; constructor(feature: string) { super(`Entitlement '${feature}' not found`); } }
