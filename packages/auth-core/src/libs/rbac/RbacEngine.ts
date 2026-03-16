@@ -1,9 +1,9 @@
+import type { AbstractRoleRegistry } from '../interfaces/AbstractRoleRegistry';
 import type { AuthUser } from '../interfaces/AuthUser';
 import { hasPermission } from './Permission';
-import type { RoleRegistry } from './Role';
 
 export class RbacEngine {
-  constructor(private roleRegistry: RoleRegistry) {}
+  constructor(private roleRegistry: AbstractRoleRegistry) {}
 
   hasPermission(user: AuthUser, permission: string): boolean {
     if (hasPermission(user.permissions, permission)) {

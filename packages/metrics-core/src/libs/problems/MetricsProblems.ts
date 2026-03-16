@@ -4,7 +4,7 @@ export class CarryingCapacitySimulationProblem extends Problem {
   readonly code = 'metrics-core/carrying-capacity-simulation-error';
   readonly category = ProblemCategory.BusinessRuleViolation;
   constructor(detail: string) {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -12,7 +12,7 @@ export class CarryingCapacityTenantRequiredProblem extends Problem {
   readonly code = 'metrics-core/carrying-capacity-tenant-required';
   readonly category = ProblemCategory.ValidationError;
   constructor() {
-    super('tenantId is required for carrying capacity calculations');
+    super(undefined, undefined, 'tenantId is required for carrying capacity calculations');
   }
 }
 
@@ -20,7 +20,7 @@ export class RetentionMetricsUnavailableProblem extends Problem {
   readonly code = 'metrics-core/retention-metrics-unavailable';
   readonly category = ProblemCategory.NotImplemented;
   constructor(detail = 'Retention metrics are not available until full retention calculation is implemented') {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -28,7 +28,7 @@ export class GrossMarginRequiredProblem extends Problem {
   readonly code = 'metrics-core/gross-margin-required';
   readonly category = ProblemCategory.ValidationError;
   constructor() {
-    super('grossMargin is required when includeMargin is true');
+    super(undefined, undefined, 'grossMargin is required when includeMargin is true');
   }
 }
 

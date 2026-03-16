@@ -1,3 +1,4 @@
+import { Component } from '@croco/framework-context';
 import type { MeterRepository } from './MeterRepository';
 import { InvalidMeterProblem } from './problems/InvalidMeterProblem';
 import type { MeterDefinition, MeterRegistrationOptions } from './types';
@@ -11,6 +12,7 @@ import type { MeterDefinition, MeterRegistrationOptions } from './types';
  * - 런타임에 새 Meter 등록 가능
  * - 테넌트별 격리된 조회
  */
+@Component()
 export class MeterRegistry {
   private static readonly DEFAULT_CACHE_TTL_MS = 60_000;
 

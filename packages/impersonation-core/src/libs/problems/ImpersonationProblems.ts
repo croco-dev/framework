@@ -5,7 +5,7 @@ export class SelfImpersonationProblem extends Problem {
   readonly category = ProblemCategory.Forbidden;
 
   constructor() {
-    super('Cannot impersonate yourself');
+    super(undefined, undefined, 'Cannot impersonate yourself');
   }
 }
 
@@ -14,7 +14,7 @@ export class NestedImpersonationProblem extends Problem {
   readonly category = ProblemCategory.Forbidden;
 
   constructor() {
-    super('Nested impersonation is not allowed');
+    super(undefined, undefined, 'Nested impersonation is not allowed');
   }
 }
 
@@ -23,7 +23,7 @@ export class ImpersonationReasonRequiredProblem extends Problem {
   readonly category = ProblemCategory.BadRequest;
 
   constructor() {
-    super('Impersonation reason is required');
+    super(undefined, undefined, 'Impersonation reason is required');
   }
 }
 
@@ -32,7 +32,7 @@ export class BlockedDuringImpersonationProblem extends Problem {
   readonly category = ProblemCategory.Forbidden;
 
   constructor(action: string) {
-    super(`Action '${action}' is blocked during impersonation`);
+    super(undefined, undefined, `Action '${action}' is blocked during impersonation`);
   }
 }
 
@@ -41,6 +41,6 @@ export class ImpersonationSessionNotFoundProblem extends Problem {
   readonly category = ProblemCategory.NotFound;
 
   constructor(sessionId: string) {
-    super(`Impersonation session not found: ${sessionId}`);
+    super(undefined, undefined, `Impersonation session not found: ${sessionId}`);
   }
 }

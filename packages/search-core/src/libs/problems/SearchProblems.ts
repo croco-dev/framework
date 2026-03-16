@@ -17,7 +17,7 @@ export class TransformNotFoundProblem extends Problem {
   readonly code = 'search-core/transform-not-found';
   readonly category = ProblemCategory.NotFound;
   constructor(id: string) {
-    super(`Transform not found: '${id}'`);
+    super(undefined, undefined, `Transform not found: '${id}'`);
   }
 }
 

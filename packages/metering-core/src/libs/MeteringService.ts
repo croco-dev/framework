@@ -1,4 +1,5 @@
 import type { EventBus } from '@croco/events-core';
+import { Component } from '@croco/framework-context';
 import { ulid } from 'ulid';
 import { QuotaExceededEvent } from './events/QuotaExceededEvent';
 import { UsageRecordedEvent } from './events/UsageRecordedEvent';
@@ -23,6 +24,7 @@ export type MeteringServiceOptions = {
  * - getUsage(): 사용량 조회
  * - Quota 초과 시 QuotaExceededProblem throw 또는 이벤트 발행
  */
+@Component()
 export class MeteringService {
   private readonly meterRegistry: MeterRegistry;
   private readonly usageStorage: UsageStorage;

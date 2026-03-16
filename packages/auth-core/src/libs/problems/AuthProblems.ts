@@ -36,7 +36,7 @@ export class InvalidPermissionFormatProblem extends Problem {
   readonly code = 'auth-core/invalid-permission-format';
   readonly category = ProblemCategory.ValidationError;
   constructor(permission: string) {
-    super(`Invalid permission format: '${permission}'`);
+    super(undefined, undefined, `Invalid permission format: '${permission}'`);
   }
 }
 
@@ -44,6 +44,6 @@ export class InvalidPermissionActionProblem extends Problem {
   readonly code = 'auth-core/invalid-permission-action';
   readonly category = ProblemCategory.ValidationError;
   constructor(action: string) {
-    super(`Invalid permission action: '${action}'`);
+    super(undefined, undefined, `Invalid permission action: '${action}'`);
   }
 }

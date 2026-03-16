@@ -72,12 +72,14 @@ export { PermissionGuard } from './libs/guards/PermissionGuard';
  * Unified guard supporting principal and API key flows.
  */
 export { UnifiedAuthGuard } from './libs/guards/UnifiedAuthGuard';
-
+/**
+ * Abstract role registry contract for dependency inversion.
+ */
+export { AbstractRoleRegistry } from './libs/interfaces/AbstractRoleRegistry';
 /**
  * API key domain model and creation option types.
  */
 export type { ApiKey, ApiKeyRateLimit, CreateApiKeyOptions, CreateApiKeyResult } from './libs/interfaces/ApiKey';
-
 /**
  * Contract for resolving API keys to principals.
  */
@@ -90,27 +92,22 @@ export type { AuthProvider } from './libs/interfaces/AuthProvider';
  * Request contract enriched by auth guards.
  */
 export type { AuthRequest } from './libs/interfaces/AuthRequest';
-
 /**
  * Authenticated user shape used by auth flows.
  */
 export type { AuthUser } from './libs/interfaces/AuthUser';
-
 /**
  * Execution context type for route guards.
  */
 export type { RouteExecutionContext } from './libs/interfaces/Guard';
-
 /**
  * Principal types used by guards and authorization.
  */
 export type { ApiKeyPrincipal, Principal, PrincipalType, UserPrincipal } from './libs/interfaces/Principal';
-
 /**
  * Contract for mapping identities to tenant information.
  */
 export type { TenantMappingProvider } from './libs/interfaces/TenantMapping';
-
 /**
  * Authentication-related Problem subclasses.
  */
@@ -122,17 +119,14 @@ export {
   InvalidPermissionFormatProblem,
   UnauthorizedProblem,
 } from './libs/problems/AuthProblems';
-
 /**
  * Permission utilities and permission type.
  */
 export { formatPermission, hasPermission, type Permission, parsePermission } from './libs/rbac/Permission';
-
 /**
  * Role-based access control engine.
  */
 export { RbacEngine } from './libs/rbac/RbacEngine';
-
 /**
  * Role registry and role definition type.
  */

@@ -6,6 +6,6 @@ export class R2ObjectTooLargeProblem extends StorageProblem {
   readonly category = ProblemCategory.InternalServerError;
 
   constructor(key: string, maxBytes: number) {
-    super(`R2 object '${key}' exceeds the in-memory download limit of ${maxBytes} bytes`);
+    super(undefined, undefined, `R2 object '${key}' exceeds the in-memory download limit of ${maxBytes} bytes`);
   }
 }

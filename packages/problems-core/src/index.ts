@@ -20,8 +20,23 @@
  * };
  * ```
  */
-export type { ProblemDetails, ProblemOptions } from './libs/Problem';
 
+/**
+ * HTTP 상태 코드 상수입니다.
+ *
+ * @property PAYLOAD_TOO_LARGE - 413 Payload Too Large
+ * @property NOT_FOUND - 404 Not Found
+ * @property INTERNAL_SERVER_ERROR - 500 Internal Server Error
+ *
+ * @example
+ * ```typescript
+ * import { HttpStatus } from '@croco/problems-core';
+ *
+ * return HttpStatus.PAYLOAD_TOO_LARGE; // 413
+ * ```
+ */
+export { HttpStatus } from './libs/HttpStatus';
+export type { ProblemDetails, ProblemOptions } from './libs/Problem';
 /**
  * RFC 7807 Problem Details 형식을 제공하는 추상 에러 클래스입니다.
  *
@@ -48,7 +63,6 @@ export type { ProblemDetails, ProblemOptions } from './libs/Problem';
  * ```
  */
 export { Problem } from './libs/Problem';
-
 /**
  * Problem의 도메인 분류와 HTTP 의미론을 연결하는 카테고리 열거형입니다.
  *
@@ -64,7 +78,6 @@ export { Problem } from './libs/Problem';
  * ```
  */
 export { ProblemCategory } from './libs/ProblemCategory';
-
 /**
  * ProblemCategory를 HTTP 응답용 status/title로 변환하는 매퍼입니다.
  *
@@ -80,7 +93,6 @@ export { ProblemCategory } from './libs/ProblemCategory';
  * ```
  */
 export { ProblemCategoryMapper } from './libs/ProblemCategoryMapper';
-
 /**
  * 카테고리별 기본 Problem 인스턴스를 생성하는 팩토리입니다.
  *

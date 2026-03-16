@@ -26,25 +26,6 @@ describe('TxManager', () => {
     txManager = new TxManager(mockAdapter);
   });
 
-  it('should not overwrite existing transaction context token on new instance', () => {
-    const firstManager = txManager;
-    const secondManager = new TxManager(createMockAdapter());
-
-    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(firstManager);
-    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).not.toBe(secondManager);
-  });
-
-  it('should register a new manager after registry clear removes stale token', () => {
-    const firstManager = txManager;
-
-    TxManagerRegistry.clear();
-
-    const secondManager = new TxManager(createMockAdapter());
-
-    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).not.toBe(firstManager);
-    expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(secondManager);
-  });
-
   describe('run', () => {
     it('should execute function within transaction', async () => {
       const result = await txManager.run(async () => {

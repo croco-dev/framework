@@ -1,3 +1,4 @@
+import path from 'path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -7,5 +8,10 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     testTimeout: 10000,
+  },
+  resolve: {
+    alias: {
+      '@croco/problems-core': path.resolve(__dirname, '../problems-core/src'),
+    },
   },
 });

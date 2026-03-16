@@ -184,10 +184,8 @@ describe('RegisterEvent decorator', () => {
     expect(EventRegistry.fromMetadata().has('decorated.event')).toBe(true);
   });
 
-  it('should keep custom registry registration semantics metadata-driven', () => {
-    const customRegistry = new EventRegistry();
-
-    @RegisterEvent(customRegistry)
+  it('should keep metadata-driven registration semantics', () => {
+    @RegisterEvent()
     class CustomEvent extends DomainEvent {
       static eventName = 'custom.event';
 
@@ -197,7 +195,6 @@ describe('RegisterEvent decorator', () => {
     }
 
     expect(globalEventRegistry.has('custom.event')).toBe(false);
-    expect(customRegistry.has('custom.event')).toBe(false);
     expect(MetadataStorage.get<boolean>(REGISTERED_EVENT_KEY, CustomEvent)).toBe(true);
     expect(EventRegistry.fromMetadata([CustomEvent]).has('custom.event')).toBe(true);
   });

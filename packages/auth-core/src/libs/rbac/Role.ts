@@ -1,10 +1,12 @@
+import { AbstractRoleRegistry } from '../interfaces/AbstractRoleRegistry';
+
 export type RoleDefinition = {
   name: string;
   permissions: string[];
   inherits?: string[];
 };
 
-export class RoleRegistry {
+export class RoleRegistry extends AbstractRoleRegistry {
   private roles = new Map<string, RoleDefinition>();
 
   register(role: RoleDefinition): void {

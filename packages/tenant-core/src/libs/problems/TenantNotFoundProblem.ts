@@ -7,6 +7,6 @@ export class TenantNotFoundProblem extends Problem {
   readonly code = 'tenant/not-found';
   readonly category = ProblemCategory.NotFound;
   constructor(tenantId: string) {
-    super(`Tenant '${tenantId}' not found`);
+    super(undefined, undefined, `Tenant '${tenantId}' not found`);
   }
 }

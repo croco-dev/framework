@@ -97,12 +97,10 @@ export class EventRegistry {
 export const globalEventRegistry = new EventRegistry();
 
 /**
- * 이벤트 클래스를 레지스트리에 자동 등록하는 데코레이터 팩토리
- * @param registry 등록에 사용할 레지스트리 (기본값: 전역 레지스트리)
+ * 이벤트 클래스 메타데이터를 저장하는 데코레이터
  */
-export function RegisterEvent(registry: EventRegistry = globalEventRegistry) {
+export function RegisterEvent() {
   return <T extends DomainEvent>(target: EventClass<T>): EventClass<T> => {
-    void registry;
     MetadataStorage.define(REGISTERED_EVENT_KEY, target, true);
     return target;
   };

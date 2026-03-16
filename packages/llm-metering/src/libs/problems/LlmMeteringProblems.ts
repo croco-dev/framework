@@ -56,6 +56,6 @@ export class PricingNotFoundProblem extends Problem {
   readonly code = 'llm-metering/pricing-not-found';
   readonly category = ProblemCategory.NotFound;
   constructor(provider: string, modelId: string) {
-    super(`Pricing not found for provider '${provider}' and model '${modelId}'`);
+    super(undefined, undefined, `Pricing not found for provider '${provider}' and model '${modelId}'`);
   }
 }

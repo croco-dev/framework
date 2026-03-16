@@ -4,7 +4,7 @@ export class ConfigSchemaNotFoundProblem extends Problem {
   readonly code = 'framework-config/config-schema-not-found';
   readonly category = ProblemCategory.InternalServerError;
   constructor(targetName: string) {
-    super(`No config schema found for '${targetName}'`);
+    super(undefined, undefined, `No config schema found for '${targetName}'`);
   }
 }
 
@@ -20,6 +20,6 @@ export class InvalidBooleanEnvProblem extends Problem {
   readonly code = 'framework-config/invalid-boolean-env';
   readonly category = ProblemCategory.ValidationError;
   constructor(envName: string, value: string) {
-    super(`Invalid boolean env value for '${envName}': '${value}'`);
+    super(undefined, undefined, `Invalid boolean env value for '${envName}': '${value}'`);
   }
 }

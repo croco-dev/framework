@@ -4,6 +4,6 @@ export class BillingStatusMappingProblem extends Problem {
   readonly code = 'BILLING_STATUS_MAPPING_FAILED';
   readonly category = ProblemCategory.InternalServerError;
   constructor(status: string) {
-    super(`Unknown billing status: ${status}`);
+    super(undefined, undefined, `Unknown billing status: ${status}`);
   }
 }

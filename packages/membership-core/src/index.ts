@@ -105,7 +105,7 @@ export { MembershipUpdatedEvent } from './libs/events/MembershipUpdatedEvent';
  * ```
  */
 export { InMemoryMembershipStore } from './libs/InMemoryMembershipStore';
-
+export { MembershipManager as AbstractMembershipManager } from './libs/interfaces/AbstractMembershipManager';
 /**
  * 멤버십 관리자
  *

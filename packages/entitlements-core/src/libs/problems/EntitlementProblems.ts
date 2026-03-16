@@ -5,7 +5,7 @@ export class EntitlementDeniedProblem extends Problem {
   readonly category = ProblemCategory.Forbidden;
   constructor(feature: string, reason?: string) {
     const detail = reason ? `Entitlement '${feature}' denied: ${reason}` : `Entitlement '${feature}' denied`;
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -13,6 +13,6 @@ export class EntitlementNotFoundProblem extends Problem {
   readonly code = 'ENTITLEMENT_NOT_FOUND';
   readonly category = ProblemCategory.NotFound;
   constructor(feature: string) {
-    super(`Entitlement '${feature}' not found`);
+    super(undefined, undefined, `Entitlement '${feature}' not found`);
   }
 }

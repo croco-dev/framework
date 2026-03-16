@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { EventPublisher } from '@croco/events-core';
 import { Component } from '@croco/framework-context';
-import type { MembershipManager, MembershipRole } from '@croco/membership-core';
+import type { AbstractMembershipManager, MembershipRole } from '@croco/membership-core';
 import { NotificationChannel, type NotificationPayload, type NotificationService } from '@croco/notifications-core';
 import {
   InvitationAcceptedEvent,
@@ -48,7 +48,7 @@ export type AcceptInvitationInput = {
 export class InvitationManager {
   constructor(
     private readonly store: InvitationStore,
-    private readonly membershipManager: MembershipManager,
+    private readonly membershipManager: AbstractMembershipManager,
     private readonly notificationService: NotificationService,
     private readonly eventPublisher: EventPublisher
   ) {}

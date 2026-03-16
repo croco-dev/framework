@@ -1,5 +1,6 @@
-import type { DomainEvent } from './DomainEvent';
 import type { EventHandler, EventHandlerClass } from './EventHandler';
+import type { EventPublishing } from './interfaces/EventPublishing';
+import type { EventSubscribing } from './interfaces/EventSubscribing';
 
 export interface EventSubscription {
   eventName: EventNamePattern;
@@ -7,12 +8,7 @@ export interface EventSubscription {
   handler?: EventHandler;
 }
 
-export interface EventBus {
-  publish(event: DomainEvent): Promise<void>;
-  subscribe(subscription: EventSubscription): void;
-  unsubscribe(subscription: EventSubscription): void;
-  clear(): void;
-}
+export interface EventBus extends EventPublishing, EventSubscribing {}
 
 export type EventNamePattern = string;
 

@@ -6,6 +6,6 @@ export class MissingR2ConfigProblem extends StorageProblem {
   readonly category = ProblemCategory.InternalServerError;
 
   constructor(configKey: string) {
-    super(`Missing required R2 configuration: ${configKey}`);
+    super(undefined, undefined, `Missing required R2 configuration: ${configKey}`);
   }
 }

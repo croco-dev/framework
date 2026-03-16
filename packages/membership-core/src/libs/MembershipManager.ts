@@ -4,6 +4,7 @@ import { Component } from '@croco/framework-context';
 import { MembershipCreatedEvent } from './events/MembershipCreatedEvent';
 import { MembershipRemovedEvent } from './events/MembershipRemovedEvent';
 import { MembershipUpdatedEvent } from './events/MembershipUpdatedEvent';
+import { MembershipManager as AbstractMembershipManager } from './interfaces/AbstractMembershipManager';
 import type { MembershipStore } from './MembershipStore';
 import {
   AlreadyMemberProblem,
@@ -14,11 +15,13 @@ import {
 import { isMembershipRole, type Membership, type MembershipRole } from './types';
 
 @Component()
-export class MembershipManager {
+export class MembershipManager extends AbstractMembershipManager {
   constructor(
     private readonly store: MembershipStore,
     private readonly eventPublisher: EventPublisher
-  ) {}
+  ) {
+    super();
+  }
   async addMember(tenantId: string, userId: string, role: MembershipRole): Promise<Membership> {
     this.ensureValidRole(role);
 

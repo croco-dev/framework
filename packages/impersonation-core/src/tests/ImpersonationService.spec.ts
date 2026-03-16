@@ -73,7 +73,7 @@ describe('ImpersonationService', () => {
     });
 
     it('should throw error when impersonating self', async () => {
-      await expect(service.start('user-1', 'user-1')).rejects.toThrow('Self impersonation is not allowed');
+      await expect(service.start('user-1', 'user-1')).rejects.toThrow('Cannot impersonate yourself');
     });
 
     it('should throw error when nested impersonation attempted', async () => {
@@ -86,7 +86,7 @@ describe('ImpersonationService', () => {
       config = { maxDurationMs: 30 * 60 * 1000, requireReason: true, blockedActions: [] };
       service = new ImpersonationService(store, authProvider, config);
 
-      await expect(service.start('admin-1', 'user-123')).rejects.toThrow('Reason is required for impersonation');
+      await expect(service.start('admin-1', 'user-123')).rejects.toThrow('Impersonation reason is required');
     });
 
     it('should allow impersonation without reason when not required', async () => {
