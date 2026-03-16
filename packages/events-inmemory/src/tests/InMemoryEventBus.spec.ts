@@ -4,7 +4,7 @@ import * as telemetryApi from '@croco/telemetry-api';
 import * as otelApi from '@opentelemetry/api';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { InMemoryEventBus } from '../index';
+import { EventPublishFailedError, InMemoryEventBus } from '../index';
 
 class TestEvent extends DomainEvent {
   static readonly eventName = 'TestEvent';
@@ -175,7 +175,15 @@ describe('InMemoryEventBus', () => {
         eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailHandler });
         eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SuccessHandler });
 
-        await expect(eventBus.publish(new TestEvent('characterization-error'))).resolves.toBeUndefined();
+        await expect(eventBus.publish(new TestEvent('characterization-error'))).rejects.toMatchObject({
+          eventName: 'TestEvent',
+          failures: [
+            expect.objectContaining({
+              handlerName: 'FailHandler',
+              error: expect.objectContaining({ message: 'Handler failed intentionally' }),
+            }),
+          ],
+        });
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           '❌ EventHandler 실행 중 오류 (TestEvent):',
@@ -252,7 +260,15 @@ describe('InMemoryEventBus', () => {
       eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SuccessHandler });
 
       const event = new TestEvent('test');
-      await expect(eventBus.publish(event)).resolves.toBeUndefined();
+      await expect(eventBus.publish(event)).rejects.toMatchObject({
+        eventName: 'TestEvent',
+        failures: [
+          expect.objectContaining({
+            handlerName: 'FailHandler',
+            error: expect.objectContaining({ message: 'Handler failed intentionally' }),
+          }),
+        ],
+      });
       expect(successHandler.handledEvents).toHaveLength(1);
     });
 
@@ -396,7 +412,7 @@ describe('InMemoryEventBus', () => {
         value: mockTracer,
       });
 
-      await eventBus.publish(new TestEvent('record-error'));
+      await expect(eventBus.publish(new TestEvent('record-error'))).rejects.toThrow(EventPublishFailedError);
 
       expect(handleSpan.recordException).toHaveBeenCalledTimes(1);
       expect(handleSpan.recordException.mock.calls[0][0]).toBeInstanceOf(Error);
@@ -443,7 +459,7 @@ describe('InMemoryEventBus', () => {
         value: mockTracer,
       });
 
-      await eventBus.publish(new TestEvent('record-stack-error'));
+      await expect(eventBus.publish(new TestEvent('record-stack-error'))).rejects.toThrow(EventPublishFailedError);
 
       expect(handleSpan.recordException).toHaveBeenCalledTimes(1);
       expect(handleSpan.recordException).toHaveBeenCalledWith(expectedError);
@@ -491,12 +507,21 @@ describe('InMemoryEventBus', () => {
         value: mockTracer,
       });
 
-      await eventBus.publish(new TestEvent('status-check'));
+      await expect(eventBus.publish(new TestEvent('status-check'))).rejects.toMatchObject({
+        eventName: 'TestEvent',
+        failures: [
+          expect.objectContaining({
+            handlerName: 'FailHandler',
+            error: expect.objectContaining({ message: 'Handler failed intentionally' }),
+          }),
+        ],
+      });
 
       expect(publishSpan.setStatus).toHaveBeenCalledWith({
         code: SpanStatusCode.ERROR,
-        message: 'One or more event handlers failed',
+        message: '1 event handler(s) failed while publishing TestEvent',
       });
+      expect(publishSpan.recordException).toHaveBeenCalledWith(expect.any(EventPublishFailedError));
       expect(successHandler.handledEvents).toHaveLength(1);
     });
 

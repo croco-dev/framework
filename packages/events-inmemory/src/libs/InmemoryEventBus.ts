@@ -6,6 +6,24 @@ import type { TraceInfo } from '@croco/telemetry-api';
 import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
 import { type Context, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 
+export type EventPublishFailure = {
+  handlerName: string;
+  error: Error;
+};
+
+export class EventPublishFailedError extends Error {
+  readonly name = 'EventPublishFailedError';
+  readonly cause?: Error;
+
+  constructor(
+    readonly eventName: string,
+    readonly failures: EventPublishFailure[]
+  ) {
+    super(`${failures.length} event handler(s) failed while publishing ${eventName}`);
+    this.cause = failures[0]?.error;
+  }
+}
+
 export class InMemoryEventBus implements EventBus {
   private readonly index = new EventSubscriptionIndex<EventHandlerClass>();
   private readonly tracer = getTracer();
@@ -33,16 +51,24 @@ export class InMemoryEventBus implements EventBus {
       const results = await Promise.allSettled(
         handlerClasses.map((handlerClass) => this.executeSubscriber(handlerClass, baseEvent, eventName))
       );
-      const hasHandlerFailure = results.some((result) => result.status === 'fulfilled' && result.value);
+      const failures = results.flatMap((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value ? [result.value] : [];
+        }
 
-      if (hasHandlerFailure) {
-        publishSpan.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: 'One or more event handlers failed',
-        });
-      } else {
-        publishSpan.setStatus({ code: SpanStatusCode.OK });
+        return [
+          {
+            handlerName: handlerClasses[index]?.name ?? 'UnknownHandler',
+            error: this.normalizeError(result.reason),
+          },
+        ];
+      });
+
+      if (failures.length > 0) {
+        throw new EventPublishFailedError(eventName, failures);
       }
+
+      publishSpan.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
       const normalizedError = this.normalizeError(error);
       publishSpan.recordException(normalizedError);
@@ -50,6 +76,7 @@ export class InMemoryEventBus implements EventBus {
         code: SpanStatusCode.ERROR,
         message: normalizedError.message,
       });
+      throw normalizedError;
     } finally {
       publishSpan.end();
     }
@@ -76,10 +103,10 @@ export class InMemoryEventBus implements EventBus {
     handlerClass: EventHandlerClass,
     baseEvent: DomainEvent,
     eventName: string
-  ): Promise<boolean> {
+  ): Promise<EventPublishFailure | null> {
     const handlerName = handlerClass.name;
     const parentContext = this.createParentContext(baseEvent.metadata.traceContext);
-    let hasHandlerFailure = false;
+    let failure: EventPublishFailure | null = null;
 
     await context.with(parentContext, async () => {
       await this.tracer.startActiveSpan(
@@ -98,8 +125,11 @@ export class InMemoryEventBus implements EventBus {
             await handlerInstance.handle(handlerEvent);
             handleSpan.setStatus({ code: SpanStatusCode.OK });
           } catch (error) {
-            hasHandlerFailure = true;
             const normalizedError = this.normalizeError(error);
+            failure = {
+              handlerName,
+              error: normalizedError,
+            };
             handleSpan.recordException(normalizedError);
             handleSpan.setStatus({
               code: SpanStatusCode.ERROR,
@@ -119,7 +149,7 @@ export class InMemoryEventBus implements EventBus {
       );
     });
 
-    return hasHandlerFailure;
+    return failure;
   }
 
   private createEventWithTraceContext(event: DomainEvent, traceContext: TraceInfo): DomainEvent {
