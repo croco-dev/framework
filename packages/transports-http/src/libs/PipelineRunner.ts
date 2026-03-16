@@ -1,7 +1,8 @@
+import type { Guard } from '@croco/framework-context';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { ProblemFactory } from '@croco/problems-core';
-import type { CallHandler, ExceptionFilter, ExecutionContext, Guard, Interceptor } from '@croco/protocols-rest';
+import type { CallHandler, ExceptionFilter, ExecutionContext, Interceptor } from '@croco/protocols-rest';
 import { ErrorHandler } from './ErrorHandler';
 import type { HttpExecutionContext } from './HttpExecutionContext';
 

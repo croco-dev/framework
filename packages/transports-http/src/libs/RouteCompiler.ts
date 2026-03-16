@@ -1,3 +1,4 @@
+import type { Guard } from '@croco/framework-context';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { ProblemFactory } from '@croco/problems-core';
@@ -6,7 +7,6 @@ import {
   type ControllerMetadata,
   type ExceptionFilter,
   type ExecutionContext,
-  type Guard,
   getControllerMeta,
   getFilters,
   getGuards,
@@ -150,7 +150,10 @@ export class RouteCompiler {
         const args = await this.paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
         const method = (instance as Record<PropertyKey, unknown>)[routeMeta.methodName];
         if (typeof method !== 'function') {
-          throw new Error(`Method ${String(routeMeta.methodName)} is not a function`);
+          throw ProblemFactory.internalServerError(
+            'transports-http/route-method-not-function',
+            `Method ${String(routeMeta.methodName)} is not a function`
+          );
         }
         const typedMethod = method as (...args: unknown[]) => unknown;
         return typedMethod.apply(instance, args);

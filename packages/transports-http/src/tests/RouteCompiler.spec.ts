@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { Guard } from '@croco/framework-context';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import {
@@ -7,7 +8,6 @@ import {
   type ExceptionFilter,
   type ExceptionFilterConstructor,
   Get,
-  type Guard,
   type GuardConstructor,
   type Interceptor,
   type InterceptorConstructor,
