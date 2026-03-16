@@ -98,16 +98,15 @@ try {
 Automatically stop retrying before AWS Lambda times out.
 
 ```typescript
-import { LambdaTimeoutGuard } from '@croco/retry-core';
+import { LambdaTimeoutGuard, runWithLambdaContext } from '@croco/retry-core';
 
 export const handler = async (event, context) => {
-  // Set context globally for the request scope
-  setLambdaContext(context);
-  
-  const guard = new LambdaTimeoutGuard({ buffer: 500 }); // 500ms buffer
-  
-  if (!guard.hasTimeForRetry()) {
-    // Stop retrying
-  }
+  return await runWithLambdaContext(context, async () => {
+    const guard = new LambdaTimeoutGuard({ reserveTimeMs: 500 });
+
+    guard.checkTimeout(200);
+
+    return await processEvent(event);
+  });
 };
 ```

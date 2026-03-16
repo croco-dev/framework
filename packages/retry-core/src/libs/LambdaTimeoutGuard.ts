@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 /**
  * AWS Lambda context interface (minimal).
  */
@@ -7,11 +9,15 @@ export interface LambdaContext {
   getRemainingTimeInMillis(): number;
 }
 
-/**
- * Global Lambda context holder.
- * Set this at the start of your Lambda handler.
- */
-let globalLambdaContext: LambdaContext | null = null;
+const lambdaContextStorage = new AsyncLocalStorage<LambdaContext | null>();
+
+function readLambdaContext(): LambdaContext | null {
+  return lambdaContextStorage.getStore() ?? null;
+}
+
+export async function runWithLambdaContext<T>(context: LambdaContext | null, fn: () => T | Promise<T>): Promise<T> {
+  return await lambdaContextStorage.run(context, fn);
+}
 
 /**
  * Set the Lambda context for timeout checking.
@@ -26,14 +32,14 @@ let globalLambdaContext: LambdaContext | null = null;
  * ```
  */
 export function setLambdaContext(context: LambdaContext | null): void {
-  globalLambdaContext = context;
+  lambdaContextStorage.enterWith(context);
 }
 
 /**
  * Get the current Lambda context.
  */
 export function getLambdaContext(): LambdaContext | null {
-  return globalLambdaContext;
+  return readLambdaContext();
 }
 
 /**
@@ -41,7 +47,7 @@ export function getLambdaContext(): LambdaContext | null {
  */
 export function isLambdaEnvironment(): boolean {
   return (
-    globalLambdaContext !== null ||
+    readLambdaContext() !== null ||
     (typeof process !== 'undefined' && process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined)
   );
 }
@@ -51,8 +57,9 @@ export function isLambdaEnvironment(): boolean {
  * Returns Infinity if not in Lambda or context not set.
  */
 export function getRemainingTimeInMillis(): number {
-  if (globalLambdaContext) {
-    return globalLambdaContext.getRemainingTimeInMillis();
+  const context = readLambdaContext();
+  if (context) {
+    return context.getRemainingTimeInMillis();
   }
   return Infinity;
 }
