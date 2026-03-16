@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { NoBackoff } from '../libs/BackoffPolicy';
 import { InMemoryCircuitBreakerStateStore } from '../libs/CircuitBreakerState';
 import { CircuitBreakerOpenProblem, DuplicateRecoverHandlerProblem, RetryExhaustedProblem } from '../libs/errors';
-import { setLambdaContext } from '../libs/LambdaTimeoutGuard';
+import { runWithLambdaContext } from '../libs/LambdaTimeoutGuard';
 import { Recover } from '../libs/Recover';
 import { Retryable } from '../libs/Retryable';
 import type { RetryPolicy } from '../libs/RetryPolicy';
@@ -394,14 +394,13 @@ describe('@Retryable', () => {
     }
 
     const service = new TestService();
-    setLambdaContext({
-      getRemainingTimeInMillis: () => 60,
-    });
-
-    try {
-      await expect(service.doWork()).rejects.toThrow('Lambda timeout guard');
-    } finally {
-      setLambdaContext(null);
-    }
+    await runWithLambdaContext(
+      {
+        getRemainingTimeInMillis: () => 60,
+      },
+      async () => {
+        await expect(service.doWork()).rejects.toThrow('Lambda timeout guard');
+      }
+    );
   });
 });
