@@ -1,6 +1,6 @@
 import { ProblemCategory } from '@croco/problems-core';
 import { describe, expect, it } from 'vitest';
-import { TxManagerNotRegisteredError, TxPropagationError } from '../libs/errors';
+import { DuplicateTxManagerRegistrationProblem, TxManagerNotRegisteredError, TxPropagationError } from '../libs/errors';
 import {
   AfterCommitHooksProblem,
   TransactionContextProblem,
@@ -54,6 +54,14 @@ describe('TransactionProblems', () => {
     expect(error.code).toBe('tx-core/manager-not-registered');
     expect(error.category).toBe(ProblemCategory.InternalServerError);
     expect(error.detail).toBe('TxManager not registered for key: my-db');
+  });
+
+  it('should create DuplicateTxManagerRegistrationProblem with expected metadata', () => {
+    const error = new DuplicateTxManagerRegistrationProblem('my-db');
+
+    expect(error.code).toBe('tx-core/duplicate-tx-manager-registration');
+    expect(error.category).toBe(ProblemCategory.InternalServerError);
+    expect(error.detail).toBe("TxManager is already registered for key: 'my-db'");
   });
 
   it('should create TxPropagationError with expected metadata', () => {

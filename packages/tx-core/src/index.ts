@@ -4,7 +4,11 @@
 /**
  * Error thrown when an invalid propagation rule is used.
  */
-export { TxManagerNotRegisteredError, TxPropagationError } from './libs/errors';
+export {
+  DuplicateTxManagerRegistrationProblem,
+  TxManagerNotRegisteredError,
+  TxPropagationError,
+} from './libs/errors';
 /**
  * Problem thrown when `@Transactional` is applied to a non-method target.
  */
