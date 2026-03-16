@@ -9,6 +9,7 @@ import type { CrocoApp } from '../libs/CrocoApp';
 import { createApp } from '../libs/CrocoApp';
 import { ErrorHandler } from '../libs/ErrorHandler';
 import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
+import type { LambdaContext, LambdaEvent } from '../libs/types';
 
 class AuthGuard implements Guard {
   canActivate(context: HttpContext): boolean {
@@ -62,6 +63,53 @@ class UserController {
 
 describe('Transport Integration', () => {
   let app!: CrocoApp;
+
+  function createLambdaEvent(overrides: Partial<LambdaEvent> = {}): LambdaEvent {
+    return {
+      version: '2.0',
+      routeKey: '$default',
+      rawPath: '/',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        accountId: '123456789012',
+        apiId: 'api-123',
+        domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
+        domainPrefix: 'example',
+        http: {
+          method: 'GET',
+          path: '/',
+          protocol: 'HTTP/1.1',
+          sourceIp: '127.0.0.1',
+          userAgent: 'vitest',
+        },
+        requestId: 'gateway-req-123',
+        routeKey: '$default',
+        stage: '$default',
+        time: '17/Mar/2026:12:00:00 +0000',
+        timeEpoch: 1710676800000,
+      },
+      isBase64Encoded: false,
+      ...overrides,
+    };
+  }
+
+  function createLambdaContext(): LambdaContext {
+    return {
+      callbackWaitsForEmptyEventLoop: false,
+      functionName: 'test',
+      functionVersion: '$LATEST',
+      invokedFunctionArn: 'arn:aws:lambda:ap-northeast-2:123456789012:function:test',
+      logGroupName: '/aws/lambda/test',
+      logStreamName: '2026/03/17/[$LATEST]abcdef',
+      memoryLimitInMB: '128',
+      awsRequestId: '123',
+      done: () => undefined,
+      fail: () => undefined,
+      getRemainingTimeInMillis: () => 5000,
+      succeed: () => undefined,
+    };
+  }
 
   beforeEach(() => {
     Container.reset();
@@ -138,17 +186,30 @@ describe('Transport Integration', () => {
 
     it('should handle API Gateway v2 event', async () => {
       const handler = app.lambdaHandler();
-      const event = {
-        requestContext: { http: { method: 'GET', path: '/api/users' } },
+      const event = createLambdaEvent({
+        requestContext: {
+          accountId: '123456789012',
+          apiId: 'api-123',
+          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
+          domainPrefix: 'example',
+          http: {
+            method: 'GET',
+            path: '/api/users',
+            protocol: 'HTTP/1.1',
+            sourceIp: '127.0.0.1',
+            userAgent: 'vitest',
+          },
+          requestId: 'gateway-req-123',
+          routeKey: '$default',
+          stage: '$default',
+          time: '17/Mar/2026:12:00:00 +0000',
+          timeEpoch: 1710676800000,
+        },
         rawPath: '/api/users',
         rawQueryString: '',
         headers: { 'content-type': 'application/json' },
-      };
-      const context = {
-        functionName: 'test',
-        awsRequestId: '123',
-        getRemainingTimeInMillis: () => 5000,
-      };
+      });
+      const context = createLambdaContext();
 
       const response = await handler(event, context);
       expect(response.statusCode).toBe(200);
