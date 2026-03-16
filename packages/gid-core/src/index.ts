@@ -2,7 +2,7 @@ import type { IdPrefixInstance, IdPrefixRegistry } from './libs/defineIdPrefixes
 import { defineIdPrefixes } from './libs/defineIdPrefixes';
 import type { PrefixedId } from './libs/IdPrefix';
 import { IdPrefix } from './libs/IdPrefix';
-import { InvalidIdPrefixProblem } from './libs/problems/GidProblems';
+import { IdPrefixProblem, InvalidIdPrefixProblem } from './libs/problems/GidProblems';
 
 /**
  * Creates a type-safe registry for generating and validating prefixed GIDs.
@@ -33,3 +33,5 @@ export type { PrefixedId };
  * Problem thrown when a GID prefix is shorter than the supported minimum.
  */
 export { InvalidIdPrefixProblem };
+
+export { IdPrefixProblem };

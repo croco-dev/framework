@@ -16,12 +16,10 @@ export type SnapshotInput = {
 };
 
 export class SnapshotTenantRequiredProblem extends Problem {
+  readonly code = 'metrics-core/snapshot-tenant-required';
+  readonly category = ProblemCategory.ValidationError;
   constructor() {
-    super(
-      'metrics-core/snapshot-tenant-required',
-      ProblemCategory.ValidationError,
-      'tenantId is required for snapshot capture'
-    );
+    super('tenantId is required for snapshot capture');
   }
 }
 

@@ -1,4 +1,5 @@
 import { IdPrefix, type PrefixedId } from './IdPrefix';
+import { IdPrefixProblem } from './problems/GidProblems';
 
 type Values<T> = T[keyof T];
 
@@ -38,7 +39,7 @@ export function defineIdPrefixes<const T extends Record<string, string>>(
       getPrefix: () => instance.getPrefix(),
       getExpectedLength: () => instance.getExpectedLength(),
       get Id() {
-        throw new Error('Id is a type-only property and should not be accessed at runtime');
+        throw new IdPrefixProblem();
       },
     };
   }

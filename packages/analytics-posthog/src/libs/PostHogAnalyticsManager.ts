@@ -1,8 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { AnalyticsManager } from '@croco/analytics-core';
-import { Component, Container } from '@croco/framework-context';
+import { Component, Container, Context } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import type { PostHogClient } from '@croco/integrations-posthog';
-import { getDistinctId, getGroups } from './utils';
 
 @Component()
 export class PostHogAnalyticsManager extends AnalyticsManager {
@@ -14,8 +14,8 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
-    const distinctId = getDistinctId(properties);
-    const groups = getGroups(properties);
+    const distinctId = this.getDistinctId(properties);
+    const groups = this.getGroups(properties);
 
     try {
       const result = this.posthogClient.getClient().capture({
@@ -46,6 +46,32 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
       groupKey,
       properties,
     });
+  }
+
+  private getDistinctId(properties?: Record<string, unknown>): string {
+    if (properties?.userId) return String(properties.userId);
+
+    const user = Context.getCurrentUser();
+    if (user?.id) return user.id;
+
+    const requestId = Context.getRequestId();
+    if (requestId) return `anonymous:${requestId}`;
+
+    const tenantId = Context.getTenantId();
+    if (tenantId) return `tenant:${tenantId}`;
+
+    return `anonymous:${randomUUID()}`;
+  }
+
+  private getGroups(properties?: Record<string, unknown>): Record<string, string> | undefined {
+    if (properties?.groups) return properties.groups as Record<string, string>;
+
+    const tenantId = Context.getTenantId();
+    if (tenantId) {
+      return { tenant: tenantId };
+    }
+
+    return undefined;
   }
 
   private logCaptureFailure(event: string, error: unknown): void {

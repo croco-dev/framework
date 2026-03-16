@@ -26,10 +26,6 @@ export class EventBusConfig {
     EventBusConfig.instance = config;
   }
 
-  public static reset(): void {
-    EventBusConfig.instance = undefined;
-  }
-
   public getEventBus(): EventBus {
     if (!this.eventBus) {
       throw new EventBusNotSetProblem();

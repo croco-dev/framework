@@ -1,5 +1,6 @@
 import type { SpanContext } from '@opentelemetry/api';
 import { type Sampler, SamplingDecision, type SamplingResult } from '@opentelemetry/sdk-trace-base';
+import { SamplerProblem } from '../problems/TelemetryProblems';
 
 type ProbabilitySamplerOptions = {
   probability: number;
@@ -11,7 +12,7 @@ class ProbabilitySampler implements Sampler {
 
   constructor(options: ProbabilitySamplerOptions) {
     if (options.probability < 0 || options.probability > 1) {
-      throw new Error('Probability must be between 0 and 1');
+      throw new SamplerProblem('Probability must be between 0 and 1');
     }
     this.probability = options.probability;
     this.threshold = Math.floor(options.probability * 0xffffffff);

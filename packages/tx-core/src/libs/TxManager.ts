@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { Container, TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
+import type { TransactionContext } from '@croco/framework-context';
+import type { Logger } from '@croco/framework-logger';
 import { TransactionContextProblem } from './problems/TransactionProblems';
 import type { TxAdapter } from './TxAdapter';
 import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
@@ -13,55 +13,68 @@ interface TxContext<TClient> {
 
 type NullableTxContext<TClient> = TxContext<TClient> | null;
 
+type TxManagerLogger = Pick<Logger, 'error' | 'warn'>;
+
+const DEFAULT_LOGGER: TxManagerLogger = console;
+
 export class TxManager<TClient, TOptions = unknown> implements TransactionContext {
   private readonly als = new AsyncLocalStorage<NullableTxContext<TClient>>();
   private readonly defaultNesting: NestingStrategy;
+  private readonly logger: TxManagerLogger;
 
+  constructor(adapter: TxAdapter<TClient, TOptions>, config?: TxManagerConfig);
   constructor(
     private readonly adapter: TxAdapter<TClient, TOptions>,
-    config: TxManagerConfig = {}
+    config: TxManagerConfig = {},
+    logger: TxManagerLogger = DEFAULT_LOGGER
   ) {
     this.defaultNesting = config.defaultNesting ?? 'join';
-
-    try {
-      Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN);
-    } catch {
-      Container.set(TRANSACTION_CONTEXT_TOKEN, this);
-    }
+    this.logger = logger;
   }
 
   async run<T>(fn: () => Promise<T>, runOptions?: TxRunOptions<TOptions>): Promise<T> {
     const nesting = runOptions?.nesting ?? this.defaultNesting;
     const options = runOptions?.options;
-
     const currentContext = this.als.getStore();
 
     if (!currentContext) {
-      const rootAfterCommitHooks: AfterCommitHook[] = [];
-      let rootContext: TxContext<TClient> | null = null;
-
-      const result = await this.adapter.transaction(async (client) => {
-        const context: TxContext<TClient> = {
-          client,
-          afterCommitHooks: rootAfterCommitHooks,
-          isRoot: true,
-        };
-        rootContext = context;
-
-        return this.als.run(context, fn);
-      }, options);
-
-      if (rootContext) {
-        await this.als.run(rootContext, () => this.executeAfterCommitHooks(rootAfterCommitHooks));
-      }
-
-      return result;
+      return this.executeRoot(fn, options);
     }
 
     if (nesting === 'join') {
       return fn();
     }
 
+    return this.executeNested(currentContext, fn, options);
+  }
+
+  private async executeRoot<T>(fn: () => Promise<T>, options?: TOptions): Promise<T> {
+    const afterCommitHooks: AfterCommitHook[] = [];
+    let rootContext: TxContext<TClient> | null = null;
+
+    const result = await this.adapter.transaction(async (client) => {
+      const context: TxContext<TClient> = {
+        client,
+        afterCommitHooks,
+        isRoot: true,
+      };
+      rootContext = context;
+
+      return this.setupContext(context, fn);
+    }, options);
+
+    if (rootContext) {
+      await this.setupContext(rootContext, () => this.executeAfterCommitHooks(afterCommitHooks));
+    }
+
+    return result;
+  }
+
+  private async executeNested<T>(
+    currentContext: TxContext<TClient>,
+    fn: () => Promise<T>,
+    options?: TOptions
+  ): Promise<T> {
     if (!this.adapter.supportsSavepoint()) {
       this.warnSavepointNotSupported();
       return fn();
@@ -79,7 +92,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
           isRoot: false,
         };
 
-        const nestedResult = await this.als.run(nestedContext, fn);
+        const nestedResult = await this.setupContext(nestedContext, fn);
         shouldMergeNestedHooks = true;
 
         return nestedResult;
@@ -92,6 +105,10 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     }
 
     return result;
+  }
+
+  private async setupContext<T>(context: NullableTxContext<TClient>, fn: () => Promise<T>): Promise<T> {
+    return this.als.run(context, fn);
   }
 
   getClient(): TClient | null {
@@ -135,19 +152,12 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
 
   private safeLog(level: 'error' | 'warn', message: string, meta?: Record<string, unknown>): void {
     const formattedMessage = `[TxManager] ${message}`;
-    try {
-      const logger = Container.get(Logger);
-      if (meta) {
-        logger[level](formattedMessage, meta);
-      } else {
-        logger[level](formattedMessage);
-      }
-    } catch {
-      if (meta) {
-        console[level](formattedMessage, meta);
-      } else {
-        console[level](formattedMessage);
-      }
+
+    if (meta) {
+      this.logger[level](formattedMessage, meta);
+      return;
     }
+
+    this.logger[level](formattedMessage);
   }
 }

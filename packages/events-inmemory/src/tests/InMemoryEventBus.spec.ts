@@ -117,6 +117,122 @@ describe('InMemoryEventBus', () => {
       expect(handler2.handledEvents).toHaveLength(1);
     });
 
+    describe('characterization', () => {
+      it('should call subscribed handlers when publishing an event', async () => {
+        class RecordingHandler implements EventHandler<TestEvent> {
+          public readonly receivedMessages: string[] = [];
+
+          async handle(event: TestEvent): Promise<void> {
+            this.receivedMessages.push(event.message);
+          }
+        }
+
+        const handler = new RecordingHandler();
+        Container.set(RecordingHandler, handler);
+        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: RecordingHandler });
+
+        await eventBus.publish(new TestEvent('characterization-single'));
+
+        expect(handler.receivedMessages).toEqual(['characterization-single']);
+      });
+
+      it('should invoke multiple handlers in subscription order', async () => {
+        const callSequence: string[] = [];
+
+        class FirstHandler implements EventHandler<TestEvent> {
+          async handle(): Promise<void> {
+            callSequence.push('first');
+          }
+        }
+
+        class SecondHandler implements EventHandler<TestEvent> {
+          async handle(): Promise<void> {
+            callSequence.push('second');
+          }
+        }
+
+        Container.set(FirstHandler, new FirstHandler());
+        Container.set(SecondHandler, new SecondHandler());
+
+        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FirstHandler });
+        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SecondHandler });
+
+        await eventBus.publish(new TestEvent('characterization-order'));
+
+        expect(callSequence).toEqual(['first', 'second']);
+      });
+
+      it('should log handler errors and continue with remaining handlers', async () => {
+        class SuccessHandler extends TestHandler {}
+        class FailHandler extends FailingHandler {}
+
+        const successHandler = new SuccessHandler();
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        Container.set(SuccessHandler, successHandler);
+        Container.set(FailHandler, new FailHandler());
+
+        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailHandler });
+        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SuccessHandler });
+
+        await expect(eventBus.publish(new TestEvent('characterization-error'))).resolves.toBeUndefined();
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          '❌ EventHandler 실행 중 오류 (TestEvent):',
+          expect.objectContaining({ message: 'Handler failed intentionally' })
+        );
+        expect(successHandler.handledEvents).toHaveLength(1);
+
+        consoleErrorSpy.mockRestore();
+      });
+
+      it('should deliver independent event copies to each handler', async () => {
+        class MutatingHandler implements EventHandler<MutablePayloadEvent> {
+          public receivedEvent?: MutablePayloadEvent;
+
+          async handle(event: MutablePayloadEvent): Promise<void> {
+            this.receivedEvent = event;
+            event.payload.nested.count = 99;
+            event.metadata.custom = { changed: true };
+          }
+        }
+
+        class ObservingHandler implements EventHandler<MutablePayloadEvent> {
+          public receivedEvent?: MutablePayloadEvent;
+          public observedCount?: number;
+          public observedCustomMetadata?: unknown;
+
+          async handle(event: MutablePayloadEvent): Promise<void> {
+            this.receivedEvent = event;
+            this.observedCount = event.payload.nested.count;
+            this.observedCustomMetadata = event.metadata.custom;
+          }
+        }
+
+        const mutatingHandler = new MutatingHandler();
+        const observingHandler = new ObservingHandler();
+
+        Container.set(MutatingHandler, mutatingHandler);
+        Container.set(ObservingHandler, observingHandler);
+
+        eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: MutatingHandler });
+        eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: ObservingHandler });
+
+        const event = new MutablePayloadEvent({ nested: { count: 1 } });
+        await eventBus.publish(event);
+
+        expect(mutatingHandler.receivedEvent).toBeDefined();
+        expect(observingHandler.receivedEvent).toBeDefined();
+        expect(mutatingHandler.receivedEvent).not.toBe(event);
+        expect(observingHandler.receivedEvent).not.toBe(event);
+        expect(mutatingHandler.receivedEvent).not.toBe(observingHandler.receivedEvent);
+        expect(observingHandler.observedCount).toBe(1);
+        expect(observingHandler.observedCustomMetadata).toBeUndefined();
+        expect(event.payload.nested.count).toBe(1);
+        expect(event.metadata).toEqual({});
+      });
+    });
+
     it('should not fail if no handlers subscribed', async () => {
       const event = new TestEvent('orphan');
       await expect(eventBus.publish(event)).resolves.toBeUndefined();

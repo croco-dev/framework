@@ -1,6 +1,7 @@
 /**
  * Rate limit policy configuration
  */
+import { RateLimitWindowProblem } from './problems/RateLimitConfigProblems';
 export type RateLimitPolicy = {
   /** Policy identifier (used as key segment) */
   name: string;
@@ -77,12 +78,12 @@ export type RateLimitMiddlewareOptions = {
 export function parseWindowMs(window: string): number {
   const match = window.match(/^(\d+)(s|m|h|d)$/);
   if (!match) {
-    throw new Error(`Invalid window format: ${window}. Use format like '1m', '1h', '1d'`);
+    throw new RateLimitWindowProblem(`Invalid window format: ${window}. Use format like '1m', '1h', '1d'`);
   }
 
   const value = parseInt(match[1], 10);
   if (value <= 0) {
-    throw new Error(`Invalid window value: ${window}. Window must be greater than 0`);
+    throw new RateLimitWindowProblem(`Invalid window value: ${window}. Window must be greater than 0`);
   }
 
   const unit = match[2];

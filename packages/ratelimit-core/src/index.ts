@@ -25,7 +25,7 @@ export type {
 
 /** Factory for creating HTTP rate limit middleware. */
 export { createRateLimitMiddleware } from './libs/middleware/rateLimitMiddleware';
-
+export { RateLimitKeyBuilderProblem, RateLimitWindowProblem } from './libs/problems/RateLimitConfigProblems';
 /** Problem raised when a request exceeds the configured limit. */
 export { RateLimitExceededProblem } from './libs/problems/RateLimitExceededProblem';
 

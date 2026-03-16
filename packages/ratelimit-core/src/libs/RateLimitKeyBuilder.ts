@@ -1,3 +1,4 @@
+import { RateLimitKeyBuilderProblem } from './problems/RateLimitConfigProblems';
 import type { KeySegment } from './types';
 
 /**
@@ -21,7 +22,7 @@ export class RateLimitKeyBuilder {
 
   constructor(segments: KeySegment[]) {
     if (segments.length === 0) {
-      throw new Error('At least one key segment is required');
+      throw new RateLimitKeyBuilderProblem('At least one key segment is required');
     }
     this.segments = segments;
   }

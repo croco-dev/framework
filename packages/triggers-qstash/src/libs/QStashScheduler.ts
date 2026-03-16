@@ -1,4 +1,5 @@
 import type { ExecutionManager } from '@croco/execution-core';
+import { ProblemFactory } from '@croco/problems-core';
 import type { CronTriggerMetadata } from '@croco/triggers-core';
 import { triggerRegistry } from '@croco/triggers-core';
 import type { Client } from '@upstash/qstash';
@@ -216,7 +217,10 @@ export class QStashScheduler {
       const scheduleId = this.generateScheduleId(trigger);
 
       if (map.has(scheduleId)) {
-        throw new Error(`Duplicate QStash schedule ID detected: ${scheduleId}`);
+        throw ProblemFactory.internalServerError(
+          'triggers-qstash/duplicate-schedule-id',
+          `Duplicate QStash schedule ID detected: ${scheduleId}`
+        );
       }
 
       map.set(scheduleId, trigger);

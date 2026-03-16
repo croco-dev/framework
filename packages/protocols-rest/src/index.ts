@@ -78,23 +78,6 @@
  * const type: ParamType = ParamType.QUERY;
  * ```
  */
-
-/**
- * 요청을 계속 처리할 수 있는지 판단하는 Guard 계약입니다.
- *
- * @param context - 현재 실행 컨텍스트입니다.
- * @returns 요청을 계속 진행하면 true를 반환합니다.
- *
- * @example
- * ```typescript
- * const guard: Guard<ExecutionContext> = {
- *   canActivate() {
- *     return true;
- *   },
- * };
- * ```
- */
-export type { Guard } from '@croco/framework-context';
 export {
   HttpMethod,
   ParamType,
@@ -107,6 +90,7 @@ export {
   REST_ROLES_KEY,
   REST_ROUTES_KEY,
 } from './libs/constants';
+
 /**
  * 클래스에 REST 컨트롤러 기본 경로 메타데이터를 등록합니다.
  *
@@ -378,6 +362,7 @@ export { UseFilters, UseGuards, UseInterceptors, UsePipes } from './libs/decorat
  * ```
  */
 export { Body, Ctx, Header, Param, Query, Raw } from './libs/decorators/Params';
+
 /**
  * 메서드에 필요한 역할 목록을 등록합니다.
  *
@@ -424,6 +409,7 @@ export { Roles } from './libs/decorators/Roles';
  * ```
  */
 export type { HttpExceptionFilterResponse, ProblemLike } from './libs/filters/HttpExceptionFilter';
+
 /**
  * 예외를 RFC 7807 형태의 HTTP 응답으로 변환하는 기본 Exception Filter입니다.
  *
@@ -462,6 +448,7 @@ export { HttpExceptionFilter } from './libs/filters/HttpExceptionFilter';
  * ```
  */
 export type { AuthGuardOptions, TokenVerifier } from './libs/guards/AuthGuard';
+
 /**
  * Authorization 헤더를 검증하고 검증된 사용자 정보를 요청 객체에 주입하는 Guard입니다.
  *
@@ -473,6 +460,7 @@ export type { AuthGuardOptions, TokenVerifier } from './libs/guards/AuthGuard';
  * ```
  */
 export { AuthGuard } from './libs/guards/AuthGuard';
+
 /**
  * 역할 정보를 포함한 요청 사용자 객체의 최소 형태입니다.
  *
@@ -484,6 +472,7 @@ export { AuthGuard } from './libs/guards/AuthGuard';
  * ```
  */
 export type { UserWithRoles } from './libs/guards/RolesGuard';
+
 /**
  * @Roles 메타데이터와 요청 사용자 역할을 비교해 접근 여부를 결정하는 Guard입니다.
  *
@@ -493,6 +482,7 @@ export type { UserWithRoles } from './libs/guards/RolesGuard';
  * ```
  */
 export { RolesGuard } from './libs/guards/RolesGuard';
+
 /**
  * 요청 처리 시간을 기록하는 기본 Interceptor입니다.
  *
@@ -502,6 +492,7 @@ export { RolesGuard } from './libs/guards/RolesGuard';
  * ```
  */
 export { LoggingInterceptor } from './libs/interceptors/LoggingInterceptor';
+
 /**
  * 다음 핸들러 체인을 실행하는 인터페이스입니다.
  *
@@ -517,6 +508,7 @@ export { LoggingInterceptor } from './libs/interceptors/LoggingInterceptor';
  * ```
  */
 export type { CallHandler } from './libs/interfaces/CallHandler';
+
 /**
  * 예외를 프레임워크 응답으로 변환하는 Exception Filter 계약입니다.
  *
@@ -534,6 +526,7 @@ export type { CallHandler } from './libs/interfaces/CallHandler';
  * ```
  */
 export type { ExceptionFilter } from './libs/interfaces/ExceptionFilter';
+
 /**
  * Guard, Interceptor, Filter가 공유하는 요청 실행 컨텍스트 계약입니다.
  *
@@ -549,6 +542,22 @@ export type { ExceptionFilter } from './libs/interfaces/ExceptionFilter';
  * ```
  */
 export type { ExecutionContext } from './libs/interfaces/ExecutionContext';
+
+/**
+ * Guard는 @croco/framework-context에서 제공하는 인터페이스입니다.
+ *
+ * @example
+ * ```typescript
+ * import type { Guard } from '@croco/framework-context';
+ *
+ * const guard: Guard<ExecutionContext> = {
+ *   canActivate(context) {
+ *     return true;
+ *   },
+ * };
+ * ```
+ */
+// Guard는 framework-context에서 import하세요
 
 /**
  * 요청 전후 로직을 감싸는 Interceptor 계약입니다.

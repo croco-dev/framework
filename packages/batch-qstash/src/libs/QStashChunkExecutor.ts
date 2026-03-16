@@ -1,6 +1,17 @@
-import { isCheckpointable, type Step } from '@croco/batch-core';
+import type { Checkpointable, Step } from '@croco/batch-core';
 import type { ExecutionManager } from '@croco/execution-core';
 import type { Client } from '@upstash/qstash';
+
+function isCheckpointable(obj: unknown): obj is Checkpointable {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'getCheckpoint' in obj &&
+    typeof (obj as Checkpointable).getCheckpoint === 'function' &&
+    'restoreCheckpoint' in obj &&
+    typeof (obj as Checkpointable).restoreCheckpoint === 'function'
+  );
+}
 
 function isPeekable<I>(obj: unknown): obj is { peek(): Promise<I | null> } {
   return typeof obj === 'object' && obj !== null && 'peek' in obj && typeof obj.peek === 'function';

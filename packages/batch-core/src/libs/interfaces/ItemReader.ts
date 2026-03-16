@@ -17,14 +17,3 @@ export interface Checkpointable {
    */
   restoreCheckpoint(checkpoint: unknown): void;
 }
-
-export function isCheckpointable(obj: unknown): obj is Checkpointable {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'getCheckpoint' in obj &&
-    typeof (obj as Checkpointable).getCheckpoint === 'function' &&
-    'restoreCheckpoint' in obj &&
-    typeof (obj as Checkpointable).restoreCheckpoint === 'function'
-  );
-}
