@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import type { Guard } from '@croco/framework-context';
 import { AUTH_PUBLIC_KEY } from '../constants';
 import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
 import type { AuthProvider } from '../interfaces/AuthProvider';
-import type { RouteExecutionContext } from '../interfaces/RouteExecutionContext';
+import type { AuthRequest } from '../interfaces/AuthRequest';
+import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
 import { UnauthorizedProblem } from '../problems/AuthProblems';
 import { getHeaderValue } from './headerUtils';
 
@@ -42,7 +42,7 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
       return true;
     }
 
-    const request = context.getRequest();
+    const request = context.getRequest() as AuthRequest;
     const apiKeyHeader = getHeaderValue(request, 'x-api-key');
 
     if (apiKeyHeader) {

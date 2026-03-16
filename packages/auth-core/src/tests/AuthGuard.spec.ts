@@ -5,7 +5,7 @@ import { AuthGuard } from '../libs/guards/AuthGuard';
 import type { AuthProvider } from '../libs/interfaces/AuthProvider';
 import type { AuthRequest } from '../libs/interfaces/AuthRequest';
 import type { AuthUser } from '../libs/interfaces/AuthUser';
-import type { RouteExecutionContext } from '../libs/interfaces/RouteExecutionContext';
+import type { RouteExecutionContext } from '../libs/interfaces/Guard';
 import { UnauthorizedProblem } from '../libs/problems/AuthProblems';
 
 describe('AuthGuard', () => {

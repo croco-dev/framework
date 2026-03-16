@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import type { Guard } from '@croco/framework-context';
 import { AUTH_PERMISSIONS_KEY } from '../constants';
+import type { AuthRequest } from '../interfaces/AuthRequest';
 import type { AuthUser } from '../interfaces/AuthUser';
+import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
 import type { UserPrincipal } from '../interfaces/Principal';
-import type { RouteExecutionContext } from '../interfaces/RouteExecutionContext';
 import { ForbiddenProblem } from '../problems/AuthProblems';
 import { hasPermission } from '../rbac/Permission';
 import type { RbacEngine } from '../rbac/RbacEngine';
@@ -31,7 +31,7 @@ export class PermissionGuard implements Guard<RouteExecutionContext> {
       return true;
     }
 
-    const request = context.getRequest();
+    const request = context.getRequest() as AuthRequest;
     const principal = request.principal;
     const user = request.user;
 
