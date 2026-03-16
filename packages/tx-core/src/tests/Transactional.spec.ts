@@ -398,6 +398,29 @@ describe('@Transactional decorator', () => {
       });
       expect(mockAdapter.transaction).toHaveBeenCalledTimes(2);
     });
+
+    it('should clear transaction context before decorated afterCommit hooks run', async () => {
+      let observedClient: { id: string } | null = { id: 'uninitialized' };
+      let observedInTransaction = true;
+
+      class TestService {
+        @Transactional({ propagation: 'REQUIRED' })
+        async execute() {
+          txManager.onAfterCommit(() => {
+            observedClient = txManager.getClient();
+            observedInTransaction = txManager.isInTransaction();
+          });
+
+          return 'result';
+        }
+      }
+
+      const service = new TestService();
+
+      await expect(service.execute()).resolves.toBe('result');
+      expect(observedClient).toBeNull();
+      expect(observedInTransaction).toBe(false);
+    });
   });
 
   describe('custom options', () => {
