@@ -72,26 +72,31 @@ describe('CrocoApp', () => {
 
     @Get('/event-metadata')
     getEventMetadata(@Raw() raw: unknown) {
-      const env = raw as {
-        env: {
-          event?: {
-            cookies?: string[];
-            requestContext?: {
-              stage?: string;
-              authorizer?: Record<string, unknown>;
-            };
-          };
-          lambdaContext?: {
-            awsRequestId?: string;
-          };
-        };
-      };
+      const env =
+        typeof raw === 'object' && raw !== null && 'env' in raw
+          ? (
+              raw as {
+                env?: {
+                  event?: {
+                    cookies?: string[];
+                    requestContext?: {
+                      stage?: string;
+                      authorizer?: Record<string, unknown>;
+                    };
+                  };
+                  lambdaContext?: {
+                    awsRequestId?: string;
+                  };
+                };
+              }
+            ).env
+          : undefined;
 
       return {
-        stage: env.env.event?.requestContext?.stage ?? null,
-        cookies: env.env.event?.cookies ?? [],
-        authorizer: env.env.event?.requestContext?.authorizer ?? null,
-        awsRequestId: env.env.lambdaContext?.awsRequestId ?? null,
+        stage: env?.event?.requestContext?.stage ?? null,
+        cookies: env?.event?.cookies ?? [],
+        authorizer: env?.event?.requestContext?.authorizer ?? null,
+        awsRequestId: env?.lambdaContext?.awsRequestId ?? null,
       };
     }
   }
