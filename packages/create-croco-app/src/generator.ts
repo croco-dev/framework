@@ -23,6 +23,7 @@ const TEMPLATES_DIR = new URL('../templates', import.meta.url).pathname;
 
 export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
   const vars = { projectName: options.projectName, scope: options.scope };
+  const isVikeFullstackPreset = options.preset === 'ddd-vike-fullstack';
 
   // Step 1: targetDir 정규화 및 생성 (non-empty 체크)
   const resolvedTarget = resolve(targetDir);
@@ -46,28 +47,30 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
 
   // Step 3: API + hosting installer
-  if (options.api === 'graphql') {
-    if (options.apiHosting === 'standalone') {
-      installGraphqlStandalone(resolvedTarget, vars);
-    } else {
-      installGraphqlNextjs(resolvedTarget, vars);
-    }
-  } else if (options.api === 'trpc') {
-    if (options.apiHosting === 'standalone') {
-      installTrpcStandalone(resolvedTarget, vars);
-    } else {
-      installTrpcNextjs(resolvedTarget, vars);
+  if (!isVikeFullstackPreset) {
+    if (options.api === 'graphql') {
+      if (options.apiHosting === 'standalone') {
+        installGraphqlStandalone(resolvedTarget, vars);
+      } else {
+        installGraphqlNextjs(resolvedTarget, vars);
+      }
+    } else if (options.api === 'trpc') {
+      if (options.apiHosting === 'standalone') {
+        installTrpcStandalone(resolvedTarget, vars);
+      } else {
+        installTrpcNextjs(resolvedTarget, vars);
+      }
     }
   }
 
   // Step 4: shared/ui (standalone fullstack or nextjs hosting에서 웹앱 있을 때)
   const hasWebApps = options.webApps.length > 0;
-  if (hasWebApps && (options.preset === 'ddd-fullstack' || options.apiHosting === 'nextjs')) {
+  if (!isVikeFullstackPreset && hasWebApps && (options.preset === 'ddd-fullstack' || options.apiHosting === 'nextjs')) {
     installSharedUi(resolvedTarget, vars);
   }
 
   // Step 5: web addon (standalone hosting + web apps)
-  if (options.apiHosting === 'standalone' && hasWebApps) {
+  if (!isVikeFullstackPreset && options.apiHosting === 'standalone' && hasWebApps) {
     for (const webAppName of options.webApps) {
       if (options.api === 'graphql') {
         installWebGraphql(resolvedTarget, webAppName, vars);
@@ -78,17 +81,26 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
 
   // Step 6: backend deploy
-  if (options.backendDeploy === 'docker') {
-    installDocker(resolvedTarget, { ...vars, api: options.api });
-  } else if (options.backendDeploy === 'lambda') {
-    installLambda(resolvedTarget, { ...vars, api: options.api });
+  if (!isVikeFullstackPreset) {
+    if (options.backendDeploy === 'docker') {
+      installDocker(resolvedTarget, { ...vars, api: options.api });
+    } else if (options.backendDeploy === 'lambda') {
+      installLambda(resolvedTarget, { ...vars, api: options.api });
+    }
   }
 
   // Step 7: frontend deploy
-  if (options.frontendDeploy && hasWebApps) {
+  if (options.frontendDeploy === 'cloudflare-vike' && isVikeFullstackPreset) {
+    installFrontendDeploy(resolvedTarget, undefined, {
+      ...vars,
+      preset: options.preset,
+      frontendDeploy: options.frontendDeploy,
+    });
+  } else if (options.frontendDeploy && hasWebApps) {
     for (const webAppName of options.webApps) {
       installFrontendDeploy(resolvedTarget, webAppName, {
         ...vars,
+        preset: options.preset,
         frontendDeploy: options.frontendDeploy,
       });
     }

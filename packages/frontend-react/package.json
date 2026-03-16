@@ -1,0 +1,50 @@
+{
+  "name": "@croco/frontend-react",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external vike --external vike-react",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check ."
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vike": "^0.4.0",
+    "vike-react": "^0.5.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@croco/utils-tsconfig": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vike": "^0.4.0",
+    "vike-react": "^0.5.0",
+    "vitest": "4.0.16"
+  },
+  "vitest": {
+    "include": [
+      "src/**/*.spec.ts"
+    ]
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

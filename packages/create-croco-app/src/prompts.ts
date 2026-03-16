@@ -47,6 +47,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
         { value: 'blank', label: 'Blank', hint: 'Empty monorepo structure' },
         { value: 'ddd-api', label: 'DDD API', hint: 'API only (no web frontend)' },
         { value: 'ddd-fullstack', label: 'DDD Fullstack', hint: 'API + Web frontend' },
+        { value: 'ddd-vike-fullstack', label: 'DDD Vike Fullstack', hint: 'API Worker + SSR Worker' },
       ],
     }));
   if (p.isCancel(preset)) {
@@ -134,7 +135,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       process.exit(0);
     }
     apiHosting = hostingChoice as 'standalone' | 'nextjs';
-  } else if (preset === 'ddd-api') {
+  } else if (preset === 'ddd-api' || preset === 'ddd-vike-fullstack') {
     // If ddd-api preset is selected, apiHosting is standalone
     apiHosting = 'standalone';
   }
@@ -159,14 +160,15 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
   }
 
   // 8. frontendDeploy (fullstack only)
-  let frontendDeploy: 'opennext' | 'vercel' | 'docker' | undefined;
-  if (preset === 'ddd-fullstack') {
+  let frontendDeploy: 'opennext' | 'vercel' | 'docker' | 'cloudflare-vike' | undefined;
+  if (preset === 'ddd-fullstack' || preset === 'ddd-vike-fullstack') {
     const frontendChoice =
       cliArgs.frontendDeploy ??
       (await p.select({
         message: 'Frontend deployment target:',
         options: [
           { value: 'opennext', label: 'OpenNext (Cloudflare)', hint: 'Edge deployment' },
+          { value: 'cloudflare-vike', label: 'Cloudflare Vike', hint: 'SSR Worker deployment' },
           { value: 'vercel', label: 'Vercel', hint: 'Vercel platform' },
           { value: 'docker', label: 'Docker', hint: 'Containerized' },
         ],
@@ -175,7 +177,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       p.cancel('Operation cancelled');
       process.exit(0);
     }
-    frontendDeploy = frontendChoice as 'opennext' | 'vercel' | 'docker';
+    frontendDeploy = frontendChoice as 'opennext' | 'vercel' | 'docker' | 'cloudflare-vike';
   }
 
   // 9. db
