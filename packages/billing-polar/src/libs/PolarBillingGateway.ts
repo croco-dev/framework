@@ -2,6 +2,23 @@ import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from '@croc
 import { Polar } from '@polar-sh/sdk';
 import type { PolarConfig } from '../types';
 
+const POLAR_RETRY_CONFIG = {
+  strategy: 'backoff' as const,
+  retryConnectionErrors: true,
+  backoff: {
+    initialInterval: 500,
+    maxInterval: 5_000,
+    exponent: 1.5,
+    maxElapsedTime: 15_000,
+  },
+};
+
+const POLAR_RETRY_CODES = ['429', '500', '502', '503', '504'];
+
+type PolarLookupError = Error & {
+  error?: string;
+};
+
 /**
  * Polar implementation of BillingGateway.
  */
@@ -23,15 +40,23 @@ export class PolarBillingGateway implements BillingGateway {
    */
   async ensureCustomer(billingAccountId: string, email: string): Promise<string> {
     try {
-      const existing = await this.client.customers.getExternal({
-        externalId: billingAccountId,
-      });
+      const existing = await this.client.customers.getExternal(
+        {
+          externalId: billingAccountId,
+        },
+        {
+          retries: POLAR_RETRY_CONFIG,
+          retryCodes: POLAR_RETRY_CODES,
+        }
+      );
 
       if (existing) {
         return existing.id;
       }
-    } catch (_error) {
-      // Ignored
+    } catch (error) {
+      if (!this.isCustomerNotFoundError(error)) {
+        throw error;
+      }
     }
 
     const created = await this.client.customers.create({
@@ -41,6 +66,16 @@ export class PolarBillingGateway implements BillingGateway {
     });
 
     return created.id;
+  }
+
+  private isCustomerNotFoundError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const polarError = error as PolarLookupError;
+
+    return polarError.name === 'ResourceNotFound' || polarError.error === 'ResourceNotFound';
   }
 
   /**
