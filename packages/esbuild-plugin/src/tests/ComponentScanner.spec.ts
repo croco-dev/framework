@@ -1,7 +1,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ComponentScanner, type CrocoPluginOptions, scanForComponents } from '../libs/ComponentScanner';
+import {
+  ComponentScanner,
+  ComponentScannerDiagnosticError,
+  ComponentScannerFileMetadataError,
+  type CrocoPluginOptions,
+  scanForComponents,
+} from '../libs/ComponentScanner';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 const TEMP_DIR = path.join(__dirname, 'scanner-temp');
@@ -58,13 +64,41 @@ describe('ComponentScanner', () => {
     it('should respect exclude patterns', () => {
       const excludeScanner = new ComponentScanner({
         scanDirs: [FIXTURES_DIR],
-        exclude: ['**/WithComponent.ts'],
+        exclude: ['WithComponent.ts'],
       });
 
       const results = excludeScanner.scan(FIXTURES_DIR);
       const componentFiles = results.filter((r) => r.hasComponent);
 
       expect(componentFiles.some((r) => r.filePath.includes('WithComponent.ts'))).toBe(false);
+    });
+
+    it('should resolve excludes from the scan root even when cwd changes', () => {
+      const projectRoot = path.join(TEMP_DIR, 'project');
+      const srcDir = path.join(projectRoot, 'src');
+      const includedFile = path.join(srcDir, 'IncludedComponent.ts');
+      const excludedFile = path.join(srcDir, 'ExcludedComponent.ts');
+      const originalCwd = process.cwd();
+
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.writeFileSync(includedFile, '@Component()\nexport class IncludedComponent {}');
+      fs.writeFileSync(excludedFile, '@Component()\nexport class ExcludedComponent {}');
+
+      process.chdir(TEMP_DIR);
+
+      try {
+        const excludeScanner = new ComponentScanner({
+          scanDirs: ['src'],
+          exclude: ['src/ExcludedComponent.ts'],
+        });
+
+        const results = excludeScanner.scan(projectRoot);
+
+        expect(results.some((result) => result.filePath === path.resolve(includedFile))).toBe(true);
+        expect(results.some((result) => result.filePath === path.resolve(excludedFile))).toBe(false);
+      } finally {
+        process.chdir(originalCwd);
+      }
     });
 
     it('should scan multiple directories', () => {
@@ -207,7 +241,44 @@ describe('ComponentScanner', () => {
       const invalidFile = path.join(TEMP_DIR, 'invalid.ts');
       fs.writeFileSync(invalidFile, 'this is not valid typescript {{{');
 
-      expect(() => scanner.scanFile(invalidFile)).toThrow(/Failed to scan decorators/);
+      expect(() => scanner.scanFile(invalidFile)).toThrow(ComponentScannerDiagnosticError);
+    });
+
+    it('should preserve diagnostic metadata when parsing fails', () => {
+      const invalidFile = path.join(TEMP_DIR, 'invalid.ts');
+      fs.writeFileSync(invalidFile, 'this is not valid typescript {{{');
+
+      try {
+        scanner.scanFile(invalidFile);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ComponentScannerDiagnosticError);
+        expect(error).toMatchObject({
+          filePath: path.resolve(invalidFile),
+          diagnosticText: expect.any(String),
+          line: expect.any(Number),
+          column: expect.any(Number),
+        });
+        return;
+      }
+
+      throw new Error('Expected diagnostic scan failure');
+    });
+
+    it('should preserve file metadata read failures with cause', () => {
+      const missingFile = path.join(TEMP_DIR, 'missing.ts');
+
+      try {
+        scanner.scanFile(missingFile);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ComponentScannerFileMetadataError);
+        expect(error).toMatchObject({
+          filePath: path.resolve(missingFile),
+          cause: expect.anything(),
+        });
+        return;
+      }
+
+      throw new Error('Expected metadata read failure');
     });
   });
 

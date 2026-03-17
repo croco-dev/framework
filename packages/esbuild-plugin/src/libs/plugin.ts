@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type * as esbuild from 'esbuild';
-import { ComponentScanner } from './ComponentScanner';
+import { ComponentScanner, ComponentScannerDiagnosticError, ComponentScannerError } from './ComponentScanner';
 
 const REFLECT_METADATA_IMPORT = "import 'reflect-metadata';\n";
 
@@ -103,6 +103,65 @@ function resolveEntryPointPath(ep: string | { in: string; out: string }): string
   return typeof ep === 'string' ? ep : ep.in;
 }
 
+function resolveScanRoot(build: esbuild.PluginBuild): string {
+  return path.resolve(build.initialOptions.absWorkingDir ?? process.cwd());
+}
+
+function resolveEntryPointPaths(
+  rawEntryPoints: esbuild.BuildOptions['entryPoints'] | undefined,
+  scanRoot: string
+): string[] {
+  const entryPoints = Array.isArray(rawEntryPoints)
+    ? rawEntryPoints
+    : rawEntryPoints && typeof rawEntryPoints === 'object'
+      ? Object.values(rawEntryPoints)
+      : [];
+
+  return entryPoints.map((entryPoint) => {
+    const resolvedPath = resolveEntryPointPath(entryPoint);
+    return path.isAbsolute(resolvedPath) ? resolvedPath : path.resolve(scanRoot, resolvedPath);
+  });
+}
+
+function getDiagnosticLineText(error: ComponentScannerDiagnosticError): string {
+  if (!error.diagnostic.file || error.line === undefined) {
+    return '';
+  }
+
+  return error.diagnostic.file.text.split(/\r?\n/u)[error.line - 1] ?? '';
+}
+
+function toBuildError(error: unknown): esbuild.PartialMessage {
+  if (error instanceof ComponentScannerDiagnosticError) {
+    return {
+      text: `Component scan failed: ${error.message}`,
+      detail: error,
+      location:
+        error.line && error.column
+          ? {
+              file: error.filePath,
+              line: error.line,
+              column: error.column - 1,
+              length: 0,
+              lineText: getDiagnosticLineText(error),
+            }
+          : undefined,
+    };
+  }
+
+  if (error instanceof ComponentScannerError) {
+    return {
+      text: `Component scan failed: ${error.message}`,
+      detail: error,
+    };
+  }
+
+  return {
+    text: `Component scan failed: ${error instanceof Error ? error.message : String(error)}`,
+    detail: error,
+  };
+}
+
 export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
   const normalizedConfig = normalizeConfig(config);
   const scanner = new ComponentScanner({
@@ -113,7 +172,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
   });
 
   let entryPointPaths: string[] = [];
-  let autoImportContent = '';
+  let autoImportContentByEntryPath = new Map<string, string>();
   let isFirstBuild = true;
 
   return {
@@ -131,24 +190,30 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
           scanner.clearCache();
         }
 
-        const rawEntryPoints = build.initialOptions.entryPoints;
-        const entryPoints = Array.isArray(rawEntryPoints) ? rawEntryPoints : [];
-        entryPointPaths = entryPoints.map((ep: string | { in: string; out: string }) => resolveEntryPointPath(ep));
+        const scanRoot = resolveScanRoot(build);
+        entryPointPaths = resolveEntryPointPaths(build.initialOptions.entryPoints, scanRoot);
+        autoImportContentByEntryPath = new Map();
 
         const scanDirs = normalizedConfig.scan.dirs;
         if (scanDirs && scanDirs.length > 0) {
-          const baseDir = entryPointPaths.length > 0 ? path.dirname(entryPointPaths[0]) : process.cwd();
           try {
-            const scanResults = scanner.scan(baseDir);
+            const scanResults = scanner.scan(scanRoot);
             const componentFiles = scanResults.filter((r) => r.hasComponent);
 
-            const importStatements = componentFiles.map((result) => {
-              const relativePath = path.relative(baseDir, result.filePath);
-              const importPath = `./${relativePath.replace(/\.tsx?$/, '')}`;
-              return `import '${importPath}';`;
-            });
+            for (const entryPointPath of entryPointPaths) {
+              const entryBaseDir = path.dirname(entryPointPath);
+              const importStatements = componentFiles.map((result) => {
+                const relativePath = path.relative(entryBaseDir, result.filePath);
+                const normalizedPath = relativePath.replace(/\.tsx?$/, '').replace(/\\/g, '/');
+                const importPath = normalizedPath.startsWith('.') ? normalizedPath : `./${normalizedPath}`;
+                return `import '${importPath}';`;
+              });
 
-            autoImportContent = `// @croco/auto-import\n${importStatements.join('\n')}\n`;
+              autoImportContentByEntryPath.set(
+                entryPointPath,
+                `// @croco/auto-import\n${importStatements.join('\n')}\n`
+              );
+            }
 
             if (normalizedConfig.generateRegistry.enabled) {
               const controllers = scanResults.filter((r) => r.decorators.includes('Controller'));
@@ -169,9 +234,8 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
               fs.writeFileSync(outPath, content);
             }
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
             return {
-              errors: [{ text: `Component scan failed: ${message}` }],
+              errors: [toBuildError(error)],
             };
           }
         }
@@ -184,6 +248,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
         }
 
         const prependContents: string[] = [];
+        const autoImportContent = autoImportContentByEntryPath.get(args.path);
 
         if (normalizedConfig.reflectMetadata) {
           prependContents.push(REFLECT_METADATA_IMPORT.trim());

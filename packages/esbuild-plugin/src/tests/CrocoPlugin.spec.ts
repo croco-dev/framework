@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type * as esbuild from 'esbuild';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ComponentScannerDiagnosticError } from '../libs/ComponentScanner';
 import { crocoPlugin } from '../libs/plugin';
 
 const TEMP_DIR = path.join(__dirname, 'plugin-temp');
@@ -101,6 +102,138 @@ describe('crocoPlugin', () => {
       expect(mockBuildContext.onStart).toHaveBeenCalled();
     });
 
+    it('should resolve default scan dirs from absWorkingDir instead of the entry file directory', async () => {
+      const projectRoot = path.join(TEMP_DIR, 'project-root');
+      const srcDir = path.join(projectRoot, 'src');
+      const entryFilePath = path.join(srcDir, 'index.ts');
+      const componentFilePath = path.join(srcDir, 'DefaultComponent.ts');
+      const onLoadArgs: esbuild.OnLoadArgs = {
+        path: entryFilePath,
+        namespace: '',
+        suffix: '',
+        pluginData: {},
+        with: {},
+      };
+
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.writeFileSync(entryFilePath, "console.log('hello');");
+      fs.writeFileSync(componentFilePath, '@Component()\nexport class DefaultComponent {}');
+
+      mockBuildContext.initialOptions = {
+        entryPoints: ['src/index.ts'],
+        absWorkingDir: projectRoot,
+      };
+
+      const plugin = crocoPlugin();
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      if (onStartCallback) {
+        onStartCallback();
+      }
+
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
+      if (onLoadCallback) {
+        const result = onLoadCallback(onLoadArgs) as esbuild.OnLoadResult;
+        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+
+        expect(actualResult?.contents).toContain("import './DefaultComponent';");
+      }
+    });
+
+    it('should generate entry-specific auto-imports for multi-entry builds in different directories', async () => {
+      const projectRoot = path.join(TEMP_DIR, 'multi-entry-project');
+      const appDir = path.join(projectRoot, 'src', 'app');
+      const adminDir = path.join(projectRoot, 'src', 'admin');
+      const appEntryPath = path.join(appDir, 'index.ts');
+      const adminEntryPath = path.join(adminDir, 'index.ts');
+      const appComponentPath = path.join(appDir, 'AppComponent.ts');
+      const adminComponentPath = path.join(adminDir, 'AdminComponent.ts');
+
+      fs.mkdirSync(appDir, { recursive: true });
+      fs.mkdirSync(adminDir, { recursive: true });
+      fs.writeFileSync(appEntryPath, "console.log('app');");
+      fs.writeFileSync(adminEntryPath, "console.log('admin');");
+      fs.writeFileSync(appComponentPath, '@Component()\nexport class AppComponent {}');
+      fs.writeFileSync(adminComponentPath, '@Component()\nexport class AdminComponent {}');
+
+      mockBuildContext.initialOptions = {
+        entryPoints: ['src/app/index.ts', 'src/admin/index.ts'],
+        absWorkingDir: projectRoot,
+      };
+
+      const plugin = crocoPlugin();
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      onStartCallback?.();
+
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
+      if (onLoadCallback) {
+        const appResult = onLoadCallback({
+          path: appEntryPath,
+          namespace: '',
+          suffix: '',
+          pluginData: {},
+          with: {},
+        }) as esbuild.OnLoadResult;
+        const adminResult = onLoadCallback({
+          path: adminEntryPath,
+          namespace: '',
+          suffix: '',
+          pluginData: {},
+          with: {},
+        }) as esbuild.OnLoadResult;
+
+        const resolvedAppResult = typeof appResult === 'object' && 'then' in appResult ? await appResult : appResult;
+        const resolvedAdminResult =
+          typeof adminResult === 'object' && 'then' in adminResult ? await adminResult : adminResult;
+
+        expect(resolvedAppResult?.contents).toContain("import './AppComponent';");
+        expect(resolvedAppResult?.contents).toContain("import '../admin/AdminComponent';");
+        expect(resolvedAdminResult?.contents).toContain("import './AdminComponent';");
+        expect(resolvedAdminResult?.contents).toContain("import '../app/AppComponent';");
+      }
+    });
+
+    it('should resolve object entry points from absWorkingDir', async () => {
+      const projectRoot = path.join(TEMP_DIR, 'object-entry-project');
+      const srcDir = path.join(projectRoot, 'src');
+      const entryFilePath = path.join(srcDir, 'main.ts');
+      const componentFilePath = path.join(srcDir, 'ObjectEntryComponent.ts');
+
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.writeFileSync(entryFilePath, "console.log('object-entry');");
+      fs.writeFileSync(componentFilePath, '@Component()\nexport class ObjectEntryComponent {}');
+
+      mockBuildContext.initialOptions = {
+        entryPoints: {
+          app: 'src/main.ts',
+        },
+        absWorkingDir: projectRoot,
+      };
+
+      const plugin = crocoPlugin();
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      onStartCallback?.();
+
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
+      if (onLoadCallback) {
+        const result = onLoadCallback({
+          path: entryFilePath,
+          namespace: '',
+          suffix: '',
+          pluginData: {},
+          with: {},
+        }) as esbuild.OnLoadResult;
+        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+
+        expect(actualResult?.contents).toContain("import './ObjectEntryComponent';");
+      }
+    });
+
     it('should surface scan failures as build errors', () => {
       const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
       const invalidFilePath = path.join(TEMP_DIR, 'invalid.ts');
@@ -120,14 +253,27 @@ describe('crocoPlugin', () => {
 
       const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
       const result = onStartCallback?.();
+      const buildError = (result as { errors: esbuild.PartialMessage[] } | undefined)?.errors?.[0];
 
       expect(result).toEqual({
         errors: [
           expect.objectContaining({
             text: expect.stringContaining('Component scan failed:'),
+            detail: expect.objectContaining({
+              diagnostic: expect.any(Object),
+              cause: expect.any(Object),
+            }),
+            location: expect.objectContaining({
+              file: path.resolve(invalidFilePath),
+              line: expect.any(Number),
+              column: expect.any(Number),
+              lineText: 'this is not valid typescript {{{',
+            }),
           }),
         ],
       });
+
+      expect(buildError?.detail).toBeInstanceOf(ComponentScannerDiagnosticError);
     });
   });
 
