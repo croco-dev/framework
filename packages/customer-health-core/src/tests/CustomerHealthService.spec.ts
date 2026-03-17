@@ -1,8 +1,11 @@
+import { EventPublisher } from '@croco/events-core';
+import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CustomerHealthService } from '../libs/CustomerHealthService';
+import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from '../libs/events';
 import { HealthScoreCalculator } from '../libs/HealthScoreCalculator';
 import { InMemoryHealthScoreStore } from '../libs/InMemoryHealthScoreStore';
-import type { HealthSignalRegistry } from '../libs/interfaces';
+import { HealthScoreStore, HealthSignalRegistry } from '../libs/interfaces';
 import type { HealthScoreProfile, HealthSignal, SignalCategory } from '../libs/types';
 
 class MockSignalProvider implements HealthSignalRegistry {
@@ -28,11 +31,18 @@ describe('CustomerHealthService', () => {
   let store!: InMemoryHealthScoreStore;
   let mockRegistry!: MockSignalProvider;
   let calculator!: HealthScoreCalculator;
+  let mockEventPublisher!: EventPublisher;
 
   beforeEach(() => {
+    Container.reset();
     store = new InMemoryHealthScoreStore();
     mockRegistry = new MockSignalProvider();
     calculator = new HealthScoreCalculator();
+    mockEventPublisher = {
+      publish: vi.fn().mockResolvedValue(undefined),
+    } as unknown as EventPublisher;
+
+    Container.set(EventPublisher, mockEventPublisher);
 
     service = new CustomerHealthService(mockRegistry, store, calculator);
   });
@@ -68,6 +78,7 @@ describe('CustomerHealthService', () => {
     const stored = await store.findLatest('tenant-1');
     expect(stored).not.toBeNull();
     expect(stored?.overallScore).toBe(80);
+    expect(mockEventPublisher.publish).not.toHaveBeenCalled();
   });
 
   it('should detect status change from healthy to at_risk and publish event', async () => {
@@ -114,6 +125,18 @@ describe('CustomerHealthService', () => {
     expect(result.status).toBe('at_risk');
     expect(result.previousScore).toBe(85);
     expect(result.trend).toBe('declining');
+    expect(mockEventPublisher.publish).toHaveBeenCalledWith(expect.any(HealthStatusChangedEvent));
+
+    const statusChangedEvent = vi
+      .mocked(mockEventPublisher.publish)
+      .mock.calls.find(([event]) => event instanceof HealthStatusChangedEvent)?.[0];
+
+    expect(statusChangedEvent).toMatchObject({
+      tenantId: 'tenant-1',
+      oldStatus: 'healthy',
+      newStatus: 'at_risk',
+      score: 70,
+    });
   });
 
   it('should publish HealthScoreDroppedEvent when score drops by 20 or more', async () => {
@@ -160,6 +183,134 @@ describe('CustomerHealthService', () => {
     expect(result.overallScore).toBe(70);
     expect(result.previousScore).toBe(90);
     expect(result.trend).toBe('declining');
+    expect(mockEventPublisher.publish).toHaveBeenCalledWith(expect.any(HealthScoreDroppedEvent));
+
+    const scoreDroppedEvent = vi
+      .mocked(mockEventPublisher.publish)
+      .mock.calls.find(([event]) => event instanceof HealthScoreDroppedEvent)?.[0];
+
+    expect(scoreDroppedEvent).toMatchObject({
+      tenantId: 'tenant-1',
+      previousScore: 90,
+      currentScore: 70,
+      dropPercentage: expect.closeTo(22.222222, 5),
+    });
+  });
+
+  it('should not publish score dropped event when score drop is below threshold', async () => {
+    const initialSignals: HealthSignal[] = [
+      {
+        category: 'usage',
+        name: 'api_calls',
+        value: 85,
+        weight: 1.0,
+        rawValue: 8500,
+        collectedAt: new Date('2026-03-15T10:00:00Z'),
+      },
+    ];
+
+    mockRegistry.addProvider('usage', initialSignals);
+
+    const profile: HealthScoreProfile = {
+      id: 'profile-1',
+      name: 'Default Profile',
+      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      thresholds: { healthy: 80, atRisk: 60 },
+    };
+
+    await service.calculateAndStore('tenant-1', profile);
+    vi.mocked(mockEventPublisher.publish).mockClear();
+
+    const slightlyLowerSignals: HealthSignal[] = [
+      {
+        category: 'usage',
+        name: 'api_calls',
+        value: 70,
+        weight: 1.1,
+        rawValue: 7000,
+        collectedAt: new Date('2026-03-15T11:00:00Z'),
+      },
+      {
+        category: 'usage',
+        name: 'retention_buffer',
+        value: 80,
+        weight: 0.9,
+        rawValue: 8000,
+        collectedAt: new Date('2026-03-15T11:00:00Z'),
+      },
+    ];
+
+    mockRegistry = new MockSignalProvider();
+    mockRegistry.addProvider('usage', slightlyLowerSignals);
+    calculator = new HealthScoreCalculator();
+    service = new CustomerHealthService(mockRegistry, store, calculator);
+
+    const result = await service.calculateAndStore('tenant-1', profile);
+
+    expect(result.overallScore).toBe(74.5);
+    expect(result.previousScore).toBe(85);
+    expect(result.trend).toBe('declining');
+    expect(mockEventPublisher.publish).not.toHaveBeenCalledWith(expect.any(HealthScoreDroppedEvent));
+  });
+
+  it('should skip publishing when no event publisher is configured', async () => {
+    Container.remove(EventPublisher);
+    service = new CustomerHealthService(mockRegistry, store, calculator);
+
+    const healthySignals: HealthSignal[] = [
+      {
+        category: 'usage',
+        name: 'api_calls',
+        value: 85,
+        weight: 1.0,
+        rawValue: 8500,
+        collectedAt: new Date('2026-03-15T10:00:00Z'),
+      },
+    ];
+
+    mockRegistry.addProvider('usage', healthySignals);
+
+    const profile: HealthScoreProfile = {
+      id: 'profile-1',
+      name: 'Default Profile',
+      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      thresholds: { healthy: 80, atRisk: 60 },
+    };
+
+    await service.calculateAndStore('tenant-1', profile);
+
+    const lowerSignals: HealthSignal[] = [
+      {
+        category: 'usage',
+        name: 'api_calls',
+        value: 60,
+        weight: 1.0,
+        rawValue: 6000,
+        collectedAt: new Date('2026-03-15T11:00:00Z'),
+      },
+    ];
+
+    mockRegistry = new MockSignalProvider();
+    mockRegistry.addProvider('usage', lowerSignals);
+    calculator = new HealthScoreCalculator();
+    service = new CustomerHealthService(mockRegistry, store, calculator);
+
+    const result = await service.calculateAndStore('tenant-1', profile);
+
+    expect(result.status).toBe('at_risk');
+    expect(result.previousScore).toBe(85);
+    expect(vi.mocked(mockEventPublisher.publish)).not.toHaveBeenCalled();
+  });
+
+  it('should resolve from Container with optional event publisher wiring intact', () => {
+    Container.set(HealthSignalRegistry.token, mockRegistry as unknown as HealthSignalRegistry);
+    Container.set(HealthScoreStore.token, store as unknown as HealthScoreStore);
+    Container.set(HealthScoreCalculator, calculator);
+    Container.register(CustomerHealthService, 'transient');
+
+    const resolved = Container.get(CustomerHealthService);
+
+    expect(resolved).toBeInstanceOf(CustomerHealthService);
   });
 
   it('should return latest score from store without recalculating', async () => {

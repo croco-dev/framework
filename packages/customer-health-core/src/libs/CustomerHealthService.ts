@@ -1,14 +1,18 @@
-import { Component } from '@croco/framework-context';
-import type { HealthScoreCalculator } from './HealthScoreCalculator';
-import type { HealthScoreStore, HealthSignalRegistry } from './interfaces';
+import { EventPublisher } from '@croco/events-core';
+import { Component, Container, Inject } from '@croco/framework-context';
+import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from './events';
+import { HealthScoreCalculator } from './HealthScoreCalculator';
+import { HealthScoreStore, HealthSignalRegistry } from './interfaces';
 import type { HealthScoreProfile, TenantHealthScore } from './types';
+
+const SCORE_DROP_EVENT_THRESHOLD_PERCENT = 20;
 
 @Component()
 export class CustomerHealthService {
   constructor(
-    private readonly signalRegistry: HealthSignalRegistry,
-    private readonly store: HealthScoreStore,
-    private readonly calculator: HealthScoreCalculator
+    @Inject(HealthSignalRegistry.token) private readonly signalRegistry: HealthSignalRegistry,
+    @Inject(HealthScoreStore.token) private readonly store: HealthScoreStore,
+    @Inject(() => HealthScoreCalculator) private readonly calculator: HealthScoreCalculator
   ) {}
 
   async calculateAndStore(tenantId: string, profile: HealthScoreProfile): Promise<TenantHealthScore> {
@@ -40,13 +44,38 @@ export class CustomerHealthService {
   }
 
   private async publishEvents(score: TenantHealthScore, previous: TenantHealthScore | null): Promise<void> {
-    // TODO: 이벤트 클래스(HealthStatusChangedEvent, HealthScoreDroppedEvent) 생성 후 구현
-    // const publisher = new EventPublisher();
-    // if (previous && previous.status !== score.status) {
-    //   await publisher.publish(new HealthStatusChangedEvent(...));
-    // }
-    // if (previous && score.overallScore < previous.overallScore) {
-    //   await publisher.publish(new HealthScoreDroppedEvent(...));
-    // }
+    const eventPublisher = this.getEventPublisher();
+    if (!previous || !eventPublisher) {
+      return;
+    }
+
+    if (previous.status !== score.status) {
+      await eventPublisher.publish(
+        new HealthStatusChangedEvent(score.tenantId, previous.status, score.status, score.overallScore)
+      );
+    }
+
+    const dropPercentage = this.calculateDropPercentage(previous.overallScore, score.overallScore);
+    if (dropPercentage >= SCORE_DROP_EVENT_THRESHOLD_PERCENT) {
+      await eventPublisher.publish(
+        new HealthScoreDroppedEvent(score.tenantId, previous.overallScore, score.overallScore, dropPercentage)
+      );
+    }
+  }
+
+  private getEventPublisher(): EventPublisher | null {
+    if (!Container.has(EventPublisher)) {
+      return null;
+    }
+
+    return Container.get(EventPublisher);
+  }
+
+  private calculateDropPercentage(previousScore: number, currentScore: number): number {
+    if (previousScore <= 0 || currentScore >= previousScore) {
+      return 0;
+    }
+
+    return ((previousScore - currentScore) / previousScore) * 100;
   }
 }
