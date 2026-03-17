@@ -16,8 +16,8 @@
     "test": "turbo test",
     "typecheck": "turbo typecheck",
     "version-packages": "changeset version",
-    "bench:check": "npx tsx scripts/bench-threshold-check.ts",
-    "bench:update": "npx tsx scripts/bench-threshold-check.ts --update-baseline"
+    "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",
+    "bench:update": "node --experimental-strip-types scripts/bench-threshold-check.mts --update-baseline"
   },
   "dependencies": {
     "vitest": "4.0.16"
