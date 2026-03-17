@@ -5,12 +5,18 @@ import type { DrizzleDB } from './types.js';
 
 @Service()
 export class DrizzleClient {
-  readonly db: DrizzleDB;
+  private dbInstance: DrizzleDB | null = null;
 
-  constructor() {
+  get db(): DrizzleDB {
+    if (this.dbInstance) {
+      return this.dbInstance;
+    }
+
     const pool = new Pool({
       connectionString: process.env['DATABASE_URL'],
     });
-    this.db = drizzle(pool);
+    this.dbInstance = drizzle(pool);
+
+    return this.dbInstance;
   }
 }

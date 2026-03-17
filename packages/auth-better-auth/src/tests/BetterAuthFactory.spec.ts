@@ -34,12 +34,17 @@ describe('BetterAuthFactory', () => {
   });
 
   describe('constructor', () => {
-    it('should create betterAuth instance with drizzle adapter', () => {
+    it('should defer betterAuth creation until getAuth is called', () => {
       const mockAuthInstance = { api: {} };
       vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
-      new BetterAuthFactory(mockDb, config);
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      expect(betterAuth).not.toHaveBeenCalled();
+      expect(drizzleAdapter).not.toHaveBeenCalled();
+
+      factory.getAuth();
 
       expect(betterAuth).toHaveBeenCalledWith({
         database: expect.any(Object),
@@ -63,7 +68,9 @@ describe('BetterAuthFactory', () => {
         secret: 'production-secret',
       };
 
-      new BetterAuthFactory(mockDb, customConfig);
+      const factory = new BetterAuthFactory(mockDb, customConfig);
+
+      factory.getAuth();
 
       expect(betterAuth).toHaveBeenCalledWith({
         database: expect.any(Object),
@@ -134,7 +141,9 @@ describe('BetterAuthFactory', () => {
       vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
-      new BetterAuthFactory(mockDb, config);
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      factory.getAuth();
 
       expect(drizzleAdapter).toHaveBeenCalledWith(mockDb, {
         provider: 'pg',
@@ -161,7 +170,9 @@ describe('BetterAuthFactory', () => {
         secret: 'test-secret',
       };
 
-      expect(() => new BetterAuthFactory(mockDb, emptyConfig)).not.toThrow();
+      const factory = new BetterAuthFactory(mockDb, emptyConfig);
+
+      expect(() => factory.getAuth()).not.toThrow();
     });
 
     it('should handle empty secret', () => {
@@ -174,7 +185,9 @@ describe('BetterAuthFactory', () => {
         secret: '',
       };
 
-      expect(() => new BetterAuthFactory(mockDb, emptySecretConfig)).not.toThrow();
+      const factory = new BetterAuthFactory(mockDb, emptySecretConfig);
+
+      expect(() => factory.getAuth()).not.toThrow();
     });
 
     it('should handle special characters in secret', () => {
@@ -187,7 +200,9 @@ describe('BetterAuthFactory', () => {
         secret: 'secret-with-!@#$%^&*()_+-=[]{}|;:,.<>?/',
       };
 
-      expect(() => new BetterAuthFactory(mockDb, specialCharConfig)).not.toThrow();
+      const factory = new BetterAuthFactory(mockDb, specialCharConfig);
+
+      expect(() => factory.getAuth()).not.toThrow();
     });
   });
 
@@ -231,8 +246,11 @@ describe('BetterAuthFactory', () => {
       const db1 = { ...mockDb, name: 'db1' };
       const db2 = { ...mockDb, name: 'db2' };
 
-      new BetterAuthFactory(db1, config);
-      new BetterAuthFactory(db2, config);
+      const factory1 = new BetterAuthFactory(db1, config);
+      const factory2 = new BetterAuthFactory(db2, config);
+
+      factory1.getAuth();
+      factory2.getAuth();
 
       expect(drizzleAdapter).toHaveBeenCalledTimes(2);
       expect(drizzleAdapter).toHaveBeenNthCalledWith(1, db1, expect.any(Object));
@@ -246,7 +264,9 @@ describe('BetterAuthFactory', () => {
         throw new Error('Invalid configuration');
       });
 
-      expect(() => new BetterAuthFactory(mockDb, config)).toThrow('Invalid configuration');
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      expect(() => factory.getAuth()).toThrow('Invalid configuration');
     });
 
     it('should propagate errors from drizzleAdapter', () => {
@@ -255,7 +275,9 @@ describe('BetterAuthFactory', () => {
         throw new Error('Invalid database schema');
       });
 
-      expect(() => new BetterAuthFactory(mockDb, config)).toThrow('Invalid database schema');
+      const factory = new BetterAuthFactory(mockDb, config);
+
+      expect(() => factory.getAuth()).toThrow('Invalid database schema');
     });
   });
 });

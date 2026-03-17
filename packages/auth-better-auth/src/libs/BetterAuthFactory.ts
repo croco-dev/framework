@@ -14,23 +14,27 @@ export interface BetterAuthConfig {
 
 @Component()
 export class BetterAuthFactory {
-  private auth: ReturnType<typeof betterAuth>;
+  private auth: ReturnType<typeof betterAuth> | null = null;
 
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: BetterAuthDatabase,
-    config: BetterAuthConfig
-  ) {
+    private readonly config: BetterAuthConfig
+  ) {}
+
+  getAuth() {
+    if (this.auth) {
+      return this.auth;
+    }
+
     this.auth = betterAuth({
       database: drizzleAdapter(this.db, {
         provider: 'pg',
         schema: schema,
       }),
-      baseURL: config.baseURL,
-      secret: config.secret,
+      baseURL: this.config.baseURL,
+      secret: this.config.secret,
     });
-  }
 
-  getAuth() {
     return this.auth;
   }
 }
