@@ -11,6 +11,14 @@ export enum CircuitState {
   HALF_OPEN = 'HALF_OPEN',
 }
 
+export type InMemoryCircuitBreakerStateStoreOptions = {
+  maxEntries?: number;
+  idleTtlMs?: number;
+};
+
+const DEFAULT_MAX_ENTRIES = 1000;
+const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000;
+
 /**
  * Circuit Breaker 상태 저장소 추상 클래스.
  *
@@ -121,22 +129,37 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
   private readonly halfOpenActiveCounts = new Map<string, number>();
   private readonly halfOpenSuccessCounts = new Map<string, number>();
   private readonly locks = new Map<string, Promise<void>>();
+  private readonly lastAccessed = new Map<string, number>();
+  private readonly maxEntries: number;
+  private readonly idleTtlMs: number;
+
+  constructor(options: InMemoryCircuitBreakerStateStoreOptions = {}) {
+    super();
+    this.maxEntries = Math.max(1, options.maxEntries ?? DEFAULT_MAX_ENTRIES);
+    this.idleTtlMs = Math.max(0, options.idleTtlMs ?? DEFAULT_IDLE_TTL_MS);
+  }
 
   async getState(circuitId: string): Promise<CircuitState> {
+    this.pruneStaleEntries();
+    this.touchIfTracked(circuitId);
     return this.states.get(circuitId) ?? CircuitState.CLOSED;
   }
 
   async setState(circuitId: string, state: CircuitState): Promise<void> {
+    this.ensureTracked(circuitId);
     this.states.set(circuitId, state);
     this.halfOpenActiveCounts.set(circuitId, 0);
     this.halfOpenSuccessCounts.set(circuitId, 0);
   }
 
   async getFailureCount(circuitId: string): Promise<number> {
+    this.pruneStaleEntries();
+    this.touchIfTracked(circuitId);
     return this.failures.get(circuitId) ?? 0;
   }
 
   async incrementFailureCount(circuitId: string): Promise<number> {
+    this.ensureTracked(circuitId);
     const current = this.failures.get(circuitId) ?? 0;
     const next = current + 1;
     this.failures.set(circuitId, next);
@@ -144,6 +167,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
   }
 
   async resetFailureCount(circuitId: string): Promise<void> {
+    this.ensureTracked(circuitId);
     this.failures.set(circuitId, 0);
   }
 
@@ -159,31 +183,41 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
   }
 
   async getLastFailureTime(circuitId: string): Promise<number | null> {
+    this.pruneStaleEntries();
+    this.touchIfTracked(circuitId);
     const time = this.lastFailures.get(circuitId);
     return time ?? null;
   }
 
   async setLastFailureTime(circuitId: string, time: number): Promise<void> {
+    this.ensureTracked(circuitId);
     this.lastFailures.set(circuitId, time);
   }
 
   async getHalfOpenActiveCount(circuitId: string): Promise<number> {
+    this.pruneStaleEntries();
+    this.touchIfTracked(circuitId);
     return this.halfOpenActiveCounts.get(circuitId) ?? 0;
   }
 
   async setHalfOpenActiveCount(circuitId: string, count: number): Promise<void> {
+    this.ensureTracked(circuitId);
     this.halfOpenActiveCounts.set(circuitId, Math.max(0, count));
   }
 
   async getHalfOpenSuccessCount(circuitId: string): Promise<number> {
+    this.pruneStaleEntries();
+    this.touchIfTracked(circuitId);
     return this.halfOpenSuccessCounts.get(circuitId) ?? 0;
   }
 
   async setHalfOpenSuccessCount(circuitId: string, count: number): Promise<void> {
+    this.ensureTracked(circuitId);
     this.halfOpenSuccessCounts.set(circuitId, Math.max(0, count));
   }
 
   async withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T> {
+    this.ensureTracked(circuitId);
     const previousLock = this.locks.get(circuitId) ?? Promise.resolve();
     let releaseCurrentLock!: () => void;
 
@@ -218,6 +252,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
     this.halfOpenActiveCounts.delete(circuitId);
     this.halfOpenSuccessCounts.delete(circuitId);
     this.locks.delete(circuitId);
+    this.lastAccessed.delete(circuitId);
   }
 
   /**
@@ -230,5 +265,67 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
     this.halfOpenActiveCounts.clear();
     this.halfOpenSuccessCounts.clear();
     this.locks.clear();
+    this.lastAccessed.clear();
+  }
+
+  private ensureTracked(circuitId: string): void {
+    this.pruneStaleEntries();
+
+    if (!this.lastAccessed.has(circuitId)) {
+      this.evictOverflow();
+    }
+
+    this.lastAccessed.set(circuitId, Date.now());
+  }
+
+  private touchIfTracked(circuitId: string): void {
+    if (!this.lastAccessed.has(circuitId)) {
+      return;
+    }
+
+    this.lastAccessed.set(circuitId, Date.now());
+  }
+
+  private pruneStaleEntries(): void {
+    if (this.idleTtlMs <= 0 || this.lastAccessed.size === 0) {
+      return;
+    }
+
+    const now = Date.now();
+
+    for (const [circuitId, lastAccessedAt] of this.lastAccessed.entries()) {
+      if (now - lastAccessedAt <= this.idleTtlMs) {
+        continue;
+      }
+
+      if (this.locks.has(circuitId)) {
+        continue;
+      }
+
+      void this.reset(circuitId);
+    }
+  }
+
+  private evictOverflow(): void {
+    while (this.lastAccessed.size >= this.maxEntries) {
+      const oldestCircuitId = this.findOldestEvictableCircuitId();
+      if (!oldestCircuitId) {
+        return;
+      }
+
+      void this.reset(oldestCircuitId);
+    }
+  }
+
+  private findOldestEvictableCircuitId(): string | null {
+    for (const circuitId of this.lastAccessed.keys()) {
+      if (this.locks.has(circuitId)) {
+        continue;
+      }
+
+      return circuitId;
+    }
+
+    return null;
   }
 }
