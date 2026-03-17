@@ -22,6 +22,7 @@
     "@croco/framework-context": "workspace:*",
     "@croco/notifications-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "resend": "^4.0.0"
   },
   "devDependencies": {
