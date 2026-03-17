@@ -1288,6 +1288,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../retry-core
       resend:
         specifier: ^4.0.0
         version: 4.8.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
