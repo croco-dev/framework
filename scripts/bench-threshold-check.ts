@@ -33,12 +33,23 @@ const baselinePath = join(projectRoot, 'benchmarks', 'baseline.json');
 const args = process.argv.slice(2);
 const isUpdateBaseline = args.includes('--update-baseline');
 
+const BASELINE_TOLERANCE = 0.2;
+const CI_THRESHOLD_MULTIPLIER = 2;
+const LOCAL_THRESHOLD_MULTIPLIER = 1;
+const BOX_WIDTH = 62;
+
 function loadThresholds(): Thresholds {
   if (!existsSync(thresholdsPath)) {
     console.error(`⚠️  thresholds.json not found at ${thresholdsPath}`);
     process.exit(1);
   }
-  return JSON.parse(readFileSync(thresholdsPath, 'utf-8'));
+  try {
+    return JSON.parse(readFileSync(thresholdsPath, 'utf-8'));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to parse thresholds.json at ${thresholdsPath}: ${message}`);
+    process.exit(1);
+  }
 }
 
 function loadBaseline(): Baseline | null {
@@ -60,12 +71,16 @@ function saveBaseline(results: BenchmarkReport[]) {
 function extractP75(benchmark: Benchmark): number {
   const result = benchmark.result;
   if (!result || !result.benchmark || !result.benchmark.samples) {
-    return 0;
+    return Number.NaN;
   }
   const samples = result.benchmark.samples;
+  if (samples.length === 0) {
+    return Number.NaN;
+  }
   const sorted = [...samples].sort((a, b) => a - b);
-  const p75Index = Math.floor(sorted.length * 0.75);
-  return sorted[p75Index];
+  const p75Index = Math.min(Math.floor(sorted.length * 0.75), sorted.length - 1);
+  const value = sorted[p75Index];
+  return value === undefined ? Number.NaN : value;
 }
 
 function formatDuration(ms: number): string {
@@ -77,6 +92,10 @@ function formatDuration(ms: number): string {
 
 function formatDiff(actual: number, expected: number): string {
   const diff = actual - expected;
+  if (expected === 0) {
+    if (diff === 0) return '+0.0%';
+    return diff > 0 ? '+∞' : '-∞';
+  }
   const percent = ((diff / expected) * 100).toFixed(1);
   const sign = diff >= 0 ? '+' : '';
   return `${sign}${percent}%`;
@@ -91,101 +110,105 @@ async function main() {
     reporters: [],
   });
 
-  await vitest.start();
+  try {
+    await vitest.start();
 
-  const files = vitest.state.getFiles();
-  const reports: BenchmarkReport[] = [];
-  let allPassed = true;
+    const files = vitest.state.getFiles();
+    const reports: BenchmarkReport[] = [];
+    let allPassed = true;
 
-  for (const file of files) {
-    for (const task of file.tasks) {
-      if (task.result?.benchmark) {
-        const p75 = extractP75(task as unknown as Benchmark);
-        const name = task.name;
+    for (const file of files) {
+      for (const task of file.tasks) {
+        if (task.result?.benchmark) {
+          const benchmark = task.result.benchmark;
+          const p75 = extractP75({ result: { benchmark } } as Benchmark);
+          const name = task.name;
 
-        const report: BenchmarkReport = {
-          name,
-          p75,
-        };
+          const report: BenchmarkReport = {
+            name,
+            p75,
+          };
 
-        if (thresholds[name]) {
-          const threshold = thresholds[name].p75;
-          report.threshold = threshold;
-          const ciMargin = process.env.CI ? 2 : 1;
-          const effectiveThreshold = threshold * ciMargin;
-          report.thresholdDiff = p75 - threshold;
+          if (thresholds[name]) {
+            const threshold = thresholds[name].p75;
+            report.threshold = threshold;
+            const ciMargin = process.env.CI ? CI_THRESHOLD_MULTIPLIER : LOCAL_THRESHOLD_MULTIPLIER;
+            const effectiveThreshold = threshold * ciMargin;
+            report.thresholdDiff = p75 - threshold;
 
-          if (p75 > effectiveThreshold) {
-            report.thresholdStatus = 'fail';
-            allPassed = false;
+            if (p75 > effectiveThreshold) {
+              report.thresholdStatus = 'fail';
+              allPassed = false;
+            } else {
+              report.thresholdStatus = 'pass';
+            }
           } else {
-            report.thresholdStatus = 'pass';
+            report.thresholdStatus = 'skip';
+            console.warn(`⚠️  No threshold defined for "${name}" - skipping threshold check`);
           }
-        } else {
-          report.thresholdStatus = 'skip';
-          console.warn(`⚠️  No threshold defined for "${name}" - skipping threshold check`);
-        }
 
-        if (baseline?.[name]) {
-          const baselineP75 = baseline[name].p75;
-          report.baseline = baselineP75;
-          report.baselineDiff = p75 - baselineP75;
-          const BASELINE_TOLERANCE = 0.2;
+          if (baseline?.[name]) {
+            const baselineP75 = baseline[name].p75;
+            report.baseline = baselineP75;
+            report.baselineDiff = p75 - baselineP75;
 
-          if (Math.abs(p75 - baselineP75) > baselineP75 * BASELINE_TOLERANCE) {
-            report.baselineStatus = 'fail';
-            allPassed = false;
+            if (Math.abs(p75 - baselineP75) > baselineP75 * BASELINE_TOLERANCE) {
+              report.baselineStatus = 'fail';
+              allPassed = false;
+            } else {
+              report.baselineStatus = 'pass';
+            }
           } else {
-            report.baselineStatus = 'pass';
+            report.baselineStatus = 'skip';
           }
-        } else {
-          report.baselineStatus = 'skip';
-        }
 
-        reports.push(report);
+          reports.push(report);
+        }
       }
     }
-  }
 
-  if (isUpdateBaseline) {
-    saveBaseline(reports);
-    process.exit(0);
-  }
-
-  console.log('\n╔══════════════════════════════════════════════════════════╗');
-  console.log('║ Cold-Start Benchmark Report                            ║');
-  console.log('╠══════════════════════════════════════════════════════════╣');
-
-  for (const report of reports) {
-    const thresholdPart = report.threshold ? `threshold: ${formatDuration(report.threshold)}` : 'no threshold';
-    const baselinePart = report.baseline ? `baseline: ${formatDuration(report.baseline)}` : '';
-
-    const statusIcon =
-      report.thresholdStatus === 'fail' || report.baselineStatus === 'fail'
-        ? '❌'
-        : report.thresholdStatus === 'skip' && report.baselineStatus === 'skip'
-          ? '⚠️ '
-          : '✅';
-
-    let line = `║ ${report.name.padEnd(30)} p75: ${formatDuration(report.p75).padEnd(10)}`;
-
-    if (report.threshold) {
-      line += ` ${thresholdPart.padEnd(20)}`;
-    }
-    if (report.baseline) {
-      const diff = report.baselineDiff !== undefined ? formatDiff(report.p75, report.baseline) : '';
-      line += ` ${baselinePart.padEnd(20)} (${diff})`;
+    if (isUpdateBaseline) {
+      saveBaseline(reports);
+      process.exit(0);
     }
 
-    line += ` ${statusIcon} ║`;
-    console.log(`${line.substring(0, 60)} ║`);
+    console.log('\n╔══════════════════════════════════════════════════════════╗');
+    console.log('║ Cold-Start Benchmark Report                            ║');
+    console.log('╠══════════════════════════════════════════════════════════╣');
+
+    for (const report of reports) {
+      const thresholdPart = report.threshold ? `threshold: ${formatDuration(report.threshold)}` : 'no threshold';
+      const baselinePart = report.baseline ? `baseline: ${formatDuration(report.baseline)}` : '';
+
+      const statusIcon =
+        report.thresholdStatus === 'fail' || report.baselineStatus === 'fail'
+          ? '❌'
+          : report.thresholdStatus === 'skip' && report.baselineStatus === 'skip'
+            ? '⚠️ '
+            : '✅';
+
+      let line = `║ ${report.name.padEnd(30)} p75: ${formatDuration(report.p75).padEnd(10)}`;
+
+      if (report.threshold) {
+        line += ` ${thresholdPart.padEnd(20)}`;
+      }
+      if (report.baseline) {
+        const diff = report.baselineDiff !== undefined ? formatDiff(report.p75, report.baseline) : '';
+        line += ` ${baselinePart.padEnd(20)} (${diff})`;
+      }
+
+      line += ` ${statusIcon} ║`;
+      console.log(line.substring(0, BOX_WIDTH));
+    }
+
+    console.log('╠══════════════════════════════════════════════════════════╣');
+    console.log(`║ Result: ${allPassed ? 'ALL PASSED' : 'FAILED'}${' '.repeat(40)} ║`);
+    console.log('╚══════════════════════════════════════════════════════════╝\n');
+
+    process.exit(allPassed ? 0 : 1);
+  } finally {
+    await vitest.close();
   }
-
-  console.log('╠══════════════════════════════════════════════════════════╣');
-  console.log(`║ Result: ${allPassed ? 'ALL PASSED' : 'FAILED'}${' '.repeat(40)} ║`);
-  console.log('╚══════════════════════════════════════════════════════════╝\n');
-
-  process.exit(allPassed ? 0 : 1);
 }
 
 main().catch((err) => {

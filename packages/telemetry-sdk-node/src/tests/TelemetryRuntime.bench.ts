@@ -1,4 +1,5 @@
 import { bench, describe } from 'vitest';
+
 import { lambdaPreset } from '../libs/presets/lambda';
 import { TelemetryRuntime } from '../runtime';
 
@@ -6,13 +7,11 @@ describe('TelemetryRuntime benchmarks', () => {
   bench(
     'TelemetryRuntime.init (lambda preset)',
     async () => {
-      // Singleton 리셋
-      (TelemetryRuntime as any).instance = undefined;
+      await TelemetryRuntime.reset();
 
       const runtime = TelemetryRuntime.getInstance();
       await runtime.init(lambdaPreset({ serviceName: 'bench-service', probability: 0 }));
 
-      // Pending spans 정리
       await runtime.forceFlush();
     },
     { iterations: 10, warmupIterations: 2 }

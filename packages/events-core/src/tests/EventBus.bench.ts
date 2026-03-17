@@ -1,9 +1,11 @@
 import { Container } from '@croco/framework-context';
 import { bench, describe } from 'vitest';
+
 import { DomainEvent } from '../libs/DomainEvent';
 import type { EventBus, EventSubscription } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
-import { type EventHandler, RegisterEventHandler } from '../libs/EventHandler';
+import type { EventHandler } from '../libs/EventHandler';
+import { RegisterEventHandler } from '../libs/EventHandler';
 import { EventPublisher } from '../libs/EventPublisher';
 import { DefaultHandlerResolver } from '../libs/HandlerResolver';
 
@@ -43,6 +45,60 @@ class BenchHandler implements EventHandler<BenchEvent> {
   async handle(_event: BenchEvent): Promise<void> {}
 }
 
+@RegisterEventHandler(BenchEvent)
+class BenchHandler1 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler2 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler3 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler4 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler5 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler6 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler7 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler8 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler9 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+@RegisterEventHandler(BenchEvent)
+class BenchHandler10 implements EventHandler<BenchEvent> {
+  async handle(): Promise<void> {}
+}
+
+const predefinedHandlers = [
+  BenchHandler1,
+  BenchHandler2,
+  BenchHandler3,
+  BenchHandler4,
+  BenchHandler5,
+  BenchHandler6,
+  BenchHandler7,
+  BenchHandler8,
+  BenchHandler9,
+  BenchHandler10,
+];
+
 describe('EventBus benchmarks', () => {
   describe('EventBusConfig.start (10 handlers)', () => {
     bench(
@@ -56,15 +112,7 @@ describe('EventBus benchmarks', () => {
 
         config.setEventBus(mockBus);
 
-        const handlers = Array.from({ length: 10 }, () => {
-          @RegisterEventHandler(BenchEvent)
-          class Handler implements EventHandler<BenchEvent> {
-            async handle(): Promise<void> {}
-          }
-          return Handler;
-        });
-
-        await config.start({ handlers });
+        await config.start({ handlers: predefinedHandlers });
       },
       { iterations: 50, warmupIterations: 5 }
     );

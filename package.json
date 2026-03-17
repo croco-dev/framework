@@ -15,7 +15,9 @@
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "bench:check": "npx tsx scripts/bench-threshold-check.ts",
+    "bench:update": "npx tsx scripts/bench-threshold-check.ts --update-baseline"
   },
   "dependencies": {
     "vitest": "4.0.16"

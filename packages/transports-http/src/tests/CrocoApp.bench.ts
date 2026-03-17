@@ -1,8 +1,10 @@
 import 'reflect-metadata';
+
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { Controller, Get } from '@croco/protocols-rest';
 import { bench, describe } from 'vitest';
+
 import { createApp } from '../libs/CrocoApp';
 import { ErrorHandler } from '../libs/ErrorHandler';
 import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';

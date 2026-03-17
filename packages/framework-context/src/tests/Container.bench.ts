@@ -1,4 +1,4 @@
-import { afterEach, bench, describe } from 'vitest';
+import { bench, describe } from 'vitest';
 import { Container } from '../libs/Container';
 
 class TestService1 {}
@@ -110,13 +110,10 @@ const serviceClasses = [
 ];
 
 describe('Container benchmarks', () => {
-  afterEach(() => {
-    Container.reset();
-  });
-
   bench(
     'Container.register × 50 components',
     () => {
+      Container.reset();
       for (const ServiceClass of serviceClasses) {
         Container.register(ServiceClass, 'singleton');
       }
@@ -127,6 +124,7 @@ describe('Container benchmarks', () => {
   bench(
     'Container.get singleton (cold)',
     () => {
+      Container.reset();
       Container.register(TestService1, 'singleton');
       Container.get(TestService1);
     },
@@ -157,6 +155,7 @@ describe('Container.get singleton (warm)', () => {
       iterations: 200,
       warmupIterations: 20,
       setup: () => {
+        Container.reset();
         Container.register(TestService1, 'singleton');
         Container.set(TestService1, new TestService1());
       },
