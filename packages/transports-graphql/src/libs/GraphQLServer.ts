@@ -10,7 +10,6 @@ import {
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,
 } from './problems/GraphQLTransportProblems';
-import { SchemaCompiler } from './SchemaCompiler';
 import type { GraphQLServerOptions } from './types';
 
 type YogaHandler = (request: Request) => Promise<Response>;
@@ -32,6 +31,7 @@ export class GraphQLServer {
     let graphqlSchema = schema;
 
     if (!graphqlSchema && schemaOptions) {
+      const { SchemaCompiler } = await import('./SchemaCompiler');
       graphqlSchema = await SchemaCompiler.compileSchema(schemaOptions);
     }
 
