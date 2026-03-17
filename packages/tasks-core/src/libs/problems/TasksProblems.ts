@@ -7,3 +7,19 @@ export class TaskNotFoundProblem extends Problem {
     super(undefined, undefined, `Task not found: '${taskId}'`);
   }
 }
+
+export class DuplicateTaskRegistrationProblem extends Problem {
+  constructor(taskName: string) {
+    super(
+      'tasks-core/duplicate-task-registration',
+      ProblemCategory.InternalServerError,
+      `Task ${taskName} is already registered`,
+      {
+        extensions: {
+          taskName,
+          retryable: false,
+        },
+      }
+    );
+  }
+}
