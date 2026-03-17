@@ -34,14 +34,14 @@ jobs:
       - name: Biome check
         run: pnpm check
 
+      - name: Build
+        run: pnpm build
+
       - name: TypeScript check
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
-
-      - name: Build
-        run: pnpm build
 
   changes:
     runs-on: ubuntu-latest
