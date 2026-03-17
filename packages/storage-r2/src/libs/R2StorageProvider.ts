@@ -4,12 +4,146 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { ConfigService } from '@croco/framework-config';
 import { Component } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
+import type { RetryPolicy } from '@croco/retry-core';
+import { RetryTemplate } from '@croco/retry-core';
 import type { ObjectMetadata, PutOptions, SignedUrlOptions } from '@croco/storage-core';
 import { BaseStorageProvider } from '@croco/storage-core';
 import { EmptyR2BodyProblem } from './problems/EmptyR2BodyProblem';
 import { MissingR2ConfigProblem } from './problems/MissingR2ConfigProblem';
 import { R2ObjectTooLargeProblem } from './problems/R2ObjectTooLargeProblem';
 import type { R2Options } from './types';
+
+const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+const TRANSIENT_ERROR_CODES = new Set([
+  'ECONNABORTED',
+  'ECONNRESET',
+  'ENETDOWN',
+  'ENETRESET',
+  'ENETUNREACH',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'RequestTimeout',
+  'RequestTimeoutException',
+  'SlowDown',
+  'Throttling',
+  'ThrottlingException',
+  'TimeoutError',
+  'TooManyRequestsException',
+]);
+
+type R2Error = Error & {
+  code?: string;
+  name?: string;
+  status?: number;
+  statusCode?: number;
+  $metadata?: {
+    httpStatusCode?: number;
+  };
+};
+
+const getErrorStatus = (error: unknown): number | undefined => {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  if ('$metadata' in error) {
+    const metadata = error.$metadata as { httpStatusCode?: number };
+    if (typeof metadata.httpStatusCode === 'number') {
+      return metadata.httpStatusCode;
+    }
+  }
+
+  if ('statusCode' in error && typeof error.statusCode === 'number') {
+    return error.statusCode;
+  }
+
+  if ('status' in error && typeof error.status === 'number') {
+    return error.status;
+  }
+
+  return undefined;
+};
+
+const getErrorCode = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  if ('code' in error && typeof error.code === 'string') {
+    return error.code;
+  }
+
+  if ('name' in error && typeof error.name === 'string') {
+    return error.name;
+  }
+
+  return undefined;
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  return fallback;
+};
+
+const normalizeR2Error = (error: unknown, fallback: string): R2Error => {
+  if (error instanceof Error) {
+    return error as R2Error;
+  }
+
+  const normalizedError = new Error(getErrorMessage(error, fallback)) as R2Error;
+
+  if (error && typeof error === 'object') {
+    if ('code' in error && typeof error.code === 'string') {
+      normalizedError.code = error.code;
+    }
+
+    if ('name' in error && typeof error.name === 'string') {
+      normalizedError.name = error.name;
+    }
+
+    if ('status' in error && typeof error.status === 'number') {
+      normalizedError.status = error.status;
+    }
+
+    if ('statusCode' in error && typeof error.statusCode === 'number') {
+      normalizedError.statusCode = error.statusCode;
+    }
+
+    if ('$metadata' in error && error.$metadata && typeof error.$metadata === 'object') {
+      normalizedError.$metadata = error.$metadata as { httpStatusCode?: number };
+    }
+  }
+
+  return normalizedError;
+};
+
+const isRetryableR2Error = (error: unknown): boolean => {
+  const status = getErrorStatus(error);
+
+  if (typeof status === 'number' && TRANSIENT_HTTP_STATUSES.has(status)) {
+    return true;
+  }
+
+  const code = getErrorCode(error);
+  return typeof code === 'string' && TRANSIENT_ERROR_CODES.has(code);
+};
+
+const R2_RETRY_POLICY: RetryPolicy = {
+  shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
+    return attempt < maxAttempts && isRetryableR2Error(error);
+  },
+};
 
 /**
  * Cloudflare R2 스토리지 제공자
@@ -21,6 +155,16 @@ export class R2StorageProvider extends BaseStorageProvider {
   private static readonly MAX_BUFFERED_GET_BYTES = 10 * 1024 * 1024;
   private readonly client: S3Client;
   private readonly options: R2Options;
+  private readonly retryTemplate = new RetryTemplate({
+    maxAttempts: 3,
+    backoff: {
+      delay: 10,
+      multiplier: 2,
+      maxDelay: 50,
+      jitter: false,
+    },
+    retryPolicy: R2_RETRY_POLICY,
+  });
   private static readonly REQUIRED_CONFIG_KEYS = [
     'R2_ACCOUNT_ID',
     'R2_ACCESS_KEY_ID',
@@ -64,25 +208,36 @@ export class R2StorageProvider extends BaseStorageProvider {
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
     this.validateKey(key);
 
-    const { PutObjectCommand } = await import('@aws-sdk/client-s3');
-
-    const command = new PutObjectCommand({
-      Bucket: this.options.bucket,
-      Key: key,
-      Body: data,
-      ContentType: options?.contentType,
-      CacheControl: options?.cacheControl,
-      Metadata: options?.metadata,
-    });
-
     try {
-      await this.client.send(command);
+      const upload = async (shouldRetry: boolean) => {
+        const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+
+        const command = new PutObjectCommand({
+          Bucket: this.options.bucket,
+          Key: key,
+          Body: data,
+          ContentType: options?.contentType,
+          CacheControl: options?.cacheControl,
+          Metadata: options?.metadata,
+        });
+
+        const send = async () => await this.executeR2Operation(() => this.client.send(command), 'Unknown upload error');
+
+        if (shouldRetry) {
+          await this.executeWithRetry(send);
+          return;
+        }
+
+        await send();
+      };
+
+      await upload(Buffer.isBuffer(data));
     } catch (error) {
       this.throwUploadFailed(key, error);
     }
   }
 
-  async get(key: string): Promise<Buffer> {
+  async getStream(key: string): Promise<Readable> {
     this.validateKey(key);
 
     const { GetObjectCommand } = await import('@aws-sdk/client-s3');
@@ -93,7 +248,34 @@ export class R2StorageProvider extends BaseStorageProvider {
     });
 
     try {
-      const response = await this.client.send(command);
+      const response = await this.executeWithRetry(
+        async () => await this.executeR2Operation(() => this.client.send(command), 'Unknown download error')
+      );
+
+      if (!response.Body) {
+        throw new EmptyR2BodyProblem(key);
+      }
+
+      return response.Body as Readable;
+    } catch (error) {
+      return this.handleNotFoundError(key, error);
+    }
+  }
+
+  async get(key: string): Promise<Buffer> {
+    this.validateKey(key);
+
+    try {
+      const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+
+      const command = new GetObjectCommand({
+        Bucket: this.options.bucket,
+        Key: key,
+      });
+
+      const response = await this.executeWithRetry(
+        async () => await this.executeR2Operation(() => this.client.send(command), 'Unknown download error')
+      );
 
       if (!response.Body) {
         throw new EmptyR2BodyProblem(key);
@@ -122,15 +304,17 @@ export class R2StorageProvider extends BaseStorageProvider {
   async delete(key: string): Promise<void> {
     this.validateKey(key);
 
-    const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
-
-    const command = new DeleteObjectCommand({
-      Bucket: this.options.bucket,
-      Key: key,
-    });
-
     try {
-      await this.client.send(command);
+      await this.executeWithRetry(async () => {
+        const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+
+        const command = new DeleteObjectCommand({
+          Bucket: this.options.bucket,
+          Key: key,
+        });
+
+        await this.executeR2Operation(() => this.client.send(command), 'Unknown delete error');
+      });
     } catch (error) {
       this.throwDeleteFailed(key, error);
     }
@@ -165,15 +349,17 @@ export class R2StorageProvider extends BaseStorageProvider {
   async getMetadata(key: string): Promise<ObjectMetadata> {
     this.validateKey(key);
 
-    const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
-
-    const command = new HeadObjectCommand({
-      Bucket: this.options.bucket,
-      Key: key,
-    });
-
     try {
-      const response = await this.client.send(command);
+      const response = await this.executeWithRetry(async () => {
+        const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
+
+        const command = new HeadObjectCommand({
+          Bucket: this.options.bucket,
+          Key: key,
+        });
+
+        return await this.executeR2Operation(() => this.client.send(command), 'Unknown metadata error');
+      });
 
       return {
         size: response.ContentLength ?? 0,
@@ -203,5 +389,17 @@ export class R2StorageProvider extends BaseStorageProvider {
       this.throwNotFound(key, error);
     }
     throw error;
+  }
+
+  private async executeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
+    return await this.retryTemplate.execute(async () => await operation());
+  }
+
+  private async executeR2Operation<T>(operation: () => Promise<T>, fallbackMessage: string): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      throw normalizeR2Error(error, fallbackMessage);
+    }
   }
 }

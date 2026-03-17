@@ -18,6 +18,7 @@
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "@croco/storage-core": "workspace:*"
   },
   "devDependencies": {
