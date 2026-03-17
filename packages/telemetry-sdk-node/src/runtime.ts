@@ -1,7 +1,5 @@
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import type { NodeSDK } from '@opentelemetry/sdk-node';
+import type { BatchSpanProcessor, Sampler } from '@opentelemetry/sdk-trace-base';
 import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import type { TelemetryConfig } from './config';
 
@@ -13,6 +11,21 @@ class TelemetryRuntime {
   private config: TelemetryConfig | null = null;
 
   private constructor() {}
+
+  private async createSampler(config: TelemetryConfig): Promise<Sampler | undefined> {
+    const traceConfig = config.trace ?? {};
+
+    if (traceConfig.sampler) {
+      return traceConfig.sampler;
+    }
+
+    if (traceConfig.probability === undefined) {
+      return undefined;
+    }
+
+    const { ProbabilitySampler } = await import('./libs/samplers/ProbabilitySampler');
+    return new ProbabilitySampler({ probability: traceConfig.probability });
+  }
 
   private reportError(phase: 'init' | 'forceFlush' | 'shutdown', error: unknown): void {
     const normalizedError = error instanceof Error ? error : new Error(String(error));
@@ -37,6 +50,15 @@ class TelemetryRuntime {
       return;
     }
 
+    const [{ Resource }, { NodeSDK }, traceBaseModule, { OTLPTraceExporter }] = await Promise.all([
+      import('@opentelemetry/resources'),
+      import('@opentelemetry/sdk-node'),
+      import('@opentelemetry/sdk-trace-base'),
+      import('@opentelemetry/exporter-trace-otlp-http'),
+    ]);
+
+    const BatchSpanProcessor = traceBaseModule.BatchSpanProcessor;
+
     const resource = Resource.default().merge(
       new Resource({
         [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
@@ -46,6 +68,7 @@ class TelemetryRuntime {
     );
 
     const traceConfig = config.trace ?? {};
+    const sampler = await this.createSampler(config);
 
     if (traceConfig.enabled !== false) {
       const exporterUrl =
@@ -68,7 +91,7 @@ class TelemetryRuntime {
     this.sdk = new NodeSDK({
       resource,
       spanProcessor: this.processor ?? undefined,
-      sampler: traceConfig.sampler,
+      sampler,
       instrumentations: traceConfig.instrumentations ?? [],
     });
 

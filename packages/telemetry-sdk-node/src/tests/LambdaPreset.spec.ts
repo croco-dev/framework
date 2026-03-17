@@ -41,7 +41,25 @@ describe('lambdaPreset', () => {
       probability: 0.25,
     });
 
-    expect(config.trace?.sampler).not.toBeUndefined();
+    expect(config.trace?.probability).toBe(0.25);
+  });
+
+  it('should default probability by environment', () => {
+    delete process.env.NODE_ENV;
+    delete process.env.ENVIRONMENT;
+
+    const developmentConfig = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    process.env.NODE_ENV = 'production';
+
+    const productionConfig = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    expect(developmentConfig.trace?.probability).toBe(1);
+    expect(productionConfig.trace?.probability).toBe(0.1);
   });
 
   it('should use custom exporterUrl', () => {
