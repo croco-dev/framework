@@ -1,6 +1,7 @@
 import { MetadataStorage } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Task } from '../libs/decorators/Task';
+import { DuplicateTaskRegistrationProblem } from '../libs/problems/TasksProblems';
 import { TaskRegistry } from '../libs/TaskRegistry';
 import type { TaskMetadata } from '../libs/types';
 
@@ -56,6 +57,31 @@ describe('TaskRegistry', () => {
     expect(task?.name).toBe('retrievable-task');
     expect(task?.target).toBe(TestTaskHandler);
     expect(task?.methodName).toBe('process');
+  });
+
+  it('should throw when registering a duplicate task name manually', () => {
+    class FirstHandler {
+      async handle(): Promise<void> {}
+    }
+
+    class SecondHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const registry = new TaskRegistry();
+    registry.register('duplicate-task', FirstHandler, 'handle', {
+      name: 'duplicate-task',
+      target: FirstHandler,
+      methodName: 'handle',
+    });
+
+    expect(() =>
+      registry.register('duplicate-task', SecondHandler, 'handle', {
+        name: 'duplicate-task',
+        target: SecondHandler,
+        methodName: 'handle',
+      })
+    ).toThrow(DuplicateTaskRegistrationProblem);
   });
 
   it('should return undefined for non-existent task', () => {
@@ -119,7 +145,7 @@ describe('TaskRegistry', () => {
     expect(task?.name).toBe('decorated-task');
   });
 
-  it('should not duplicate existing tasks when collecting from metadata', () => {
+  it('should not duplicate existing tasks when collecting the same metadata twice', () => {
     class TaskHandler {
       @Task({ name: 'existing-task' })
       async handle(): Promise<void> {}
@@ -129,15 +155,117 @@ describe('TaskRegistry', () => {
 
     const registry = TaskRegistry.getInstance();
 
-    // First collection
     registry.collectFromMetadata();
-    // Second collection should not duplicate
     registry.collectFromMetadata();
 
     const allTasks = registry.getAll();
     const existingTasks = allTasks.filter((t) => t.name === 'existing-task');
 
     expect(existingTasks).toHaveLength(1);
+  });
+
+  it('should throw when creating registry from metadata with duplicate task names', () => {
+    class FirstHandler {
+      async handle(): Promise<void> {}
+    }
+
+    class SecondHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const firstMetadata: TaskMetadata = {
+      name: 'duplicate-bootstrap-task',
+      target: FirstHandler,
+      methodName: 'handle',
+    };
+    const secondMetadata: TaskMetadata = {
+      name: 'duplicate-bootstrap-task',
+      target: SecondHandler,
+      methodName: 'handle',
+    };
+
+    expect(() => TaskRegistry.fromMetadata([firstMetadata, secondMetadata])).toThrow(DuplicateTaskRegistrationProblem);
+  });
+
+  it('should throw when collecting different metadata entries with the same task name', () => {
+    class FirstHandler {
+      @Task({ name: 'duplicate-task' })
+      async handle(): Promise<void> {}
+    }
+
+    class SecondHandler {
+      @Task({ name: 'duplicate-task' })
+      async process(): Promise<void> {}
+    }
+
+    expect(FirstHandler).toBeDefined();
+    expect(SecondHandler).toBeDefined();
+
+    const registry = TaskRegistry.getInstance();
+
+    expect(() => registry.collectFromMetadata()).toThrow(DuplicateTaskRegistrationProblem);
+  });
+
+  it('should throw when collecting the same handler and method with different task options', () => {
+    class TaskHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const registry = new TaskRegistry();
+    registry.register('option-sensitive-task', TaskHandler, 'handle', {
+      name: 'option-sensitive-task',
+      target: TaskHandler,
+      methodName: 'handle',
+      options: {
+        maxAttempts: 3,
+        timeout: 1_000,
+      },
+    });
+
+    expect(() =>
+      registry.register('option-sensitive-task', TaskHandler, 'handle', {
+        name: 'option-sensitive-task',
+        target: TaskHandler,
+        methodName: 'handle',
+        options: {
+          maxAttempts: 5,
+          timeout: 1_000,
+        },
+      })
+    ).toThrow(DuplicateTaskRegistrationProblem);
+  });
+
+  it('should allow collecting cloned metadata when task definition is identical', () => {
+    class TaskHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const metadata: TaskMetadata = {
+      name: 'cloned-task',
+      target: TaskHandler,
+      methodName: 'handle',
+      options: {
+        maxAttempts: 3,
+        timeout: 1_000,
+        idempotencyKey: 'dedupe-key',
+      },
+    };
+
+    const clonedMetadata: TaskMetadata = {
+      name: metadata.name,
+      target: metadata.target,
+      methodName: metadata.methodName,
+      options: {
+        maxAttempts: metadata.options?.maxAttempts,
+        timeout: metadata.options?.timeout,
+        idempotencyKey: metadata.options?.idempotencyKey,
+      },
+    };
+
+    const registry = TaskRegistry.fromMetadata([metadata, clonedMetadata]);
+
+    expect(registry.getAll()).toHaveLength(1);
+    expect(registry.get('cloned-task')?.metadata.options).toEqual(metadata.options);
   });
 
   it('should create a registry from provided metadata without global singleton state', () => {

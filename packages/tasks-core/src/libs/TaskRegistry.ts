@@ -1,5 +1,6 @@
 import { MetadataStorage } from '@croco/framework-context';
 import { TASK_METADATA_KEY } from './decorators/Task';
+import { DuplicateTaskRegistrationProblem } from './problems/TasksProblems';
 import type { TaskMetadata } from './types';
 
 export type RegisteredTask = {
@@ -31,6 +32,16 @@ export class TaskRegistry {
   }
 
   register(name: string, target: object, methodName: string, metadata: TaskMetadata): void {
+    const existingTask = this.get(name);
+
+    if (existingTask) {
+      if (TaskRegistry.isSameRegistration(existingTask, target, methodName, metadata)) {
+        return;
+      }
+
+      throw new DuplicateTaskRegistrationProblem(name);
+    }
+
     this.tasks.set(name, { name, target, methodName, metadata });
   }
 
@@ -52,14 +63,39 @@ export class TaskRegistry {
 
   private collect(metadataEntries: TaskMetadata[]): void {
     for (const metadata of metadataEntries) {
-      if (!this.has(metadata.name)) {
-        this.register(metadata.name, metadata.target, String(metadata.methodName), metadata);
-      }
+      this.register(metadata.name, metadata.target, String(metadata.methodName), metadata);
     }
   }
 
   private static getMetadataTasks(): TaskMetadata[] {
     return MetadataStorage.getAll<TaskMetadata>(TASK_METADATA_KEY).map((entry) => entry.value);
+  }
+
+  private static isSameRegistration(
+    existingTask: RegisteredTask,
+    target: object,
+    methodName: string,
+    metadata: TaskMetadata
+  ): boolean {
+    return (
+      existingTask.target === target &&
+      existingTask.methodName === methodName &&
+      existingTask.metadata.target === metadata.target &&
+      String(existingTask.metadata.methodName) === String(metadata.methodName) &&
+      TaskRegistry.isSameOptions(existingTask.metadata.options, metadata.options)
+    );
+  }
+
+  private static isSameOptions(
+    existingOptions?: TaskMetadata['options'],
+    nextOptions?: TaskMetadata['options']
+  ): boolean {
+    return (
+      existingOptions?.maxAttempts === nextOptions?.maxAttempts &&
+      existingOptions?.timeout === nextOptions?.timeout &&
+      existingOptions?.idempotencyKey === nextOptions?.idempotencyKey &&
+      existingOptions?.name === nextOptions?.name
+    );
   }
 
   reset(): void {
