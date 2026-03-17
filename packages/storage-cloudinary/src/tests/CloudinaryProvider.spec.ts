@@ -195,6 +195,54 @@ describe('CloudinaryProvider', () => {
       await expect(provider.put('test-key', buffer)).rejects.toThrow(UploadFailedProblem);
     });
 
+    it('should retry transient upload errors before succeeding', async () => {
+      let attempts = 0;
+      const mockUploadStream = vi.fn(
+        (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
+          attempts += 1;
+
+          if (attempts < 3) {
+            callback(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }), undefined);
+          } else {
+            callback(undefined, { public_id: 'test-key' });
+          }
+
+          return {
+            end: vi.fn(),
+          };
+        }
+      );
+
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
+
+      await expect(provider.put('test-key', Buffer.from('test data'))).resolves.not.toThrow();
+      expect(cloudinary.uploader.upload_stream).toHaveBeenCalledTimes(3);
+    });
+
+    it('should retry transient object-like upload errors for buffers before succeeding', async () => {
+      let attempts = 0;
+      const mockUploadStream = vi.fn(
+        (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
+          attempts += 1;
+
+          if (attempts < 3) {
+            callback({ http_code: 503, message: 'Service unavailable' } as unknown as Error, undefined);
+          } else {
+            callback(undefined, { public_id: 'test-key' });
+          }
+
+          return {
+            end: vi.fn(),
+          };
+        }
+      );
+
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
+
+      await expect(provider.put('test-key', Buffer.from('test data'))).resolves.not.toThrow();
+      expect(cloudinary.uploader.upload_stream).toHaveBeenCalledTimes(3);
+    });
+
     it('should throw UploadFailedProblem when upload stream creation throws', async () => {
       vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(() => {
         throw new Error('Cloudinary SDK error');
@@ -217,6 +265,29 @@ describe('CloudinaryProvider', () => {
       source.emit('error', new Error('Stream broken'));
 
       await expect(putPromise).rejects.toThrow(UploadFailedProblem);
+    });
+
+    it('should not retry readable stream uploads on transient callback errors', async () => {
+      const { Readable } = await import('node:stream');
+      const mockUploadStream = vi.fn(
+        (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
+          callback({ http_code: 503, message: 'Service unavailable' } as unknown as Error, undefined);
+          return {
+            end: vi.fn(),
+            on: vi.fn(),
+            once: vi.fn(),
+            emit: vi.fn(),
+            write: vi.fn(),
+          };
+        }
+      );
+
+      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
+
+      await expect(provider.put('test-key', Readable.from(Buffer.from('test data')))).rejects.toThrow(
+        UploadFailedProblem
+      );
+      expect(cloudinary.uploader.upload_stream).toHaveBeenCalledTimes(1);
     });
 
     it('should throw InvalidKeyProblem for empty key', async () => {
@@ -287,6 +358,27 @@ describe('CloudinaryProvider', () => {
       await expect(provider.get('test-key')).rejects.toThrow(UploadFailedProblem);
     });
 
+    it('should retry transient fetch failures before succeeding', async () => {
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({ ok: false, status: 503 } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(4)),
+        } as unknown as Response);
+
+      const result = await provider.get('test-key');
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not retry not found fetch failures', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({ ok: false, status: 404 } as unknown as Response);
+
+      await expect(provider.get('test-key')).rejects.toThrow(FileNotFoundProblem);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
     it('should throw InvalidKeyProblem for invalid key', async () => {
       await expect(provider.get('')).rejects.toThrow(InvalidKeyProblem);
     });
@@ -329,6 +421,15 @@ describe('CloudinaryProvider', () => {
       vi.mocked(cloudinary.uploader.destroy).mockResolvedValue({ result: 'error' });
 
       await expect(provider.delete('test-key')).rejects.toThrow(DeleteFailedProblem);
+    });
+
+    it('should retry transient delete failures before succeeding', async () => {
+      vi.mocked(cloudinary.uploader.destroy)
+        .mockRejectedValueOnce({ http_code: 503, message: 'Service unavailable' })
+        .mockResolvedValueOnce({ result: 'ok' });
+
+      await expect(provider.delete('test-key')).resolves.not.toThrow();
+      expect(cloudinary.uploader.destroy).toHaveBeenCalledTimes(2);
     });
 
     it('should throw InvalidKeyProblem for invalid key', async () => {
@@ -500,6 +601,23 @@ describe('CloudinaryProvider', () => {
       });
 
       await expect(provider.getMetadata('test-key')).rejects.toThrow(UploadFailedProblem);
+    });
+
+    it('should retry transient metadata failures before succeeding', async () => {
+      const mockResource = {
+        bytes: 1024,
+        format: 'jpg',
+        created_at: '2024-01-01T00:00:00Z',
+      };
+
+      vi.mocked(cloudinary.api.resource)
+        .mockRejectedValueOnce({ http_code: 429, message: 'Too many requests' })
+        .mockResolvedValueOnce(mockResource);
+
+      const metadata = await provider.getMetadata('test-key');
+
+      expect(metadata.size).toBe(1024);
+      expect(cloudinary.api.resource).toHaveBeenCalledTimes(2);
     });
 
     it('should throw InvalidKeyProblem for invalid key', async () => {

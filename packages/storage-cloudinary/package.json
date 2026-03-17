@@ -14,6 +14,7 @@
   "dependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "@croco/storage-core": "workspace:*",
     "cloudinary": "^2.9.0"
   },
