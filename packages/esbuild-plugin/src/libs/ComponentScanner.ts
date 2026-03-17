@@ -26,8 +26,66 @@ const DEFAULT_SCAN_DIRS = ['src'];
 const DEFAULT_EXCLUDE = ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**'];
 const DEFAULT_DECORATORS = ['Component', 'Controller', 'GraphQLResolver'];
 
-function getErrorMessage(error: unknown): string {
+function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+type DiagnosticPosition = {
+  line?: number;
+  column?: number;
+};
+
+export class ComponentScannerError extends Error {
+  readonly filePath: string;
+  readonly cause: unknown;
+
+  constructor(message: string, filePath: string, cause?: unknown) {
+    super(message);
+    this.name = new.target.name;
+    this.filePath = path.resolve(filePath);
+    this.cause = cause;
+  }
+}
+
+export class ComponentScannerDiagnosticError extends ComponentScannerError {
+  readonly diagnostic: ts.Diagnostic;
+  readonly diagnosticText: string;
+  readonly line?: number;
+  readonly column?: number;
+
+  constructor(filePath: string, diagnostic: ts.Diagnostic) {
+    const diagnosticText = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+    const position = getDiagnosticPosition(diagnostic);
+    super(`Failed to parse TypeScript file '${path.resolve(filePath)}': ${diagnosticText}`, filePath, diagnostic);
+    this.diagnostic = diagnostic;
+    this.diagnosticText = diagnosticText;
+    this.line = position.line;
+    this.column = position.column;
+  }
+}
+
+export class ComponentScannerFileMetadataError extends ComponentScannerError {
+  constructor(filePath: string, cause: unknown) {
+    super(`Failed to read file metadata for '${path.resolve(filePath)}': ${toErrorMessage(cause)}`, filePath, cause);
+  }
+}
+
+export class ComponentScannerDecoratorScanError extends ComponentScannerError {
+  constructor(filePath: string, cause: unknown) {
+    super(`Failed to scan decorators in '${path.resolve(filePath)}': ${toErrorMessage(cause)}`, filePath, cause);
+  }
+}
+
+function getDiagnosticPosition(diagnostic: ts.Diagnostic): DiagnosticPosition {
+  if (!diagnostic.file || diagnostic.start === undefined) {
+    return {};
+  }
+
+  const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+  return {
+    line: line + 1,
+    column: character + 1,
+  };
 }
 
 export class ComponentScanner {
@@ -45,10 +103,11 @@ export class ComponentScanner {
 
   scan(baseDir: string = process.cwd()): ScanResult[] {
     const results: ScanResult[] = [];
-    const absoluteDirs = this.options.scanDirs.map((dir) => (path.isAbsolute(dir) ? dir : path.resolve(baseDir, dir)));
+    const scanRoot = path.resolve(baseDir);
+    const absoluteDirs = this.options.scanDirs.map((dir) => (path.isAbsolute(dir) ? dir : path.resolve(scanRoot, dir)));
 
     for (const dir of absoluteDirs) {
-      const files = this.findTypeScriptFiles(dir);
+      const files = this.findTypeScriptFiles(dir, scanRoot);
       for (const filePath of files) {
         const result = this.scanFile(filePath);
         if (result.hasComponent) {
@@ -97,15 +156,16 @@ export class ComponentScanner {
 
   incrementalScan(changedFiles: string[], baseDir: string): ScanResult[] {
     const results: ScanResult[] = [];
+    const scanRoot = path.resolve(baseDir);
 
     for (const file of changedFiles) {
       this.invalidateCache(file);
     }
 
-    const absoluteDirs = this.options.scanDirs.map((dir) => (path.isAbsolute(dir) ? dir : path.resolve(baseDir, dir)));
+    const absoluteDirs = this.options.scanDirs.map((dir) => (path.isAbsolute(dir) ? dir : path.resolve(scanRoot, dir)));
 
     for (const dir of absoluteDirs) {
-      const files = this.findTypeScriptFiles(dir);
+      const files = this.findTypeScriptFiles(dir, scanRoot);
       for (const filePath of files) {
         const result = this.scanFile(filePath);
         if (result.hasComponent) {
@@ -117,7 +177,7 @@ export class ComponentScanner {
     return results;
   }
 
-  private findTypeScriptFiles(dir: string): string[] {
+  private findTypeScriptFiles(dir: string, scanRoot: string): string[] {
     if (!fs.existsSync(dir)) {
       return [];
     }
@@ -138,11 +198,11 @@ export class ComponentScanner {
       const fullPath = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        if (!this.isExcluded(fullPath)) {
-          files.push(...this.findTypeScriptFiles(fullPath));
+        if (!this.isExcluded(fullPath, scanRoot)) {
+          files.push(...this.findTypeScriptFiles(fullPath, scanRoot));
         }
       } else if (entry.isFile() && this.isTypeScriptFile(fullPath)) {
-        if (!this.isExcluded(fullPath)) {
+        if (!this.isExcluded(fullPath, scanRoot)) {
           files.push(fullPath);
         }
       }
@@ -155,8 +215,8 @@ export class ComponentScanner {
     return /\.(ts|tsx)$/.test(filePath) && !/\.d\.ts$/.test(filePath);
   }
 
-  private isExcluded(filePath: string): boolean {
-    const relativePath = path.relative(process.cwd(), filePath);
+  private isExcluded(filePath: string, scanRoot: string): boolean {
+    const relativePath = path.relative(scanRoot, filePath).replace(/\\/g, '/');
     return this.options.exclude.some((pattern) => this.matchPattern(pattern, relativePath));
   }
 
@@ -200,10 +260,7 @@ export class ComponentScanner {
       const [firstDiagnostic] = parseResult.diagnostics ?? [];
 
       if (firstDiagnostic) {
-        const message = firstDiagnostic
-          ? ts.flattenDiagnosticMessageText(firstDiagnostic.messageText, '\n')
-          : 'Unknown parse error';
-        throw new Error(message);
+        throw new ComponentScannerDiagnosticError(filePath, firstDiagnostic);
       }
 
       const sourceFile = ts.createSourceFile(filePath, sourceCode, ts.ScriptTarget.Latest, true);
@@ -223,7 +280,11 @@ export class ComponentScanner {
       ts.forEachChild(sourceFile, visitNode);
       return decorators;
     } catch (error) {
-      throw new Error(`Failed to scan decorators in '${filePath}': ${getErrorMessage(error)}`);
+      if (error instanceof ComponentScannerError) {
+        throw error;
+      }
+
+      throw new ComponentScannerDecoratorScanError(filePath, error);
     }
   }
 
@@ -244,7 +305,7 @@ export class ComponentScanner {
     try {
       return fs.statSync(filePath).mtimeMs;
     } catch (error) {
-      throw new Error(`Failed to read file metadata for '${filePath}': ${getErrorMessage(error)}`);
+      throw new ComponentScannerFileMetadataError(filePath, error);
     }
   }
 }
