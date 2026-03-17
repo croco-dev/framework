@@ -2,7 +2,7 @@ import { Readable } from 'node:stream';
 import type { ConfigService } from '@croco/framework-config';
 import { Container } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
-import { FileNotFoundProblem } from '@croco/storage-core';
+import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from '@croco/storage-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmptyR2BodyProblem } from '../libs/problems/EmptyR2BodyProblem';
 import { MissingR2ConfigProblem } from '../libs/problems/MissingR2ConfigProblem';
@@ -173,6 +173,119 @@ describe('R2StorageProvider', () => {
       await expect(getPromise).rejects.toThrow(
         "R2 object 'test/file.txt' exceeds the in-memory download limit of 10485760 bytes"
       );
+    });
+
+    it('should retry transient get failures before succeeding', async () => {
+      mockSend
+        .mockRejectedValueOnce({ $metadata: { httpStatusCode: 503 }, name: 'ServiceUnavailable' })
+        .mockResolvedValueOnce({
+          Body: Readable.from([Buffer.from('hello world')]),
+        });
+
+      const buffer = await provider.get('test/file.txt');
+
+      expect(buffer).toEqual(Buffer.from('hello world'));
+      expect(mockSend).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('put', () => {
+    it('should upload object data', async () => {
+      mockSend.mockResolvedValue({});
+
+      await expect(provider.put('test/file.txt', Buffer.from('data'))).resolves.toBeUndefined();
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('should retry transient put failures for buffers before succeeding', async () => {
+      mockSend
+        .mockRejectedValueOnce({ $metadata: { httpStatusCode: 503 }, name: 'ServiceUnavailable' })
+        .mockResolvedValueOnce({});
+
+      await expect(provider.put('test/file.txt', Buffer.from('data'))).resolves.toBeUndefined();
+      expect(mockSend).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not retry readable stream uploads on transient failures', async () => {
+      mockSend.mockRejectedValueOnce({ $metadata: { httpStatusCode: 503 }, name: 'ServiceUnavailable' });
+
+      await expect(provider.put('test/file.txt', Readable.from([Buffer.from('data')]))).rejects.toThrow(
+        UploadFailedProblem
+      );
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('delete', () => {
+    it('should delete an object', async () => {
+      mockSend.mockResolvedValue({});
+
+      await expect(provider.delete('test/file.txt')).resolves.toBeUndefined();
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('should retry transient delete failures before succeeding', async () => {
+      mockSend
+        .mockRejectedValueOnce({ $metadata: { httpStatusCode: 503 }, name: 'ServiceUnavailable' })
+        .mockResolvedValueOnce({});
+
+      await expect(provider.delete('test/file.txt')).resolves.toBeUndefined();
+      expect(mockSend).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw DeleteFailedProblem for terminal delete failures', async () => {
+      mockSend.mockRejectedValue(new Error('delete failed'));
+
+      await expect(provider.delete('test/file.txt')).rejects.toThrow(DeleteFailedProblem);
+    });
+  });
+
+  describe('getMetadata', () => {
+    it('should return metadata for an object', async () => {
+      const lastModified = new Date('2024-01-01T00:00:00.000Z');
+      mockSend.mockResolvedValue({
+        ContentLength: 123,
+        ContentType: 'image/png',
+        LastModified: lastModified,
+        ETag: 'etag-123',
+        Metadata: { foo: 'bar' },
+      });
+
+      await expect(provider.getMetadata('test/file.txt')).resolves.toEqual({
+        size: 123,
+        contentType: 'image/png',
+        lastModified,
+        etag: 'etag-123',
+        metadata: { foo: 'bar' },
+      });
+    });
+
+    it('should throw FileNotFoundProblem when metadata lookup returns 404', async () => {
+      mockSend.mockRejectedValue({ $metadata: { httpStatusCode: 404 }, name: 'NotFound' });
+
+      await expect(provider.getMetadata('test/file.txt')).rejects.toThrow(FileNotFoundProblem);
+    });
+
+    it('should retry transient metadata failures before succeeding', async () => {
+      const lastModified = new Date('2024-01-01T00:00:00.000Z');
+      mockSend
+        .mockRejectedValueOnce({ $metadata: { httpStatusCode: 429 }, name: 'TooManyRequestsException' })
+        .mockResolvedValueOnce({
+          ContentLength: 456,
+          ContentType: 'text/plain',
+          LastModified: lastModified,
+          ETag: 'etag-456',
+          Metadata: undefined,
+        });
+
+      await expect(provider.getMetadata('test/file.txt')).resolves.toEqual({
+        size: 456,
+        contentType: 'text/plain',
+        lastModified,
+        etag: 'etag-456',
+        metadata: undefined,
+      });
+      expect(mockSend).toHaveBeenCalledTimes(2);
     });
   });
 });
