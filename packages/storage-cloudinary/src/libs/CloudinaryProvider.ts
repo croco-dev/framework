@@ -1,5 +1,7 @@
 import type { Readable } from 'node:stream';
 import { Component } from '@croco/framework-context';
+import type { RetryPolicy } from '@croco/retry-core';
+import { RetryTemplate } from '@croco/retry-core';
 import type {
   ImageProvider,
   ObjectMetadata,
@@ -12,6 +14,143 @@ import { BaseStorageProvider } from '@croco/storage-core';
 import { v2 as cloudinary } from 'cloudinary';
 import type { CloudinaryConfig, CloudinaryTransformOptions } from './types';
 
+const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+const TRANSIENT_ERROR_CODES = new Set([
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EAI_AGAIN',
+  'ENETDOWN',
+  'ENETRESET',
+  'ENETUNREACH',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'UND_ERR_BODY_TIMEOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_SOCKET',
+]);
+const CLOUDINARY_RETRY_POLICY: RetryPolicy = {
+  shouldRetry(error: unknown, attempt: number, maxAttempts: number) {
+    if (attempt >= maxAttempts) {
+      return false;
+    }
+
+    return isRetryableCloudinaryError(error);
+  },
+};
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null) {
+    return undefined;
+  }
+
+  const status = Reflect.get(error, 'status');
+  if (typeof status === 'number') {
+    return status;
+  }
+
+  const httpCode = Reflect.get(error, 'http_code');
+  if (typeof httpCode === 'number') {
+    return httpCode;
+  }
+
+  const statusCode = Reflect.get(error, 'statusCode');
+  if (typeof statusCode === 'number') {
+    return statusCode;
+  }
+
+  return undefined;
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return undefined;
+  }
+
+  const code = Reflect.get(error, 'code');
+  return typeof code === 'string' ? code : undefined;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = Reflect.get(error, 'message');
+    if (typeof message === 'string') {
+      return message;
+    }
+  }
+
+  return '';
+}
+
+function isRetryableCloudinaryError(error: unknown): boolean {
+  const status = getErrorStatus(error);
+  if (status !== undefined) {
+    if (status === 404) {
+      return false;
+    }
+
+    if (TRANSIENT_HTTP_STATUSES.has(status)) {
+      return true;
+    }
+  }
+
+  const code = getErrorCode(error);
+  if (code && TRANSIENT_ERROR_CODES.has(code)) {
+    return true;
+  }
+
+  const message = getErrorMessage(error).toLowerCase();
+
+  return [
+    'connection reset',
+    'connect timeout',
+    'econnreset',
+    'fetch failed',
+    'network error',
+    'rate limit',
+    'socket hang up',
+    'temporarily unavailable',
+    'timed out',
+    'timeout',
+    'too many requests',
+    'try again',
+  ].some((pattern) => message.includes(pattern));
+}
+
+type CloudinaryError = Error & {
+  code?: string;
+  http_code?: number;
+  status?: number;
+  statusCode?: number;
+};
+
+function normalizeCloudinaryError(error: unknown, fallbackMessage: string): CloudinaryError {
+  if (error instanceof Error) {
+    return error as CloudinaryError;
+  }
+
+  const normalizedError = new Error(getErrorMessage(error) || fallbackMessage) as CloudinaryError;
+  const code = getErrorCode(error);
+  const status = getErrorStatus(error);
+
+  if (code) {
+    normalizedError.code = code;
+  }
+
+  if (status !== undefined) {
+    normalizedError.status = status;
+    normalizedError.statusCode = status;
+    normalizedError.http_code = status;
+  }
+
+  return normalizedError;
+}
+
 @Component()
 export class CloudinaryProvider extends BaseStorageProvider implements ImageProvider {
   private static operationInFlight = false;
@@ -22,6 +161,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   private readonly apiSecret: string;
   private readonly secure: boolean;
   private readonly uploadBaseUrl: string;
+  private readonly retryTemplate: RetryTemplate;
 
   constructor(config: CloudinaryConfig) {
     super();
@@ -30,6 +170,16 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.apiSecret = config.apiSecret;
     this.secure = config.secure ?? true;
     this.uploadBaseUrl = config.uploadBaseUrl ?? 'https://api.cloudinary.com';
+    this.retryTemplate = new RetryTemplate({
+      maxAttempts: 3,
+      backoff: {
+        delay: 10,
+        multiplier: 2,
+        maxDelay: 50,
+        jitter: false,
+      },
+      retryPolicy: CLOUDINARY_RETRY_POLICY,
+    });
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
@@ -44,39 +194,45 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
       uploadOptions.context = this.formatContext(options.metadata);
     }
 
-    return this.withConfiguredCloudinary(async () => {
-      await new Promise<void>((resolve, reject) => {
-        let uploadStream: ReturnType<typeof cloudinary.uploader.upload_stream>;
+    const upload = async () => {
+      await this.withConfiguredCloudinary(async () => {
+        await new Promise<void>((resolve, reject) => {
+          let uploadStream: ReturnType<typeof cloudinary.uploader.upload_stream>;
 
-        try {
-          uploadStream = cloudinary.uploader.upload_stream(
-            uploadOptions,
-            (error: Error | undefined, _result: unknown) => {
-              if (error) {
-                reject(error);
-                return;
+          try {
+            uploadStream = cloudinary.uploader.upload_stream(
+              uploadOptions,
+              (error: Error | undefined, _result: unknown) => {
+                if (error) {
+                  reject(normalizeCloudinaryError(error, 'Unknown upload error'));
+                  return;
+                }
+
+                resolve();
               }
+            );
+          } catch (error) {
+            reject(normalizeCloudinaryError(error, 'Unknown upload error'));
+            return;
+          }
 
-              resolve();
-            }
-          );
-        } catch (error) {
-          reject(error);
-          return;
-        }
+          if (Buffer.isBuffer(data)) {
+            uploadStream.end(data);
+            return;
+          }
 
-        if (Buffer.isBuffer(data)) {
-          uploadStream.end(data);
-          return;
-        }
+          data.once('error', (error) => {
+            reject(error);
+          });
 
-        data.once('error', (error) => {
-          reject(error);
+          data.pipe(uploadStream);
         });
-
-        data.pipe(uploadStream);
       });
-    }).catch((error) => {
+    };
+
+    const uploadPromise = Buffer.isBuffer(data) ? this.executeWithRetry(upload) : upload();
+
+    return uploadPromise.catch((error) => {
       this.throwUploadFailed(key, this.getErrorMessage(error, 'Unknown upload error'));
     });
   }
@@ -87,15 +243,23 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     const url = this.buildDeliveryUrl(key, 'image');
 
     try {
-      const response = await fetch(url);
+      const response = await this.executeWithRetry(async () => {
+        const fetchedResponse = await fetch(url);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          this.throwNotFound(key);
+        if (!fetchedResponse.ok) {
+          if (fetchedResponse.status === 404) {
+            this.throwNotFound(key);
+          }
+
+          if (TRANSIENT_HTTP_STATUSES.has(fetchedResponse.status)) {
+            throw this.createHttpError(fetchedResponse.status, `Failed to fetch file: HTTP ${fetchedResponse.status}`);
+          }
+
+          this.throwUploadFailed(key, `Failed to fetch file: HTTP ${fetchedResponse.status}`);
         }
 
-        this.throwUploadFailed(key, `Failed to fetch file: HTTP ${response.status}`);
-      }
+        return fetchedResponse;
+      });
 
       const arrayBuffer = await response.arrayBuffer();
       return Buffer.from(arrayBuffer);
@@ -111,11 +275,16 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.validateKey(key);
 
     try {
-      const result = (await this.withConfiguredCloudinary(() =>
-        cloudinary.uploader.destroy(key, {
-          resource_type: 'image',
-        })
-      )) as { result?: string };
+      const result = await this.executeWithRetry(
+        async () =>
+          await this.executeCloudinaryOperation(
+            async () =>
+              await cloudinary.uploader.destroy(key, {
+                resource_type: 'image',
+              }),
+            'Unknown delete error'
+          )
+      );
 
       if (result.result !== 'ok' && result.result !== 'not found') {
         this.throwDeleteFailed(key, `Delete failed: ${result.result}`);
@@ -154,10 +323,15 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.validateKey(key);
 
     try {
-      const resource = (await this.withConfiguredCloudinary(() =>
-        cloudinary.api.resource(key, {
-          resource_type: 'image',
-        })
+      const resource = (await this.executeWithRetry(
+        async () =>
+          await this.executeCloudinaryOperation(
+            async () =>
+              await cloudinary.api.resource(key, {
+                resource_type: 'image',
+              }),
+            'Unknown metadata error'
+          )
       )) as {
         bytes?: number;
         format?: string;
@@ -212,6 +386,24 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   private buildDeliveryUrl(key: string, resourceType: string): string {
     const protocol = this.secure ? 'https' : 'http';
     return `${protocol}://res.cloudinary.com/${this.cloudName}/${resourceType}/upload/${key}`;
+  }
+
+  private async executeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
+    return await this.retryTemplate.execute(async () => await operation());
+  }
+
+  private createHttpError(status: number, message: string): Error & { status: number } {
+    const error = new Error(message) as Error & { status: number };
+    error.status = status;
+    return error;
+  }
+
+  private async executeCloudinaryOperation<T>(operation: () => Promise<T>, fallbackMessage: string): Promise<T> {
+    try {
+      return await this.withConfiguredCloudinary(operation);
+    } catch (error) {
+      throw normalizeCloudinaryError(error, fallbackMessage);
+    }
   }
 
   private getCloudinaryConfig() {
@@ -406,11 +598,9 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   }
 
   private isNotFoundError(error: unknown): boolean {
-    if (typeof error === 'object' && error !== null && 'http_code' in error) {
-      const httpCode = Reflect.get(error, 'http_code');
-      if (httpCode === 404) {
-        return true;
-      }
+    const status = getErrorStatus(error);
+    if (status === 404) {
+      return true;
     }
 
     const message = this.getErrorMessage(error, '').toLowerCase();
