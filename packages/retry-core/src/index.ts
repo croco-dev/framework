@@ -31,6 +31,7 @@ export {
   CircuitState,
   type DistributedCircuitBreakerStateStore,
   InMemoryCircuitBreakerStateStore,
+  type InMemoryCircuitBreakerStateStoreOptions,
   isDistributedStore,
 } from './libs/CircuitBreakerState';
 

@@ -130,4 +130,56 @@ describe('InMemoryCircuitBreakerStateStore', () => {
       expect(await store.getFailureCount('circuit-2')).toBe(0);
     });
   });
+
+  describe('메모리 경계 관리', () => {
+    it('maxEntries를 초과하면 가장 오래된 idle 회로를 제거해야 한다', async () => {
+      const store = new InMemoryCircuitBreakerStateStore({ maxEntries: 2, idleTtlMs: 60_000 });
+
+      await store.setState('circuit-1', CircuitState.OPEN);
+      await store.setState('circuit-2', CircuitState.HALF_OPEN);
+      await store.setState('circuit-3', CircuitState.CLOSED);
+
+      expect(await store.getState('circuit-1')).toBe(CircuitState.CLOSED);
+      expect(await store.getState('circuit-2')).toBe(CircuitState.HALF_OPEN);
+      expect(await store.getState('circuit-3')).toBe(CircuitState.CLOSED);
+    });
+
+    it('idle TTL이 지난 회로는 다음 접근 시 정리되어야 한다', async () => {
+      const store = new InMemoryCircuitBreakerStateStore({ maxEntries: 10, idleTtlMs: 5 });
+
+      await store.setState('stale-circuit', CircuitState.OPEN);
+      await store.incrementFailureCount('stale-circuit');
+      await store.setLastFailureTime('stale-circuit', Date.now());
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(await store.getState('fresh-circuit')).toBe(CircuitState.CLOSED);
+      expect(await store.getState('stale-circuit')).toBe(CircuitState.CLOSED);
+      expect(await store.getFailureCount('stale-circuit')).toBe(0);
+      expect(await store.getLastFailureTime('stale-circuit')).toBeNull();
+    });
+
+    it('lock이 잡힌 회로는 eviction 대상에서 건너뛰어야 한다', async () => {
+      const store = new InMemoryCircuitBreakerStateStore({ maxEntries: 1, idleTtlMs: 60_000 });
+
+      let releaseLock!: () => void;
+      const pendingOperation = new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      });
+
+      const lockPromise = store.withCircuitLock('locked-circuit', async () => {
+        await pendingOperation;
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      await store.setState('new-circuit', CircuitState.OPEN);
+
+      expect(await store.getState('locked-circuit')).toBe(CircuitState.CLOSED);
+      expect(await store.getState('new-circuit')).toBe(CircuitState.OPEN);
+
+      releaseLock();
+      await lockPromise;
+    });
+  });
 });
