@@ -5,7 +5,7 @@ prev: false
 title: "EventPublisher"
 ---
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventPublisher.ts#L12)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:15](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventPublisher.ts#L15)
 
 구성된 EventBus를 통해 단건/다건 이벤트를 발행하는 헬퍼입니다.
 
@@ -15,7 +15,7 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:12](https://github.
 
 > **new EventPublisher**(`config`): `EventPublisher`
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventPublisher.ts#L13)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventPublisher.ts#L16)
 
 #### Parameters
 
@@ -29,11 +29,15 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:13](https://github.
 
 ## Methods
 
-### publish()
+### ~~publish()~~
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:32](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventPublisher.ts#L32)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:51](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventPublisher.ts#L51)
+
+:::caution[Deprecated]
+Use publishNow() for immediate publication or publishAfterCommit() for explicit after-commit scheduling.
+:::
 
 #### Parameters
 
@@ -47,11 +51,29 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:32](https://github.
 
 ***
 
+### publishAfterCommit()
+
+> **publishAfterCommit**(`event`): `void`
+
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:39](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventPublisher.ts#L39)
+
+#### Parameters
+
+##### event
+
+[`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
+#### Returns
+
+`void`
+
+***
+
 ### publishMany()
 
 > **publishMany**(`events`): `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:41](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventPublisher.ts#L41)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:60](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventPublisher.ts#L60)
 
 #### Parameters
 
@@ -69,7 +91,7 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:41](https://github.
 
 > **publishManyParallel**(`events`): `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
-Defined in: [packages/events-core/src/libs/EventPublisher.ts:54](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventPublisher.ts#L54)
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:73](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventPublisher.ts#L73)
 
 #### Parameters
 
@@ -80,3 +102,21 @@ Defined in: [packages/events-core/src/libs/EventPublisher.ts:54](https://github.
 #### Returns
 
 `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
+
+***
+
+### publishNow()
+
+> **publishNow**(`event`): `Promise`\<`void`\>
+
+Defined in: [packages/events-core/src/libs/EventPublisher.ts:35](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventPublisher.ts#L35)
+
+#### Parameters
+
+##### event
+
+[`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
+#### Returns
+
+`Promise`\<`void`\>

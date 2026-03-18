@@ -2,6 +2,7 @@ import type { NodeSDK } from '@opentelemetry/sdk-node';
 import type { BatchSpanProcessor, Sampler } from '@opentelemetry/sdk-trace-base';
 import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import type { TelemetryConfig } from './config';
+import { OtlpEndpointRequiredProblem } from './libs/problems/TelemetryProblems';
 
 class TelemetryRuntime {
   private static instance: TelemetryRuntime;
@@ -77,10 +78,7 @@ class TelemetryRuntime {
         process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
 
       if (!endpoint) {
-        throw new Error(
-          '[TelemetryRuntime] OTLP endpoint is required. ' +
-            'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config.'
-        );
+        throw new OtlpEndpointRequiredProblem();
       }
 
       const exporter = new OTLPTraceExporter({

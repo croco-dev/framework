@@ -7,7 +7,7 @@ title: "InterceptorProvider"
 
 > **InterceptorProvider**\<`T`\> = `Constructor`\<`T`\> \| `T`
 
-Defined in: [packages/transports-http/src/libs/types.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/types.ts#L5)
+Defined in: [packages/transports-http/src/libs/types.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L11)
 
 transports-http 구성과 실행에 사용되는 핵심 타입 집합입니다.
 

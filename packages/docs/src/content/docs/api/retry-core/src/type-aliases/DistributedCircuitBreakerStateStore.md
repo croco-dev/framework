@@ -5,9 +5,9 @@ prev: false
 title: "DistributedCircuitBreakerStateStore"
 ---
 
-> **DistributedCircuitBreakerStateStore** = [`CircuitBreakerStateStore`](/api/retry-core/src/interfaces/circuitbreakerstatestore/)
+> **DistributedCircuitBreakerStateStore** = [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/)
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:100](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/CircuitBreakerState.ts#L100)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:108](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/CircuitBreakerState.ts#L108)
 
 :::caution[Deprecated]
 Use CircuitBreakerStateStore directly.

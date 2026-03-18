@@ -5,7 +5,7 @@ prev: false
 title: "RouteCompiler"
 ---
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:61](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/RouteCompiler.ts#L61)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:59](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/RouteCompiler.ts#L59)
 
 Croco HTTP 앱의 핵심 런타임 API입니다.
 
@@ -13,7 +13,19 @@ Croco HTTP 앱의 핵심 런타임 API입니다.
 
 ### Constructor
 
-> **new RouteCompiler**(): `RouteCompiler`
+> **new RouteCompiler**(`logger`, `pipelineRunner`): `RouteCompiler`
+
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:62](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/RouteCompiler.ts#L62)
+
+#### Parameters
+
+##### logger
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
+
+##### pipelineRunner
+
+[`PipelineRunner`](/api/transports-http/src/classes/pipelinerunner/)
 
 #### Returns
 
@@ -25,7 +37,7 @@ Croco HTTP 앱의 핵심 런타임 API입니다.
 
 > **compile**(`controllers`, `options?`): [`CompiledRoute`](/api/transports-http/src/interfaces/compiledroute/)[]
 
-Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:66](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/RouteCompiler.ts#L66)
+Defined in: [packages/transports-http/src/libs/RouteCompiler.ts:67](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/RouteCompiler.ts#L67)
 
 #### Parameters
 

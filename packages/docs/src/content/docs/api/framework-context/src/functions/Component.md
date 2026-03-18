@@ -7,7 +7,7 @@ title: "Component"
 
 > **Component**(`options?`): (`target`) => `void`
 
-Defined in: [packages/framework-context/src/libs/decorators/Component.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/decorators/Component.ts#L4)
+Defined in: [packages/framework-context/src/libs/decorators/Component.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/decorators/Component.ts#L4)
 
 ## Parameters
 

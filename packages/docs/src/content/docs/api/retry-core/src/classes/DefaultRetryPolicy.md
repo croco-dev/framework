@@ -5,7 +5,7 @@ prev: false
 title: "DefaultRetryPolicy"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:51](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/RetryPolicy.ts#L51)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:51](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/RetryPolicy.ts#L51)
 
 Default retry policy with ProblemCategory support.
 
@@ -19,7 +19,7 @@ Default retry policy with ProblemCategory support.
 
 > **new DefaultRetryPolicy**(`options?`): `DefaultRetryPolicy`
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:56](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/RetryPolicy.ts#L56)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:56](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/RetryPolicy.ts#L56)
 
 #### Parameters
 
@@ -37,7 +37,7 @@ Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:56](https://github.com/
 
 > **shouldRetry**(`error`, `attempt`, `maxAttempts`): `boolean`
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:62](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/RetryPolicy.ts#L62)
+Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:62](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/RetryPolicy.ts#L62)
 
 Check if the given error should be retried.
 

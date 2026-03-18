@@ -5,7 +5,7 @@ prev: false
 title: "CircuitState"
 ---
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/CircuitBreakerState.ts#L8)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/CircuitBreakerState.ts#L8)
 
 Circuit Breaker 상태를 나타내는 열거형.
 
@@ -19,7 +19,7 @@ Circuit Breaker 상태를 나타내는 열거형.
 
 > **CLOSED**: `"CLOSED"`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/CircuitBreakerState.ts#L9)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/CircuitBreakerState.ts#L9)
 
 ***
 
@@ -27,7 +27,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:9](https://gith
 
 > **HALF\_OPEN**: `"HALF_OPEN"`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/CircuitBreakerState.ts#L11)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/CircuitBreakerState.ts#L11)
 
 ***
 
@@ -35,4 +35,4 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:11](https://git
 
 > **OPEN**: `"OPEN"`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/CircuitBreakerState.ts#L10)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/CircuitBreakerState.ts#L10)

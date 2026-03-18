@@ -7,7 +7,7 @@ title: "MeteredOptions"
 
 > **MeteredOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/decorators/Metered.ts#L9)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/decorators/Metered.ts#L9)
 
 Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
@@ -21,7 +21,7 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
 > `optional` **idempotencyKeyExtractor**: (`args`) => `string` \| `undefined`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/decorators/Metered.ts#L12)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:12](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/decorators/Metered.ts#L12)
 
 #### Parameters
 
@@ -39,7 +39,7 @@ Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:12](https://g
 
 > `optional` **metadataExtractor**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/decorators/Metered.ts#L13)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:13](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/decorators/Metered.ts#L13)
 
 #### Parameters
 
@@ -61,7 +61,7 @@ Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:13](https://g
 
 > **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/decorators/Metered.ts#L10)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/decorators/Metered.ts#L10)
 
 ***
 
@@ -69,7 +69,7 @@ Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:10](https://g
 
 > `optional` **valueExtractor**: (`args`, `result`) => `number`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/decorators/Metered.ts#L11)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/decorators/Metered.ts#L11)
 
 #### Parameters
 

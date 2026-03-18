@@ -9,3 +9,12 @@ export class SamplerProblem extends Problem {
     super(detail);
   }
 }
+
+export class OtlpEndpointRequiredProblem extends Problem {
+  readonly code = 'OTLP_ENDPOINT_REQUIRED';
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super('OTLP endpoint is required for telemetry');
+  }
+}

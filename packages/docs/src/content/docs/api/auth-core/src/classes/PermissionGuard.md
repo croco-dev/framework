@@ -5,13 +5,13 @@ prev: false
 title: "PermissionGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:16](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/PermissionGuard.ts#L16)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:17](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/PermissionGuard.ts#L17)
 
 Guard for permission-based authorization checks.
 
 ## Implements
 
-- [`Guard`](/api/auth-core/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)\>
+- [`Guard`](/api/framework-context/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/interfaces/routeexecutioncontext/)\>
 
 ## Constructors
 
@@ -19,7 +19,7 @@ Guard for permission-based authorization checks.
 
 > **new PermissionGuard**(`rbacEngine`): `PermissionGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:17](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/PermissionGuard.ts#L17)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:18](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/PermissionGuard.ts#L18)
 
 #### Parameters
 
@@ -37,13 +37,13 @@ Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:17](https://g
 
 > **canActivate**(`context`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:19](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/PermissionGuard.ts#L19)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/PermissionGuard.ts#L20)
 
 #### Parameters
 
 ##### context
 
-[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)
+[`RouteExecutionContext`](/api/auth-core/src/interfaces/routeexecutioncontext/)
 
 #### Returns
 
@@ -51,4 +51,4 @@ Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:19](https://g
 
 #### Implementation of
 
-[`Guard`](/api/auth-core/src/interfaces/guard/).[`canActivate`](/api/auth-core/src/interfaces/guard/#canactivate)
+[`Guard`](/api/framework-context/src/interfaces/guard/).[`canActivate`](/api/framework-context/src/interfaces/guard/#canactivate)

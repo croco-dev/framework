@@ -1,7 +1,6 @@
-import type { Constructor, ILogger } from '@croco/framework-context';
 import { Container, Context, LOGGER_TOKEN } from '@croco/framework-context';
 import { recordError } from '@croco/telemetry-api';
-import { AuditLogRepository } from './AuditLogRepository';
+import { AUDIT_LOG_REPOSITORY_TOKEN } from './AuditLogRepositoryToken';
 import type { AuditableOptions, AuditLogEntry } from './types';
 
 type DecoratedMethod = (...args: unknown[]) => unknown;
@@ -64,15 +63,19 @@ function extractDiff(payload: unknown): Record<string, unknown> | null {
 function writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
   void Promise.resolve()
     .then(() => {
-      const repository = Container.get(AuditLogRepository as unknown as Constructor<AuditLogRepository>);
+      const repository = Container.get(AUDIT_LOG_REPOSITORY_TOKEN);
       return repository.create(entry);
     })
     .catch((error) => {
-      recordError(error);
-      const logger = Container.get(LOGGER_TOKEN) as ILogger;
-      logger.warn('[Auditable] Failed to write audit log', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      try {
+        recordError(error);
+        const logger = Container.get(LOGGER_TOKEN);
+        logger.warn('[Auditable] Failed to write audit log', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } catch {
+        // ignore secondary errors
+      }
     });
 }
 

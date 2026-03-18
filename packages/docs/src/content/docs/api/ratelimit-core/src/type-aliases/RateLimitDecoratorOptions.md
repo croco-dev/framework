@@ -7,7 +7,7 @@ title: "RateLimitDecoratorOptions"
 
 > **RateLimitDecoratorOptions** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:50](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L50)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:51](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L51)
 
 Options for
 
@@ -21,7 +21,7 @@ decorator
 
 > `optional` **key**: (`context`) => `string`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:58](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L58)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:59](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L59)
 
 Custom key resolver function
 
@@ -41,7 +41,7 @@ Custom key resolver function
 
 > `optional` **limit**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:52](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L52)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:53](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L53)
 
 Maximum requests allowed (overrides policy)
 
@@ -51,7 +51,7 @@ Maximum requests allowed (overrides policy)
 
 > `optional` **policy**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:56](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L56)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:57](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L57)
 
 Pre-defined policy name to use
 
@@ -61,6 +61,6 @@ Pre-defined policy name to use
 
 > `optional` **window**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:54](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L54)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:55](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L55)
 
 Time window string ('1m', '1h', '1d')

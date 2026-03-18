@@ -5,7 +5,7 @@ prev: false
 title: "TelemetryRuntime"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/runtime.ts#L8)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L7)
 
 OpenTelemetry SDK runtime manager.
 
@@ -47,7 +47,7 @@ export const handler = async (event: any) => {
 
 > **forceFlush**(): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:86](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/runtime.ts#L86)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:114](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L114)
 
 #### Returns
 
@@ -59,7 +59,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:86](https://github.com/c
 
 > **getConfig**(): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:117](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/runtime.ts#L117)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:153](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L153)
 
 #### Returns
 
@@ -71,7 +71,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:117](https://github.com/
 
 > **init**(`config`): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:29](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/runtime.ts#L29)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:43](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L43)
 
 #### Parameters
 
@@ -89,7 +89,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:29](https://github.com/c
 
 > **isInitialized**(): `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:113](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/runtime.ts#L113)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:149](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L149)
 
 #### Returns
 
@@ -101,7 +101,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:113](https://github.com/
 
 > **shutdown**(): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:98](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/runtime.ts#L98)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:126](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L126)
 
 #### Returns
 
@@ -113,8 +113,20 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:98](https://github.com/c
 
 > `static` **getInstance**(): `TelemetryRuntime`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/runtime.ts#L22)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:36](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L36)
 
 #### Returns
 
 `TelemetryRuntime`
+
+***
+
+### reset()
+
+> `static` **reset**(): `Promise`\<`void`\>
+
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:141](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/runtime.ts#L141)
+
+#### Returns
+
+`Promise`\<`void`\>

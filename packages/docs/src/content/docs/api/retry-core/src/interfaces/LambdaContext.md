@@ -5,9 +5,9 @@ prev: false
 title: "LambdaContext"
 ---
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L4)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L8)
 
-AWS Lambda context interface (minimal).
+Lambda timeout guard types for integrating retry logic with AWS Lambda execution limits.
 
 ## Methods
 
@@ -15,7 +15,7 @@ AWS Lambda context interface (minimal).
 
 > **getRemainingTimeInMillis**(): `number`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L5)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L9)
 
 #### Returns
 

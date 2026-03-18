@@ -7,7 +7,7 @@ title: "corsMiddleware"
 
 > **corsMiddleware**(`options`): [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:34](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L34)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:34](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L34)
 
 CORS (Cross-Origin Resource Sharing) middleware
 

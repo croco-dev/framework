@@ -5,7 +5,7 @@ prev: false
 title: "DomainEvent"
 ---
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:15](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L15)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:15](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L15)
 
 모든 도메인 이벤트가 상속해야 하는 기본 추상 클래스입니다.
 
@@ -24,7 +24,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:15](https://github.com
 
 > **new DomainEvent**(): `DomainEvent`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L22)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:22](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L22)
 
 #### Returns
 
@@ -36,7 +36,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:22](https://github.com
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L18)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L18)
 
 ***
 
@@ -44,7 +44,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L20)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L20)
 
 ***
 
@@ -52,7 +52,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com
 
 > `readonly` **timestamp**: `Date`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L19)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L19)
 
 ***
 
@@ -60,4 +60,4 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com
 
 > `static` `optional` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:16](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/DomainEvent.ts#L16)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L16)

@@ -31,7 +31,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<V> {
 
   constructor(options: InMemoryCacheStoreOptions = {}) {
     super();
-    if (!options.maxEntries) {
+    if (options.maxEntries === undefined) {
       console.warn(
         '[InMemoryCacheStore] maxEntries not set, using default 1000. Set maxEntries to control memory usage.'
       );

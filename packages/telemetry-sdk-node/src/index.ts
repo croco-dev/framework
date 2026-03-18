@@ -103,7 +103,7 @@ export type { LogsConfig, MetricsConfig, TelemetryConfig, TraceConfig } from './
  * @see {@link TelemetryRuntime.init}
  */
 export { lambdaPreset } from './libs/presets/lambda';
-export { SamplerProblem } from './libs/problems/TelemetryProblems';
+export { OtlpEndpointRequiredProblem, SamplerProblem } from './libs/problems/TelemetryProblems';
 /**
  * Probability-based sampler for OpenTelemetry traces.
  *

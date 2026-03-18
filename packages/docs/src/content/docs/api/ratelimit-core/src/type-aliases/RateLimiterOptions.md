@@ -7,7 +7,7 @@ title: "RateLimiterOptions"
 
 > **RateLimiterOptions** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:38](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L38)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:39](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L39)
 
 Options for RateLimiter
 
@@ -17,7 +17,7 @@ Options for RateLimiter
 
 > `optional` **failOpen**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:42](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L42)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:43](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L43)
 
 Whether to allow requests when store fails (default: true)
 
@@ -27,7 +27,7 @@ Whether to allow requests when store fails (default: true)
 
 > **keySegments**: [`KeySegment`](/api/ratelimit-core/src/type-aliases/keysegment/)[]
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:40](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L40)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:41](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L41)
 
 Key segments to include in rate limit key
 
@@ -37,7 +37,7 @@ Key segments to include in rate limit key
 
 > `optional` **onStoreError**: (`error`) => `void`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:44](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L44)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:45](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L45)
 
 Error callback when store fails
 

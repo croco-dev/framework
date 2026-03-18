@@ -7,7 +7,7 @@ title: "ProblemFactory"
 
 > `const` **ProblemFactory**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/ProblemFactory.ts#L10)
+Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/ProblemFactory.ts#L11)
 
 카테고리별 기본 Problem 인스턴스를 생성하는 팩토리입니다.
 

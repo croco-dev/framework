@@ -7,7 +7,7 @@ title: "TelemetryConfig"
 
 > **TelemetryConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L3)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L3)
 
 Main configuration for the OpenTelemetry SDK.
 
@@ -39,7 +39,7 @@ const config: TelemetryConfig = {
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L7)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L7)
 
 ***
 
@@ -47,7 +47,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:7](https://github.com/cro
 
 > `optional` **environment**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L6)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:6](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L6)
 
 ***
 
@@ -55,7 +55,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:6](https://github.com/cro
 
 > `optional` **logs**: [`LogsConfig`](/api/telemetry-sdk-node/src/type-aliases/logsconfig/)
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L10)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L10)
 
 ***
 
@@ -63,7 +63,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:10](https://github.com/cr
 
 > `optional` **metrics**: [`MetricsConfig`](/api/telemetry-sdk-node/src/type-aliases/metricsconfig/)
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L9)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L9)
 
 ***
 
@@ -71,7 +71,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:9](https://github.com/cro
 
 > `optional` **resourceAttributes**: `Record`\<`string`, `string` \| `number` \| `boolean`\>
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L11)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L11)
 
 ***
 
@@ -79,7 +79,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:11](https://github.com/cr
 
 > **serviceName**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L4)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L4)
 
 ***
 
@@ -87,7 +87,7 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:4](https://github.com/cro
 
 > `optional` **serviceVersion**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L5)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L5)
 
 ***
 
@@ -95,4 +95,4 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:5](https://github.com/cro
 
 > `optional` **trace**: [`TraceConfig`](/api/telemetry-sdk-node/src/type-aliases/traceconfig/)
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-sdk-node/src/config.ts#L8)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L8)

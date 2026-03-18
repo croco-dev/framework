@@ -94,10 +94,7 @@ describe('TelemetryRuntime', () => {
         serviceName: 'test-service',
         trace: { enabled: true },
       })
-    ).rejects.toThrow(
-      '[TelemetryRuntime] OTLP endpoint is required. ' +
-        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config.'
-    );
+    ).rejects.toThrow('OTLP endpoint is required for telemetry');
 
     vi.unstubAllEnvs();
   });
@@ -108,10 +105,7 @@ describe('TelemetryRuntime', () => {
         serviceName: 'test-service',
         trace: { enabled: true, exporterUrl: undefined },
       })
-    ).rejects.toThrow(
-      '[TelemetryRuntime] OTLP endpoint is required. ' +
-        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config.'
-    );
+    ).rejects.toThrow('OTLP endpoint is required for telemetry');
   });
 
   it('should not throw when endpoint is provided in config', async () => {

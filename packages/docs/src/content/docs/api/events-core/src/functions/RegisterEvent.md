@@ -5,19 +5,11 @@ prev: false
 title: "RegisterEvent"
 ---
 
-> **RegisterEvent**(`registry?`): \<`T`\>(`target`) => `EventClass`\<`T`\>
+> **RegisterEvent**(): \<`T`\>(`target`) => `EventClass`\<`T`\>
 
-Defined in: [packages/events-core/src/libs/EventRegistry.ts:103](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventRegistry.ts#L103)
+Defined in: [packages/events-core/src/libs/EventRegistry.ts:102](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventRegistry.ts#L102)
 
-이벤트 클래스를 레지스트리에 자동 등록하는 데코레이터 팩토리
-
-## Parameters
-
-### registry?
-
-[`EventRegistry`](/api/events-core/src/classes/eventregistry/) = `globalEventRegistry`
-
-등록에 사용할 레지스트리 (기본값: 전역 레지스트리)
+이벤트 클래스 메타데이터를 저장하는 데코레이터
 
 ## Returns
 

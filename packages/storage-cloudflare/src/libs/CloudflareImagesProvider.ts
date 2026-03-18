@@ -29,6 +29,12 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     this.transformBaseUrl = options.customDomain ? `https://${options.customDomain}` : 'https://imagedelivery.net';
     this.apiBaseUrl = `https://api.cloudflare.com/client/v4/accounts/${options.accountId}/images/v1`;
     this.ttl = options.ttl ?? 3600;
+    if (!Number.isFinite(this.ttl) || !Number.isInteger(this.ttl) || this.ttl <= 0) {
+      throw ProblemFactory.internalServerError(
+        'cloudflare/images-invalid-ttl',
+        `Cloudflare Images TTL must be a positive finite integer, got: ${this.ttl}`
+      );
+    }
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {

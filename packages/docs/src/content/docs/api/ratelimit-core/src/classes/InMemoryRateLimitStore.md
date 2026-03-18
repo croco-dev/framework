@@ -5,15 +5,15 @@ prev: false
 title: "InMemoryRateLimitStore"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:15](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L15)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:15](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L15)
 
 In-memory rate limit store for testing and development.
 Uses sliding window algorithm.
 NOT suitable for production multi-instance deployments.
 
-## Implements
+## Extends
 
-- [`RateLimitStore`](/api/ratelimit-core/src/interfaces/ratelimitstore/)
+- [`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/)
 
 ## Constructors
 
@@ -25,13 +25,17 @@ NOT suitable for production multi-instance deployments.
 
 `InMemoryRateLimitStore`
 
+#### Inherited from
+
+[`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`constructor`](/api/ratelimit-core/src/classes/ratelimitstore/#constructor)
+
 ## Methods
 
 ### check()
 
 > **check**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:18](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L18)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:18](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L18)
 
 Check and increment the rate limit counter for a key.
 
@@ -55,9 +59,9 @@ Rate limit policy to apply
 
 Rate limit result with success status and metadata
 
-#### Implementation of
+#### Overrides
 
-[`RateLimitStore`](/api/ratelimit-core/src/interfaces/ratelimitstore/).[`check`](/api/ratelimit-core/src/interfaces/ratelimitstore/#check)
+[`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`check`](/api/ratelimit-core/src/classes/ratelimitstore/#check)
 
 ***
 
@@ -65,15 +69,15 @@ Rate limit result with success status and metadata
 
 > **pruneExpired**(): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:56](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L56)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:56](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L56)
 
 #### Returns
 
 `Promise`\<`number`\>
 
-#### Implementation of
+#### Overrides
 
-[`RateLimitStore`](/api/ratelimit-core/src/interfaces/ratelimitstore/).[`pruneExpired`](/api/ratelimit-core/src/interfaces/ratelimitstore/#pruneexpired)
+[`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/ratelimitstore/#pruneexpired)
 
 ***
 
@@ -81,7 +85,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:56](http
 
 > **reset**(): `void`
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:52](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L52)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:52](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L52)
 
 Clear all buckets (for testing)
 

@@ -7,7 +7,7 @@ title: "isLambdaEnvironment"
 
 > **isLambdaEnvironment**(): `boolean`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:40](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L40)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:48](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L48)
 
 Check if running in Lambda environment.
 

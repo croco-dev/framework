@@ -5,13 +5,13 @@ prev: false
 title: "AuthGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/AuthGuard.ts#L22)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:23](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/AuthGuard.ts#L23)
 
 Guard for user authentication and authorization.
 
 ## Implements
 
-- [`Guard`](/api/auth-core/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)\>
+- [`Guard`](/api/framework-context/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/interfaces/routeexecutioncontext/)\>
 
 ## Constructors
 
@@ -19,7 +19,7 @@ Guard for user authentication and authorization.
 
 > **new AuthGuard**(`authProvider`): `AuthGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/AuthGuard.ts#L23)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:24](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/AuthGuard.ts#L24)
 
 #### Parameters
 
@@ -37,13 +37,13 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:23](https://github.
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/AuthGuard.ts#L25)
+Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:26](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/AuthGuard.ts#L26)
 
 #### Parameters
 
 ##### context
 
-[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)
+[`RouteExecutionContext`](/api/auth-core/src/interfaces/routeexecutioncontext/)
 
 #### Returns
 
@@ -51,4 +51,4 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:25](https://github.
 
 #### Implementation of
 
-[`Guard`](/api/auth-core/src/interfaces/guard/).[`canActivate`](/api/auth-core/src/interfaces/guard/#canactivate)
+[`Guard`](/api/framework-context/src/interfaces/guard/).[`canActivate`](/api/framework-context/src/interfaces/guard/#canactivate)

@@ -172,6 +172,9 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.secure = config.secure ?? true;
     this.uploadBaseUrl = config.uploadBaseUrl ?? 'https://api.cloudinary.com';
     this.ttl = config.ttl ?? 3600;
+    if (!Number.isFinite(this.ttl) || !Number.isInteger(this.ttl) || this.ttl <= 0) {
+      this.ttl = 3600;
+    }
     this.retryTemplate = new RetryTemplate({
       maxAttempts: 3,
       backoff: {

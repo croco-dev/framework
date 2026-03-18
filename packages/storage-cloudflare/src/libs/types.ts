@@ -126,7 +126,7 @@ export type CloudflareImageDetails = {
      * 이미지 크기 (bytes)
      */
     size?: number;
-  };
+  } | null;
 
   /**
    * 성공 여부

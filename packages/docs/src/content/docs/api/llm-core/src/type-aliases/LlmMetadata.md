@@ -7,7 +7,7 @@ title: "LlmMetadata"
 
 > **LlmMetadata** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:249](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/types.ts#L249)
+Defined in: [packages/llm-core/src/libs/types.ts:249](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/types.ts#L249)
 
 메타데이터
 
@@ -23,7 +23,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:249](https://github.com/croco-d
 
 > `optional` **finishReason**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:258](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/types.ts#L258)
+Defined in: [packages/llm-core/src/libs/types.ts:258](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/types.ts#L258)
 
 완료 이유
 
@@ -33,6 +33,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:258](https://github.com/croco-d
 
 > **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:253](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/types.ts#L253)
+Defined in: [packages/llm-core/src/libs/types.ts:253](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/types.ts#L253)
 
 모델 ID

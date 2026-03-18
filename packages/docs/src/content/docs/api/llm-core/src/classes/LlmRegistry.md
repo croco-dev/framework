@@ -5,7 +5,7 @@ prev: false
 title: "LlmRegistry"
 ---
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/LlmRegistry.ts#L11)
+Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/LlmRegistry.ts#L11)
 
 LLM 레지스트리 추상 클래스
 
@@ -34,7 +34,7 @@ Token 기반 DI를 지원하며, 다중 제공자 관리를 지원합니다.
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`LlmRegistry`\>
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/LlmRegistry.ts#L12)
+Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:12](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/LlmRegistry.ts#L12)
 
 ## Methods
 
@@ -42,7 +42,7 @@ Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:12](https://github.com/cr
 
 > `abstract` **getModel**(`modelId`): `Promise`\<[`LlmModel`](/api/llm-core/src/classes/llmmodel/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:20](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/LlmRegistry.ts#L20)
+Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/LlmRegistry.ts#L20)
 
 모델 조회
 
@@ -66,7 +66,7 @@ LLM 모델 인스턴스
 
 > `abstract` **listModels**(): `Promise`\<`string`[]\>
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:27](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/LlmRegistry.ts#L27)
+Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:27](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/LlmRegistry.ts#L27)
 
 사용 가능한 모델 목록 조회
 
@@ -82,7 +82,7 @@ Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:27](https://github.com/cr
 
 > `abstract` **registerProvider**(`providerId`, `factory`): `void`
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:35](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/llm-core/src/libs/LlmRegistry.ts#L35)
+Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:35](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/LlmRegistry.ts#L35)
 
 제공자 등록
 

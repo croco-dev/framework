@@ -5,7 +5,7 @@ prev: false
 title: "PipelineRunner"
 ---
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:31](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/PipelineRunner.ts#L31)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:30](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/PipelineRunner.ts#L30)
 
 Croco HTTP 앱의 핵심 런타임 API입니다.
 
@@ -13,7 +13,19 @@ Croco HTTP 앱의 핵심 런타임 API입니다.
 
 ### Constructor
 
-> **new PipelineRunner**(): `PipelineRunner`
+> **new PipelineRunner**(`errorHandler`, `logger`): `PipelineRunner`
+
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:31](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/PipelineRunner.ts#L31)
+
+#### Parameters
+
+##### errorHandler
+
+[`ErrorHandler`](/api/transports-http/src/classes/errorhandler/)
+
+##### logger
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 #### Returns
 
@@ -25,7 +37,7 @@ Croco HTTP 앱의 핵심 런타임 API입니다.
 
 > **run**(`execContext`, `handler`, `config`): `Promise`\<`unknown`\>
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:40](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/PipelineRunner.ts#L40)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:36](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/PipelineRunner.ts#L36)
 
 #### Parameters
 

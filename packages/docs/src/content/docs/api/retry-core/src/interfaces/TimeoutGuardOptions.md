@@ -5,7 +5,7 @@ prev: false
 title: "TimeoutGuardOptions"
 ---
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:61](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L61)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:70](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L70)
 
 Options for timeout guard.
 
@@ -15,7 +15,7 @@ Options for timeout guard.
 
 > `optional` **getRemainingTime**: () => `number`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:66](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L66)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:75](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L75)
 
 Custom timeout checker (for testing)
 
@@ -29,6 +29,6 @@ Custom timeout checker (for testing)
 
 > `optional` **reserveTimeMs**: `number`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:63](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L63)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:72](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L72)
 
 Minimum time to reserve for cleanup (ms). Default: 5000
