@@ -15,7 +15,9 @@
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",
+    "bench:update": "node --experimental-strip-types scripts/bench-threshold-check.mts --update-baseline"
   },
   "dependencies": {
     "vitest": "4.0.16"

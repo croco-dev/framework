@@ -133,6 +133,14 @@ class TelemetryRuntime {
     }
   }
 
+  static async reset(): Promise<void> {
+    const instance = TelemetryRuntime.instance;
+    if (instance) {
+      await instance.shutdown();
+      TelemetryRuntime.instance = undefined as unknown as TelemetryRuntime;
+    }
+  }
+
   isInitialized(): boolean {
     return this.initialized;
   }

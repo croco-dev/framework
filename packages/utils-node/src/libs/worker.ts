@@ -131,19 +131,15 @@ export class Worker<TD = unknown, TR = unknown> {
     await this.runtime.bootstrap(config);
   }
 
-  async processEvent(event: SQSEvent): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
-    return this.runtime.processEvent(event);
-  }
-
-  reset(): void {
-    this.runtime.reset();
-  }
-
   static async bootstrap<TD = unknown, TR = unknown>(config: WorkerConfig<TD, TR>): Promise<void> {
     const worker = new Worker<TD, TR>();
     await worker.bootstrap(config);
     Worker.defaultProcessEvent = (event: SQSEvent) => worker.processEvent(event);
     Worker.defaultReset = () => worker.reset();
+  }
+
+  async processEvent(event: SQSEvent): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
+    return this.runtime.processEvent(event);
   }
 
   static async processEvent(event: SQSEvent): Promise<{ batchItemFailures: { itemIdentifier: string }[] }> {
@@ -152,6 +148,10 @@ export class Worker<TD = unknown, TR = unknown> {
     }
 
     return Worker.defaultProcessEvent(event);
+  }
+
+  reset(): void {
+    this.runtime.reset();
   }
 
   static reset() {

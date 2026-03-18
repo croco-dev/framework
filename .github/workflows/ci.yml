@@ -34,14 +34,14 @@ jobs:
       - name: Biome check
         run: pnpm check
 
+      - name: Build
+        run: pnpm build
+
       - name: TypeScript check
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
-
-      - name: Build
-        run: pnpm build
 
   changes:
     runs-on: ubuntu-latest
@@ -141,7 +141,7 @@ jobs:
       - name: Link Checker
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --verbose --no-progress 'packages/docs/dist/**/*.html'
+          args: --verbose --no-progress --root-dir 'packages/docs/dist' 'packages/docs/dist/**/*.html'
           fail: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

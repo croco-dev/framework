@@ -51,9 +51,6 @@ class MetadataStorageImpl {
 
   define<T>(key: MetadataKey, target: MetadataTarget, value: T, propertyKey?: string | symbol): void {
     const compositeKey = this.makeKey(key, target, propertyKey);
-    if (process.env.NODE_ENV !== 'production' && this.storage.has(compositeKey)) {
-      console.warn(`[MetadataStorage] Overwriting existing metadata for key: ${String(key)}`);
-    }
     this.storage.set(compositeKey, { key, target, propertyKey, value });
   }
 

@@ -30,10 +30,14 @@ export abstract class Problem extends Error {
   protected constructor(code?: string, category?: ProblemCategory, detail?: string, options?: ProblemOptions) {
     super(detail ?? code ?? 'Unknown error');
 
+    // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
     if ((this as any).code === undefined) {
+      // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
       (this as any).code = code ?? 'UNKNOWN_ERROR';
     }
+    // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
     if ((this as any).category === undefined) {
+      // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
       (this as any).category = category ?? ProblemCategory.InternalServerError;
     }
 

@@ -20,7 +20,7 @@ export default defineConfig({
           lang: 'ko',
         },
       },
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/yourusername/croco' }],
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/croco-dev/framework' }],
       plugins: [
         starlightTypeDoc({
           entryPoints: [

@@ -1,0 +1,15 @@
+{
+  "_comment": "p75 기준 절대 임계값 (ms). CI에서는 2x 마진이 자동 적용됨",
+  "Container.register × 50 components": 10,
+  "Container.get singleton (cold)": 5,
+  "Container.get singleton (warm)": 0.5,
+  "Container.validate (50 components)": 20,
+  "CrocoApp constructor": 30,
+  "CrocoApp lambdaHandler (10 controllers)": 50,
+  "CrocoApp full cold-start simulation": 80,
+  "TelemetryRuntime.init (lambda preset)": 200,
+  "lambdaPreset config creation": 2,
+  "EventBusConfig.start (10 handlers)": 10,
+  "EventPublisher.publish single event": 2,
+  "DefaultHandlerResolver.resolve × 10": 5
+}
