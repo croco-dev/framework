@@ -19,6 +19,7 @@
     "@croco/tx-core": "workspace:*"
   },
   "devDependencies": {
+    "@croco/dataloader-core": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*",
     "drizzle-orm": "0.44.2"
   },

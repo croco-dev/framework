@@ -96,8 +96,7 @@ describe('TelemetryRuntime', () => {
       })
     ).rejects.toThrow(
       '[TelemetryRuntime] OTLP endpoint is required. ' +
-        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config. ' +
-        'For local development, run an OTLP collector on localhost:4318.'
+        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config.'
     );
 
     vi.unstubAllEnvs();
@@ -111,8 +110,7 @@ describe('TelemetryRuntime', () => {
       })
     ).rejects.toThrow(
       '[TelemetryRuntime] OTLP endpoint is required. ' +
-        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config. ' +
-        'For local development, run an OTLP collector on localhost:4318.'
+        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config.'
     );
   });
 

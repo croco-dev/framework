@@ -1,3 +1,4 @@
+import { registerBatchLoaderFactory } from '@croco/dataloader-core';
 import { Context } from '@croco/framework-context';
 import { BatchLoad } from '@croco/repository-core';
 import { Transactional, type TxAdapter, TxManager, TxManagerRegistry } from '@croco/tx-core';
@@ -67,6 +68,7 @@ describe('Repository + BatchLoad + Transaction integration', () => {
 
   beforeEach(() => {
     TxManagerRegistry.clear();
+    registerBatchLoaderFactory();
 
     let txCounter = 0;
     const transaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> => {

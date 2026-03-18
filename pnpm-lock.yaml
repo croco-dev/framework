@@ -1952,6 +1952,9 @@ importers:
         specifier: workspace:*
         version: link:../tx-core
     devDependencies:
+      '@croco/dataloader-core':
+        specifier: workspace:*
+        version: link:../dataloader-core
       '@croco/utils-tsconfig':
         specifier: workspace:*
         version: link:../shared/utils-tsconfig
