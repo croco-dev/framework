@@ -10,6 +10,11 @@ describe('lambdaPreset', () => {
 
     delete process.env.AWS_LAMBDA_FUNCTION_NAME;
     delete process.env.AWS_EXECUTION_ENV;
+    delete process.env.NODE_ENV;
+    delete process.env.ENVIRONMENT;
+    delete process.env.TELEMETRY_ENABLED;
+    delete process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
+    delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
   });
 
   it('should create config with required fields', () => {

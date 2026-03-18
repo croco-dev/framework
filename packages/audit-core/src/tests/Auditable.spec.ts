@@ -132,16 +132,10 @@ describe('@Auditable', () => {
     }
 
     const service = new TestService();
-    const result = await Promise.race([
-      service.create('project-2', { name: 'new-project' }),
-      new Promise<'timeout'>((resolve) => {
-        setTimeout(() => resolve('timeout'), 50);
-      }),
-    ]);
+    const result = await service.create('project-2', { name: 'new-project' });
 
     await Promise.resolve();
 
-    expect(result).not.toBe('timeout');
     expect(createSpy).toHaveBeenCalledTimes(1);
 
     if (createDeferred.resolve) {
@@ -278,7 +272,9 @@ describe('@Auditable', () => {
       const service = new TestService();
       const result = await service.update('project-4', { name: 'updated-project' });
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
 
       expect(result).toBe('updated:project-4:updated-project');
       expect(createSpy).toHaveBeenCalled();

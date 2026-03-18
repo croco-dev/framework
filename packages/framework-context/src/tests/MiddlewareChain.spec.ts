@@ -78,12 +78,11 @@ describe('MiddlewareChain', () => {
       expect(result).toBe('final-result');
     });
 
-    it('should throw MiddlewareProblem when finalFn returns no result', async () => {
+    it('should return undefined when finalFn returns undefined', async () => {
       chain.use(async (_ctx, next) => {
         await next();
       });
 
-      // finalFn이 undefined를 반환하면 에러가 발생해야 함
       const result = await chain.execute({ requestId: 'test-222' }, async () => undefined);
       expect(result).toBeUndefined();
     });

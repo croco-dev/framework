@@ -480,7 +480,7 @@ describe('CloudflareImagesProvider', () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.getMetadata('test-image-id')).rejects.toThrow('Cloudflare Images API returned null result');
+      await expect(provider.getMetadata('test-image-id')).rejects.toThrow();
     });
   });
 

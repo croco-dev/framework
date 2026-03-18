@@ -165,28 +165,33 @@ describe('InMemoryCacheStore', () => {
   describe('capacity management', () => {
     it('should apply default maxEntries of 1000 when not set', async () => {
       const warnSpy = vi.spyOn(console, 'warn');
-      const defaultCache = new InMemoryCacheStore<string>();
+      try {
+        const defaultCache = new InMemoryCacheStore<string>();
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        '[InMemoryCacheStore] maxEntries not set, using default 1000. Set maxEntries to control memory usage.'
-      );
+        expect(warnSpy).toHaveBeenCalledWith(
+          '[InMemoryCacheStore] maxEntries not set, using default 1000. Set maxEntries to control memory usage.'
+        );
 
-      for (let i = 0; i < 1001; i++) {
-        await defaultCache.set(`key${i}`, `value${i}`);
+        for (let i = 0; i < 1001; i++) {
+          await defaultCache.set(`key${i}`, `value${i}`);
+        }
+
+        expect(await defaultCache.get('key0')).toBeUndefined();
+        expect(await defaultCache.get('key1000')).toBe('value1000');
+      } finally {
+        warnSpy.mockRestore();
       }
-
-      expect(await defaultCache.get('key0')).toBeUndefined();
-      expect(await defaultCache.get('key1000')).toBe('value1000');
-
-      warnSpy.mockRestore();
     });
 
     it('should not warn when maxEntries is explicitly set', async () => {
       const warnSpy = vi.spyOn(console, 'warn');
-      const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 2 });
+      try {
+        const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 2 });
 
-      expect(warnSpy).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
+        expect(warnSpy).not.toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
 
     it('should evict the oldest entry when maxEntries is exceeded', async () => {
