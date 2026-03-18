@@ -66,7 +66,20 @@ const COMMENT_MARKER = '<!-- benchmark-results -->';
  * @param {{ github: any; context: any }} args
  */
 export async function run({ github, context }) {
-  const result = JSON.parse(readFileSync('benchmark-result.json', 'utf-8'));
+  if (!context.issue?.number) {
+    console.log('Not a PR context, skipping comment');
+    return;
+  }
+
+  let result;
+  try {
+    result = JSON.parse(readFileSync('benchmark-result.json', 'utf-8'));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to read benchmark-result.json: ${message}`);
+    return;
+  }
+
   const body = buildCommentBody(result, context.sha);
 
   const { data: comments } = await github.rest.issues.listComments({

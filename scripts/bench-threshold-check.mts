@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Benchmark } from 'vitest';
+
 import { createVitest } from 'vitest/node';
 
 interface Thresholds {
@@ -58,7 +58,13 @@ function loadBaseline(): Baseline | null {
   if (!existsSync(baselinePath)) {
     return null;
   }
-  return JSON.parse(readFileSync(baselinePath, 'utf-8'));
+  try {
+    return JSON.parse(readFileSync(baselinePath, 'utf-8'));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to parse baseline.json at ${baselinePath}: ${message}`);
+    return null;
+  }
 }
 
 function saveBaseline(results: BenchmarkReport[]) {
@@ -68,21 +74,6 @@ function saveBaseline(results: BenchmarkReport[]) {
   }
   writeFileSync(baselinePath, JSON.stringify(baseline, null, 2));
   console.log(`\n✅ Baseline updated at ${baselinePath}`);
-}
-
-function extractP75(benchmark: Benchmark): number {
-  const result = benchmark.result;
-  if (!result || !result.benchmark || !result.benchmark.samples) {
-    return Number.NaN;
-  }
-  const samples = result.benchmark.samples;
-  if (samples.length === 0) {
-    return Number.NaN;
-  }
-  const sorted = [...samples].sort((a, b) => a - b);
-  const p75Index = Math.min(Math.floor(sorted.length * 0.75), sorted.length - 1);
-  const value = sorted[p75Index];
-  return value === undefined ? Number.NaN : value;
 }
 
 function formatDuration(ms: number): string {
@@ -119,53 +110,77 @@ async function main() {
     const reports: BenchmarkReport[] = [];
     let allPassed = true;
 
-    for (const file of files) {
-      for (const task of file.tasks) {
-        if (task.result?.benchmark) {
-          const benchmark = task.result.benchmark;
-          const p75 = extractP75({ result: { benchmark } } as Benchmark);
-          const name = task.name;
+    type BenchEntry = { name: string; p75: number };
 
-          const report: BenchmarkReport = {
-            name,
-            p75,
-          };
-
-          if (thresholds[name]) {
-            const threshold = thresholds[name].p75;
-            report.threshold = threshold;
-            const ciMargin = process.env.CI ? CI_THRESHOLD_MULTIPLIER : LOCAL_THRESHOLD_MULTIPLIER;
-            const effectiveThreshold = threshold * ciMargin;
-            report.thresholdDiff = p75 - threshold;
-
-            if (p75 > effectiveThreshold) {
-              report.thresholdStatus = 'fail';
-              allPassed = false;
-            } else {
-              report.thresholdStatus = 'pass';
-            }
+    // Collects bench entries from a task tree.
+    // - Suite with 1 child bench → uses suite name (describe('key') { bench(...) } pattern)
+    // - Suite with multiple children → uses each child's own name
+    // - Leaf bench with samples → uses bench name directly
+    // In Vitest 4.x, raw samples are not stored in state; use pre-computed p75 on leaf tasks (type=test).
+    // Suite heuristic: if a describe block contains exactly one bench, attribute the result to the
+    // suite name (the threshold key). Multiple children → use each child's own name.
+    const collectEntries = (tasks: (typeof files)[number]['tasks']): BenchEntry[] => {
+      const entries: BenchEntry[] = [];
+      for (const task of tasks) {
+        const p75: number | undefined = (task.result?.benchmark as Record<string, unknown> | undefined)?.p75 as
+          | number
+          | undefined;
+        if (p75 !== undefined) {
+          entries.push({ name: task.name, p75 });
+        } else if ('tasks' in task && Array.isArray(task.tasks) && task.tasks.length > 0) {
+          const childEntries = collectEntries(task.tasks);
+          if (childEntries.length === 1) {
+            // Single-bench suite: attribute result to the suite name (the threshold key)
+            entries.push({ name: task.name, p75: childEntries[0].p75 });
           } else {
-            report.thresholdStatus = 'skip';
-            console.warn(`⚠️  No threshold defined for "${name}" - skipping threshold check`);
+            entries.push(...childEntries);
           }
-
-          if (baseline?.[name]) {
-            const baselineP75 = baseline[name].p75;
-            report.baseline = baselineP75;
-            report.baselineDiff = p75 - baselineP75;
-
-            if (Math.abs(p75 - baselineP75) > baselineP75 * BASELINE_TOLERANCE) {
-              report.baselineStatus = 'fail';
-              allPassed = false;
-            } else {
-              report.baselineStatus = 'pass';
-            }
-          } else {
-            report.baselineStatus = 'skip';
-          }
-
-          reports.push(report);
         }
+      }
+      return entries;
+    };
+
+    for (const file of files) {
+      for (const { name, p75 } of collectEntries(file.tasks)) {
+        const report: BenchmarkReport = {
+          name,
+          p75,
+        };
+
+        if (thresholds[name]) {
+          const threshold = thresholds[name].p75;
+          report.threshold = threshold;
+          const ciMargin = process.env.CI ? CI_THRESHOLD_MULTIPLIER : LOCAL_THRESHOLD_MULTIPLIER;
+          const effectiveThreshold = threshold * ciMargin;
+          report.thresholdDiff = p75 - threshold;
+
+          if (p75 > effectiveThreshold) {
+            report.thresholdStatus = 'fail';
+            allPassed = false;
+          } else {
+            report.thresholdStatus = 'pass';
+          }
+        } else {
+          report.thresholdStatus = 'skip';
+          console.warn(`⚠️  No threshold defined for "${name}" - skipping threshold check`);
+        }
+
+        if (baseline?.[name]) {
+          const baselineP75 = baseline[name].p75;
+          report.baseline = baselineP75;
+          report.baselineDiff = p75 - baselineP75;
+
+          if (p75 - baselineP75 > baselineP75 * BASELINE_TOLERANCE) {
+            report.baselineStatus = 'fail';
+            allPassed = false;
+          } else {
+            report.baselineStatus = 'pass';
+          }
+        } else {
+          report.baselineStatus = 'skip';
+        }
+
+        reports.push(report);
       }
     }
 

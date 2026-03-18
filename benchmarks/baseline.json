@@ -1,32 +1,35 @@
 {
-  "Container.register × 50 components": {
-    "p75": 0.008
-  },
-  "Container.get singleton (warm)": {
-    "p75": 0.0003
-  },
   "EventBusConfig.start (10 handlers)": {
-    "p75": 0.5985
+    "p75": 0.002333000000021457
   },
   "EventPublisher.publish single event": {
-    "p75": 0.0689
+    "p75": 0.0005000000001018634
   },
   "DefaultHandlerResolver.resolve × 10": {
-    "p75": 0.0001
+    "p75": 0.0001249999995707185
+  },
+  "Container.register × 50 components": {
+    "p75": 0.004208000000062384
+  },
+  "Container.validate (50 components)": {
+    "p75": 0.014042000000017651
+  },
+  "Container.get singleton (warm)": {
+    "p75": 0.00012500000002546585
   },
   "CrocoApp constructor": {
-    "p75": 0.0014
+    "p75": 0.001040999999986525
   },
   "CrocoApp lambdaHandler (10 controllers)": {
-    "p75": 0.0166
+    "p75": 0.012874999999894499
   },
   "CrocoApp full cold-start simulation": {
-    "p75": 0.052
+    "p75": 0.030291999999917607
   },
   "TelemetryRuntime.init (lambda preset)": {
-    "p75": 5.103
+    "p75": 4.923833000000002
   },
   "lambdaPreset config creation": {
-    "p75": 0.0011
+    "p75": 0.0009169999998448475
   }
 }
