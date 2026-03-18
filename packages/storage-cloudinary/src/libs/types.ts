@@ -23,6 +23,11 @@ export type CloudinaryConfig = {
   secure?: boolean;
 
   uploadBaseUrl?: string;
+
+  /**
+   * Upload Intent TTL (초 단위, 기본값: 3600)
+   */
+  ttl?: number;
 };
 
 /**

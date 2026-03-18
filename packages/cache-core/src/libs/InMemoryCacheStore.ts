@@ -31,7 +31,14 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<V> {
 
   constructor(options: InMemoryCacheStoreOptions = {}) {
     super();
-    this.maxEntries = options.maxEntries ?? null;
+    if (!options.maxEntries) {
+      console.warn(
+        '[InMemoryCacheStore] maxEntries not set, using default 1000. Set maxEntries to control memory usage.'
+      );
+      this.maxEntries = 1000;
+    } else {
+      this.maxEntries = options.maxEntries;
+    }
   }
 
   async get(key: string): Promise<V | undefined> {

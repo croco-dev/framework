@@ -32,6 +32,11 @@ export type CloudflareImagesOptions = {
   defaultVariant?: string;
 
   maxUploadBytes?: number;
+
+  /**
+   * Upload Intent TTL (초 단위, 기본값: 3600)
+   */
+  ttl?: number;
 };
 
 /**

@@ -17,6 +17,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   private readonly imageBaseUrl: string;
   private readonly transformBaseUrl: string;
   private readonly apiBaseUrl: string;
+  private readonly ttl: number;
 
   constructor(options: CloudflareImagesOptions) {
     super();
@@ -26,6 +27,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       : 'https://imagedelivery.net';
     this.transformBaseUrl = options.customDomain ? `https://${options.customDomain}` : 'https://imagedelivery.net';
     this.apiBaseUrl = `https://api.cloudflare.com/client/v4/accounts/${options.accountId}/images/v1`;
+    this.ttl = options.ttl ?? 3600;
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
@@ -201,7 +203,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        maxDurationSeconds: 3600,
+        maxDurationSeconds: this.ttl,
         metadata: {
           originalKey: key,
         },
@@ -221,7 +223,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
     const uploadUrl = result.result.uploadURL;
     const publicUrl = this.buildImageUrl(result.result.id, this.options.defaultVariant ?? 'public');
-    const expiresAt = new Date(Date.now() + 3600 * 1000);
+    const expiresAt = new Date(Date.now() + this.ttl * 1000);
 
     return {
       uploadUrl,

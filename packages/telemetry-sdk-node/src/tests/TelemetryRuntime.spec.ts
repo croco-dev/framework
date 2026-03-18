@@ -4,7 +4,8 @@ import { TelemetryRuntime } from '../runtime';
 describe('TelemetryRuntime', () => {
   let runtime!: TelemetryRuntime;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await TelemetryRuntime.reset();
     runtime = TelemetryRuntime.getInstance();
   });
 
@@ -80,6 +81,59 @@ describe('TelemetryRuntime', () => {
     });
 
     expect(runtime.getConfig()?.trace?.exporterUrl).toBeUndefined();
+
+    vi.unstubAllEnvs();
+  });
+
+  it('should throw error when OTLP endpoint is not provided', async () => {
+    vi.stubEnv('OTEL_EXPORTER_OTLP_TRACES_ENDPOINT', '');
+    vi.stubEnv('OTEL_EXPORTER_OTLP_ENDPOINT', '');
+
+    await expect(
+      runtime.init({
+        serviceName: 'test-service',
+        trace: { enabled: true },
+      })
+    ).rejects.toThrow(
+      '[TelemetryRuntime] OTLP endpoint is required. ' +
+        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config. ' +
+        'For local development, run an OTLP collector on localhost:4318.'
+    );
+
+    vi.unstubAllEnvs();
+  });
+
+  it('should throw error when endpoint is undefined', async () => {
+    await expect(
+      runtime.init({
+        serviceName: 'test-service',
+        trace: { enabled: true, exporterUrl: undefined },
+      })
+    ).rejects.toThrow(
+      '[TelemetryRuntime] OTLP endpoint is required. ' +
+        'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config. ' +
+        'For local development, run an OTLP collector on localhost:4318.'
+    );
+  });
+
+  it('should not throw when endpoint is provided in config', async () => {
+    await expect(
+      runtime.init({
+        serviceName: 'test-service',
+        trace: { enabled: true, exporterUrl: 'http://localhost:4318/v1/traces' },
+      })
+    ).resolves.not.toThrow();
+  });
+
+  it('should not throw when endpoint is provided via env var', async () => {
+    vi.stubEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318/v1/traces');
+
+    await expect(
+      runtime.init({
+        serviceName: 'test-service',
+        trace: { enabled: true },
+      })
+    ).resolves.not.toThrow();
 
     vi.unstubAllEnvs();
   });

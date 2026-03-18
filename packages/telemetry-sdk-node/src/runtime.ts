@@ -71,13 +71,21 @@ class TelemetryRuntime {
     const sampler = await this.createSampler(config);
 
     if (traceConfig.enabled !== false) {
-      const exporterUrl =
+      const endpoint =
         traceConfig.exporterUrl ??
         process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-        process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
-        'http://localhost:4318/v1/traces';
+        process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+
+      if (!endpoint) {
+        throw new Error(
+          '[TelemetryRuntime] OTLP endpoint is required. ' +
+            'Set OTEL_EXPORTER_OTLP_ENDPOINT environment variable or pass endpoint in config. ' +
+            'For local development, run an OTLP collector on localhost:4318.'
+        );
+      }
+
       const exporter = new OTLPTraceExporter({
-        url: exporterUrl,
+        url: endpoint,
         headers: traceConfig.exporterHeaders,
       });
 
