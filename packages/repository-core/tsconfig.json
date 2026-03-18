@@ -1,5 +1,12 @@
 {
   "exclude": ["node_modules"],
   "extends": "@croco/utils-tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
+  },
   "include": ["src/**/*.ts"]
 }

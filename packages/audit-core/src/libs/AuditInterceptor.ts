@@ -1,7 +1,6 @@
 import 'reflect-metadata';
-import type { Constructor } from '@croco/framework-context';
-import { Container, Context } from '@croco/framework-context';
-import { AuditLogRepository } from './AuditLogRepository';
+import { Context } from '@croco/framework-context';
+import type { AuditLogRepository } from './AuditLogRepository';
 import { AUDIT_METADATA_KEY } from './constants';
 import type { AuditExecutionContext, CallHandler, Interceptor } from './interfaces/Interceptor';
 import type { AuditLogEntry } from './types';
@@ -114,11 +113,7 @@ function resolveResourceId(path: string): string {
 }
 
 export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
-  constructor(
-    private readonly repository: AuditLogRepository = Container.get(
-      AuditLogRepository as unknown as Constructor<AuditLogRepository>
-    )
-  ) {}
+  constructor(private readonly repository: AuditLogRepository) {}
 
   private async writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): Promise<void> {
     await this.repository.create(entry);

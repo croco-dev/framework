@@ -491,6 +491,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/repository-core':
+        specifier: workspace:*
+        version: link:../repository-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -1467,12 +1470,12 @@ importers:
 
   packages/repository-core:
     dependencies:
-      '@croco/dataloader-core':
-        specifier: workspace:*
-        version: link:../dataloader-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*

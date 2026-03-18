@@ -19,6 +19,7 @@ import {
 } from '@croco/protocols-rest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorHandler } from '../libs/ErrorHandler';
+import { PipelineRunner } from '../libs/PipelineRunner';
 import { RouteCompiler } from '../libs/RouteCompiler';
 import type { CrocoHttpContext } from '../libs/types';
 
@@ -58,6 +59,12 @@ function createMockHttpContext(): CrocoHttpContext {
 }
 
 describe('RouteCompiler', () => {
+  function createCompiler(): RouteCompiler {
+    const logger = Container.get(Logger);
+    const errorHandler = Container.get(ErrorHandler);
+    return new RouteCompiler(logger, new PipelineRunner(errorHandler, logger));
+  }
+
   beforeEach(() => {
     Container.reset();
     const logger = {
@@ -90,7 +97,7 @@ describe('RouteCompiler', () => {
       }
     }
 
-    const compiler = new RouteCompiler();
+    const compiler = createCompiler();
     const routes = compiler.compile([UserController]);
 
     expect(routes).toHaveLength(3);
@@ -106,7 +113,7 @@ describe('RouteCompiler', () => {
       test() {}
     }
 
-    const compiler = new RouteCompiler();
+    const compiler = createCompiler();
     const routes = compiler.compile([NotAController]);
 
     expect(routes).toHaveLength(0);
@@ -188,7 +195,7 @@ describe('RouteCompiler', () => {
       },
     };
 
-    const compiler = new RouteCompiler();
+    const compiler = createCompiler();
     const [route] = compiler.compile([SecuredController], {
       container,
     });
@@ -238,7 +245,7 @@ describe('RouteCompiler', () => {
       },
     };
 
-    const compiler = new RouteCompiler();
+    const compiler = createCompiler();
     const [route] = compiler.compile([SecuredController], {
       container,
     });
@@ -262,7 +269,7 @@ describe('RouteCompiler', () => {
       }
     }
 
-    const compiler = new RouteCompiler();
+    const compiler = createCompiler();
 
     expect(() => {
       compiler.compile([DuplicateRouteController]);
@@ -286,7 +293,7 @@ describe('RouteCompiler', () => {
       }
     }
 
-    const compiler = new RouteCompiler();
+    const compiler = createCompiler();
 
     expect(() => {
       compiler.compile([FirstController, SecondController]);

@@ -1,8 +1,14 @@
 {
   "extends": "@croco/utils-tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "outDir": "dist",
-    "rootDir": "src"
+    "paths": {
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/repository-core": ["../repository-core/src/index.ts"],
+      "@croco/telemetry-api": ["../telemetry-api/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"]

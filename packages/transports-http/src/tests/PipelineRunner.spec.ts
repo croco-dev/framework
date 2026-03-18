@@ -56,6 +56,11 @@ describe('PipelineRunner', () => {
     debug: ReturnType<typeof vi.fn>;
   };
 
+  function createRunner(): PipelineRunner {
+    const typedLogger = logger as unknown as Logger;
+    return new PipelineRunner(Container.get(ErrorHandler), typedLogger);
+  }
+
   beforeEach(() => {
     Container.reset();
     logger = {
@@ -68,13 +73,12 @@ describe('PipelineRunner', () => {
     Container.set(ErrorHandler, new ErrorHandler(logger as unknown as Logger));
   });
 
-  it('BUG-03 Container 초기화 전 PipelineRunner 생성 가능', () => {
-    Container.reset();
-    expect(() => new PipelineRunner()).not.toThrow();
+  it('BUG-03 명시적 의존성으로 PipelineRunner 생성 가능', () => {
+    expect(() => createRunner()).not.toThrow();
   });
 
   it('BUG-01 다중 ExceptionFilter 중 매칭 필터 실행', async () => {
-    const runner = new PipelineRunner();
+    const runner = createRunner();
     const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');
     const httpProblem = ProblemFactory.badRequest('BAD_REQUEST', 'bad request');
 
@@ -135,7 +139,7 @@ describe('PipelineRunner', () => {
     Container.set(Logger, logger as unknown as Logger);
     Container.set(ErrorHandler, new ErrorHandler(logger as unknown as Logger));
 
-    const runner = new PipelineRunner();
+    const runner = createRunner();
     const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');
 
     const result = await runner.run(
@@ -156,7 +160,7 @@ describe('PipelineRunner', () => {
   });
 
   it('should preserve the original business error when a filter throws', async () => {
-    const runner = new PipelineRunner();
+    const runner = createRunner();
     const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');
     const originalProblem = ProblemFactory.badRequest('BAD_REQUEST', 'original business error');
 
