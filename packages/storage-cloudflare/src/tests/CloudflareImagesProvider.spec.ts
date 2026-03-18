@@ -1,4 +1,5 @@
 import { Container } from '@croco/framework-context';
+import { Problem } from '@croco/problems-core';
 import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from '@croco/storage-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloudflareImagesProvider } from '../libs/CloudflareImagesProvider';
@@ -466,6 +467,21 @@ describe('CloudflareImagesProvider', () => {
 
       expect(metadata.size).toBe(0);
     });
+
+    it('should throw Problem when API returns null result', async () => {
+      const mockResponse = {
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: null,
+          errors: [],
+        }),
+      };
+
+      mockFetch.mockResolvedValueOnce(mockResponse);
+
+      await expect(provider.getMetadata('test-image-id')).rejects.toThrow('Cloudflare Images API returned null result');
+    });
   });
 
   describe('getTransformUrl', () => {
@@ -669,6 +685,23 @@ describe('CloudflareImagesProvider', () => {
       expect(intent.expiresAt.getTime()).toBeCloseTo(expectedExpires.getTime(), -3);
 
       vi.restoreAllMocks();
+    });
+
+    it('should throw Problem when API returns null result', async () => {
+      const mockResponse = {
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: null,
+          errors: [],
+        }),
+      };
+
+      mockFetch.mockResolvedValueOnce(mockResponse);
+
+      await expect(provider.getUploadIntent('new-image.jpg')).rejects.toThrow(
+        'Cloudflare Images API returned null result'
+      );
     });
   });
 });

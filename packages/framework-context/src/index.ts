@@ -179,6 +179,7 @@ export { MiddlewareChain } from './libs/Middleware';
  */
 export { ShutdownManager } from './libs/ShutdownManager';
 export { CircularDependencyProblem } from './libs/problems/CircularDependencyProblem';
+export { MiddlewareProblem } from './libs/problems/MiddlewareProblems';
 export { ShutdownTimeoutProblem } from './libs/problems/ShutdownProblems';
 
 /**

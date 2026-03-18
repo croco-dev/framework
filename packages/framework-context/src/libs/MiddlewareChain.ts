@@ -1,6 +1,8 @@
 /**
  * Middleware chain class for executing middleware in onion pattern
  */
+
+import { MiddlewareProblem } from './problems/MiddlewareProblems';
 import type { Middleware } from './types';
 
 export class MiddlewareChain<TContext = Record<string, unknown>> {
@@ -24,7 +26,7 @@ export class MiddlewareChain<TContext = Record<string, unknown>> {
 
     const dispatch = async (i: number): Promise<void> => {
       if (i <= index) {
-        throw new Error('Middleware called next() multiple times');
+        throw new MiddlewareProblem('Middleware called next() multiple times');
       }
       index = i;
 
@@ -42,7 +44,7 @@ export class MiddlewareChain<TContext = Record<string, unknown>> {
     await dispatch(0);
 
     if (result === NO_RESULT && finalFn) {
-      throw new Error('No result returned from function execution');
+      throw new MiddlewareProblem('No result returned from function execution');
     }
 
     if (result === NO_RESULT) {

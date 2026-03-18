@@ -1,5 +1,6 @@
-import type { Constructor } from '@croco/framework-context';
-import { Container, Context } from '@croco/framework-context';
+import type { Constructor, ILogger } from '@croco/framework-context';
+import { Container, Context, LOGGER_TOKEN } from '@croco/framework-context';
+import { recordError } from '@croco/telemetry-api';
 import { AuditLogRepository } from './AuditLogRepository';
 import type { AuditableOptions, AuditLogEntry } from './types';
 
@@ -66,7 +67,13 @@ function writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
       const repository = Container.get(AuditLogRepository as unknown as Constructor<AuditLogRepository>);
       return repository.create(entry);
     })
-    .catch(() => undefined);
+    .catch((error) => {
+      recordError(error);
+      const logger = Container.get(LOGGER_TOKEN) as ILogger;
+      logger.warn('[Auditable] Failed to write audit log', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
 }
 
 export function Auditable(options: AuditableOptions): MethodDecorator {

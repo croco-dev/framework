@@ -1,4 +1,6 @@
 import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from '@croco/billing-core';
+import { Component, type ILogger, Inject, LOGGER_TOKEN } from '@croco/framework-context';
+import { recordError } from '@croco/telemetry-api';
 import { Polar } from '@polar-sh/sdk';
 import type { PolarConfig } from '../types';
 
@@ -22,11 +24,15 @@ type PolarLookupError = Error & {
 /**
  * Polar implementation of BillingGateway.
  */
+@Component()
 export class PolarBillingGateway implements BillingGateway {
   private readonly client: Polar;
   private readonly organizationId?: string;
 
-  constructor(config: PolarConfig) {
+  constructor(
+    config: PolarConfig,
+    @Inject(LOGGER_TOKEN) private readonly logger: ILogger
+  ) {
     this.client = new Polar({
       accessToken: config.accessToken,
       server: config.environment,
@@ -57,6 +63,12 @@ export class PolarBillingGateway implements BillingGateway {
       if (!this.isCustomerNotFoundError(error)) {
         throw error;
       }
+
+      this.logger.warn('Customer not found in Polar, creating new customer', {
+        billingAccountId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      recordError(error);
     }
 
     const created = await this.client.customers.create({

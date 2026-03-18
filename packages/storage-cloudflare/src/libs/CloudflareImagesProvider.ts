@@ -1,5 +1,6 @@
 import type { Readable } from 'node:stream';
 import { Component } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 import type { ImageProvider, PutOptions, SignedUrlOptions, TransformOptions, UploadIntent } from '@croco/storage-core';
 import { BaseStorageProvider } from '@croco/storage-core';
 import type {
@@ -175,6 +176,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       this.throwUploadFailed(key, `Cloudflare metadata failed: ${result.errors.join(', ')}`);
     }
 
+    if (!result.result) {
+      throw ProblemFactory.internalServerError(
+        'cloudflare/images-null-result',
+        'Cloudflare Images API returned null result'
+      );
+    }
+
     return {
       size: result.result.size ?? 0,
       lastModified: new Date(result.result.uploaded),
@@ -219,6 +227,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
     if (!result.success) {
       this.throwUploadFailed(key, `Cloudflare upload intent failed: ${result.errors.join(', ')}`);
+    }
+
+    if (!result.result) {
+      throw ProblemFactory.internalServerError(
+        'cloudflare/images-null-result',
+        'Cloudflare Images API returned null result'
+      );
     }
 
     const uploadUrl = result.result.uploadURL;

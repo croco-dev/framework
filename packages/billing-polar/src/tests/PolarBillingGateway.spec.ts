@@ -9,6 +9,13 @@ const mockRevokeSubscription = vi.fn();
 const mockUpdateSubscription = vi.fn();
 const mockCreateCustomerSession = vi.fn();
 
+const mockLogger = {
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+};
+
 vi.mock('@polar-sh/sdk', () => {
   class Polar {
     readonly customers = {
@@ -56,7 +63,7 @@ const POLAR_RETRY_CONFIG = {
 const POLAR_RETRY_CODES = ['429', '500', '502', '503', '504'];
 
 function createGateway(config: PolarConfig = baseConfig): PolarBillingGateway {
-  return new PolarBillingGateway(config);
+  return new PolarBillingGateway(config, mockLogger as any);
 }
 
 function createNotFoundError(): Error {
@@ -84,6 +91,10 @@ function createUnexpected404Error(): Error {
 describe('PolarBillingGateway', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLogger.debug.mockClear();
+    mockLogger.info.mockClear();
+    mockLogger.warn.mockClear();
+    mockLogger.error.mockClear();
   });
 
   describe('ensureCustomer', () => {
@@ -118,6 +129,21 @@ describe('PolarBillingGateway', () => {
         externalId: 'account-1',
         email: 'test@example.com',
         organizationId: 'org-123',
+      });
+    });
+
+    it('should log warning when customer not found error is caught', async () => {
+      const gateway = createGateway();
+
+      const notFoundError = createNotFoundError();
+      mockGetExternal.mockRejectedValue(notFoundError);
+      mockCreateCustomer.mockResolvedValue({ id: 'cust-created' });
+
+      await gateway.ensureCustomer('account-1', 'test@example.com');
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('Customer not found in Polar, creating new customer', {
+        billingAccountId: 'account-1',
+        error: 'Customer not found',
       });
     });
 
