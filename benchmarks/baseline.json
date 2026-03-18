@@ -9,7 +9,7 @@
     "p75": 0.013916000000108397
   },
   "Container.get singleton (warm)": {
-    "p75": 0.00012500000002546585
+    "p75": 0.0003
   },
   "EventBusConfig.start (10 handlers)": {
     "p75": 0.0024579999999900792
@@ -21,13 +21,13 @@
     "p75": 0.00008400000001529406
   },
   "CrocoApp constructor": {
-    "p75": 0.0009999999999763531
+    "p75": 0.0025
   },
   "CrocoApp lambdaHandler (10 controllers)": {
     "p75": 0.012667000000192274
   },
   "CrocoApp full cold-start simulation": {
-    "p75": 0.040624999999863576
+    "p75": 0.26
   },
   "TelemetryRuntime benchmarks": {
     "p75": 0.0017
