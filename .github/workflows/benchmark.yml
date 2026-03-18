@@ -10,6 +10,8 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,6 +22,18 @@ jobs:
       - run: pnpm install
       - run: pnpm build
       - name: Run benchmarks with threshold check
-        run: pnpm bench:check
+        id: bench
+        run: pnpm bench:check --output-json=benchmark-result.json
+        continue-on-error: true
         env:
           CI: true
+      - name: Comment PR with benchmark results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const { run } = await import('${{ github.workspace }}/scripts/post-benchmark-comment.mjs');
+            await run({ github, context });
+      - name: Fail if benchmarks failed
+        if: steps.bench.outcome == 'failure'
+        run: exit 1

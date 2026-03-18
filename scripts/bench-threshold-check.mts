@@ -32,6 +32,8 @@ const baselinePath = join(projectRoot, 'benchmarks', 'baseline.json');
 
 const args = process.argv.slice(2);
 const isUpdateBaseline = args.includes('--update-baseline');
+const outputJsonArg = args.find((a) => a.startsWith('--output-json='));
+const outputJsonPath = outputJsonArg ? outputJsonArg.split('=')[1] : null;
 
 const BASELINE_TOLERANCE = 0.2;
 const CI_THRESHOLD_MULTIPLIER = 2;
@@ -170,6 +172,10 @@ async function main() {
     if (isUpdateBaseline) {
       saveBaseline(reports);
       process.exit(0);
+    }
+
+    if (outputJsonPath) {
+      writeFileSync(outputJsonPath, JSON.stringify({ allPassed, reports }, null, 2));
     }
 
     console.log('\n╔══════════════════════════════════════════════════════════╗');
