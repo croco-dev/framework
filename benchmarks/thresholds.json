@@ -7,6 +7,7 @@
   "CrocoApp constructor": 30,
   "CrocoApp lambdaHandler (10 controllers)": 50,
   "CrocoApp full cold-start simulation": 80,
+  "TelemetryRuntime benchmarks": 200,
   "TelemetryRuntime.init (lambda preset)": 200,
   "lambdaPreset config creation": 2,
   "EventBusConfig.start (10 handlers)": 10,
