@@ -3,7 +3,7 @@ import type { SsrHandlerOptions, SsrWorkerEnv } from './types';
 export function createSsrHandler(
   _options: SsrHandlerOptions = {}
 ): (request: Request, env: SsrWorkerEnv, ctx: ExecutionContext) => Promise<Response> {
-  return async (request, env, ctx) => {
+  return async (request, env, _ctx) => {
     const url = new URL(request.url);
 
     if (env.ASSETS) {

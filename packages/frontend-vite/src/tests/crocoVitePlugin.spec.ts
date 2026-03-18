@@ -8,7 +8,7 @@ describe('crocoVitePlugin', () => {
     expect(Array.isArray(plugins)).toBe(true);
     expect(plugins.length).toBeGreaterThan(0);
 
-    const hasCloudflare = plugins.some((p) => p.name && p.name.includes('cloudflare'));
+    const hasCloudflare = plugins.some((p) => p.name?.includes('cloudflare'));
     expect(hasCloudflare).toBe(true);
 
     const hasVike = plugins.some((p) => p.name === undefined && '_vikeVitePluginOptions' in p);
@@ -20,7 +20,7 @@ describe('crocoVitePlugin', () => {
 
     expect(Array.isArray(plugins)).toBe(true);
 
-    const hasCloudflare = plugins.some((p) => p.name && p.name.includes('cloudflare'));
+    const hasCloudflare = plugins.some((p) => p.name?.includes('cloudflare'));
     expect(hasCloudflare).toBe(false);
 
     const hasVike = plugins.some((p) => p.name === undefined && '_vikeVitePluginOptions' in p);
@@ -32,7 +32,7 @@ describe('crocoVitePlugin', () => {
 
     expect(Array.isArray(plugins)).toBe(true);
 
-    const cloudflarePlugins = plugins.filter((p) => p.name && p.name.includes('cloudflare'));
+    const cloudflarePlugins = plugins.filter((p) => p.name?.includes('cloudflare'));
     expect(cloudflarePlugins.length).toBeGreaterThan(0);
   });
 });

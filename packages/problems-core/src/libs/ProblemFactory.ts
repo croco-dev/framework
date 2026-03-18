@@ -2,6 +2,7 @@ import { Problem, type ProblemOptions } from './Problem';
 import { ProblemCategory } from './ProblemCategory';
 
 class GenericProblem extends Problem {
+  // biome-ignore lint/complexity/noUselessConstructor: Problem's constructor is protected, so subclass needs explicit constructor
   constructor(code: string, category: ProblemCategory, detail?: string, options?: ProblemOptions) {
     super(code, category, detail, options);
   }

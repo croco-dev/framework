@@ -15,10 +15,6 @@ export class InMemoryBillingStore extends BillingStore {
   private readonly orders = new Map<string, Order[]>();
   private readonly processedWebhooks = new Set<string>();
 
-  constructor() {
-    super();
-  }
-
   async findAccountByTenantId(tenantId: string): Promise<BillingAccount | null> {
     return this.accountsByTenantId.get(tenantId) ?? null;
   }

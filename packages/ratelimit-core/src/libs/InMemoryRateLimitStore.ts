@@ -15,10 +15,6 @@ type BucketEntry = {
 export class InMemoryRateLimitStore extends RateLimitStore {
   private readonly buckets = new Map<string, BucketEntry>();
 
-  constructor() {
-    super();
-  }
-
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     const now = Date.now();
     const windowStart = now - policy.windowMs;

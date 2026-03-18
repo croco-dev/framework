@@ -174,7 +174,7 @@ export class R2StorageProvider extends BaseStorageProvider {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly logger: Logger
+    readonly _logger: Logger
   ) {
     super();
     this.options = {

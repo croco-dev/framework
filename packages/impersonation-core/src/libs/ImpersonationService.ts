@@ -21,7 +21,7 @@ export class ImpersonationService {
 
   constructor(
     @Inject(ImpersonationStore.token) private readonly store: ImpersonationStore,
-    @Inject(AuthProvider.token) private readonly authProvider: AuthProvider,
+    @Inject(AuthProvider.token) readonly _authProvider: AuthProvider,
     @Inject(IMPERSONATION_CONFIG_TOKEN) private readonly config: ImpersonationConfig
   ) {}
 

@@ -13,7 +13,7 @@ export class DrizzleClient {
     }
 
     const pool = new Pool({
-      connectionString: process.env['DATABASE_URL'],
+      connectionString: process.env.DATABASE_URL,
     });
     this.dbInstance = drizzle(pool);
 

@@ -1,7 +1,7 @@
 import type { MRRMovement, Percentage } from '../types';
 
 export class RetentionCalculator {
-  async calculateChurn(startingMRR: number, movement: MRRMovement, type: 'revenue'): Promise<Percentage | null> {
+  async calculateChurn(startingMRR: number, movement: MRRMovement, _type: 'revenue'): Promise<Percentage | null> {
     if (startingMRR === 0) {
       return null;
     }

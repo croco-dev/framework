@@ -120,7 +120,7 @@ export class DefaultEventSerializer implements EventSerializer {
     );
   }
 
-  private createInstance<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, data: SerializedEvent): T {
+  private createInstance<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, _data: SerializedEvent): T {
     try {
       return new EventClass();
     } catch {
