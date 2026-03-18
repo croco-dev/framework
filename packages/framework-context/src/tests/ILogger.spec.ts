@@ -1,0 +1,17 @@
+import { describe, expect, it } from 'vitest';
+import type { Logger } from '../../../framework-logger/src/Logger';
+import type { ILogger } from '../index';
+import { LOGGER_TOKEN } from '../index';
+
+describe('ILogger', () => {
+  it('should expose LOGGER_TOKEN with the ILogger name', () => {
+    expect(LOGGER_TOKEN.name).toBe('ILogger');
+  });
+
+  it('should be compatible with Logger instances', () => {
+    const acceptsLogger = <T extends ILogger>(_logger: T) => true;
+    const isAssignable = acceptsLogger<Logger>;
+
+    expect(isAssignable).toBeTypeOf('function');
+  });
+});

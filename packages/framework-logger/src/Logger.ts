@@ -1,11 +1,12 @@
 import type { ConfigService } from '@croco/framework-config';
+import type { ILogger } from '@croco/framework-context';
 import { Component, Context } from '@croco/framework-context';
 import { trace } from '@opentelemetry/api';
 import pino, { type Logger as PinoLogger } from 'pino';
 import { LogLevel } from './LogLevel';
 
 @Component({ scope: 'singleton' })
-export class Logger {
+export class Logger implements ILogger {
   private logger: PinoLogger;
 
   constructor(private readonly config: ConfigService) {
@@ -35,7 +36,7 @@ export class Logger {
   /**
    * Create a child logger with bound context
    */
-  child(bindings: Record<string, unknown>): Logger {
+  child(bindings: Record<string, unknown>): ILogger {
     const childPino = this.logger.child(bindings);
     const childLogger = new Logger(this.config);
     childLogger.logger = childPino;
