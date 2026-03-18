@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import type { Logger } from '@croco/framework-logger';
+import type { ILogger } from '@croco/framework-context';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoggingInterceptor } from '../libs/interceptors/LoggingInterceptor';
 import type { CallHandler } from '../libs/interfaces/CallHandler';
@@ -9,13 +9,13 @@ describe('LoggingInterceptor', () => {
   let interceptor!: LoggingInterceptor;
   let mockContext!: ExecutionContext;
   let mockNext!: CallHandler;
-  let mockLogger!: Pick<Logger, 'info'>;
+  let mockLogger!: Pick<ILogger, 'info'>;
 
   beforeEach(() => {
     mockLogger = {
       info: vi.fn(),
     };
-    interceptor = new LoggingInterceptor(mockLogger);
+    interceptor = new LoggingInterceptor(mockLogger as ILogger);
 
     mockContext = {
       getRequest: vi.fn(),
