@@ -141,9 +141,8 @@ describe('PolarBillingGateway', () => {
 
       await gateway.ensureCustomer('account-1', 'test@example.com');
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Customer not found in Polar, creating new customer', {
+      expect(mockLogger.info).toHaveBeenCalledWith('Customer not found, creating new customer', {
         billingAccountId: 'account-1',
-        error: 'Customer not found',
       });
     });
 

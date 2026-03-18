@@ -18,7 +18,3 @@ const defaultBatchLoaderFactory = new BatchLoaderFactory();
 export function registerBatchLoaderFactory(factory: IBatchLoaderFactory = defaultBatchLoaderFactory): void {
   Container.set(BATCH_LOADER_FACTORY_TOKEN, factory);
 }
-
-if (!Container.has(BATCH_LOADER_FACTORY_TOKEN)) {
-  registerBatchLoaderFactory();
-}
