@@ -109,17 +109,15 @@ const serviceClasses = [
   TestService50,
 ];
 
-describe('Container.get singleton (cold)', () => {
-  bench(
-    'Container.get singleton (cold)',
-    () => {
-      Container.reset();
-      Container.register(TestService1, 'singleton');
-      Container.get(TestService1);
-    },
-    { iterations: 100 }
-  );
-});
+bench(
+  'Container.get singleton (cold)',
+  () => {
+    Container.reset();
+    Container.register(TestService1, 'singleton');
+    Container.get(TestService1);
+  },
+  { iterations: 100, warmupIterations: 5 }
+);
 
 describe('Container.register × 50 components', () => {
   bench(
