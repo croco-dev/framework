@@ -109,19 +109,21 @@ const serviceClasses = [
   TestService50,
 ];
 
-bench(
-  'Container.get singleton (cold)',
-  () => {
-    Container.reset();
-    Container.register(TestService1, 'singleton');
-    Container.get(TestService1);
-  },
-  { iterations: 100 }
-);
+describe('Container.get singleton (cold)', () => {
+  bench(
+    'Container.get singleton (cold)',
+    () => {
+      Container.reset();
+      Container.register(TestService1, 'singleton');
+      Container.get(TestService1);
+    },
+    { iterations: 100 }
+  );
+});
 
 describe('Container.register × 50 components', () => {
   bench(
-    'Container.register × 50 components',
+    'register 50 singletons',
     () => {
       Container.reset();
       for (const ServiceClass of serviceClasses) {
