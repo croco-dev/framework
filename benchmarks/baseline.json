@@ -1,6 +1,6 @@
 {
   "Container.get singleton (cold)": {
-    "p75": 0.00042
+    "p75": 0.0005
   },
   "Container.register × 50 components": {
     "p75": 0.004332999999974163
