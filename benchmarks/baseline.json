@@ -3,10 +3,10 @@
     "p75": 0.0005
   },
   "Container.register × 50 components": {
-    "p75": 0.004332999999974163
+    "p75": 0.008
   },
   "Container.validate (50 components)": {
-    "p75": 0.013916000000108397
+    "p75": 0.025
   },
   "Container.get singleton (warm)": {
     "p75": 0.0003
