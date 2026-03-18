@@ -26,7 +26,7 @@ describe('PostHog Integration', () => {
   let logger!: Pick<Logger, 'warn'>;
 
   beforeEach(() => {
-    postHogClient = new PostHogClient({ apiKey: 'test-api-key' });
+    postHogClient = new PostHogClient({ apiKey: 'test-api-key', host: 'https://eu.posthog.com' });
     logger = {
       warn: vi.fn(),
     };
