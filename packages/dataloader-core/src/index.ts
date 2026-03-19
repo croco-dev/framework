@@ -78,6 +78,7 @@
  * });
  * ```
  */
+export { BatchLoaderFactory, registerBatchLoaderFactory } from './libs/BatchLoaderFactory';
 export { createBatchLoader } from './libs/createBatchLoader';
 export { BatchResultLengthMismatchProblem } from './libs/problems/BatchLoaderProblems';
 /**

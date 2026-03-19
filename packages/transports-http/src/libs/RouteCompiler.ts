@@ -1,6 +1,4 @@
-import type { Guard } from '@croco/framework-context';
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
+import type { Guard, ILogger } from '@croco/framework-context';
 import { ProblemFactory } from '@croco/problems-core';
 import {
   type Constructor,
@@ -17,7 +15,7 @@ import {
 } from '@croco/protocols-rest';
 import { HttpExecutionContext } from './HttpExecutionContext';
 import { ParamResolver } from './ParamResolver';
-import { PipelineRunner } from './PipelineRunner';
+import type { PipelineRunner } from './PipelineRunner';
 import type {
   CompiledRoute,
   CrocoHttpContext,
@@ -60,8 +58,11 @@ function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<
 
 export class RouteCompiler {
   private paramResolver = new ParamResolver();
-  private pipelineRunner = new PipelineRunner();
-  private logger = Container.get(Logger);
+
+  constructor(
+    private readonly logger: ILogger,
+    private readonly pipelineRunner: PipelineRunner
+  ) {}
 
   compile(controllers: Constructor[], options: CompileOptions = {}): CompiledRoute[] {
     const routes: CompiledRoute[] = [];

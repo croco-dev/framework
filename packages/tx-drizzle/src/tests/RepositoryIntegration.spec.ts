@@ -1,7 +1,8 @@
-import { Context } from '@croco/framework-context';
+import { registerBatchLoaderFactory } from '@croco/dataloader-core';
+import { Container, Context } from '@croco/framework-context';
 import { BatchLoad } from '@croco/repository-core';
 import { Transactional, type TxAdapter, TxManager, TxManagerRegistry } from '@croco/tx-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AbstractDrizzleRepository } from '../libs/AbstractDrizzleRepository';
 import type { DrizzleDb } from '../libs/types';
 
@@ -66,7 +67,9 @@ describe('Repository + BatchLoad + Transaction integration', () => {
   let service!: IntegrationService;
 
   beforeEach(() => {
+    Container.reset();
     TxManagerRegistry.clear();
+    registerBatchLoaderFactory();
 
     let txCounter = 0;
     const transaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> => {
@@ -93,6 +96,10 @@ describe('Repository + BatchLoad + Transaction integration', () => {
 
     repository = new IntegrationRepository(db, txManager);
     service = new IntegrationService(repository);
+  });
+
+  afterEach(() => {
+    Container.reset();
   });
 
   it('should batch concurrent calls through transactional chain', async () => {

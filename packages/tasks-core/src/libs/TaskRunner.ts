@@ -1,14 +1,25 @@
 import type { ExecutionManager } from '@croco/execution-core';
+import type { ILogger } from '@croco/framework-context';
 import { Container } from '@croco/framework-context';
+import { recordError } from '@croco/telemetry-api';
 import { TaskNotFoundProblem } from './problems/TasksProblems';
 import { TaskRegistry } from './TaskRegistry';
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
 
+const noopLogger: ILogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  child: () => noopLogger,
+};
+
 export class TaskRunner {
   constructor(
     private executionManager: ExecutionManager,
-    private registry: TaskRegistry = TaskRegistry.fromMetadata()
+    private registry: TaskRegistry = TaskRegistry.fromMetadata(),
+    private logger: ILogger = noopLogger
   ) {}
 
   async execute(taskId: string, payload: unknown): Promise<unknown> {
@@ -52,7 +63,13 @@ export class TaskRunner {
     if (typeof target === 'function') {
       try {
         return Container.get(target as Constructor<object>);
-      } catch {
+      } catch (error) {
+        const targetName = target.name || 'Unknown';
+        this.logger.warn('DI resolution failed, falling back to manual instantiation', {
+          target: targetName,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        recordError(error);
         return new (target as Constructor<object>)();
       }
     }

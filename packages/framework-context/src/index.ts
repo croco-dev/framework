@@ -138,6 +138,7 @@ export { OnShutdown } from './libs/decorators/OnShutdown';
  * ```
  */
 export { MetadataStorage } from './libs/MetadataStorage';
+export { LOGGER_TOKEN } from './libs/ILogger';
 
 /**
  * 요청 컨텍스트에 미들웨어를 순차 실행하는 onion 패턴 체인 클래스입니다.
@@ -178,6 +179,7 @@ export { MiddlewareChain } from './libs/Middleware';
  */
 export { ShutdownManager } from './libs/ShutdownManager';
 export { CircularDependencyProblem } from './libs/problems/CircularDependencyProblem';
+export { MiddlewareProblem } from './libs/problems/MiddlewareProblems';
 export { ShutdownTimeoutProblem } from './libs/problems/ShutdownProblems';
 
 /**
@@ -337,3 +339,4 @@ export type { ShutdownHook } from './libs/types';
  * ```
  */
 export type { Guard } from './libs/Guard';
+export type { ILogger } from './libs/ILogger';

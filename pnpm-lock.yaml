@@ -154,6 +154,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
@@ -369,6 +372,9 @@ importers:
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -491,6 +497,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/repository-core':
+        specifier: workspace:*
+        version: link:../repository-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -1407,9 +1416,6 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
-      '@croco/framework-logger':
-        specifier: workspace:*
-        version: link:../framework-logger
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -1467,12 +1473,12 @@ importers:
 
   packages/repository-core:
     dependencies:
-      '@croco/dataloader-core':
-        specifier: workspace:*
-        version: link:../dataloader-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       '@croco/utils-tsconfig':
         specifier: workspace:*
@@ -1682,6 +1688,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
       reflect-metadata:
         specifier: ^0.1.13
         version: 0.1.14
@@ -1943,6 +1952,9 @@ importers:
         specifier: workspace:*
         version: link:../tx-core
     devDependencies:
+      '@croco/dataloader-core':
+        specifier: workspace:*
+        version: link:../dataloader-core
       '@croco/utils-tsconfig':
         specifier: workspace:*
         version: link:../shared/utils-tsconfig

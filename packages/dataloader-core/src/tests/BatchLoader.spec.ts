@@ -1,3 +1,4 @@
+import type { ILogger } from '@croco/framework-context';
 import { Context } from '@croco/framework-context';
 import * as otelApi from '@opentelemetry/api';
 import { ROOT_CONTEXT } from '@opentelemetry/api';
@@ -203,5 +204,69 @@ describe('BatchLoader', () => {
 
     expect(results[0]).toBeInstanceOf(BatchResultLengthMismatchProblem);
     expect(results[1]).toBeInstanceOf(BatchResultLengthMismatchProblem);
+  });
+
+  describe('prime', () => {
+    it('should cache rejected promise and log error when priming with Error', async () => {
+      const mockLogger: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      const { BatchLoaderImpl: BatchLoaderClass } = await import('../libs/BatchLoader');
+      const loader = new BatchLoaderClass(
+        {
+          name: 'test-loader',
+          batchFn: batchFn,
+        },
+        mockLogger
+      );
+
+      const error = new Error('Primed error');
+      loader.prime(1, error);
+
+      await expect(loader.load(1)).rejects.toThrow('Primed error');
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Prime rejected error cached',
+        expect.objectContaining({
+          key: 1,
+          error: error,
+        })
+      );
+    });
+
+    it('should cache resolved promise when priming with value', async () => {
+      const mockLogger: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      const { BatchLoaderImpl: BatchLoaderClass } = await import('../libs/BatchLoader');
+      const loader = new BatchLoaderClass(
+        {
+          name: 'test-loader',
+          batchFn: batchFn,
+        },
+        mockLogger
+      );
+
+      loader.prime(1, 'Primed value');
+
+      const result = await loader.load(1);
+      expect(result).toBe('Primed value');
+
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
   });
 });

@@ -7,7 +7,7 @@ title: "CircuitIdResolverContext"
 
 > **CircuitIdResolverContext** = `object`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:53](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L53)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:53](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/Retryable.ts#L53)
 
 Options for configuring the `@Retryable` method decorator.
 
@@ -17,7 +17,7 @@ Options for configuring the `@Retryable` method decorator.
 
 > **args**: `unknown`[]
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:54](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L54)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:54](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/Retryable.ts#L54)
 
 ***
 
@@ -25,7 +25,7 @@ Defined in: [packages/retry-core/src/libs/Retryable.ts:54](https://github.com/cr
 
 > **defaultCircuitId**: `string`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:58](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L58)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:58](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/Retryable.ts#L58)
 
 ***
 
@@ -33,7 +33,7 @@ Defined in: [packages/retry-core/src/libs/Retryable.ts:58](https://github.com/cr
 
 > **instance**: `unknown`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:55](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L55)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:55](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/Retryable.ts#L55)
 
 ***
 
@@ -41,7 +41,7 @@ Defined in: [packages/retry-core/src/libs/Retryable.ts:55](https://github.com/cr
 
 > **methodName**: `string`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:56](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L56)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:56](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/Retryable.ts#L56)
 
 ***
 
@@ -49,4 +49,4 @@ Defined in: [packages/retry-core/src/libs/Retryable.ts:56](https://github.com/cr
 
 > **targetName**: `string`
 
-Defined in: [packages/retry-core/src/libs/Retryable.ts:57](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/retry-core/src/libs/Retryable.ts#L57)
+Defined in: [packages/retry-core/src/libs/Retryable.ts:57](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/Retryable.ts#L57)

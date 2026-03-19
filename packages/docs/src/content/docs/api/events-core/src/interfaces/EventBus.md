@@ -5,9 +5,13 @@ prev: false
 title: "EventBus"
 ---
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L10)
+Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventBus.ts#L11)
 
 이벤트 발행/구독 추상화와 구독 엔트리 타입입니다.
+
+## Extends
+
+- [`EventPublishing`](/api/events-core/src/interfaces/eventpublishing/).[`EventSubscribing`](/api/events-core/src/interfaces/eventsubscribing/)
 
 ## Methods
 
@@ -15,11 +19,15 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:10](https://github.com/cr
 
 > **clear**(): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L14)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L10)
 
 #### Returns
 
 `void`
+
+#### Inherited from
+
+[`EventSubscribing`](/api/events-core/src/interfaces/eventsubscribing/).[`clear`](/api/events-core/src/interfaces/eventsubscribing/#clear)
 
 ***
 
@@ -27,7 +35,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:14](https://github.com/cr
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L11)
+Defined in: [packages/events-core/src/libs/interfaces/EventPublishing.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventPublishing.ts#L8)
 
 #### Parameters
 
@@ -39,13 +47,17 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:11](https://github.com/cr
 
 `Promise`\<`void`\>
 
+#### Inherited from
+
+[`EventPublishing`](/api/events-core/src/interfaces/eventpublishing/).[`publish`](/api/events-core/src/interfaces/eventpublishing/#publish)
+
 ***
 
 ### subscribe()
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L12)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L8)
 
 #### Parameters
 
@@ -56,6 +68,10 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/cr
 #### Returns
 
 `void`
+
+#### Inherited from
+
+[`EventSubscribing`](/api/events-core/src/interfaces/eventsubscribing/).[`subscribe`](/api/events-core/src/interfaces/eventsubscribing/#subscribe)
 
 ***
 
@@ -63,7 +79,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/cr
 
 > **unsubscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventBus.ts#L13)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L9)
 
 #### Parameters
 
@@ -74,3 +90,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:13](https://github.com/cr
 #### Returns
 
 `void`
+
+#### Inherited from
+
+[`EventSubscribing`](/api/events-core/src/interfaces/eventsubscribing/).[`unsubscribe`](/api/events-core/src/interfaces/eventsubscribing/#unsubscribe)

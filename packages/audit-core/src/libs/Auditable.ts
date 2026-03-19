@@ -1,6 +1,6 @@
-import type { Constructor } from '@croco/framework-context';
-import { Container, Context } from '@croco/framework-context';
-import { AuditLogRepository } from './AuditLogRepository';
+import { Container, Context, LOGGER_TOKEN } from '@croco/framework-context';
+import { recordError } from '@croco/telemetry-api';
+import { AUDIT_LOG_REPOSITORY_TOKEN } from './AuditLogRepositoryToken';
 import type { AuditableOptions, AuditLogEntry } from './types';
 
 type DecoratedMethod = (...args: unknown[]) => unknown;
@@ -63,10 +63,20 @@ function extractDiff(payload: unknown): Record<string, unknown> | null {
 function writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
   void Promise.resolve()
     .then(() => {
-      const repository = Container.get(AuditLogRepository as unknown as Constructor<AuditLogRepository>);
+      const repository = Container.get(AUDIT_LOG_REPOSITORY_TOKEN);
       return repository.create(entry);
     })
-    .catch(() => undefined);
+    .catch((error) => {
+      try {
+        recordError(error);
+        const logger = Container.get(LOGGER_TOKEN);
+        logger.warn('[Auditable] Failed to write audit log', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } catch {
+        // ignore secondary errors
+      }
+    });
 }
 
 export function Auditable(options: AuditableOptions): MethodDecorator {

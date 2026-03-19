@@ -5,13 +5,13 @@ prev: false
 title: "ApiKeyGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L7)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L8)
 
 Guard for API key based authentication.
 
 ## Implements
 
-- [`Guard`](/api/auth-core/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)\>
+- [`Guard`](/api/framework-context/src/interfaces/guard/)\<[`RouteExecutionContext`](/api/auth-core/src/interfaces/routeexecutioncontext/)\>
 
 ## Constructors
 
@@ -19,7 +19,7 @@ Guard for API key based authentication.
 
 > **new ApiKeyGuard**(`apiKeyProvider`): `ApiKeyGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L8)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L9)
 
 #### Parameters
 
@@ -37,13 +37,13 @@ Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:8](https://github
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L10)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L11)
 
 #### Parameters
 
 ##### context
 
-[`RouteExecutionContext`](/api/auth-core/src/type-aliases/routeexecutioncontext/)
+[`RouteExecutionContext`](/api/auth-core/src/interfaces/routeexecutioncontext/)
 
 #### Returns
 
@@ -51,4 +51,4 @@ Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:10](https://githu
 
 #### Implementation of
 
-[`Guard`](/api/auth-core/src/interfaces/guard/).[`canActivate`](/api/auth-core/src/interfaces/guard/#canactivate)
+[`Guard`](/api/framework-context/src/interfaces/guard/).[`canActivate`](/api/framework-context/src/interfaces/guard/#canactivate)

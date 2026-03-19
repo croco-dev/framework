@@ -1,4 +1,9 @@
-import { createBatchLoader } from '@croco/dataloader-core';
+import { Container } from '@croco/framework-context';
+import { BATCH_LOADER_FACTORY_TOKEN, type IBatchLoaderFactory } from '../IBatchLoaderFactory';
+import {
+  BatchLoaderFactoryNotRegisteredProblem,
+  BatchLoaderFactoryResolutionProblem,
+} from '../problems/BatchLoadProblems';
 
 type BatchKeyedRecord = Record<string, unknown>;
 
@@ -27,6 +32,19 @@ export type BatchLoadOptions = {
   name?: string;
 };
 
+function getBatchLoaderFactory(): IBatchLoaderFactory {
+  if (!Container.has(BATCH_LOADER_FACTORY_TOKEN)) {
+    throw new BatchLoaderFactoryNotRegisteredProblem();
+  }
+
+  try {
+    return Container.get(BATCH_LOADER_FACTORY_TOKEN);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new BatchLoaderFactoryResolutionProblem(message);
+  }
+}
+
 export function BatchLoad(options: BatchLoadOptions): MethodDecorator {
   return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
     const originalMethod = descriptor.value as BatchLoadMethod<unknown, unknown>;
@@ -35,6 +53,7 @@ export function BatchLoad(options: BatchLoadOptions): MethodDecorator {
     const loaderName = options.name || `${className}:${methodName}`;
 
     descriptor.value = async function (this: BatchLoadableRepository<unknown, BatchKeyedRecord>, arg: unknown) {
+      const batchLoaderFactory = getBatchLoaderFactory();
       const batchFn = async (keys: ReadonlyArray<unknown>) => {
         // 1. Try to use findByIds if it exists (Optimization)
         if (typeof this.findByIds === 'function') {
@@ -69,7 +88,7 @@ export function BatchLoad(options: BatchLoadOptions): MethodDecorator {
       };
 
       // Create (or retrieve context-scoped) DataLoader
-      const loader = createBatchLoader({
+      const loader = batchLoaderFactory.create({
         name: loaderName,
         batchFn,
       });

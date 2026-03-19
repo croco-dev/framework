@@ -1,9 +1,7 @@
-import type { Guard } from '@croco/framework-context';
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
+import type { Guard, ILogger } from '@croco/framework-context';
 import { ProblemFactory } from '@croco/problems-core';
 import type { CallHandler, ExceptionFilter, ExecutionContext, Interceptor } from '@croco/protocols-rest';
-import { ErrorHandler } from './ErrorHandler';
+import type { ErrorHandler } from './ErrorHandler';
 import type { HttpExecutionContext } from './HttpExecutionContext';
 
 type FilterResponse = {
@@ -30,13 +28,10 @@ export interface PipelineConfig {
 }
 
 export class PipelineRunner {
-  private get errorHandler() {
-    return Container.get(ErrorHandler);
-  }
-
-  private get logger() {
-    return Container.get(Logger);
-  }
+  constructor(
+    private readonly errorHandler: ErrorHandler,
+    private readonly logger: ILogger
+  ) {}
 
   async run(
     execContext: HttpExecutionContext,

@@ -1,10 +1,11 @@
-import { Container } from '@croco/framework-context';
+import { Container, type ILogger, LOGGER_TOKEN } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { Hono } from 'hono';
 import { CrocoLambdaAdapter } from './CrocoLambdaAdapter';
 import { CrocoRouteRegistrar } from './CrocoRouteRegistrar';
 import { ErrorHandler } from './ErrorHandler';
 import { HealthCheckRegistry } from './HealthCheckRegistry';
+import { PipelineRunner } from './PipelineRunner';
 
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
 import type { AppConfig, CompiledRoute, LambdaHandler } from './types';
@@ -12,18 +13,17 @@ import type { AppConfig, CompiledRoute, LambdaHandler } from './types';
 export class CrocoApp {
   private hono: Hono;
   private routes: CompiledRoute[] = [];
-  private errorHandler: ErrorHandler;
-  private healthCheckRegistry: HealthCheckRegistry;
   private booted = false;
-  private logger: Logger;
   private routeRegistrar: CrocoRouteRegistrar;
   private lambdaAdapter: CrocoLambdaAdapter;
 
-  constructor(private config: AppConfig) {
+  constructor(
+    private readonly config: AppConfig,
+    private readonly logger: ILogger,
+    private readonly errorHandler: ErrorHandler,
+    private readonly healthCheckRegistry: HealthCheckRegistry
+  ) {
     this.hono = new Hono();
-    this.logger = Container.get(Logger);
-    this.errorHandler = Container.get(ErrorHandler);
-    this.healthCheckRegistry = Container.get(HealthCheckRegistry);
     this.routeRegistrar = new CrocoRouteRegistrar(this.hono, this.errorHandler, this.config.middlewares ?? []);
     this.lambdaAdapter = new CrocoLambdaAdapter(this.hono);
   }
@@ -33,7 +33,7 @@ export class CrocoApp {
 
     this.registerSystemRoutes();
 
-    const compiler = new RouteCompiler();
+    const compiler = new RouteCompiler(this.logger, new PipelineRunner(this.errorHandler, this.logger));
     this.routes = compiler.compile(this.config.controllers, {
       ...options,
       globalGuards: this.config.globalGuards,
@@ -92,5 +92,21 @@ export class CrocoApp {
 }
 
 export function createApp(config: AppConfig): CrocoApp {
-  return new CrocoApp(config);
+  return new CrocoApp(config, resolveLogger(), resolveErrorHandler(), resolveHealthCheckRegistry());
+}
+
+function resolveLogger(): ILogger {
+  if (!Container.has(LOGGER_TOKEN)) {
+    Container.set(LOGGER_TOKEN, Container.get(Logger));
+  }
+
+  return Container.get(LOGGER_TOKEN);
+}
+
+function resolveErrorHandler(): ErrorHandler {
+  return Container.get(ErrorHandler);
+}
+
+function resolveHealthCheckRegistry(): HealthCheckRegistry {
+  return Container.get(HealthCheckRegistry);
 }

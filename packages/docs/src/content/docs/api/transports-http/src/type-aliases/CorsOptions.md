@@ -7,7 +7,7 @@ title: "CorsOptions"
 
 > **CorsOptions** = `object`
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L3)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L3)
 
 CORS 미들웨어 및 옵션 타입입니다.
 
@@ -17,7 +17,7 @@ CORS 미들웨어 및 옵션 타입입니다.
 
 > `optional` **allowedHeaders**: `string`[]
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:9](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L9)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L9)
 
 Allowed request headers
 
@@ -27,7 +27,7 @@ Allowed request headers
 
 > `optional` **credentials**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:11](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L11)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L11)
 
 Whether to include credentials. Default: false
 
@@ -37,7 +37,7 @@ Whether to include credentials. Default: false
 
 > `optional` **maxAge**: `number`
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:13](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L13)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:13](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L13)
 
 Preflight cache duration in seconds. Default: 86400 (24 hours)
 
@@ -47,7 +47,7 @@ Preflight cache duration in seconds. Default: 86400 (24 hours)
 
 > `optional` **methods**: `string`[]
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L7)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L7)
 
 Allowed HTTP methods. Default: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 
@@ -57,6 +57,6 @@ Allowed HTTP methods. Default: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTION
 
 > **origins**: `string`[]
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L5)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L5)
 
 Allowed origins (allowlist)

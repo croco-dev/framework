@@ -6,7 +6,7 @@ type MethodDecorator = (
   target: object,
   propertyKey: string | symbol,
   descriptor: PropertyDescriptor
-) => PropertyDescriptor | void;
+) => PropertyDescriptor | undefined;
 
 export function BlockDuringImpersonation(): MethodDecorator {
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {

@@ -1,5 +1,6 @@
 import type { Readable } from 'node:stream';
 import { Component } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 import type { ImageProvider, PutOptions, SignedUrlOptions, TransformOptions, UploadIntent } from '@croco/storage-core';
 import { BaseStorageProvider } from '@croco/storage-core';
 import type {
@@ -17,6 +18,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   private readonly imageBaseUrl: string;
   private readonly transformBaseUrl: string;
   private readonly apiBaseUrl: string;
+  private readonly ttl: number;
 
   constructor(options: CloudflareImagesOptions) {
     super();
@@ -26,6 +28,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       : 'https://imagedelivery.net';
     this.transformBaseUrl = options.customDomain ? `https://${options.customDomain}` : 'https://imagedelivery.net';
     this.apiBaseUrl = `https://api.cloudflare.com/client/v4/accounts/${options.accountId}/images/v1`;
+    this.ttl = options.ttl ?? 3600;
+    if (!Number.isFinite(this.ttl) || !Number.isInteger(this.ttl) || this.ttl <= 0) {
+      throw ProblemFactory.internalServerError(
+        'cloudflare/images-invalid-ttl',
+        `Cloudflare Images TTL must be a positive finite integer, got: ${this.ttl}`
+      );
+    }
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
@@ -173,6 +182,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       this.throwUploadFailed(key, `Cloudflare metadata failed: ${result.errors.join(', ')}`);
     }
 
+    if (!result.result) {
+      throw ProblemFactory.internalServerError(
+        'cloudflare/images-null-result',
+        'Cloudflare Images API returned null result'
+      );
+    }
+
     return {
       size: result.result.size ?? 0,
       lastModified: new Date(result.result.uploaded),
@@ -201,7 +217,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        maxDurationSeconds: 3600,
+        maxDurationSeconds: this.ttl,
         metadata: {
           originalKey: key,
         },
@@ -219,9 +235,16 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       this.throwUploadFailed(key, `Cloudflare upload intent failed: ${result.errors.join(', ')}`);
     }
 
+    if (!result.result) {
+      throw ProblemFactory.internalServerError(
+        'cloudflare/images-null-result',
+        'Cloudflare Images API returned null result'
+      );
+    }
+
     const uploadUrl = result.result.uploadURL;
     const publicUrl = this.buildImageUrl(result.result.id, this.options.defaultVariant ?? 'public');
-    const expiresAt = new Date(Date.now() + 3600 * 1000);
+    const expiresAt = new Date(Date.now() + this.ttl * 1000);
 
     return {
       uploadUrl,

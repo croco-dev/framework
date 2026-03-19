@@ -5,7 +5,7 @@ prev: false
 title: "CrocoApp"
 ---
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:12](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/CrocoApp.ts#L12)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:13](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/CrocoApp.ts#L13)
 
 Croco HTTP 앱의 핵심 런타임 API입니다.
 
@@ -13,15 +13,27 @@ Croco HTTP 앱의 핵심 런타임 API입니다.
 
 ### Constructor
 
-> **new CrocoApp**(`config`): `CrocoApp`
+> **new CrocoApp**(`config`, `logger`, `errorHandler`, `healthCheckRegistry`): `CrocoApp`
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/CrocoApp.ts#L22)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/CrocoApp.ts#L20)
 
 #### Parameters
 
 ##### config
 
 [`AppConfig`](/api/transports-http/src/interfaces/appconfig/)
+
+##### logger
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
+
+##### errorHandler
+
+[`ErrorHandler`](/api/transports-http/src/classes/errorhandler/)
+
+##### healthCheckRegistry
+
+[`HealthCheckRegistry`](/api/transports-http/src/interfaces/healthcheckregistry/)
 
 #### Returns
 
@@ -33,7 +45,7 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:22](https://github.co
 
 > **fetch**(`request`): `Promise`\<`Response`\>
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:88](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/CrocoApp.ts#L88)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:88](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/CrocoApp.ts#L88)
 
 #### Parameters
 
@@ -51,7 +63,7 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:88](https://github.co
 
 > **getHono**(): `Hono`
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:66](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/CrocoApp.ts#L66)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:66](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/CrocoApp.ts#L66)
 
 #### Returns
 
@@ -63,7 +75,7 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:66](https://github.co
 
 > **lambdaHandler**(): [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:61](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/CrocoApp.ts#L61)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:61](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/CrocoApp.ts#L61)
 
 #### Returns
 
@@ -75,7 +87,7 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:61](https://github.co
 
 > **listen**(`port`, `callback?`): `Promise`\<`void`\>
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:71](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/transports-http/src/libs/CrocoApp.ts#L71)
+Defined in: [packages/transports-http/src/libs/CrocoApp.ts:71](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/CrocoApp.ts#L71)
 
 #### Parameters
 

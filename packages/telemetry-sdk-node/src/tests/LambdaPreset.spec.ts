@@ -10,6 +10,11 @@ describe('lambdaPreset', () => {
 
     delete process.env.AWS_LAMBDA_FUNCTION_NAME;
     delete process.env.AWS_EXECUTION_ENV;
+    delete process.env.NODE_ENV;
+    delete process.env.ENVIRONMENT;
+    delete process.env.TELEMETRY_ENABLED;
+    delete process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
+    delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
   });
 
   it('should create config with required fields', () => {
@@ -158,5 +163,47 @@ describe('lambdaPreset', () => {
     expect(config.trace?.batchTimeout).toBe(3000);
     expect(config.trace?.batchCount).toBe(512);
     expect(config.trace?.batchSize).toBe(256);
+  });
+
+  it('should return undefined exporterUrl when not provided', () => {
+    delete process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
+    delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+
+    const config = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    expect(config.trace?.exporterUrl).toBeUndefined();
+  });
+
+  it('should use OTEL_EXPORTER_OTLP_TRACES_ENDPOINT when provided', () => {
+    process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = 'http://traces:4318/v1/traces';
+
+    const config = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    expect(config.trace?.exporterUrl).toBe('http://traces:4318/v1/traces');
+  });
+
+  it('should use OTEL_EXPORTER_OTLP_ENDPOINT as fallback', () => {
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://generic:4318/v1/traces';
+
+    const config = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    expect(config.trace?.exporterUrl).toBe('http://generic:4318/v1/traces');
+  });
+
+  it('should prefer OTEL_EXPORTER_OTLP_TRACES_ENDPOINT over OTEL_EXPORTER_OTLP_ENDPOINT', () => {
+    process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = 'http://traces:4318/v1/traces';
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://generic:4318/v1/traces';
+
+    const config = lambdaPreset({
+      serviceName: 'test-service',
+    });
+
+    expect(config.trace?.exporterUrl).toBe('http://traces:4318/v1/traces');
   });
 });

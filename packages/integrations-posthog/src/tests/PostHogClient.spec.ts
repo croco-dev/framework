@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Container } from '@croco/framework-context';
 import { PostHog } from 'posthog-node';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostHogClient } from '../libs/PostHogClient';
 
 vi.mock('posthog-node', () => {
@@ -19,7 +19,12 @@ describe('PostHogClient', () => {
   beforeEach(() => {
     Container.reset();
     vi.clearAllMocks();
+    vi.stubEnv('POSTHOG_HOST', 'https://test.posthog.com');
     client = new PostHogClient({ apiKey: 'test-key' });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('should return underlying PostHog client', () => {
@@ -37,12 +42,11 @@ describe('PostHogClient', () => {
     expect(shutdownSpy).toHaveBeenCalled();
   });
 
-  it('should create PostHog client with default host', () => {
-    new PostHogClient({ apiKey: 'new-key' });
-
-    expect(PostHog).toHaveBeenLastCalledWith('new-key', {
-      host: 'https://app.posthog.com',
-    });
+  it('should throw error when host is not provided', () => {
+    vi.unstubAllEnvs();
+    expect(() => new PostHogClient({ apiKey: 'new-key' })).toThrow(
+      '[PostHogClient] PostHog host is required. ' + 'Set POSTHOG_HOST environment variable or pass host in config.'
+    );
   });
 
   it('should create PostHog client with custom host', () => {
@@ -64,6 +68,16 @@ describe('PostHogClient', () => {
     expect(PostHog).toHaveBeenLastCalledWith('env-key', {
       host: 'https://env.posthog.example',
     });
+
+    vi.unstubAllEnvs();
+  });
+
+  it('should throw error when POSTHOG_HOST is empty string', () => {
+    vi.stubEnv('POSTHOG_HOST', '');
+
+    expect(() => new PostHogClient({ apiKey: 'env-key' })).toThrow(
+      '[PostHogClient] PostHog host is required. ' + 'Set POSTHOG_HOST environment variable or pass host in config.'
+    );
 
     vi.unstubAllEnvs();
   });

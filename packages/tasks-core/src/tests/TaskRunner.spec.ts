@@ -1,5 +1,7 @@
 import type { ExecutionManager } from '@croco/execution-core';
+import type { ILogger } from '@croco/framework-context';
 import { Container, MetadataStorage } from '@croco/framework-context';
+import * as telemetry from '@croco/telemetry-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Task } from '../libs/decorators/Task';
 import { TaskRegistry } from '../libs/TaskRegistry';
@@ -221,5 +223,45 @@ describe('TaskRunner', () => {
         message: 'String error',
       })
     );
+  });
+
+  it('should log and record error when DI resolution fails', async () => {
+    class DITaskHandler {
+      @Task({ name: 'di-fail-task' })
+      async process(payload: { value: number }): Promise<number> {
+        return payload.value * 2;
+      }
+    }
+
+    new DITaskHandler();
+    registry.collectFromMetadata();
+
+    const mockLogger: ILogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+    };
+
+    const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
+
+    const containerError = new Error('DI resolution failed');
+    vi.spyOn(Container, 'get').mockImplementation(() => {
+      throw containerError;
+    });
+
+    const runner = new TaskRunner(mockExecutionManager, registry, mockLogger);
+
+    const result = await runner.execute('di-fail-task', { value: 5 });
+
+    expect(result).toBe(10);
+    expect(mockLogger.warn).toHaveBeenCalledWith('DI resolution failed, falling back to manual instantiation', {
+      target: 'DITaskHandler',
+      error: 'DI resolution failed',
+    });
+    expect(recordErrorSpy).toHaveBeenCalledWith(containerError);
+
+    recordErrorSpy.mockRestore();
   });
 });

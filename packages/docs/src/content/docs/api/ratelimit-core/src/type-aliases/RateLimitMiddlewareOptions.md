@@ -7,7 +7,7 @@ title: "RateLimitMiddlewareOptions"
 
 > **RateLimitMiddlewareOptions** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:64](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L64)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:65](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L65)
 
 Options for global rate limit middleware
 
@@ -17,7 +17,7 @@ Options for global rate limit middleware
 
 > `optional` **failOpen**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:70](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L70)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:71](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L71)
 
 Whether to allow requests when store fails
 
@@ -27,7 +27,7 @@ Whether to allow requests when store fails
 
 > `optional` **keySegments**: [`KeySegment`](/api/ratelimit-core/src/type-aliases/keysegment/)[]
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:68](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L68)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:69](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L69)
 
 Key segments to use for building keys
 
@@ -37,6 +37,6 @@ Key segments to use for building keys
 
 > **policy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:66](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/ratelimit-core/src/libs/types.ts#L66)
+Defined in: [packages/ratelimit-core/src/libs/types.ts:67](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L67)
 
 Rate limit policy to apply

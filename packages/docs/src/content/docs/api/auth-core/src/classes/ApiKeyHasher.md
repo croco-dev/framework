@@ -5,7 +5,7 @@ prev: false
 title: "ApiKeyHasher"
 ---
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyHasher.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyHasher.ts#L3)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyHasher.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/apikey/ApiKeyHasher.ts#L3)
 
 Hashes and verifies API keys.
 
@@ -25,7 +25,7 @@ Hashes and verifies API keys.
 
 > **hash**(`value`): `string`
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyHasher.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyHasher.ts#L4)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyHasher.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/apikey/ApiKeyHasher.ts#L4)
 
 #### Parameters
 
@@ -43,7 +43,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyHasher.ts:4](https://githu
 
 > **verify**(`value`, `hash`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyHasher.ts:8](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/apikey/ApiKeyHasher.ts#L8)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyHasher.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/apikey/ApiKeyHasher.ts#L8)
 
 #### Parameters
 

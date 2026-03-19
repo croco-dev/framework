@@ -34,8 +34,7 @@ function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
       exporterUrl:
         options.exporterUrl ??
         process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-        process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
-        'http://localhost:4318/v1/traces',
+        process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
       exporterHeaders: {
         'X-Croco-Source': 'lambda',
         ...options.exporterHeaders,

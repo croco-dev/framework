@@ -7,7 +7,7 @@ title: "RegisterEventHandler"
 
 > **RegisterEventHandler**\<`TArgs`\>(`eventClass`, `options?`): \<`T`\>(`f`) => `void`
 
-Defined in: [packages/events-core/src/libs/EventHandler.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/events-core/src/libs/EventHandler.ts#L25)
+Defined in: [packages/events-core/src/libs/EventHandler.ts:25](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventHandler.ts#L25)
 
 이벤트 타입과 핸들러를 연결하는 클래스 데코레이터입니다.
 

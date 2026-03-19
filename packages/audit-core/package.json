@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
-    "@croco/framework-logger": "workspace:*"
+    "@croco/framework-logger": "workspace:*",
+    "@croco/telemetry-api": "workspace:*"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

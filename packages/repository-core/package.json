@@ -19,8 +19,8 @@
     "vitest": "4.0.16"
   },
   "dependencies": {
-    "@croco/dataloader-core": "workspace:*",
-    "@croco/framework-context": "workspace:*"
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

@@ -109,18 +109,7 @@ const serviceClasses = [
   TestService50,
 ];
 
-describe('Container benchmarks', () => {
-  bench(
-    'Container.register × 50 components',
-    () => {
-      Container.reset();
-      for (const ServiceClass of serviceClasses) {
-        Container.register(ServiceClass, 'singleton');
-      }
-    },
-    { iterations: 50, warmupIterations: 10 }
-  );
-
+describe('Container.get singleton (cold)', () => {
   bench(
     'Container.get singleton (cold)',
     () => {
@@ -130,7 +119,22 @@ describe('Container benchmarks', () => {
     },
     { iterations: 100, warmupIterations: 5 }
   );
+});
 
+describe('Container.register × 50 components', () => {
+  bench(
+    'register 50 singletons',
+    () => {
+      Container.reset();
+      for (const ServiceClass of serviceClasses) {
+        Container.register(ServiceClass, 'singleton');
+      }
+    },
+    { iterations: 50, warmupIterations: 10 }
+  );
+});
+
+describe('Container.validate (50 components)', () => {
   bench(
     'Container.validate (50 components)',
     () => {
@@ -147,7 +151,7 @@ describe('Container benchmarks', () => {
 
 describe('Container.get singleton (warm)', () => {
   bench(
-    'warm - returns cached instance',
+    'Container.get singleton (warm)',
     () => {
       Container.get(TestService1);
     },

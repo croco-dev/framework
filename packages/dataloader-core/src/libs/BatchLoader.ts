@@ -1,6 +1,16 @@
+import type { ILogger } from '@croco/framework-context';
+import { recordError } from '@croco/telemetry-api';
 import { context, trace } from '@opentelemetry/api';
 import { BatchResultLengthMismatchProblem } from './problems/BatchLoaderProblems';
 import type { BatchLoader, BatchLoaderOptions } from './types';
+
+const noopLogger: ILogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  child: () => noopLogger,
+};
 
 export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
   private queue: K[] = [];
@@ -10,14 +20,16 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
   }> = [];
   private cache = new Map<K, Promise<V | null>>();
   private readonly options: BatchLoaderOptions<K, V>;
+  private readonly logger: ILogger;
   private scheduled = false;
 
-  constructor(options: BatchLoaderOptions<K, V>) {
+  constructor(options: BatchLoaderOptions<K, V>, logger: ILogger = noopLogger) {
     this.options = {
       cache: true,
       maxBatchSize: Infinity,
       ...options,
     };
+    this.logger = logger.child({ component: 'BatchLoader', loader: this.options.name });
   }
 
   async load(key: K): Promise<V | null> {
@@ -59,7 +71,10 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
   prime(key: K, value: V | Error): void {
     if (value instanceof Error) {
       const rejected = Promise.reject<V | null>(value);
-      void rejected.catch(() => undefined);
+      void rejected.catch((error) => {
+        this.logger.warn('Prime rejected error cached', { key, error: error as Error });
+        recordError(error);
+      });
       this.cache.set(key, rejected);
     } else {
       this.cache.set(key, Promise.resolve(value));

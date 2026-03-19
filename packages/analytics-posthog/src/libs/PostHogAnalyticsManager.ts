@@ -1,14 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { AnalyticsManager } from '@croco/analytics-core';
-import { Component, Container, Context } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
+import { Component, Context, type ILogger, Inject, LOGGER_TOKEN } from '@croco/framework-context';
 import type { PostHogClient } from '@croco/integrations-posthog';
 
 @Component()
 export class PostHogAnalyticsManager extends AnalyticsManager {
   constructor(
     private readonly posthogClient: PostHogClient,
-    private readonly logger: Logger = Container.get(Logger)
+    @Inject(LOGGER_TOKEN) private readonly logger: ILogger
   ) {
     super();
   }

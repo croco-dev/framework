@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import { Container, Context } from '@croco/framework-context';
+import type { ILogger } from '@croco/framework-context';
+import { Container, Context, LOGGER_TOKEN } from '@croco/framework-context';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Auditable } from '../libs/Auditable';
 import type { AuditLogRepository } from '../libs/AuditLogRepository';
@@ -131,16 +132,10 @@ describe('@Auditable', () => {
     }
 
     const service = new TestService();
-    const result = await Promise.race([
-      service.create('project-2', { name: 'new-project' }),
-      new Promise<'timeout'>((resolve) => {
-        setTimeout(() => resolve('timeout'), 50);
-      }),
-    ]);
+    const result = await service.create('project-2', { name: 'new-project' });
 
     await Promise.resolve();
 
-    expect(result).not.toBe('timeout');
     expect(createSpy).toHaveBeenCalledTimes(1);
 
     if (createDeferred.resolve) {
@@ -225,5 +220,129 @@ describe('@Auditable', () => {
         diff: { status: { before: 'ACTIVE', after: 'DELETED' } },
       })
     );
+  });
+
+  describe('audit log write failure', () => {
+    it('should log warning when audit log write fails', async () => {
+      const auditError = new Error('database connection failed');
+      const createSpy = vi.fn(async () => {
+        throw auditError;
+      });
+
+      const repository = {
+        create: createSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+
+      const loggerMock: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      vi.spyOn(Container, 'get').mockImplementation((token) => {
+        if (token === LOGGER_TOKEN) {
+          return loggerMock;
+        }
+        return repository;
+      });
+
+      vi.spyOn(Context, 'get').mockReturnValue({
+        requestId: 'req-4',
+        tenantId: 'tenant-4',
+        user: { id: 'actor-4' },
+      } as RequestContextStub);
+
+      class TestService {
+        @Auditable({
+          action: 'project.update',
+          resourceType: 'Project',
+          resourceIdParam: 'resourceId',
+          payloadParam: 'payload',
+        })
+        async update(resourceId: string, payload: { name: string }): Promise<string> {
+          return `updated:${resourceId}:${payload.name}`;
+        }
+      }
+
+      const service = new TestService();
+      const result = await service.update('project-4', { name: 'updated-project' });
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(result).toBe('updated:project-4:updated-project');
+      expect(createSpy).toHaveBeenCalled();
+      expect(loggerMock.warn).toHaveBeenCalledWith(
+        '[Auditable] Failed to write audit log',
+        expect.objectContaining({
+          error: 'database connection failed',
+        })
+      );
+    });
+
+    it('should maintain fire-and-forget pattern when audit log write fails', async () => {
+      const auditError = new Error('audit service unavailable');
+      let createCallCount = 0;
+      const createSpy = vi.fn(async () => {
+        createCallCount++;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        throw auditError;
+      });
+
+      const repository = {
+        create: createSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+
+      const loggerMock: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      vi.spyOn(Container, 'get').mockImplementation((token) => {
+        if (token === LOGGER_TOKEN) {
+          return loggerMock;
+        }
+        return repository;
+      });
+
+      vi.spyOn(Context, 'get').mockReturnValue({
+        requestId: 'req-5',
+        tenantId: 'tenant-5',
+        user: { id: 'actor-5' },
+      } as RequestContextStub);
+
+      class TestService {
+        @Auditable({
+          action: 'project.create',
+          resourceType: 'Project',
+          resourceIdParam: 'resourceId',
+          payloadParam: 'payload',
+        })
+        async create(resourceId: string, payload: { name: string }): Promise<string> {
+          return `created:${resourceId}:${payload.name}`;
+        }
+      }
+
+      const service = new TestService();
+      const startTime = Date.now();
+      const result = await service.create('project-5', { name: 'fast-project' });
+      const endTime = Date.now();
+
+      expect(result).toBe('created:project-5:fast-project');
+      expect(endTime - startTime).toBeLessThan(50);
+      expect(createCallCount).toBe(1);
+    });
   });
 });

@@ -7,7 +7,7 @@ title: "SpanOptions"
 
 > **SpanOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-api/src/libs/span.ts#L4)
+Defined in: [packages/telemetry-api/src/libs/span.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-api/src/libs/span.ts#L4)
 
 Information about the current active trace context.
 
@@ -29,7 +29,7 @@ console.log('Is Sampled:', traceInfo.isValid);
 
 > `optional` **attributes**: `Attributes`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-api/src/libs/span.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-api/src/libs/span.ts#L6)
 
 ***
 
@@ -37,4 +37,4 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:6](https://github.com/croco
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/telemetry-api/src/libs/span.ts#L5)
+Defined in: [packages/telemetry-api/src/libs/span.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-api/src/libs/span.ts#L5)

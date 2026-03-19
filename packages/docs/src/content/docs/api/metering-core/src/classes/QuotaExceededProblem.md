@@ -5,7 +5,7 @@ prev: false
 title: "QuotaExceededProblem"
 ---
 
-Defined in: [packages/metering-core/src/libs/problems/QuotaExceededProblem.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/problems/QuotaExceededProblem.ts#L3)
+Defined in: [packages/metering-core/src/libs/problems/QuotaExceededProblem.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/problems/QuotaExceededProblem.ts#L3)
 
 quota 초과 시 발생하는 문제 타입입니다.
 
@@ -29,7 +29,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 > **new QuotaExceededProblem**(`meterId`, `currentUsage`, `quota`): `QuotaExceededProblem`
 
-Defined in: [packages/metering-core/src/libs/problems/QuotaExceededProblem.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/problems/QuotaExceededProblem.ts#L4)
+Defined in: [packages/metering-core/src/libs/problems/QuotaExceededProblem.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/problems/QuotaExceededProblem.ts#L4)
 
 #### Parameters
 
@@ -59,7 +59,7 @@ Defined in: [packages/metering-core/src/libs/problems/QuotaExceededProblem.ts:4]
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L23)
+Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L23)
 
 HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
@@ -73,7 +73,7 @@ HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
 > `readonly` `optional` **cause**: `Error`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L28)
+Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Inherited from
 
@@ -85,7 +85,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/c
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L22)
+Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L22)
 
 도메인에서 문제를 식별하는 고유 코드입니다.
 
@@ -99,7 +99,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/c
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L24)
 
 문제의 상세 설명입니다.
 
@@ -113,7 +113,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 
 > `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L27)
+Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L27)
 
 Problem Details 확장 필드입니다.
 
@@ -127,7 +127,7 @@ Problem Details 확장 필드입니다.
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L26)
 
 특정 에러 발생 인스턴스를 식별하는 URI입니다.
 
@@ -177,7 +177,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L25)
 
 문제 유형 식별자 URI입니다.
 
@@ -215,7 +215,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:61](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L61)
+Defined in: [packages/problems-core/src/libs/Problem.ts:70](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L70)
 
 ##### Returns
 
@@ -233,7 +233,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:61](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:57](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L57)
+Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L66)
 
 ##### Returns
 
@@ -249,7 +249,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:57](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:65](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/problems-core/src/libs/Problem.ts#L65)
+Defined in: [packages/problems-core/src/libs/Problem.ts:74](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L74)
 
 #### Returns
 

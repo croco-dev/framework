@@ -162,6 +162,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   private readonly secure: boolean;
   private readonly uploadBaseUrl: string;
   private readonly retryTemplate: RetryTemplate;
+  private readonly ttl: number;
 
   constructor(config: CloudinaryConfig) {
     super();
@@ -170,6 +171,10 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.apiSecret = config.apiSecret;
     this.secure = config.secure ?? true;
     this.uploadBaseUrl = config.uploadBaseUrl ?? 'https://api.cloudinary.com';
+    this.ttl = config.ttl ?? 3600;
+    if (!Number.isFinite(this.ttl) || !Number.isInteger(this.ttl) || this.ttl <= 0) {
+      this.ttl = 3600;
+    }
     this.retryTemplate = new RetryTemplate({
       maxAttempts: 3,
       backoff: {
@@ -374,7 +379,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
     const uploadUrl = new URL(`/v1_1/${this.cloudName}/image/upload`, this.uploadBaseUrl).toString();
     const publicUrl = this.getPublicUrl(key);
-    const expiresAt = new Date(Date.now() + 3600 * 1000);
+    const expiresAt = new Date(Date.now() + this.ttl * 1000);
 
     return {
       uploadUrl,

@@ -5,7 +5,7 @@ prev: false
 title: "TransactionContext"
 ---
 
-Defined in: [packages/framework-context/src/libs/TransactionContext.ts:3](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/TransactionContext.ts#L3)
+Defined in: [packages/framework-context/src/libs/TransactionContext.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/TransactionContext.ts#L3)
 
 ## Methods
 
@@ -13,7 +13,7 @@ Defined in: [packages/framework-context/src/libs/TransactionContext.ts:3](https:
 
 > **isInTransaction**(): `boolean`
 
-Defined in: [packages/framework-context/src/libs/TransactionContext.ts:4](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/TransactionContext.ts#L4)
+Defined in: [packages/framework-context/src/libs/TransactionContext.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/TransactionContext.ts#L4)
 
 #### Returns
 
@@ -25,7 +25,7 @@ Defined in: [packages/framework-context/src/libs/TransactionContext.ts:4](https:
 
 > **onAfterCommit**(`hook`): `void`
 
-Defined in: [packages/framework-context/src/libs/TransactionContext.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/framework-context/src/libs/TransactionContext.ts#L5)
+Defined in: [packages/framework-context/src/libs/TransactionContext.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/TransactionContext.ts#L5)
 
 #### Parameters
 

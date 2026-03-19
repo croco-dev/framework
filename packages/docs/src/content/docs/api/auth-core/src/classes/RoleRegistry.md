@@ -5,9 +5,13 @@ prev: false
 title: "RoleRegistry"
 ---
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/Role.ts#L7)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L9)
 
 Role registry and role definition type.
+
+## Extends
+
+- [`AbstractRoleRegistry`](/api/auth-core/src/classes/abstractroleregistry/)
 
 ## Constructors
 
@@ -19,13 +23,17 @@ Role registry and role definition type.
 
 `RoleRegistry`
 
+#### Inherited from
+
+[`AbstractRoleRegistry`](/api/auth-core/src/classes/abstractroleregistry/).[`constructor`](/api/auth-core/src/classes/abstractroleregistry/#constructor)
+
 ## Methods
 
 ### getRole()
 
 > **getRole**(`name`): [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:14](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/Role.ts#L14)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L16)
 
 #### Parameters
 
@@ -43,7 +51,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:14](https://github.com/cro
 
 > **getRolePermissions**(`name`, `visited?`): `string`[]
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:18](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/Role.ts#L18)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L20)
 
 #### Parameters
 
@@ -59,13 +67,17 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:18](https://github.com/cro
 
 `string`[]
 
+#### Overrides
+
+[`AbstractRoleRegistry`](/api/auth-core/src/classes/abstractroleregistry/).[`getRolePermissions`](/api/auth-core/src/classes/abstractroleregistry/#getrolepermissions)
+
 ***
 
 ### register()
 
 > **register**(`role`): `void`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:10](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/auth-core/src/libs/rbac/Role.ts#L10)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:12](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L12)
 
 #### Parameters
 

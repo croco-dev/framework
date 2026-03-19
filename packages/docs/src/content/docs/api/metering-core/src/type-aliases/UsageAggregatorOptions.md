@@ -7,7 +7,7 @@ title: "UsageAggregatorOptions"
 
 > **UsageAggregatorOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:5](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageAggregator.ts#L5)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/UsageAggregator.ts#L5)
 
 UsageAggregator 생성 옵션 타입입니다.
 
@@ -19,9 +19,9 @@ UsageAggregator 인스턴스 생성 시 필요한 설정을 정의합니다.
 
 ### meterRepository
 
-> **meterRepository**: [`MeterRepository`](/api/metering-core/src/interfaces/meterrepository/)
+> **meterRepository**: [`MeterRepository`](/api/metering-core/src/classes/meterrepository/)
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageAggregator.ts#L7)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/UsageAggregator.ts#L7)
 
 ***
 
@@ -29,4 +29,4 @@ Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:7](https://githu
 
 > **usageStorage**: [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/)
 
-Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:6](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/UsageAggregator.ts#L6)
+Defined in: [packages/metering-core/src/libs/UsageAggregator.ts:6](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/UsageAggregator.ts#L6)

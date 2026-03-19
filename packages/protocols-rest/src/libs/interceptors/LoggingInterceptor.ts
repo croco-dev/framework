@@ -1,11 +1,11 @@
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
+import type { ILogger } from '@croco/framework-context';
+import { Inject, LOGGER_TOKEN } from '@croco/framework-context';
 import type { CallHandler } from '../interfaces/CallHandler';
 import type { ExecutionContext } from '../interfaces/ExecutionContext';
 import type { Interceptor } from '../interfaces/Interceptor';
 
 export class LoggingInterceptor implements Interceptor<ExecutionContext> {
-  constructor(private readonly logger: Pick<Logger, 'info'> = Container.get(Logger)) {}
+  constructor(@Inject(LOGGER_TOKEN) private readonly logger: ILogger) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<unknown> {
     const method = context.getMethod();

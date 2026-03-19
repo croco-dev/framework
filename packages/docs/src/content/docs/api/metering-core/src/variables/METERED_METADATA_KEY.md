@@ -7,7 +7,7 @@ title: "METERED_METADATA_KEY"
 
 > `const` **METERED\_METADATA\_KEY**: *typeof* `METERED_METADATA_KEY`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:7](https://github.com/croco-dev/framework/blob/dfdc13c04d1ec41944df1d6a5c5701779b83d710/packages/metering-core/src/libs/decorators/Metered.ts#L7)
+Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/decorators/Metered.ts#L7)
 
 Metered 메서드 데코레이터와 서비스 바인딩 헬퍼입니다.
 

@@ -2,6 +2,7 @@ import type { NodeSDK } from '@opentelemetry/sdk-node';
 import type { BatchSpanProcessor, Sampler } from '@opentelemetry/sdk-trace-base';
 import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import type { TelemetryConfig } from './config';
+import { OtlpEndpointRequiredProblem } from './libs/problems/TelemetryProblems';
 
 class TelemetryRuntime {
   private static instance: TelemetryRuntime;
@@ -71,13 +72,17 @@ class TelemetryRuntime {
     const sampler = await this.createSampler(config);
 
     if (traceConfig.enabled !== false) {
-      const exporterUrl =
+      const endpoint =
         traceConfig.exporterUrl ??
         process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-        process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
-        'http://localhost:4318/v1/traces';
+        process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+
+      if (!endpoint) {
+        throw new OtlpEndpointRequiredProblem();
+      }
+
       const exporter = new OTLPTraceExporter({
-        url: exporterUrl,
+        url: endpoint,
         headers: traceConfig.exporterHeaders,
       });
 

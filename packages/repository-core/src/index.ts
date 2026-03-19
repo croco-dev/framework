@@ -3,6 +3,8 @@
  */
 
 export { BatchLoad } from './libs/decorators/BatchLoad';
+export type { BatchLoaderFactoryOptions, BatchLoaderLike, IBatchLoaderFactory } from './libs/IBatchLoaderFactory';
+export { BATCH_LOADER_FACTORY_TOKEN } from './libs/IBatchLoaderFactory';
 export * from './libs/ReadRepository';
 /**
  * Unified repository contract that combines read and write capabilities.
