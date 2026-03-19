@@ -6,7 +6,11 @@ export { TASK_METADATA_KEY, Task } from './libs/decorators/Task';
 /**
  * 등록되지 않은 태스크 실행 시 발생하는 Problem 하위 타입입니다.
  */
-export { DuplicateTaskRegistrationProblem, TaskNotFoundProblem } from './libs/problems/TasksProblems';
+export {
+  DuplicateTaskRegistrationProblem,
+  TaskDIResolutionProblem,
+  TaskNotFoundProblem,
+} from './libs/problems/TasksProblems';
 
 /**
  * 레지스트리에 등록된 태스크 엔트리 타입입니다.

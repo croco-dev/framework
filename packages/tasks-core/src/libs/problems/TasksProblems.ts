@@ -23,3 +23,21 @@ export class DuplicateTaskRegistrationProblem extends Problem {
     );
   }
 }
+
+export class TaskDIResolutionProblem extends Problem {
+  constructor(taskClassName: string, cause: Error) {
+    super(
+      'tasks-core/di-resolution-failed',
+      ProblemCategory.InternalServerError,
+      `Failed to resolve dependencies for task '${taskClassName}'. Ensure the class is decorated with @Component().`,
+      {
+        cause,
+        extensions: {
+          taskClassName,
+          hint: 'Add @Component() decorator to the task class',
+          retryable: false,
+        },
+      }
+    );
+  }
+}
