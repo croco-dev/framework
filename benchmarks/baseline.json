@@ -12,19 +12,19 @@
     "p75": 0.0003
   },
   "EventBusConfig.start (10 handlers)": {
-    "p75": 0.0024579999999900792
+    "p75": 0.009
   },
   "EventPublisher.publish single event": {
-    "p75": 0.0005829999997786217
+    "p75": 0.0015
   },
   "DefaultHandlerResolver.resolve × 10": {
-    "p75": 0.00008400000001529406
+    "p75": 0.0002
   },
   "CrocoApp constructor": {
     "p75": 0.0025
   },
   "CrocoApp lambdaHandler (10 controllers)": {
-    "p75": 0.012667000000192274
+    "p75": 0.025
   },
   "CrocoApp full cold-start simulation": {
     "p75": 0.26
