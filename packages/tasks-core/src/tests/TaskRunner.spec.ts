@@ -4,6 +4,7 @@ import { Container, MetadataStorage } from '@croco/framework-context';
 import * as telemetry from '@croco/telemetry-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Task } from '../libs/decorators/Task';
+import { TaskDIResolutionProblem } from '../libs/problems/TasksProblems';
 import { TaskRegistry } from '../libs/TaskRegistry';
 import { TaskRunner } from '../libs/TaskRunner';
 import type { TaskMetadata } from '../libs/types';
@@ -225,43 +226,60 @@ describe('TaskRunner', () => {
     );
   });
 
-  it('should log and record error when DI resolution fails', async () => {
-    class DITaskHandler {
+  it('should throw TaskDIResolutionProblem when DI resolution fails', async () => {
+    class DIFailTaskHandler {
       @Task({ name: 'di-fail-task' })
       async process(payload: { value: number }): Promise<number> {
         return payload.value * 2;
       }
     }
-
-    new DITaskHandler();
+    new DIFailTaskHandler();
     registry.collectFromMetadata();
 
-    const mockLogger: ILogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      child: vi.fn().mockReturnThis(),
-    };
-
-    const recordErrorSpy = vi.spyOn(telemetry, 'recordError').mockImplementation(() => {});
-
-    const containerError = new Error('DI resolution failed');
     vi.spyOn(Container, 'get').mockImplementation(() => {
-      throw containerError;
+      throw new Error('Service not found');
     });
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
-    const runner = new TaskRunner(mockExecutionManager, registry, mockLogger);
+    await expect(runner.execute('di-fail-task', { value: 5 })).rejects.toThrow(TaskDIResolutionProblem);
+  });
 
-    const result = await runner.execute('di-fail-task', { value: 5 });
+  it('should include original error as cause in TaskDIResolutionProblem', async () => {
+    class CauseTestHandler {
+      @Task({ name: 'cause-test-task' })
+      async run(): Promise<void> {}
+    }
+    new CauseTestHandler();
+    registry.collectFromMetadata();
 
-    expect(result).toBe(10);
-    expect(mockLogger.warn).toHaveBeenCalledWith('DI resolution failed, falling back to manual instantiation', {
-      target: 'DITaskHandler',
-      error: 'DI resolution failed',
+    const originalError = new Error('TypeDI: Service not found');
+    vi.spyOn(Container, 'get').mockImplementation(() => {
+      throw originalError;
     });
-    expect(recordErrorSpy).toHaveBeenCalledWith(containerError);
+    const runner = new TaskRunner(mockExecutionManager, registry);
 
-    recordErrorSpy.mockRestore();
+    try {
+      await runner.execute('cause-test-task', {});
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(TaskDIResolutionProblem);
+      expect((error as TaskDIResolutionProblem).cause).toBe(originalError);
+    }
+  });
+
+  it('should include task class name in error message', async () => {
+    class ImageProcessor {
+      @Task({ name: 'process-image' })
+      async resize(): Promise<void> {}
+    }
+    new ImageProcessor();
+    registry.collectFromMetadata();
+
+    vi.spyOn(Container, 'get').mockImplementation(() => {
+      throw new Error('DI failed');
+    });
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute('process-image', {})).rejects.toThrow(/ImageProcessor/);
   });
 });
