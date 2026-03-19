@@ -93,6 +93,7 @@ export class Container {
 
   static register<T>(token: Constructor<T>, scope: Scope): void {
     MetadataStorage.define(COMPONENT_METADATA_KEY, token, { scope, target: token });
+    TypeDIContainer.set({ id: token, type: token });
     Container.validated = false;
   }
 

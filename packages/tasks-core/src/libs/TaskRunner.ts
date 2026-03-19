@@ -1,8 +1,7 @@
 import type { ExecutionManager } from '@croco/execution-core';
 import type { ILogger } from '@croco/framework-context';
 import { Container } from '@croco/framework-context';
-import { recordError } from '@croco/telemetry-api';
-import { TaskNotFoundProblem } from './problems/TasksProblems';
+import { TaskDIResolutionProblem, TaskNotFoundProblem } from './problems/TasksProblems';
 import { TaskRegistry } from './TaskRegistry';
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
@@ -61,16 +60,12 @@ export class TaskRunner {
 
   private createInstance(target: object): object {
     if (typeof target === 'function') {
+      const targetName = target.name || 'Unknown';
       try {
         return Container.get(target as Constructor<object>);
       } catch (error) {
-        const targetName = target.name || 'Unknown';
-        this.logger.warn('DI resolution failed, falling back to manual instantiation', {
-          target: targetName,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        recordError(error);
-        return new (target as Constructor<object>)();
+        const wrappedError = error instanceof Error ? error : new Error(String(error));
+        throw new TaskDIResolutionProblem(targetName, wrappedError);
       }
     }
     return target;

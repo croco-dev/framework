@@ -1,6 +1,6 @@
 import type { ExecutionManager } from '@croco/execution-core';
 import type { ILogger } from '@croco/framework-context';
-import { Container, MetadataStorage } from '@croco/framework-context';
+import { Component, Container, MetadataStorage } from '@croco/framework-context';
 import * as telemetry from '@croco/telemetry-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Task } from '../libs/decorators/Task';
@@ -37,6 +37,7 @@ describe('TaskRunner', () => {
       timeout: vi.fn().mockResolvedValue(undefined),
     };
 
+    @Component()
     class TestTaskHandler {
       @Task({ name: 'test-task' })
       async handle(payload: { data: string }): Promise<string> {
@@ -105,6 +106,7 @@ describe('TaskRunner', () => {
   });
 
   it('should extract retryable flag from error', async () => {
+    @Component()
     class RetryableTaskHandler {
       @Task({ name: 'retryable-fail' })
       async failWithRetryable(): Promise<string> {
@@ -141,6 +143,7 @@ describe('TaskRunner', () => {
   });
 
   it('should extract code from error', async () => {
+    @Component()
     class TaskWithCodeError {
       @Task({ name: 'code-error-task' })
       async failWithCode(): Promise<string> {
@@ -176,6 +179,7 @@ describe('TaskRunner', () => {
   });
 
   it('should resolve class constructors through the container', async () => {
+    @Component()
     class StatelessTaskHandler {
       @Task({ name: 'stateless-task' })
       async process(payload: { value: number }): Promise<number> {
@@ -194,6 +198,7 @@ describe('TaskRunner', () => {
   });
 
   it('should handle non-Error objects in error handling', async () => {
+    @Component()
     class NonErrorTaskHandler {
       @Task({ name: 'non-error-task' })
       async throwString(): Promise<string> {
