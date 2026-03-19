@@ -30,6 +30,6 @@
     "p75": 0.26
   },
   "TelemetryRuntime benchmarks": {
-    "p75": 0.0018
+    "p75": 0.002
   }
 }
