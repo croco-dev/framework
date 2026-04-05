@@ -21,11 +21,12 @@ export class IdPrefix<TPrefix extends string = string> {
     this.validate = this.validate.bind(this);
   }
 
-  generate(): `${TPrefix}_${string}` {
-    return `${this.prefix}_${ulid()}` as `${TPrefix}_${string}`;
+  generate(): PrefixedId<TPrefix> {
+    const id = `${this.prefix}_${ulid()}`;
+    return id as PrefixedId<TPrefix>;
   }
 
-  validate(id: unknown): id is `${TPrefix}_${string}` {
+  validate(id: unknown): id is PrefixedId<TPrefix> {
     if (typeof id !== 'string') {
       return false;
     }
@@ -58,5 +59,5 @@ export class IdPrefix<TPrefix extends string = string> {
 }
 
 export type PrefixedId<TPrefix extends string> = `${TPrefix}_${string}` & {
-  readonly __brand: TPrefix;
+  readonly __brand: unique symbol;
 };

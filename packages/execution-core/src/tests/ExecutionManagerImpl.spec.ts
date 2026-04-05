@@ -436,4 +436,90 @@ describe('ExecutionManagerImpl', () => {
       expect(running.status).toBe('running');
     });
   });
+
+  describe('edge cases', () => {
+    it('allows retry when attempts less than maxAttempts', async () => {
+      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: 'error', retryable: false });
+
+      const retrying = await manager.retry(execution.id);
+      expect(retrying.status).toBe('retrying');
+    });
+
+    it('throws on retry when attempts equal maxAttempts', async () => {
+      const execution = await manager.create({ type: 'task', maxAttempts: 1 });
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: 'error', retryable: false });
+
+      await expect(manager.retry(execution.id)).rejects.toThrow('Maximum retry attempts exceeded');
+    });
+
+    it('preserves metadata when canceling without reason', async () => {
+      const execution = await manager.create({
+        type: 'task',
+        metadata: { key: 'value' },
+      });
+
+      const cancelled = await manager.cancel(execution.id);
+
+      expect(cancelled.metadata).toEqual({ key: 'value' });
+    });
+
+    it('preserves existing metadata when canceling with reason', async () => {
+      const execution = await manager.create({
+        type: 'task',
+        metadata: { existingKey: 'existingValue' },
+      });
+
+      const cancelled = await manager.cancel(execution.id, 'cancel reason');
+
+      expect(cancelled.metadata).toEqual({
+        existingKey: 'existingValue',
+        cancellationReason: 'cancel reason',
+      });
+    });
+
+    it('handles progress update for execution with existing progress', async () => {
+      const execution = await manager.create({ type: 'batch' });
+      await manager.updateProgress(execution.id, { current: 10, total: 100 });
+
+      const updated = await manager.updateProgress(execution.id, { current: 50, total: 100 });
+
+      expect(updated.progress?.current).toBe(50);
+      expect(updated.progress?.percent).toBe(50);
+    });
+
+    it('handles checkpoint merge with existing checkpoints', async () => {
+      const execution = await manager.create({ type: 'batch' });
+      await manager.checkpoint(execution.id, 'existing', 'checkpoint1');
+
+      const updated = await manager.checkpoint(execution.id, 'new', 'checkpoint2');
+
+      expect(updated.checkpoints).toEqual({
+        existing: 'checkpoint1',
+        new: 'checkpoint2',
+      });
+    });
+
+    it('handles checkpoint for execution without existing checkpoints', async () => {
+      const execution = await manager.create({ type: 'batch' });
+
+      const updated = await manager.checkpoint(execution.id, 'first', 'value');
+
+      expect(updated.checkpoints).toEqual({ first: 'value' });
+    });
+
+    it('clears error when retrying from failed state', async () => {
+      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+      await manager.start(execution.id);
+
+      const error: ExecutionError = { message: 'temp error', retryable: false, code: 'TEMP_ERROR' };
+      await manager.fail(execution.id, error);
+
+      const retrying = await manager.retry(execution.id);
+
+      expect(retrying.error).toBeUndefined();
+    });
+  });
 });
