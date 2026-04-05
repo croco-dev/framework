@@ -80,6 +80,42 @@ describe('Container.validate', () => {
     }).toThrowError(/Circular dependency detected: SelfReferencing → SelfReferencing/);
   });
 
+  it('should detect a cycle in a branched dependency graph', () => {
+    class SharedDependency {}
+
+    class ServiceA {
+      constructor(_dependency: SharedDependency) {}
+    }
+
+    class ServiceB {
+      constructor(_serviceC: ServiceC) {}
+    }
+
+    class ServiceC {
+      constructor(_serviceD: ServiceD) {}
+    }
+
+    class ServiceD {
+      constructor(_serviceB: ServiceB) {}
+    }
+
+    Reflect.defineMetadata('design:paramtypes', [], SharedDependency);
+    Reflect.defineMetadata('design:paramtypes', [SharedDependency], ServiceA);
+    Reflect.defineMetadata('design:paramtypes', [ServiceC], ServiceB);
+    Reflect.defineMetadata('design:paramtypes', [ServiceD], ServiceC);
+    Reflect.defineMetadata('design:paramtypes', [ServiceB], ServiceD);
+
+    Container.register(SharedDependency, 'singleton');
+    Container.register(ServiceA, 'singleton');
+    Container.register(ServiceB, 'singleton');
+    Container.register(ServiceC, 'singleton');
+    Container.register(ServiceD, 'singleton');
+
+    expect(() => {
+      Container.validate();
+    }).toThrowError(/Circular dependency detected: ServiceB → ServiceC → ServiceD → ServiceB/);
+  });
+
   it('should re-run validation after removing a dependency registration', () => {
     class Dependency {}
 

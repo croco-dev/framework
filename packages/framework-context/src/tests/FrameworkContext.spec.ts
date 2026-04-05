@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import 'reflect-metadata';
-import { Component, Container, Context, MetadataStorage } from '../index';
+import { Component, Container, Context, MetadataStorage, Token } from '../index';
 import { getComponentScope } from '../libs/decorators/Component';
 
 class SimpleService {
@@ -92,7 +92,10 @@ describe('Container', () => {
     it('should register component with scope', () => {
       Container.register(SimpleService, 'transient');
 
-      expect(true).toBe(true);
+      expect(Container.getComponentMetadata(SimpleService)).toEqual({
+        scope: 'transient',
+        target: SimpleService,
+      });
     });
 
     it('should keep request-scoped instances separate for same class names', () => {
@@ -120,6 +123,45 @@ describe('Container', () => {
       expect(serviceA).not.toBe(serviceB);
       expect(serviceA).toBeInstanceOf(UserServiceA);
       expect(serviceB).toBeInstanceOf(UserServiceB);
+    });
+
+    it('should resolve optional dependency when registered', () => {
+      const token = new Token<SimpleService>('optional.service');
+      const service = new SimpleService();
+
+      Container.set(token, service);
+
+      expect(Container.getOptional(token)).toBe(service);
+    });
+
+    it('should return undefined for missing optional dependency', () => {
+      const token = new Token<SimpleService>('optional.missing');
+
+      expect(Container.getOptional(token)).toBeUndefined();
+    });
+
+    it('should register async provider and resolve the created instance', async () => {
+      const token = new Token<SimpleService>('async.service');
+      const factory = vi.fn(async () => new SimpleService());
+
+      const instance = await Container.registerAsync(token, factory);
+
+      expect(factory).toHaveBeenCalledTimes(1);
+      expect(Container.get(token)).toBe(instance);
+      expect(instance.getValue()).toBe('simple');
+    });
+
+    it('should lazily initialize a provider once', () => {
+      const token = new Token<SimpleService>('lazy.service');
+      const factory = vi.fn(() => new SimpleService());
+
+      Container.registerLazy(token, factory);
+
+      const first = Container.get(token);
+      const second = Container.get(token);
+
+      expect(factory).toHaveBeenCalledTimes(1);
+      expect(first).toBe(second);
     });
   });
 });

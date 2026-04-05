@@ -1,10 +1,10 @@
 import {
   type Service,
-  type ServiceIdentifier,
-  type Token,
   Container as TypeDIContainer,
-  type ContainerInstance as TypeDIContainerInstance,
+  ContainerInstance as TypeDIContainerInstance,
+  Token as TypeDIToken,
 } from 'typedi';
+import type { Constructable as TypeDIConstructable } from 'typedi/types/types/constructable.type';
 import 'reflect-metadata';
 import { ProblemFactory } from '@croco/problems-core';
 import { Context } from './Context';
@@ -12,36 +12,50 @@ import { MetadataStorage } from './MetadataStorage';
 import { CircularDependencyProblem } from './problems/CircularDependencyProblem';
 import type { ComponentMetadata, Constructor, Scope } from './types';
 
-export type TokenIdentifier<T> = Constructor<T> | Token<T> | string | symbol;
+export type TokenIdentifier<T> = Constructor<T> | TypeDIToken<T> | string | symbol;
 
 const COMPONENT_METADATA_KEY = Symbol('component:metadata');
 
+class HandlerContainerInstance extends TypeDIContainerInstance {
+  override get<T>(id: Constructor<T> | TypeDIToken<T> | string): T {
+    return Container.get(id);
+  }
+}
+
 export class Container {
   private static validated = false;
+  private static readonly lazyProviders = new Map<TokenIdentifier<unknown>, () => unknown>();
+  private static readonly symbolTokens = new Map<symbol, TypeDIToken<unknown>>();
 
   static get<T>(token: TokenIdentifier<T>): T {
-    if (!(token instanceof Function)) {
-      return TypeDIContainer.get(token as any);
+    if (Container.shouldResolveLazy(token)) {
+      return Container.resolveLazy(token);
     }
 
-    const metadata = Container.getComponentMetadata(token);
+    if (!Container.isConstructorToken(token)) {
+      return Container.getRegisteredValue(token);
+    }
+
+    const constructorToken = token as Constructor<T>;
+
+    const metadata = Container.getComponentMetadata(constructorToken);
 
     if (!metadata) {
-      return TypeDIContainer.get(token);
+      return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
     }
 
     switch (metadata.scope) {
       case 'singleton':
-        return TypeDIContainer.get(token);
+        return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
 
       case 'transient':
-        return Container.createTransientInstance(token);
+        return Container.createTransientInstance(constructorToken);
 
       case 'request':
-        return Container.getRequestScoped(token);
+        return Container.getRequestScoped(constructorToken);
 
       default:
-        return TypeDIContainer.get(token);
+        return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
     }
   }
 
@@ -49,24 +63,39 @@ export class Container {
     return tokens.map((token) => Container.get(token));
   }
 
+  static getOptional<T>(token: TokenIdentifier<T>): T | undefined {
+    try {
+      return Container.get(token);
+    } catch (error) {
+      if (Container.isOptionalResolutionError(error)) {
+        return undefined;
+      }
+
+      throw error;
+    }
+  }
+
   static set<T>(token: TokenIdentifier<T>, instance: T): T {
-    TypeDIContainer.set({ id: token as ServiceIdentifier<T>, value: instance });
+    TypeDIContainer.set({ id: Container.resolveIdentifier(token), value: instance });
+    Container.lazyProviders.delete(token);
     Container.validated = false;
     return instance;
   }
 
   static has<T>(token: TokenIdentifier<T>): boolean {
-    return TypeDIContainer.has(token as any);
+    return Container.lazyProviders.has(token) || Container.hasRegisteredValue(token);
   }
 
   static remove<T>(token: TokenIdentifier<T>): void {
-    // TypeDI runtime supports symbols despite type definition
-    TypeDIContainer.remove(token as any);
+    Container.removeRegisteredValue(token);
+    Container.lazyProviders.delete(token);
     Container.validated = false;
   }
 
   static reset(): void {
     TypeDIContainer.reset();
+    Container.lazyProviders.clear();
+    Container.symbolTokens.clear();
     Container.validated = false;
   }
 
@@ -93,6 +122,16 @@ export class Container {
 
   static register<T>(token: Constructor<T>, scope: Scope): void {
     MetadataStorage.define(COMPONENT_METADATA_KEY, token, { scope, target: token });
+    Container.validated = false;
+  }
+
+  static async registerAsync<T>(token: TokenIdentifier<T>, factory: () => Promise<T>): Promise<T> {
+    const instance = await factory();
+    return Container.set(token, instance);
+  }
+
+  static registerLazy<T>(token: TokenIdentifier<T>, factory: () => T): void {
+    Container.lazyProviders.set(token, factory);
     Container.validated = false;
   }
 
@@ -167,9 +206,108 @@ export class Container {
     return MetadataStorage.get(COMPONENT_METADATA_KEY, target);
   }
 
+  private static shouldResolveLazy<T>(token: TokenIdentifier<T>): boolean {
+    return Container.lazyProviders.has(token) && !Container.hasRegisteredValue(token);
+  }
+
+  private static resolveLazy<T>(token: TokenIdentifier<T>): T {
+    const factory = Container.lazyProviders.get(token);
+    if (!factory) {
+      return Container.getRegisteredValue(token);
+    }
+
+    const instance = factory() as T;
+    Container.set(token, instance);
+    return instance;
+  }
+
+  private static resolveIdentifier<T>(token: TokenIdentifier<T>): Constructor<T> | TypeDIToken<T> | string {
+    if (typeof token === 'symbol') {
+      return Container.getOrCreateSymbolToken(token) as TypeDIToken<T>;
+    }
+
+    return token;
+  }
+
+  private static getOrCreateSymbolToken(symbol: symbol): TypeDIToken<unknown> {
+    const existing = Container.symbolTokens.get(symbol);
+    if (existing) {
+      return existing;
+    }
+
+    const token = new TypeDIToken(Symbol.keyFor(symbol) ?? symbol.description ?? symbol.toString());
+    Container.symbolTokens.set(symbol, token);
+    return token;
+  }
+
+  private static isConstructorToken<T>(token: TokenIdentifier<T>): token is Constructor<T> {
+    return typeof token === 'function';
+  }
+
+  private static getRegisteredValue<T>(token: TokenIdentifier<T>): T {
+    if (typeof token === 'symbol') {
+      return TypeDIContainer.get(Container.getOrCreateSymbolToken(token) as TypeDIToken<T>);
+    }
+
+    if (typeof token === 'string') {
+      return TypeDIContainer.get(token);
+    }
+
+    if (token instanceof TypeDIToken) {
+      return TypeDIContainer.get(token);
+    }
+
+    return TypeDIContainer.get(Container.toTypeDIConstructable(token));
+  }
+
+  private static hasRegisteredValue<T>(token: TokenIdentifier<T>): boolean {
+    if (typeof token === 'symbol') {
+      return TypeDIContainer.has(Container.getOrCreateSymbolToken(token));
+    }
+
+    if (typeof token === 'string') {
+      return TypeDIContainer.has(token);
+    }
+
+    if (token instanceof TypeDIToken) {
+      return TypeDIContainer.has(token);
+    }
+
+    return TypeDIContainer.has(Container.toTypeDIConstructable(token));
+  }
+
+  private static removeRegisteredValue<T>(token: TokenIdentifier<T>): void {
+    if (typeof token === 'symbol') {
+      TypeDIContainer.remove(Container.getOrCreateSymbolToken(token));
+      return;
+    }
+
+    if (typeof token === 'string') {
+      TypeDIContainer.remove(token);
+      return;
+    }
+
+    if (token instanceof TypeDIToken) {
+      TypeDIContainer.remove(token);
+      return;
+    }
+
+    TypeDIContainer.remove(Container.toTypeDIConstructable(token));
+  }
+
+  private static toTypeDIConstructable<T>(token: Constructor<T>): TypeDIConstructable<T> {
+    return token as unknown as TypeDIConstructable<T>;
+  }
+
+  private static isOptionalResolutionError(error: unknown): error is Error {
+    return (
+      error instanceof Error && (error.name === 'ServiceNotFoundError' || error.name === 'CannotInstantiateValueError')
+    );
+  }
+
   private static createTransientInstance<T>(token: Constructor<T>): T {
     const dependencies = Container.resolveDependencies(token);
-    return new token(...dependencies);
+    return Reflect.construct(token, dependencies) as T;
   }
 
   private static resolveDependencies<T>(token: Constructor<T>): unknown[] {
@@ -191,13 +329,7 @@ export class Container {
   }
 
   private static createHandlerContainer(): TypeDIContainerInstance {
-    const containerLike = {
-      get<T>(id: ServiceIdentifier<T>): T {
-        return Container.get(id as TokenIdentifier<T>);
-      },
-    };
-
-    return containerLike as unknown as TypeDIContainerInstance;
+    return new HandlerContainerInstance('__croco_handler__');
   }
 
   private static getRequestScoped<T>(token: Constructor<T>): T {

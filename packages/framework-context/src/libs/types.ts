@@ -1,41 +1,22 @@
-/**
- * Component scope types
- */
 export type Scope = 'singleton' | 'request' | 'transient';
 
-/**
- * Generic constructor type
- */
-// biome-ignore lint/suspicious/noExplicitAny: Generic constructor requires any for arguments
-export type Constructor<T = any> = new (...args: any[]) => T;
+export type Constructor<T = unknown> = new (...args: never[]) => T;
 
-/**
- * Component options for @Component decorator
- */
 export interface ComponentOptions {
   scope?: Scope;
 }
 
-/**
- * Internal component metadata
- */
 export interface ComponentMetadata {
   scope: Scope;
   target: Constructor;
 }
 
-/**
- * User information in request context
- */
 export type UserContext = {
   id: string;
   email?: string;
   [key: string]: unknown;
 };
 
-/**
- * Request context data
- */
 export interface RequestContext {
   requestId: string;
   user?: UserContext;
@@ -43,38 +24,16 @@ export interface RequestContext {
   traceId?: string;
 }
 
-/**
- * Onion middleware function type
- * Similar to Koa middleware pattern
- */
 export type Middleware<TContext = RequestContext> = (ctx: TContext, next: () => Promise<void>) => Promise<void>;
 
-/**
- * Lifecycle hooks for request scope
- */
 export interface LifecycleHooks<TContext = RequestContext> {
-  /**
-   * Called when request starts, before middleware chain
-   */
   onRequestStart?: (ctx: TContext) => Promise<void> | void;
 
-  /**
-   * Called when request ends successfully, after middleware chain
-   */
   onRequestEnd?: (ctx: TContext, result?: unknown) => Promise<void> | void;
 
-  /**
-   * Called when request encounters an error
-   */
   onRequestError?: (ctx: TContext, error: Error) => Promise<void> | void;
 }
 
-/**
- * Shutdown hook interface for graceful shutdown
- */
 export interface ShutdownHook {
-  /**
-   * Called during graceful shutdown process
-   */
   onShutdown(signal?: AbortSignal): Promise<void>;
 }

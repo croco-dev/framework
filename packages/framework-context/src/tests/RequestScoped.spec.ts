@@ -41,4 +41,21 @@ describe('request scoped container behavior', () => {
 
     expect(firstRequestInstance).not.toBe(secondRequestInstance);
   });
+
+  it('should preserve request scoped instance across async boundaries', async () => {
+    class RequestService {
+      readonly id = Math.random();
+    }
+
+    Component({ scope: 'request' })(RequestService);
+
+    await Context.run({ requestId: 'req-async-boundary' }, async () => {
+      const first = Container.get(RequestService);
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const second = Container.get(RequestService);
+
+      expect(first).toBe(second);
+    });
+  });
 });
