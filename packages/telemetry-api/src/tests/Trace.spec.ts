@@ -3,7 +3,7 @@ import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-ho
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { TraceDecoratorOptions } from '../libs/decorators/Trace';
 import { getTraceOptions, Trace } from '../libs/decorators/Trace';
-import { getActiveTraceInfo, recordEvent, withSpan } from '../libs/span';
+import { getActiveTraceInfo, recordError, recordEvent, withSpan } from '../libs/span';
 import * as tracerModule from '../libs/tracer';
 import { getTracer } from '../libs/tracer';
 
@@ -76,6 +76,14 @@ function createMockTracer(mockSpan: Span): Tracer {
 }
 
 describe('Trace', () => {
+  it('should return descriptor when value is undefined', () => {
+    const descriptor: PropertyDescriptor = { writable: true, enumerable: true, configurable: true };
+
+    const result = Trace()({}, 'method', descriptor);
+
+    expect(result).toBe(descriptor);
+  });
+
   it('should decorate async methods with tracing', async () => {
     class TestService {
       value = 0;
@@ -127,6 +135,10 @@ describe('Trace', () => {
   });
 
   it('should handle errors in decorated methods', async () => {
+    const mockSpan = createMockSpan();
+
+    vi.spyOn(tracerModule, 'getTracer').mockReturnValue(createMockTracer(mockSpan.span));
+
     class TestService {
       async failingMethod(): Promise<void> {
         throw new Error('Test error');
@@ -138,6 +150,11 @@ describe('Trace', () => {
     const service = new TestService();
 
     await expect(service.failingMethod()).rejects.toThrow('Test error');
+
+    expect(mockSpan.setStatus).toHaveBeenCalledWith({
+      code: expect.any(Number),
+      message: 'Test error',
+    });
   });
 
   it('should not set span status on successful completion', async () => {
@@ -194,6 +211,16 @@ describe('Trace', () => {
       name: 'base-operation',
       attributes: { level: 'base' },
     });
+  });
+
+  it('should return undefined when target is not an object', () => {
+    const options = getTraceOptions('string', 'method');
+    expect(options).toBeUndefined();
+  });
+
+  it('should return undefined when target is null', () => {
+    const options = getTraceOptions(null, 'method');
+    expect(options).toBeUndefined();
   });
 
   it('should return cloned options to prevent external mutation', () => {
@@ -254,9 +281,33 @@ describe('withSpan', () => {
   });
 });
 
+describe('recordError', () => {
+  it('should not throw when no active span', () => {
+    expect(() => recordError(new Error('test'))).not.toThrow();
+  });
+
+  it('should not throw when active span exists', async () => {
+    await withSpan(
+      async () => {
+        expect(() => recordError(new Error('test'))).not.toThrow();
+      },
+      { name: 'test-operation' }
+    );
+  });
+});
+
 describe('recordEvent', () => {
   it('should not throw when no active span', () => {
     expect(() => recordEvent('test-event', { key: 'value' })).not.toThrow();
+  });
+
+  it('should not throw when active span exists', async () => {
+    await withSpan(
+      async () => {
+        expect(() => recordEvent('test-event', { key: 'value' })).not.toThrow();
+      },
+      { name: 'test-operation' }
+    );
   });
 });
 
@@ -264,6 +315,20 @@ describe('getActiveTraceInfo', () => {
   it('should return empty object when no active trace', () => {
     const info = getActiveTraceInfo();
     expect(info).toEqual({});
+  });
+
+  it('should return trace info when span is active', async () => {
+    const info = await withSpan(
+      async () => {
+        return getActiveTraceInfo();
+      },
+      { name: 'test-operation' }
+    );
+
+    expect(info).toHaveProperty('traceId');
+    expect(info).toHaveProperty('spanId');
+    expect(info).toHaveProperty('traceFlags');
+    expect(info).toHaveProperty('isValid');
   });
 });
 
@@ -303,5 +368,29 @@ describe('@Trace + withSpan error recording', () => {
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toBe('Test error');
     }
+  });
+});
+
+describe('getTraceOptions', () => {
+  it('should update existing options when decorating same method twice', () => {
+    class TestService {
+      async run(): Promise<void> {}
+    }
+
+    decorateMethodWithTrace(TestService.prototype, 'run', {
+      name: 'first-operation',
+      attributes: { version: '1' },
+    });
+
+    decorateMethodWithTrace(TestService.prototype, 'run', {
+      name: 'second-operation',
+      attributes: { version: '2' },
+    });
+
+    const options = getTraceOptions(TestService.prototype, 'run');
+    expect(options).toEqual({
+      name: 'second-operation',
+      attributes: { version: '2' },
+    });
   });
 });

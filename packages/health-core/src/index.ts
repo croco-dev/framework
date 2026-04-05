@@ -109,14 +109,20 @@ export { HealthCheckService } from './libs/HealthCheckService';
  *
  * @property name - Identifier for the health check (e.g., 'database', 'redis')
  * @property status - Current health status: 'up' (healthy) or 'down' (unhealthy)
- * @property details - Optional additional information, typically containing error messages when status is 'down'
+ * @property details - Optional additional information, typically containing error messages when status is 'down' or metrics when status is 'up'
  *
  * @example
  * ```typescript
- * const result: HealthIndicatorResult = {
+ * const errorResult: HealthIndicatorResult = {
  *   name: 'database',
  *   status: 'down',
- *   details: { error: 'Connection refused' },
+ *   details: { error: 'Connection refused', code: 'ECONNREFUSED' },
+ * };
+ *
+ * const successResult: HealthIndicatorResult = {
+ *   name: 'redis',
+ *   status: 'up',
+ *   details: { latency: 5, connections: 10 },
  * };
  * ```
  */
@@ -130,7 +136,43 @@ export { HealthCheckService } from './libs/HealthCheckService';
  *
  * @example
  * ```typescript
- * const status: HealthStatus = 'up'; // Component is healthy
+ * const status: HealthStatus = 'up';
  * ```
  */
-export type { HealthIndicator, HealthIndicatorResult, HealthStatus } from './libs/HealthIndicator';
+/**
+ * Error details for a failed health check.
+ *
+ * @property error - Error message describing what went wrong
+ * @property message - Optional additional error context
+ * @property code - Optional error code for categorization
+ *
+ * @example
+ * ```typescript
+ * const errorDetails: HealthIndicatorErrorDetails = {
+ *   error: 'Connection timeout',
+ *   message: 'Database did not respond within 5000ms',
+ *   code: 'ETIMEDOUT',
+ * };
+ * ```
+ */
+/**
+ * Success details for a passing health check.
+ *
+ * Can include metrics, latency information, or other diagnostic data.
+ *
+ * @example
+ * ```typescript
+ * const successDetails: HealthIndicatorSuccessDetails = {
+ *   latency: 15,
+ *   connections: 5,
+ *   version: '1.2.3',
+ * };
+ * ```
+ */
+export type {
+  HealthIndicator,
+  HealthIndicatorErrorDetails,
+  HealthIndicatorResult,
+  HealthIndicatorSuccessDetails,
+  HealthStatus,
+} from './libs/HealthIndicator';

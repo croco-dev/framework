@@ -48,11 +48,6 @@ export function recordEvent(name: string, attributes: Attributes = {}): void {
   span.addEvent(name, attributes);
 }
 
-/**
- * 현재 Span에 에러를 기록합니다.
- * @param error 에러 객체 또는 메시지
- * @param span Span 인스턴스 (선택사항, 지정하지 않으면 현재 Span 사용)
- */
 export function recordError(error: unknown, span?: Span): void {
   const activeSpan = span ?? trace.getActiveSpan();
   if (!activeSpan) {

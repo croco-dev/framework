@@ -1,0 +1,230 @@
+# @croco/health-core
+
+Health check monitoring system for Croco applications.
+
+## Features
+
+- **Type-safe health indicators** with detailed error and success reporting
+- **Parallel execution** of all health checks with configurable timeout
+- **AbortController support** for cancellable health checks
+- **Zero dependencies** — lightweight and fast
+
+## Installation
+
+```bash
+pnpm add @croco/health-core
+```
+
+## Quick Start
+
+```typescript
+import { HealthCheckService } from '@croco/health-core';
+import type { HealthIndicator, HealthIndicatorResult } from '@croco/health-core';
+
+const healthService = new HealthCheckService({ timeout: 5000 });
+
+class DatabaseHealthIndicator implements HealthIndicator {
+  async check(signal?: AbortSignal): Promise<HealthIndicatorResult> {
+    try {
+      await this.db.ping();
+
+      return {
+        name: 'database',
+        status: 'up',
+        details: { latency: 15, connections: 5 },
+      };
+    } catch (error) {
+      return {
+        name: 'database',
+        status: 'down',
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+          code: 'DB_CONNECTION_ERROR',
+        },
+      };
+    }
+  }
+}
+
+healthService.register(new DatabaseHealthIndicator());
+
+const result = await healthService.check();
+console.log(result.status); // 'up' | 'down'
+console.log(result.results); // Array of individual check results
+```
+
+## API Reference
+
+### HealthIndicator
+
+Interface for implementing custom health checks.
+
+```typescript
+interface HealthIndicator {
+  check(signal?: AbortSignal): Promise<HealthIndicatorResult>;
+}
+```
+
+### HealthIndicatorResult
+
+Result type returned by health checks.
+
+```typescript
+type HealthIndicatorResult = {
+  name: string;
+  status: 'up' | 'down';
+  details?: HealthIndicatorErrorDetails | HealthIndicatorSuccessDetails;
+};
+```
+
+**Success details:**
+
+```typescript
+type HealthIndicatorSuccessDetails = {
+  [key: string]: string | number | boolean | null | undefined;
+};
+```
+
+Example: `{ latency: 15, connections: 5, version: '1.2.3' }`
+
+**Error details:**
+
+```typescript
+type HealthIndicatorErrorDetails = {
+  error: string;
+  message?: string;
+  code?: string;
+};
+```
+
+Example: `{ error: 'Connection timeout', code: 'ETIMEDOUT' }`
+
+### HealthCheckService
+
+Orchestrates health check execution.
+
+```typescript
+class HealthCheckService {
+  constructor(options?: { timeout?: number });
+
+  register(indicator: HealthIndicator): void;
+  check(): Promise<HealthCheckResult>;
+}
+```
+
+## Examples
+
+### Database Health Check
+
+```typescript
+class PostgresHealthIndicator implements HealthIndicator {
+  constructor(private readonly pool: Pool) {}
+
+  async check(): Promise<HealthIndicatorResult> {
+    try {
+      const start = Date.now();
+      await this.pool.query('SELECT 1');
+      const latency = Date.now() - start;
+
+      return {
+        name: 'postgres',
+        status: 'up',
+        details: { latency, idleCount: this.pool.idleCount },
+      };
+    } catch (error) {
+      return {
+        name: 'postgres',
+        status: 'down',
+        details: { error: String(error), code: 'POSTGRES_ERROR' },
+      };
+    }
+  }
+}
+```
+
+### Redis Health Check
+
+```typescript
+class RedisHealthIndicator implements HealthIndicator {
+  constructor(private readonly redis: Redis) {}
+
+  async check(signal?: AbortSignal): Promise<HealthIndicatorResult> {
+    try {
+      const start = Date.now();
+      await this.redis.ping();
+      const latency = Date.now() - start;
+
+      return {
+        name: 'redis',
+        status: 'up',
+        details: { latency, connectedClients: await this.redis.client('LIST') },
+      };
+    } catch (error) {
+      return {
+        name: 'redis',
+        status: 'down',
+        details: { error: String(error) },
+      };
+    }
+  }
+}
+```
+
+### External API Health Check
+
+```typescript
+class ApiHealthIndicator implements HealthIndicator {
+  async check(signal?: AbortSignal): Promise<HealthIndicatorResult> {
+    try {
+      const response = await fetch('https://api.example.com/health', {
+        signal,
+      });
+
+      if (!response.ok) {
+        return {
+          name: 'external-api',
+          status: 'down',
+          details: {
+            error: `HTTP ${response.status}`,
+            code: String(response.status),
+          },
+        };
+      }
+
+      return {
+        name: 'external-api',
+        status: 'up',
+        details: { latency: response.headers.get('X-Response-Time') },
+      };
+    } catch (error) {
+      return {
+        name: 'external-api',
+        status: 'down',
+        details: { error: String(error) },
+      };
+    }
+  }
+}
+```
+
+## Integration with HTTP Endpoints
+
+```typescript
+import { Hono } from 'hono';
+import { HealthCheckService } from '@croco/health-core';
+
+const app = new Hono();
+const healthService = new HealthCheckService();
+
+healthService.register(new DatabaseHealthIndicator(db));
+healthService.register(new RedisHealthIndicator(redis));
+
+app.get('/health', async (c) => {
+  const result = await healthService.check();
+  return c.json(result, result.status === 'up' ? 200 : 503);
+});
+```
+
+## License
+
+MIT

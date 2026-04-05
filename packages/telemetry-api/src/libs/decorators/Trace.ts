@@ -28,13 +28,23 @@ function setTraceOptions(target: object, propertyKey: string | symbol, options: 
   traceOptionsStore.set(target, map);
 }
 
-export function Trace(options: TraceDecoratorOptions = {}): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
+  options: TraceDecoratorOptions = {}
+): (
+  _target: object,
+  propertyKey: string | symbol,
+  descriptor: TypedPropertyDescriptor<(...args: Args) => Promise<ReturnType>>
+) => TypedPropertyDescriptor<(...args: Args) => Promise<ReturnType>> | undefined {
+  return (_target, propertyKey, descriptor) => {
     const originalMethod = descriptor.value;
+
+    if (!originalMethod) {
+      return descriptor;
+    }
 
     setTraceOptions(_target, propertyKey, options);
 
-    descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+    descriptor.value = async function (this: unknown, ...args: Args): Promise<ReturnType> {
       const span = getTracer().startSpan(options.name ?? String(propertyKey));
       const spanAttributes = options.attributes ?? {};
       const spanContext = trace.setSpan(context.active(), span);
@@ -56,7 +66,7 @@ export function Trace(options: TraceDecoratorOptions = {}): MethodDecorator {
           span.end();
         }
       });
-    };
+    } as (...args: Args) => Promise<ReturnType>;
 
     return descriptor;
   };
