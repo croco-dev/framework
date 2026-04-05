@@ -1,22 +1,22 @@
 import { ProblemCategory } from './ProblemCategory';
 import { ProblemCategoryMapper } from './ProblemCategoryMapper';
+import type { ProblemExtensions } from './ProblemExtensions';
 
-export interface ProblemOptions {
+export type ProblemOptions = {
   type?: string;
   instance?: string;
-  extensions?: Record<string, unknown>;
+  extensions?: ProblemExtensions;
   cause?: Error;
-}
+};
 
-export interface ProblemDetails {
+export type ProblemDetails = {
   type: string;
   title: string;
   status: number;
   detail?: string;
   instance?: string;
   code: string;
-  [key: string]: unknown;
-}
+} & Record<string, unknown>;
 
 export abstract class Problem extends Error {
   public readonly code: string;
@@ -24,22 +24,14 @@ export abstract class Problem extends Error {
   public readonly detail?: string;
   public readonly type: string;
   public readonly instance?: string;
-  public readonly extensions?: Record<string, unknown>;
+  public readonly extensions?: ProblemExtensions;
   public readonly cause?: Error;
 
   protected constructor(code?: string, category?: ProblemCategory, detail?: string, options?: ProblemOptions) {
     super(detail ?? code ?? 'Unknown error');
 
-    // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
-    if ((this as any).code === undefined) {
-      // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
-      (this as any).code = code ?? 'UNKNOWN_ERROR';
-    }
-    // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
-    if ((this as any).category === undefined) {
-      // biome-ignore lint/suspicious/noExplicitAny: subclasses may override readonly properties
-      (this as any).category = category ?? ProblemCategory.InternalServerError;
-    }
+    this.code = code ?? 'UNKNOWN_ERROR';
+    this.category = category ?? ProblemCategory.InternalServerError;
 
     this.detail = detail;
     this.type = options?.type ?? 'about:blank';

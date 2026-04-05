@@ -1,38 +1,84 @@
 import { ProblemCategory } from './ProblemCategory';
 
-const HTTP_STATUS_MAP: Record<ProblemCategory, number> = {
-  [ProblemCategory.BadRequest]: 400,
-  [ProblemCategory.Unauthorized]: 401,
-  [ProblemCategory.Forbidden]: 403,
-  [ProblemCategory.NotFound]: 404,
-  [ProblemCategory.Conflict]: 409,
-  [ProblemCategory.Gone]: 410,
-  [ProblemCategory.ValidationError]: 422,
-  [ProblemCategory.BusinessRuleViolation]: 422,
-  [ProblemCategory.TooManyRequests]: 429,
-  [ProblemCategory.InternalServerError]: 500,
-  [ProblemCategory.NotImplemented]: 501,
-};
+/**
+ * ProblemCategory를 HTTP 상태 코드로 변환합니다.
+ * @param category - 변환할 ProblemCategory
+ * @returns 해당 카테고리에 해당하는 HTTP 상태 코드
+ * @throws {Error} 처리되지 않은 카테고리인 경우
+ */
+export function toHttpStatus(category: ProblemCategory): number {
+  switch (category) {
+    case ProblemCategory.BadRequest:
+      return 400;
+    case ProblemCategory.Unauthorized:
+      return 401;
+    case ProblemCategory.Forbidden:
+      return 403;
+    case ProblemCategory.NotFound:
+      return 404;
+    case ProblemCategory.Conflict:
+      return 409;
+    case ProblemCategory.Gone:
+      return 410;
+    case ProblemCategory.ValidationError:
+      return 422;
+    case ProblemCategory.BusinessRuleViolation:
+      return 422;
+    case ProblemCategory.TooManyRequests:
+      return 429;
+    case ProblemCategory.InternalServerError:
+      return 500;
+    case ProblemCategory.NotImplemented:
+      return 501;
+    default: {
+      const _exhaustiveCheck: never = category;
+      throw new Error(`Unhandled ProblemCategory: ${String(_exhaustiveCheck)}`);
+    }
+  }
+}
 
-const TITLE_MAP: Record<ProblemCategory, string> = {
-  [ProblemCategory.BadRequest]: 'Bad Request',
-  [ProblemCategory.Unauthorized]: 'Unauthorized',
-  [ProblemCategory.Forbidden]: 'Forbidden',
-  [ProblemCategory.NotFound]: 'Not Found',
-  [ProblemCategory.Conflict]: 'Conflict',
-  [ProblemCategory.Gone]: 'Gone',
-  [ProblemCategory.ValidationError]: 'Validation Error',
-  [ProblemCategory.BusinessRuleViolation]: 'Business Rule Violation',
-  [ProblemCategory.TooManyRequests]: 'Too Many Requests',
-  [ProblemCategory.InternalServerError]: 'Internal Server Error',
-  [ProblemCategory.NotImplemented]: 'Not Implemented',
-};
+/**
+ * ProblemCategory를 사람이 읽을 수 있는 제목으로 변환합니다.
+ * @param category - 변환할 ProblemCategory
+ * @returns 해당 카테고리의 제목 문자열
+ * @throws {Error} 처리되지 않은 카테고리인 경우
+ */
+export function toTitle(category: ProblemCategory): string {
+  switch (category) {
+    case ProblemCategory.BadRequest:
+      return 'Bad Request';
+    case ProblemCategory.Unauthorized:
+      return 'Unauthorized';
+    case ProblemCategory.Forbidden:
+      return 'Forbidden';
+    case ProblemCategory.NotFound:
+      return 'Not Found';
+    case ProblemCategory.Conflict:
+      return 'Conflict';
+    case ProblemCategory.Gone:
+      return 'Gone';
+    case ProblemCategory.ValidationError:
+      return 'Validation Error';
+    case ProblemCategory.BusinessRuleViolation:
+      return 'Business Rule Violation';
+    case ProblemCategory.TooManyRequests:
+      return 'Too Many Requests';
+    case ProblemCategory.InternalServerError:
+      return 'Internal Server Error';
+    case ProblemCategory.NotImplemented:
+      return 'Not Implemented';
+    default: {
+      const _exhaustiveCheck: never = category;
+      throw new Error(`Unhandled ProblemCategory: ${String(_exhaustiveCheck)}`);
+    }
+  }
+}
 
+/**
+ * ProblemCategory와 HTTP 상태 코드 및 제목 간의 매핑을 제공합니다.
+ * RFC 7807 Problem Details 형식과 호환됩니다.
+ */
 export const ProblemCategoryMapper = {
-  toHttpStatus(category: ProblemCategory): number {
-    return HTTP_STATUS_MAP[category];
-  },
-  toTitle(category: ProblemCategory): string {
-    return TITLE_MAP[category];
-  },
+  toHttpStatus,
+  toTitle,
 };
