@@ -3,7 +3,7 @@ import { Component, Container, Inject } from '@croco/framework-context';
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from './events';
 import { HealthScoreCalculator } from './HealthScoreCalculator';
 import { HealthScoreStore, HealthSignalRegistry } from './interfaces';
-import type { HealthScoreProfile, TenantHealthScore } from './types';
+import type { HealthScoreProfile, HealthTrend, TenantHealthScore } from './types';
 
 const SCORE_DROP_EVENT_THRESHOLD_PERCENT = 20;
 
@@ -17,13 +17,21 @@ export class CustomerHealthService {
 
   async calculateAndStore(tenantId: string, profile: HealthScoreProfile): Promise<TenantHealthScore> {
     const providers = this.signalRegistry.getProviders();
-    const signals: unknown[] = [];
+    const allSignals: {
+      category: string;
+      name: string;
+      value: number;
+      weight: number;
+      rawValue: unknown;
+      collectedAt: Date;
+    }[] = [];
+
     for (const provider of providers) {
       const providerSignals = await provider.collect(tenantId);
-      signals.push(...providerSignals);
+      allSignals.push(...providerSignals);
     }
 
-    const score = this.calculator.calculate(signals as Parameters<HealthScoreCalculator['calculate']>[0], profile);
+    const score = this.calculator.calculate(allSignals, profile);
     score.tenantId = tenantId;
 
     const previous = await this.store.findLatest(tenantId);
@@ -41,6 +49,33 @@ export class CustomerHealthService {
 
   async getLatest(tenantId: string): Promise<TenantHealthScore | null> {
     return this.store.findLatest(tenantId);
+  }
+
+  async getTrend(tenantId: string, days: number): Promise<{ trend: HealthTrend; changePercentage: number } | null> {
+    const history = await this.store.findHistory(tenantId, days + 1);
+    if (history.length < 2) {
+      return null;
+    }
+
+    const sorted = history.sort((a, b) => a.calculatedAt.getTime() - b.calculatedAt.getTime());
+    const oldest = sorted[0];
+    const newest = sorted[sorted.length - 1];
+
+    const changePercentage =
+      oldest.overallScore === 0
+        ? newest.overallScore * 100
+        : ((newest.overallScore - oldest.overallScore) / oldest.overallScore) * 100;
+
+    let trend: HealthTrend;
+    if (changePercentage >= 5) {
+      trend = 'improving';
+    } else if (changePercentage <= -5) {
+      trend = 'declining';
+    } else {
+      trend = 'stable';
+    }
+
+    return { trend, changePercentage };
   }
 
   private async publishEvents(score: TenantHealthScore, previous: TenantHealthScore | null): Promise<void> {

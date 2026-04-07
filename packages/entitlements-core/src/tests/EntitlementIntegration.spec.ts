@@ -1,24 +1,43 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { Container } from '@croco/framework-context';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntitlementManager } from '../libs/EntitlementManager';
+import { EntitlementOverageAllowedEvent, EntitlementQuotaExceededEvent } from '../libs/events';
 import { InMemoryPlanEntitlementRegistry } from '../libs/InMemoryPlanEntitlementRegistry';
-import { EntitlementMeterLookup, EntitlementQuotaChecker } from '../libs/interfaces';
+import { EntitlementEventPublisher, EntitlementMeterLookup, EntitlementQuotaChecker } from '../libs/interfaces';
 import { StaticSubscriptionProvider } from '../libs/StaticSubscriptionProvider';
-import type { EntitlementRule } from '../libs/types';
+import type { EntitlementQuotaStatus, EntitlementRule, UsageHistoryEntry, UsageHistoryPeriod } from '../libs/types';
 
 class MockQuotaChecker extends EntitlementQuotaChecker {
-  private usageValue = 0;
-  private exceededValue = false;
+  private quotaStatus: EntitlementQuotaStatus = {
+    usage: 0,
+    quota: 0,
+    exceeded: false,
+    remaining: 0,
+  };
 
-  setUsage(usage: number): void {
-    this.usageValue = usage;
+  setQuotaStatus(quotaStatus: EntitlementQuotaStatus): void {
+    this.quotaStatus = quotaStatus;
   }
 
-  setExceeded(exceeded: boolean): void {
-    this.exceededValue = exceeded;
+  async checkQuota(_tenantId: string, _featureId: string, quota: number): Promise<EntitlementQuotaStatus> {
+    return {
+      ...this.quotaStatus,
+      quota,
+    };
   }
 
-  async checkQuota(): Promise<{ exceeded: boolean; usage: number }> {
-    return { exceeded: this.exceededValue, usage: this.usageValue };
+  async getCurrentUsage(_tenantId: string, _featureId: string): Promise<number> {
+    return this.quotaStatus.usage;
+  }
+
+  async resetUsage(_tenantId: string, _featureId: string, _billingCycleStart: Date): Promise<void> {}
+
+  async getUsageHistory(
+    _tenantId: string,
+    _featureId: string,
+    _period: UsageHistoryPeriod
+  ): Promise<UsageHistoryEntry[]> {
+    return [];
   }
 }
 
@@ -34,18 +53,27 @@ class MockMeterLookup extends EntitlementMeterLookup {
   }
 }
 
+class MockEventPublisher extends EntitlementEventPublisher {
+  readonly publish = vi.fn(async () => undefined);
+}
+
 describe('EntitlementIntegration', () => {
   let manager!: EntitlementManager;
   let registry!: InMemoryPlanEntitlementRegistry;
   let subscriptionProvider!: StaticSubscriptionProvider;
   let quotaChecker!: MockQuotaChecker;
   let meterLookup!: MockMeterLookup;
+  let eventPublisher!: MockEventPublisher;
 
   beforeEach(() => {
+    Container.reset();
     registry = new InMemoryPlanEntitlementRegistry();
     quotaChecker = new MockQuotaChecker();
     meterLookup = new MockMeterLookup();
     subscriptionProvider = new StaticSubscriptionProvider('free');
+    eventPublisher = new MockEventPublisher();
+
+    Container.set(EntitlementEventPublisher.token, eventPublisher);
 
     manager = new EntitlementManager(registry, subscriptionProvider, quotaChecker, meterLookup);
   });
@@ -112,108 +140,133 @@ describe('EntitlementIntegration', () => {
   });
 
   describe('Scenario 2: OveragePolicy Behavior', () => {
-    it('should grant metered entitlement when usage within quota (block policy)', async () => {
+    it('should grant metered entitlement when usage within quota', async () => {
       const rules: EntitlementRule[] = [
         {
           featureKey: 'api_calls',
           type: 'metered',
           meterId: 'api_calls',
           quota: 100,
-          overagePolicy: 'block',
+          overagePolicy: 'BLOCK',
         },
       ];
       registry.register('free', rules);
-
-      quotaChecker.setUsage(50);
-      quotaChecker.setExceeded(false);
+      quotaChecker.setQuotaStatus({ usage: 50, quota: 100, exceeded: false, remaining: 50 });
 
       const result = await manager.check('tenant-1', 'api_calls');
 
-      expect(result.granted).toBe(true);
-      if (result.granted) {
-        expect(result.featureKey).toBe('api_calls');
-        expect(result.type).toBe('metered');
-        expect(result.quota).toBe(100);
-        expect(result.planId).toBe('free');
-      }
+      expect(result).toEqual({
+        granted: true,
+        featureKey: 'api_calls',
+        type: 'metered',
+        quota: 100,
+        usage: 50,
+        remaining: 50,
+        exceeded: false,
+        overagePolicy: 'BLOCK',
+        planId: 'free',
+      });
     });
 
-    it('should grant metered entitlement when usage equals quota (block policy)', async () => {
-      const rules: EntitlementRule[] = [
+    it('should reject metered entitlement when quota exceeded and policy is BLOCK', async () => {
+      registry.register('free', [
         {
           featureKey: 'api_calls',
           type: 'metered',
           meterId: 'api_calls',
           quota: 100,
-          overagePolicy: 'block',
+          overagePolicy: 'BLOCK',
         },
-      ];
-      registry.register('free', rules);
-
-      quotaChecker.setUsage(100);
-      quotaChecker.setExceeded(false);
+      ]);
+      quotaChecker.setQuotaStatus({ usage: 101, quota: 100, exceeded: true, remaining: -1 });
 
       const result = await manager.check('tenant-1', 'api_calls');
 
-      expect(result.granted).toBe(true);
-      if (result.granted) {
-        expect(result.featureKey).toBe('api_calls');
-        expect(result.type).toBe('metered');
-        expect(result.quota).toBe(100);
-        expect(result.planId).toBe('free');
-      }
+      expect(result).toEqual({
+        granted: false,
+        featureKey: 'api_calls',
+        type: 'metered',
+        quota: 100,
+        usage: 101,
+        remaining: -1,
+        exceeded: true,
+        reason: 'quota_exceeded',
+        overagePolicy: 'BLOCK',
+        planId: 'free',
+      });
+      expect(eventPublisher.publish).toHaveBeenCalledWith(
+        expect.objectContaining({ eventName: EntitlementQuotaExceededEvent.eventName })
+      );
     });
 
-    it('should grant metered entitlement with warn policy when quota exceeded', async () => {
-      const rules: EntitlementRule[] = [
+    it('should warn and allow metered entitlement when quota exceeded and policy is WARN', async () => {
+      registry.register('free', [
         {
           featureKey: 'api_calls',
           type: 'metered',
           meterId: 'api_calls',
           quota: 100,
-          overagePolicy: 'warn',
+          overagePolicy: 'WARN',
         },
-      ];
-      registry.register('free', rules);
+      ]);
+      quotaChecker.setQuotaStatus({ usage: 150, quota: 100, exceeded: true, remaining: -50 });
 
-      quotaChecker.setUsage(150);
-      quotaChecker.setExceeded(true);
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const result = await manager.check('tenant-1', 'api_calls');
 
-      expect(result.granted).toBe(true);
-      if (result.granted) {
-        expect(result.featureKey).toBe('api_calls');
-        expect(result.type).toBe('metered');
-        expect(result.quota).toBe(100);
-        expect(result.planId).toBe('free');
-      }
+      expect(result).toEqual({
+        granted: true,
+        featureKey: 'api_calls',
+        type: 'metered',
+        quota: 100,
+        usage: 150,
+        remaining: -50,
+        exceeded: true,
+        overagePolicy: 'WARN',
+        planId: 'free',
+      });
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(eventPublisher.publish).toHaveBeenCalledWith(
+        expect.objectContaining({ eventName: EntitlementQuotaExceededEvent.eventName })
+      );
+
+      warnSpy.mockRestore();
     });
 
-    it('should grant metered entitlement with allow policy when quota exceeded', async () => {
-      const rules: EntitlementRule[] = [
+    it('should publish overage event and allow metered entitlement when policy is ALLOW_WITH_OVERAGE', async () => {
+      registry.register('free', [
         {
           featureKey: 'api_calls',
           type: 'metered',
           meterId: 'api_calls',
           quota: 100,
-          overagePolicy: 'allow',
+          overagePolicy: 'ALLOW_WITH_OVERAGE',
         },
-      ];
-      registry.register('free', rules);
-
-      quotaChecker.setUsage(200);
-      quotaChecker.setExceeded(true);
+      ]);
+      quotaChecker.setQuotaStatus({ usage: 200, quota: 100, exceeded: true, remaining: -100 });
 
       const result = await manager.check('tenant-1', 'api_calls');
 
-      expect(result.granted).toBe(true);
-      if (result.granted) {
-        expect(result.featureKey).toBe('api_calls');
-        expect(result.type).toBe('metered');
-        expect(result.quota).toBe(100);
-        expect(result.planId).toBe('free');
-      }
+      expect(result).toEqual({
+        granted: true,
+        featureKey: 'api_calls',
+        type: 'metered',
+        quota: 100,
+        usage: 200,
+        remaining: -100,
+        exceeded: true,
+        overagePolicy: 'ALLOW_WITH_OVERAGE',
+        planId: 'free',
+      });
+      expect(eventPublisher.publish).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ eventName: EntitlementQuotaExceededEvent.eventName })
+      );
+      expect(eventPublisher.publish).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ eventName: EntitlementOverageAllowedEvent.eventName })
+      );
     });
 
     it('should use meter lookup quota when rule quota is not specified', async () => {
@@ -222,22 +275,27 @@ describe('EntitlementIntegration', () => {
           featureKey: 'storage',
           type: 'metered',
           meterId: 'storage',
-          overagePolicy: 'block',
+          overagePolicy: 'BLOCK',
         },
       ];
       registry.register('free', rules);
 
       meterLookup.setQuota(500);
+      quotaChecker.setQuotaStatus({ usage: 100, quota: 500, exceeded: false, remaining: 400 });
 
       const result = await manager.check('tenant-1', 'storage');
 
-      expect(result.granted).toBe(true);
-      if (result.granted) {
-        expect(result.featureKey).toBe('storage');
-        expect(result.type).toBe('metered');
-        expect(result.quota).toBe(500);
-        expect(result.planId).toBe('free');
-      }
+      expect(result).toEqual({
+        granted: true,
+        featureKey: 'storage',
+        type: 'metered',
+        quota: 500,
+        usage: 100,
+        remaining: 400,
+        exceeded: false,
+        overagePolicy: 'BLOCK',
+        planId: 'free',
+      });
     });
 
     it('should return no_quota_defined when both rule and meter lack quota', async () => {
@@ -246,7 +304,7 @@ describe('EntitlementIntegration', () => {
           featureKey: 'events',
           type: 'metered',
           meterId: 'events',
-          overagePolicy: 'block',
+          overagePolicy: 'BLOCK',
         },
       ];
       registry.register('free', rules);
@@ -260,6 +318,7 @@ describe('EntitlementIntegration', () => {
         featureKey: 'events',
         type: 'metered',
         reason: 'no_quota_defined',
+        planId: 'free',
       });
     });
   });

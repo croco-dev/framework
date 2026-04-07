@@ -1,14 +1,17 @@
+import type { DomainEvent } from './DomainEvent';
 import type { EventHandler, EventHandlerClass } from './EventHandler';
 import type { EventPublishing } from './interfaces/EventPublishing';
 import type { EventSubscribing } from './interfaces/EventSubscribing';
 
-export interface EventSubscription {
+export interface EventSubscription<TEvent extends DomainEvent = DomainEvent> {
   eventName: EventNamePattern;
-  handlerClass: EventHandlerClass;
-  handler?: EventHandler;
+  handlerClass: EventHandlerClass<TEvent>;
+  handler?: EventHandler<TEvent>;
 }
 
-export interface EventBus extends EventPublishing, EventSubscribing {}
+export interface EventBus<TEvent extends DomainEvent = DomainEvent>
+  extends EventPublishing<TEvent>,
+    EventSubscribing<TEvent> {}
 
 export type EventNamePattern = string;
 

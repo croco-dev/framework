@@ -1,17 +1,31 @@
 import { Component, Inject, Token } from '@croco/framework-context';
 import { type Invitation, type InvitationStatus, InvitationStore } from '@croco/invitation-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb, DrizzleInsertFn, DrizzleSelectFn, DrizzleUpdateFn } from '@croco/tx-drizzle';
-import { and, eq } from 'drizzle-orm';
+import type { DrizzleDb } from '@croco/tx-drizzle';
+import { and, count, eq, gte } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { invitations } from './schema';
 
-export type DrizzleInvitationClient = DrizzleDb & {
-  select: DrizzleSelectFn;
-  insert: DrizzleInsertFn;
-  update: DrizzleUpdateFn;
-};
+type DrizzleInvitationClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
+
+interface InvitationRow {
+  id: string;
+  tenantId: string;
+  inviterId: string;
+  email: string | null;
+  tokenHash: string;
+  type: 'email' | 'link';
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  status: 'pending' | 'accepted' | 'expired' | 'revoked' | 'declined';
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
 
 export const DRIZZLE_INVITATION_TOKEN = new Token<DrizzleInvitationClient>('DRIZZLE_INVITATION_TOKEN');
+
+export type { DrizzleInvitationClient };
 
 @Component()
 export class DrizzleInvitationStore extends InvitationStore {
@@ -25,7 +39,7 @@ export class DrizzleInvitationStore extends InvitationStore {
   async findById(id: string): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client.select().from(invitations).where(eq(invitations.id, id)).limit(1);
+    const result = (await client.select().from(invitations).where(eq(invitations.id, id)).limit(1)) as InvitationRow[];
     if (result.length === 0) {
       return null;
     }
@@ -36,7 +50,11 @@ export class DrizzleInvitationStore extends InvitationStore {
   async findByTokenHash(tokenHash: string): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client.select().from(invitations).where(eq(invitations.tokenHash, tokenHash)).limit(1);
+    const result = (await client
+      .select()
+      .from(invitations)
+      .where(eq(invitations.tokenHash, tokenHash))
+      .limit(1)) as InvitationRow[];
     if (result.length === 0) {
       return null;
     }
@@ -47,11 +65,11 @@ export class DrizzleInvitationStore extends InvitationStore {
   async findByTenantAndEmail(tenantId: string, email: string): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const result = (await client
       .select()
       .from(invitations)
       .where(and(eq(invitations.tenantId, tenantId), eq(invitations.email, email)))
-      .limit(1);
+      .limit(1)) as InvitationRow[];
 
     if (result.length === 0) {
       return null;
@@ -63,14 +81,17 @@ export class DrizzleInvitationStore extends InvitationStore {
   async findAllByTenant(tenantId: string): Promise<Invitation[]> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client.select().from(invitations).where(eq(invitations.tenantId, tenantId));
-    return result.map((row: typeof invitations.$inferSelect) => this.mapToInvitation(row));
+    const result = (await client
+      .select()
+      .from(invitations)
+      .where(eq(invitations.tenantId, tenantId))) as InvitationRow[];
+    return result.map((row) => this.mapToInvitation(row));
   }
 
   async save(invitation: Invitation): Promise<Invitation> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const result = (await client
       .insert(invitations)
       .values({
         id: invitation.id,
@@ -102,7 +123,7 @@ export class DrizzleInvitationStore extends InvitationStore {
           createdAt: invitation.createdAt,
         },
       })
-      .returning();
+      .returning()) as InvitationRow[];
 
     return this.mapToInvitation(result[0]);
   }
@@ -112,7 +133,7 @@ export class DrizzleInvitationStore extends InvitationStore {
     const whereClause =
       status === 'accepted' ? and(eq(invitations.id, id), eq(invitations.status, 'pending')) : eq(invitations.id, id);
 
-    const result = await client.update(invitations).set({ status }).where(whereClause).returning();
+    const result = (await client.update(invitations).set({ status }).where(whereClause).returning()) as InvitationRow[];
 
     if (result.length === 0) {
       return null;
@@ -121,7 +142,20 @@ export class DrizzleInvitationStore extends InvitationStore {
     return this.mapToInvitation(result[0]);
   }
 
-  private mapToInvitation(row: typeof invitations.$inferSelect): Invitation {
+  async countPendingByTenant(tenantId: string, since: Date): Promise<number> {
+    const client = this.txManager.getClient() ?? this.db;
+
+    const result = (await client
+      .select({ total: count() })
+      .from(invitations)
+      .where(
+        and(eq(invitations.tenantId, tenantId), eq(invitations.status, 'pending'), gte(invitations.createdAt, since))
+      )) as { total: number }[];
+
+    return Number(result[0]?.total ?? 0);
+  }
+
+  private mapToInvitation(row: InvitationRow): Invitation {
     return {
       id: row.id,
       tenantId: row.tenantId,

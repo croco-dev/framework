@@ -219,6 +219,57 @@ describe('RetentionCalculator', () => {
         revenueChurn: 3,
       });
     });
+
+    it('should calculate logo churn when customer counts are provided', async () => {
+      const startingMRR = 100000;
+      const movement = createMovement({
+        new: { amount: 15000, currency: 'USD' },
+        expansion: { amount: 8000, currency: 'USD' },
+        contraction: { amount: 2000, currency: 'USD' },
+        churned: { amount: 3000, currency: 'USD' },
+        reactivation: { amount: 1000, currency: 'USD' },
+        net: { amount: 19000, currency: 'USD' },
+      });
+
+      const result = await calculator.calculateRetention(startingMRR, movement, 100, 95);
+
+      expect(result.grr).toBe(95);
+      expect(result.nrr).toBe(103);
+      expect(result.logoChurn).toBe(5);
+      expect(result.revenueChurn).toBe(3);
+    });
+
+    it('should return 0 logo churn when no customers churned', async () => {
+      const startingMRR = 100000;
+      const movement = createMovement({
+        new: { amount: 15000, currency: 'USD' },
+        expansion: { amount: 8000, currency: 'USD' },
+        contraction: { amount: 2000, currency: 'USD' },
+        churned: { amount: 3000, currency: 'USD' },
+        reactivation: { amount: 1000, currency: 'USD' },
+        net: { amount: 19000, currency: 'USD' },
+      });
+
+      const result = await calculator.calculateRetention(startingMRR, movement, 100, 100);
+
+      expect(result.logoChurn).toBe(0);
+    });
+
+    it('should return null logo churn when starting customers is 0', async () => {
+      const startingMRR = 100000;
+      const movement = createMovement({
+        new: { amount: 15000, currency: 'USD' },
+        expansion: { amount: 8000, currency: 'USD' },
+        contraction: { amount: 2000, currency: 'USD' },
+        churned: { amount: 3000, currency: 'USD' },
+        reactivation: { amount: 1000, currency: 'USD' },
+        net: { amount: 19000, currency: 'USD' },
+      });
+
+      const result = await calculator.calculateRetention(startingMRR, movement, 0, 0);
+
+      expect(result.logoChurn).toBeNull();
+    });
   });
 
   describe('Edge Cases', () => {
@@ -304,6 +355,25 @@ describe('RetentionCalculator', () => {
         logoChurn: null,
         revenueChurn: 10,
       });
+    });
+
+    it('should return full retention results with logo churn when customer counts provided', async () => {
+      const startingMRR = 50000;
+      const movement = createMovement({
+        new: { amount: 10000, currency: 'USD' },
+        expansion: { amount: 7500, currency: 'USD' },
+        contraction: { amount: 2500, currency: 'USD' },
+        churned: { amount: 5000, currency: 'USD' },
+        reactivation: { amount: 1500, currency: 'USD' },
+        net: { amount: 11500, currency: 'USD' },
+      });
+
+      const result = await calculator.calculateRetention(startingMRR, movement, 50, 45);
+
+      expect(result.grr).toBe(85);
+      expect(result.nrr).toBe(100);
+      expect(result.logoChurn).toBe(10);
+      expect(result.revenueChurn).toBe(10);
     });
   });
 });

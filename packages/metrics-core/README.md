@@ -34,13 +34,38 @@ const metrics = await engine.calculateAll({
 |--------|------|
 | **MRR** | Monthly Recurring Revenue (월 반복 수익) |
 | **Churn Rate** | 고객 이탈률 (월 기준) |
+| **Logo Churn** | 고객 수 기반 이탈률 |
 | **NRR** | Net Revenue Retention (순 수익 유지율) |
+| **GRR** | Gross Revenue Retention (총 수익 유지율) |
 | **Quick Ratio** | 신규 MRR / 이탈 MRR 비율 |
 | **Growth Rate** | MRR 성장률 |
 | **Carrying Capacity** | 수용 가능한 신규 고객 수 |
 | **LTV** | Customer Lifetime Value (고객 생애 가치) |
 
-### Carrying Capacity (운영 capacity)
+### RetentionCalculator
+
+리텐션 메트릭(GRR, NRR, Logo Churn, Revenue Churn)을 계산합니다.
+
+```ts
+import { RetentionCalculator } from '@croco/metrics-core';
+
+const calculator = new RetentionCalculator();
+
+// 개별 메트릭 계산
+const grr = await calculator.calculateGRR(startingMRR, movement);
+const nrr = await calculator.calculateNRR(startingMRR, movement);
+const logoChurn = await calculator.calculateLogoChurn(100, 95); // 5% 이탈
+
+// 전체 리텐션 메트릭 한 번에 계산
+const retention = await calculator.calculateRetention(
+  startingMRR,
+  movement,
+  startingCustomers,  // optional: Logo Churn 계산용
+  endingCustomers     // optional: Logo Churn 계산용
+);
+```
+
+### CarryingCapacityCalculator
 
 Carrying Capacity는 현재 팀/인프라가 감당할 수 있는 최대 고객 수를 계산합니다.
 

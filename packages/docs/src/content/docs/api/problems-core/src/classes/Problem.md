@@ -5,37 +5,7 @@ prev: false
 title: "Problem"
 ---
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L21)
-
-RFC 7807 Problem Details 형식을 제공하는 추상 에러 클래스입니다.
-
-## Param
-
-도메인에서 문제를 식별하는 고유 코드입니다.
-
-## Param
-
-HTTP 의미론과 매핑되는 문제 카테고리입니다.
-
-## Param
-
-문제의 상세 설명입니다.
-
-## Param
-
-RFC 7807 필드 확장을 위한 옵션입니다.
-
-## Example
-
-```typescript
-import { Problem, ProblemCategory } from '@croco/problems-core';
-
-class UserNotFoundProblem extends Problem {
-  constructor(userId: string) {
-    super('user/not-found', ProblemCategory.NotFound, `사용자(${userId})를 찾을 수 없습니다.`);
-  }
-}
-```
+Defined in: [packages/problems-core/src/libs/Problem.ts:21](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L21)
 
 ## Extends
 
@@ -94,9 +64,7 @@ class UserNotFoundProblem extends Problem {
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L23)
-
-HTTP 의미론과 매핑되는 문제 카테고리입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L23)
 
 ***
 
@@ -104,7 +72,7 @@ HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
 > `readonly` `optional` **cause**: `Error`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L28)
+Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Overrides
 
@@ -116,9 +84,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/c
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L22)
-
-도메인에서 문제를 식별하는 고유 코드입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L22)
 
 ***
 
@@ -126,19 +92,15 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/c
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L24)
-
-문제의 상세 설명입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L24)
 
 ***
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L27)
-
-Problem Details 확장 필드입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L27)
 
 ***
 
@@ -146,9 +108,7 @@ Problem Details 확장 필드입니다.
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L26)
-
-특정 에러 발생 인스턴스를 식별하는 URI입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L26)
 
 ***
 
@@ -192,9 +152,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L25)
-
-문제 유형 식별자 URI입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L25)
 
 ***
 
@@ -226,7 +184,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:70](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L70)
+Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L62)
 
 ##### Returns
 
@@ -240,7 +198,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:70](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L66)
+Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L58)
 
 ##### Returns
 
@@ -250,13 +208,13 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/c
 
 ### toJSON()
 
-> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
+> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:74](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L74)
+Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L66)
 
 #### Returns
 
-[`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
+[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
 ***
 

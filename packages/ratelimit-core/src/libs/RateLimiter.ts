@@ -1,79 +1,124 @@
 import type { KeyContext, RateLimitKeyBuilder } from './RateLimitKeyBuilder';
 import type { RateLimitStore } from './RateLimitStore';
-import type { RateLimiterOptions, RateLimitPolicy, RateLimitResult } from './types';
+import type {
+  FixedWindowPolicy,
+  RateLimitPolicy,
+  RateLimitResult,
+  RateLimitStats,
+  SlidingWindowPolicy,
+  TokenBucketPolicy,
+} from './types';
 
-/**
- * Core rate limiter service.
- * Orchestrates key building, store access, and error handling.
- */
-export class RateLimiter {
+export type RateLimiterKeyBuilder<TContext> = (context: TContext, policyName?: string) => string;
+
+export class RateLimiter<TContext = KeyContext> {
   private readonly store: RateLimitStore;
-  private readonly keyBuilder: RateLimitKeyBuilder;
+  private readonly keyBuilder: RateLimiterKeyBuilder<TContext>;
   private readonly failOpen: boolean;
   private readonly onStoreError?: (error: Error) => void;
 
   constructor(
     store: RateLimitStore,
-    keyBuilder: RateLimitKeyBuilder,
-    options: Omit<RateLimiterOptions, 'keySegments'> = {}
+    keyBuilder: RateLimiterKeyBuilder<TContext> | RateLimitKeyBuilder,
+    options?: { failOpen?: boolean; onStoreError?: (error: Error) => void }
   ) {
     this.store = store;
-    this.keyBuilder = keyBuilder;
-    this.failOpen = options.failOpen ?? true;
-    this.onStoreError = options.onStoreError;
+    this.keyBuilder = (ctx: TContext, policyName?: string) => {
+      if (typeof keyBuilder === 'function') {
+        return keyBuilder(ctx, policyName);
+      }
+      return keyBuilder.build(ctx as KeyContext, policyName ?? 'default');
+    };
+    this.failOpen = options?.failOpen ?? true;
+    this.onStoreError = options?.onStoreError;
   }
 
-  /**
-   * Check rate limit for the given context and policy.
-   * @param context - Request context containing key segments
-   * @param policy - Rate limit policy to apply
-   * @returns Rate limit result
-   */
-  async check(context: KeyContext, policy: RateLimitPolicy): Promise<RateLimitResult> {
-    const key = this.keyBuilder.build(context, policy.name);
+  async check(context: TContext, policy: RateLimitPolicy): Promise<RateLimitResult> {
+    const key = this.keyBuilder(context, policy.name);
 
     try {
-      return await this.store.check(key, policy);
+      const result = await this.store.check(key, policy);
+      return { ...result, policyName: policy.algorithm };
     } catch (error) {
       return this.handleStoreError(error as Error, policy);
     }
   }
 
-  /**
-   * Check rate limit with a pre-built key (for middleware use).
-   * @param key - Pre-built rate limit key
-   * @param policy - Rate limit policy to apply
-   * @returns Rate limit result
-   */
   async checkWithKey(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     try {
-      return await this.store.check(key, policy);
+      const result = await this.store.check(key, policy);
+      return { ...result, policyName: policy.algorithm };
     } catch (error) {
       return this.handleStoreError(error as Error, policy);
+    }
+  }
+
+  async getStats(key?: string): Promise<RateLimitStats> {
+    try {
+      return await this.store.getStats(key);
+    } catch {
+      return { allowed: 0, denied: 0, total: 0 };
     }
   }
 
   private handleStoreError(error: Error, policy: RateLimitPolicy): RateLimitResult {
     this.onStoreError?.(error);
 
+    const limit = policy.algorithm === 'token-bucket' ? (policy as TokenBucketPolicy).capacity : policy.limit;
+
     if (this.failOpen) {
-      // Allow request when store fails
       return {
         success: true,
         degraded: true,
-        limit: policy.limit,
-        remaining: policy.limit,
-        resetAtMs: Date.now() + policy.windowMs,
+        limit,
+        remaining: limit,
+        resetAtMs: Date.now() + 60000,
+        policyName: policy.algorithm,
       };
     }
 
-    // Fail-closed: reject request when store fails
     return {
       success: false,
       degraded: true,
-      limit: policy.limit,
+      limit,
       remaining: 0,
-      resetAtMs: Date.now() + policy.windowMs,
+      resetAtMs: Date.now() + 60000,
+      policyName: policy.algorithm,
     };
   }
+}
+
+export type RateLimiterContext<T> = T extends RateLimiter<infer C> ? C : never;
+
+export function createFixedWindowPolicy(name: string, limit: number, windowMs: number): FixedWindowPolicy {
+  return {
+    name,
+    algorithm: 'fixed',
+    limit,
+    windowMs,
+  };
+}
+
+export function createSlidingWindowPolicy(name: string, limit: number, windowMs: number): SlidingWindowPolicy {
+  return {
+    name,
+    algorithm: 'sliding',
+    limit,
+    windowMs,
+  };
+}
+
+export function createTokenBucketPolicy(
+  name: string,
+  capacity: number,
+  refillRate: number,
+  refillIntervalMs = 1000
+): TokenBucketPolicy {
+  return {
+    name,
+    algorithm: 'token-bucket',
+    capacity,
+    refillRate,
+    refillIntervalMs,
+  };
 }

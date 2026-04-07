@@ -1,17 +1,28 @@
 import type { EntitlementRule } from '@croco/entitlements-core';
 import { PlanEntitlementRegistry } from '@croco/entitlements-core';
 import { Token } from '@croco/framework-context';
-import type { DrizzleDb, DrizzleSelectFn } from '@croco/tx-drizzle';
+import type { DrizzleDb } from '@croco/tx-drizzle';
 import { eq } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { planEntitlements } from './schema';
 
-type DrizzleEntitlementsClient = DrizzleDb & {
-  select: DrizzleSelectFn;
-};
+type DrizzleEntitlementsClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
-type PlanEntitlementsRow = typeof planEntitlements.$inferSelect;
+interface PlanEntitlementsRow {
+  id: string;
+  planId: string;
+  featureKey: string;
+  type: string;
+  value: number | null;
+  meterId: string | null;
+  quota: number | null;
+  overagePolicy: string | null;
+  createdAt: Date | null;
+}
 
 export const DRIZZLE_TOKEN = new Token<DrizzleEntitlementsClient>('DRIZZLE_TOKEN');
+
+export type { DrizzleEntitlementsClient };
 
 export class DrizzlePlanEntitlementRegistry extends PlanEntitlementRegistry {
   constructor(private readonly db: DrizzleEntitlementsClient) {
@@ -19,9 +30,11 @@ export class DrizzlePlanEntitlementRegistry extends PlanEntitlementRegistry {
   }
 
   async getEntitlements(planId: string): Promise<EntitlementRule[]> {
-    const result = await this.db.select().from(planEntitlements).where(eq(planEntitlements.planId, planId));
+    const rows = await this.db.select().from(planEntitlements).where(eq(planEntitlements.planId, planId));
 
-    return result.map((row: PlanEntitlementsRow) => ({
+    const result = rows as PlanEntitlementsRow[];
+
+    return result.map((row) => ({
       featureKey: row.featureKey,
       type: row.type as EntitlementRule['type'],
       value: row.value ?? undefined,

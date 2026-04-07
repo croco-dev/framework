@@ -15,10 +15,14 @@ export {
 /**
  * Problem thrown when transaction context is required but not available.
  */
+/**
+ * Problem thrown when transaction times out.
+ */
 export {
   AfterCommitHooksProblem,
   TransactionContextProblem,
   TransactionDecoratorProblem,
+  TransactionTimeoutProblem,
 } from './libs/problems/TransactionProblems';
 
 /**
@@ -60,6 +64,9 @@ export { TxManagerRegistry } from './libs/TxManagerRegistry';
  */
 /**
  * Options for executing a function within a transaction.
+ */
+/**
+ * Problem thrown when transaction times out.
  */
 export type {
   AfterCommitHook,

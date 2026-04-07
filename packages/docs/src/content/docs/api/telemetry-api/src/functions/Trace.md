@@ -5,11 +5,21 @@ prev: false
 title: "Trace"
 ---
 
-> **Trace**(`options?`): `MethodDecorator`
+> **Trace**\<`Args`, `ReturnType`\>(`options?`): (`_target`, `propertyKey`, `descriptor`) => `TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\> \| `undefined`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:31](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-api/src/libs/decorators/Trace.ts#L31)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:31](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/decorators/Trace.ts#L31)
 
 Decorator that automatically traces async method execution.
+
+## Type Parameters
+
+### Args
+
+`Args` *extends* `unknown`[] = `unknown`[]
+
+### ReturnType
+
+`ReturnType` = `unknown`
 
 ## Parameters
 
@@ -19,7 +29,25 @@ Decorator that automatically traces async method execution.
 
 ## Returns
 
-`MethodDecorator`
+> (`_target`, `propertyKey`, `descriptor`): `TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\> \| `undefined`
+
+### Parameters
+
+#### \_target
+
+`object`
+
+#### propertyKey
+
+`string` | `symbol`
+
+#### descriptor
+
+`TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\>
+
+### Returns
+
+`TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\> \| `undefined`
 
 ## Remarks
 

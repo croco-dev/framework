@@ -1,5 +1,6 @@
 import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from '@croco/billing-core';
-import { Component, type ILogger, Inject, LOGGER_TOKEN } from '@croco/framework-context';
+import type { ILogger } from '@croco/framework-context';
+import { Component, Inject, LOGGER_TOKEN } from '@croco/framework-context';
 import { Polar } from '@polar-sh/sdk';
 import type { PolarConfig } from '../types';
 
@@ -20,9 +21,6 @@ type PolarLookupError = Error & {
   error?: string;
 };
 
-/**
- * Polar implementation of BillingGateway.
- */
 @Component()
 export class PolarBillingGateway implements BillingGateway {
   private readonly client: Polar;
@@ -39,10 +37,6 @@ export class PolarBillingGateway implements BillingGateway {
     this.organizationId = config.organizationId;
   }
 
-  /**
-   * Ensure a customer exists in Polar. Creates if not found.
-   * Uses externalId to link with our tenantId.
-   */
   async ensureCustomer(billingAccountId: string, email: string): Promise<string> {
     try {
       const existing = await this.client.customers.getExternal(
@@ -87,9 +81,6 @@ export class PolarBillingGateway implements BillingGateway {
     return polarError.name === 'ResourceNotFound' || polarError.error === 'ResourceNotFound';
   }
 
-  /**
-   * Create a checkout session for purchasing a product/subscription.
-   */
   async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
     const customerId = await this.ensureCustomer(params.billingAccountId, params.email);
 
@@ -106,10 +97,6 @@ export class PolarBillingGateway implements BillingGateway {
     };
   }
 
-  /**
-   * Cancel a subscription.
-   * @param immediate - If true, cancel immediately. Otherwise, cancel at period end.
-   */
   async cancelSubscription(externalSubscriptionId: string, immediate = false): Promise<void> {
     if (immediate) {
       await this.client.subscriptions.revoke({
@@ -125,9 +112,6 @@ export class PolarBillingGateway implements BillingGateway {
     }
   }
 
-  /**
-   * Resume a subscription that was scheduled for cancellation.
-   */
   async resumeSubscription(externalSubscriptionId: string): Promise<void> {
     await this.client.subscriptions.update({
       id: externalSubscriptionId,
@@ -137,9 +121,6 @@ export class PolarBillingGateway implements BillingGateway {
     });
   }
 
-  /**
-   * Get a URL for the customer portal where users can manage their subscription.
-   */
   async getCustomerPortalUrl(externalCustomerId: string): Promise<string> {
     const session = await this.client.customerSessions.create({
       customerId: externalCustomerId,

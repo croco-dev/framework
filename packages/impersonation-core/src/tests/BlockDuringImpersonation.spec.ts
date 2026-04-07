@@ -1,8 +1,8 @@
 import { Context } from '@croco/framework-context';
 import { describe, expect, it } from 'vitest';
 import { BlockDuringImpersonation } from '../libs/decorators/BlockDuringImpersonation';
+import type { ImpersonationContext } from '../libs/ImpersonationService';
 import { BlockedDuringImpersonationProblem } from '../libs/problems/ImpersonationProblems';
-import type { ImpersonationContext } from '../libs/types';
 
 describe('BlockDuringImpersonation', () => {
   class TestService {

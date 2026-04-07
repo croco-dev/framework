@@ -744,6 +744,13 @@ export {
   getRouteMeta,
   isController,
 } from './libs/metadata/MetadataReader';
+export type {
+  InferRequestType,
+  InferResponseType,
+  RequestSchema,
+  ResponseSchema,
+  RouteSchema,
+} from './libs/schemas/ValidationSchema';
 /**
  * 임의의 클래스 생성자 시그니처를 표현하는 제네릭 타입입니다.
  *
@@ -918,3 +925,25 @@ export type {
   PipeTransformConstructor,
   RouteMetadata,
 } from './libs/types';
+export type {
+  ApiEndpoint,
+  EndpointRequest,
+  EndpointResponse,
+  InferRouteRequest,
+  InferRouteResponse,
+  RouteHandler,
+  TypedRouteConfig,
+  TypedRouteHandler,
+} from './libs/types/index';
+export {
+  createValidator,
+  validateRequest,
+  validateResponse,
+} from './libs/validators/SchemaValidator';
+export { createValidationPipe, ValidationPipe } from './libs/validators/ValidationPipe';
+export {
+  RequestValidationProblem,
+  ResponseValidationProblem,
+  type ValidationIssue,
+  ValidationProblem,
+} from './libs/validators/ValidationProblem';

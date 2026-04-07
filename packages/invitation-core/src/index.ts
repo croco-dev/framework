@@ -244,7 +244,8 @@ export {
   InvitationInvalidStatusProblem,
   InvitationNotFoundProblem,
 } from './libs/problems/InvitationProblems';
-
+export { DuplicateInvitationProblem, InvitationRateLimitExceededProblem } from './libs/problems/RateLimitProblems';
+export { RateLimitedInvitationService } from './libs/RateLimitedInvitationService';
 /**
  * Token generation and hashing utilities.
  *
@@ -259,7 +260,6 @@ export {
  * ```
  */
 export { generateToken, hashToken } from './libs/token';
-
 /**
  * Core domain types.
  *
@@ -268,14 +268,16 @@ export { generateToken, hashToken } from './libs/token';
  * Includes entity types, enums, and input types.
  */
 export type {
+  BatchInviteOptions,
+  BatchInviteResult,
   DomainPolicy,
   DomainPolicyCreateInput,
   Invitation,
   InvitationCreateInput,
   InvitationStatus,
   InvitationType,
+  RateLimitConfig,
 } from './libs/types';
-
 /**
  * Public email domain denylist.
  *

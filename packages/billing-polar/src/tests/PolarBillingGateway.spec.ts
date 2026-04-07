@@ -1,3 +1,4 @@
+import type { ILogger } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PolarBillingGateway } from '../libs/PolarBillingGateway';
 import type { PolarConfig } from '../types';
@@ -14,7 +15,8 @@ const mockLogger = {
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
-};
+  child: vi.fn(() => mockLogger),
+} as unknown as ILogger;
 
 vi.mock('@polar-sh/sdk', () => {
   class Polar {
@@ -63,7 +65,7 @@ const POLAR_RETRY_CONFIG = {
 const POLAR_RETRY_CODES = ['429', '500', '502', '503', '504'];
 
 function createGateway(config: PolarConfig = baseConfig): PolarBillingGateway {
-  return new PolarBillingGateway(config, mockLogger as any);
+  return new PolarBillingGateway(config, mockLogger);
 }
 
 function createNotFoundError(): Error {
@@ -91,10 +93,6 @@ function createUnexpected404Error(): Error {
 describe('PolarBillingGateway', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLogger.debug.mockClear();
-    mockLogger.info.mockClear();
-    mockLogger.warn.mockClear();
-    mockLogger.error.mockClear();
   });
 
   describe('ensureCustomer', () => {

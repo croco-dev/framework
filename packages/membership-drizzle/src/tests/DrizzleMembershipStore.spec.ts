@@ -2,8 +2,9 @@ import 'reflect-metadata';
 import type { Membership, MembershipCreateInput } from '@croco/membership-core';
 import type { TxManager } from '@croco/tx-core';
 import type { DrizzleDb } from '@croco/tx-drizzle';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DrizzleMembershipStore } from '../libs/DrizzleMembershipStore';
+import { type DrizzleMembershipClient, DrizzleMembershipStore } from '../libs/DrizzleMembershipStore';
 
 const createInput = (overrides: Partial<MembershipCreateInput> = {}): MembershipCreateInput => {
   return {
@@ -33,6 +34,7 @@ describe('DrizzleMembershipStore', () => {
     select: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
+    transaction?: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -40,6 +42,7 @@ describe('DrizzleMembershipStore', () => {
       select: vi.fn(),
       insert: vi.fn(),
       delete: vi.fn(),
+      transaction: vi.fn(),
     };
 
     const mockTxManager = {
@@ -47,18 +50,8 @@ describe('DrizzleMembershipStore', () => {
     };
 
     store = new DrizzleMembershipStore(
-      mockDb as unknown as DrizzleDb & {
-        select: (...args: unknown[]) => unknown;
-        insert: (...args: unknown[]) => unknown;
-        delete: (...args: unknown[]) => unknown;
-      },
-      mockTxManager as unknown as TxManager<
-        DrizzleDb & {
-          select: (...args: unknown[]) => unknown;
-          insert: (...args: unknown[]) => unknown;
-          delete: (...args: unknown[]) => unknown;
-        }
-      >
+      mockDb as unknown as DrizzleMembershipClient,
+      mockTxManager as unknown as TxManager<DrizzleMembershipClient>
     );
   });
 

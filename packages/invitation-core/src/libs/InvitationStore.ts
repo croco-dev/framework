@@ -7,4 +7,5 @@ export abstract class InvitationStore {
   abstract findAllByTenant(tenantId: string): Promise<Invitation[]>;
   abstract save(invitation: Invitation): Promise<Invitation>;
   abstract updateStatus(id: string, status: InvitationStatus): Promise<Invitation | null>;
+  abstract countPendingByTenant(tenantId: string, since: Date): Promise<number>;
 }

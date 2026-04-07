@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CacheStore } from '../libs/CacheStore';
 import { Cacheable } from '../libs/decorators/Cacheable';
 import { CacheEvict } from '../libs/decorators/CacheEvict';
 import { InMemoryCacheStore } from '../libs/InMemoryCacheStore';
@@ -7,7 +8,7 @@ describe('@Cacheable', () => {
   let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
-    cache = new InMemoryCacheStore<string>();
+    cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
   });
 
   it('caches method result', async () => {
@@ -29,6 +30,33 @@ describe('@Cacheable', () => {
     expect(result1).toBe('data-123');
     expect(result2).toBe('data-123');
     expect(callCount).toBe(1);
+  });
+
+  it('uses singleflight when concurrent calls share the same key', async () => {
+    let callCount = 0;
+    let resolveValue!: () => void;
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: 'test-service' })
+      async getData(id: string): Promise<string> {
+        callCount++;
+        return new Promise<string>((resolve) => {
+          resolveValue = () => resolve(`data-${id}`);
+        });
+      }
+    }
+
+    const service = new TestService();
+
+    const pending = Promise.all([service.getData('123'), service.getData('123'), service.getData('123')]);
+
+    await Promise.resolve();
+
+    expect(callCount).toBe(1);
+
+    resolveValue();
+
+    await expect(pending).resolves.toEqual(['data-123', 'data-123', 'data-123']);
   });
 
   it('uses different cache keys for different arguments', async () => {
@@ -154,7 +182,7 @@ describe('@CacheEvict', () => {
   let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
-    cache = new InMemoryCacheStore<string>();
+    cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
   });
 
   it('evicts cache by pattern after method execution', async () => {
@@ -252,16 +280,23 @@ describe('@CacheEvict', () => {
     }).toThrow('@CacheEvict requires "namespace" when "key" is not provided (method: updateData)');
   });
 
-  it('fails fast when namespace eviction is used with a store that does not support deleteByPattern', async () => {
-    const unsupportedStore = {
+  it('propagates invalidatePattern errors for namespace eviction', async () => {
+    const unsupportedStore: CacheStore<string> = {
       get: async () => undefined,
       set: async () => undefined,
       delete: async () => undefined,
       has: async () => false,
       clear: async () => undefined,
-      deleteByPattern: undefined,
+      invalidatePattern: async () => 0,
+      getOrSet: async (_key, loader) => loader(),
+      warmup: async () => undefined,
+      getStats: () => ({ hits: 0, misses: 0, evictions: 0, size: 0 }),
       pruneExpired: async () => 0,
-    } as any;
+    };
+
+    const deleteByPatternSpy = vi
+      .spyOn(unsupportedStore, 'invalidatePattern')
+      .mockRejectedValueOnce(new Error('not supported'));
 
     class TestService {
       @CacheEvict({ store: unsupportedStore, namespace: 'stable-service' })
@@ -270,21 +305,28 @@ describe('@CacheEvict', () => {
 
     const service = new TestService();
 
-    await expect(service.updateData()).rejects.toThrow(
-      'Cache store does not support deleteByPattern for namespace eviction: stable-service:updateData:*'
-    );
+    await expect(service.updateData()).rejects.toThrow('not supported');
+
+    deleteByPatternSpy.mockRestore();
   });
 
-  it('fails fast when wildcard key eviction is used with a store that does not support deleteByPattern', async () => {
-    const unsupportedStore = {
+  it('propagates invalidatePattern errors for wildcard key eviction', async () => {
+    const unsupportedStore: CacheStore<string> = {
       get: async () => undefined,
       set: async () => undefined,
       delete: async () => undefined,
       has: async () => false,
       clear: async () => undefined,
-      deleteByPattern: undefined,
+      invalidatePattern: async () => 0,
+      getOrSet: async (_key, loader) => loader(),
+      warmup: async () => undefined,
+      getStats: () => ({ hits: 0, misses: 0, evictions: 0, size: 0 }),
       pruneExpired: async () => 0,
-    } as any;
+    };
+
+    const deleteByPatternSpy = vi
+      .spyOn(unsupportedStore, 'invalidatePattern')
+      .mockRejectedValueOnce(new Error('not supported'));
 
     class TestService {
       @CacheEvict({ store: unsupportedStore, key: 'user:*' })
@@ -293,9 +335,9 @@ describe('@CacheEvict', () => {
 
     const service = new TestService();
 
-    await expect(service.clearUserCache()).rejects.toThrow(
-      'Cache store does not support deleteByPattern for wildcard eviction: user:*'
-    );
+    await expect(service.clearUserCache()).rejects.toThrow('not supported');
+
+    deleteByPatternSpy.mockRestore();
   });
 
   it('executes method before evicting', async () => {
@@ -324,7 +366,7 @@ describe('@Cacheable with @CacheEvict integration', () => {
   let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
-    cache = new InMemoryCacheStore<string>();
+    cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
   });
 
   it('evicts cache and refetches on next call', async () => {

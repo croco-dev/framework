@@ -5,7 +5,7 @@ prev: false
 title: "DefaultEventSerializer"
 ---
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:40](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventSerializer.ts#L40)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:40](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventSerializer.ts#L40)
 
 기본 이벤트 직렬화 구현체
 
@@ -19,7 +19,7 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:40](https://github
 
 > **new DefaultEventSerializer**(`registry?`): `DefaultEventSerializer`
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:41](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventSerializer.ts#L41)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:41](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventSerializer.ts#L41)
 
 #### Parameters
 
@@ -37,7 +37,7 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:41](https://github
 
 > **deserialize**\<`T`\>(`data`): `T`
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:53](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventSerializer.ts#L53)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:53](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventSerializer.ts#L53)
 
 #### Type Parameters
 
@@ -65,7 +65,7 @@ Defined in: [packages/events-core/src/libs/EventSerializer.ts:53](https://github
 
 > **serialize**\<`T`\>(`event`): [`SerializedEvent`](/api/events-core/src/interfaces/serializedevent/)
 
-Defined in: [packages/events-core/src/libs/EventSerializer.ts:43](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/EventSerializer.ts#L43)
+Defined in: [packages/events-core/src/libs/EventSerializer.ts:43](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventSerializer.ts#L43)
 
 #### Type Parameters
 

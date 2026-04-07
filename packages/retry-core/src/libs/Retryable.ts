@@ -12,6 +12,23 @@ import { RetryOrchestrator } from './RetryOrchestrator';
 import type { RetryPolicy, RetryPolicyOptions } from './RetryPolicy';
 
 /**
+ * CircuitBreaker 설정 옵션.
+ */
+export interface CircuitBreakerConfig {
+  /** 실패 임계값 - 이 횟수 이상 실패하면 OPEN 상태로 전환 */
+  failureThreshold: number;
+
+  /** 성공 임계값 (HALF_OPEN 상태에서 이 횟수 성공하면 CLOSED로 복귀) */
+  successThreshold?: number;
+
+  /** OPEN 상태 유지 시간 (밀리초) */
+  timeout?: number;
+
+  /** @deprecated successThreshold를 사용하세요 */
+  halfOpenAttempts?: number;
+}
+
+/**
  * Options for @Retryable decorator.
  */
 export interface RetryableOptions extends RetryPolicyOptions {
@@ -37,13 +54,9 @@ export interface RetryableOptions extends RetryPolicyOptions {
   listeners?: RetryListener[];
 
   /** CircuitBreaker options */
-  circuitBreaker?: {
-    failureThreshold: number;
-    successThreshold?: number;
-    timeout?: number;
-    halfOpenAttempts?: number;
-  };
+  circuitBreaker?: CircuitBreakerConfig;
 
+  /** Custom circuit ID resolver */
   circuitIdResolver?: (context: CircuitIdResolverContext) => string;
 
   /** Reserve time for Lambda timeout (ms) */

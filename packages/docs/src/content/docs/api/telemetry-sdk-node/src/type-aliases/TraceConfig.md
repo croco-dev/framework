@@ -7,39 +7,32 @@ title: "TraceConfig"
 
 > **TraceConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:14](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L14)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:11](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L11)
 
-Main configuration for the OpenTelemetry SDK.
+Configuration for telemetry traces.
 
-## Remarks
-
-This is the top-level configuration object passed to [TelemetryRuntime.init](/api/telemetry-sdk-node/src/classes/telemetryruntime/#init).
-It combines service metadata with trace, metrics, and logs configurations.
-
-## Example
-
-```ts
-const config: TelemetryConfig = {
-  serviceName: 'my-service',
-  serviceVersion: '1.0.0',
-  environment: 'production',
-  enabled: true,
-  trace: {
-    enabled: true,
-    exporterUrl: 'http://localhost:4318/v1/traces',
-  },
-  metrics: { enabled: false },
-  logs: { enabled: false },
-};
-```
+Defines how trace data is collected and exported, including OTLP endpoint settings,
+sampling strategy, and batching behavior.
 
 ## Properties
+
+### autoInstrumentation?
+
+> `optional` **autoInstrumentation**: [`AutoInstrumentationConfig`](/api/telemetry-sdk-node/src/interfaces/autoinstrumentationconfig/)
+
+Defined in: [packages/telemetry-sdk-node/src/config.ts:31](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L31)
+
+Auto-instrumentation configuration
+
+***
 
 ### batchCount?
 
 > `optional` **batchCount**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:21](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L21)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L25)
+
+Maximum queue size. Default: 2048
 
 ***
 
@@ -47,7 +40,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:21](https://github.com/cr
 
 > `optional` **batchSize**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:22](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L22)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L27)
+
+Maximum export batch size. Default: 512
 
 ***
 
@@ -55,7 +50,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:22](https://github.com/cr
 
 > `optional` **batchTimeout**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L20)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:23](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L23)
+
+Batch timeout in milliseconds. Default: 5000
 
 ***
 
@@ -63,7 +60,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:20](https://github.com/cr
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:15](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L15)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L13)
+
+Whether tracing is enabled. Default: true
 
 ***
 
@@ -71,7 +70,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:15](https://github.com/cr
 
 > `optional` **exporterHeaders**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:17](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L17)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:17](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L17)
+
+Additional HTTP headers for the exporter
 
 ***
 
@@ -79,15 +80,19 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:17](https://github.com/cr
 
 > `optional` **exporterUrl**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L16)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L15)
+
+OTLP exporter URL. Default: from env or localhost:4318
 
 ***
 
 ### instrumentations?
 
-> `optional` **instrumentations**: `never`[]
+> `optional` **instrumentations**: `Instrumentation`[]
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:23](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L23)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:29](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L29)
+
+Custom instrumentation instances
 
 ***
 
@@ -95,7 +100,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:23](https://github.com/cr
 
 > `optional` **probability**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:19](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L19)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:21](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L21)
+
+Sampling probability (0.0-1.0). Alternative to sampler
 
 ***
 
@@ -103,4 +110,6 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:19](https://github.com/cr
 
 > `optional` **sampler**: `Sampler`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:18](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L18)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:19](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L19)
+
+Custom sampler instance. Takes precedence over probability

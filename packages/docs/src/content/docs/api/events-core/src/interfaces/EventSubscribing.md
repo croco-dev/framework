@@ -5,7 +5,7 @@ prev: false
 title: "EventSubscribing"
 ---
 
-Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L7)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L8)
 
 이벤트 구독 인터페이스입니다.
 이벤트 버스에서 이벤트를 구독/해제하는 기능만 제공합니다.
@@ -14,13 +14,19 @@ Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:7](htt
 
 - [`EventBus`](/api/events-core/src/interfaces/eventbus/)
 
+## Type Parameters
+
+### TEvent
+
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
 ## Methods
 
 ### clear()
 
 > **clear**(): `void`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L10)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:11](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L11)
 
 #### Returns
 
@@ -32,13 +38,13 @@ Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:10](ht
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L8)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L9)
 
 #### Parameters
 
 ##### subscription
 
-[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)
+[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)\<`TEvent`\>
 
 #### Returns
 
@@ -50,13 +56,13 @@ Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:8](htt
 
 > **unsubscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L9)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:10](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L10)
 
 #### Parameters
 
 ##### subscription
 
-[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)
+[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)\<`TEvent`\>
 
 #### Returns
 

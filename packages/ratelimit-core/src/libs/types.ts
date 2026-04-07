@@ -1,80 +1,84 @@
-/**
- * Rate limit policy configuration
- */
 import { RateLimitWindowProblem } from './problems/RateLimitConfigProblems';
-export type RateLimitPolicy = {
-  /** Policy identifier (used as key segment) */
+
+export type RateLimitAlgorithm = 'fixed' | 'sliding' | 'token-bucket';
+
+export type FixedWindowPolicy = {
   name: string;
-  /** Maximum number of requests allowed */
+  algorithm: 'fixed';
   limit: number;
-  /** Time window in milliseconds */
   windowMs: number;
-  /** Algorithm type (reserved for future use) */
-  algorithm?: 'sliding';
 };
 
-/**
- * Result of a rate limit check
- */
+export type SlidingWindowPolicy = {
+  name: string;
+  algorithm: 'sliding';
+  limit: number;
+  windowMs: number;
+};
+
+export type TokenBucketPolicy = {
+  name: string;
+  algorithm: 'token-bucket';
+  capacity: number;
+  refillRate: number;
+  refillIntervalMs: number;
+};
+
+export type RateLimitPolicy =
+  | FixedWindowPolicy
+  | SlidingWindowPolicy
+  | TokenBucketPolicy
+  | {
+      name: string;
+      limit: number;
+      windowMs: number;
+      algorithm?: RateLimitAlgorithm;
+    };
+
 export type RateLimitResult = {
-  /** Whether the request is allowed */
   success: boolean;
   degraded?: boolean;
-  /** Maximum requests allowed in the window */
   limit: number;
-  /** Remaining requests in current window */
   remaining: number;
-  /** Unix epoch ms when the window resets */
   resetAtMs: number;
+  policyName?: string;
 };
 
-/**
- * Key segments for building rate limit keys
- */
-export type KeySegment = 'tenant' | 'user' | 'ip' | 'apiKey' | 'route';
+export type RateLimitStats = {
+  allowed: number;
+  denied: number;
+  total: number;
+};
 
-/**
- * Options for RateLimiter
- */
+export type KeySegment = 'tenant' | 'user' | 'ip' | 'apiKey' | 'route' | 'custom';
+
 export type RateLimiterOptions = {
-  /** Key segments to include in rate limit key */
   keySegments: KeySegment[];
-  /** Whether to allow requests when store fails (default: true) */
   failOpen?: boolean;
-  /** Error callback when store fails */
   onStoreError?: (error: Error) => void;
 };
 
-/**
- * Options for @RateLimit decorator
- */
 export type RateLimitDecoratorOptions = {
-  /** Maximum requests allowed (overrides policy) */
   limit?: number;
-  /** Time window string ('1m', '1h', '1d') */
   window?: string;
-  /** Pre-defined policy name to use */
   policy?: string;
-  /** Custom key resolver function */
+  algorithm?: RateLimitAlgorithm;
   key?: (context: unknown) => string;
 };
 
-/**
- * Options for global rate limit middleware
- */
 export type RateLimitMiddlewareOptions = {
-  /** Rate limit policy to apply */
   policy: RateLimitPolicy;
-  /** Key segments to use for building keys */
   keySegments?: KeySegment[];
-  /** Whether to allow requests when store fails */
   failOpen?: boolean;
 };
 
-/**
- * Parse window string to milliseconds
- * @example '1m' -> 60000, '1h' -> 3600000, '1d' -> 86400000
- */
+export type PolicyResult<T extends RateLimitPolicy> = {
+  policy: T;
+  success: boolean;
+  remaining: number;
+  resetAtMs: number;
+};
+
 export function parseWindowMs(window: string): number {
   const match = window.match(/^(\d+)(s|m|h|d)$/);
   if (!match) {
@@ -94,4 +98,16 @@ export function parseWindowMs(window: string): number {
     d: 24 * 60 * 60 * 1000,
   };
   return value * multipliers[unit];
+}
+
+export function isFixedWindowPolicy(policy: RateLimitPolicy): policy is FixedWindowPolicy {
+  return policy.algorithm === 'fixed';
+}
+
+export function isSlidingWindowPolicy(policy: RateLimitPolicy): policy is SlidingWindowPolicy {
+  return policy.algorithm === 'sliding';
+}
+
+export function isTokenBucketPolicy(policy: RateLimitPolicy): policy is TokenBucketPolicy {
+  return policy.algorithm === 'token-bucket';
 }

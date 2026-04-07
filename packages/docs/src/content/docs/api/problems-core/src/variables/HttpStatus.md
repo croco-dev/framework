@@ -7,7 +7,7 @@ title: "HttpStatus"
 
 > `const` **HttpStatus**: `object`
 
-Defined in: [packages/problems-core/src/libs/HttpStatus.ts:13](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/HttpStatus.ts#L13)
+Defined in: [packages/problems-core/src/libs/HttpStatus.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/HttpStatus.ts#L13)
 
 HTTP 상태 코드 상수입니다.
 

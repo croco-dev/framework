@@ -1,4 +1,4 @@
-import type { Hono } from 'hono';
+import type { Hono, HonoRequest } from 'hono';
 import type { LambdaContext, LambdaEvent, LambdaHandler } from './types';
 
 function isBinaryContentType(contentType: string): boolean {
@@ -24,20 +24,35 @@ function isBinaryContentType(contentType: string): boolean {
   return true;
 }
 
+export interface LambdaExecutionEnv {
+  event: LambdaEvent;
+  lambdaContext: LambdaContext;
+}
+
+export type TypedLambdaHandler = (
+  event: LambdaEvent,
+  context: LambdaContext
+) => Promise<{
+  statusCode: number;
+  headers?: Record<string, string>;
+  body?: string;
+  isBase64Encoded?: boolean;
+}>;
+
 export class CrocoLambdaAdapter {
   constructor(private readonly hono: Hono) {}
 
   createHandler(): LambdaHandler {
     return async (event: LambdaEvent, lambdaContext: LambdaContext) => {
-      const method = event.requestContext?.http?.method || 'GET';
-      const path = event.rawPath || '/';
-      const queryString = event.rawQueryString || '';
+      const method = event.requestContext?.http?.method ?? 'GET';
+      const path = event.rawPath ?? '/';
+      const queryString = event.rawQueryString ?? '';
       const url = `https://lambda.local${path}${queryString ? `?${queryString}` : ''}`;
 
       const headers = new Headers();
       if (event.headers) {
         for (const [key, value] of Object.entries(event.headers)) {
-          if (value) {
+          if (value !== undefined && value !== null) {
             headers.set(key, value);
           }
         }
@@ -54,12 +69,14 @@ export class CrocoLambdaAdapter {
         body: ['GET', 'HEAD'].includes(method) ? null : body,
       });
 
-      const response = await this.hono.fetch(request, {
+      const executionEnv: LambdaExecutionEnv = {
         event,
         lambdaContext,
-      });
+      };
 
-      const contentType = response.headers.get('content-type') || '';
+      const response = await this.hono.fetch(request, executionEnv);
+
+      const contentType = response.headers.get('content-type') ?? '';
       const isBinary = isBinaryContentType(contentType);
       const responseBody = isBinary
         ? Buffer.from(await response.arrayBuffer()).toString('base64')
@@ -78,4 +95,18 @@ export class CrocoLambdaAdapter {
       };
     };
   }
+
+  getExecutionEnv(c: { env: LambdaExecutionEnv }): LambdaExecutionEnv {
+    return c.env;
+  }
+}
+
+export function getLambdaEvent(honoRequest: HonoRequest): LambdaEvent | undefined {
+  const env = honoRequest.raw as unknown as { env?: LambdaExecutionEnv };
+  return env.env?.event;
+}
+
+export function getLambdaContext(honoRequest: HonoRequest): LambdaContext | undefined {
+  const env = honoRequest.raw as unknown as { env?: LambdaExecutionEnv };
+  return env.env?.lambdaContext;
 }

@@ -68,14 +68,48 @@ export type { HandlerResolver } from './libs/HandlerResolver';
  */
 export { DefaultHandlerResolver } from './libs/HandlerResolver';
 /**
+ * DLQ (Dead Letter Queue) 인터페이스와 타입들입니다.
+ */
+export type {
+  DeadLetterItem,
+  DeadLetterPolicy,
+  DeadLetterQueue,
+  RetryableEventHandler,
+} from './libs/interfaces/DeadLetterQueue';
+export { DEFAULT_DEAD_LETTER_POLICY } from './libs/interfaces/DeadLetterQueue';
+/**
+ * 이벤트 순서 보장 인터페이스와 타입들입니다.
+ */
+export type {
+  EventOrdering,
+  EventOrderingConfig,
+  EventOrderingStrategy,
+  OrderedEventContext,
+  OrderedEventHandler,
+  OrderedEventResult,
+  OrderingPolicy,
+  PartitionKeyExtractor,
+  PartitionStatus,
+} from './libs/interfaces/EventOrdering';
+/**
  * 이벤트 발행 인터페이스입니다.
  */
 export type { EventPublishing } from './libs/interfaces/EventPublishing';
 /**
+ * 이벤트 리플레이(Replay) 인터페이스와 타입들입니다.
+ */
+export type {
+  EventReplay,
+  EventSnapshot,
+  EventStore,
+  ReplayMode,
+  ReplayOptions,
+  ReplayResult,
+} from './libs/interfaces/EventReplay';
+/**
  * 이벤트 구독 인터페이스입니다.
  */
 export type { EventSubscribing } from './libs/interfaces/EventSubscribing';
-
 /**
  * 이벤트 코어에서 사용하는 Problem 하위 타입들입니다.
  */
@@ -89,7 +123,3 @@ export {
   EventTransactionContextUnavailableProblem,
   UnknownEventTypeProblem,
 } from './libs/problems/EventsProblems';
-
-/**
- * 트랜잭션 컨텍스트 DI 토큰과 컨텍스트 계약 타입입니다.
- */

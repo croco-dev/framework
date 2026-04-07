@@ -1,4 +1,5 @@
-import type { ImpersonationContext, ImpersonationState } from './types';
+import type { ImpersonationContext } from './ImpersonationService';
+import type { ImpersonationState } from './types';
 
 export function withImpersonationAudit(
   metadata: Record<string, unknown>,

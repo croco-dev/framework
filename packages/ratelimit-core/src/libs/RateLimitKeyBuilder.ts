@@ -1,22 +1,11 @@
 import { RateLimitKeyBuilderProblem } from './problems/RateLimitConfigProblems';
-import type { KeySegment } from './types';
 
-/**
- * Context interface for extracting rate limit key segments.
- * Compatible with ExecutionContext and CrocoHttpContext.
- */
 export type KeyContext = {
   get<T>(key: string): T | undefined;
 };
 
-/**
- * Builds rate limit keys from context using configurable segments.
- *
- * @example
- * const builder = new RateLimitKeyBuilder(['tenant', 'user', 'route']);
- * const key = builder.build(context, 'api-default');
- * // Result: "rl:api-default:tenant_123:user_456::GET:/api/users"
- */
+export type KeySegment = 'tenant' | 'user' | 'ip' | 'apiKey' | 'route' | 'custom';
+
 export class RateLimitKeyBuilder {
   private readonly segments: KeySegment[];
 
@@ -27,12 +16,6 @@ export class RateLimitKeyBuilder {
     this.segments = segments;
   }
 
-  /**
-   * Build a rate limit key from context.
-   * @param context - Context containing segment values
-   * @param policyName - Policy identifier
-   * @returns Composite key string
-   */
   build(context: KeyContext, policyName: string): string {
     const parts: string[] = ['rl', policyName];
 
@@ -56,6 +39,8 @@ export class RateLimitKeyBuilder {
         return context.get<string>('apiKey');
       case 'route':
         return this.buildRouteKey(context);
+      case 'custom':
+        return undefined;
       default:
         return undefined;
     }

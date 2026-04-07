@@ -1,9 +1,36 @@
 import 'reflect-metadata';
+import { type EventBus, EventBusConfig } from '@croco/events-core';
+import type { RequestContext } from '@croco/framework-context';
 import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ImpersonationService } from '../libs/ImpersonationService';
 import { AuthProvider, ImpersonationStore } from '../libs/interfaces';
 import type { ImpersonationConfig, ImpersonationState } from '../libs/types';
+
+class MockEventBus implements EventBus {
+  private subscriptions = new Set<import('@croco/events-core').EventSubscription>();
+
+  async publish(event: any): Promise<void> {
+    const eventName = event.constructor.eventName;
+    for (const sub of this.subscriptions) {
+      if (sub.eventName === eventName && sub.handler) {
+        await sub.handler.handle(event);
+      }
+    }
+  }
+
+  subscribe(subscription: import('@croco/events-core').EventSubscription): void {
+    this.subscriptions.add(subscription);
+  }
+
+  unsubscribe(subscription: import('@croco/events-core').EventSubscription): void {
+    this.subscriptions.delete(subscription);
+  }
+
+  clear(): void {
+    this.subscriptions.clear();
+  }
+}
 
 class MockImpersonationStore extends ImpersonationStore {
   private sessions = new Map<string, ImpersonationState>();
@@ -48,6 +75,10 @@ describe('ImpersonationService', () => {
 
   beforeEach(() => {
     Container.reset();
+
+    const eventBus = new MockEventBus();
+    const eventBusConfig = EventBusConfig.getInstance();
+    eventBusConfig.setEventBus(eventBus);
 
     store = new MockImpersonationStore();
     authProvider = new MockAuthProvider();
@@ -132,7 +163,18 @@ describe('ImpersonationService', () => {
 
   describe('isImpersonating', () => {
     it('should return true when context has impersonation', () => {
-      const context = { impersonation: { impersonatorId: 'admin-1', targetUserId: 'user-123' } } as any;
+      const session: ImpersonationState = {
+        sessionId: 'imp-123',
+        impersonatorId: 'admin-1',
+        targetUserId: 'user-123',
+        reason: 'Support request',
+        startedAt: new Date(),
+        expiresAt: new Date(),
+      };
+      const context: RequestContext = {
+        requestId: 'req-1',
+        impersonation: session,
+      } as any;
 
       const result = service.isImpersonating(context);
 
@@ -140,7 +182,9 @@ describe('ImpersonationService', () => {
     });
 
     it('should return false when context has no impersonation', () => {
-      const context = {} as any;
+      const context: RequestContext = {
+        requestId: 'req-1',
+      };
 
       const result = service.isImpersonating(context);
 
@@ -150,7 +194,18 @@ describe('ImpersonationService', () => {
 
   describe('getImpersonator', () => {
     it('should return impersonatorId when context has impersonation', () => {
-      const context = { impersonation: { impersonatorId: 'admin-1', targetUserId: 'user-123' } } as any;
+      const session: ImpersonationState = {
+        sessionId: 'imp-123',
+        impersonatorId: 'admin-1',
+        targetUserId: 'user-123',
+        reason: 'Support request',
+        startedAt: new Date(),
+        expiresAt: new Date(),
+      };
+      const context: RequestContext = {
+        requestId: 'req-1',
+        impersonation: session,
+      } as any;
 
       const result = service.getImpersonator(context);
 
@@ -158,7 +213,9 @@ describe('ImpersonationService', () => {
     });
 
     it('should return null when context has no impersonation', () => {
-      const context = {} as any;
+      const context: RequestContext = {
+        requestId: 'req-1',
+      };
 
       const result = service.getImpersonator(context);
 
@@ -168,7 +225,18 @@ describe('ImpersonationService', () => {
 
   describe('getTargetUser', () => {
     it('should return targetUserId when context has impersonation', () => {
-      const context = { impersonation: { impersonatorId: 'admin-1', targetUserId: 'user-123' } } as any;
+      const session: ImpersonationState = {
+        sessionId: 'imp-123',
+        impersonatorId: 'admin-1',
+        targetUserId: 'user-123',
+        reason: 'Support request',
+        startedAt: new Date(),
+        expiresAt: new Date(),
+      };
+      const context: RequestContext = {
+        requestId: 'req-1',
+        impersonation: session,
+      } as any;
 
       const result = service.getTargetUser(context);
 
@@ -176,7 +244,9 @@ describe('ImpersonationService', () => {
     });
 
     it('should return null when context has no impersonation', () => {
-      const context = {} as any;
+      const context: RequestContext = {
+        requestId: 'req-1',
+      };
 
       const result = service.getTargetUser(context);
 

@@ -2,8 +2,9 @@ import 'reflect-metadata';
 import type { DomainPolicy } from '@croco/invitation-core';
 import type { TxManager } from '@croco/tx-core';
 import type { DrizzleDb } from '@croco/tx-drizzle';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DrizzleDomainPolicyStore } from '../libs/DrizzleDomainPolicyStore';
+import { type DrizzleDomainPolicyClient, DrizzleDomainPolicyStore } from '../libs/DrizzleDomainPolicyStore';
 
 const createPolicy = (overrides: Partial<DomainPolicy> = {}): DomainPolicy => {
   return {
@@ -18,6 +19,7 @@ const createPolicy = (overrides: Partial<DomainPolicy> = {}): DomainPolicy => {
 
 describe('DrizzleDomainPolicyStore', () => {
   let store!: DrizzleDomainPolicyStore;
+
   let mockDb!: {
     select: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
@@ -36,18 +38,8 @@ describe('DrizzleDomainPolicyStore', () => {
     };
 
     store = new DrizzleDomainPolicyStore(
-      mockDb as unknown as DrizzleDb & {
-        select: (...args: unknown[]) => unknown;
-        insert: (...args: unknown[]) => unknown;
-        delete: (...args: unknown[]) => unknown;
-      },
-      mockTxManager as unknown as TxManager<
-        DrizzleDb & {
-          select: (...args: unknown[]) => unknown;
-          insert: (...args: unknown[]) => unknown;
-          delete: (...args: unknown[]) => unknown;
-        }
-      >
+      mockDb as unknown as DrizzleDomainPolicyClient,
+      mockTxManager as unknown as TxManager<DrizzleDomainPolicyClient>
     );
   });
 

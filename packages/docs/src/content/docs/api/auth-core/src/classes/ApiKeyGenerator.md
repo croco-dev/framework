@@ -5,7 +5,7 @@ prev: false
 title: "ApiKeyGenerator"
 ---
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L3)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L3)
 
 Creates cryptographically secure API keys.
 
@@ -15,7 +15,7 @@ Creates cryptographically secure API keys.
 
 > **new ApiKeyGenerator**(`shortLength?`, `longLength?`): `ApiKeyGenerator`
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L4)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L4)
 
 #### Parameters
 
@@ -37,7 +37,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:4](https://gi
 
 > **generate**(`prefix?`): `object`
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L9)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L9)
 
 #### Parameters
 
@@ -71,7 +71,7 @@ Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:9](https://gi
 
 > **parse**(`rawKey`): \{ `longToken`: `string`; `prefix`: `string`; `shortToken`: `string`; \} \| `null`
 
-Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:21](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L21)
+Defined in: [packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts:21](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/apikey/ApiKeyGenerator.ts#L21)
 
 #### Parameters
 

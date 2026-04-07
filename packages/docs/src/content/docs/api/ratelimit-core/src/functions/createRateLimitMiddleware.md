@@ -7,9 +7,7 @@ title: "createRateLimitMiddleware"
 
 > **createRateLimitMiddleware**(`options`): [`MiddlewareFunction`](/api/ratelimit-core/src/type-aliases/middlewarefunction/)
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:64](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L64)
-
-Creates a rate limiting middleware for global application.
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:33](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L33)
 
 ## Parameters
 
@@ -20,16 +18,3 @@ Creates a rate limiting middleware for global application.
 ## Returns
 
 [`MiddlewareFunction`](/api/ratelimit-core/src/type-aliases/middlewarefunction/)
-
-## Example
-
-```typescript
-const middleware = createRateLimitMiddleware({
-  rateLimiter,
-  policy: { name: 'global', limit: 1000, windowMs: 3600000 },
-  keySegments: ['tenant', 'ip'],
-});
-
-// In CrocoApp config
-{ middlewares: [middleware] }
-```

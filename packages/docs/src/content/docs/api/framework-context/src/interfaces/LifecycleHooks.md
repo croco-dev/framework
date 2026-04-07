@@ -5,9 +5,21 @@ prev: false
 title: "LifecycleHooks"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:55](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L55)
+Defined in: [packages/framework-context/src/libs/types.ts:29](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L29)
 
-Lifecycle hooks for request scope
+요청 라이프사이클 전후와 에러 상황에 실행할 훅 타입입니다.
+
+## Example
+
+```typescript
+import type { LifecycleHooks } from '@croco/framework-context';
+
+const hooks: LifecycleHooks = {
+  onRequestStart: async (ctx) => {
+    void ctx.requestId;
+  },
+};
+```
 
 ## Type Parameters
 
@@ -21,9 +33,9 @@ Lifecycle hooks for request scope
 
 > `optional` **onRequestEnd**: (`ctx`, `result?`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:64](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L64)
+Defined in: [packages/framework-context/src/libs/types.ts:32](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L32)
 
-Called when request ends successfully, after middleware chain
+요청 성공 종료 시 호출됩니다.
 
 #### Parameters
 
@@ -45,9 +57,9 @@ Called when request ends successfully, after middleware chain
 
 > `optional` **onRequestError**: (`ctx`, `error`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:69](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L69)
+Defined in: [packages/framework-context/src/libs/types.ts:34](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L34)
 
-Called when request encounters an error
+요청 에러 발생 시 호출됩니다.
 
 #### Parameters
 
@@ -69,9 +81,9 @@ Called when request encounters an error
 
 > `optional` **onRequestStart**: (`ctx`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:59](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L59)
+Defined in: [packages/framework-context/src/libs/types.ts:30](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L30)
 
-Called when request starts, before middleware chain
+요청 시작 시 호출됩니다.
 
 #### Parameters
 

@@ -1,6 +1,23 @@
 export type EntitlementType = 'boolean' | 'metered' | 'static';
 
-export type OveragePolicy = 'block' | 'warn' | 'allow';
+export type OveragePolicy = 'BLOCK' | 'WARN' | 'ALLOW_WITH_OVERAGE';
+
+export type UsageHistoryPeriod = {
+  startDate: Date;
+  endDate: Date;
+};
+
+export type UsageHistoryEntry = {
+  timestamp: Date;
+  usage: number;
+};
+
+export type EntitlementQuotaStatus = {
+  usage: number;
+  quota: number;
+  exceeded: boolean;
+  remaining: number;
+};
 
 export type EntitlementRule = {
   featureKey: string;
@@ -27,4 +44,5 @@ export type EntitlementCheckResult = {
   value?: number;
   planId?: string;
   reason?: string;
+  overagePolicy?: OveragePolicy;
 };

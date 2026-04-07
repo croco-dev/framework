@@ -7,9 +7,7 @@ title: "recordError"
 
 > **recordError**(`error`, `span?`): `void`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:56](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-api/src/libs/span.ts#L56)
-
-현재 Span에 에러를 기록합니다.
+Defined in: [packages/telemetry-api/src/libs/span.ts:51](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/span.ts#L51)
 
 ## Parameters
 
@@ -17,14 +15,12 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:56](https://github.com/croc
 
 `unknown`
 
-에러 객체 또는 메시지
-
 ### span?
 
 `Span`
 
-Span 인스턴스 (선택사항, 지정하지 않으면 현재 Span 사용)
-
 ## Returns
 
 `void`
+
+TraceInfo object with trace details, or empty object if no active trace

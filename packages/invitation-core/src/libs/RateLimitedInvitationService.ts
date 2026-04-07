@@ -1,0 +1,125 @@
+import { Component } from '@croco/framework-context';
+import type { MembershipRole } from '@croco/membership-core';
+import type { InvitationManager } from './InvitationManager';
+import type { InvitationStore } from './InvitationStore';
+import { DuplicateInvitationProblem, InvitationRateLimitExceededProblem } from './problems/RateLimitProblems';
+import type { BatchInviteOptions, BatchInviteResult, RateLimitConfig } from './types';
+
+type CreateEmailInvitationInput = {
+  tenantId: string;
+  inviterId: string;
+  email: string;
+  role: MembershipRole;
+  expiresInDays?: number;
+};
+
+type CreateLinkInvitationInput = {
+  tenantId: string;
+  inviterId: string;
+  role: MembershipRole;
+  expiresInDays?: number;
+};
+
+@Component()
+export class RateLimitedInvitationService {
+  private readonly DEFAULT_CONFIG: RateLimitConfig = {
+    maxInvitesPerHour: 100,
+    maxInvitesPerDay: 1000,
+  };
+
+  constructor(
+    private readonly manager: InvitationManager,
+    private readonly store: InvitationStore,
+    private readonly config?: RateLimitConfig
+  ) {}
+
+  async checkRateLimit(tenantId: string): Promise<void> {
+    const config = this.config ?? this.DEFAULT_CONFIG;
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const hourlyCount = await this.store.countPendingByTenant(tenantId, oneHourAgo);
+    const dailyCount = await this.store.countPendingByTenant(tenantId, oneDayAgo);
+
+    if (hourlyCount >= config.maxInvitesPerHour) {
+      throw new InvitationRateLimitExceededProblem(`${config.maxInvitesPerHour} per hour`);
+    }
+
+    if (dailyCount >= config.maxInvitesPerDay) {
+      throw new InvitationRateLimitExceededProblem(`${config.maxInvitesPerDay} per day`);
+    }
+  }
+
+  async createEmailInvitationWithRateLimit(input: CreateEmailInvitationInput): Promise<string> {
+    await this.checkRateLimit(input.tenantId);
+
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const existing = await this.store.findByTenantAndEmail(input.tenantId, normalizedEmail);
+
+    if (existing && existing.status === 'pending') {
+      throw new DuplicateInvitationProblem(input.tenantId, normalizedEmail);
+    }
+
+    return this.manager.createEmailInvitation({
+      ...input,
+      email: normalizedEmail,
+    });
+  }
+
+  async createLinkInvitationWithRateLimit(input: CreateLinkInvitationInput): Promise<string> {
+    await this.checkRateLimit(input.tenantId);
+
+    return this.manager.createLinkInvitation(input);
+  }
+
+  async batchInvite(tenantId: string, emails: string[], options: BatchInviteOptions = {}): Promise<BatchInviteResult> {
+    const maxBatchSize = options.maxBatchSize ?? 50;
+
+    if (emails.length > maxBatchSize) {
+      throw new Error(`Batch size exceeds maximum of ${maxBatchSize}`);
+    }
+
+    const result: BatchInviteResult = {
+      successful: [],
+      failed: [],
+    };
+
+    for (const email of emails) {
+      try {
+        await this.checkRateLimit(tenantId);
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const existing = await this.store.findByTenantAndEmail(tenantId, normalizedEmail);
+
+        if (existing && existing.status === 'pending') {
+          result.failed.push({
+            email: normalizedEmail,
+            error: 'Invitation already pending',
+          });
+          continue;
+        }
+
+        const token = await this.manager.createEmailInvitation({
+          tenantId,
+          inviterId: 'system',
+          email: normalizedEmail,
+          role: 'member' as const,
+          expiresInDays: options.expiresInDays,
+        });
+
+        result.successful.push({
+          email: normalizedEmail,
+          token,
+        });
+      } catch (error) {
+        result.failed.push({
+          email: email.trim().toLowerCase(),
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    return result;
+  }
+}

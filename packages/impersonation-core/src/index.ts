@@ -5,7 +5,7 @@ export { BlockDuringImpersonation } from './libs/decorators/BlockDuringImpersona
 // Events
 export { ImpersonationEndedEvent, ImpersonationStartedEvent } from './libs/events';
 export { ImpersonationGuard } from './libs/ImpersonationGuard';
-export { ImpersonationService } from './libs/ImpersonationService';
+export { type ImpersonationContext, ImpersonationService } from './libs/ImpersonationService';
 export { InMemoryImpersonationStore } from './libs/InMemoryImpersonationStore';
 // Interfaces
 export * from './libs/interfaces';

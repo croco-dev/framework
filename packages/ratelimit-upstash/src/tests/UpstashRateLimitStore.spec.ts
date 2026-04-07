@@ -1,104 +1,341 @@
-import type { RateLimitPolicy } from '@croco/ratelimit-core';
+import { createFixedWindowPolicy, createSlidingWindowPolicy, createTokenBucketPolicy } from '@croco/ratelimit-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UpstashRateLimitStore } from '../libs/UpstashRateLimitStore';
+import {
+  UpstashFixedWindowStore,
+  UpstashSlidingWindowStore,
+  UpstashTokenBucketStore,
+} from '../libs/UpstashRateLimitStore';
 
-// Mock @upstash/ratelimit
-vi.mock('@upstash/ratelimit', () => {
-  const slidingWindowMock = vi.fn();
-
-  class MockRatelimit {
-    limit = vi.fn().mockResolvedValue({
-      success: true,
-      limit: 100,
-      remaining: 99,
-      reset: Date.now() + 60000,
-      pending: Promise.resolve(),
-    });
-
-    static slidingWindow = slidingWindowMock;
-  }
-
-  return {
-    Ratelimit: MockRatelimit,
-  };
-});
-
-describe('UpstashRateLimitStore', () => {
-  let store!: UpstashRateLimitStore;
-  let mockRedis!: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
-  let mockSlidingWindow!: ReturnType<typeof vi.fn>;
-
-  const policy: RateLimitPolicy = {
-    name: 'test-policy',
-    limit: 100,
-    windowMs: 60000,
+describe('UpstashFixedWindowStore', () => {
+  let store!: UpstashFixedWindowStore;
+  let mockRedis!: {
+    eval: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    del: ReturnType<typeof vi.fn>;
+    keys: ReturnType<typeof vi.fn>;
+    expire: ReturnType<typeof vi.fn>;
   };
 
-  beforeEach(async () => {
-    vi.clearAllMocks();
+  beforeEach(() => {
     mockRedis = {
+      eval: vi.fn(),
       get: vi.fn(),
       set: vi.fn(),
+      del: vi.fn(),
+      keys: vi.fn(),
+      expire: vi.fn(),
     };
-    const { Ratelimit } = await import('@upstash/ratelimit');
-    mockSlidingWindow = Ratelimit.slidingWindow as unknown as ReturnType<typeof vi.fn>;
-    store = new UpstashRateLimitStore({
-      redis: mockRedis as never,
-    });
+    store = new UpstashFixedWindowStore({ redis: mockRedis as never });
   });
 
-  it('should return successful result when limit not exceeded', async () => {
+  it('should allow requests within limit', async () => {
+    mockRedis.eval.mockResolvedValue([1, 1, 9]);
+
+    const policy = createFixedWindowPolicy('test', 10, 60000);
     const result = await store.check('test-key', policy);
 
     expect(result.success).toBe(true);
-    expect(result.limit).toBe(100);
-    expect(result.remaining).toBe(99);
-    expect(result.resetAtMs).toBeGreaterThan(Date.now());
+    expect(result.limit).toBe(10);
+    expect(result.remaining).toBe(9);
   });
 
-  it('should cache limiter instances by policy', async () => {
-    await store.check('key1', policy);
-    await store.check('key2', policy);
+  it('should deny requests exceeding limit', async () => {
+    mockRedis.eval.mockResolvedValue([0, 10, 0]);
 
-    // slidingWindow should only be called once for same policy
-    expect(mockSlidingWindow).toHaveBeenCalledTimes(1);
+    const policy = createFixedWindowPolicy('test', 10, 60000);
+    const result = await store.check('test-key', policy);
+
+    expect(result.success).toBe(false);
+    expect(result.remaining).toBe(0);
   });
 
-  it('should create different limiters for different policies', async () => {
-    const policy2: RateLimitPolicy = {
-      name: 'other-policy',
-      limit: 50,
-      windowMs: 30000,
-    };
+  it('should track stats', async () => {
+    mockRedis.eval.mockResolvedValue([1, 1, 9]);
 
-    await store.check('key1', policy);
-    await store.check('key2', policy2);
+    const policy = createFixedWindowPolicy('test', 10, 60000);
+    await store.check('test-key', policy);
 
-    // slidingWindow should be called twice for different policies
-    expect(mockSlidingWindow).toHaveBeenCalledTimes(2);
+    const stats = await store.getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.allowed).toBe(1);
+    expect(stats.denied).toBe(0);
   });
 
   it('should use custom prefix', async () => {
-    store = new UpstashRateLimitStore({
+    mockRedis.eval.mockResolvedValue([1, 1, 9]);
+
+    const customStore = new UpstashFixedWindowStore({
       redis: mockRedis as never,
-      prefix: 'custom-prefix',
+      prefix: 'custom',
     });
 
-    await store.check('test-key', policy);
+    const policy = createFixedWindowPolicy('test', 10, 60000);
+    await customStore.check('test-key', policy);
 
-    // Verify slidingWindow was called with correct parameters
-    expect(mockSlidingWindow).toHaveBeenCalledWith(100, '60000 ms');
+    expect(mockRedis.eval).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.arrayContaining([expect.stringContaining('custom:test-key:')]),
+      [10, 60]
+    );
   });
 
-  it('should enable ephemeral cache when specified', async () => {
-    store = new UpstashRateLimitStore({
-      redis: mockRedis as never,
-      ephemeralCache: true,
-    });
+  it('should throw error for invalid policy', async () => {
+    const policy = createSlidingWindowPolicy('test', 10, 60000);
 
+    await expect(store.check('test-key', policy)).rejects.toThrow('Invalid policy for fixed window store');
+  });
+
+  it('should reset keys', async () => {
+    mockRedis.keys.mockResolvedValue(['key1', 'key2']);
+    mockRedis.del.mockResolvedValue(2);
+
+    await store.reset('test-key');
+
+    expect(mockRedis.keys).toHaveBeenCalledWith('ratelimit:fixed:test-key*');
+    expect(mockRedis.del).toHaveBeenCalledWith('key1', 'key2');
+  });
+
+  it('should handle getCount', async () => {
+    mockRedis.get.mockResolvedValue('5');
+
+    const count = await store.getCount('test-key');
+
+    expect(count).toBe(5);
+  });
+
+  it('should handle getCount with null value', async () => {
+    mockRedis.get.mockResolvedValue(null);
+
+    const count = await store.getCount('test-key');
+
+    expect(count).toBe(0);
+  });
+
+  it('should handle increment', async () => {
+    mockRedis.get.mockResolvedValue('5');
+
+    const newValue = await store.increment('test-key', 3);
+
+    expect(newValue).toBe(8);
+    expect(mockRedis.set).toHaveBeenCalledWith('ratelimit:fixed:test-key:increment', '8');
+  });
+
+  it('should handle expire', async () => {
+    await store.expire('test-key', 60000);
+
+    expect(mockRedis.expire).toHaveBeenCalledWith('ratelimit:fixed:test-key:expire', 60);
+  });
+
+  it('should handle pruneExpired', async () => {
+    const count = await store.pruneExpired();
+
+    expect(count).toBe(0);
+  });
+
+  it('should track denied stats', async () => {
+    mockRedis.eval.mockResolvedValue([0, 10, 0]);
+
+    const policy = createFixedWindowPolicy('test', 10, 60000);
+    await store.check('test-key', policy);
+
+    const stats = await store.getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.allowed).toBe(0);
+    expect(stats.denied).toBe(1);
+  });
+});
+
+describe('UpstashSlidingWindowStore', () => {
+  let store!: UpstashSlidingWindowStore;
+  let mockRedis!: {
+    eval: ReturnType<typeof vi.fn>;
+    del: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(() => {
+    mockRedis = {
+      eval: vi.fn(),
+      del: vi.fn(),
+      get: vi.fn(),
+      set: vi.fn(),
+    };
+    store = new UpstashSlidingWindowStore({ redis: mockRedis as never });
+  });
+
+  it('should allow requests within limit', async () => {
+    mockRedis.eval.mockResolvedValue([1, 1, 9]);
+
+    const policy = createSlidingWindowPolicy('test', 10, 60000);
     const result = await store.check('test-key', policy);
 
-    // Verify the store works correctly with ephemeral cache enabled
     expect(result.success).toBe(true);
+    expect(result.limit).toBe(10);
+    expect(result.remaining).toBe(9);
+  });
+
+  it('should deny requests exceeding limit', async () => {
+    mockRedis.eval.mockResolvedValue([0, 10, 0]);
+
+    const policy = createSlidingWindowPolicy('test', 10, 60000);
+    const result = await store.check('test-key', policy);
+
+    expect(result.success).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  it('should track stats', async () => {
+    mockRedis.eval.mockResolvedValue([1, 1, 9]);
+
+    const policy = createSlidingWindowPolicy('test', 10, 60000);
+    await store.check('test-key', policy);
+
+    const stats = await store.getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.allowed).toBe(1);
+    expect(stats.denied).toBe(0);
+  });
+
+  it('should throw error for invalid policy', async () => {
+    const policy = createFixedWindowPolicy('test', 10, 60000);
+
+    await expect(store.check('test-key', policy)).rejects.toThrow('Invalid policy for sliding window store');
+  });
+
+  it('should reset keys', async () => {
+    await store.reset('test-key');
+
+    expect(mockRedis.del).toHaveBeenCalledWith('ratelimit:sliding:test-key');
+  });
+
+  it('should handle pruneExpired', async () => {
+    const count = await store.pruneExpired();
+
+    expect(count).toBe(0);
+  });
+
+  it('should handle increment', async () => {
+    mockRedis.get.mockResolvedValue('5');
+
+    const newValue = await store.increment('test-key', 2);
+
+    expect(newValue).toBe(7);
+  });
+
+  it('should handle getCount', async () => {
+    const count = await store.getCount();
+
+    expect(count).toBe(0);
+  });
+
+  it('should track denied stats', async () => {
+    mockRedis.eval.mockResolvedValue([0, 10, 0]);
+
+    const policy = createSlidingWindowPolicy('test', 10, 60000);
+    await store.check('test-key', policy);
+
+    const stats = await store.getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.allowed).toBe(0);
+    expect(stats.denied).toBe(1);
+  });
+});
+
+describe('UpstashTokenBucketStore', () => {
+  let store!: UpstashTokenBucketStore;
+  let mockRedis!: {
+    eval: ReturnType<typeof vi.fn>;
+    del: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(() => {
+    mockRedis = {
+      eval: vi.fn(),
+      del: vi.fn(),
+      get: vi.fn(),
+      set: vi.fn(),
+    };
+    store = new UpstashTokenBucketStore({ redis: mockRedis as never });
+  });
+
+  it('should allow requests when tokens available', async () => {
+    mockRedis.eval.mockResolvedValue([1, 9, 9]);
+
+    const policy = createTokenBucketPolicy('test', 10, 1, 1000);
+    const result = await store.check('test-key', policy);
+
+    expect(result.success).toBe(true);
+    expect(result.limit).toBe(10);
+    expect(result.remaining).toBe(9);
+  });
+
+  it('should deny requests when no tokens available', async () => {
+    mockRedis.eval.mockResolvedValue([0, 0, 0]);
+
+    const policy = createTokenBucketPolicy('test', 10, 1, 1000);
+    const result = await store.check('test-key', policy);
+
+    expect(result.success).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  it('should track stats', async () => {
+    mockRedis.eval.mockResolvedValue([1, 9, 9]);
+
+    const policy = createTokenBucketPolicy('test', 10, 1, 1000);
+    await store.check('test-key', policy);
+
+    const stats = await store.getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.allowed).toBe(1);
+    expect(stats.denied).toBe(0);
+  });
+
+  it('should throw error for invalid policy', async () => {
+    const policy = createFixedWindowPolicy('test', 10, 60000);
+
+    await expect(store.check('test-key', policy)).rejects.toThrow('Invalid policy for token bucket store');
+  });
+
+  it('should reset keys', async () => {
+    await store.reset('test-key');
+
+    expect(mockRedis.del).toHaveBeenCalledWith('ratelimit:bucket:test-key');
+  });
+
+  it('should handle pruneExpired', async () => {
+    const count = await store.pruneExpired();
+
+    expect(count).toBe(0);
+  });
+
+  it('should handle increment', async () => {
+    mockRedis.get.mockResolvedValue('3');
+
+    const newValue = await store.increment('test-key', 4);
+
+    expect(newValue).toBe(7);
+  });
+
+  it('should handle getCount', async () => {
+    const count = await store.getCount();
+
+    expect(count).toBe(0);
+  });
+
+  it('should track denied stats', async () => {
+    mockRedis.eval.mockResolvedValue([0, 0, 0]);
+
+    const policy = createTokenBucketPolicy('test', 10, 1, 1000);
+    await store.check('test-key', policy);
+
+    const stats = await store.getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.allowed).toBe(0);
+    expect(stats.denied).toBe(1);
   });
 });

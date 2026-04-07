@@ -3,10 +3,12 @@ export type NestingStrategy = 'join' | 'savepoint';
 export interface TxRunOptions<TOptions = unknown> {
   nesting?: NestingStrategy;
   options?: TOptions;
+  timeout?: number;
 }
 
 export interface TxManagerConfig {
   defaultNesting?: NestingStrategy;
+  defaultTimeout?: number;
 }
 
 export type Propagation = 'REQUIRED' | 'REQUIRES_NEW' | 'MANDATORY' | 'NEVER';
@@ -22,4 +24,5 @@ export interface TransactionalOptions<TOptions = unknown> {
   managerKey?: TxManagerKey;
   nesting?: NestingStrategy;
   options?: TOptions;
+  timeout?: number;
 }

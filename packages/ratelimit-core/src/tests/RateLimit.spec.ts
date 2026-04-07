@@ -7,6 +7,7 @@ import {
   type RateLimitMetadata,
   ROUTE_GUARDS_METADATA_KEY,
 } from '../libs/guards/RateLimitGuard';
+import { isSlidingWindowPolicy } from '../libs/types';
 
 describe('@RateLimit decorator', () => {
   it('should store metadata with default values', () => {
@@ -19,8 +20,11 @@ describe('@RateLimit decorator', () => {
     const metadata = Reflect.getMetadata(RATE_LIMIT_METADATA_KEY, instance.testMethod) as RateLimitMetadata;
 
     expect(metadata).not.toBeUndefined();
-    expect(metadata.policy.limit).toBe(100);
-    expect(metadata.policy.windowMs).toBe(60000); // 1m
+    expect(isSlidingWindowPolicy(metadata.policy)).toBe(true);
+    if (isSlidingWindowPolicy(metadata.policy)) {
+      expect(metadata.policy.limit).toBe(100);
+      expect(metadata.policy.windowMs).toBe(60000); // 1m
+    }
     expect(metadata.policy.name).toBe('testMethod-default');
   });
 
@@ -33,8 +37,11 @@ describe('@RateLimit decorator', () => {
     const instance = new TestController();
     const metadata = Reflect.getMetadata(RATE_LIMIT_METADATA_KEY, instance.limitedMethod) as RateLimitMetadata;
 
-    expect(metadata.policy.limit).toBe(10);
-    expect(metadata.policy.windowMs).toBe(300000); // 5m
+    expect(isSlidingWindowPolicy(metadata.policy)).toBe(true);
+    if (isSlidingWindowPolicy(metadata.policy)) {
+      expect(metadata.policy.limit).toBe(10);
+      expect(metadata.policy.windowMs).toBe(300000); // 5m
+    }
   });
 
   it('should store metadata with custom policy name', () => {
@@ -47,8 +54,11 @@ describe('@RateLimit decorator', () => {
     const metadata = Reflect.getMetadata(RATE_LIMIT_METADATA_KEY, instance.premiumMethod) as RateLimitMetadata;
 
     expect(metadata.policy.name).toBe('premium-tier');
-    expect(metadata.policy.limit).toBe(1000);
-    expect(metadata.policy.windowMs).toBe(3600000); // 1h
+    expect(isSlidingWindowPolicy(metadata.policy)).toBe(true);
+    if (isSlidingWindowPolicy(metadata.policy)) {
+      expect(metadata.policy.limit).toBe(1000);
+      expect(metadata.policy.windowMs).toBe(3600000); // 1h
+    }
   });
 
   it('should store custom key function', () => {
@@ -80,13 +90,22 @@ describe('@RateLimit decorator', () => {
     const instance = new TestController();
 
     const meta30s = Reflect.getMetadata(RATE_LIMIT_METADATA_KEY, instance.method30s) as RateLimitMetadata;
-    expect(meta30s.policy.windowMs).toBe(30000);
+    expect(isSlidingWindowPolicy(meta30s.policy)).toBe(true);
+    if (isSlidingWindowPolicy(meta30s.policy)) {
+      expect(meta30s.policy.windowMs).toBe(30000);
+    }
 
     const meta2h = Reflect.getMetadata(RATE_LIMIT_METADATA_KEY, instance.method2h) as RateLimitMetadata;
-    expect(meta2h.policy.windowMs).toBe(7200000);
+    expect(isSlidingWindowPolicy(meta2h.policy)).toBe(true);
+    if (isSlidingWindowPolicy(meta2h.policy)) {
+      expect(meta2h.policy.windowMs).toBe(7200000);
+    }
 
     const meta1d = Reflect.getMetadata(RATE_LIMIT_METADATA_KEY, instance.method1d) as RateLimitMetadata;
-    expect(meta1d.policy.windowMs).toBe(86400000);
+    expect(isSlidingWindowPolicy(meta1d.policy)).toBe(true);
+    if (isSlidingWindowPolicy(meta1d.policy)) {
+      expect(meta1d.policy.windowMs).toBe(86400000);
+    }
   });
 
   it('should throw when window value is zero', () => {

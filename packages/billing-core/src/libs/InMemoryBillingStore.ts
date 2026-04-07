@@ -35,6 +35,18 @@ export class InMemoryBillingStore extends BillingStore {
     this.accountsByExternalId.set(account.externalCustomerId, account);
   }
 
+  async deleteAccount(billingAccountId: string): Promise<void> {
+    const account = this.accounts.get(billingAccountId);
+
+    if (!account) {
+      return;
+    }
+
+    this.accounts.delete(billingAccountId);
+    this.accountsByTenantId.delete(account.tenantId);
+    this.accountsByExternalId.delete(account.externalCustomerId);
+  }
+
   async findSubscription(billingAccountId: string): Promise<Subscription | null> {
     return this.subscriptions.get(billingAccountId) ?? null;
   }
@@ -44,8 +56,25 @@ export class InMemoryBillingStore extends BillingStore {
   }
 
   async saveSubscription(subscription: Subscription): Promise<void> {
+    const existingSubscription = this.subscriptions.get(subscription.billingAccountId);
+
+    if (existingSubscription && existingSubscription.externalSubscriptionId !== subscription.externalSubscriptionId) {
+      this.subscriptionsByExternalId.delete(existingSubscription.externalSubscriptionId);
+    }
+
     this.subscriptions.set(subscription.billingAccountId, subscription);
     this.subscriptionsByExternalId.set(subscription.externalSubscriptionId, subscription);
+  }
+
+  async deleteSubscription(billingAccountId: string): Promise<void> {
+    const subscription = this.subscriptions.get(billingAccountId);
+
+    if (!subscription) {
+      return;
+    }
+
+    this.subscriptions.delete(billingAccountId);
+    this.subscriptionsByExternalId.delete(subscription.externalSubscriptionId);
   }
 
   async saveOrder(order: Order): Promise<void> {

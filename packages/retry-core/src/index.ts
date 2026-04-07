@@ -11,7 +11,7 @@ export { ExponentialBackoff, FixedBackoff, NoBackoff } from './libs/BackoffPolic
 /**
  * Configuration type for creating a circuit breaker.
  */
-export type { CircuitBreakerOptions } from './libs/CircuitBreaker';
+export type { CircuitBreakerFallback, CircuitBreakerOptions } from './libs/CircuitBreaker';
 
 /**
  * Circuit breaker implementation for preventing repeated calls to unstable dependencies.
@@ -22,16 +22,18 @@ export { CircuitBreaker } from './libs/CircuitBreaker';
  * Retry template that combines retry execution with circuit breaker protection.
  */
 export { CircuitBreakerRetryTemplate } from './libs/CircuitBreakerRetryTemplate';
-
+export type {
+  CircuitStateTransition,
+  DistributedCircuitBreakerStateStore,
+  InMemoryCircuitBreakerStateStoreOptions,
+} from './libs/CircuitBreakerState';
 /**
  * Circuit breaker state contracts and helper types for shared state storage.
  */
 export {
   CircuitBreakerStateStore,
   CircuitState,
-  type DistributedCircuitBreakerStateStore,
   InMemoryCircuitBreakerStateStore,
-  type InMemoryCircuitBreakerStateStoreOptions,
   isDistributedStore,
 } from './libs/CircuitBreakerState';
 
@@ -76,7 +78,7 @@ export { findRecoverMethod, getRecoverMethods, Recover } from './libs/Recover';
 /**
  * Options for configuring the `@Retryable` method decorator.
  */
-export type { CircuitIdResolverContext, RetryableOptions } from './libs/Retryable';
+export type { CircuitBreakerConfig, CircuitIdResolverContext, RetryableOptions } from './libs/Retryable';
 
 /**
  * Method decorator that applies declarative retry behavior.

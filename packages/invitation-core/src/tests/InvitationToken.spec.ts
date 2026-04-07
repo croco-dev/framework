@@ -3,16 +3,10 @@ import { generateToken, hashToken } from '../libs/token';
 
 describe('token', () => {
   describe('generateToken', () => {
-    it('should generate a token with default length', () => {
+    it('should generate a token with fixed length', () => {
       const token = generateToken();
       expect(token).not.toBeNull();
       expect(token).toHaveLength(64);
-    });
-
-    it('should generate a token with custom length', () => {
-      const token = generateToken(16);
-      expect(token).not.toBeNull();
-      expect(token).toHaveLength(32);
     });
 
     it('should generate different tokens on each call', () => {
@@ -36,15 +30,17 @@ describe('token', () => {
     });
 
     it('should produce consistent hash for same input', () => {
-      const token = 'test-token';
+      const token = generateToken();
       const hash1 = hashToken(token);
       const hash2 = hashToken(token);
       expect(hash1).toBe(hash2);
     });
 
     it('should produce different hashes for different inputs', () => {
-      const hash1 = hashToken('token1');
-      const hash2 = hashToken('token2');
+      const token1 = generateToken();
+      const token2 = generateToken();
+      const hash1 = hashToken(token1);
+      const hash2 = hashToken(token2);
       expect(hash1).not.toBe(hash2);
     });
 

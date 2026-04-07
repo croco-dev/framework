@@ -1,19 +1,15 @@
-/**
- * Cache storage contract for get/set/delete/clear operations.
- */
-export { CacheStore } from './libs/CacheStore';
-
-/**
- * Method decorator that caches method return values.
- */
+export {
+  type CacheGetOrSetOptions,
+  type CachePattern,
+  type CacheStats,
+  CacheStore,
+  type CacheWarmupEntry,
+} from './libs/CacheStore';
+export {
+  type DistributedCacheLock,
+  type DistributedCacheSetOptions,
+  DistributedCacheStore,
+} from './libs/DistributedCacheStore';
 export { Cacheable, type CacheableOptions } from './libs/decorators/Cacheable';
-
-/**
- * Method decorator that evicts cache entries by key or pattern.
- */
 export { CacheEvict, type CacheEvictOptions } from './libs/decorators/CacheEvict';
-
-/**
- * Default in-memory cache store implementation.
- */
-export { InMemoryCacheStore } from './libs/InMemoryCacheStore';
+export { InMemoryCacheStore, type InMemoryCacheStoreOptions } from './libs/InMemoryCacheStore';

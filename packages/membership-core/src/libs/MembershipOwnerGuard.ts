@@ -39,7 +39,14 @@ export class MembershipOwnerGuard {
     );
   }
 
-  private async isLastOwner(tenantId: string, userId: string, currentRole: MembershipRole): Promise<boolean> {
+  async validateLastOwner(tenantId: string, userId: string, currentRole: MembershipRole): Promise<void> {
+    const isLastOwner = await this.isLastOwner(tenantId, userId, currentRole);
+    if (isLastOwner) {
+      throw new LastOwnerCannotBeRemovedProblem(tenantId, userId);
+    }
+  }
+
+  async isLastOwner(tenantId: string, userId: string, currentRole: MembershipRole): Promise<boolean> {
     if (currentRole !== 'owner') {
       return false;
     }
@@ -49,7 +56,7 @@ export class MembershipOwnerGuard {
     return owners.length === 1 && isTargetOwner;
   }
 
-  private async findOwners(tenantId: string): Promise<Membership[]> {
+  async findOwners(tenantId: string): Promise<Membership[]> {
     const memberships = await this.store.findAllByTenant(tenantId);
     return memberships.filter((membership) => membership.role === 'owner');
   }

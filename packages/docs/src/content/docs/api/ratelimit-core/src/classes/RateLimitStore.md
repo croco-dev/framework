@@ -5,14 +5,11 @@ prev: false
 title: "RateLimitStore"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/RateLimitStore.ts#L7)
-
-Abstract storage for rate limiting.
-Implementations: InMemoryRateLimitStore, UpstashRateLimitStore
+Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:30](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimitStore.ts#L30)
 
 ## Extended by
 
-- [`InMemoryRateLimitStore`](/api/ratelimit-core/src/classes/inmemoryratelimitstore/)
+- [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/)
 
 ## Constructors
 
@@ -30,9 +27,7 @@ Implementations: InMemoryRateLimitStore, UpstashRateLimitStore
 
 > `abstract` **check**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:14](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/RateLimitStore.ts#L14)
-
-Check and increment the rate limit counter for a key.
+Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:31](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimitStore.ts#L31)
 
 #### Parameters
 
@@ -40,19 +35,31 @@ Check and increment the rate limit counter for a key.
 
 `string`
 
-Unique identifier for the rate limit bucket
-
 ##### policy
 
 [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
-
-Rate limit policy to apply
 
 #### Returns
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Rate limit result with success status and metadata
+***
+
+### getStats()
+
+> `abstract` **getStats**(`key?`): `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
+
+Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:32](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimitStore.ts#L32)
+
+#### Parameters
+
+##### key?
+
+`string`
+
+#### Returns
+
+`Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
 
 ***
 
@@ -60,7 +67,7 @@ Rate limit result with success status and metadata
 
 > `abstract` **pruneExpired**(): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/RateLimitStore.ts#L16)
+Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:33](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimitStore.ts#L33)
 
 #### Returns
 

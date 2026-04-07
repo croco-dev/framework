@@ -5,7 +5,7 @@ prev: false
 title: "ILogger"
 ---
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/ILogger.ts#L3)
+Defined in: [packages/framework-context/src/libs/ILogger.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ILogger.ts#L3)
 
 ## Methods
 
@@ -13,7 +13,7 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:3](https://github.co
 
 > **child**(`bindings`): `ILogger`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/ILogger.ts#L8)
+Defined in: [packages/framework-context/src/libs/ILogger.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ILogger.ts#L8)
 
 #### Parameters
 
@@ -31,7 +31,7 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:8](https://github.co
 
 > **debug**(`message`, `context?`): `void`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/ILogger.ts#L4)
+Defined in: [packages/framework-context/src/libs/ILogger.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ILogger.ts#L4)
 
 #### Parameters
 
@@ -53,7 +53,7 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:4](https://github.co
 
 > **error**(`message`, `context?`): `void`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/ILogger.ts#L7)
+Defined in: [packages/framework-context/src/libs/ILogger.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ILogger.ts#L7)
 
 #### Parameters
 
@@ -63,7 +63,7 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:7](https://github.co
 
 ##### context?
 
-`Record`\<`string`, `unknown`\> | `Error`
+`Error` | `Record`\<`string`, `unknown`\>
 
 #### Returns
 
@@ -75,7 +75,7 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:7](https://github.co
 
 > **info**(`message`, `context?`): `void`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/ILogger.ts#L5)
+Defined in: [packages/framework-context/src/libs/ILogger.ts:5](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ILogger.ts#L5)
 
 #### Parameters
 
@@ -97,7 +97,7 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:5](https://github.co
 
 > **warn**(`message`, `context?`): `void`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:6](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/ILogger.ts#L6)
+Defined in: [packages/framework-context/src/libs/ILogger.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ILogger.ts#L6)
 
 #### Parameters
 

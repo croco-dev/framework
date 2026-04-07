@@ -270,7 +270,7 @@ describe('BillingService', () => {
       expect(result).toEqual({ checkoutUrl: 'https://checkout.example.com/abc123' });
     });
 
-    it('BUG-09 should keep the created account when checkout creation fails after customer creation', async () => {
+    it('should keep the created account when checkout creation fails after customer creation', async () => {
       const params = {
         tenantId: 'tenant-bug-09',
         email: 'bug09@example.com',
@@ -353,7 +353,7 @@ describe('BillingService', () => {
       expect(updatedSubscription?.lastSyncedAt).toBeInstanceOf(Date);
     });
 
-    it('should cancel subscription immediately and update status', async () => {
+    it('should cleanup orphan account when subscription is canceled immediately', async () => {
       await saveBillingAccount('tenant-1');
 
       const subscription: Subscription = {
@@ -371,11 +371,41 @@ describe('BillingService', () => {
       await service.cancelSubscription('tenant-1', true);
 
       expect(mockGateway.cancelSubscription).toHaveBeenCalledWith('ext-sub-1', true);
+      expect(await store.findSubscription('tenant-1')).toBeNull();
+      expect(await store.findAccountByTenantId('tenant-1')).toBeNull();
+    });
+
+    it('should keep billing history when immediate cancellation has existing orders', async () => {
+      await saveBillingAccount('tenant-1');
+
+      const subscription: Subscription = {
+        id: 'sub-1',
+        billingAccountId: 'tenant-1',
+        externalSubscriptionId: 'ext-sub-1',
+        planId: 'plan-pro',
+        status: 'active',
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      };
+      await store.saveSubscription(subscription);
+      await store.saveOrder({
+        id: 'order-1',
+        billingAccountId: 'tenant-1',
+        externalOrderId: 'ext-order-1',
+        amount: 2900,
+        currency: 'USD',
+        reason: 'subscription_cycle',
+        paidAt: new Date(),
+      });
+
+      await service.cancelSubscription('tenant-1', true);
 
       const updatedSubscription = await store.findSubscription('tenant-1');
       expect(updatedSubscription?.cancelAtPeriodEnd).toBe(false);
       expect(updatedSubscription?.status).toBe('canceled');
       expect(updatedSubscription?.lastSyncedAt).toBeInstanceOf(Date);
+      expect(await store.findAccountByTenantId('tenant-1')).not.toBeNull();
     });
 
     it('should throw error when no subscription exists', async () => {

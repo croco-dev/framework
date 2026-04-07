@@ -22,7 +22,8 @@
     "@croco/events-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/entitlements-core": "workspace:*"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

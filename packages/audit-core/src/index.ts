@@ -29,10 +29,20 @@
 
 import 'reflect-metadata';
 
-export { Auditable } from './libs/Auditable';
+export { AUDIT_PARAM_KEY, Auditable } from './libs/Auditable';
+export { AuditErrorHandler, fireAndForgetWithRetry } from './libs/AuditErrorHandler';
+export type {
+  AuditChainVerifier,
+  AuditIntegrityConfig,
+  AuditIntegrityMetadata,
+  AuditIntegrityVerifier,
+  AuditSequenceConfig,
+  AuditSequenceGenerator,
+  TamperProofAuditLog,
+} from './libs/AuditIntegrity';
 export { AuditInterceptor } from './libs/AuditInterceptor';
 export { AuditLogRepository } from './libs/AuditLogRepository';
 export { AUDIT_LOG_REPOSITORY_TOKEN } from './libs/AuditLogRepositoryToken';
 export { AUDIT_METADATA_KEY } from './libs/constants';
 export type { AuditExecutionContext, CallHandler, Interceptor } from './libs/interfaces/Interceptor';
-export type { AuditableOptions, AuditLogEntry, AuditQuery } from './libs/types';
+export type { AuditableOptions, AuditLogEntry, AuditParamMetadata, AuditPayload, AuditQuery } from './libs/types';

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "graphql": "^16.10.1",
     "reflect-metadata": "0.2.2",
     "type-graphql": "^2.0.0-rc.2"

@@ -5,9 +5,20 @@ prev: false
 title: "RequestContext"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:39](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L39)
+Defined in: [packages/framework-context/src/libs/types.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L20)
 
-Request context data
+요청 단위로 전달되는 공통 컨텍스트 타입입니다.
+
+## Example
+
+```typescript
+import type { RequestContext } from '@croco/framework-context';
+
+const ctx: RequestContext = {
+  requestId: 'req-123',
+  tenantId: 'tenant-a',
+};
+```
 
 ## Properties
 
@@ -15,7 +26,9 @@ Request context data
 
 > **requestId**: `string`
 
-Defined in: [packages/framework-context/src/libs/types.ts:40](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L40)
+Defined in: [packages/framework-context/src/libs/types.ts:21](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L21)
+
+요청 고유 식별자입니다.
 
 ***
 
@@ -23,7 +36,9 @@ Defined in: [packages/framework-context/src/libs/types.ts:40](https://github.com
 
 > `optional` **tenantId**: `string`
 
-Defined in: [packages/framework-context/src/libs/types.ts:42](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L42)
+Defined in: [packages/framework-context/src/libs/types.ts:23](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L23)
+
+멀티 테넌트 식별자입니다.
 
 ***
 
@@ -31,7 +46,9 @@ Defined in: [packages/framework-context/src/libs/types.ts:42](https://github.com
 
 > `optional` **traceId**: `string`
 
-Defined in: [packages/framework-context/src/libs/types.ts:43](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L43)
+Defined in: [packages/framework-context/src/libs/types.ts:24](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L24)
+
+분산 추적 식별자입니다.
 
 ***
 
@@ -39,4 +56,6 @@ Defined in: [packages/framework-context/src/libs/types.ts:43](https://github.com
 
 > `optional` **user**: `UserContext`
 
-Defined in: [packages/framework-context/src/libs/types.ts:41](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L41)
+Defined in: [packages/framework-context/src/libs/types.ts:22](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L22)
+
+현재 사용자 정보입니다.

@@ -5,6 +5,16 @@ import { AUDIT_METADATA_KEY } from './constants';
 import type { AuditExecutionContext, CallHandler, Interceptor } from './interfaces/Interceptor';
 import type { AuditLogEntry } from './types';
 
+type RequestHeaders = Headers | Record<string, string | undefined>;
+
+type HeaderValue = string | undefined;
+
+type RequestLike = {
+  headers?: RequestHeaders;
+  header?: Record<string, string | undefined> | ((name: string) => string | undefined);
+  body?: unknown;
+};
+
 type HttpMetadata = {
   method: string;
   path: string;
@@ -17,16 +27,29 @@ type AuditableMetadata = {
   [key: string]: unknown;
 };
 
-function readHeaderValue(
-  headers: Headers | Record<string, string | undefined> | undefined,
-  headerName: string
-): string | undefined {
+function isHeadersInstance(headers: unknown): headers is Headers {
+  return headers instanceof Headers;
+}
+
+function hasGetMethod(headers: unknown): boolean {
+  return typeof (headers as { get?: unknown }).get === 'function';
+}
+
+function readHeaderValue(headers: RequestHeaders | undefined, headerName: string): HeaderValue {
   if (!headers) {
     return undefined;
   }
 
-  if ('get' in headers && typeof headers.get === 'function') {
+  if (isHeadersInstance(headers)) {
     return headers.get(headerName) ?? undefined;
+  }
+
+  if (hasGetMethod(headers)) {
+    const getter = (headers as unknown as { get(name: string): string | null }).get;
+    const result = getter(headerName);
+    if (typeof result === 'string') {
+      return result;
+    }
   }
 
   const headerRecord = headers as Record<string, string | undefined>;
@@ -40,10 +63,7 @@ function readHeaderValue(
 }
 
 function extractIp(request: Request): string {
-  const requestLike = request as unknown as {
-    headers?: Headers | Record<string, string | undefined>;
-    header?: Record<string, string | undefined> | ((name: string) => string | undefined);
-  };
+  const requestLike = request as RequestLike;
 
   const forwardedFor = readHeaderValue(requestLike.headers, 'x-forwarded-for');
   if (forwardedFor) {
@@ -67,7 +87,7 @@ function extractIp(request: Request): string {
 }
 
 function extractRequestBody(request: Request): unknown {
-  const requestLike = request as unknown as { body?: unknown };
+  const requestLike = request as RequestLike;
   return requestLike.body;
 }
 

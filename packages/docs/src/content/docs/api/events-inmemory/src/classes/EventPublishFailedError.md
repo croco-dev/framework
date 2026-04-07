@@ -5,7 +5,7 @@ prev: false
 title: "EventPublishFailedError"
 ---
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:14](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L14)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L14)
 
 `@croco/events-core`의 EventBus 인터페이스를 인메모리로 구현한 EventBus입니다.
 
@@ -19,7 +19,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:14](https://g
 
 > **new EventPublishFailedError**(`eventName`, `failures`): `EventPublishFailedError`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:18](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L18)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L18)
 
 #### Parameters
 
@@ -45,7 +45,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:18](https://g
 
 > `readonly` `optional` **cause**: `Error`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L16)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:16](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L16)
 
 #### Overrides
 
@@ -57,7 +57,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:16](https://g
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:19](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L19)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:19](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L19)
 
 ***
 
@@ -65,7 +65,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:19](https://g
 
 > `readonly` **failures**: [`EventPublishFailure`](/api/events-inmemory/src/type-aliases/eventpublishfailure/)[]
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L20)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L20)
 
 ***
 
@@ -85,7 +85,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 > `readonly` **name**: `"EventPublishFailedError"` = `'EventPublishFailedError'`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:15](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L15)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L15)
 
 #### Overrides
 

@@ -5,32 +5,7 @@ prev: false
 title: "ProbabilitySampler"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L9)
-
-Probability-based sampler for OpenTelemetry traces.
-
-## Remarks
-
-Implements consistent sampling based on trace ID. This ensures that the same trace
-is always sampled or not sampled, regardless of which service in the distributed
-system makes the sampling decision.
-
-Uses the lower 32 bits of the trace ID to make deterministic sampling decisions,
-providing consistent sampling across all spans in a trace.
-
-## Example
-
-```ts
-import { ProbabilitySampler } from '@croco/telemetry-sdk-node';
-
-// Sample 10% of traces
-const sampler = new ProbabilitySampler({ probability: 0.1 });
-
-await telemetry.init({
-  serviceName: 'my-service',
-  trace: { sampler },
-});
-```
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:10](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L10)
 
 ## Implements
 
@@ -42,7 +17,7 @@ await telemetry.init({
 
 > **new ProbabilitySampler**(`options`): `ProbabilitySampler`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:13](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L13)
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L14)
 
 #### Parameters
 
@@ -60,7 +35,7 @@ Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts
 
 > **shouldSample**(`context`, `traceId`, `_spanName`, `_spanKind`, `_attributes`, `_links`): `SamplingResult`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:21](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L21)
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:22](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L22)
 
 Checks whether span needs to be created and tracked.
 
@@ -68,7 +43,7 @@ Checks whether span needs to be created and tracked.
 
 ##### context
 
-`unknown`
+`Context`
 
 Parent Context which may contain a span.
 
@@ -86,15 +61,15 @@ of the span to be created. It can be different from the
 
 ##### \_spanKind
 
-`unknown`
+`SpanKind`
 
 ##### \_attributes
 
-`unknown`
+`Attributes`
 
 ##### \_links
 
-`unknown`
+`Link`[]
 
 #### Returns
 
@@ -112,7 +87,7 @@ a SamplingResult.
 
 > **toString**(): `string`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:51](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L51)
+Defined in: [packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts:52](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/samplers/ProbabilitySampler.ts#L52)
 
 Returns the sampler name or short description with the configuration.
 

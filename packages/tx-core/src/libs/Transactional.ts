@@ -11,6 +11,7 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
   const managerKey = options?.managerKey;
   const nesting = options?.nesting;
   const txOptions = options?.options;
+  const timeout = options?.timeout;
 
   return (
     _target: object,
@@ -34,11 +35,12 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
             return txManager.run(() => originalMethod.apply(this, args), {
               nesting: nesting ?? 'join',
               options: txOptions,
+              timeout,
             });
 
           case 'REQUIRES_NEW':
             return txManager.suspend(() =>
-              txManager.run(() => originalMethod.apply(this, args), { nesting: 'join', options: txOptions })
+              txManager.run(() => originalMethod.apply(this, args), { nesting: 'join', options: txOptions, timeout })
             );
 
           case 'MANDATORY':

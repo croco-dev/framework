@@ -34,7 +34,7 @@ describe('ClerkWebhookHandler', () => {
     const request = createRequest();
     vi.mocked(verifyWebhook).mockResolvedValue({
       type: 'user.created',
-      data: { id: 'user_123' },
+      data: { id: 'user_123', email_addresses: [{ email_address: 'test@example.com' }] },
     } as unknown as VerifiedWebhook);
 
     await webhookHandler.handleWebhook(request);
@@ -64,7 +64,7 @@ describe('ClerkWebhookHandler', () => {
 
   it('should call registered handler for organization.updated', async () => {
     const request = createRequest();
-    const eventData = { id: 'org_123', name: 'New Name' };
+    const eventData = { id: 'org_123', name: 'New Name', slug: 'new-name' };
     vi.mocked(verifyWebhook).mockResolvedValue({
       type: 'organization.updated',
       data: eventData,

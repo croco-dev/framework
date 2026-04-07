@@ -200,4 +200,35 @@ return { exceeded and 1 or 0, newUsage }
     const value = Number.parseInt(parts[parts.length - 1], 10);
     return Number.isNaN(value) ? 0 : value;
   }
+
+  /**
+   * 빌링 주기 리셋
+   * 현재 빌링 주기의 모든 usage 데이터를 삭제합니다.
+   */
+  async resetBillingCycle(tenantId: string, meterId?: string): Promise<void> {
+    try {
+      if (meterId) {
+        const key = this.buildUsageKey(tenantId, meterId, new Date());
+        await this.redis.eval<[number]>('return redis.call("DEL", KEYS[1])', [key], []);
+      } else {
+        const now = new Date();
+        const periodKey = this.getPeriodKey(now, 'billing_cycle');
+        const keyPattern = `${RedisUsageStorage.USAGE_KEY_PREFIX}:${tenantId}:*:${periodKey}`;
+
+        await this.redis.eval<[number]>(
+          `
+          local keys = redis.call('KEYS', ARGV[1])
+          for _, key in ipairs(keys) do
+            redis.call('DEL', key)
+          end
+          return #keys
+          `,
+          [],
+          [keyPattern]
+        );
+      }
+    } catch (error) {
+      throw new RedisProblem('DEL', error instanceof Error ? error : undefined);
+    }
+  }
 }

@@ -1,5 +1,4 @@
-import type { CircuitBreakerStateStore } from './CircuitBreakerState';
-import { CircuitState, InMemoryCircuitBreakerStateStore } from './CircuitBreakerState';
+import { type CircuitBreakerStateStore, CircuitState, InMemoryCircuitBreakerStateStore } from './CircuitBreakerState';
 import { CircuitBreakerOpenProblem } from './errors/CircuitBreakerOpenProblem';
 
 export interface CircuitBreakerOptions {
@@ -8,8 +7,13 @@ export interface CircuitBreakerOptions {
   openDuration?: number;
   halfOpenRequests?: number;
   stateStore?: CircuitBreakerStateStore;
-  fallback?: <T>() => T | Promise<T>;
+  fallback?: CircuitBreakerFallback;
 }
+
+/**
+ * Fallback function type for circuit breaker.
+ */
+export type CircuitBreakerFallback<T = unknown> = () => T | Promise<T>;
 
 export class CircuitBreaker {
   private readonly circuitId: string;
@@ -17,7 +21,7 @@ export class CircuitBreaker {
   private readonly openDuration: number;
   private readonly halfOpenRequests: number;
   private readonly stateStore: CircuitBreakerStateStore;
-  private readonly fallback?: <T>() => T | Promise<T>;
+  private readonly fallback?: CircuitBreakerFallback;
   private _closedActiveCount = 0;
 
   constructor(options: CircuitBreakerOptions) {
@@ -239,7 +243,7 @@ export class CircuitBreaker {
 
   private async rejectOpenCircuit<T>(): Promise<T> {
     if (this.fallback) {
-      return this.fallback<T>();
+      return this.fallback() as Promise<T>;
     }
 
     throw new CircuitBreakerOpenProblem(this.circuitId);

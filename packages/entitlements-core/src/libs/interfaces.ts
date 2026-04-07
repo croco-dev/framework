@@ -1,5 +1,6 @@
+import type { DomainEvent } from '@croco/events-core';
 import { Token } from '@croco/framework-context';
-import type { EntitlementRule } from './types';
+import type { EntitlementQuotaStatus, EntitlementRule, UsageHistoryEntry, UsageHistoryPeriod } from './types';
 
 export abstract class SubscriptionProvider {
   static readonly token = new Token<SubscriptionProvider>('SubscriptionProvider');
@@ -18,11 +19,27 @@ export abstract class PlanEntitlementRegistry {
 export abstract class EntitlementQuotaChecker {
   static readonly token = new Token<EntitlementQuotaChecker>('EntitlementQuotaChecker');
 
-  abstract checkQuota(tenantId: string, meterId: string, quota: number): Promise<{ exceeded: boolean; usage: number }>;
+  abstract checkQuota(tenantId: string, featureId: string, quota: number): Promise<EntitlementQuotaStatus>;
+
+  abstract getCurrentUsage(tenantId: string, featureId: string): Promise<number>;
+
+  abstract resetUsage(tenantId: string, featureId: string, billingCycleStart: Date): Promise<void>;
+
+  abstract getUsageHistory(
+    tenantId: string,
+    featureId: string,
+    period: UsageHistoryPeriod
+  ): Promise<UsageHistoryEntry[]>;
 }
 
 export abstract class EntitlementMeterLookup {
   static readonly token = new Token<EntitlementMeterLookup>('EntitlementMeterLookup');
 
   abstract getMeterQuota(tenantId: string, meterId: string): Promise<number | null>;
+}
+
+export abstract class EntitlementEventPublisher {
+  static readonly token = new Token<EntitlementEventPublisher>('EntitlementEventPublisher');
+
+  abstract publish(event: DomainEvent): Promise<void>;
 }

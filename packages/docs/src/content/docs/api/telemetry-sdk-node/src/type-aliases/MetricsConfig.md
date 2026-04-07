@@ -7,31 +7,12 @@ title: "MetricsConfig"
 
 > **MetricsConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:26](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L26)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:40](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L40)
 
-Main configuration for the OpenTelemetry SDK.
+Configuration for telemetry metrics.
 
-## Remarks
-
-This is the top-level configuration object passed to [TelemetryRuntime.init](/api/telemetry-sdk-node/src/classes/telemetryruntime/#init).
-It combines service metadata with trace, metrics, and logs configurations.
-
-## Example
-
-```ts
-const config: TelemetryConfig = {
-  serviceName: 'my-service',
-  serviceVersion: '1.0.0',
-  environment: 'production',
-  enabled: true,
-  trace: {
-    enabled: true,
-    exporterUrl: 'http://localhost:4318/v1/traces',
-  },
-  metrics: { enabled: false },
-  logs: { enabled: false },
-};
-```
+Defines how metric data is collected and exported.
+Currently disabled by default in Lambda environments.
 
 ## Properties
 
@@ -39,7 +20,9 @@ const config: TelemetryConfig = {
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:27](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L27)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:42](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L42)
+
+Whether metrics collection is enabled. Default: false
 
 ***
 
@@ -47,7 +30,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:27](https://github.com/cr
 
 > `optional` **exporterHeaders**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:29](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L29)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:46](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L46)
+
+Additional HTTP headers for the exporter
 
 ***
 
@@ -55,7 +40,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:29](https://github.com/cr
 
 > `optional` **exporterUrl**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:28](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L28)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:44](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L44)
+
+OTLP metrics exporter URL
 
 ***
 
@@ -63,7 +50,9 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:28](https://github.com/cr
 
 > `optional` **exportIntervalMillis**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:30](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L30)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:48](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L48)
+
+Export interval in milliseconds
 
 ***
 
@@ -71,4 +60,6 @@ Defined in: [packages/telemetry-sdk-node/src/config.ts:30](https://github.com/cr
 
 > `optional` **exportTimeoutMillis**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:31](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L31)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:50](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L50)
+
+Export timeout in milliseconds

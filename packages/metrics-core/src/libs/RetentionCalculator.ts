@@ -1,5 +1,10 @@
 import type { MRRMovement, Percentage } from '../types';
 
+export type LogoChurnInput = {
+  startingCustomers: number;
+  endingCustomers: number;
+};
+
 export class RetentionCalculator {
   async calculateChurn(startingMRR: number, movement: MRRMovement, _type: 'revenue'): Promise<Percentage | null> {
     if (startingMRR === 0) {
@@ -50,15 +55,37 @@ export class RetentionCalculator {
   }
 
   /**
+   * Calculate Logo Churn Rate (customer churn rate based on number of customers).
+   *
+   * Formula: (Starting Customers - Ending Customers) / Starting Customers * 100
+   *
+   * @param startingCustomers - Number of customers at start of period
+   * @param endingCustomers - Number of customers at end of period
+   * @returns Logo Churn as percentage, or null if starting customers is zero
+   */
+  async calculateLogoChurn(startingCustomers: number, endingCustomers: number): Promise<Percentage | null> {
+    if (startingCustomers === 0) {
+      return null;
+    }
+
+    const churnedCustomers = Math.max(startingCustomers - endingCustomers, 0);
+    return (churnedCustomers / startingCustomers) * 100;
+  }
+
+  /**
    * Calculate all retention metrics at once.
    *
    * @param startingMRR - MRR at the start of the period
    * @param movement - MRR movement data for the period
+   * @param startingCustomers - Number of customers at start (optional, for logo churn)
+   * @param endingCustomers - Number of customers at end (optional, for logo churn)
    * @returns Complete retention metrics
    */
   async calculateRetention(
     startingMRR: number,
-    movement: MRRMovement
+    movement: MRRMovement,
+    startingCustomers?: number,
+    endingCustomers?: number
   ): Promise<{
     grr: Percentage | null;
     nrr: Percentage | null;
@@ -71,10 +98,15 @@ export class RetentionCalculator {
       this.calculateChurn(startingMRR, movement, 'revenue'),
     ]);
 
+    let logoChurn: Percentage | null = null;
+    if (startingCustomers !== undefined && endingCustomers !== undefined) {
+      logoChurn = await this.calculateLogoChurn(startingCustomers, endingCustomers);
+    }
+
     return {
       grr,
       nrr,
-      logoChurn: null,
+      logoChurn,
       revenueChurn,
     };
   }

@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryRateLimitStore } from '../libs/InMemoryRateLimitStore';
-import type { RateLimitPolicy } from '../libs/types';
+import type { SlidingWindowPolicy } from '../libs/types';
 
 describe('InMemoryRateLimitStore', () => {
   let store!: InMemoryRateLimitStore;
-  const policy: RateLimitPolicy = {
+  const policy: SlidingWindowPolicy = {
     name: 'test',
+    algorithm: 'sliding',
     limit: 3,
     windowMs: 60000,
   };

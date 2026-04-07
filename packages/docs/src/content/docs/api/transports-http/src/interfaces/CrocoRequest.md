@@ -5,9 +5,7 @@ prev: false
 title: "CrocoRequest"
 ---
 
-Defined in: [packages/transports-http/src/libs/types.ts:41](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L41)
-
-transports-http 구성과 실행에 사용되는 핵심 타입 집합입니다.
+Defined in: [packages/transports-http/src/libs/types.ts:41](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/types.ts#L41)
 
 ## Properties
 
@@ -15,7 +13,7 @@ transports-http 구성과 실행에 사용되는 핵심 타입 집합입니다.
 
 > **headers**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/transports-http/src/libs/types.ts:47](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L47)
+Defined in: [packages/transports-http/src/libs/types.ts:47](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/types.ts#L47)
 
 ***
 
@@ -23,7 +21,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:47](https://github.com/c
 
 > **method**: `string`
 
-Defined in: [packages/transports-http/src/libs/types.ts:42](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L42)
+Defined in: [packages/transports-http/src/libs/types.ts:42](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/types.ts#L42)
 
 ***
 
@@ -31,7 +29,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:42](https://github.com/c
 
 > **params**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/transports-http/src/libs/types.ts:45](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L45)
+Defined in: [packages/transports-http/src/libs/types.ts:45](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/types.ts#L45)
 
 ***
 
@@ -39,7 +37,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:45](https://github.com/c
 
 > **path**: `string`
 
-Defined in: [packages/transports-http/src/libs/types.ts:44](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L44)
+Defined in: [packages/transports-http/src/libs/types.ts:44](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/types.ts#L44)
 
 ***
 
@@ -47,7 +45,7 @@ Defined in: [packages/transports-http/src/libs/types.ts:44](https://github.com/c
 
 > **query**: `Record`\<`string`, `string`\>
 
-Defined in: [packages/transports-http/src/libs/types.ts:46](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L46)
+Defined in: [packages/transports-http/src/libs/types.ts:46](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/types.ts#L46)
 
 ***
 
@@ -55,4 +53,4 @@ Defined in: [packages/transports-http/src/libs/types.ts:46](https://github.com/c
 
 > **url**: `string`
 
-Defined in: [packages/transports-http/src/libs/types.ts:43](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/types.ts#L43)
+Defined in: [packages/transports-http/src/libs/types.ts:43](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/types.ts#L43)

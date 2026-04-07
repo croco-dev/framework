@@ -5,7 +5,7 @@ prev: false
 title: "RoleRegistry"
 ---
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L9)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L9)
 
 Role registry and role definition type.
 
@@ -33,7 +33,7 @@ Role registry and role definition type.
 
 > **getRole**(`name`): [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L16)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L16)
 
 #### Parameters
 
@@ -51,7 +51,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/cro
 
 > **getRolePermissions**(`name`, `visited?`): `string`[]
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L20)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L20)
 
 #### Parameters
 
@@ -77,7 +77,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/cro
 
 > **register**(`role`): `void`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:12](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/rbac/Role.ts#L12)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:12](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L12)
 
 #### Parameters
 

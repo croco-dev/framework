@@ -120,9 +120,19 @@ export {
   UnauthorizedProblem,
 } from './libs/problems/AuthProblems';
 /**
- * Permission utilities and permission type.
+ * Permission utilities and permission types.
  */
-export { formatPermission, hasPermission, type Permission, parsePermission } from './libs/rbac/Permission';
+export {
+  formatPermission,
+  getResourcePermissions,
+  hasAllPermissions,
+  hasAnyPermission,
+  hasPermission,
+  hasResourcePermission,
+  type Permission,
+  type PermissionAction,
+  parsePermission,
+} from './libs/rbac/Permission';
 /**
  * Role-based access control engine.
  */

@@ -4,24 +4,32 @@ import { Component } from '@croco/framework-context';
 import { MembershipCreatedEvent } from './events/MembershipCreatedEvent';
 import { MembershipRemovedEvent } from './events/MembershipRemovedEvent';
 import { MembershipUpdatedEvent } from './events/MembershipUpdatedEvent';
-import { MembershipManager as AbstractMembershipManager } from './interfaces/AbstractMembershipManager';
+import type { MembershipManager as AbstractMembershipManager } from './interfaces/AbstractMembershipManager';
+import { MembershipOwnerGuard } from './MembershipOwnerGuard';
 import type { MembershipStore } from './MembershipStore';
 import {
   AlreadyMemberProblem,
   InvalidRoleProblem,
-  LastOwnerProblem,
   MembershipNotFoundProblem,
+  OwnershipTransferRequiredProblem,
+  RoleHierarchyViolationProblem,
+  SeatLimitExceededProblem,
 } from './problems/MembershipProblems';
-import { isMembershipRole, type Membership, type MembershipRole } from './types';
+import type { SeatLimitChecker } from './SeatLimitChecker';
+import { canDemote, canPromote, isHigherRole, isMembershipRole, type Membership, type MembershipRole } from './types';
 
 @Component()
-export class MembershipManager extends AbstractMembershipManager {
+export class MembershipManager implements AbstractMembershipManager {
+  private ownerGuard: MembershipOwnerGuard;
+
   constructor(
     private readonly store: MembershipStore,
-    private readonly eventPublisher: EventPublisher
+    private readonly eventPublisher: EventPublisher,
+    private readonly seatLimitChecker?: SeatLimitChecker
   ) {
-    super();
+    this.ownerGuard = new MembershipOwnerGuard(store);
   }
+
   async addMember(tenantId: string, userId: string, role: MembershipRole): Promise<Membership> {
     this.ensureValidRole(role);
 
@@ -29,6 +37,8 @@ export class MembershipManager extends AbstractMembershipManager {
     if (existing) {
       throw new AlreadyMemberProblem(tenantId, userId);
     }
+
+    await this.checkSeatLimit(tenantId);
 
     const membership = await this.store.save({
       id: randomUUID(),
@@ -43,7 +53,7 @@ export class MembershipManager extends AbstractMembershipManager {
 
   async removeMember(tenantId: string, userId: string): Promise<void> {
     const membership = await this.getMembershipOrThrow(tenantId, userId);
-    await this.ensureOwnerInvariant(tenantId, userId, membership.role, 'remove');
+    await this.ownerGuard.validateLastOwner(tenantId, userId, membership.role);
 
     await this.store.delete(tenantId, userId);
     await this.publishSafely(new MembershipRemovedEvent({ tenantId, userId, role: membership.role }));
@@ -57,7 +67,17 @@ export class MembershipManager extends AbstractMembershipManager {
       return membership;
     }
 
-    await this.ensureOwnerInvariant(tenantId, userId, membership.role, 'demote', newRole);
+    if (membership.role === 'owner' && newRole !== 'owner') {
+      throw new OwnershipTransferRequiredProblem(tenantId, userId);
+    }
+
+    if (isHigherRole(newRole, membership.role) && !canPromote(membership.role, newRole)) {
+      throw new RoleHierarchyViolationProblem(membership.role, newRole, 'promote');
+    }
+
+    if (isHigherRole(membership.role, newRole) && !canDemote(membership.role, newRole)) {
+      throw new RoleHierarchyViolationProblem(membership.role, newRole, 'demote');
+    }
 
     const updated = await this.store.save({
       id: membership.id,
@@ -76,6 +96,50 @@ export class MembershipManager extends AbstractMembershipManager {
     );
 
     return updated;
+  }
+
+  async transferOwnership(tenantId: string, fromUserId: string, toUserId: string): Promise<void> {
+    const fromMembership = await this.getMembershipOrThrow(tenantId, fromUserId);
+    if (fromMembership.role !== 'owner') {
+      throw new OwnershipTransferRequiredProblem(tenantId, fromUserId);
+    }
+
+    const toMembership = await this.store.findByTenantAndUser(tenantId, toUserId);
+    if (!toMembership) {
+      throw new MembershipNotFoundProblem(tenantId, toUserId);
+    }
+
+    await this.store.save({
+      id: fromMembership.id,
+      tenantId,
+      userId: fromUserId,
+      role: 'admin',
+    });
+
+    await this.store.save({
+      id: toMembership.id,
+      tenantId,
+      userId: toUserId,
+      role: 'owner',
+    });
+
+    await this.publishSafely(
+      new MembershipUpdatedEvent({
+        tenantId,
+        userId: fromUserId,
+        oldRole: 'owner',
+        newRole: 'admin',
+      })
+    );
+
+    await this.publishSafely(
+      new MembershipUpdatedEvent({
+        tenantId,
+        userId: toUserId,
+        oldRole: toMembership.role,
+        newRole: 'owner',
+      })
+    );
   }
 
   async getMember(tenantId: string, userId: string): Promise<Membership> {
@@ -99,27 +163,18 @@ export class MembershipManager extends AbstractMembershipManager {
     return membership;
   }
 
-  private async ensureOwnerInvariant(
-    tenantId: string,
-    userId: string,
-    currentRole: MembershipRole,
-    operation: 'remove' | 'demote',
-    nextRole?: MembershipRole
-  ): Promise<void> {
-    const isOwnerMutation = currentRole === 'owner' && (operation === 'remove' || nextRole !== 'owner');
-    if (!isOwnerMutation) {
-      return;
-    }
-
-    const ownerCount = await this.store.countByRole(tenantId, 'owner');
-    if (ownerCount <= 1) {
-      throw new LastOwnerProblem(tenantId, userId, operation);
-    }
-  }
-
   private ensureValidRole(role: string): void {
     if (!isMembershipRole(role)) {
       throw new InvalidRoleProblem(role);
+    }
+  }
+
+  private async checkSeatLimit(tenantId: string): Promise<void> {
+    if (!this.seatLimitChecker) return;
+
+    const status = await this.seatLimitChecker.checkSeatAvailability(tenantId);
+    if (status.exceeded) {
+      throw new SeatLimitExceededProblem(tenantId, status.usage, status.quota);
     }
   }
 

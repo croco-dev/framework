@@ -51,4 +51,16 @@ export class InMemoryInvitationStore extends InvitationStore {
     this.storage.set(id, updated);
     return updated;
   }
+
+  async countPendingByTenant(tenantId: string, since: Date): Promise<number> {
+    let count = 0;
+
+    for (const invitation of this.storage.values()) {
+      if (invitation.tenantId === tenantId && invitation.status === 'pending' && invitation.createdAt >= since) {
+        count += 1;
+      }
+    }
+
+    return count;
+  }
 }

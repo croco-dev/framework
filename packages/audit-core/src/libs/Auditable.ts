@@ -5,33 +5,48 @@ import type { AuditableOptions, AuditLogEntry } from './types';
 
 type DecoratedMethod = (...args: unknown[]) => unknown;
 
-function extractParameterNames(method: DecoratedMethod): string[] {
-  const source = method.toString().replace(/\n/g, ' ');
-  const signatureMatch = source.match(/^[^(]*\(([^)]*)\)/);
+type ImpersonationContext = {
+  impersonatorId: string;
+  targetUserId: string;
+};
 
-  if (!signatureMatch) {
-    return [];
+function getImpersonationContext(context: unknown): ImpersonationContext | undefined {
+  if (!context || typeof context !== 'object') {
+    return undefined;
   }
 
-  return signatureMatch[1]
-    .split(',')
-    .map((name) => name.trim())
-    .filter((name) => name.length > 0)
-    .map((name) => name.replace(/=[\s\S]*$/, '').trim())
-    .map((name) => name.replace(/^\.\.\./, '').trim());
+  const ctx = context as Record<string, unknown>;
+  if (!('impersonation' in ctx)) {
+    return undefined;
+  }
+
+  const impersonation = ctx.impersonation;
+  if (!impersonation || typeof impersonation !== 'object') {
+    return undefined;
+  }
+
+  const imp = impersonation as Record<string, unknown>;
+  if (typeof imp.impersonatorId !== 'string' || typeof imp.targetUserId !== 'string') {
+    return undefined;
+  }
+
+  return {
+    impersonatorId: imp.impersonatorId,
+    targetUserId: imp.targetUserId,
+  };
 }
 
-function getArgumentByParamName(args: unknown[], parameterNames: string[], paramName?: string): unknown {
-  if (!paramName) {
-    return undefined;
+function extractDiffFromPayload(payload: unknown): Record<string, unknown> | null {
+  if (!payload || typeof payload !== 'object' || !('diff' in payload)) {
+    return null;
   }
 
-  const paramIndex = parameterNames.indexOf(paramName);
-  if (paramIndex < 0) {
-    return undefined;
+  const diff = payload.diff;
+  if (!diff || typeof diff !== 'object') {
+    return null;
   }
 
-  return args[paramIndex];
+  return diff as Record<string, unknown>;
 }
 
 function toResourceId(value: unknown, args: unknown[]): string {
@@ -47,20 +62,54 @@ function toResourceId(value: unknown, args: unknown[]): string {
   return 'unknown';
 }
 
-function extractDiff(payload: unknown): Record<string, unknown> | null {
-  if (!payload || typeof payload !== 'object' || !('diff' in payload)) {
-    return null;
+function buildAuditPayload(
+  args: unknown[],
+  payloadInput: unknown,
+  result: unknown,
+  error: Error | null,
+  includeResult: boolean
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    arguments: args,
+  };
+
+  if (payloadInput !== undefined) {
+    payload.input = payloadInput;
   }
 
-  const diff = payload.diff;
-  if (!diff || typeof diff !== 'object') {
-    return null;
+  if (includeResult && error === null) {
+    payload.result = result;
   }
 
-  return diff as Record<string, unknown>;
+  if (error !== null) {
+    payload.error = error.message;
+  }
+
+  return payload;
 }
 
-function writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
+type AuditWriteConfig = {
+  tenantId: string;
+  actorId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  diff: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+};
+
+function writeAuditLog(config: AuditWriteConfig, payload: Record<string, unknown>): void {
+  const entry: Omit<AuditLogEntry, 'id' | 'createdAt'> = {
+    tenantId: config.tenantId,
+    actorId: config.actorId,
+    action: config.action,
+    resourceType: config.resourceType,
+    resourceId: config.resourceId,
+    payload,
+    diff: config.diff,
+    metadata: config.metadata,
+  };
+
   void Promise.resolve()
     .then(() => {
       const repository = Container.get(AUDIT_LOG_REPOSITORY_TOKEN);
@@ -74,45 +123,48 @@ function writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
           error: error instanceof Error ? error.message : String(error),
         });
       } catch {
-        // ignore secondary errors
+        // Empty catch block intentionally suppresses secondary errors in audit logging
+        // eslint-disable-next-line no-empty
       }
     });
 }
 
+export const AUDIT_PARAM_KEY = Symbol('audit:param');
+
+export type AuditParamMetadata = {
+  resourceIdIndex?: number;
+  payloadIndex?: number;
+};
+
 export function Auditable(options: AuditableOptions): MethodDecorator {
-  return (_target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
     const originalMethod = descriptor.value as DecoratedMethod;
 
     if (typeof originalMethod !== 'function') {
       throw new Error('@Auditable can only be applied to methods');
     }
 
-    const parameterNames = extractParameterNames(originalMethod);
+    const paramMetadata: AuditParamMetadata = {
+      resourceIdIndex: options.resourceIdParam !== undefined ? 0 : undefined,
+      payloadIndex: options.payloadParam !== undefined ? 1 : undefined,
+    };
+
+    Reflect.defineMetadata(AUDIT_PARAM_KEY, paramMetadata, target, propertyKey);
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const context = Context.get();
-      const payloadInput = getArgumentByParamName(args, parameterNames, options.payloadParam);
-      const resourceIdValue = getArgumentByParamName(args, parameterNames, options.resourceIdParam);
-      const payload: Record<string, unknown> = {
-        arguments: args,
-      };
+      const payloadInput = paramMetadata.payloadIndex !== undefined ? args[paramMetadata.payloadIndex] : undefined;
+      const resourceIdValue =
+        paramMetadata.resourceIdIndex !== undefined ? args[paramMetadata.resourceIdIndex] : undefined;
+      const impersonation = getImpersonationContext(context);
 
-      if (payloadInput !== undefined) {
-        payload.input = payloadInput;
-      }
-
-      const impersonation =
-        context && 'impersonation' in context
-          ? ((context as Record<string, unknown>).impersonation as { impersonatorId: string; targetUserId: string })
-          : undefined;
-
-      const auditEntryBase: Omit<AuditLogEntry, 'id' | 'createdAt' | 'payload'> = {
+      const auditConfig: AuditWriteConfig = {
         tenantId: context?.tenantId ?? 'unknown',
         actorId: impersonation?.impersonatorId ?? context?.user?.id ?? 'unknown',
         action: options.action,
         resourceType: options.resourceType,
         resourceId: toResourceId(resourceIdValue, args),
-        diff: extractDiff(payloadInput),
+        diff: extractDiffFromPayload(payloadInput),
         metadata: impersonation
           ? {
               impersonation: true,
@@ -125,23 +177,14 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
       try {
         const result = await originalMethod.apply(this, args);
 
-        if (options.includeResult ?? true) {
-          payload.result = result;
-        }
-
-        writeAuditLog({
-          ...auditEntryBase,
-          payload,
-        });
+        const payload = buildAuditPayload(args, payloadInput, result, null, options.includeResult ?? true);
+        writeAuditLog(auditConfig, payload);
 
         return result;
       } catch (error) {
-        payload.error = error instanceof Error ? error.message : String(error);
-
-        writeAuditLog({
-          ...auditEntryBase,
-          payload,
-        });
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        const payload = buildAuditPayload(args, payloadInput, null, errorObj, false);
+        writeAuditLog(auditConfig, payload);
 
         throw error;
       }

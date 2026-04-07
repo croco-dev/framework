@@ -31,6 +31,10 @@ class TestRepository extends AbstractDrizzleRepository<TestEntity, TestId, MockD
   async delete(_id: TestId): Promise<void> {
     return;
   }
+
+  async deleteById(_id: TestId): Promise<void> {
+    return;
+  }
 }
 
 describe('AbstractDrizzleRepository', () => {

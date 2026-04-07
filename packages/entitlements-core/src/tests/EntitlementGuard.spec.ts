@@ -1,14 +1,14 @@
 import { Container } from '@croco/framework-context';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENTITLEMENT_REQUIRED_KEY } from '../libs/decorators/RequireEntitlement';
-import { EntitlementGuard } from '../libs/EntitlementGuard';
+import { EntitlementGuard, type RouteExecutionContext } from '../libs/EntitlementGuard';
 import type { EntitlementManager } from '../libs/EntitlementManager';
 import { EntitlementDeniedProblem } from '../libs/problems/EntitlementProblems';
 
 class MockEntitlementManager {
   checkResult:
     | { granted: true; featureKey: string; type: string; planId: string }
-    | { granted: false; reason: string } = {
+    | { granted: false; featureKey: string; type: string; reason: string } = {
     granted: true,
     featureKey: 'test_feature',
     type: 'boolean',
@@ -18,6 +18,32 @@ class MockEntitlementManager {
   async check(_tenantId: string, _featureKey: string) {
     return this.checkResult;
   }
+}
+
+type RequestWithTenant = RouteExecutionContext['getRequest'] extends () => infer T ? T : never;
+type RequestWithOptionalTenantUser = Omit<RequestWithTenant, 'user'> & {
+  user?: RequestWithTenant['user'] & { tenantId?: string };
+};
+
+function createUser(tenantId: string): RequestWithOptionalTenantUser['user'] {
+  return {
+    id: 'user-1',
+    roles: [],
+    permissions: [],
+    tenantId,
+  };
+}
+
+function createContext(options: {
+  target?: unknown;
+  handler?: string | symbol;
+  request?: Partial<RequestWithOptionalTenantUser>;
+}): RouteExecutionContext {
+  return {
+    getClass: () => options.target ?? {},
+    getHandler: () => options.handler ?? 'testMethod',
+    getRequest: () => options.request as RequestWithTenant,
+  };
 }
 
 describe('EntitlementGuard', () => {
@@ -31,15 +57,12 @@ describe('EntitlementGuard', () => {
   });
 
   it('should pass when no metadata is present', async () => {
-    const context = {
-      getClass: () => ({}),
-      getHandler: () => 'testMethod',
-      getRequest: () =>
-        ({
-          tenantId: 'tenant-123',
-          user: { tenantId: 'tenant-123' },
-        }) as any,
-    };
+    const context = createContext({
+      request: {
+        tenantId: 'tenant-123',
+        user: createUser('tenant-123'),
+      },
+    });
 
     const result = await guard.canActivate(context);
 
@@ -60,15 +83,13 @@ describe('EntitlementGuard', () => {
       planId: 'pro',
     };
 
-    const context = {
-      getClass: () => TestController,
-      getHandler: () => 'testMethod',
-      getRequest: () =>
-        ({
-          tenantId: 'tenant-123',
-          user: { tenantId: 'tenant-123' },
-        }) as any,
-    };
+    const context = createContext({
+      target: TestController,
+      request: {
+        tenantId: 'tenant-123',
+        user: createUser('tenant-123'),
+      },
+    });
 
     const result = await guard.canActivate(context);
 
@@ -84,18 +105,18 @@ describe('EntitlementGuard', () => {
 
     mockManager.checkResult = {
       granted: false,
+      featureKey: 'test_feature',
+      type: 'boolean',
       reason: 'limit_exceeded',
     };
 
-    const context = {
-      getClass: () => TestController,
-      getHandler: () => 'testMethod',
-      getRequest: () =>
-        ({
-          tenantId: 'tenant-123',
-          user: { tenantId: 'tenant-123' },
-        }) as any,
-    };
+    const context = createContext({
+      target: TestController,
+      request: {
+        tenantId: 'tenant-123',
+        user: createUser('tenant-123'),
+      },
+    });
 
     await expect(guard.canActivate(context)).rejects.toThrow(EntitlementDeniedProblem);
     await expect(guard.canActivate(context)).rejects.toThrow('Entitlement');
@@ -108,11 +129,10 @@ describe('EntitlementGuard', () => {
 
     Reflect.defineMetadata(ENTITLEMENT_REQUIRED_KEY, 'test_feature', TestController.prototype, 'testMethod');
 
-    const context = {
-      getClass: () => TestController,
-      getHandler: () => 'testMethod',
-      getRequest: () => ({}) as any,
-    };
+    const context = createContext({
+      target: TestController,
+      request: {},
+    });
 
     await expect(guard.canActivate(context)).rejects.toThrow(EntitlementDeniedProblem);
     await expect(guard.canActivate(context)).rejects.toThrow('tenantId not found');
@@ -133,15 +153,12 @@ describe('EntitlementGuard', () => {
     };
 
     const checkSpy = vi.spyOn(mockManager, 'check');
-
-    const context = {
-      getClass: () => TestController,
-      getHandler: () => 'testMethod',
-      getRequest: () =>
-        ({
-          tenantId: 'tenant-from-request',
-        }) as any,
-    };
+    const context = createContext({
+      target: TestController,
+      request: {
+        tenantId: 'tenant-from-request',
+      },
+    });
 
     await guard.canActivate(context);
 
@@ -163,15 +180,12 @@ describe('EntitlementGuard', () => {
     };
 
     const checkSpy = vi.spyOn(mockManager, 'check');
-
-    const context = {
-      getClass: () => TestController,
-      getHandler: () => 'testMethod',
-      getRequest: () =>
-        ({
-          user: { tenantId: 'tenant-from-user' },
-        }) as any,
-    };
+    const context = createContext({
+      target: TestController,
+      request: {
+        user: createUser('tenant-from-user'),
+      },
+    });
 
     await guard.canActivate(context);
 

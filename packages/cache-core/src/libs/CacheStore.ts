@@ -1,41 +1,61 @@
 /**
- * Cache store for caching values with optional TTL.
+ * Cache runtime statistics.
  */
-export abstract class CacheStore<V = unknown> {
-  /**
-   * Get a value from the cache.
-   * Returns undefined if the key does not exist or has expired.
-   */
-  abstract get(key: string): Promise<V | undefined>;
+export type CacheStats = {
+  hits: number;
+  misses: number;
+  evictions: number;
+  size: number;
+};
 
-  /**
-   * Set a value in the cache with optional TTL.
-   * @param key - The cache key
-   * @param value - The value to cache
-   * @param ttlMs - Time to live in milliseconds (optional)
-   */
-  abstract set(key: string, value: V, ttlMs?: number): Promise<void>;
+/**
+ * Options for cache-backed loading.
+ */
+export type CacheGetOrSetOptions = {
+  ttlMs?: number;
+};
 
-  /**
-   * Delete a value from the cache.
-   */
-  abstract delete(key: string): Promise<void>;
+/**
+ * Preloaded cache entry.
+ */
+export type CacheWarmupEntry<K extends string, V> = {
+  key: K;
+  value: V;
+  ttlMs?: number;
+};
 
-  /**
-   * Check if a key exists in the cache.
-   */
-  abstract has(key: string): Promise<boolean>;
+export type CachePattern = string;
 
-  /**
-   * Clear all values from the cache.
-   */
+/**
+ * Generic cache contract.
+ */
+export abstract class Cache<K extends string = string, V = unknown> {
+  abstract get(key: K): Promise<V | undefined>;
+
+  abstract set(key: K, value: V, ttlMs?: number): Promise<void>;
+
+  abstract delete(key: K): Promise<void>;
+
+  abstract has(key: K): Promise<boolean>;
+
   abstract clear(): Promise<void>;
 
-  /**
-   * Delete all keys matching a pattern.
-   * @param pattern - The pattern to match (supports * as wildcard)
-   */
-  abstract deleteByPattern(pattern: string): Promise<number>;
+  abstract invalidatePattern(pattern: CachePattern): Promise<number>;
 
   abstract pruneExpired(): Promise<number>;
+
+  abstract getOrSet(
+    key: K,
+    loader: () => Promise<V | undefined>,
+    options?: CacheGetOrSetOptions
+  ): Promise<V | undefined>;
+
+  abstract warmup(entries: ReadonlyArray<CacheWarmupEntry<K, V>>): Promise<void>;
+
+  abstract getStats(): CacheStats;
 }
+
+/**
+ * Backward-compatible cache store base class.
+ */
+export abstract class CacheStore<K extends string = string, V = unknown> extends Cache<K, V> {}

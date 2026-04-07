@@ -63,9 +63,12 @@ export {
   MixedCurrencyMRRProblem,
   RetentionMetricsUnavailableProblem,
 } from './libs/problems/MetricsProblems';
-
 /**
- * churn, GRR, NRR 등 리텐션 지표를 계산하는 계산기입니다.
+ * Logo Churn 계산을 위한 고객 수 기반 입력 타입입니다.
+ */
+export type { LogoChurnInput } from './libs/RetentionCalculator';
+/**
+ * churn, GRR, NRR, Logo Churn 등 리텐션 지표를 계산하는 계산기입니다.
  */
 export { RetentionCalculator } from './libs/RetentionCalculator';
 
@@ -95,12 +98,17 @@ export { TimescaleMetricsStore } from './libs/stores/TimescaleMetricsStore';
 export type {
   CCComparisonResult,
   CCResult,
+  CohortAnalysisOptions,
+  CohortAnalysisResult,
+  CohortData,
+  CohortPeriodData,
   CustomerMetrics,
   GrowthMetrics,
   MetricsSnapshot,
   Money,
   MRRMovement,
   MRRMovementType,
+  MultiCurrencyMoney,
   Percentage,
   Period,
   PlanSnapshot,

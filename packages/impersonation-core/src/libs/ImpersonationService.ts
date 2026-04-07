@@ -1,6 +1,8 @@
+import { EventBusConfig, EventPublisher } from '@croco/events-core';
 import type { RequestContext } from '@croco/framework-context';
 import { Component, Inject } from '@croco/framework-context';
 import { IdPrefix } from '@croco/gid-core';
+import { ImpersonationEndedEvent, ImpersonationStartedEvent } from './events';
 import { AuthProvider, ImpersonationStore } from './interfaces';
 import {
   ImpersonationReasonRequiredProblem,
@@ -8,16 +10,17 @@ import {
   NestedImpersonationProblem,
   SelfImpersonationProblem,
 } from './problems/ImpersonationProblems';
-import type { ImpersonationConfig, ImpersonationContext, ImpersonationState } from './types';
+import type { ImpersonationConfig, ImpersonationState } from './types';
 import { IMPERSONATION_CONFIG_TOKEN } from './types';
 
-// TODO: TASK 21 - Event 클래스 구현 필요
-// const event = new ImpersonationStartedEvent({ ... });
-// await this.eventPublisher.publish(event);
+export type ImpersonationContext = RequestContext & {
+  impersonation: ImpersonationState;
+};
 
 @Component()
 export class ImpersonationService {
   private readonly idPrefix = new IdPrefix('imp');
+  private readonly eventPublisher = new EventPublisher(EventBusConfig.getInstance());
 
   constructor(
     @Inject(ImpersonationStore.token) private readonly store: ImpersonationStore,
@@ -54,15 +57,7 @@ export class ImpersonationService {
 
     await this.store.save(session);
 
-    // TODO: TASK 21 - Event 클래스 구현 필요
-    // const event = new ImpersonationStartedEvent({
-    //   sessionId,
-    //   impersonatorId,
-    //   targetUserId,
-    //   reason,
-    //   startedAt: now,
-    // });
-    // await this.eventPublisher.publish(event);
+    await this.eventPublisher.publish(new ImpersonationStartedEvent(session));
 
     return session;
   }
@@ -75,14 +70,7 @@ export class ImpersonationService {
 
     await this.store.revoke(sessionId);
 
-    // TODO: TASK 21 - Event 클래스 구현 필요
-    // const event = new ImpersonationEndedEvent({
-    //   sessionId,
-    //   impersonatorId: session.impersonatorId,
-    //   targetUserId: session.targetUserId,
-    //   endedAt: new Date(),
-    // });
-    // await this.eventPublisher.publish(event);
+    await this.eventPublisher.publish(new ImpersonationEndedEvent(session));
   }
 
   isImpersonating(context: RequestContext): context is ImpersonationContext {

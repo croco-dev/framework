@@ -11,6 +11,20 @@ export enum CircuitState {
   HALF_OPEN = 'HALF_OPEN',
 }
 
+/**
+ * Circuit Breaker 상태 전환 규칙을 나타내는 타입.
+ *
+ * - CLOSED → OPEN: 실패 임계치 도달
+ * - OPEN → HALF_OPEN: openDuration 경과
+ * - HALF_OPEN → CLOSED: successThreshold 충족
+ * - HALF_OPEN → OPEN: 실패 발생
+ */
+export type CircuitStateTransition =
+  | { from: CircuitState.CLOSED; to: CircuitState.OPEN; reason: 'failure_threshold_reached' }
+  | { from: CircuitState.OPEN; to: CircuitState.HALF_OPEN; reason: 'timeout_elapsed' }
+  | { from: CircuitState.HALF_OPEN; to: CircuitState.CLOSED; reason: 'success_threshold_reached' }
+  | { from: CircuitState.HALF_OPEN; to: CircuitState.OPEN; reason: 'failure_occurred' };
+
 export type InMemoryCircuitBreakerStateStoreOptions = {
   maxEntries?: number;
   idleTtlMs?: number;
@@ -81,35 +95,85 @@ export abstract class CircuitBreakerStateStore {
    */
   abstract setLastFailureTime(circuitId: string, time: number): Promise<void>;
 
+  /**
+   * 분산 락을 사용하여 회로별 작업을 원자적으로 실행합니다.
+   *
+   * @param circuitId 회로 식별자
+   * @param operation 원자적으로 실행할 작업
+   * @returns 작업 결과
+   */
   abstract withCircuitLock<T>(circuitId: string, operation: () => Promise<T>): Promise<T>;
 
+  /**
+   * 실패 카운트를 증가시키고 열림 임계값을 초과했는지 확인합니다.
+   *
+   * @param circuitId 회로 식별자
+   * @param failureThreshold 실패 임계값
+   * @returns 증가된 실패 카운트와 열림 여부
+   */
   abstract incrementFailureAndCheck(
     circuitId: string,
     failureThreshold: number
   ): Promise<{ failureCount: number; shouldOpen: boolean }>;
 
+  /**
+   * HALF_OPEN 상태에서 현재 실행 중인 요청 수를 가져옵니다.
+   *
+   * @param circuitId 회로 식별자
+   * @returns 활성 요청 수
+   */
   abstract getHalfOpenActiveCount(circuitId: string): Promise<number>;
 
+  /**
+   * HALF_OPEN 상태에서 활성 요청 수를 설정합니다.
+   *
+   * @param circuitId 회로 식별자
+   * @param count 설정할 카운트
+   */
   abstract setHalfOpenActiveCount(circuitId: string, count: number): Promise<void>;
 
+  /**
+   * HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
+   *
+   * @param circuitId 회로 식별자
+   * @returns 성공한 요청 수
+   */
   abstract getHalfOpenSuccessCount(circuitId: string): Promise<number>;
 
+  /**
+   * HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
+   *
+   * @param circuitId 회로 식별자
+   * @param count 설정할 카운트
+   */
   abstract setHalfOpenSuccessCount(circuitId: string, count: number): Promise<void>;
 
+  /**
+   * 특정 회로의 모든 상태를 초기화합니다.
+   *
+   * @param circuitId 회로 식별자
+   */
   abstract reset(circuitId: string): Promise<void>;
 
+  /**
+   * 모든 회로의 상태를 초기화합니다.
+   */
   abstract resetAll(): Promise<void>;
 }
 
 /**
- * @deprecated Use CircuitBreakerStateStore directly.
- * DistributedCircuitBreakerStateStore is now merged into CircuitBreakerStateStore.
+ * 분산 환경(Redis, DynamoDB 등)에서 사용 가능한 Circuit Breaker 상태 저장소 인터페이스.
+ *
+ * @deprecated CircuitBreakerStateStore를 직접 사용하세요. 모든 CircuitBreakerStateStore 구현체는
+ * 기본적으로 분산 환경을 지원합니다.
  */
 export type DistributedCircuitBreakerStateStore = CircuitBreakerStateStore;
 
 /**
- * @deprecated All CircuitBreakerStateStore instances are now distributed-capable.
- * This function always returns true and will be removed in a future version.
+ * 주어진 저장소가 분산 환경을 지원하는지 확인합니다.
+ *
+ * @deprecated 모든 CircuitBreakerStateStore는 기본적으로 분산 환경을 지원합니다.
+ * 이 함수는 항상 true를 반환하며, 향후 버전에서 제거될 예정입니다.
  */
 export function isDistributedStore(_store: CircuitBreakerStateStore): _store is DistributedCircuitBreakerStateStore {
   return true;

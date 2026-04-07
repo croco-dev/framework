@@ -6,38 +6,33 @@ export const PolarEventSchema = z.object({
   data: z.record(z.string(), z.unknown()),
 });
 
+const PolarCustomerSchema = z.object({
+  externalId: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+const PolarProductSchema = z.object({
+  id: z.string().optional(),
+});
+
 export const PolarSubscriptionDataSchema = z
   .object({
     id: z.string(),
-    status: z.string(),
-    customer: z
-      .object({
-        externalId: z.string().nullable().optional(),
-        metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-      })
-      .optional(),
-    product: z
-      .object({
-        id: z.string().optional(),
-      })
-      .optional(),
+    status: z.enum(['active', 'past_due', 'canceled', 'revoked', 'trialing']),
+    customer: PolarCustomerSchema.optional(),
+    product: PolarProductSchema.optional(),
     currentPeriodEnd: z.union([z.string(), z.date()]).nullable().optional(),
-    cancelAtPeriodEnd: z.unknown(),
+    cancelAtPeriodEnd: z.boolean().nullable().optional(),
   })
   .passthrough();
 
 export const PolarOrderDataSchema = z
   .object({
     id: z.string(),
-    amount: z.number().optional(),
-    currency: z.string().optional(),
+    amount: z.number().finite().positive().optional(),
+    currency: z.string().length(3).optional(),
     createdAt: z.union([z.string(), z.date()]).nullable().optional(),
-    customer: z
-      .object({
-        externalId: z.string().nullable().optional(),
-        metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-      })
-      .optional(),
+    customer: PolarCustomerSchema.optional(),
   })
   .passthrough();
 

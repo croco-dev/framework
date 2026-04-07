@@ -50,7 +50,8 @@ export class RetryContext {
   }
 
   getAttribute<T>(key: string): T | undefined {
-    return this._attributes.get(key) as T | undefined;
+    const value = this._attributes.get(key);
+    return value as T | undefined;
   }
 
   setAttribute(key: string, value: unknown): void {

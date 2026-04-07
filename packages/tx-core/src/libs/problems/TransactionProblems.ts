@@ -36,3 +36,12 @@ export class AfterCommitHooksProblem extends Problem {
     });
   }
 }
+
+export class TransactionTimeoutProblem extends Problem {
+  readonly code = 'tx-core/transaction-timeout';
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(timeoutMs: number, cause?: Error) {
+    super(undefined, undefined, `Transaction timed out after ${timeoutMs}ms`, cause ? { cause } : undefined);
+  }
+}

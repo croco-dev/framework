@@ -1,18 +1,9 @@
 import type { MembershipRole } from '@croco/membership-core';
 
-/**
- * Invitation type enumeration
- */
 export type InvitationType = 'email' | 'link';
 
-/**
- * Invitation status enumeration
- */
 export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked' | 'declined';
 
-/**
- * Invitation entity
- */
 export type Invitation = {
   id: string;
   tenantId: string;
@@ -28,9 +19,6 @@ export type Invitation = {
   createdAt: Date;
 };
 
-/**
- * Input for creating an invitation
- */
 export type InvitationCreateInput = {
   tenantId: string;
   inviterId: string;
@@ -40,9 +28,27 @@ export type InvitationCreateInput = {
   expiresInDays?: number;
 };
 
-/**
- * Domain policy for auto-join
- */
+export type CreateEmailInvitationInput = {
+  tenantId: string;
+  inviterId: string;
+  email: string;
+  role: MembershipRole;
+  expiresInDays?: number;
+};
+
+export type CreateLinkInvitationInput = {
+  tenantId: string;
+  inviterId: string;
+  role: MembershipRole;
+  expiresInDays?: number;
+};
+
+export type AcceptInvitationInput = {
+  token: string;
+  userId: string;
+  email?: string;
+};
+
 export type DomainPolicy = {
   id: string;
   tenantId: string;
@@ -52,13 +58,31 @@ export type DomainPolicy = {
   createdAt: Date;
 };
 
-/**
- * Input for creating a domain policy
- */
 export type DomainPolicyCreateInput = {
   tenantId: string;
   domain: string;
   role: MembershipRole;
+};
+
+export type BatchInviteResult = {
+  successful: Array<{
+    email: string;
+    token: string;
+  }>;
+  failed: Array<{
+    email: string;
+    error: string;
+  }>;
+};
+
+export type BatchInviteOptions = {
+  expiresInDays?: number;
+  maxBatchSize?: number;
+};
+
+export type RateLimitConfig = {
+  maxInvitesPerHour: number;
+  maxInvitesPerDay: number;
 };
 
 /**

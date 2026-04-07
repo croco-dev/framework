@@ -7,10 +7,7 @@ title: "RateLimit"
 
 > **RateLimit**(`options?`): `MethodDecorator`
 
-Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:42](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L42)
-
-Method decorator that applies rate limiting to an endpoint.
-Automatically registers RateLimitGuard - no need for @UseGuards(RateLimitGuard).
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L25)
 
 ## Parameters
 
@@ -21,22 +18,3 @@ Automatically registers RateLimitGuard - no need for @UseGuards(RateLimitGuard).
 ## Returns
 
 `MethodDecorator`
-
-## Examples
-
-```typescript
-@RateLimit({ limit: 10, window: '1m' })
-@Get('/expensive')
-async expensiveOperation() {}
-```
-
-```typescript
-// Dynamic limit based on context
-@RateLimit({
-  limit: 100,
-  window: '1h',
-  key: (ctx) => ctx.get('tenant')?.id
-})
-@Post('/api')
-async apiCall() {}
-```

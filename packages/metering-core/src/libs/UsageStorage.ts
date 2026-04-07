@@ -52,4 +52,12 @@ export interface UsageStorage {
   deleteUsageRecords?(options: UsageQueryOptions, records: UsageRecord[]): Promise<void>;
 
   checkAndRecordWithinQuota?(options: AtomicQuotaCheckOptions): Promise<AtomicQuotaCheckResult>;
+
+  /**
+   * 빌링 주기 리셋
+   * 현재 빌링 주기의 모든 usage 데이터를 삭제합니다.
+   * @param tenantId - 테넌트 ID
+   * @param meterId - Meter ID (optional, 없으면 해당 테넌트의 모든 meter 리셋)
+   */
+  resetBillingCycle?(tenantId: string, meterId?: string): Promise<void>;
 }

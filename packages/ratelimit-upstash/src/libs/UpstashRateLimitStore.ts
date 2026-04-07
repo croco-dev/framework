@@ -1,92 +1,310 @@
-import type { RateLimitPolicy, RateLimitResult } from '@croco/ratelimit-core';
-import { Ratelimit } from '@upstash/ratelimit';
+import type {
+  RateLimitPolicy,
+  RateLimitResult,
+  RateLimitStats,
+  SlidingWindowPolicy,
+  TokenBucketPolicy,
+} from '@croco/ratelimit-core';
+import {
+  FixedWindowStore,
+  isFixedWindowPolicy,
+  isSlidingWindowPolicy,
+  isTokenBucketPolicy,
+  SlidingWindowStore,
+  TokenBucketStore,
+} from '@croco/ratelimit-core';
 import type { Redis } from '@upstash/redis';
 
-/**
- * Options for UpstashRateLimitStore.
- */
+import { fixedWindowLua } from './lua/fixed-window';
+import { slidingWindowLua } from './lua/sliding-window';
+import { tokenBucketLua } from './lua/token-bucket';
+
 export type UpstashRateLimitStoreOptions = {
-  /** Upstash Redis client instance */
   redis: Redis;
-  /** Key prefix for rate limit entries (default: 'ratelimit') */
   prefix?: string;
-  /** Enable analytics (default: false) */
-  analytics?: boolean;
-  /** Timeout in milliseconds (default: 5000) */
-  timeout?: number;
-  /** Enable ephemeral cache for local rate limiting (default: true in Lambda) */
-  ephemeralCache?: boolean | Map<string, number>;
 };
 
-/**
- * Rate limit store implementation using Upstash Ratelimit.
- * Suitable for serverless and edge deployments.
- *
- * @example
- * ```typescript
- * import { Redis } from '@upstash/redis';
- *
- * const redis = Redis.fromEnv();
- * const store = new UpstashRateLimitStore({ redis });
- * const rateLimiter = new RateLimiter(store, keyBuilder);
- * ```
- */
-export class UpstashRateLimitStore {
+export class UpstashSlidingWindowStore extends SlidingWindowStore {
   private readonly redis: Redis;
   private readonly prefix: string;
-  private readonly analytics: boolean;
-  private readonly timeout: number;
-  private readonly ephemeralCache?: Map<string, number>;
-
-  // Cache of Ratelimit instances by policy name
-  private readonly limiters = new Map<string, Ratelimit>();
+  private readonly stats: { allowed: number; denied: number; total: number } = {
+    allowed: 0,
+    denied: 0,
+    total: 0,
+  };
 
   constructor(options: UpstashRateLimitStoreOptions) {
+    super();
     this.redis = options.redis;
-    this.prefix = options.prefix ?? 'ratelimit';
-    this.analytics = options.analytics ?? false;
-    this.timeout = options.timeout ?? 5000;
-
-    // Enable ephemeral cache by default (good for Lambda)
-    if (options.ephemeralCache === true) {
-      this.ephemeralCache = new Map<string, number>();
-    } else if (options.ephemeralCache instanceof Map) {
-      this.ephemeralCache = options.ephemeralCache;
-    }
+    this.prefix = options.prefix ?? 'ratelimit:sliding';
   }
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
-    const limiter = this.getLimiter(policy);
-    const response = await limiter.limit(key);
+    if (!isSlidingWindowPolicy(policy)) {
+      throw new Error('Invalid policy for sliding window store');
+    }
+
+    const result = await this.checkSlidingWindow(key, policy);
+
+    this.stats.total++;
+    if (result.success) {
+      this.stats.allowed++;
+    } else {
+      this.stats.denied++;
+    }
+
+    return result;
+  }
+
+  protected async addTimestamp(): Promise<void> {
+    return;
+  }
+
+  protected async getTimestamps(): Promise<number[]> {
+    return [];
+  }
+
+  protected async removeTimestamps(): Promise<void> {
+    return;
+  }
+
+  async checkSlidingWindow(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
+    const now = Date.now();
+    const windowStart = now - policy.windowMs;
+    const redisKey = `${this.prefix}:${key}`;
+    const ttlSeconds = Math.ceil(policy.windowMs / 1000) + 1;
+
+    const result = (await this.redis.eval(
+      slidingWindowLua,
+      [redisKey],
+      [now, windowStart, policy.limit, String(now), ttlSeconds]
+    )) as [number, number, number];
+
+    const success = result[0] === 1;
+    const remaining = result[2];
 
     return {
-      success: response.success,
-      limit: response.limit,
-      remaining: response.remaining,
-      resetAtMs: response.reset,
+      success,
+      limit: policy.limit,
+      remaining,
+      resetAtMs: now + policy.windowMs,
     };
   }
 
-  /**
-   * Get or create a Ratelimit instance for the given policy.
-   * Instances are cached by policy name for reuse.
-   */
-  private getLimiter(policy: RateLimitPolicy): Ratelimit {
-    const cacheKey = `${policy.name}:${policy.limit}:${policy.windowMs}`;
+  async increment(key: string, amount = 1): Promise<number> {
+    const redisKey = `${this.prefix}:${key}:increment`;
+    const current = await this.redis.get(redisKey);
+    const newValue = (Number(current) || 0) + amount;
+    await this.redis.set(redisKey, String(newValue));
+    return newValue;
+  }
 
-    let limiter = this.limiters.get(cacheKey);
-    if (!limiter) {
-      limiter = new Ratelimit({
-        redis: this.redis,
-        limiter: Ratelimit.slidingWindow(policy.limit, `${policy.windowMs} ms`),
-        prefix: `${this.prefix}:${policy.name}`,
-        analytics: this.analytics,
-        timeout: this.timeout,
-        ephemeralCache: this.ephemeralCache,
-      });
-      this.limiters.set(cacheKey, limiter);
+  async getCount(): Promise<number> {
+    return 0;
+  }
+
+  async reset(key: string): Promise<void> {
+    const redisKey = `${this.prefix}:${key}`;
+    await this.redis.del(redisKey);
+  }
+
+  async expire(): Promise<void> {
+    return;
+  }
+
+  async getStats(): Promise<RateLimitStats> {
+    return { ...this.stats };
+  }
+
+  async pruneExpired(): Promise<number> {
+    return 0;
+  }
+}
+
+export class UpstashTokenBucketStore extends TokenBucketStore {
+  private readonly redis: Redis;
+  private readonly prefix: string;
+  private readonly stats: { allowed: number; denied: number; total: number } = {
+    allowed: 0,
+    denied: 0,
+    total: 0,
+  };
+
+  constructor(options: UpstashRateLimitStoreOptions) {
+    super();
+    this.redis = options.redis;
+    this.prefix = options.prefix ?? 'ratelimit:bucket';
+  }
+
+  async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
+    if (!isTokenBucketPolicy(policy)) {
+      throw new Error('Invalid policy for token bucket store');
     }
 
-    return limiter;
+    const result = await this.checkTokenBucket(key, policy);
+
+    this.stats.total++;
+    if (result.success) {
+      this.stats.allowed++;
+    } else {
+      this.stats.denied++;
+    }
+
+    return result;
+  }
+
+  protected async getBucket(): Promise<{ tokens: number; lastRefill: number } | null> {
+    return null;
+  }
+
+  protected async setBucket(): Promise<void> {
+    return;
+  }
+
+  async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
+    const now = Date.now();
+    const redisKey = `${this.prefix}:${key}`;
+    const ttlSeconds = Math.ceil((policy.capacity * policy.refillIntervalMs) / policy.refillRate / 1000) + 1;
+
+    const result = (await this.redis.eval(
+      tokenBucketLua,
+      [redisKey],
+      [now, policy.capacity, policy.refillIntervalMs, policy.refillRate, ttlSeconds]
+    )) as [number, number, number];
+
+    const success = result[0] === 1;
+    const remaining = result[2];
+
+    const timeUntilNextToken = policy.refillIntervalMs / policy.refillRate;
+    const resetAtMs = success ? now + timeUntilNextToken : now + (1 - remaining) * timeUntilNextToken;
+
+    return {
+      success,
+      limit: policy.capacity,
+      remaining,
+      resetAtMs,
+    };
+  }
+
+  async increment(key: string, amount = 1): Promise<number> {
+    const redisKey = `${this.prefix}:${key}:increment`;
+    const current = await this.redis.get(redisKey);
+    const newValue = (Number(current) || 0) + amount;
+    await this.redis.set(redisKey, String(newValue));
+    return newValue;
+  }
+
+  async getCount(): Promise<number> {
+    return 0;
+  }
+
+  async reset(key: string): Promise<void> {
+    const redisKey = `${this.prefix}:${key}`;
+    await this.redis.del(redisKey);
+  }
+
+  async expire(): Promise<void> {
+    return;
+  }
+
+  async getStats(): Promise<RateLimitStats> {
+    return { ...this.stats };
+  }
+
+  async pruneExpired(): Promise<number> {
+    return 0;
+  }
+}
+
+export class UpstashFixedWindowStore extends FixedWindowStore {
+  private readonly redis: Redis;
+  private readonly prefix: string;
+  private readonly stats: { allowed: number; denied: number; total: number } = {
+    allowed: 0,
+    denied: 0,
+    total: 0,
+  };
+
+  constructor(options: UpstashRateLimitStoreOptions) {
+    super();
+    this.redis = options.redis;
+    this.prefix = options.prefix ?? 'ratelimit:fixed';
+  }
+
+  async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
+    if (!isFixedWindowPolicy(policy)) {
+      throw new Error('Invalid policy for fixed window store');
+    }
+
+    const now = Date.now();
+    const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
+    const redisKey = `${this.prefix}:${key}:${windowStart}`;
+    const ttlSeconds = Math.ceil(policy.windowMs / 1000);
+
+    const result = (await this.redis.eval(fixedWindowLua, [redisKey], [policy.limit, ttlSeconds])) as [
+      number,
+      number,
+      number,
+    ];
+
+    const success = result[0] === 1;
+    const remaining = result[2];
+
+    this.stats.total++;
+    if (success) {
+      this.stats.allowed++;
+    } else {
+      this.stats.denied++;
+    }
+
+    return {
+      success,
+      limit: policy.limit,
+      remaining,
+      resetAtMs: windowStart + policy.windowMs,
+    };
+  }
+
+  protected async getWindowEntry(): Promise<{ count: number; windowStart: number; windowMs: number } | null> {
+    return null;
+  }
+
+  protected async setWindowEntry(): Promise<void> {
+    return;
+  }
+
+  async increment(key: string, amount = 1): Promise<number> {
+    const redisKey = `${this.prefix}:${key}:increment`;
+    const current = await this.redis.get(redisKey);
+    const newValue = (Number(current) || 0) + amount;
+    await this.redis.set(redisKey, String(newValue));
+    return newValue;
+  }
+
+  async getCount(key: string): Promise<number> {
+    const redisKey = `${this.prefix}:${key}:increment`;
+    const value = await this.redis.get(redisKey);
+    return Number(value) || 0;
+  }
+
+  async reset(key: string): Promise<void> {
+    const pattern = `${this.prefix}:${key}*`;
+    const keys = await this.redis.keys(pattern);
+    if (keys.length > 0) {
+      await this.redis.del(...keys);
+    }
+  }
+
+  async expire(key: string, ttlMs: number): Promise<void> {
+    const redisKey = `${this.prefix}:${key}:expire`;
+    await this.redis.expire(redisKey, Math.ceil(ttlMs / 1000));
+  }
+
+  async getStats(): Promise<RateLimitStats> {
+    return { ...this.stats };
+  }
+
+  async pruneExpired(): Promise<number> {
+    return 0;
   }
 }

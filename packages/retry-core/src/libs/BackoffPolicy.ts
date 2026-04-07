@@ -17,8 +17,10 @@ export interface BackoffOptions {
 
 /**
  * Backoff policy interface.
+ *
+ * @typeParam T - Backoff 구현체의 추가 옵션 타입
  */
-export interface BackoffPolicy {
+export interface BackoffPolicy<T = unknown> {
   /** Calculate delay for the given attempt (0-based) */
   getDelay(attempt: number): number;
 
@@ -27,6 +29,9 @@ export interface BackoffPolicy {
 
   /** Reset internal state if any */
   reset(): void;
+
+  /** Backoff 구현체의 추가 옵션 (구현체에 따라 다름) */
+  readonly options?: T;
 }
 
 /**

@@ -41,7 +41,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 
 const db = drizzle(pool);
 const adapter = createDrizzleTxAdapter(db);
-const txManager = new TxManager(adapter, { defaultNesting: 'join' });
+const txManager = new TxManager(adapter, { defaultNesting: 'join', defaultTimeout: 5000 });
 
 Container.set(TxManager, txManager);
 ```
@@ -67,10 +67,52 @@ class UserService {
       // 중첩 호출 시 savepoint 생성
     }, { nesting: 'savepoint' });
   }
+
+  async criticalOperation() {
+    const txManager = Container.get(TxManager);
+    return txManager.run(async () => {
+      // 타임아웃이 있는 트랜잭션
+    }, { timeout: 30000 }); // 30초 타임아웃
+  }
 }
 ```
 
-### 4. Repository에서 현재 트랜잭션 클라이언트 사용
+### 4. @Transactional 데코레이터 사용
+
+```ts
+import { Component } from '@croco/framework-context';
+import { Transactional } from '@croco/tx-core';
+
+@Component()
+class OrderService {
+  @Transactional()
+  async placeOrder(dto: CreateOrderDto) {
+    // REQUIRED propagation (기본값)
+  }
+
+  @Transactional({ propagation: 'REQUIRES_NEW' })
+  async createAuditLog(dto: AuditDto) {
+    // 항상 새 트랜잭션
+  }
+
+  @Transactional({ propagation: 'MANDATORY' })
+  async updateInventory(dto: InventoryDto) {
+    // 반드시 기존 트랜잭션 내에서만 호출
+  }
+
+  @Transactional({ propagation: 'NEVER' })
+  async readOnlyQuery(id: string) {
+    // 트랜잭션 없이만 실행
+  }
+
+  @Transactional({ timeout: 10000 })
+  async longRunningOperation() {
+    // 10초 타임아웃
+  }
+}
+```
+
+### 5. Repository에서 현재 트랜잭션 클라이언트 사용
 
 ```ts
 import { Component } from '@croco/framework-context';
@@ -107,6 +149,8 @@ AsyncLocalStorage를 사용해 트랜잭션 컨텍스트를 관리합니다.
 - `run(fn, options?)`: 트랜잭션 내에서 함수 실행
 - `getClient()`: 현재 트랜잭션 클라이언트 반환 (없으면 `null`)
 - `isInTransaction()`: 현재 트랜잭션 내부인지 여부
+- `onAfterCommit(hook)`: 트랜잭션 커밋 후 실행될 훅 등록
+- `suspend(fn)`: 현재 트랜잭션 컨텍스트를 일시 중단하고 함수 실행
 
 `onAfterCommit()`으로 등록한 훅은 root transaction commit 이후, **트랜잭션 컨텍스트 밖에서** 순차 실행됩니다. 따라서 훅 내부의 `isInTransaction()`은 `false`, `getClient()`는 `null`을 반환합니다. 훅 하나가 실패해도 나머지 훅은 계속 시도되며, 하나 이상 실패하면 `run()`은 `AfterCommitHooksProblem`으로 reject 됩니다. 즉 DB commit은 유지되지만 post-commit 작업 실패는 호출자에게 숨겨지지 않습니다.
 
@@ -116,8 +160,46 @@ AsyncLocalStorage를 사용해 트랜잭션 컨텍스트를 관리합니다.
 interface TxRunOptions<TOptions> {
   nesting?: 'join' | 'savepoint';
   options?: TOptions;
+  timeout?: number; // 밀리초 단위 타임아웃
 }
 ```
+
+### TxManagerConfig
+
+```ts
+interface TxManagerConfig {
+  defaultNesting?: 'join' | 'savepoint';
+  defaultTimeout?: number; // 기본 타임아웃 (밀리초)
+}
+```
+
+### Propagation
+
+Spring 프레임워크와 호환되는 트랜잭션 전파 전략:
+
+- `REQUIRED` (기본값): 기존 트랜잭션이 있으면 참여, 없으면 새로 생성
+- `REQUIRES_NEW`: 항상 새 트랜잭션 생성, 기존 트랜잭션은 일시 중단
+- `MANDATORY`: 반드시 기존 트랜잭션 내에서만 실행, 없으면 예외 발생
+- `NEVER`: 반드시 트랜잭션 없이만 실행, 있으면 예외 발생
+
+### TransactionalOptions<TOptions>
+
+```ts
+interface TransactionalOptions<TOptions> {
+  propagation?: Propagation;
+  managerKey?: string | symbol;
+  nesting?: 'join' | 'savepoint';
+  options?: TOptions;
+  timeout?: number; // 밀리초 단위 타임아웃
+}
+```
+
+### Error Types
+
+- `TransactionTimeoutProblem`: 트랜잭션 타임아웃 발생 시
+- `TxPropagationError`: 전파 규칙 위반 시
+- `TransactionContextProblem`: 트랜잭션 컨텍스트 없이 onAfterCommit 호출 시
+- `AfterCommitHooksProblem`: after-commit 훅 실행 실패 시
 
 ## Dependencies
 

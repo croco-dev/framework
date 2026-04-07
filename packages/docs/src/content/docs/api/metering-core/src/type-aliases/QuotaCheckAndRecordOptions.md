@@ -7,7 +7,7 @@ title: "QuotaCheckAndRecordOptions"
 
 > **QuotaCheckAndRecordOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/QuotaManager.ts#L10)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:10](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/QuotaManager.ts#L10)
 
 QuotaManager 동작에 사용되는 옵션 및 결과 타입입니다.
 
@@ -21,7 +21,7 @@ Quota 검증 및 기록 작업의 옵션과 결과를 정의합니다.
 
 > **allowOverQuota**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:15](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/QuotaManager.ts#L15)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/QuotaManager.ts#L15)
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:15](https://github.
 
 > **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:12](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/QuotaManager.ts#L12)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:12](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/QuotaManager.ts#L12)
 
 ***
 
@@ -37,7 +37,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:12](https://github.
 
 > **quota**: `number`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:14](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/QuotaManager.ts#L14)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/QuotaManager.ts#L14)
 
 ***
 
@@ -45,7 +45,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:14](https://github.
 
 > **tenantId**: `string`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/QuotaManager.ts#L11)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:11](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/QuotaManager.ts#L11)
 
 ***
 
@@ -53,7 +53,7 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:11](https://github.
 
 > **usageRecord**: [`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/QuotaManager.ts#L16)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:16](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/QuotaManager.ts#L16)
 
 ***
 
@@ -61,4 +61,4 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:16](https://github.
 
 > **value**: `number`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:13](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/metering-core/src/libs/QuotaManager.ts#L13)
+Defined in: [packages/metering-core/src/libs/QuotaManager.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/QuotaManager.ts#L13)

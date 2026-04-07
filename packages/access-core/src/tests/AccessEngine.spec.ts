@@ -34,9 +34,9 @@ describe('AccessEngine', () => {
     it('should deny when provider returns false', async () => {
       const request: CheckRequest = {
         tenantId: 'tenant-1',
-        subject: 'user-1',
+        subject: 'user:user-1',
         relation: 'viewer',
-        object: 'document-1',
+        object: 'document:document-1',
       };
       vi.mocked(mockProvider.check).mockResolvedValue({ allowed: false });
 
@@ -49,9 +49,9 @@ describe('AccessEngine', () => {
     it('should allow when provider returns true', async () => {
       const request: CheckRequest = {
         tenantId: 'tenant-1',
-        subject: 'user-1',
+        subject: 'user:user-1',
         relation: 'editor',
-        object: 'document-1',
+        object: 'document:document-1',
       };
       vi.mocked(mockProvider.check).mockResolvedValue({ allowed: true });
 
@@ -64,9 +64,9 @@ describe('AccessEngine', () => {
     it('should enforce tenantId hard filter', async () => {
       const request: CheckRequest = {
         tenantId: 'tenant-1',
-        subject: 'user-1',
+        subject: 'user:user-1',
         relation: 'viewer',
-        object: 'document-1',
+        object: 'document:document-1',
       };
       vi.mocked(mockProvider.check).mockResolvedValue({ allowed: true });
 
@@ -79,9 +79,9 @@ describe('AccessEngine', () => {
     it('should deny on provider business problem (fail-closed)', async () => {
       const request: CheckRequest = {
         tenantId: 'tenant-1',
-        subject: 'user-1',
+        subject: 'user:user-1',
         relation: 'viewer',
-        object: 'document-1',
+        object: 'document:document-1',
       };
       vi.mocked(mockProvider.check).mockRejectedValue(new TestBusinessProblem('Provider business error'));
 
@@ -93,9 +93,9 @@ describe('AccessEngine', () => {
     it('should re-throw on provider system problem', async () => {
       const request: CheckRequest = {
         tenantId: 'tenant-1',
-        subject: 'user-1',
+        subject: 'user:user-1',
         relation: 'viewer',
-        object: 'document-1',
+        object: 'document:document-1',
       };
       vi.mocked(mockProvider.check).mockRejectedValue(new TestSystemProblem('DB connection failed'));
 
@@ -105,9 +105,9 @@ describe('AccessEngine', () => {
     it('should re-throw on provider system exception', async () => {
       const request: CheckRequest = {
         tenantId: 'tenant-1',
-        subject: 'user-1',
+        subject: 'user:user-1',
         relation: 'viewer',
-        object: 'document-1',
+        object: 'document:document-1',
       };
       vi.mocked(mockProvider.check).mockRejectedValue(new TypeError('Cannot read properties of undefined'));
 
@@ -120,9 +120,9 @@ describe('AccessEngine', () => {
       const request: GrantRequest = {
         tenantId: 'tenant-1',
         tuple: {
-          object: 'document-1',
+          object: 'document:document-1',
           relation: 'editor',
-          subject: 'user-1',
+          subject: 'user:user-1',
         },
       };
       vi.mocked(mockProvider.grant).mockResolvedValue(undefined);
@@ -138,9 +138,9 @@ describe('AccessEngine', () => {
       const request: RevokeRequest = {
         tenantId: 'tenant-1',
         tuple: {
-          object: 'document-1',
+          object: 'document:document-1',
           relation: 'editor',
-          subject: 'user-1',
+          subject: 'user:user-1',
         },
       };
       vi.mocked(mockProvider.revoke).mockResolvedValue(undefined);
@@ -155,9 +155,11 @@ describe('AccessEngine', () => {
     it('should delegate to provider', async () => {
       const request: ListRequest = {
         tenantId: 'tenant-1',
-        object: 'document-1',
+        object: 'document:document-1',
       };
-      const mockTuples: RelationTuple[] = [{ object: 'document-1', relation: 'editor', subject: 'user-1' }];
+      const mockTuples: RelationTuple[] = [
+        { object: 'document:document-1', relation: 'editor', subject: 'user:user-1' },
+      ];
       vi.mocked(mockProvider.list).mockResolvedValue(mockTuples);
 
       const result = await accessEngine.list(request);

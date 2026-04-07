@@ -1,7 +1,11 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { TransactionContext } from '@croco/framework-context';
 import type { Logger } from '@croco/framework-logger';
-import { AfterCommitHooksProblem, TransactionContextProblem } from './problems/TransactionProblems';
+import {
+  AfterCommitHooksProblem,
+  TransactionContextProblem,
+  TransactionTimeoutProblem,
+} from './problems/TransactionProblems';
 import type { TxAdapter } from './TxAdapter';
 import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
 
@@ -23,9 +27,16 @@ type AfterCommitHookFailure = {
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
 
+function createTimeoutPromise<T>(ms: number): Promise<T> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new TransactionTimeoutProblem(ms)), ms);
+  });
+}
+
 export class TxManager<TClient, TOptions = unknown> implements TransactionContext {
   private readonly als = new AsyncLocalStorage<NullableTxContext<TClient>>();
   private readonly defaultNesting: NestingStrategy;
+  private readonly defaultTimeout: number | undefined;
   private readonly logger: TxManagerLogger;
 
   constructor(adapter: TxAdapter<TClient, TOptions>, config?: TxManagerConfig);
@@ -35,49 +46,60 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     logger: TxManagerLogger = DEFAULT_LOGGER
   ) {
     this.defaultNesting = config.defaultNesting ?? 'join';
+    this.defaultTimeout = config.defaultTimeout;
     this.logger = logger;
   }
 
   async run<T>(fn: () => Promise<T>, runOptions?: TxRunOptions<TOptions>): Promise<T> {
     const nesting = runOptions?.nesting ?? this.defaultNesting;
     const options = runOptions?.options;
+    const timeout = runOptions?.timeout ?? this.defaultTimeout;
     const currentContext = this.als.getStore();
 
     if (!currentContext) {
-      return this.executeRoot(fn, options);
+      return this.executeRoot(fn, options, timeout);
     }
 
     if (nesting === 'join') {
       return fn();
     }
 
-    return this.executeNested(currentContext, fn, options);
+    return this.executeNested(currentContext, fn, options, timeout);
   }
 
-  private async executeRoot<T>(fn: () => Promise<T>, options?: TOptions): Promise<T> {
+  private async executeRoot<T>(fn: () => Promise<T>, options?: TOptions, timeout?: number): Promise<T> {
     const afterCommitHooks: AfterCommitHook[] = [];
 
-    const result = await this.adapter.transaction(async (client) => {
-      const context: TxContext<TClient> = {
-        client,
-        afterCommitHooks,
-        isRoot: true,
-      };
+    const executeTransaction = async (): Promise<T> => {
+      const result = await this.adapter.transaction(async (client) => {
+        const context: TxContext<TClient> = {
+          client,
+          afterCommitHooks,
+          isRoot: true,
+        };
 
-      return this.setupContext(context, fn);
-    }, options);
+        return this.setupContext(context, fn);
+      }, options);
 
-    if (afterCommitHooks.length > 0) {
-      await this.setupContext(null, () => this.executeAfterCommitHooks(afterCommitHooks));
+      if (afterCommitHooks.length > 0) {
+        await this.setupContext(null, () => this.executeAfterCommitHooks(afterCommitHooks));
+      }
+
+      return result;
+    };
+
+    if (timeout !== undefined && timeout > 0) {
+      return Promise.race([executeTransaction(), createTimeoutPromise<T>(timeout)]);
     }
 
-    return result;
+    return executeTransaction();
   }
 
   private async executeNested<T>(
     currentContext: TxContext<TClient>,
     fn: () => Promise<T>,
-    options?: TOptions
+    options?: TOptions,
+    timeout?: number
   ): Promise<T> {
     if (!this.adapter.supportsSavepoint()) {
       this.warnSavepointNotSupported();
@@ -87,28 +109,36 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     const nestedHooks: AfterCommitHook[] = [];
     let shouldMergeNestedHooks = false;
 
-    const result = await this.adapter.savepoint(
-      currentContext.client,
-      async (nestedClient) => {
-        const nestedContext: TxContext<TClient> = {
-          client: nestedClient,
-          afterCommitHooks: nestedHooks,
-          isRoot: false,
-        };
+    const executeSavepoint = async (): Promise<T> => {
+      const result = await this.adapter.savepoint(
+        currentContext.client,
+        async (nestedClient) => {
+          const nestedContext: TxContext<TClient> = {
+            client: nestedClient,
+            afterCommitHooks: nestedHooks,
+            isRoot: false,
+          };
 
-        const nestedResult = await this.setupContext(nestedContext, fn);
-        shouldMergeNestedHooks = true;
+          const nestedResult = await this.setupContext(nestedContext, fn);
+          shouldMergeNestedHooks = true;
 
-        return nestedResult;
-      },
-      options
-    );
+          return nestedResult;
+        },
+        options
+      );
 
-    if (shouldMergeNestedHooks) {
-      currentContext.afterCommitHooks.push(...nestedHooks);
+      if (shouldMergeNestedHooks) {
+        currentContext.afterCommitHooks.push(...nestedHooks);
+      }
+
+      return result;
+    };
+
+    if (timeout !== undefined && timeout > 0) {
+      return Promise.race([executeSavepoint(), createTimeoutPromise<T>(timeout)]);
     }
 
-    return result;
+    return executeSavepoint();
   }
 
   private async setupContext<T>(context: NullableTxContext<TClient>, fn: () => Promise<T>): Promise<T> {

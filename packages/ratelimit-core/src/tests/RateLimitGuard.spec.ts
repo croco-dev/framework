@@ -16,6 +16,7 @@ describe('RateLimitGuard', () => {
 
   const policy: RateLimitPolicy = {
     name: 'test-policy',
+    algorithm: 'sliding',
     limit: 10,
     windowMs: 60000,
   };

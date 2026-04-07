@@ -5,10 +5,7 @@ prev: false
 title: "HttpContext"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L10)
-
-CrocoHttpContext interface (compatible with transports-http).
-Defined here to avoid circular dependency.
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L6)
 
 ## Properties
 
@@ -16,7 +13,7 @@ Defined here to avoid circular dependency.
 
 > `readonly` **req**: `object`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L11)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L7)
 
 #### headers
 
@@ -36,7 +33,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > **get**\<`T`\>(`key`): `T` \| `undefined`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:17](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L17)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L13)
 
 #### Type Parameters
 
@@ -60,7 +57,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > **set**\<`T`\>(`key`, `value`): `void`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:16](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L16)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:12](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L12)
 
 #### Type Parameters
 

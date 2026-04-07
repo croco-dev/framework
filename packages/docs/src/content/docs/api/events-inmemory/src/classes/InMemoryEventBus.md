@@ -5,23 +5,37 @@ prev: false
 title: "InMemoryEventBus"
 ---
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:27](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L27)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:40](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L40)
 
 `@croco/events-core`의 EventBus 인터페이스를 인메모리로 구현한 EventBus입니다.
 
+## Type Parameters
+
+### TEvent
+
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
 ## Implements
 
-- [`EventBus`](/api/events-core/src/interfaces/eventbus/)
+- [`EventBus`](/api/events-core/src/interfaces/eventbus/)\<`TEvent`\>
 
 ## Constructors
 
 ### Constructor
 
-> **new InMemoryEventBus**(): `InMemoryEventBus`
+> **new InMemoryEventBus**\<`TEvent`\>(`options?`): `InMemoryEventBus`\<`TEvent`\>
+
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:48](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L48)
+
+#### Parameters
+
+##### options?
+
+[`InMemoryEventBusOptions`](/api/events-inmemory/src/type-aliases/inmemoryeventbusoptions/) = `{}`
 
 #### Returns
 
-`InMemoryEventBus`
+`InMemoryEventBus`\<`TEvent`\>
 
 ## Methods
 
@@ -29,7 +43,7 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:27](https://g
 
 > **clear**(): `void`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:226](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L226)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:339](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L339)
 
 #### Returns
 
@@ -41,17 +55,41 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:226](https://
 
 ***
 
+### getRunningHandlerCount()
+
+> **getRunningHandlerCount**(): `number`
+
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:345](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L345)
+
+#### Returns
+
+`number`
+
+***
+
+### getRunningHandlers()
+
+> **getRunningHandlers**(): readonly `RunningHandler`[]
+
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:349](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L349)
+
+#### Returns
+
+readonly `RunningHandler`[]
+
+***
+
 ### publish()
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:31](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L31)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:53](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L53)
 
 #### Parameters
 
 ##### event
 
-[`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent`
 
 #### Returns
 
@@ -67,13 +105,13 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:31](https://g
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:218](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L218)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:322](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L322)
 
 #### Parameters
 
 ##### subscription
 
-[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)
+[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)\<`TEvent`\>
 
 #### Returns
 
@@ -89,13 +127,13 @@ Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:218](https://
 
 > **unsubscribe**(`subscription`): `void`
 
-Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:222](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L222)
+Defined in: [packages/events-inmemory/src/libs/InmemoryEventBus.ts:326](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-inmemory/src/libs/InmemoryEventBus.ts#L326)
 
 #### Parameters
 
 ##### subscription
 
-[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)
+[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)\<`TEvent`\>
 
 #### Returns
 

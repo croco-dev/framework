@@ -7,7 +7,9 @@ import { PolarEventMapper } from './PolarEventMapper';
 import { BillingStatusMappingProblem } from './problems/BillingStatusMappingProblem';
 import { WebhookProcessingProblem } from './problems/WebhookProcessingProblem';
 import { WebhookValidationProblem } from './problems/WebhookValidationProblem';
+import type { PolarSubscriptionData } from './schemas/polarWebhookSchema';
 import { PolarEventSchema, PolarOrderDataSchema, PolarSubscriptionDataSchema } from './schemas/polarWebhookSchema';
+
 export type WebhookDependencies = {
   store: BillingStore;
   eventPublisher: EventPublisher;
@@ -17,11 +19,21 @@ type RollbackCapableBillingStore = BillingStore & {
   unmarkWebhookProcessed?: (eventId: string) => Promise<void>;
 };
 
+type PolarSubscriptionEventType =
+  | 'subscription.created'
+  | 'subscription.updated'
+  | 'subscription.active'
+  | 'subscription.canceled'
+  | 'subscription.revoked'
+  | 'subscription.past_due';
+
+type PolarOrderEventType = 'order.paid' | 'order.created' | 'order.updated';
+
 type ParsedSubscriptionPayload = {
   id: string;
   tenantId: string;
   productId: string;
-  rawStatus: string;
+  rawStatus: PolarSubscriptionData['status'];
   status: Subscription['status'];
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
@@ -38,21 +50,18 @@ type ParsedOrderPayload = {
 type ParsedWebhookEvent =
   | {
       kind: 'subscription';
-      eventType: string;
+      eventType: PolarSubscriptionEventType;
       payload: ParsedSubscriptionPayload;
     }
   | {
       kind: 'order';
-      eventType: string;
+      eventType: PolarOrderEventType;
       payload: ParsedOrderPayload;
     }
   | {
       kind: 'ignored';
     };
 
-/**
- * Handles incoming Polar webhooks with signature verification and idempotency.
- */
 export class PolarWebhookHandler {
   private readonly store: BillingStore;
   private readonly eventPublisher: EventPublisher;
@@ -169,7 +178,7 @@ export class PolarWebhookHandler {
     if (eventType.startsWith('subscription.')) {
       return {
         kind: 'subscription',
-        eventType,
+        eventType: eventType as PolarSubscriptionEventType,
         payload: this.parseSubscriptionPayload(data),
       };
     }
@@ -177,7 +186,7 @@ export class PolarWebhookHandler {
     if (eventType.startsWith('order.')) {
       return {
         kind: 'order',
-        eventType,
+        eventType: eventType as PolarOrderEventType,
         payload: this.parseOrderPayload(data),
       };
     }

@@ -16,12 +16,18 @@ function hasStringField(data: Record<string, unknown>, key: string): boolean {
   return typeof data[key] === 'string';
 }
 
+function isArrayOfObjects(value: unknown): value is Array<Record<string, unknown>> {
+  return Array.isArray(value) && value.every((item) => isObjectRecord(item));
+}
+
 function isClerkUserEvent(data: unknown): data is ClerkUserEvent {
-  return isObjectRecord(data) && hasStringField(data, 'id');
+  return isObjectRecord(data) && hasStringField(data, 'id') && isArrayOfObjects(data.email_addresses);
 }
 
 function isClerkOrgEvent(data: unknown): data is ClerkOrgEvent {
-  return isObjectRecord(data) && hasStringField(data, 'id');
+  return (
+    isObjectRecord(data) && hasStringField(data, 'id') && hasStringField(data, 'name') && hasStringField(data, 'slug')
+  );
 }
 
 function isClerkMembershipEvent(data: unknown): data is ClerkMembershipEvent {

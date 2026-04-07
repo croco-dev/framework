@@ -253,7 +253,7 @@ describe('PolarWebhookHandler', () => {
       const result = await handler.handle(JSON.stringify(eventData), { 'webhook-id': 'evt-unknown-status' });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Unknown billing status: future_status');
+      expect(result.error).toContain('Event processing failed:');
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
     });

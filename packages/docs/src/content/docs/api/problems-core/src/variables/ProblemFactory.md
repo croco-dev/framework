@@ -7,9 +7,10 @@ title: "ProblemFactory"
 
 > `const` **ProblemFactory**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/ProblemFactory.ts#L11)
+Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/ProblemFactory.ts#L15)
 
-카테고리별 기본 Problem 인스턴스를 생성하는 팩토리입니다.
+카테고리별 Problem 인스턴스를 생성하는 팩토리입니다.
+각 메서드는 해당 카테고리에 맞는 HTTP 상태 코드와 함께 Problem 인스턴스를 생성합니다.
 
 ## Type Declaration
 
@@ -17,249 +18,350 @@ Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:11](https://githu
 
 > **badRequest**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+BadRequest (400) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### businessRuleViolation()
 
 > **businessRuleViolation**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+BusinessRuleViolation (422) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### conflict()
 
 > **conflict**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+Conflict (409) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### forbidden()
 
 > **forbidden**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+Forbidden (403) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### gone()
 
 > **gone**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+Gone (410) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### internalServerError()
 
 > **internalServerError**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+InternalServerError (500) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### notFound()
 
 > **notFound**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+NotFound (404) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### notImplemented()
 
 > **notImplemented**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+NotImplemented (501) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### tooManyRequests()
 
 > **tooManyRequests**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+TooManyRequests (429) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### unauthorized()
 
 > **unauthorized**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+Unauthorized (401) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
 
 ### validationError()
 
 > **validationError**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
+ValidationError (422) 카테고리의 Problem을 생성합니다.
+
 #### Parameters
 
 ##### code
 
 `string`
 
+도메인에서 문제를 식별하는 고유 코드
+
 ##### detail?
 
 `string`
 
+문제의 상세 설명
+
 ##### options?
 
-[`ProblemOptions`](/api/problems-core/src/interfaces/problemoptions/)
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
 
 #### Returns
 
 [`Problem`](/api/problems-core/src/classes/problem/)
 
-## Example
-
-```typescript
-import { ProblemFactory } from '@croco/problems-core';
-
-const problem = ProblemFactory.notFound('user/not-found', '사용자를 찾을 수 없습니다.');
-const body = problem.toJSON();
-```
+Problem 인스턴스

@@ -5,18 +5,21 @@ prev: false
 title: "RateLimiter"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/RateLimiter.ts#L9)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L14)
 
-Core rate limiter service.
-Orchestrates key building, store access, and error handling.
+## Type Parameters
+
+### TContext
+
+`TContext` = [`KeyContext`](/api/ratelimit-core/src/type-aliases/keycontext/)
 
 ## Constructors
 
 ### Constructor
 
-> **new RateLimiter**(`store`, `keyBuilder`, `options?`): `RateLimiter`
+> **new RateLimiter**\<`TContext`\>(`store`, `keyBuilder`, `options?`): `RateLimiter`\<`TContext`\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:15](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/RateLimiter.ts#L15)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L20)
 
 #### Parameters
 
@@ -26,15 +29,21 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:15](https://github.
 
 ##### keyBuilder
 
-[`RateLimitKeyBuilder`](/api/ratelimit-core/src/classes/ratelimitkeybuilder/)
+[`RateLimiterKeyBuilder`](/api/ratelimit-core/src/type-aliases/ratelimiterkeybuilder/)\<`TContext`\> | [`RateLimitKeyBuilder`](/api/ratelimit-core/src/classes/ratelimitkeybuilder/)
 
 ##### options?
 
-`Omit`\<[`RateLimiterOptions`](/api/ratelimit-core/src/type-aliases/ratelimiteroptions/), `"keySegments"`\> = `{}`
+###### failOpen?
+
+`boolean`
+
+###### onStoreError?
+
+(`error`) => `void`
 
 #### Returns
 
-`RateLimiter`
+`RateLimiter`\<`TContext`\>
 
 ## Methods
 
@@ -42,29 +51,21 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:15](https://github.
 
 > **check**(`context`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:32](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/RateLimiter.ts#L32)
-
-Check rate limit for the given context and policy.
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:36](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L36)
 
 #### Parameters
 
 ##### context
 
-[`KeyContext`](/api/ratelimit-core/src/type-aliases/keycontext/)
-
-Request context containing key segments
+`TContext`
 
 ##### policy
 
 [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-Rate limit policy to apply
-
 #### Returns
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
-
-Rate limit result
 
 ***
 
@@ -72,9 +73,7 @@ Rate limit result
 
 > **checkWithKey**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:48](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/RateLimiter.ts#L48)
-
-Check rate limit with a pre-built key (for middleware use).
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:47](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L47)
 
 #### Parameters
 
@@ -82,16 +81,28 @@ Check rate limit with a pre-built key (for middleware use).
 
 `string`
 
-Pre-built rate limit key
-
 ##### policy
 
 [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
-
-Rate limit policy to apply
 
 #### Returns
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Rate limit result
+***
+
+### getStats()
+
+> **getStats**(`key?`): `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
+
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:56](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L56)
+
+#### Parameters
+
+##### key?
+
+`string`
+
+#### Returns
+
+`Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>

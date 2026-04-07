@@ -24,11 +24,33 @@ export class EventPublishFailedError extends Error {
   }
 }
 
-export class InMemoryEventBus implements EventBus {
-  private readonly index = new EventSubscriptionIndex<EventHandlerClass>();
-  private readonly tracer = getTracer();
+export type BackpressureStrategy = 'drop' | 'block' | 'error';
 
-  async publish(event: DomainEvent): Promise<void> {
+export type InMemoryEventBusOptions = {
+  maxConcurrency?: number;
+  backpressureStrategy?: BackpressureStrategy;
+};
+
+type RunningHandler = {
+  eventName: string;
+  handlerName: string;
+  startTime: number;
+};
+
+export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implements EventBus<TEvent> {
+  private readonly index = new EventSubscriptionIndex<EventHandlerClass<TEvent>>();
+  private readonly tracer = getTracer();
+  private readonly maxConcurrency: number;
+  private readonly backpressureStrategy: BackpressureStrategy;
+  private runningHandlers = new Map<string, RunningHandler>();
+  private handlerCounter = 0;
+
+  constructor(options: InMemoryEventBusOptions = {}) {
+    this.maxConcurrency = options.maxConcurrency ?? Number.POSITIVE_INFINITY;
+    this.backpressureStrategy = options.backpressureStrategy ?? 'block';
+  }
+
+  async publish(event: TEvent): Promise<void> {
     const eventName = event.eventName;
     const traceInfo = getActiveTraceInfo();
     const baseEvent = this.createEventWithTraceContext(event, traceInfo);
@@ -43,31 +65,12 @@ export class InMemoryEventBus implements EventBus {
 
   private async finishPublishSpan(
     publishSpan: Span,
-    handlerClasses: EventHandlerClass[],
-    baseEvent: DomainEvent,
+    handlerClasses: EventHandlerClass<TEvent>[],
+    baseEvent: TEvent,
     eventName: string
   ): Promise<void> {
     try {
-      const results = await Promise.allSettled(
-        handlerClasses.map((handlerClass) => this.executeSubscriber(handlerClass, baseEvent, eventName))
-      );
-      const failures = results.flatMap((result, index) => {
-        if (result.status === 'fulfilled') {
-          return result.value ? [result.value] : [];
-        }
-
-        return [
-          {
-            handlerName: handlerClasses[index]?.name ?? 'UnknownHandler',
-            error: this.normalizeError(result.reason),
-          },
-        ];
-      });
-
-      if (failures.length > 0) {
-        throw new EventPublishFailedError(eventName, failures);
-      }
-
+      await this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
       publishSpan.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
       const normalizedError = this.normalizeError(error);
@@ -82,10 +85,111 @@ export class InMemoryEventBus implements EventBus {
     }
   }
 
-  private createPublishSpanAttributes(
-    event: DomainEvent,
-    traceInfo: TraceInfo
-  ): Record<string, boolean | number | string> {
+  private async executeWithBackpressure(
+    handlerClasses: EventHandlerClass<TEvent>[],
+    baseEvent: TEvent,
+    eventName: string
+  ): Promise<void> {
+    if (this.maxConcurrency === Number.POSITIVE_INFINITY || handlerClasses.length === 0) {
+      const results = await Promise.allSettled(
+        handlerClasses.map((handlerClass) => this.executeSubscriber(handlerClass, baseEvent, eventName))
+      );
+      const failures = this.collectFailures(results, handlerClasses);
+      if (failures.length > 0) {
+        throw new EventPublishFailedError(eventName, failures);
+      }
+      return;
+    }
+
+    const currentRunning = this.runningHandlers.size;
+    const availableSlots = this.maxConcurrency - currentRunning;
+
+    if (availableSlots <= 0) {
+      switch (this.backpressureStrategy) {
+        case 'drop': {
+          return;
+        }
+        case 'error': {
+          throw new Error(`Backpressure exceeded: ${currentRunning} handlers already running`);
+        }
+        case 'block':
+        default: {
+          await this.waitForSlot();
+          return this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
+        }
+      }
+    }
+
+    const handlersToRun = handlerClasses.slice(0, availableSlots);
+    const remainingHandlers = handlerClasses.slice(availableSlots);
+
+    const results = await Promise.allSettled(
+      handlersToRun.map((handlerClass) => this.executeSubscriberWithTracking(handlerClass, baseEvent, eventName))
+    );
+
+    if (remainingHandlers.length > 0) {
+      await this.waitForSlot();
+      await this.executeWithBackpressure(remainingHandlers, baseEvent, eventName);
+    }
+
+    const failures = this.collectFailures(results, handlersToRun);
+    if (failures.length > 0) {
+      throw new EventPublishFailedError(eventName, failures);
+    }
+  }
+
+  private async waitForSlot(): Promise<void> {
+    if (this.runningHandlers.size === 0) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (this.runningHandlers.size < this.maxConcurrency) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 10);
+    });
+  }
+
+  private async executeSubscriberWithTracking(
+    handlerClass: EventHandlerClass<TEvent>,
+    baseEvent: TEvent,
+    eventName: string
+  ): Promise<EventPublishFailure | null> {
+    const handlerName = handlerClass.name;
+    const handlerId = `${handlerName}-${++this.handlerCounter}`;
+    const startTime = Date.now();
+
+    this.runningHandlers.set(handlerId, { eventName, handlerName, startTime });
+
+    try {
+      return await this.executeSubscriber(handlerClass, baseEvent, eventName);
+    } finally {
+      this.runningHandlers.delete(handlerId);
+    }
+  }
+
+  private collectFailures(
+    results: PromiseSettledResult<EventPublishFailure | null>[],
+    handlerClasses: EventHandlerClass<TEvent>[]
+  ): EventPublishFailure[] {
+    return results.flatMap((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value ? [result.value] : [];
+      }
+
+      return [
+        {
+          handlerName: handlerClasses[index]?.name ?? 'UnknownHandler',
+          error: this.normalizeError(result.reason),
+        },
+      ];
+    });
+  }
+
+  private createPublishSpanAttributes(event: TEvent, traceInfo: TraceInfo): Record<string, boolean | number | string> {
     return {
       'event.name': event.eventName,
       'event.timestamp': event.timestamp.toISOString(),
@@ -95,13 +199,13 @@ export class InMemoryEventBus implements EventBus {
     };
   }
 
-  private resolveSubscribers(eventName: string): EventHandlerClass[] {
+  private resolveSubscribers(eventName: string): EventHandlerClass<TEvent>[] {
     return Array.from(this.index.match(eventName));
   }
 
   private async executeSubscriber(
-    handlerClass: EventHandlerClass,
-    baseEvent: DomainEvent,
+    handlerClass: EventHandlerClass<TEvent>,
+    baseEvent: TEvent,
     eventName: string
   ): Promise<EventPublishFailure | null> {
     const handlerName = handlerClass.name;
@@ -138,9 +242,9 @@ export class InMemoryEventBus implements EventBus {
 
             try {
               const logger = Container.get(Logger);
-              logger.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, normalizedError);
+              logger.error(`EventHandler error (${eventName}):`, normalizedError);
             } catch {
-              console.error(`❌ EventHandler 실행 중 오류 (${eventName}):`, normalizedError);
+              console.error(`EventHandler error (${eventName}):`, normalizedError);
             }
           } finally {
             handleSpan.end();
@@ -152,7 +256,7 @@ export class InMemoryEventBus implements EventBus {
     return failure;
   }
 
-  private createEventWithTraceContext(event: DomainEvent, traceContext: TraceInfo): DomainEvent {
+  private createEventWithTraceContext(event: TEvent, traceContext: TraceInfo): TEvent {
     const eventCopy = this.cloneEvent(event);
     const traceContextCopy = { ...traceContext };
     eventCopy.metadata = {
@@ -163,7 +267,7 @@ export class InMemoryEventBus implements EventBus {
     return eventCopy;
   }
 
-  private createParentContext(traceContext: DomainEvent['metadata']['traceContext']): Context {
+  private createParentContext(traceContext: TEvent['metadata']['traceContext']): Context {
     if (!traceContext?.isValid || !traceContext.traceId || !traceContext.spanId) {
       return context.active();
     }
@@ -176,8 +280,8 @@ export class InMemoryEventBus implements EventBus {
     });
   }
 
-  private cloneEvent(event: DomainEvent): DomainEvent {
-    const clonedEvent = Object.create(Object.getPrototypeOf(event)) as DomainEvent;
+  private cloneEvent(event: TEvent): TEvent {
+    const clonedEvent = Object.create(Object.getPrototypeOf(event)) as TEvent;
     Object.assign(clonedEvent, this.cloneValue({ ...event }));
 
     return clonedEvent;
@@ -215,15 +319,34 @@ export class InMemoryEventBus implements EventBus {
     return new Error(String(error));
   }
 
-  subscribe(subscription: EventSubscription): void {
+  subscribe(subscription: EventSubscription<TEvent>): void {
     this.index.add(subscription.eventName, subscription.handlerClass);
   }
 
-  unsubscribe(subscription: EventSubscription): void {
+  unsubscribe(subscription: EventSubscription<TEvent>): void {
     this.index.delete(subscription.eventName, subscription.handlerClass);
+    this.cleanupRunningHandlers(subscription.eventName, subscription.handlerClass.name);
+  }
+
+  private cleanupRunningHandlers(eventName: string, handlerName: string): void {
+    for (const [id, runningHandler] of this.runningHandlers.entries()) {
+      if (runningHandler.eventName === eventName && runningHandler.handlerName === handlerName) {
+        this.runningHandlers.delete(id);
+      }
+    }
   }
 
   clear(): void {
     this.index.clear();
+    this.runningHandlers.clear();
+    this.handlerCounter = 0;
+  }
+
+  getRunningHandlerCount(): number {
+    return this.runningHandlers.size;
+  }
+
+  getRunningHandlers(): ReadonlyArray<RunningHandler> {
+    return Array.from(this.runningHandlers.values());
   }
 }

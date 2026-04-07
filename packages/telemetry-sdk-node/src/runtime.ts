@@ -4,6 +4,12 @@ import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentele
 import type { TelemetryConfig } from './config';
 import { OtlpEndpointRequiredProblem } from './libs/problems/TelemetryProblems';
 
+type ForceFlushResult = {
+  success: boolean;
+  flushedSpans?: number;
+  error?: Error;
+};
+
 class TelemetryRuntime {
   private static instance: TelemetryRuntime;
   private sdk: NodeSDK | null = null;
@@ -111,15 +117,36 @@ class TelemetryRuntime {
     }
   }
 
-  async forceFlush(): Promise<void> {
+  async forceFlush(timeoutMillis?: number): Promise<ForceFlushResult> {
     if (!this.processor) {
-      return;
+      return { success: true };
     }
 
+    const effectiveTimeout = timeoutMillis ?? 30000;
+
     try {
-      await this.processor.forceFlush();
+      const flushPromise = this.processor.forceFlush();
+
+      if (timeoutMillis !== undefined) {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`forceFlush timed out after ${effectiveTimeout}ms`)), effectiveTimeout);
+        });
+
+        await Promise.race([flushPromise, timeoutPromise]);
+      } else {
+        await flushPromise;
+      }
+
+      return {
+        success: true,
+        flushedSpans: this.processor ? undefined : 0,
+      };
     } catch (error) {
       this.reportError('forceFlush', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
     }
   }
 
@@ -156,3 +183,4 @@ class TelemetryRuntime {
 }
 
 export { TelemetryRuntime };
+export type { ForceFlushResult };

@@ -5,7 +5,7 @@ prev: false
 title: "RetryAbortedProblem"
 ---
 
-Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:3](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L3)
+Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L3)
 
 Problem types raised when retry execution is blocked or fully exhausted.
 
@@ -19,7 +19,7 @@ Problem types raised when retry execution is blocked or fully exhausted.
 
 > **new RetryAbortedProblem**(`message`, `methodName?`): `RetryAbortedProblem`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L7)
+Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L7)
 
 #### Parameters
 
@@ -45,9 +45,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:7](https
 
 > `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L5)
-
-HTTP 의미론과 매핑되는 문제 카테고리입니다.
+Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:5](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L5)
 
 #### Overrides
 
@@ -59,7 +57,7 @@ HTTP 의미론과 매핑되는 문제 카테고리입니다.
 
 > `readonly` `optional` **cause**: `Error`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L28)
+Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Inherited from
 
@@ -71,9 +69,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/c
 
 > `readonly` **code**: `"RETRY_ABORTED"` = `'RETRY_ABORTED'`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L4)
-
-도메인에서 문제를 식별하는 고유 코드입니다.
+Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L4)
 
 #### Overrides
 
@@ -85,9 +81,7 @@ Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:4](https
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L24)
-
-문제의 상세 설명입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L24)
 
 #### Inherited from
 
@@ -97,11 +91,9 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L27)
-
-Problem Details 확장 필드입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L27)
 
 #### Inherited from
 
@@ -113,9 +105,7 @@ Problem Details 확장 필드입니다.
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L26)
-
-특정 에러 발생 인스턴스를 식별하는 URI입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L26)
 
 #### Inherited from
 
@@ -139,7 +129,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 > `readonly` `optional` **methodName**: `string`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L9)
+Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L9)
 
 ***
 
@@ -171,9 +161,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L25)
-
-문제 유형 식별자 URI입니다.
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L25)
 
 #### Inherited from
 
@@ -209,7 +197,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:70](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L70)
+Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L62)
 
 ##### Returns
 
@@ -227,7 +215,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:70](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L66)
+Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L58)
 
 ##### Returns
 
@@ -241,13 +229,13 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/c
 
 ### toJSON()
 
-> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
+> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:74](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/problems-core/src/libs/Problem.ts#L74)
+Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L66)
 
 #### Returns
 
-[`ProblemDetails`](/api/problems-core/src/interfaces/problemdetails/)
+[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
 #### Inherited from
 
@@ -329,7 +317,7 @@ a();
 
 > `static` **fromContext**(`methodName`): `RetryAbortedProblem`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:14](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L14)
+Defined in: [packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/errors/RetryAbortedProblem.ts#L14)
 
 #### Parameters
 

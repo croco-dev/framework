@@ -72,6 +72,22 @@ describe('InMemoryBillingStore', () => {
       expect(await store.findAccountByExternalId('ext-cust-1')).toBeNull();
       expect(await store.findAccountByExternalId('ext-cust-2')).toEqual(updatedAccount);
     });
+
+    it('should delete account and clear lookup indices', async () => {
+      const account: BillingAccount = {
+        id: 'tenant-1',
+        tenantId: 'tenant-1',
+        externalCustomerId: 'ext-cust-1',
+        email: 'test@example.com',
+        createdAt: new Date(),
+      };
+
+      await store.saveAccount(account);
+      await store.deleteAccount(account.id);
+
+      expect(await store.findAccountByTenantId(account.tenantId)).toBeNull();
+      expect(await store.findAccountByExternalId(account.externalCustomerId)).toBeNull();
+    });
   });
 
   describe('findSubscription', () => {
@@ -119,6 +135,25 @@ describe('InMemoryBillingStore', () => {
     it('should return null when finding by non-existent external subscription ID', async () => {
       const result = await store.findSubscriptionByExternalId('non-existent');
       expect(result).toBeNull();
+    });
+
+    it('should delete subscription and clear external subscription lookup', async () => {
+      const subscription: Subscription = {
+        id: 'sub-1',
+        billingAccountId: 'tenant-1',
+        externalSubscriptionId: 'ext-sub-1',
+        planId: 'plan-pro',
+        status: 'active',
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      };
+
+      await store.saveSubscription(subscription);
+      await store.deleteSubscription(subscription.billingAccountId);
+
+      expect(await store.findSubscription(subscription.billingAccountId)).toBeNull();
+      expect(await store.findSubscriptionByExternalId(subscription.externalSubscriptionId)).toBeNull();
     });
   });
 

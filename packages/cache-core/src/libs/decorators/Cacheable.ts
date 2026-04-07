@@ -1,14 +1,9 @@
 import type { CacheStore } from '../CacheStore';
 
 export interface CacheableOptions<V = unknown> {
-  /** Cache store instance */
-  store: CacheStore<V>;
-
+  store: CacheStore<string, V>;
   namespace?: string;
-
-  /** Time to live in milliseconds */
   ttl?: number;
-
   keyPrefix?: string;
 }
 
@@ -25,31 +20,26 @@ function resolveCachePrefix(options: CacheableOptions<unknown>, methodName: stri
 }
 
 function generateCacheKey(prefix: string, args: unknown[]): string {
-  const argsKey = JSON.stringify(args);
-  return `${prefix}:${argsKey}`;
+  return `${prefix}:${JSON.stringify(args)}`;
 }
 
 export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDecorator {
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
-    const originalMethod = descriptor.value;
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<V | undefined>;
     const methodName = String(propertyKey);
     const prefix = resolveCachePrefix(options, methodName);
 
-    descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+    descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<V | undefined> {
       const cacheKey = generateCacheKey(prefix, args);
 
-      const cachedValue = await options.store.get(cacheKey);
-      if (cachedValue !== undefined) {
-        return cachedValue;
-      }
-
-      const result = await originalMethod.apply(this, args);
-
-      if (result !== undefined) {
-        await options.store.set(cacheKey, result as V, options.ttl);
-      }
-
-      return result;
+      return options.store.getOrSet(
+        cacheKey,
+        async () => {
+          const result = await originalMethod.apply(this, args);
+          return result;
+        },
+        { ttlMs: options.ttl }
+      );
     };
 
     return descriptor;

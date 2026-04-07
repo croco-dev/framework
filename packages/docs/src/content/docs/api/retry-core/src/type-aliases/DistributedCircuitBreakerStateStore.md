@@ -7,9 +7,11 @@ title: "DistributedCircuitBreakerStateStore"
 
 > **DistributedCircuitBreakerStateStore** = [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/)
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:108](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/CircuitBreakerState.ts#L108)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:170](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreakerState.ts#L170)
+
+분산 환경(Redis, DynamoDB 등)에서 사용 가능한 Circuit Breaker 상태 저장소 인터페이스.
 
 :::caution[Deprecated]
-Use CircuitBreakerStateStore directly.
-DistributedCircuitBreakerStateStore is now merged into CircuitBreakerStateStore.
+CircuitBreakerStateStore를 직접 사용하세요. 모든 CircuitBreakerStateStore 구현체는
+기본적으로 분산 환경을 지원합니다.
 :::

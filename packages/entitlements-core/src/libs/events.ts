@@ -24,3 +24,17 @@ export class EntitlementQuotaExceededEvent extends DomainEvent {
     super();
   }
 }
+
+export class EntitlementOverageAllowedEvent extends DomainEvent {
+  public static eventName = 'entitlement.overage.allowed';
+
+  constructor(
+    public readonly tenantId: string,
+    public readonly featureKey: string,
+    public readonly usage: number,
+    public readonly quota: number,
+    public readonly planId: string
+  ) {
+    super();
+  }
+}

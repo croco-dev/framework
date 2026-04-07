@@ -7,18 +7,13 @@ title: "GuardContext"
 
 > **GuardContext** = [`KeyContext`](/api/ratelimit-core/src/type-aliases/keycontext/) & `object`
 
-Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:28](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L28)
-
-Execution context interface for guard.
-Compatible with protocols-rest ExecutionContext.
+Defined in: [packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/guards/RateLimitGuard.ts#L14)
 
 ## Type Declaration
 
 ### getHandler()
 
 > **getHandler**(): (...`args`) => `unknown`
-
-The handler method being invoked
 
 #### Returns
 
@@ -37,8 +32,6 @@ The handler method being invoked
 ### set()
 
 > **set**\<`T`\>(`key`, `value`): `void`
-
-Set a value in the context (for passing result to middleware)
 
 #### Type Parameters
 

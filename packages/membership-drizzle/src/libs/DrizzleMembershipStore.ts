@@ -6,17 +6,18 @@ import {
   MembershipStore,
 } from '@croco/membership-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb, DrizzleDeleteFn, DrizzleInsertFn, DrizzleSelectFn } from '@croco/tx-drizzle';
+import type { DrizzleDb } from '@croco/tx-drizzle';
 import { and, count, eq } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { memberships } from './schema';
 
-type DrizzleMembershipClient = DrizzleDb & {
-  select: DrizzleSelectFn;
-  insert: DrizzleInsertFn;
-  delete: DrizzleDeleteFn;
-};
+type DrizzleMembershipClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
+
+type MembershipRow = typeof memberships.$inferSelect;
 
 export const DRIZZLE_TOKEN = new Token<DrizzleMembershipClient>('DRIZZLE_TOKEN');
+
+export type { DrizzleMembershipClient };
 
 @Component()
 export class DrizzleMembershipStore extends MembershipStore {
@@ -30,37 +31,37 @@ export class DrizzleMembershipStore extends MembershipStore {
   async findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const rows = (await client
       .select()
       .from(memberships)
       .where(and(eq(memberships.tenantId, tenantId), eq(memberships.userId, userId)))
-      .limit(1);
+      .limit(1)) as MembershipRow[];
 
-    if (result.length === 0) {
+    if (rows.length === 0) {
       return null;
     }
 
-    return this.mapToMembership(result[0]);
+    return this.mapToMembership(rows[0]);
   }
 
   async findAllByTenant(tenantId: string): Promise<Membership[]> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client.select().from(memberships).where(eq(memberships.tenantId, tenantId));
-    return result.map((row: typeof memberships.$inferSelect) => this.mapToMembership(row));
+    const rows = (await client.select().from(memberships).where(eq(memberships.tenantId, tenantId))) as MembershipRow[];
+    return rows.map((row) => this.mapToMembership(row));
   }
 
   async findAllByUser(userId: string): Promise<Membership[]> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client.select().from(memberships).where(eq(memberships.userId, userId));
-    return result.map((row: typeof memberships.$inferSelect) => this.mapToMembership(row));
+    const rows = (await client.select().from(memberships).where(eq(memberships.userId, userId))) as MembershipRow[];
+    return rows.map((row) => this.mapToMembership(row));
   }
 
   async save(input: MembershipCreateInput): Promise<Membership> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const rows = (await client
       .insert(memberships)
       .values({
         id: input.id,
@@ -76,9 +77,9 @@ export class DrizzleMembershipStore extends MembershipStore {
           updatedAt: new Date(),
         },
       })
-      .returning();
+      .returning()) as MembershipRow[];
 
-    return this.mapToMembership(result[0]);
+    return this.mapToMembership(rows[0]);
   }
 
   async delete(tenantId: string, userId: string): Promise<void> {
@@ -90,15 +91,26 @@ export class DrizzleMembershipStore extends MembershipStore {
   async countByRole(tenantId: string, role: MembershipRole): Promise<number> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const rows = (await client
       .select({ total: count() })
       .from(memberships)
-      .where(and(eq(memberships.tenantId, tenantId), eq(memberships.role, role)));
+      .where(and(eq(memberships.tenantId, tenantId), eq(memberships.role, role)))) as { total: number }[];
 
-    return Number(result[0]?.total ?? 0);
+    return Number(rows[0]?.total ?? 0);
   }
 
-  private mapToMembership(row: typeof memberships.$inferSelect): Membership {
+  async countAll(tenantId: string): Promise<number> {
+    const client = this.txManager.getClient() ?? this.db;
+
+    const rows = (await client
+      .select({ total: count() })
+      .from(memberships)
+      .where(eq(memberships.tenantId, tenantId))) as { total: number }[];
+
+    return Number(rows[0]?.total ?? 0);
+  }
+
+  private mapToMembership(row: MembershipRow): Membership {
     return {
       id: row.id,
       tenantId: row.tenantId,

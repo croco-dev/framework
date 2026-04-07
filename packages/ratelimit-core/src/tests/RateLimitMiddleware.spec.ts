@@ -8,6 +8,7 @@ describe('createRateLimitMiddleware', () => {
   let mockRateLimiter!: RateLimiter;
   const policy: RateLimitPolicy = {
     name: 'test-global',
+    algorithm: 'sliding',
     limit: 100,
     windowMs: 3600000,
   };

@@ -7,12 +7,7 @@ title: "corsMiddleware"
 
 > **corsMiddleware**(`options`): [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:34](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L34)
-
-CORS (Cross-Origin Resource Sharing) middleware
-
-Handles preflight requests automatically and adds CORS headers to responses.
-Only adds CORS headers if the request origin is in the allowlist.
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L15)
 
 ## Parameters
 
@@ -23,13 +18,3 @@ Only adds CORS headers if the request origin is in the allowlist.
 ## Returns
 
 [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
-
-## Example
-
-```typescript
-app.use(corsMiddleware({
-  origins: ['https://example.com', 'https://app.example.com'],
-  methods: ['GET', 'POST'],
-  credentials: true,
-}));
-```

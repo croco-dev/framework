@@ -1,33 +1,39 @@
-export type RelationTuple = {
-  object: string;
-  relation: string;
-  subject: string;
-};
+export type ResourceObject = `${string}:${string}`;
 
-export type CheckRequest = {
+export type Subject = `user:${string}` | `role:${string}` | `group:${string}`;
+
+export type Relation = 'owner' | 'editor' | 'viewer' | 'admin' | 'member' | string;
+
+export interface RelationTuple {
+  object: ResourceObject;
+  relation: Relation;
+  subject: Subject;
+}
+
+export interface CheckRequest {
   tenantId: string;
-  subject: string;
-  relation: string;
-  object: string;
-};
+  subject: Subject;
+  relation: Relation;
+  object: ResourceObject;
+}
 
-export type CheckResult = {
+export interface CheckResult {
   allowed: boolean;
-};
+}
 
-export type GrantRequest = {
+export interface GrantRequest {
   tenantId: string;
   tuple: RelationTuple;
-};
+}
 
-export type RevokeRequest = {
+export interface RevokeRequest {
   tenantId: string;
   tuple: RelationTuple;
-};
+}
 
-export type ListRequest = {
+export interface ListRequest {
   tenantId: string;
-  object?: string;
-  subject?: string;
-  relation?: string;
-};
+  object?: ResourceObject;
+  subject?: Subject;
+  relation?: Relation;
+}

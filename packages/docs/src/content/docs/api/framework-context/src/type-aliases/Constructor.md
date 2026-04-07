@@ -7,22 +7,32 @@ title: "Constructor"
 
 > **Constructor**\<`T`\> = (...`args`) => `T`
 
-Defined in: [packages/framework-context/src/libs/types.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L10)
+Defined in: [packages/framework-context/src/libs/types.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L3)
 
-Generic constructor type
+인스턴스를 생성할 수 있는 생성자 시그니처 타입입니다.
 
 ## Type Parameters
 
 ### T
 
-`T` = `any`
+`T` = `unknown`
 
 ## Parameters
 
 ### args
 
-...`any`[]
+...`never`[]
 
 ## Returns
 
 `T`
+
+## Example
+
+```typescript
+import type { Constructor } from '@croco/framework-context';
+
+class UserService {}
+
+const target: Constructor<UserService> = UserService;
+```

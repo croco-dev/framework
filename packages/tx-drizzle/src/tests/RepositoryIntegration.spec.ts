@@ -42,6 +42,10 @@ class IntegrationRepository extends AbstractDrizzleRepository<UserEntity, string
     return;
   }
 
+  async deleteById(_id: string): Promise<void> {
+    return;
+  }
+
   private getClientId(): string {
     const dbOrTx = this.getDb();
     if ('txId' in dbOrTx && typeof dbOrTx.txId === 'string') {

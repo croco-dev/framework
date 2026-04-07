@@ -9,11 +9,11 @@ export class AccessEngine {
     try {
       return await this.provider.check(request);
     } catch (error) {
-      if (!this.isBusinessProblem(error)) {
-        throw error;
+      if (this.isBusinessProblem(error)) {
+        return { allowed: false };
       }
 
-      return { allowed: false };
+      throw error;
     }
   }
 
@@ -29,7 +29,7 @@ export class AccessEngine {
     return this.provider.revoke(request);
   }
 
-  async list(request: ListRequest) {
+  async list(request: ListRequest): Promise<ReturnType<AccessProvider['list']>> {
     return this.provider.list(request);
   }
 }

@@ -129,12 +129,16 @@ export class BillingService {
 
     await this.gateway.cancelSubscription(subscription.externalSubscriptionId, immediate);
 
-    await this.store.saveSubscription({
-      ...subscription,
-      cancelAtPeriodEnd: !immediate,
-      status: immediate ? 'canceled' : subscription.status,
-      lastSyncedAt: new Date(),
-    });
+    if (immediate) {
+      await this.cleanupCanceledSubscription(subscription);
+    } else {
+      await this.store.saveSubscription({
+        ...subscription,
+        cancelAtPeriodEnd: true,
+        status: subscription.status,
+        lastSyncedAt: new Date(),
+      });
+    }
 
     if (this.eventPublisher) {
       await this.eventPublisher.publish(
@@ -182,5 +186,22 @@ export class BillingService {
     }
 
     return this.store.findSubscription(account.id);
+  }
+
+  private async cleanupCanceledSubscription(subscription: Subscription): Promise<void> {
+    const orders = await this.store.findOrdersByAccount(subscription.billingAccountId);
+
+    if (orders.length > 0) {
+      await this.store.saveSubscription({
+        ...subscription,
+        cancelAtPeriodEnd: false,
+        status: 'canceled',
+        lastSyncedAt: new Date(),
+      });
+      return;
+    }
+
+    await this.store.deleteSubscription(subscription.billingAccountId);
+    await this.store.deleteAccount(subscription.billingAccountId);
   }
 }

@@ -11,6 +11,7 @@ describe('RateLimiter', () => {
 
   const policy: RateLimitPolicy = {
     name: 'test-policy',
+    algorithm: 'sliding',
     limit: 10,
     windowMs: 60000,
   };
@@ -25,6 +26,7 @@ describe('RateLimiter', () => {
     limit: 10,
     remaining: 9,
     resetAtMs: Date.now() + 60000,
+    policyName: 'sliding',
   };
 
   const failedResult: RateLimitResult = {
@@ -33,13 +35,15 @@ describe('RateLimiter', () => {
     limit: 10,
     remaining: 0,
     resetAtMs: Date.now() + 60000,
+    policyName: 'sliding',
   };
 
   beforeEach(() => {
     mockStore = {
       check: vi.fn().mockResolvedValue(successResult),
+      getStats: vi.fn().mockResolvedValue({ allowed: 0, denied: 0, total: 0 }),
       pruneExpired: vi.fn().mockResolvedValue(0),
-    };
+    } as unknown as RateLimitStore;
     keyBuilder = new RateLimitKeyBuilder(['tenant', 'user']);
     rateLimiter = new RateLimiter(mockStore, keyBuilder);
   });

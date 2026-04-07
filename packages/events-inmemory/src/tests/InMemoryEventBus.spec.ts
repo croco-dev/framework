@@ -56,7 +56,7 @@ describe('InMemoryEventBus', () => {
   describe('subscribe', () => {
     it('should subscribe a handler to an event', async () => {
       Container.set(TestHandler, testHandler);
-      const subscription: EventSubscription = { eventName: 'TestEvent', handlerClass: TestHandler };
+      const subscription: EventSubscription<TestEvent> = { eventName: 'TestEvent', handlerClass: TestHandler };
       eventBus.subscribe(subscription);
 
       const event = new TestEvent('subscribe-test');
@@ -186,7 +186,7 @@ describe('InMemoryEventBus', () => {
         });
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
-          '❌ EventHandler 실행 중 오류 (TestEvent):',
+          'EventHandler error (TestEvent):',
           expect.objectContaining({ message: 'Handler failed intentionally' })
         );
         expect(successHandler.handledEvents).toHaveLength(1);
@@ -567,7 +567,7 @@ describe('InMemoryEventBus', () => {
   describe('unsubscribe', () => {
     it('should unsubscribe a handler', async () => {
       Container.set(TestHandler, testHandler);
-      const subscription: EventSubscription = { eventName: 'TestEvent', handlerClass: TestHandler };
+      const subscription: EventSubscription<TestEvent> = { eventName: 'TestEvent', handlerClass: TestHandler };
 
       eventBus.subscribe(subscription);
       eventBus.unsubscribe(subscription);
@@ -579,8 +579,35 @@ describe('InMemoryEventBus', () => {
     });
 
     it('should not fail when unsubscribing non-existent handler', () => {
-      const subscription: EventSubscription = { eventName: 'TestEvent', handlerClass: TestHandler };
+      const subscription: EventSubscription<TestEvent> = { eventName: 'TestEvent', handlerClass: TestHandler };
       expect(() => eventBus.unsubscribe(subscription)).not.toThrow();
+    });
+
+    it('should clean up running handlers on unsubscribe', async () => {
+      class SlowHandler implements EventHandler<TestEvent> {
+        public static completeCount = 0;
+
+        async handle(): Promise<void> {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          SlowHandler.completeCount++;
+        }
+      }
+
+      const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
+
+      Container.set(SlowHandler, new SlowHandler());
+      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      limitedBus.publish(new TestEvent('slow1'));
+      limitedBus.publish(new TestEvent('slow2'));
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(1);
+
+      limitedBus.unsubscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(0);
     });
   });
 
@@ -594,6 +621,215 @@ describe('InMemoryEventBus', () => {
       await eventBus.publish(event);
 
       expect(testHandler.handledEvents).toHaveLength(0);
+    });
+
+    it('should clear running handlers', async () => {
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
+
+      Container.set(SlowHandler, new SlowHandler());
+      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      limitedBus.publish(new TestEvent('slow'));
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(1);
+
+      limitedBus.clear();
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(0);
+    });
+  });
+
+  describe('backpressure', () => {
+    it('should respect maxConcurrency with block strategy', async () => {
+      const executionOrder: string[] = [];
+
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          executionOrder.push(`start-${event.message}`);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          executionOrder.push(`end-${event.message}`);
+        }
+      }
+
+      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'block' });
+
+      Container.set(SlowHandler, new SlowHandler());
+      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      await Promise.all([
+        limitedBus.publish(new TestEvent('first')),
+        limitedBus.publish(new TestEvent('second')),
+        limitedBus.publish(new TestEvent('third')),
+      ]);
+
+      expect(executionOrder).toEqual([
+        'start-first',
+        'end-first',
+        'start-second',
+        'end-second',
+        'start-third',
+        'end-third',
+      ]);
+    });
+
+    it('should drop events when using drop strategy', async () => {
+      const executionCount: string[] = [];
+
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          executionCount.push(event.message);
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      const dropBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'drop' });
+
+      Container.set(SlowHandler, new SlowHandler());
+      dropBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      const promise1 = dropBus.publish(new TestEvent('first'));
+      const promise2 = dropBus.publish(new TestEvent('second'));
+      const promise3 = dropBus.publish(new TestEvent('third'));
+
+      await Promise.all([promise1, promise2, promise3]);
+
+      expect(executionCount).toHaveLength(1);
+      expect(executionCount[0]).toBe('first');
+    });
+
+    it('should throw error when using error strategy', async () => {
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      const errorBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'error' });
+
+      Container.set(SlowHandler, new SlowHandler());
+      errorBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      const promise1 = errorBus.publish(new TestEvent('first'));
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      await expect(errorBus.publish(new TestEvent('second'))).rejects.toThrow('Backpressure exceeded');
+
+      await promise1;
+    });
+
+    it('should track running handlers correctly', async () => {
+      let resolveHandler: (() => void) | undefined;
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          await new Promise<void>((resolve) => {
+            resolveHandler = resolve;
+          });
+        }
+      }
+
+      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+
+      Container.set(BlockingHandler, new BlockingHandler());
+      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: BlockingHandler });
+
+      const publishPromise = limitedBus.publish(new TestEvent('block'));
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(1);
+      expect(limitedBus.getRunningHandlers()).toHaveLength(1);
+      expect(limitedBus.getRunningHandlers()[0].eventName).toBe('TestEvent');
+      expect(limitedBus.getRunningHandlers()[0].handlerName).toBe('BlockingHandler');
+
+      resolveHandler?.();
+      await publishPromise;
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(0);
+    });
+
+    it('should allow unlimited concurrency by default', async () => {
+      const executionOrder: string[] = [];
+
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          executionOrder.push(`start-${event.message}`);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          executionOrder.push(`end-${event.message}`);
+        }
+      }
+
+      const unlimitedBus = new InMemoryEventBus<TestEvent>();
+
+      Container.set(SlowHandler, new SlowHandler());
+      unlimitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      await Promise.all([
+        unlimitedBus.publish(new TestEvent('first')),
+        unlimitedBus.publish(new TestEvent('second')),
+        unlimitedBus.publish(new TestEvent('third')),
+      ]);
+
+      const starts = executionOrder.filter((e) => e.startsWith('start-'));
+      expect(starts).toHaveLength(3);
+    });
+  });
+
+  describe('memory leak prevention', () => {
+    it('should clean up handler counter and not grow unbounded', async () => {
+      const handlerCount = 100;
+
+      class QuickHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          await Promise.resolve();
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>();
+
+      Container.set(QuickHandler, new QuickHandler());
+      bus.subscribe({ eventName: 'TestEvent', handlerClass: QuickHandler });
+
+      for (let i = 0; i < handlerCount; i++) {
+        await bus.publish(new TestEvent(`event-${i}`));
+      }
+
+      expect(bus.getRunningHandlerCount()).toBe(0);
+    });
+
+    it('should release all references on clear', async () => {
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+
+      Container.set(SlowHandler, new SlowHandler());
+      bus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      const publishPromise = bus.publish(new TestEvent('slow'));
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(bus.getRunningHandlerCount()).toBe(1);
+
+      bus.clear();
+
+      expect(bus.getRunningHandlerCount()).toBe(0);
+
+      await publishPromise;
+
+      expect(bus.getRunningHandlerCount()).toBe(0);
     });
   });
 });

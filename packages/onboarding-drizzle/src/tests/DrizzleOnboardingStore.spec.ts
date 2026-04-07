@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import type { OnboardingState } from '@croco/onboarding-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DrizzleOnboardingClient } from '../libs/DrizzleOnboardingStore';
 import { DrizzleOnboardingStore } from '../libs/DrizzleOnboardingStore';
 
 describe('DrizzleOnboardingStore', () => {
@@ -16,12 +16,10 @@ describe('DrizzleOnboardingStore', () => {
   };
 
   beforeEach(() => {
-    // Mock Drizzle DB chain
-    // select().from().where().limit()
     const mockQueryBuilder = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([]), // Default empty
+      limit: vi.fn().mockResolvedValue([]),
       values: vi.fn().mockReturnThis(),
       onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
     };
@@ -32,20 +30,12 @@ describe('DrizzleOnboardingStore', () => {
     };
 
     mockTxManager = {
-      getClient: vi.fn().mockReturnValue(null), // No active tx
+      getClient: vi.fn().mockReturnValue(null),
     };
 
     store = new DrizzleOnboardingStore(
-      mockDb as unknown as DrizzleDb & {
-        select: (...args: unknown[]) => unknown;
-        insert: (...args: unknown[]) => unknown;
-      },
-      mockTxManager as unknown as TxManager<
-        DrizzleDb & {
-          select: (...args: unknown[]) => unknown;
-          insert: (...args: unknown[]) => unknown;
-        }
-      >
+      mockDb as unknown as DrizzleOnboardingClient,
+      mockTxManager as unknown as TxManager<DrizzleOnboardingClient>
     );
   });
 
@@ -65,6 +55,5 @@ describe('DrizzleOnboardingStore', () => {
     await store.saveState('tenant-1', 'user-1', 'onboarding-1', newState);
 
     expect(mockDb.insert).toHaveBeenCalled();
-    // Verify values passed to insert... (omitted for brevity in mock test)
   });
 });

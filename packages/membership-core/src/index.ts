@@ -7,32 +7,40 @@
  *
  * @feature 멤버십 라이프사이클 관리 - 사용자 추가, 제거, 역할 변경
  * @feature 역할 기반 접근 제어 - owner, admin, member, viewer 계층 구조
+ * @feature 소유권 보호 - 마지막 소유자 제거/강등 방지
+ * @feature 소유권 이전 - 안전한 소유권 이전 인터페이스
+ * @feature 좌석 제한 통합 - entitlements-core 연동
  * @feature 도메인 이벤트 - 멤버십 변경 이벤트 발행
  * @feature 저장소 추상화 - MembershipStore 인터페이스로 다양한 저장소 지원
  *
  * @example 기본 사용법
  * ```typescript
- * import { MembershipService, InMemoryMembershipStore } from '@croco/membership-core';
+ * import { MembershipManager, InMemoryMembershipStore } from '@croco/membership-core';
  *
  * const store = new InMemoryMembershipStore();
- * const service = new MembershipService(store, eventPublisher);
+ * const manager = new MembershipManager(store, eventPublisher);
  *
  * // 멤버 추가
- * const membership = await service.addMember('tenant-123', 'user-456', 'admin');
+ * const membership = await manager.addMember('tenant-123', 'user-456', 'admin');
  *
  * // 역할 변경
- * await service.updateRole('tenant-123', 'user-456', 'owner');
+ * await manager.updateRole('tenant-123', 'user-456', 'owner');
+ *
+ * // 소유권 이전
+ * await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner');
  *
  * // 멤버 제거
- * await service.removeMember('tenant-123', 'user-456');
+ * await manager.removeMember('tenant-123', 'user-456');
  * ```
  *
  * @description 이 패키지는 다음을 제공합니다:
+ * - {@link MembershipManager}: 멤버십 관리 매니저
  * - {@link MembershipService}: 멤버십 관리 서비스
  * - {@link MembershipStore}: 저장소 인터페이스
  * - {@link InMemoryMembershipStore}: 인메모리 저장소 구현체
+ * - {@link SeatLimitChecker}: 좌석 제한 체커 인터페이스
  * - 도메인 이벤트: {@link MembershipCreatedEvent}, {@link MembershipRemovedEvent}, {@link MembershipUpdatedEvent}
- * - 문제 타입: {@link MembershipNotFoundProblem}, {@link AlreadyMemberProblem}, {@link LastOwnerProblem}
+ * - 문제 타입: {@link MembershipNotFoundProblem}, {@link AlreadyMemberProblem}, {@link LastOwnerCannotBeRemovedProblem}
  */
 
 /**
@@ -105,15 +113,26 @@ export { MembershipUpdatedEvent } from './libs/events/MembershipUpdatedEvent';
  * ```
  */
 export { InMemoryMembershipStore } from './libs/InMemoryMembershipStore';
+
+/**
+ * 멤버십 매니저 추상 인터페이스
+ *
+ * @description 멤버십 관리 기능의 추상 인터페이스입니다.
+ */
 export { MembershipManager as AbstractMembershipManager } from './libs/interfaces/AbstractMembershipManager';
+
 /**
  * 멤버십 관리자
  *
- * @description 멤버십 라이프사이클을 관리하는 서비스입니다. 내장된 owner invariant 체크를 통해 마지막 소유자가 제거되지 않도록 보호합니다.
+ * @description 멤버십 라이프사이클을 관리하는 매니저입니다.
+ * - 역할 계층 검증 (owner > admin > member > viewer)
+ * - 소유권 보호 (마지막 소유자 제거/강등 방지)
+ * - 소유권 이전 지원
+ * - 좌석 제한 통합
  *
- * @example 서비스 사용
+ * @example 매니저 사용
  * ```typescript
- * const manager = new MembershipManager(store, eventPublisher, logger);
+ * const manager = new MembershipManager(store, eventPublisher, seatLimitChecker);
  *
  * // 멤버 추가
  * await manager.addMember('tenant-123', 'user-456', 'admin');
@@ -121,12 +140,14 @@ export { MembershipManager as AbstractMembershipManager } from './libs/interface
  * // 역할 변경
  * await manager.updateRole('tenant-123', 'user-456', 'owner');
  *
+ * // 소유권 이전
+ * await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner');
+ *
  * // 멤버 제거
  * await manager.removeMember('tenant-123', 'user-456');
  * ```
  */
 export { MembershipManager } from './libs/MembershipManager';
-
 /**
  * 멤버십 소유자 변경 가드
  *
@@ -145,21 +166,27 @@ export { MembershipManager } from './libs/MembershipManager';
  * ```
  */
 export { MembershipOwnerGuard } from './libs/MembershipOwnerGuard';
-
 /**
  * 멤버십 서비스
  *
  * @description 멤버십 라이프사이클을 관리하는 서비스입니다. {@link MembershipOwnerGuard}를 사용하여 소유자 제약 조건을 검증합니다.
+ * - 역할 계층 검증
+ * - 소유권 보호
+ * - 소유권 이전 지원
+ * - 좌석 제한 통합
  *
  * @example 서비스 사용
  * ```typescript
- * const service = new MembershipService(store, eventPublisher);
+ * const service = new MembershipService(store, eventPublisher, seatLimitChecker);
  *
  * // 멤버 추가
  * await service.addMember('tenant-123', 'user-456', 'admin');
  *
  * // 역할 변경
  * await service.updateRole('tenant-123', 'user-456', 'owner');
+ *
+ * // 소유권 이전
+ * await service.transferOwnership('tenant-123', 'current-owner', 'new-owner');
  *
  * // 멤버 제거
  * await service.removeMember('tenant-123', 'user-456');
@@ -183,7 +210,6 @@ export { MembershipService } from './libs/MembershipService';
  * ```
  */
 export { MembershipStore } from './libs/MembershipStore';
-
 /**
  * 마지막 소유자 제거 불가 문제
  *
@@ -201,7 +227,6 @@ export { MembershipStore } from './libs/MembershipStore';
  * ```
  */
 export { LastOwnerCannotBeRemovedProblem } from './libs/problems/LastOwnerCannotBeRemovedProblem';
-
 /**
  * 멤버십 제약 조건 문제
  *
@@ -239,21 +264,60 @@ export { MembershipConstraintProblem } from './libs/problems/MembershipConstrain
  *
  * @description 지정된 테넌트-사용자 조합에 대한 멤버십을 찾을 수 없을 때 발생하는 문제입니다.
  */
+/**
+ * 소유권 이전 필요 문제
+ *
+ * @description 소유자의 역할을 변경하려 할 때 소유권 이전이 필요한 경우 발생하는 문제입니다.
+ */
+/**
+ * 역할 계층 위반 문제
+ *
+ * @description 역할 계층을 위반하는 권한 변경을 시도할 때 발생하는 문제입니다.
+ */
+/**
+ * 좌석 제한 초과 문제
+ *
+ * @description 테넌트의 좌석 제한을 초과하여 멤버를 추가하려 할 때 발생하는 문제입니다.
+ */
 export {
   AlreadyMemberProblem,
   InvalidRoleProblem,
   LastOwnerProblem,
   MembershipNotFoundProblem,
+  OwnershipTransferRequiredProblem,
+  RoleHierarchyViolationProblem,
+  SeatLimitExceededProblem,
 } from './libs/problems/MembershipProblems';
+/**
+ * 좌석 제한 체커 인터페이스
+ *
+ * @description entitlements-core와 연동하여 테넌트의 좌석 제한을 체크하는 인터페이스입니다.
+ *
+ * @example 구현
+ * ```typescript
+ * class EntitlementSeatLimitChecker extends SeatLimitChecker {
+ *   async checkSeatAvailability(tenantId: string): Promise<EntitlementQuotaStatus> {
+ *     return this.entitlementManager.check(tenantId, 'seats');
+ *   }
+ *   // 다른 메서드 구현...
+ * }
+ * ```
+ */
+export { SeatLimitChecker } from './libs/SeatLimitChecker';
 
 /**
  * 멤버십 타입
  *
- * @description 멤버십 관련 타입들을 내보냅니다.
+ * @description 멤버십 관련 타입들을 내보니다.
  *
  * @see {@link MembershipRole} - 멤버십 역할 타입 (owner | admin | member | viewer)
  * @see {@link Membership} - 멤버십 엔티티 타입
  * @see {@link MembershipCreateInput} - 멤버십 생성 입력 타입
  * @see {@link MembershipUpdateInput} - 멤버십 업데이트 입력 타입
+ * @see {@link ROLE_HIERARCHY} - 역할 계층 상수
+ * @see {@link isHigherRole} - 더 높은 역할 체크 함수
+ * @see {@link isLowerRole} - 더 낮은 역할 체크 함수
+ * @see {@link canPromote} - 승격 가능 여부 체크 함수
+ * @see {@link canDemote} - 강등 가능 여부 체크 함수
  */
-export type * from './libs/types';
+export * from './libs/types';

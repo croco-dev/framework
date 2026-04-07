@@ -39,7 +39,6 @@ export type { BillingGateway, CheckoutResult, CreateCheckoutParams } from './lib
  * Dependencies required for billing service initialization.
  */
 export type { BillingServiceDependencies, CreateBillingCheckoutParams } from './libs/BillingService';
-
 // Service
 /**
  * Core billing service for managing billing accounts, subscriptions, and orders.
@@ -63,7 +62,6 @@ export type { BillingServiceDependencies, CreateBillingCheckoutParams } from './
  * ```
  */
 export { BillingService } from './libs/BillingService';
-
 // Store
 /**
  * Billing store interface for persisting billing entities.
@@ -80,7 +78,6 @@ export { BillingService } from './libs/BillingService';
  * ```
  */
 export { BillingStore } from './libs/BillingStore';
-
 // Events
 /**
  * Domain event emitted when an order is successfully paid.
@@ -172,7 +169,6 @@ export { SubscriptionPastDueEvent } from './libs/events/SubscriptionPastDueEvent
  * ```
  */
 export { SubscriptionRevokedEvent } from './libs/events/SubscriptionRevokedEvent';
-
 /**
  * In-memory implementation of billing store for testing and development.
  *
@@ -185,6 +181,9 @@ export { SubscriptionRevokedEvent } from './libs/events/SubscriptionRevokedEvent
  * ```
  */
 export { InMemoryBillingStore } from './libs/InMemoryBillingStore';
+export type { GenerateInvoiceParams, InvoiceGenerator } from './libs/InvoiceGenerator';
+export type { MoneyRoundingMode } from './libs/Money';
+export { Money } from './libs/Money';
 /**
  * Plan registry interface for managing available subscription plans.
  *
@@ -199,6 +198,8 @@ export { InMemoryBillingStore } from './libs/InMemoryBillingStore';
  * ```
  */
 export type { PlanRegistry } from './libs/PlanRegistry';
+export type { PlanTransitionParams, PlanTransitionPreview, PlanTransitionService } from './libs/PlanTransitionService';
+export type { ProrationCalculation, ProrationCalculationParams, ProrationCalculator } from './libs/ProrationCalculator';
 
 /**
  * Problem details for billing-related errors.
@@ -214,6 +215,10 @@ export type { PlanRegistry } from './libs/PlanRegistry';
 export {
   BillingAccountNotFoundProblem,
   BillingCheckoutCreationProblem,
+  InvalidMoneyAmountProblem,
+  InvalidMoneyCurrencyProblem,
+  MoneyCurrencyMismatchProblem,
+  MoneyDivisionByZeroProblem,
   SubscriptionNotFoundProblem,
   WebhookAlreadyProcessedProblem,
 } from './libs/problems/BillingProblems';
@@ -244,6 +249,10 @@ export {
  */
 export type {
   BillingAccount,
+  Invoice,
+  InvoiceLineItem,
+  InvoiceLineItemType,
+  InvoiceStatus,
   Order,
   Plan,
   PlanInterval,

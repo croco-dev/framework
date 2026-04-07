@@ -4,15 +4,36 @@ import type {
   CheckResult,
   GrantRequest,
   ListRequest,
+  RelationTuple,
   RevokeRequest,
 } from '@croco/access-core';
 import { sql } from 'drizzle-orm';
 
-type DrizzleDb = {
+interface DrizzleDb {
   execute: (query: SQLWrapper) => Promise<{ rows: unknown[] }>;
-};
+}
 
-type SQLWrapper = { getSQL: () => unknown };
+interface SQLWrapper {
+  getSQL: () => unknown;
+}
+
+interface RelationTupleRow {
+  object: string;
+  relation: string;
+  subject: string;
+}
+
+interface AllowedRow {
+  allowed: unknown;
+}
+
+function isResourceObject(value: string): value is `${string}:${string}` {
+  return /^[^:]+:[^:]+$/.test(value);
+}
+
+function isSubject(value: string): value is `user:${string}` | `role:${string}` | `group:${string}` {
+  return /^(user|role|group):[^:]+$/.test(value);
+}
 
 function normalizeAllowedValue(value: unknown): boolean {
   if (typeof value === 'boolean') {
@@ -36,6 +57,26 @@ function normalizeAllowedValue(value: unknown): boolean {
   }
 
   return false;
+}
+
+function assertRelationTupleRow(row: unknown): row is RelationTupleRow & {
+  object: `${string}:${string}`;
+  subject: `user:${string}` | `role:${string}` | `group:${string}`;
+} {
+  if (!row || typeof row !== 'object') {
+    return false;
+  }
+
+  const record = row as Record<string, unknown>;
+  const isObjectString = typeof record.object === 'string';
+  const isRelationString = typeof record.relation === 'string';
+  const isSubjectString = typeof record.subject === 'string';
+
+  if (!isObjectString || !isRelationString || !isSubjectString) {
+    return false;
+  }
+
+  return isResourceObject(record.object as string) && isSubject(record.subject as string);
 }
 
 const MAX_TRAVERSAL_DEPTH = 10;
@@ -68,7 +109,7 @@ export class DrizzleAccessProvider implements AccessProvider {
       `
     );
 
-    const firstRow = result.rows[0] as { allowed?: unknown } | undefined;
+    const firstRow = result.rows[0] as AllowedRow | undefined;
     return { allowed: normalizeAllowedValue(firstRow?.allowed) };
   }
 
@@ -94,7 +135,7 @@ export class DrizzleAccessProvider implements AccessProvider {
     );
   }
 
-  async list(request: ListRequest) {
+  async list(request: ListRequest): Promise<RelationTuple[]> {
     const conditions = [sql`tenant_id = ${request.tenantId}`];
 
     if (request.object) {
@@ -117,6 +158,18 @@ export class DrizzleAccessProvider implements AccessProvider {
       `
     );
 
-    return result.rows as { object: string; relation: string; subject: string }[];
+    const tuples: RelationTuple[] = [];
+
+    for (const row of result.rows) {
+      if (assertRelationTupleRow(row)) {
+        tuples.push({
+          object: row.object,
+          relation: row.relation,
+          subject: row.subject,
+        });
+      }
+    }
+
+    return tuples;
   }
 }

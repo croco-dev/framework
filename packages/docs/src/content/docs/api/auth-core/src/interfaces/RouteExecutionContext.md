@@ -5,7 +5,7 @@ prev: false
 title: "RouteExecutionContext"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:6](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/interfaces/Guard.ts#L6)
+Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/Guard.ts#L6)
 
 Execution context type for route guards.
 
@@ -15,7 +15,7 @@ Execution context type for route guards.
 
 > **getClass**(): `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:7](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/interfaces/Guard.ts#L7)
+Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/Guard.ts#L7)
 
 #### Returns
 
@@ -27,7 +27,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:7](https://github.c
 
 > **getHandler**(): `string` \| `symbol`
 
-Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/interfaces/Guard.ts#L8)
+Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/Guard.ts#L8)
 
 #### Returns
 
@@ -39,7 +39,7 @@ Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:8](https://github.c
 
 > **getRequest**(): [`AuthRequest`](/api/auth-core/src/type-aliases/authrequest/)
 
-Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/auth-core/src/libs/interfaces/Guard.ts#L9)
+Defined in: [packages/auth-core/src/libs/interfaces/Guard.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/Guard.ts#L9)
 
 #### Returns
 

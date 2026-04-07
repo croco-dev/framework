@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { withImpersonationAudit } from '../libs/ImpersonationAuditHelper';
-import type { ImpersonationContext } from '../libs/types';
+import type { ImpersonationContext } from '../libs/ImpersonationService';
 
 describe('withImpersonationAudit', () => {
   it('should add impersonatorId when impersonation context exists', () => {

@@ -166,6 +166,7 @@ NODE_ENV=production
 ### 4. forceFlush 사용
 
 Lambda 환경에서는 핸들러 반환 전에 `forceFlush()`를 호출하여 추적 데이터가 전송되도록 해야 합니다.
+`forceFlush()`는 타입 안전한 결과 객체를 반환합니다.
 
 ```typescript
 import { TelemetryRuntime, lambdaPreset } from '@croco/telemetry-sdk-node';
@@ -179,9 +180,23 @@ export const handler = async (event: any) => {
     return result;
   } finally {
     // Lambda가 응답을 반환하기 전에 추적 데이터 flush
-    await telemetry.forceFlush();
+    const flushResult = await telemetry.forceFlush(5000); // 5초 타임아웃
+    
+    if (!flushResult.success) {
+      console.warn('Failed to flush telemetry:', flushResult.error);
+    }
   }
 };
+```
+
+#### forceFlush 결과 타입
+
+```typescript
+interface ForceFlushResult {
+  success: boolean;           // 성공 여부
+  flushedSpans?: number;      // 내보 span 수 (구현에 따라)
+  error?: Error;              // 실패 시 오류 정보
+}
 ```
 
 ### 5. 샘플링 설정
@@ -229,23 +244,184 @@ interface TraceConfig {
   exporterUrl?: string;           // 선택: OTLP Exporter URL
   exporterHeaders?: Record<string, string>; // 선택: HTTP 헤더
   sampler?: Sampler;              // 선택: 샘플러
+  probability?: number;           // 선택: 샘플링 확률 (0.0-1.0)
   batchTimeout?: number;          // 선택: 배치 타임아웃 (ms)
   batchCount?: number;            // 선택: 최대 배치 큐 크기
   batchSize?: number;             // 선택: 최대 배치 크기
-  instrumentations?: Array<never>; // 선택: 자동 계측 (현재 미사용)
+  instrumentations?: Instrumentation[]; // 선택: 커스텀 계측
+  autoInstrumentation?: AutoInstrumentationConfig; // 선택: 자동 계측 설정
 }
 
 interface MetricsConfig {
-  enabled?: boolean;
-  exporterUrl?: string;
-  exporterHeaders?: Record<string, string>;
-  exportIntervalMillis?: number;
-  exportTimeoutMillis?: number;
+  enabled?: boolean;              // 선택: 메트릭 활성화 (기본값: false)
+  exporterUrl?: string;           // 선택: OTLP Exporter URL
+  exporterHeaders?: Record<string, string>; // 선택: HTTP 헤더
+  exportIntervalMillis?: number;  // 선택: 내보기 간격 (ms)
+  exportTimeoutMillis?: number;   // 선택: 내보기 타임아웃 (ms)
 }
 
 interface LogsConfig {
-  enabled?: boolean;
+  enabled?: boolean;              // 선택: 로그 활성화 (기본값: false)
+  exporterUrl?: string;           // 선택: OTLP Exporter URL
+  exporterHeaders?: Record<string, string>; // 선택: HTTP 헤더
+  maxQueueSize?: number;          // 선택: 최대 큐 크기
+  maxExportBatchSize?: number;    // 선택: 최대 내보기 배치 크기
 }
+```
+
+## 메트릭 API 인터페이스
+
+Croco는 OpenTelemetry 메트릭 API를 기반으로 한 인터페이스를 제공합니다.
+
+```typescript
+import type {
+  Counter,
+  CounterOptions,
+  Gauge,
+  GaugeOptions,
+  Histogram,
+  HistogramOptions,
+  MetricsApi,
+} from '@croco/telemetry-sdk-node';
+
+// Counter: 누적 값을 기록 (이벤트 발생 횟수)
+interface Counter {
+  add(value: number, attributes?: Attributes, context?: Context): void;
+}
+
+// Histogram: 값의 분포를 기록 (요청 지연 시간 등)
+interface Histogram {
+  record(value: number, attributes?: Attributes, context?: Context): void;
+}
+
+// Gauge: 현재 값을 기록 (큐 크기 등)
+interface Gauge {
+  record(value: number, attributes?: Attributes, context?: Context): void;
+}
+
+// 메트릭 생성 옵션
+interface CounterOptions {
+  name: string;
+  description?: string;
+  unit?: string;
+}
+
+interface HistogramOptions {
+  name: string;
+  description?: string;
+  unit?: string;
+  boundaries?: number[];  // 버킷 경계
+}
+
+interface GaugeOptions {
+  name: string;
+  description?: string;
+  unit?: string;
+}
+```
+
+## 로그 API 인터페이스
+
+Croco는 OpenTelemetry 로그 API를 기반으로 한 구조화 로깅 인터페이스를 제공합니다.
+
+```typescript
+import type {
+  LogRecord,
+  LogRecordOptions,
+  Logger,
+  LoggerOptions,
+  LogsApi,
+  LogSeverity,
+} from '@croco/telemetry-sdk-node';
+
+// 로그 심각도 수준
+enum LogSeverity {
+  TRACE = 1,
+  DEBUG = 5,
+  INFO = 9,
+  WARN = 13,
+  ERROR = 17,
+  FATAL = 21,
+}
+
+// 로그 레코드
+interface LogRecord {
+  timestamp?: number;
+  observedTimestamp?: number;
+  severity?: LogSeverity;
+  severityText?: string;
+  body: string | Record<string, unknown>;
+  attributes?: Attributes;
+  traceContext?: {
+    traceId: string;
+    spanId: string;
+    traceFlags: number;
+  };
+}
+
+// Logger 인터페이스
+interface Logger {
+  emit(options: LogRecordOptions): void;
+  trace(body: string | Record<string, unknown>, attributes?: Attributes): void;
+  debug(body: string | Record<string, unknown>, attributes?: Attributes): void;
+  info(body: string | Record<string, unknown>, attributes?: Attributes): void;
+  warn(body: string | Record<string, unknown>, attributes?: Attributes): void;
+  error(body: string | Record<string, unknown>, attributes?: Attributes): void;
+  fatal(body: string | Record<string, unknown>, attributes?: Attributes): void;
+}
+```
+
+## 자동 계측 설정
+
+Croco는 인기 있는 Node.js 라이브러리에 대한 자동 계측을 설정할 수 있습니다.
+
+```typescript
+import type { AutoInstrumentationConfig } from '@croco/telemetry-sdk-node';
+
+const autoInstrumentConfig: AutoInstrumentationConfig = {
+  enabled: true,
+  modules: ['http', 'express', 'pg'],  // 계측할 모듈
+  excludeModules: ['fs'],              // 제외할 모듈
+  exclude: ['health.check', 'metrics.*'],  // 제외할 작업 패턴
+  include: ['api.*', 'service.*'],     // 포함할 작업 패턴 (화이트리스트)
+};
+
+await telemetry.init({
+  serviceName: 'my-service',
+  trace: {
+    autoInstrumentation: autoInstrumentConfig,
+  },
+});
+```
+
+### 지원되는 자동 계측 모듈
+
+| 모듈 | 설명 |
+|------|------|
+| `http` / `https` | HTTP 클라이언트 요청 |
+| `express` | Express.js 웹 프레임워크 |
+| `fastify` | Fastify 웹 프레임워크 |
+| `koa` | Koa 웹 프레임워크 |
+| `nest` | NestJS 프레임워크 |
+| `aws-sdk` / `aws-lambda` | AWS SDK 및 Lambda |
+| `pg` / `mysql` / `mysql2` | 데이터베이스 클라이언트 |
+| `ioredis` / `redis` | Redis 클라이언트 |
+| `mongodb` | MongoDB 클라이언트 |
+| `graphql` | GraphQL |
+| `grpc` | gRPC |
+| `dns` / `net` / `fs` | Node.js 내장 모듈 |
+| `bunyan` / `pino` / `winston` | 로깅 라이브러리 |
+
+### 환경별 기본 모듈
+
+```typescript
+import { LAMBDA_DEFAULT_MODULES, NODE_DEFAULT_MODULES } from '@croco/telemetry-sdk-node';
+
+// Lambda: 최소한의 오버헤드
+// ['http', 'https', 'aws-sdk', 'aws-lambda']
+
+// Node.js: 일반적인 웹 스택
+// ['http', 'https', 'express', 'fastify', 'dns', 'net']
 ```
 
 ## Lambda 핸들러 예시

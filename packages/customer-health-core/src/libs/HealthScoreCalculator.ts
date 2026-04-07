@@ -8,7 +8,10 @@ import type {
 } from './types';
 
 export class HealthScoreCalculator {
-  calculate(signals: HealthSignal[], profile: HealthScoreProfile): TenantHealthScore {
+  calculate(
+    signals: { category: string; name: string; value: number; weight: number; rawValue: unknown; collectedAt: Date }[],
+    profile: HealthScoreProfile
+  ): TenantHealthScore {
     const now = new Date();
 
     if (signals.length === 0) {
@@ -40,8 +43,9 @@ export class HealthScoreCalculator {
     };
 
     for (const signal of signals) {
-      categoryScores[signal.category] += signal.value * signal.weight;
-      categoryWeights[signal.category] += signal.weight;
+      const category = signal.category as SignalCategory;
+      categoryScores[category] += signal.value * signal.weight;
+      categoryWeights[category] += signal.weight;
     }
 
     for (const category of Object.keys(categoryScores) as SignalCategory[]) {
@@ -69,7 +73,7 @@ export class HealthScoreCalculator {
       overallScore,
       status,
       categoryScores,
-      signals,
+      signals: signals as HealthSignal[],
       trend: 'stable',
       calculatedAt: now,
     };

@@ -7,31 +7,12 @@ title: "LogsConfig"
 
 > **LogsConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:34](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L34)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:59](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L59)
 
-Main configuration for the OpenTelemetry SDK.
+Configuration for telemetry logs.
 
-## Remarks
-
-This is the top-level configuration object passed to [TelemetryRuntime.init](/api/telemetry-sdk-node/src/classes/telemetryruntime/#init).
-It combines service metadata with trace, metrics, and logs configurations.
-
-## Example
-
-```ts
-const config: TelemetryConfig = {
-  serviceName: 'my-service',
-  serviceVersion: '1.0.0',
-  environment: 'production',
-  enabled: true,
-  trace: {
-    enabled: true,
-    exporterUrl: 'http://localhost:4318/v1/traces',
-  },
-  metrics: { enabled: false },
-  logs: { enabled: false },
-};
-```
+Defines how log data is collected and exported.
+Currently disabled by default in Lambda environments.
 
 ## Properties
 
@@ -39,4 +20,46 @@ const config: TelemetryConfig = {
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:35](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/telemetry-sdk-node/src/config.ts#L35)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:61](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L61)
+
+Whether logs collection is enabled. Default: false
+
+***
+
+### exporterHeaders?
+
+> `optional` **exporterHeaders**: `Record`\<`string`, `string`\>
+
+Defined in: [packages/telemetry-sdk-node/src/config.ts:65](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L65)
+
+Additional HTTP headers for the exporter
+
+***
+
+### exporterUrl?
+
+> `optional` **exporterUrl**: `string`
+
+Defined in: [packages/telemetry-sdk-node/src/config.ts:63](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L63)
+
+OTLP logs exporter URL
+
+***
+
+### maxExportBatchSize?
+
+> `optional` **maxExportBatchSize**: `number`
+
+Defined in: [packages/telemetry-sdk-node/src/config.ts:69](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L69)
+
+Maximum batch size for export
+
+***
+
+### maxQueueSize?
+
+> `optional` **maxQueueSize**: `number`
+
+Defined in: [packages/telemetry-sdk-node/src/config.ts:67](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L67)
+
+Maximum queue size for log records

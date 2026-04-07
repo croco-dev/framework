@@ -46,6 +46,10 @@ export class InMemoryMembershipStore extends MembershipStore {
     ).length;
   }
 
+  async countAll(tenantId: string): Promise<number> {
+    return [...this.storage.values()].filter((membership) => membership.tenantId === tenantId).length;
+  }
+
   private getKey(tenantId: string, userId: string): string {
     return `${tenantId}:${userId}`;
   }

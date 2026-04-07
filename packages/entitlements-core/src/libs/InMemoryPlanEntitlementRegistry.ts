@@ -20,7 +20,10 @@ export class InMemoryPlanEntitlementRegistry extends PlanEntitlementRegistry {
 
   async findRule(planId: string, featureKey: string): Promise<EntitlementRule | null> {
     const rules = this.registry.get(planId);
-    if (!rules) return null;
+    if (!rules) {
+      return null;
+    }
+
     return rules.find((rule) => rule.featureKey === featureKey) ?? null;
   }
 }

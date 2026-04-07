@@ -2,8 +2,9 @@ import 'reflect-metadata';
 import type { Invitation } from '@croco/invitation-core';
 import type { TxManager } from '@croco/tx-core';
 import type { DrizzleDb } from '@croco/tx-drizzle';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DrizzleInvitationStore } from '../libs/DrizzleInvitationStore';
+import { type DrizzleInvitationClient, DrizzleInvitationStore } from '../libs/DrizzleInvitationStore';
 
 const createInvitation = (overrides: Partial<Invitation> = {}): Invitation => {
   return {
@@ -52,18 +53,8 @@ describe('DrizzleInvitationStore', () => {
     };
 
     store = new DrizzleInvitationStore(
-      mockDb as unknown as DrizzleDb & {
-        select: (...args: unknown[]) => unknown;
-        insert: (...args: unknown[]) => unknown;
-        update: (...args: unknown[]) => unknown;
-      },
-      mockTxManager as unknown as TxManager<
-        DrizzleDb & {
-          select: (...args: unknown[]) => unknown;
-          insert: (...args: unknown[]) => unknown;
-          update: (...args: unknown[]) => unknown;
-        }
-      >
+      mockDb as unknown as DrizzleInvitationClient,
+      mockTxManager as unknown as TxManager<DrizzleInvitationClient>
     );
   });
 

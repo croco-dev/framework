@@ -1,4 +1,5 @@
-import type { SpanContext } from '@opentelemetry/api';
+import type { Attributes, Context, Link, SpanKind } from '@opentelemetry/api';
+import { isSpanContextValid, isValidTraceId, TraceFlags, trace } from '@opentelemetry/api';
 import { type Sampler, SamplingDecision, type SamplingResult } from '@opentelemetry/sdk-trace-base';
 import { SamplerProblem } from '../problems/TelemetryProblems';
 
@@ -19,25 +20,25 @@ class ProbabilitySampler implements Sampler {
   }
 
   shouldSample(
-    context: unknown,
+    context: Context,
     traceId: string,
     _spanName: string,
-    _spanKind: unknown,
-    _attributes: unknown,
-    _links: unknown
+    _spanKind: SpanKind,
+    _attributes: Attributes,
+    _links: Link[]
   ): SamplingResult {
-    const spanContext = context as SpanContext | undefined;
-    const parentSpanContext = spanContext?.traceId ? spanContext : undefined;
+    const spanContext = trace.getSpanContext(context);
 
-    if (parentSpanContext) {
-      const parentSampled = parentSpanContext.traceFlags;
-
-      if (parentSampled === 1) {
+    if (spanContext && isSpanContextValid(spanContext)) {
+      if (spanContext.traceFlags & TraceFlags.SAMPLED) {
         return { decision: SamplingDecision.RECORD_AND_SAMPLED };
       }
     }
 
-    // BigInt로 64비트 정밀도 보장: parseInt는 MAX_SAFE_INTEGER 초과 시 정밀도 손실
+    if (!isValidTraceId(traceId)) {
+      return { decision: SamplingDecision.NOT_RECORD };
+    }
+
     const lowerLong = BigInt(`0x${traceId.slice(16, 32)}`);
     const scaledLowerLong = lowerLong & BigInt(0xffffffff);
 

@@ -4,6 +4,7 @@ import { Problem, ProblemCategory } from '@croco/problems-core';
 import type { AccessEngine } from '../AccessEngine';
 import { ACCESS_METADATA_KEY } from '../constants';
 import type { AccessExecutionContext, Guard } from '../interfaces/Guard';
+import type { ResourceObject } from '../types';
 
 export class BadRequestProblem extends Problem {
   constructor(detail = 'Bad request') {
@@ -15,6 +16,28 @@ export class ForbiddenProblem extends Problem {
   constructor(detail = 'Forbidden') {
     super('FORBIDDEN', ProblemCategory.Forbidden, detail);
   }
+}
+
+interface RequestWithUser {
+  user?: { id: string };
+}
+
+interface RequestWithTenantId {
+  tenantId?: string;
+}
+
+interface RequestWithParams {
+  params?: Record<string, string>;
+}
+
+type RequestWithAccessData = RequestWithUser & RequestWithTenantId & RequestWithParams;
+
+interface CrocoHttpContextLike {
+  req: {
+    params: Record<string, string>;
+  };
+  param(name: string): string | undefined;
+  get<T>(key: string): T | undefined;
 }
 
 export class AccessGuard implements Guard<AccessExecutionContext> {
@@ -30,7 +53,7 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
       return true;
     }
 
-    const request = context.getRequest() as RequestWithAccessData;
+    const request = context.getRequest() as Request;
     const user = this.resolveUser(request);
     if (!user) {
       throw new BadRequestProblem('Authenticated user missing');
@@ -47,36 +70,36 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
       throw new BadRequestProblem('Object ID missing');
     }
 
-    const object = `${metadata.objectType}:${objectId}`;
-
     const result = await this.accessEngine.check({
       tenantId,
       subject: `user:${user.id}`,
       relation: metadata.relation,
-      object,
+      object: objectId,
     });
 
     if (!result.allowed) {
-      throw new ForbiddenProblem(`Access denied to ${object}`);
+      throw new ForbiddenProblem(`Access denied to ${objectId}`);
     }
 
     return true;
   }
 
-  private resolveUser(request: RequestWithAccessData): { id: string } | null {
-    const user = request.user;
+  private resolveUser(request: Request): { id: string } | null {
+    const accessRequest = request as unknown as RequestWithAccessData;
+    const user = accessRequest.user;
 
-    if (typeof user !== 'object' || user === null) {
+    if (!user || typeof user.id !== 'string') {
       return null;
     }
 
-    const userRecord = user as Record<string, unknown>;
-    return typeof userRecord.id === 'string' ? ({ id: userRecord.id } as { id: string }) : null;
+    return { id: user.id };
   }
 
-  private resolveTenantId(context: AccessExecutionContext, request: RequestWithAccessData): string | null {
-    if (typeof request.tenantId === 'string' && request.tenantId.length > 0) {
-      return request.tenantId;
+  private resolveTenantId(context: AccessExecutionContext, request: Request): string | null {
+    const accessRequest = request as unknown as RequestWithAccessData;
+
+    if (typeof accessRequest.tenantId === 'string' && accessRequest.tenantId.length > 0) {
+      return accessRequest.tenantId;
     }
 
     const httpContext = this.getHttpContext(context);
@@ -97,15 +120,16 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
 
   private resolveObjectId(
     context: AccessExecutionContext,
-    request: RequestWithAccessData,
+    request: Request,
     objectType: string
-  ): string | undefined {
-    const params = request.params ?? this.getHttpContext(context)?.req.params;
+  ): ResourceObject | undefined {
+    const accessRequest = request as unknown as RequestWithAccessData;
+    const params = accessRequest.params ?? this.getHttpContext(context)?.req.params;
 
     const objectTypeIdKey = `${objectType}Id`;
     const byParams = params?.id ?? params?.[objectTypeIdKey];
     if (typeof byParams === 'string' && byParams.length > 0) {
-      return byParams;
+      return `${objectType}:${byParams}`;
     }
 
     const httpContext = this.getHttpContext(context);
@@ -113,7 +137,12 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
       return undefined;
     }
 
-    return httpContext.param('id') ?? httpContext.param(objectTypeIdKey);
+    const paramValue = httpContext.param('id') ?? httpContext.param(objectTypeIdKey);
+    if (typeof paramValue === 'string' && paramValue.length > 0) {
+      return `${objectType}:${paramValue}`;
+    }
+
+    return undefined;
   }
 
   private getHttpContext(context: AccessExecutionContext): CrocoHttpContextLike | null {
@@ -124,17 +153,3 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
     return context.getHttpContext();
   }
 }
-
-type RequestWithAccessData = Request & {
-  user?: unknown;
-  tenantId?: string;
-  params?: Record<string, string>;
-};
-
-type CrocoHttpContextLike = {
-  req: {
-    params: Record<string, string>;
-  };
-  param(name: string): string | undefined;
-  get<T>(key: string): T | undefined;
-};

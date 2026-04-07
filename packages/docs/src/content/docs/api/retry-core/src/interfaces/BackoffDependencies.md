@@ -5,7 +5,7 @@ prev: false
 title: "BackoffDependencies"
 ---
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:35](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/BackoffPolicy.ts#L35)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:40](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L40)
 
 Dependency injection for testability.
 
@@ -15,7 +15,7 @@ Dependency injection for testability.
 
 > `optional` **random**: () => `number`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:40](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/BackoffPolicy.ts#L40)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:45](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L45)
 
 Random function (default: Math.random)
 
@@ -29,7 +29,7 @@ Random function (default: Math.random)
 
 > `optional` **sleep**: (`ms`) => `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:37](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/BackoffPolicy.ts#L37)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:42](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L42)
 
 Sleep function (default: setTimeout-based)
 

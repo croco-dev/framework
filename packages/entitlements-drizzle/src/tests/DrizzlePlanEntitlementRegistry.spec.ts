@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import type { DrizzleDb } from '@croco/tx-drizzle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock @croco/entitlements-core to prevent @Inject decorator execution during import
@@ -7,7 +6,7 @@ vi.mock('@croco/entitlements-core', () => ({
   PlanEntitlementRegistry: class {},
 }));
 
-import { DrizzlePlanEntitlementRegistry } from '../libs/DrizzlePlanEntitlementRegistry';
+import { type DrizzleEntitlementsClient, DrizzlePlanEntitlementRegistry } from '../libs/DrizzlePlanEntitlementRegistry';
 
 describe('DrizzlePlanEntitlementRegistry', () => {
   let registry!: DrizzlePlanEntitlementRegistry;
@@ -25,11 +24,7 @@ describe('DrizzlePlanEntitlementRegistry', () => {
       select: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    registry = new DrizzlePlanEntitlementRegistry(
-      mockDb as unknown as DrizzleDb & {
-        select: (...args: unknown[]) => unknown;
-      }
-    );
+    registry = new DrizzlePlanEntitlementRegistry(mockDb as unknown as DrizzleEntitlementsClient);
   });
 
   it('should get entitlements by planId', async () => {

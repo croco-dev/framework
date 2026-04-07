@@ -7,6 +7,8 @@ export abstract class MembershipManager {
 
   abstract updateRole(tenantId: string, userId: string, newRole: MembershipRole): Promise<Membership>;
 
+  abstract transferOwnership(tenantId: string, fromUserId: string, toUserId: string): Promise<void>;
+
   abstract getMember(tenantId: string, userId: string): Promise<Membership>;
 
   abstract listMembers(tenantId: string): Promise<Membership[]>;

@@ -1,14 +1,4 @@
 /**
- * Core type definitions for Croco Metrics package.
- *
- * This file defines the contracts for all metrics calculations including:
- * - Money value representation
- * - Time period definitions
- * - MRR movement tracking
- * - Retention metrics (GRR, NRR, Churn)
- * - Growth metrics (Quick Ratio, Cohort Capacity)
- * - Customer metrics (LTV, ARPA)
- */
 
 /**
  * Money value with currency.
@@ -178,4 +168,46 @@ export type PlanSnapshot = {
   currency: string;
   interval: 'month' | 'year';
   intervalCount: number;
+};
+
+export type MultiCurrencyMoney = {
+  base: Money;
+  converted: Map<string, Money>;
+  exchangeRates: Map<string, number>;
+  baseCurrency: string;
+};
+
+export type CohortData = {
+  cohortId: string;
+  startDate: Date;
+  initialCustomers: number;
+  initialMRR: Money;
+  periods: CohortPeriodData[];
+};
+
+export type CohortPeriodData = {
+  periodIndex: number;
+  periodStart: Date;
+  periodEnd: Date;
+  remainingCustomers: number;
+  remainingMRR: Money;
+  retentionRate: Percentage;
+  churnedCustomers: number;
+  churnedMRR: Money;
+};
+
+export type CohortAnalysisOptions = {
+  granularity: 'day' | 'week' | 'month';
+  maxPeriods: number;
+  startDate?: Date;
+  endDate?: Date;
+};
+
+export type CohortAnalysisResult = {
+  cohorts: CohortData[];
+  summary: {
+    averageRetentionByPeriod: Map<number, Percentage>;
+    weightedAverageRetention: Percentage;
+    totalCohorts: number;
+  };
 };

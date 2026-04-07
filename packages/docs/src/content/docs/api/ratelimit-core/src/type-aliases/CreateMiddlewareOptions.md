@@ -7,9 +7,7 @@ title: "CreateMiddlewareOptions"
 
 > **CreateMiddlewareOptions** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:28](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L28)
-
-Options for creating rate limit middleware.
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L18)
 
 ## Properties
 
@@ -17,19 +15,23 @@ Options for creating rate limit middleware.
 
 > `optional` **addHeaders**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:36](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L36)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:23](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L23)
 
-Whether to add X-RateLimit-* headers (default: true)
+***
+
+### failOpen?
+
+> `optional` **failOpen**: `boolean`
+
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:22](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L22)
 
 ***
 
 ### keySegments?
 
-> `optional` **keySegments**: [`KeySegment`](/api/ratelimit-core/src/type-aliases/keysegment/)[]
+> `optional` **keySegments**: `KeySegment`[]
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:34](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L34)
-
-Key segments for building rate limit key (default: ['ip'])
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:21](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L21)
 
 ***
 
@@ -37,9 +39,7 @@ Key segments for building rate limit key (default: ['ip'])
 
 > **policy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:32](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L32)
-
-Rate limit policy
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L20)
 
 ***
 
@@ -47,6 +47,4 @@ Rate limit policy
 
 > **rateLimiter**: [`RateLimiter`](/api/ratelimit-core/src/classes/ratelimiter/)
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:30](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L30)
-
-RateLimiter instance
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:19](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L19)

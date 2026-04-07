@@ -7,7 +7,7 @@ title: "runWithLambdaContext"
 
 > **runWithLambdaContext**\<`T`\>(`context`, `fn`): `Promise`\<`T`\>
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:18](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L18)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L18)
 
 Lambda timeout guard utilities for tracking remaining execution time during retries.
 

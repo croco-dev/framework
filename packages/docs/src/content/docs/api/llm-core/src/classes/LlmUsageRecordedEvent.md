@@ -5,7 +5,7 @@ prev: false
 title: "LlmUsageRecordedEvent"
 ---
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:4](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L4)
+Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L4)
 
 모든 도메인 이벤트가 상속해야 하는 기본 추상 클래스입니다.
 
@@ -19,7 +19,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:4](https
 
 > **new LlmUsageRecordedEvent**(`modelId`, `usage`, `operation`): `LlmUsageRecordedEvent`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:8](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L8)
+Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L8)
 
 #### Parameters
 
@@ -49,7 +49,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:8](https
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L18)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/DomainEvent.ts#L18)
 
 #### Inherited from
 
@@ -61,7 +61,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L20)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/DomainEvent.ts#L20)
 
 #### Inherited from
 
@@ -73,7 +73,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com
 
 > `readonly` **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:9](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L9)
+Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L9)
 
 ***
 
@@ -81,7 +81,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:9](https
 
 > `readonly` **operation**: `"generate"` \| `"stream"` \| `"embed"` \| `"embedMany"` \| `"generateObject"` \| `"callTool"`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:11](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L11)
+Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:11](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L11)
 
 ***
 
@@ -89,7 +89,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:11](http
 
 > `readonly` **timestamp**: `Date`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/events-core/src/libs/DomainEvent.ts#L19)
+Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/DomainEvent.ts#L19)
 
 #### Inherited from
 
@@ -101,7 +101,7 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com
 
 > `readonly` **type**: `"llm.usage_recorded"` = `'llm.usage_recorded'`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:5](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L5)
+Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:5](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L5)
 
 ***
 
@@ -109,7 +109,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:5](https
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:10](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L10)
+Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:10](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L10)
 
 ***
 
@@ -117,7 +117,7 @@ Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:10](http
 
 > `static` **eventName**: `string` = `'llm.usage_recorded'`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:6](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L6)
+Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L6)
 
 #### Overrides
 

@@ -57,7 +57,7 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
 
     const result = await this.entitlementManager.check(tenantId, featureKey);
 
-    if (result.granted === false) {
+    if (!result.granted) {
       throw new EntitlementDeniedProblem(featureKey, result.reason);
     }
 

@@ -1,17 +1,25 @@
 import { Component, Inject, Token } from '@croco/framework-context';
 import { type DomainPolicy, DomainPolicyStore } from '@croco/invitation-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb, DrizzleDeleteFn, DrizzleInsertFn, DrizzleSelectFn } from '@croco/tx-drizzle';
+import type { DrizzleDb } from '@croco/tx-drizzle';
 import { and, eq } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { domainPolicies } from './schema';
 
-export type DrizzleDomainPolicyClient = DrizzleDb & {
-  select: DrizzleSelectFn;
-  insert: DrizzleInsertFn;
-  delete: DrizzleDeleteFn;
-};
+type DrizzleDomainPolicyClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
+
+interface DomainPolicyRow {
+  id: string;
+  tenantId: string;
+  domain: string;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  enabled: boolean;
+  createdAt: Date;
+}
 
 export const DRIZZLE_DOMAIN_POLICY_TOKEN = new Token<DrizzleDomainPolicyClient>('DRIZZLE_DOMAIN_POLICY_TOKEN');
+
+export type { DrizzleDomainPolicyClient };
 
 @Component()
 export class DrizzleDomainPolicyStore extends DomainPolicyStore {
@@ -25,11 +33,11 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
   async findByTenantAndDomain(tenantId: string, domain: string): Promise<DomainPolicy | null> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const result = (await client
       .select()
       .from(domainPolicies)
       .where(and(eq(domainPolicies.tenantId, tenantId), eq(domainPolicies.domain, domain)))
-      .limit(1);
+      .limit(1)) as DomainPolicyRow[];
 
     if (result.length === 0) {
       return null;
@@ -41,14 +49,17 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
   async findAllByTenant(tenantId: string): Promise<DomainPolicy[]> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client.select().from(domainPolicies).where(eq(domainPolicies.tenantId, tenantId));
-    return result.map((row: typeof domainPolicies.$inferSelect) => this.mapToDomainPolicy(row));
+    const result = (await client
+      .select()
+      .from(domainPolicies)
+      .where(eq(domainPolicies.tenantId, tenantId))) as DomainPolicyRow[];
+    return result.map((row) => this.mapToDomainPolicy(row));
   }
 
   async save(policy: DomainPolicy): Promise<DomainPolicy> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const result = (await client
       .insert(domainPolicies)
       .values({
         id: policy.id,
@@ -67,7 +78,7 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
           createdAt: policy.createdAt,
         },
       })
-      .returning();
+      .returning()) as DomainPolicyRow[];
 
     return this.mapToDomainPolicy(result[0]);
   }
@@ -80,7 +91,7 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
       .where(and(eq(domainPolicies.tenantId, tenantId), eq(domainPolicies.domain, domain)));
   }
 
-  private mapToDomainPolicy(row: typeof domainPolicies.$inferSelect): DomainPolicy {
+  private mapToDomainPolicy(row: DomainPolicyRow): DomainPolicy {
     return {
       id: row.id,
       tenantId: row.tenantId,

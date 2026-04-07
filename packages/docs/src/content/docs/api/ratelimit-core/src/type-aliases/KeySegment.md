@@ -5,8 +5,6 @@ prev: false
 title: "KeySegment"
 ---
 
-> **KeySegment** = `"tenant"` \| `"user"` \| `"ip"` \| `"apiKey"` \| `"route"`
+> **KeySegment** = `"tenant"` \| `"user"` \| `"ip"` \| `"apiKey"` \| `"route"` \| `"custom"`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:34](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L34)
-
-Key segments for building rate limit keys
+Defined in: [packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimitKeyBuilder.ts#L7)

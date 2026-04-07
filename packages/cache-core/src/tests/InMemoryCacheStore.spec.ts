@@ -5,7 +5,7 @@ describe('InMemoryCacheStore', () => {
   let cache!: InMemoryCacheStore<string>;
 
   beforeEach(() => {
-    cache = new InMemoryCacheStore<string>();
+    cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
   });
 
   describe('get and set', () => {
@@ -111,13 +111,13 @@ describe('InMemoryCacheStore', () => {
     });
   });
 
-  describe('deleteByPattern', () => {
-    it('deletes keys matching prefix pattern', async () => {
+  describe('invalidatePattern', () => {
+    it('deletes keys matching wildcard pattern', async () => {
       await cache.set('User:getUser:123', 'user1');
       await cache.set('User:getUser:456', 'user2');
       await cache.set('Order:getOrder:789', 'order1');
 
-      const deleted = await cache.deleteByPattern('User:getUser:*');
+      const deleted = await cache.invalidatePattern('User:getUser:*');
 
       expect(deleted).toBe(2);
       expect(await cache.get('User:getUser:123')).toBeUndefined();
@@ -129,7 +129,7 @@ describe('InMemoryCacheStore', () => {
       await cache.set('key1', 'value1');
       await cache.set('key2', 'value2');
 
-      const deleted = await cache.deleteByPattern('key1');
+      const deleted = await cache.invalidatePattern('key1');
 
       expect(deleted).toBe(1);
       expect(await cache.get('key1')).toBeUndefined();
@@ -138,8 +138,21 @@ describe('InMemoryCacheStore', () => {
 
     it('returns 0 when no keys match', async () => {
       await cache.set('key1', 'value1');
-      const deleted = await cache.deleteByPattern('nonexistent*');
+      const deleted = await cache.invalidatePattern('nonexistent*');
       expect(deleted).toBe(0);
+    });
+
+    it('supports wildcard pattern in the middle of the key', async () => {
+      await cache.set('user:profile:1', 'profile');
+      await cache.set('user:settings:1', 'settings');
+      await cache.set('order:profile:1', 'order');
+
+      const deleted = await cache.invalidatePattern('user:*:1');
+
+      expect(deleted).toBe(2);
+      expect(await cache.get('user:profile:1')).toBeUndefined();
+      expect(await cache.get('user:settings:1')).toBeUndefined();
+      expect(await cache.get('order:profile:1')).toBe('order');
     });
   });
 
@@ -188,6 +201,7 @@ describe('InMemoryCacheStore', () => {
       try {
         const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 2 });
 
+        expect(boundedCache).toBeInstanceOf(InMemoryCacheStore);
         expect(warnSpy).not.toHaveBeenCalled();
       } finally {
         warnSpy.mockRestore();
@@ -206,6 +220,21 @@ describe('InMemoryCacheStore', () => {
       expect(await boundedCache.get('key3')).toBe('value3');
     });
 
+    it('uses true LRU ordering when accessed entries are read', async () => {
+      const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 2 });
+
+      await boundedCache.set('key1', 'value1');
+      await boundedCache.set('key2', 'value2');
+
+      expect(await boundedCache.get('key1')).toBe('value1');
+
+      await boundedCache.set('key3', 'value3');
+
+      expect(await boundedCache.get('key1')).toBe('value1');
+      expect(await boundedCache.get('key2')).toBeUndefined();
+      expect(await boundedCache.get('key3')).toBe('value3');
+    });
+
     it('should prune expired entries before evicting active ones on set', async () => {
       vi.useFakeTimers();
 
@@ -221,6 +250,125 @@ describe('InMemoryCacheStore', () => {
       expect(await boundedCache.get('expired')).toBeUndefined();
       expect(await boundedCache.get('active')).toBe('value2');
       expect(await boundedCache.get('fresh')).toBe('value3');
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('getOrSet', () => {
+    it('returns cached value without calling loader again', async () => {
+      const loader = vi.fn(async () => 'loaded');
+
+      const first = await cache.getOrSet('key1', loader, { ttlMs: 1000 });
+      const second = await cache.getOrSet('key1', loader, { ttlMs: 1000 });
+
+      expect(first).toBe('loaded');
+      expect(second).toBe('loaded');
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses singleflight for concurrent requests', async () => {
+      let resolveLoader!: (value: string) => void;
+      const loader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveLoader = resolve;
+          })
+      );
+
+      const pending = Promise.all([
+        cache.getOrSet('key1', loader),
+        cache.getOrSet('key1', loader),
+        cache.getOrSet('key1', loader),
+      ]);
+
+      await Promise.resolve();
+
+      expect(loader).toHaveBeenCalledTimes(1);
+
+      resolveLoader('loaded');
+
+      await expect(pending).resolves.toEqual(['loaded', 'loaded', 'loaded']);
+    });
+
+    it('does not cache undefined values', async () => {
+      const loader = vi.fn(async () => undefined);
+
+      const first = await cache.getOrSet('key1', loader);
+      const second = await cache.getOrSet('key1', loader);
+
+      expect(first).toBeUndefined();
+      expect(second).toBeUndefined();
+      expect(loader).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('warmup', () => {
+    it('primes multiple entries with ttl metadata', async () => {
+      vi.useFakeTimers();
+
+      await cache.warmup([
+        { key: 'key1', value: 'value1', ttlMs: 1000 },
+        { key: 'key2', value: 'value2' },
+      ]);
+
+      expect(await cache.get('key1')).toBe('value1');
+      expect(await cache.get('key2')).toBe('value2');
+
+      vi.advanceTimersByTime(1001);
+
+      expect(await cache.get('key1')).toBeUndefined();
+      expect(await cache.get('key2')).toBe('value2');
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('stats', () => {
+    it('tracks hits, misses, evictions, and size', async () => {
+      vi.useFakeTimers();
+
+      const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 2 });
+
+      await boundedCache.set('key1', 'value1');
+      await boundedCache.set('key2', 'value2', 1000);
+
+      expect(await boundedCache.get('key1')).toBe('value1');
+      expect(await boundedCache.get('missing')).toBeUndefined();
+
+      vi.advanceTimersByTime(1001);
+
+      expect(await boundedCache.get('key2')).toBeUndefined();
+
+      await boundedCache.set('key3', 'value3');
+      await boundedCache.set('key4', 'value4');
+
+      expect(boundedCache.getStats()).toEqual({
+        hits: 1,
+        misses: 2,
+        evictions: 2,
+        size: 2,
+      });
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('periodic cleanup', () => {
+    it('removes expired entries on cleanup interval without reads', async () => {
+      vi.useFakeTimers();
+
+      const periodicCache = new InMemoryCacheStore<string>({
+        maxEntries: 10,
+        cleanupIntervalMs: 500,
+      });
+
+      await periodicCache.set('expiring', 'value', 400);
+
+      vi.advanceTimersByTime(500);
+
+      expect(await periodicCache.get('expiring')).toBeUndefined();
+      expect(periodicCache.getStats().evictions).toBe(1);
 
       vi.useRealTimers();
     });

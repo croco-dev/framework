@@ -7,23 +7,23 @@ title: "RateLimitDecoratorOptions"
 
 > **RateLimitDecoratorOptions** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:51](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L51)
-
-Options for
-
-## Rate Limit
-
-decorator
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:17](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L17)
 
 ## Properties
+
+### algorithm?
+
+> `optional` **algorithm**: [`RateLimitAlgorithm`](/api/ratelimit-core/src/type-aliases/ratelimitalgorithm/)
+
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:21](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L21)
+
+***
 
 ### key()?
 
 > `optional` **key**: (`context`) => `string`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:59](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L59)
-
-Custom key resolver function
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:22](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L22)
 
 #### Parameters
 
@@ -41,9 +41,7 @@ Custom key resolver function
 
 > `optional` **limit**: `number`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:53](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L53)
-
-Maximum requests allowed (overrides policy)
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L18)
 
 ***
 
@@ -51,9 +49,7 @@ Maximum requests allowed (overrides policy)
 
 > `optional` **policy**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:57](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L57)
-
-Pre-defined policy name to use
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L20)
 
 ***
 
@@ -61,6 +57,4 @@ Pre-defined policy name to use
 
 > `optional` **window**: `string`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:55](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L55)
-
-Time window string ('1m', '1h', '1d')
+Defined in: [packages/ratelimit-core/src/libs/decorators/RateLimit.ts:19](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/decorators/RateLimit.ts#L19)

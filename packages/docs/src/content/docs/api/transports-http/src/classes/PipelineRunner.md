@@ -5,9 +5,7 @@ prev: false
 title: "PipelineRunner"
 ---
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:30](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/PipelineRunner.ts#L30)
-
-Croco HTTP 앱의 핵심 런타임 API입니다.
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:30](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/PipelineRunner.ts#L30)
 
 ## Constructors
 
@@ -15,7 +13,7 @@ Croco HTTP 앱의 핵심 런타임 API입니다.
 
 > **new PipelineRunner**(`errorHandler`, `logger`): `PipelineRunner`
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:31](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/PipelineRunner.ts#L31)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:31](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/PipelineRunner.ts#L31)
 
 #### Parameters
 
@@ -37,7 +35,7 @@ Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:31](https://git
 
 > **run**(`execContext`, `handler`, `config`): `Promise`\<`unknown`\>
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:36](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/transports-http/src/libs/PipelineRunner.ts#L36)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:36](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/PipelineRunner.ts#L36)
 
 #### Parameters
 

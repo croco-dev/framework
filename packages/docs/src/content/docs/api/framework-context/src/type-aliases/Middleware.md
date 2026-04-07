@@ -7,10 +7,9 @@ title: "Middleware"
 
 > **Middleware**\<`TContext`\> = (`ctx`, `next`) => `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:50](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/types.ts#L50)
+Defined in: [packages/framework-context/src/libs/types.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L27)
 
-Onion middleware function type
-Similar to Koa middleware pattern
+컨텍스트와 `next` 함수를 받아 실행되는 미들웨어 함수 타입입니다.
 
 ## Type Parameters
 
@@ -31,3 +30,13 @@ Similar to Koa middleware pattern
 ## Returns
 
 `Promise`\<`void`\>
+
+## Example
+
+```typescript
+import type { Middleware } from '@croco/framework-context';
+
+const middleware: Middleware = async (_ctx, next) => {
+  await next();
+};
+```

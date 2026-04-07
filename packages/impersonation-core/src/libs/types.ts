@@ -1,4 +1,3 @@
-import type { RequestContext } from '@croco/framework-context';
 import { Token } from '@croco/framework-context';
 
 export type ImpersonationState = {
@@ -8,10 +7,6 @@ export type ImpersonationState = {
   reason?: string;
   startedAt: Date;
   expiresAt: Date;
-};
-
-export type ImpersonationContext = RequestContext & {
-  impersonation: ImpersonationState;
 };
 
 export type ImpersonationConfig = {

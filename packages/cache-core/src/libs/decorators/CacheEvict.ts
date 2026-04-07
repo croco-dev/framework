@@ -1,17 +1,9 @@
-import { ProblemFactory } from '@croco/problems-core';
-
 import type { CacheStore } from '../CacheStore';
 
 export interface CacheEvictOptions<V = unknown> {
-  /** Cache store instance */
-  store: CacheStore<V>;
-
+  store: CacheStore<string, V>;
   namespace?: string;
-
-  /** Specific key to evict (supports * wildcard at the end) */
   key?: string;
-
-  /** Evict all entries (calls clear()) */
   allEntries?: boolean;
 }
 
@@ -25,7 +17,7 @@ function resolveEvictionPattern(options: CacheEvictOptions<unknown>, methodName:
 
 export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDecorator {
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
-    const originalMethod = descriptor.value;
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const methodName = String(propertyKey);
     const pattern =
       options.key === undefined && options.allEntries !== true
@@ -41,28 +33,17 @@ export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDe
       }
 
       if (options.key !== undefined) {
-        if (options.key.endsWith('*') && options.store.deleteByPattern) {
-          await options.store.deleteByPattern(options.key);
-        } else if (options.key.endsWith('*')) {
-          throw ProblemFactory.internalServerError(
-            'cache-core/delete-by-pattern-not-supported',
-            `Cache store does not support deleteByPattern for wildcard eviction: ${options.key}`
-          );
+        if (options.key.includes('*')) {
+          await options.store.invalidatePattern(options.key);
         } else {
           await options.store.delete(options.key);
         }
+
         return result;
       }
 
       if (pattern !== undefined) {
-        if (!options.store.deleteByPattern) {
-          throw ProblemFactory.internalServerError(
-            'cache-core/delete-by-pattern-not-supported',
-            `Cache store does not support deleteByPattern for namespace eviction: ${pattern}`
-          );
-        }
-
-        await options.store.deleteByPattern(pattern);
+        await options.store.invalidatePattern(pattern);
       }
 
       return result;

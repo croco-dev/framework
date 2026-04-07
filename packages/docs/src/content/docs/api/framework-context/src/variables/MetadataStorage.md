@@ -7,7 +7,7 @@ title: "MetadataStorage"
 
 > `const` **MetadataStorage**: `MetadataStorageImpl`
 
-Defined in: [packages/framework-context/src/libs/MetadataStorage.ts:97](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/framework-context/src/libs/MetadataStorage.ts#L97)
+Defined in: [packages/framework-context/src/libs/MetadataStorage.ts:97](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/MetadataStorage.ts#L97)
 
 심볼 키 기반으로 메타데이터를 저장하고 조회하는 저장소 인스턴스입니다.
 

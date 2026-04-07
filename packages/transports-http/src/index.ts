@@ -6,19 +6,9 @@ import { ParamResolver } from './libs/ParamResolver';
 import { PipelineRunner } from './libs/PipelineRunner';
 import { RouteCompiler } from './libs/RouteCompiler';
 
-/**
- * AWS Lambda(API Gateway v2) 이벤트를 Croco HTTP 앱에 연결하는 핸들러를 생성합니다.
- */
 export { toLambdaHandler } from './libs/adapters/LambdaAdapter';
-
-/**
- * Node.js 환경에서 Croco HTTP 앱을 실행하는 서버 시작 유틸리티입니다.
- */
 export { startServer } from './libs/adapters/NodeAdapter';
 
-/**
- * transports-http 구성과 실행에 사용되는 핵심 타입 집합입니다.
- */
 export type {
   AppConfig,
   CompiledRoute,
@@ -39,9 +29,6 @@ export type {
   PipeProvider,
 } from './libs/types';
 
-/**
- * Croco HTTP 앱의 핵심 런타임 API입니다.
- */
 export {
   CrocoApp,
   createApp,
@@ -53,32 +40,43 @@ export {
   RouteCompiler,
 };
 
-/**
- * 헬스 체크 레지스트리 작성/응답에 사용하는 타입 집합입니다.
- */
+export {
+  getLambdaContext,
+  getLambdaEvent,
+  type LambdaExecutionEnv,
+  type TypedLambdaHandler,
+} from './libs/CrocoLambdaAdapter';
 export type {
   HealthCheckFunction,
   HealthCheckOptions,
   HealthCheckResult,
   HealthCheckStatus,
 } from './libs/HealthCheckRegistry';
-
-/**
- * CORS 미들웨어 및 옵션 타입입니다.
- */
+export {
+  type BodyLimitOptions,
+  bodyLimitMiddleware,
+  kb,
+  mb,
+} from './libs/middleware/BodyLimitMiddleware';
+export {
+  type CompressionEncoding,
+  type CompressionOptions,
+  compressionMiddleware,
+} from './libs/middleware/CompressionMiddleware';
 export { type CorsOptions, corsMiddleware } from './libs/middleware/CorsMiddleware';
-
-/**
- * 보안 헤더 미들웨어 및 옵션 타입입니다.
- */
+export {
+  type GracefulShutdownOptions,
+  gracefulShutdownMiddleware,
+  isShuttingDown,
+  resetShutdownState,
+  setupGracefulShutdown,
+} from './libs/middleware/GracefulShutdownMiddleware';
+export {
+  createRateLimitMiddlewareFactory,
+  type RateLimitHttpOptions,
+  type RateLimitMiddlewareFactoryOptions,
+  rateLimitHttpMiddleware,
+} from './libs/middleware/RateLimitMiddleware';
 export { type SecurityHeadersOptions, securityHeadersMiddleware } from './libs/middleware/SecurityHeadersMiddleware';
-
-/**
- * 파이프라인 실행기 구성 타입입니다.
- */
 export type { PipelineConfig } from './libs/PipelineRunner';
-
-/**
- * 라우트 컴파일러 구성 타입입니다.
- */
 export type { CompileOptions } from './libs/RouteCompiler';

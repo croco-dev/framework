@@ -7,9 +7,7 @@ title: "RateLimitMiddlewareOptions"
 
 > **RateLimitMiddlewareOptions** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:65](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L65)
-
-Options for global rate limit middleware
+Defined in: [packages/ratelimit-core/src/libs/types.ts:69](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/types.ts#L69)
 
 ## Properties
 
@@ -17,19 +15,15 @@ Options for global rate limit middleware
 
 > `optional` **failOpen**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:71](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L71)
-
-Whether to allow requests when store fails
+Defined in: [packages/ratelimit-core/src/libs/types.ts:72](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/types.ts#L72)
 
 ***
 
 ### keySegments?
 
-> `optional` **keySegments**: [`KeySegment`](/api/ratelimit-core/src/type-aliases/keysegment/)[]
+> `optional` **keySegments**: `KeySegment`[]
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:69](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L69)
-
-Key segments to use for building keys
+Defined in: [packages/ratelimit-core/src/libs/types.ts:71](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/types.ts#L71)
 
 ***
 
@@ -37,6 +31,4 @@ Key segments to use for building keys
 
 > **policy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-Defined in: [packages/ratelimit-core/src/libs/types.ts:67](https://github.com/croco-dev/framework/blob/7b8a1acf436b1287a1d68b6f5ed7382cf2d96a90/packages/ratelimit-core/src/libs/types.ts#L67)
-
-Rate limit policy to apply
+Defined in: [packages/ratelimit-core/src/libs/types.ts:70](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/types.ts#L70)

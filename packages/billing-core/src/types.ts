@@ -1,3 +1,5 @@
+import type { Money } from './libs/Money';
+
 export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'revoked' | 'trialing';
 
 export type BillingAccount = {
@@ -44,4 +46,33 @@ export type Plan = {
   currency: string;
   interval: PlanInterval;
   intervalCount: number;
+};
+
+export type InvoiceLineItemType = 'subscription' | 'proration' | 'credit' | 'one_time';
+
+export type InvoiceLineItem = {
+  id: string;
+  description: string;
+  type: InvoiceLineItemType;
+  quantity: number;
+  unitPrice: Money;
+  total: Money;
+  periodStart?: Date;
+  periodEnd?: Date;
+};
+
+export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void';
+
+export type Invoice = {
+  id: string;
+  billingAccountId: string;
+  currency: string;
+  lineItems: InvoiceLineItem[];
+  subtotal: Money;
+  total: Money;
+  status: InvoiceStatus;
+  issuedAt: Date;
+  dueAt?: Date;
+  paidAt?: Date;
+  externalInvoiceId?: string;
 };

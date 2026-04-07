@@ -1,6 +1,6 @@
 import type { EventBus } from '@croco/events-core';
 import { Token } from '@croco/framework-context';
-import { Trace } from '@croco/telemetry-api';
+import { Trace, withSpan } from '@croco/telemetry-api';
 import { LlmGeneratedEvent } from './events/LlmGeneratedEvent';
 import { LlmStreamCompletedEvent } from './events/LlmStreamCompletedEvent';
 import type { LlmRegistry } from './LlmRegistry';
@@ -106,15 +106,20 @@ export class LlmService {
     }
   }
 
-  @Trace({ name: 'llm.generate_object' })
   async generateObject<T>(params: GenerateObjectParams<T>): Promise<T> {
-    try {
-      const modelId = params.modelId ?? 'default';
-      const model = await this.registry.getModel(modelId);
-      return await model.generateObject(params);
-    } catch (error) {
-      throw LlmServiceProblem.fromError(error);
-    }
+    return withSpan(
+      async (span) => {
+        try {
+          const modelId = params.modelId ?? 'default';
+          span.setAttribute('llm.model_id', modelId);
+          const model = await this.registry.getModel(modelId);
+          return await model.generateObject(params);
+        } catch (error) {
+          throw LlmServiceProblem.fromError(error);
+        }
+      },
+      { name: 'llm.generate_object' }
+    );
   }
 
   @Trace({ name: 'llm.call_tool' })

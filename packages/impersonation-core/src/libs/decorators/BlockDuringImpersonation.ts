@@ -1,6 +1,6 @@
 import { Context } from '@croco/framework-context';
+import type { ImpersonationContext } from '../ImpersonationService';
 import { BlockedDuringImpersonationProblem } from '../problems/ImpersonationProblems';
-import type { ImpersonationContext } from '../types';
 
 type MethodDecorator = (
   target: object,

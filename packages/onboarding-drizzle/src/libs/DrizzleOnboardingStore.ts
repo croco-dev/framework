@@ -1,16 +1,15 @@
 import { Component, Inject, Token } from '@croco/framework-context';
 import { type OnboardingState, OnboardingStore } from '@croco/onboarding-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb, DrizzleInsertFn, DrizzleSelectFn } from '@croco/tx-drizzle';
+import type { DrizzleDb } from '@croco/tx-drizzle';
 import { and, eq } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { onboardingStates } from './schema';
 
-type DrizzleOnboardingClient = DrizzleDb & {
-  select: DrizzleSelectFn;
-  insert: DrizzleInsertFn;
-};
+export type DrizzleOnboardingClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
-// Token for Drizzle Database Instance
+export type OnboardingStateRow = typeof onboardingStates.$inferSelect;
+
 export const DRIZZLE_TOKEN = new Token<DrizzleOnboardingClient>('DRIZZLE_TOKEN');
 
 @Component()
@@ -25,7 +24,7 @@ export class DrizzleOnboardingStore extends OnboardingStore {
   async getState(tenantId: string, userId: string, onboardingId: string): Promise<OnboardingState | null> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = await client
+    const rows = (await client
       .select()
       .from(onboardingStates)
       .where(
@@ -35,13 +34,13 @@ export class DrizzleOnboardingStore extends OnboardingStore {
           eq(onboardingStates.onboardingId, onboardingId)
         )
       )
-      .limit(1);
+      .limit(1)) as OnboardingStateRow[];
 
-    if (result.length === 0) {
+    if (rows.length === 0) {
       return null;
     }
 
-    const row = result[0];
+    const row = rows[0];
     return {
       steps: row.steps as OnboardingState['steps'],
       isCompleted: row.isCompleted,

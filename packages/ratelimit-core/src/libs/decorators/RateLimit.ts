@@ -5,44 +5,28 @@ import {
   type RateLimitMetadata,
   ROUTE_GUARDS_METADATA_KEY,
 } from '../guards/RateLimitGuard';
-import { parseWindowMs, type RateLimitDecoratorOptions, type RateLimitPolicy } from '../types';
+import { parseWindowMs, type RateLimitAlgorithm, type RateLimitPolicy } from '../types';
 
-/**
- * Default rate limit values when not specified.
- */
 const DEFAULTS = {
   limit: 100,
   window: '1m',
   policyName: 'default',
-} as const;
+  algorithm: 'sliding' as RateLimitAlgorithm,
+};
 
-/**
- * Method decorator that applies rate limiting to an endpoint.
- * Automatically registers RateLimitGuard - no need for @UseGuards(RateLimitGuard).
- *
- * @example
- * ```typescript
- * @RateLimit({ limit: 10, window: '1m' })
- * @Get('/expensive')
- * async expensiveOperation() {}
- * ```
- *
- * @example
- * ```typescript
- * // Dynamic limit based on context
- * @RateLimit({
- *   limit: 100,
- *   window: '1h',
- *   key: (ctx) => ctx.get('tenant')?.id
- * })
- * @Post('/api')
- * async apiCall() {}
- * ```
- */
+export type RateLimitDecoratorOptions = {
+  limit?: number;
+  window?: string;
+  policy?: string;
+  algorithm?: RateLimitAlgorithm;
+  key?: (context: unknown) => string;
+};
+
 export function RateLimit(options: RateLimitDecoratorOptions = {}): MethodDecorator {
   return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
     const policy: RateLimitPolicy = {
       name: options.policy ?? `${String(propertyKey)}-${DEFAULTS.policyName}`,
+      algorithm: options.algorithm ?? DEFAULTS.algorithm,
       limit: options.limit ?? DEFAULTS.limit,
       windowMs: parseWindowMs(options.window ?? DEFAULTS.window),
     };
@@ -52,12 +36,11 @@ export function RateLimit(options: RateLimitDecoratorOptions = {}): MethodDecora
       customKey: options.key,
     };
 
-    // Store rate limit metadata
     Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, metadata, descriptor.value);
 
-    // Auto-register RateLimitGuard (no need for @UseGuards)
-    const existingGuards: unknown[] =
-      Reflect.getMetadata(ROUTE_GUARDS_METADATA_KEY, _target.constructor, propertyKey) || [];
+    const existingGuards =
+      (Reflect.getMetadata(ROUTE_GUARDS_METADATA_KEY, _target.constructor, propertyKey) as unknown[]) || [];
+
     if (!existingGuards.includes(RateLimitGuard)) {
       Reflect.defineMetadata(
         ROUTE_GUARDS_METADATA_KEY,
