@@ -11,7 +11,8 @@ describe('DrizzleAuditLogRepository', () => {
   let repository!: DrizzleAuditLogRepository;
   let sqlite!: Database.Database;
   let db!: DrizzleDb;
-  let txManager!: TxManager<DrizzleDb>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let txManager!: TxManager<any, any>;
 
   beforeEach(() => {
     sqlite = new Database(':memory:');
@@ -32,7 +33,7 @@ describe('DrizzleAuditLogRepository', () => {
       )
     `);
 
-    const adapter = createDrizzleTxAdapter(db);
+    const adapter = createDrizzleTxAdapter(db as unknown as Parameters<typeof createDrizzleTxAdapter>[0]);
     txManager = new TxManager(adapter, { defaultNesting: 'join' });
 
     const schema = {
