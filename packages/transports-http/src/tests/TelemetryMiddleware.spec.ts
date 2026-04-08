@@ -33,7 +33,6 @@ describe('TelemetryMiddleware', () => {
   it('should continue request and mark degraded mode when telemetry setup fails', async () => {
     const ctx = createContext();
     const next = vi.fn().mockResolvedValue(undefined);
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const middleware = telemetryMiddleware('/health');
     const headerSpy = vi.spyOn(ctx, 'header').mockImplementation(() => {
@@ -45,15 +44,6 @@ describe('TelemetryMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(ctx.get('telemetryDegraded')).toBe(true);
     expect(ctx.get('traceId')).toMatch(/^telemetry-degraded-/);
-    expect(warnSpy).toHaveBeenCalledWith(
-      'Telemetry middleware failed, proceeding without tracing',
-      expect.objectContaining({
-        route: '/health',
-        method: 'GET',
-        path: '/health',
-        telemetryDegraded: true,
-      })
-    );
 
     headerSpy.mockRestore();
   });

@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {

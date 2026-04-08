@@ -26,3 +26,5 @@ export enum ParamType {
   CTX = 'ctx',
   RAW = 'raw',
 }
+
+export type ParamSource = 'param' | 'query' | 'header' | 'body';

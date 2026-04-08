@@ -1,5 +1,7 @@
 import { type CircuitBreakerStateStore, CircuitState, InMemoryCircuitBreakerStateStore } from './CircuitBreakerState';
 import { CircuitBreakerOpenProblem } from './errors/CircuitBreakerOpenProblem';
+import { InvalidRetryConfigurationError } from './errors/RetryInfrastructureProblem';
+import { CircuitBreakerUnexpectedStateProblem } from './problems/CircuitBreakerProblems';
 
 export interface CircuitBreakerOptions {
   circuitId: string;
@@ -25,9 +27,19 @@ export class CircuitBreaker {
   private _closedActiveCount = 0;
 
   constructor(options: CircuitBreakerOptions) {
+    const failureThreshold = options.failureThreshold ?? 5;
+    const openDuration = options.openDuration ?? 30000;
+
+    if (!Number.isInteger(failureThreshold) || failureThreshold <= 0) {
+      throw new InvalidRetryConfigurationError(`failureThreshold must be a positive integer, got ${failureThreshold}`);
+    }
+    if (!Number.isFinite(openDuration) || openDuration <= 0) {
+      throw new InvalidRetryConfigurationError(`openDuration must be a positive number, got ${openDuration}`);
+    }
+
     this.circuitId = options.circuitId;
-    this.failureThreshold = options.failureThreshold ?? 5;
-    this.openDuration = options.openDuration ?? 30000;
+    this.failureThreshold = failureThreshold;
+    this.openDuration = openDuration;
     this.halfOpenRequests = options.halfOpenRequests ?? 1;
     this.stateStore = options.stateStore ?? new InMemoryCircuitBreakerStateStore();
     this.fallback = options.fallback;
@@ -45,7 +57,7 @@ export class CircuitBreaker {
         return this.handleClosed(fn);
       default: {
         const exhaustive: never = state;
-        throw new Error(`Unexpected state: ${exhaustive}`);
+        throw new CircuitBreakerUnexpectedStateProblem(exhaustive);
       }
     }
   }

@@ -7,3 +7,11 @@ export class BatchResultLengthMismatchProblem extends Problem {
     super(undefined, undefined, `BatchLoader: batch function returned ${actual} results, expected ${expected}`);
   }
 }
+
+export class InvalidBatchLoaderConfigurationError extends Error {
+  readonly name = 'InvalidBatchLoaderConfigurationError';
+
+  constructor(message: string) {
+    super(`Invalid BatchLoader configuration: ${message}`);
+  }
+}

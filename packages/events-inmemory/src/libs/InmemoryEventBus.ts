@@ -5,6 +5,7 @@ import { Logger } from '@croco/framework-logger';
 import type { TraceInfo } from '@croco/telemetry-api';
 import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
 import { type Context, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
+import { BackpressureExceededProblem } from './problems/EventsInmemoryProblems';
 
 export type EventPublishFailure = {
   handlerName: string;
@@ -21,6 +22,14 @@ export class EventPublishFailedError extends Error {
   ) {
     super(`${failures.length} event handler(s) failed while publishing ${eventName}`);
     this.cause = failures[0]?.error;
+  }
+}
+
+export class InvalidEventBusConfigurationError extends Error {
+  readonly name = 'InvalidEventBusConfigurationError';
+
+  constructor(message: string) {
+    super(`Invalid EventBus configuration: ${message}`);
   }
 }
 
@@ -46,7 +55,13 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
   private handlerCounter = 0;
 
   constructor(options: InMemoryEventBusOptions = {}) {
-    this.maxConcurrency = options.maxConcurrency ?? Number.POSITIVE_INFINITY;
+    const maxConcurrency = options.maxConcurrency ?? 100;
+    if (!Number.isFinite(maxConcurrency) || maxConcurrency <= 0) {
+      throw new InvalidEventBusConfigurationError(
+        `maxConcurrency must be a positive finite number, got ${maxConcurrency}`
+      );
+    }
+    this.maxConcurrency = maxConcurrency;
     this.backpressureStrategy = options.backpressureStrategy ?? 'block';
   }
 
@@ -110,7 +125,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
           return;
         }
         case 'error': {
-          throw new Error(`Backpressure exceeded: ${currentRunning} handlers already running`);
+          throw new BackpressureExceededProblem(currentRunning);
         }
         case 'block':
         default: {

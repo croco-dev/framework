@@ -45,4 +45,5 @@ export { AuditLogRepository } from './libs/AuditLogRepository';
 export { AUDIT_LOG_REPOSITORY_TOKEN } from './libs/AuditLogRepositoryToken';
 export { AUDIT_METADATA_KEY } from './libs/constants';
 export type { AuditExecutionContext, CallHandler, Interceptor } from './libs/interfaces/Interceptor';
+export { AuditableDecoratorProblem } from './libs/problems/AuditableDecoratorProblem';
 export type { AuditableOptions, AuditLogEntry, AuditParamMetadata, AuditPayload, AuditQuery } from './libs/types';

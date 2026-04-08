@@ -21,6 +21,7 @@
   "dependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*"
   },
   "devDependencies": {

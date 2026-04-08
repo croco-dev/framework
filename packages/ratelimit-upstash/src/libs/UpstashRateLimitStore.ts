@@ -18,6 +18,7 @@ import type { Redis } from '@upstash/redis';
 import { fixedWindowLua } from './lua/fixed-window';
 import { slidingWindowLua } from './lua/sliding-window';
 import { tokenBucketLua } from './lua/token-bucket';
+import { InvalidRateLimitPolicyProblem } from './problems/RateLimitUpstashProblems';
 
 export type UpstashRateLimitStoreOptions = {
   redis: Redis;
@@ -41,7 +42,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     if (!isSlidingWindowPolicy(policy)) {
-      throw new Error('Invalid policy for sliding window store');
+      throw new InvalidRateLimitPolicyProblem('sliding window');
     }
 
     const result = await this.checkSlidingWindow(key, policy);
@@ -138,7 +139,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     if (!isTokenBucketPolicy(policy)) {
-      throw new Error('Invalid policy for token bucket store');
+      throw new InvalidRateLimitPolicyProblem('token bucket');
     }
 
     const result = await this.checkTokenBucket(key, policy);
@@ -233,7 +234,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     if (!isFixedWindowPolicy(policy)) {
-      throw new Error('Invalid policy for fixed window store');
+      throw new InvalidRateLimitPolicyProblem('fixed window');
     }
 
     const now = Date.now();

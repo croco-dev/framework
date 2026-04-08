@@ -1,4 +1,5 @@
 import type { Guard } from '@croco/framework-context';
+import { GuardDeniedProblem } from '../problems/GuardProblems';
 import type { GraphQLCallHandler, GraphQLInterceptor, GraphQLInterceptorContext } from '../types/InterceptorTypes';
 
 export class GuardInterceptor implements GraphQLInterceptor {
@@ -12,7 +13,7 @@ export class GuardInterceptor implements GraphQLInterceptor {
     for (const guard of this.guards) {
       const canActivate = await guard.canActivate(context);
       if (!canActivate) {
-        throw new Error('GUARD_DENIED');
+        throw new GuardDeniedProblem();
       }
     }
 

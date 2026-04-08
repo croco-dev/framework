@@ -29,3 +29,11 @@ export class LambdaTimeoutProblem extends Problem {
     super(detail);
   }
 }
+
+export class InvalidRetryConfigurationError extends Error {
+  readonly name = 'InvalidRetryConfigurationError';
+
+  constructor(message: string) {
+    super(`Invalid retry configuration: ${message}`);
+  }
+}

@@ -30,3 +30,4 @@ export type { BackpressureStrategy, EventPublishFailure, InMemoryEventBusOptions
  * `@croco/events-core`의 EventBus 인터페이스를 인메모리로 구현한 EventBus입니다.
  */
 export { EventPublishFailedError, InMemoryEventBus } from './libs/InmemoryEventBus';
+export { BackpressureExceededProblem } from './libs/problems/EventsInmemoryProblems';

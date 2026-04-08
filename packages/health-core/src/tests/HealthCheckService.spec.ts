@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HealthCheckService } from '../libs/HealthCheckService';
-import type { HealthIndicator, HealthIndicatorResult } from '../libs/HealthIndicator';
+import type { HealthIndicator, HealthIndicatorResult, ReadinessIndicator } from '../libs/HealthIndicator';
 
 describe('HealthCheckService', () => {
   let service!: HealthCheckService;
@@ -202,5 +202,111 @@ describe('HealthCheckService', () => {
 
     expect(result.status).toBe('up');
     expect(result.results[0].status).toBe('up');
+  });
+
+  describe('liveness', () => {
+    it('should return true when process is alive', () => {
+      const service = new HealthCheckService();
+      expect(service.isLive()).toBe(true);
+    });
+
+    it('should always return true regardless of indicators', () => {
+      const service = new HealthCheckService();
+      const indicator: HealthIndicator = {
+        check: vi.fn().mockRejectedValue(new Error('Failed')),
+      };
+      service.register(indicator);
+
+      expect(service.isLive()).toBe(true);
+    });
+  });
+
+  describe('readiness', () => {
+    it('should return true when no readiness indicators registered', async () => {
+      const service = new HealthCheckService();
+      const isReady = await service.isReady();
+      expect(isReady).toBe(true);
+    });
+
+    it('should return true when all readiness indicators are up', async () => {
+      const service = new HealthCheckService();
+      const readinessIndicator: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        isReady: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+      };
+
+      service.registerReadiness(readinessIndicator);
+
+      const isReady = await service.isReady();
+      expect(isReady).toBe(true);
+      expect(readinessIndicator.isReady).toHaveBeenCalled();
+    });
+
+    it('should return false when any readiness indicator is down', async () => {
+      const service = new HealthCheckService();
+      const readinessIndicator: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        isReady: vi.fn().mockResolvedValue({
+          name: 'db',
+          status: 'down',
+          details: { error: 'Connection failed' },
+        }),
+      };
+
+      service.registerReadiness(readinessIndicator);
+
+      const isReady = await service.isReady();
+      expect(isReady).toBe(false);
+    });
+
+    it('should return false when readiness indicator throws error', async () => {
+      const service = new HealthCheckService();
+      const readinessIndicator: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        isReady: vi.fn().mockRejectedValue(new Error('Timeout')),
+      };
+
+      service.registerReadiness(readinessIndicator);
+
+      const isReady = await service.isReady();
+      expect(isReady).toBe(false);
+    });
+
+    it('should handle multiple readiness indicators', async () => {
+      const service = new HealthCheckService();
+      const indicator1: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        isReady: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+      };
+      const indicator2: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: 'redis', status: 'up' }),
+        isReady: vi.fn().mockResolvedValue({ name: 'redis', status: 'up' }),
+      };
+
+      service.registerReadiness(indicator1);
+      service.registerReadiness(indicator2);
+
+      const isReady = await service.isReady();
+      expect(isReady).toBe(true);
+      expect(indicator1.isReady).toHaveBeenCalled();
+      expect(indicator2.isReady).toHaveBeenCalled();
+    });
+
+    it('should use timeout for readiness checks', async () => {
+      const service = new HealthCheckService({ timeout: 100 });
+      const slowIndicator: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        isReady: vi
+          .fn()
+          .mockImplementation(
+            () => new Promise((resolve) => setTimeout(() => resolve({ name: 'db', status: 'up' }), 10000))
+          ),
+      };
+
+      service.registerReadiness(slowIndicator);
+
+      const isReady = await service.isReady();
+      expect(isReady).toBe(false);
+    });
   });
 });

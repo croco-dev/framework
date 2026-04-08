@@ -1,7 +1,7 @@
 import type { ILogger } from '@croco/framework-context';
 import { recordError } from '@croco/telemetry-api';
 import { context, trace } from '@opentelemetry/api';
-import { BatchResultLengthMismatchProblem } from './problems/BatchLoaderProblems';
+import { BatchResultLengthMismatchProblem, InvalidBatchLoaderConfigurationError } from './problems/BatchLoaderProblems';
 import type { BatchLoader, BatchLoaderOptions } from './types';
 
 const noopLogger: ILogger = {
@@ -24,9 +24,15 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
   private scheduled = false;
 
   constructor(options: BatchLoaderOptions<K, V>, logger: ILogger = noopLogger) {
+    const maxBatchSize = options.maxBatchSize ?? 50;
+    if (!Number.isFinite(maxBatchSize) || maxBatchSize <= 0) {
+      throw new InvalidBatchLoaderConfigurationError(
+        `maxBatchSize must be a positive finite number, got ${maxBatchSize}`
+      );
+    }
     this.options = {
       cache: true,
-      maxBatchSize: Infinity,
+      maxBatchSize,
       ...options,
     };
     this.logger = logger.child({ component: 'BatchLoader', loader: this.options.name });

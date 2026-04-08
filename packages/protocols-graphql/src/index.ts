@@ -56,6 +56,7 @@ export {
   getResolverMetadata,
   isResolver,
 } from './libs/metadata/MetadataReader';
+export { GuardDeniedProblem } from './libs/problems/GuardProblems';
 export type {
   ClassType,
   GraphQLCallHandler,

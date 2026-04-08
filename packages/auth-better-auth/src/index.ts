@@ -2,5 +2,6 @@ export * from './libs/BetterAuthFactory';
 export * from './libs/BetterAuthProvider';
 export * from './libs/BetterAuthWebhookProcessor';
 export * from './libs/problems/BetterAuthInvalidSessionProblem';
+export * from './libs/problems/WebhookProblems';
 export * from './libs/schema';
 export * from './libs/types';

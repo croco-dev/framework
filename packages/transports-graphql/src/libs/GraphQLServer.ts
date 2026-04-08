@@ -134,11 +134,7 @@ export class GraphQLServer {
             logger.info(
               `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || '/graphql'}`
             );
-          } catch {
-            console.log(
-              `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || '/graphql'}`
-            );
-          }
+          } catch {}
           resolve();
         }
       });

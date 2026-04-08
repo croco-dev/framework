@@ -154,6 +154,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -400,6 +403,9 @@ importers:
 
   packages/cache-core:
     dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -677,6 +683,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -955,6 +964,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       posthog-node:
         specifier: ^4.0.0
         version: 4.18.0
@@ -1463,6 +1475,9 @@ importers:
 
   packages/ratelimit-upstash:
     dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/ratelimit-core':
         specifier: workspace:*
         version: link:../ratelimit-core

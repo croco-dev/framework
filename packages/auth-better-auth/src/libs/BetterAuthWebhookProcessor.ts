@@ -1,3 +1,4 @@
+import { InvalidWebhookPayloadProblem, InvalidWebhookSignatureProblem } from './problems/WebhookProblems';
 import type {
   BetterAuthSession,
   BetterAuthSessionProvider,
@@ -27,11 +28,11 @@ export class BetterAuthWebhookProcessor {
     const bodyString = JSON.stringify(body);
 
     if (!this.verifySignature(bodyString, signature)) {
-      throw new Error('Invalid webhook signature');
+      throw new InvalidWebhookSignatureProblem();
     }
 
     if (!isObjectRecord(body) || typeof body.type !== 'string') {
-      throw new Error('Invalid webhook payload');
+      throw new InvalidWebhookPayloadProblem();
     }
 
     const eventType = body.type;

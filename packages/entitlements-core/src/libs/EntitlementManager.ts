@@ -105,10 +105,6 @@ export class EntitlementManager {
         });
 
       case 'WARN':
-        console.warn(
-          `[EntitlementManager] tenant=${tenantId} feature=${featureKey} usage=${quotaStatus.usage} quota=${quota}`
-        );
-
         return this.createMeteredResult({
           granted: true,
           featureKey,

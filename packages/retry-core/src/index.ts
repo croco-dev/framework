@@ -46,12 +46,10 @@ export {
   RetryAbortedProblem,
   RetryExhaustedProblem,
 } from './libs/errors';
-
 /**
  * Lambda timeout guard types for integrating retry logic with AWS Lambda execution limits.
  */
 export type { LambdaContext, TimeoutGuardOptions } from './libs/LambdaTimeoutGuard';
-
 /**
  * Lambda timeout guard utilities for tracking remaining execution time during retries.
  */
@@ -64,6 +62,7 @@ export {
   runWithLambdaContext,
   setLambdaContext,
 } from './libs/LambdaTimeoutGuard';
+export { CircuitBreakerUnexpectedStateProblem } from './libs/problems/CircuitBreakerProblems';
 
 /**
  * Metadata type stored for recovery methods registered with `@Recover`.

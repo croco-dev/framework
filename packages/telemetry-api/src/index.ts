@@ -74,8 +74,6 @@ export { Trace } from './libs/decorators/Trace.js';
  * @example
  * ```typescript
  * const traceInfo = getActiveTraceInfo();
- * console.log('Trace ID:', traceInfo.traceId);
- * console.log('Is Sampled:', traceInfo.isValid);
  * ```
  */
 export type { SpanOptions, TraceInfo } from './libs/span.js';

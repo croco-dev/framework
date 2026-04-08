@@ -255,19 +255,14 @@ describe('EntitlementManager', () => {
       remaining: -1,
     });
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
     const result = await manager.check('tenant-1', 'reports');
 
     expect(result.granted).toBe(true);
     expect(result.overagePolicy).toBe('WARN');
     expect(result.exceeded).toBe(true);
-    expect(warnSpy).toHaveBeenCalledOnce();
     expect(eventPublisher.publish).toHaveBeenCalledWith(
       expect.objectContaining({ eventName: EntitlementQuotaExceededEvent.eventName })
     );
-
-    warnSpy.mockRestore();
   });
 
   it('should allow requests that exceed quota with ALLOW_WITH_OVERAGE policy', async () => {

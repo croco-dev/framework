@@ -1,6 +1,7 @@
 import { Container, Context, LOGGER_TOKEN } from '@croco/framework-context';
 import { recordError } from '@croco/telemetry-api';
 import { AUDIT_LOG_REPOSITORY_TOKEN } from './AuditLogRepositoryToken';
+import { AuditableDecoratorProblem } from './problems/AuditableDecoratorProblem';
 import type { AuditableOptions, AuditLogEntry } from './types';
 
 type DecoratedMethod = (...args: unknown[]) => unknown;
@@ -141,7 +142,7 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
     const originalMethod = descriptor.value as DecoratedMethod;
 
     if (typeof originalMethod !== 'function') {
-      throw new Error('@Auditable can only be applied to methods');
+      throw new AuditableDecoratorProblem('@Auditable can only be applied to methods');
     }
 
     const paramMetadata: AuditParamMetadata = {

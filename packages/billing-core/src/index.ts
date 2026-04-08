@@ -58,7 +58,6 @@ export type { BillingServiceDependencies, CreateBillingCheckoutParams } from './
  *   successUrl: 'https://example.com/billing/success',
  *   cancelUrl: 'https://example.com/billing/cancel',
  * });
- * console.log(checkout.checkoutUrl);
  * ```
  */
 export { BillingService } from './libs/BillingService';

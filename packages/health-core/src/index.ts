@@ -23,8 +23,6 @@
  *
  * // Check health
  * const result = await healthService.check();
- * console.log(result.status); // 'up' | 'down'
- * console.log(result.results); // Array of individual check results
  * ```
  */
 
@@ -175,4 +173,5 @@ export type {
   HealthIndicatorResult,
   HealthIndicatorSuccessDetails,
   HealthStatus,
+  ReadinessIndicator,
 } from './libs/HealthIndicator';

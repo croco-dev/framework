@@ -333,8 +333,6 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
       return;
     }
 
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[RedisCircuitBreakerStore] Redis store error. Falling back to in-memory state store: ${message}`);
     this.hasLoggedFallbackWarning = true;
   }
 

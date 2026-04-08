@@ -34,10 +34,7 @@ class TelemetryRuntime {
     return new ProbabilitySampler({ probability: traceConfig.probability });
   }
 
-  private reportError(phase: 'init' | 'forceFlush' | 'shutdown', error: unknown): void {
-    const normalizedError = error instanceof Error ? error : new Error(String(error));
-    console.warn(`[TelemetryRuntime] ${phase} failed: ${normalizedError.message}`, normalizedError);
-  }
+  private reportError(_phase: 'init' | 'forceFlush' | 'shutdown', _error: unknown): void {}
 
   static getInstance(): TelemetryRuntime {
     if (!TelemetryRuntime.instance) {

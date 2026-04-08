@@ -198,7 +198,7 @@ export { InvitationManager } from './libs/InvitationManager';
  * and database-backed stores for production.
  */
 export { InvitationStore } from './libs/InvitationStore';
-
+export { BatchSizeExceededProblem } from './libs/problems/BatchInviteProblems';
 /**
  * Domain policy problem types.
  *
@@ -212,13 +212,12 @@ export { InvitationStore } from './libs/InvitationStore';
  *   await domainPolicyManager.addDomainPolicy('t1', 'gmail.com', 'member');
  * } catch (e) {
  *   if (e instanceof PublicEmailDomainNotAllowedProblem) {
- *     console.log('Public email domains are not allowed');
+ *     // Handle public email domain error
  *   }
  * }
  * ```
  */
 export { InvalidAutoJoinRoleProblem, PublicEmailDomainNotAllowedProblem } from './libs/problems/DomainPolicyProblems';
-
 /**
  * Invitation problem types.
  *
@@ -232,7 +231,7 @@ export { InvalidAutoJoinRoleProblem, PublicEmailDomainNotAllowedProblem } from '
  *   await manager.acceptInvitation({ token, userId: 'u1' });
  * } catch (e) {
  *   if (e instanceof InvitationExpiredProblem) {
- *     console.log('This invitation has expired');
+ *     // Handle expired invitation
  *   }
  * }
  * ```
