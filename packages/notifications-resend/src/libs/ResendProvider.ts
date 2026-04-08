@@ -183,15 +183,27 @@ export class ResendProvider implements NotificationProvider {
 
   async send(payload: NotificationPayload): Promise<NotificationResult> {
     try {
-      const { to, subject, content } = payload;
+      const { to, subject, content, templateId, variables } = payload;
       const idempotencyKey = `resend-${randomUUID()}`;
 
       const emailOptions: CreateEmailOptions = {
         from: this.config.from,
         to,
-        subject: subject || 'No Subject',
-        html: content,
       };
+
+      if (subject) {
+        emailOptions.subject = subject;
+      }
+
+      if (templateId && variables) {
+        emailOptions.template = {
+          id: templateId,
+          variables: variables as Record<string, string | number>,
+        };
+      } else {
+        emailOptions.subject = subject || 'No Subject';
+        emailOptions.html = content;
+      }
 
       const data = await this.retryTemplate.execute(async () => {
         const response = await this.client.emails.send(emailOptions, { idempotencyKey });
@@ -229,5 +241,9 @@ export class ResendProvider implements NotificationProvider {
         providerResponse: cause.providerResponse,
       };
     }
+  }
+
+  async sendBatch(payloads: NotificationPayload[]): Promise<NotificationResult[]> {
+    return Promise.all(payloads.map((payload) => this.send(payload)));
   }
 }
