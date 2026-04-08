@@ -4,6 +4,10 @@ export class BetterAuthInvalidSessionProblem extends Problem {
   readonly code = 'auth-better-auth/invalid-session-payload';
   readonly category = ProblemCategory.InternalServerError;
   constructor() {
-    super(undefined, undefined, 'Better Auth session did not include a valid user payload');
+    super(
+      'auth-better-auth/invalid-session-payload',
+      ProblemCategory.InternalServerError,
+      'Better Auth session did not include a valid user payload'
+    );
   }
 }

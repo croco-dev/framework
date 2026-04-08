@@ -1,73 +1,63 @@
 /**
+ * Contract for managing user sessions.
+ */
+
+/**
  * Creates cryptographically secure API keys.
  */
 export { ApiKeyGenerator } from './libs/apikey/ApiKeyGenerator';
-
 /**
  * Hashes and verifies API keys.
  */
 export { ApiKeyHasher } from './libs/apikey/ApiKeyHasher';
-
 /**
  * Manages API key lifecycle operations.
  */
 export { ApiKeyManager } from './libs/apikey/ApiKeyManager';
-
 /**
  * Defines storage operations for API keys.
  */
 export { API_KEY_STORE_TOKEN, ApiKeyStore } from './libs/apikey/ApiKeyStore';
-
 /**
  * Metadata keys used by auth decorators and guards.
  */
 export { API_KEY_REQUIRED_KEY, AUTH_PERMISSIONS_KEY, AUTH_PUBLIC_KEY } from './libs/constants';
-
 /**
  * Injects the current API key into a handler parameter.
  */
 export { CurrentApiKey } from './libs/decorators/CurrentApiKey';
-
 /**
  * Injects the current authenticated principal into a handler parameter.
  */
 export { CurrentPrincipal } from './libs/decorators/CurrentPrincipal';
-
 /**
  * Marks an endpoint as publicly accessible.
  */
 export { Public } from './libs/decorators/Public';
-
 /**
  * Marks an endpoint as requiring API key authentication.
  */
 export { RequireApiKey } from './libs/decorators/RequireApiKey';
-
 /**
  * Declares required permissions for an endpoint.
  */
 export { RequirePermission } from './libs/decorators/RequirePermission';
-
 /**
  * Injects the current authenticated user into a handler parameter.
  */
 export { User } from './libs/decorators/User';
-
 /**
  * Guard for API key based authentication.
  */
 export { ApiKeyGuard } from './libs/guards/ApiKeyGuard';
-
 /**
  * Guard for user authentication and authorization.
  */
 export { AuthGuard } from './libs/guards/AuthGuard';
-
 /**
  * Guard for permission-based authorization checks.
  */
 export { PermissionGuard } from './libs/guards/PermissionGuard';
-
 /**
  * Unified guard supporting principal and API key flows.
  */
@@ -104,6 +94,12 @@ export type { RouteExecutionContext } from './libs/interfaces/Guard';
  * Principal types used by guards and authorization.
  */
 export type { ApiKeyPrincipal, Principal, PrincipalType, UserPrincipal } from './libs/interfaces/Principal';
+export type {
+  Session,
+  SessionListOptions,
+  SessionListResult,
+  SessionProvider,
+} from './libs/interfaces/SessionProvider';
 /**
  * Contract for mapping identities to tenant information.
  */

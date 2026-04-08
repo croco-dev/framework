@@ -5,7 +5,7 @@ export class InvalidWebhookSignatureProblem extends Problem {
   readonly category = ProblemCategory.Unauthorized;
 
   constructor() {
-    super(undefined, undefined, 'Invalid webhook signature');
+    super('auth-better-auth/invalid-webhook-signature', ProblemCategory.Unauthorized, 'Invalid webhook signature');
   }
 }
 
@@ -14,6 +14,6 @@ export class InvalidWebhookPayloadProblem extends Problem {
   readonly category = ProblemCategory.BadRequest;
 
   constructor() {
-    super(undefined, undefined, 'Invalid webhook payload');
+    super('auth-better-auth/invalid-webhook-payload', ProblemCategory.BadRequest, 'Invalid webhook payload');
   }
 }
