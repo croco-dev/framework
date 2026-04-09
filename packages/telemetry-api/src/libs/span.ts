@@ -39,6 +39,9 @@ export async function withSpan<T>(fn: (span: Span) => Promise<T> | T, options: S
   });
 }
 
+/**
+ * 현재 활성 Span에 이름과 속성을 가진 이벤트를 기록합니다.
+ */
 export function recordEvent(name: string, attributes: Attributes = {}): void {
   const span = trace.getActiveSpan();
   if (!span) {
@@ -48,6 +51,9 @@ export function recordEvent(name: string, attributes: Attributes = {}): void {
   span.addEvent(name, attributes);
 }
 
+/**
+ * 현재 활성 Span 또는 지정한 Span에 에러를 기록합니다.
+ */
 export function recordError(error: unknown, span?: Span): void {
   const activeSpan = span ?? trace.getActiveSpan();
   if (!activeSpan) {
@@ -70,6 +76,9 @@ export function recordError(error: unknown, span?: Span): void {
   });
 }
 
+/**
+ * 현재 활성 Trace의 traceId, spanId, traceFlags를 반환합니다.
+ */
 export function getActiveTraceInfo(): TraceInfo {
   const spanContext = trace.getSpanContext(context.active());
 

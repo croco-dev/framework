@@ -20,14 +20,23 @@ import type {
   RouteMetadata,
 } from '../types';
 
+/**
+ * 클래스에 등록된 컨트롤러 메타데이터를 조회합니다.
+ */
 export function getControllerMeta(target: Constructor): ControllerMetadata | undefined {
   return Reflect.getMetadata(REST_CONTROLLER_KEY, target);
 }
 
+/**
+ * 클래스에 등록된 라우트 메타데이터 배열을 조회합니다.
+ */
 export function getRouteMeta(target: Constructor): RouteMetadata[] {
   return Reflect.getMetadata(REST_ROUTES_KEY, target) || [];
 }
 
+/**
+ * 메서드 파라미터 바인딩 메타데이터를 조회합니다.
+ */
 export function getParamsMeta(target: Constructor, methodName: string | symbol): ParamMetadata[] {
   const paramsMap: Map<string | symbol, ParamMetadata[]> = Reflect.getMetadata(REST_PARAMS_KEY, target) || new Map();
   const params = paramsMap.get(methodName) || [];
@@ -47,6 +56,9 @@ export function getParamsMeta(target: Constructor, methodName: string | symbol):
   return params;
 }
 
+/**
+ * 클래스 또는 메서드에 등록된 Guard 목록을 조회합니다.
+ */
 export function getGuards(target: Constructor, methodName?: string | symbol): GuardConstructor[] {
   const classGuards: GuardConstructor[] = Reflect.getMetadata(REST_GUARDS_KEY, target) || [];
   if (methodName) {
@@ -56,6 +68,9 @@ export function getGuards(target: Constructor, methodName?: string | symbol): Gu
   return classGuards;
 }
 
+/**
+ * 클래스 또는 메서드에 등록된 Pipe 목록을 조회합니다.
+ */
 export function getPipes(target: Constructor, methodName?: string | symbol): PipeTransformConstructor[] {
   const classPipes: PipeTransformConstructor[] = Reflect.getMetadata(REST_PIPES_KEY, target) || [];
   if (methodName) {
@@ -65,6 +80,9 @@ export function getPipes(target: Constructor, methodName?: string | symbol): Pip
   return classPipes;
 }
 
+/**
+ * 클래스 또는 메서드에 등록된 Interceptor 목록을 조회합니다.
+ */
 export function getInterceptors(target: Constructor, methodName?: string | symbol): InterceptorConstructor[] {
   const classInterceptors: InterceptorConstructor[] = Reflect.getMetadata(REST_INTERCEPTORS_KEY, target) || [];
   if (methodName) {
@@ -75,6 +93,9 @@ export function getInterceptors(target: Constructor, methodName?: string | symbo
   return classInterceptors;
 }
 
+/**
+ * 클래스 또는 메서드에 등록된 Exception Filter 목록을 조회합니다.
+ */
 export function getFilters(target: Constructor, methodName?: string | symbol): ExceptionFilterConstructor[] {
   const classFilters: ExceptionFilterConstructor[] = Reflect.getMetadata(REST_FILTERS_KEY, target) || [];
   if (methodName) {
@@ -84,6 +105,9 @@ export function getFilters(target: Constructor, methodName?: string | symbol): E
   return classFilters;
 }
 
+/**
+ * 대상 클래스가 REST 컨트롤러인지 판별합니다.
+ */
 export function isController(target: Constructor): boolean {
   return !!getControllerMeta(target);
 }

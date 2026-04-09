@@ -20,11 +20,17 @@ import { slidingWindowLua } from './lua/sliding-window';
 import { tokenBucketLua } from './lua/token-bucket';
 import { InvalidRateLimitPolicyProblem } from './problems/RateLimitUpstashProblems';
 
+/**
+ * Upstash Redis 저장소에 사용할 공통 옵션입니다.
+ */
 export type UpstashRateLimitStoreOptions = {
   redis: Redis;
   prefix?: string;
 };
 
+/**
+ * Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하는 저장소입니다.
+ */
 export class UpstashSlidingWindowStore extends SlidingWindowStore {
   private readonly redis: Redis;
   private readonly prefix: string;
@@ -122,6 +128,9 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
   }
 }
 
+/**
+ * Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장소입니다.
+ */
 export class UpstashTokenBucketStore extends TokenBucketStore {
   private readonly redis: Redis;
   private readonly prefix: string;
@@ -217,6 +226,9 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   }
 }
 
+/**
+ * Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저장소입니다.
+ */
 export class UpstashFixedWindowStore extends FixedWindowStore {
   private readonly redis: Redis;
   private readonly prefix: string;

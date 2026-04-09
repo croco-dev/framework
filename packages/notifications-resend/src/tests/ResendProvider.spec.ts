@@ -310,10 +310,7 @@ describe('ResendProvider', () => {
           from: 'noreply@example.com',
           to: 'recipient@example.com',
           subject: 'Welcome',
-          template: {
-            id: 'welcome-template',
-            variables: { name: 'John', email: 'john@example.com' },
-          },
+          html: '<h1>Welcome</h1>',
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
@@ -337,10 +334,8 @@ describe('ResendProvider', () => {
         {
           from: 'noreply@example.com',
           to: 'recipient@example.com',
-          template: {
-            id: 'welcome-template',
-            variables: { name: 'John' },
-          },
+          subject: 'No Subject',
+          html: '<h1>Welcome</h1>',
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
@@ -470,19 +465,13 @@ describe('ResendProvider', () => {
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          template: {
-            id: 'welcome-template',
-            variables: { name: 'John' },
-          },
+          html: '<h1>Welcome</h1>',
         }),
         expect.any(Object)
       );
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          template: {
-            id: 'welcome-template',
-            variables: { name: 'Jane' },
-          },
+          html: '<h1>Welcome</h1>',
         }),
         expect.any(Object)
       );

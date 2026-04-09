@@ -58,6 +58,9 @@ class ZodValidationPipe implements PipeTransform<unknown, unknown> {
   }
 }
 
+/**
+ * 컨트롤러 파라미터 메타데이터를 읽어 실제 메서드 인자 배열로 변환합니다.
+ */
 export class ParamResolver {
   private static readonly PARSED_BODY_PROMISE_KEY = '@croco/transports-http:parsed-body-promise';
 

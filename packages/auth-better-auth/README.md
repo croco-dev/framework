@@ -1,6 +1,6 @@
 # @croco/auth-better-auth
 
-Better Auth SDK 기반 인증 패키지입니다. Drizzle ORM과 통합된 셀프 호스팅 인증 솔루션을 제공합니다.
+Better Auth와 Drizzle을 Croco 인증 흐름에 연결하는 패키지입니다.
 
 ## 설치
 
@@ -8,140 +8,81 @@ Better Auth SDK 기반 인증 패키지입니다. Drizzle ORM과 통합된 셀�
 pnpm add @croco/auth-better-auth better-auth drizzle-orm
 ```
 
-## 설정
+## 사용법
 
-### 1. 데이터베이스 스키마
-
-Better Auth용 Drizzle 스키마는 패키지에서 제공됩니다:
+### 1. Drizzle과 팩토리 등록
 
 ```typescript
-import { user, session, account, verification } from '@croco/auth-better-auth';
-
-// drizzle.config.ts에서 사용
-export default {
-  schema: './schema.ts',
-  out: './migrations',
-};
-```
-
-### 2. BetterAuthFactory 설정
-
-```typescript
-import { Container, Component } from '@croco/framework-context';
 import { BetterAuthFactory, DRIZZLE_TOKEN } from '@croco/auth-better-auth';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-
-// Drizzle DB 인스턴스 등록
-const client = postgres(process.env.DATABASE_URL);
-const db = drizzle(client);
+import { Container } from '@croco/framework-context';
 
 Container.register(DRIZZLE_TOKEN, db);
 
-// Better Auth 설정
-const betterAuthFactory = new BetterAuthFactory(db, {
+const factory = new BetterAuthFactory(db, {
   baseURL: process.env.BETTER_AUTH_URL!,
   secret: process.env.BETTER_AUTH_SECRET!,
 });
-
-Container.register(BetterAuthFactory, betterAuthFactory);
 ```
 
-### 3. 인증 Provider 사용
+### 2. 인증 사용자 변환
 
 ```typescript
 import { BetterAuthProvider } from '@croco/auth-better-auth';
-import { AuthGuard } from '@croco/auth-core';
-import { Controller, Get } from '@croco/protocols-rest';
 
-@Controller('/api')
-class ApiController {
-  @Get('/profile')
-  @UseGuard(AuthGuard)
-  async getProfile(@User() user: AuthUser) {
-    return { id: user.id, email: user.email };
-  }
-}
-```
-
-## API
-
-### BetterAuthProvider
-
-`AuthProvider<Request>` 인터페이스 구현체입니다.
-
-```typescript
 const provider = new BetterAuthProvider(factory);
 const user = await provider.authenticate(request);
 ```
 
-### BetterAuthSessionManager
-
-세션 관리 기능을 제공합니다.
+### 3. 세션 관리
 
 ```typescript
-const sessionManager = new BetterAuthSessionManager(factory);
+import { BetterAuthSessionManager } from '@croco/auth-better-auth';
 
-// 세션 조회
-const session = await sessionManager.getSession(token);
-
-// 세션 취소
-await sessionManager.revokeSession(sessionId);
-
-// 사용자의 모든 세션 취소
-await sessionManager.revokeUserSessions(userId);
+const sessions = new BetterAuthSessionManager(factory);
+const session = await sessions.getSession(token);
+await sessions.revokeUserSessions('user_123');
 ```
 
-### BetterAuthUserService
-
-사용자 관리 기능을 제공합니다.
+### 4. 웹훅 처리
 
 ```typescript
-const userService = new BetterAuthUserService(factory);
+import { BetterAuthWebhookProcessor } from '@croco/auth-better-auth';
 
-// 사용자 조회
-const user = await userService.getUser(userId);
-
-// 사용자 정보 업데이트
-await userService.updateUser(userId, { email: 'new@example.com' });
-
-// 사용자 삭제
-await userService.deleteUser(userId);
-```
-
-### BetterAuthWebhookProcessor
-
-Better Auth 웹훅을 처리합니다.
-
-```typescript
 const processor = new BetterAuthWebhookProcessor(
-  { signingSecret: process.env.WEBHOOK_SECRET! },
+  { signingSecret: process.env.BETTER_AUTH_WEBHOOK_SECRET! },
   {
-    'user.created': async (data) => {
-      // 사용자 생성 시 처리
-    },
-    'session.revoked': async (data) => {
-      // 세션 취소 시 처리
+    'session.revoked': async (payload) => {
+      await auditSession(payload);
     },
   },
-  sessionProvider
+  sessions
 );
 
-// 웹훅 처리
 await processor.processWebhook(request);
 ```
 
-## Problem 에러
+### 5. 제공 스키마 사용
 
-Better Auth 관련 에러는 모두 Problem 클래스를 상속합니다:
+```typescript
+import { account, session, user, verification } from '@croco/auth-better-auth';
 
-- `BetterAuthInvalidSessionProblem`: 유효하지 않은 세션
-- `BetterAuthNotInitializedProblem`: 초기화되지 않음
-- `BetterAuthSessionNotFoundProblem`: 세션을 찾을 수 없음
-- `BetterAuthUserNotFoundProblem`: 사용자를 찾을 수 없음
-- `InvalidWebhookSignatureProblem`: 웹훅 서명 오류
-- `InvalidWebhookPayloadProblem`: 웹훅 페이로드 오류
+export const authSchema = { user, session, account, verification };
+```
 
-## 라이선스
+## API 레퍼런스
 
-MIT
+| API | 설명 |
+|---|---|
+| `BetterAuthFactory` | Better Auth 인스턴스를 생성하고 재사용합니다. |
+| `BetterAuthProvider` | 요청 헤더에서 세션을 읽어 `AuthUser`로 변환합니다. |
+| `BetterAuthSessionManager` | 세션 조회, 단건 해제, 사용자 전체 세션 해제를 처리합니다. |
+| `BetterAuthWebhookProcessor` | 웹훅 서명을 확인하고 이벤트 핸들러를 호출합니다. |
+| `user`, `session`, `account`, `verification` | Better Auth용 Drizzle 스키마를 제공합니다. |
+| `BetterAuthInvalidSessionProblem` 외 Problem | 세션, 초기화, 웹훅 오류를 Problem으로 표현합니다. |
+
+## 공개 타입
+
+- `BetterAuthConfig`
+- `BetterAuthSession`, `BetterAuthSessionProvider`
+- `BetterAuthWebhookEvent`, `BetterAuthWebhookHandler`, `BetterAuthWebhookOptions`
+- `BetterAuthUser`

@@ -1,6 +1,6 @@
 # @croco/metering-upstash
 
-Upstash Redis 어댑터 for @croco/metering-core
+`@upstash/redis`를 `@croco/metering-core`에서 요구하는 RedisClient 인터페이스로 연결하는 어댑터입니다.
 
 ## 설치
 
@@ -13,48 +13,26 @@ pnpm add @croco/metering-upstash @upstash/redis
 ```typescript
 import { Redis } from '@upstash/redis';
 import { createUpstashRedisClient } from '@croco/metering-upstash';
-import {
-  MeteringService,
-  MeterRegistry,
-  IdempotencyManager,
-  RedisUsageStorage,
-} from '@croco/metering-core';
+import { IdempotencyManager, RedisUsageStorage } from '@croco/metering-core';
 
-// Upstash Redis 클라이언트 생성
-const upstashRedis = new Redis({
+const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// metering-core용 어댑터로 래핑
-const redisClient = createUpstashRedisClient(upstashRedis);
-
-// metering-core 구성 요소에서 사용
-const usageStorage = new RedisUsageStorage(redisClient);
-const idempotencyManager = new IdempotencyManager(redisClient);
-
-const meteringService = new MeteringService({
-  meterRegistry,
-  usageStorage,
-  idempotencyManager,
-});
+const client = createUpstashRedisClient(redis);
+const usageStorage = new RedisUsageStorage(client);
+const idempotency = new IdempotencyManager(client);
 ```
 
-## 환경 변수
+## API 레퍼런스
 
-```env
-UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
-UPSTASH_REDIS_REST_TOKEN=xxx
-```
+| API | 설명 |
+|---|---|
+| `UpstashRedisClient` | `zadd`, `zrangebyscore`, `set`, `eval`을 metering-core 시그니처로 제공합니다. |
+| `createUpstashRedisClient()` | Upstash Redis 인스턴스를 빠르게 어댑터로 감쌉니다. |
 
-## 서버리스 환경
+## 동작 메모
 
-Upstash는 HTTP/REST 기반으로 동작하므로 다음 환경에서 최적화됩니다:
-- Vercel Edge Functions
-- Cloudflare Workers
-- AWS Lambda
-- Next.js API Routes
-
-## 라이선스
-
-MIT
+- 서버리스 환경에서 쓰기 쉬운 HTTP 기반 Upstash SDK를 그대로 사용합니다.
+- 반환값이 없는 `zadd`는 0으로 정규화합니다.

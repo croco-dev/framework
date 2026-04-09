@@ -40,6 +40,9 @@ function noopLogger(): ILogger {
   };
 }
 
+/**
+ * shutdown 상태에서 새 요청을 차단하고 활성 요청 완료를 기다리는 미들웨어입니다.
+ */
 export const gracefulShutdownMiddleware = (options: GracefulShutdownOptions = {}): MiddlewareFunction => {
   const {
     timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -81,6 +84,9 @@ export const gracefulShutdownMiddleware = (options: GracefulShutdownOptions = {}
   };
 };
 
+/**
+ * 원하는 시점에 graceful shutdown 절차를 실행할 함수를 생성합니다.
+ */
 export function setupGracefulShutdown(options: GracefulShutdownOptions = {}): () => Promise<void> {
   const {
     timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -208,14 +214,23 @@ function generateRequestId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
+/**
+ * 현재 처리 중인 활성 요청 수를 반환합니다.
+ */
 export function getActiveRequestCount(): number {
   return state.activeRequests.size;
 }
 
+/**
+ * 현재 프로세스가 shutdown 단계인지 반환합니다.
+ */
 export function isShuttingDown(): boolean {
   return state.isShuttingDown;
 }
 
+/**
+ * 테스트와 재초기화를 위해 shutdown 상태를 초기화합니다.
+ */
 export function resetShutdownState(): void {
   state.isShuttingDown = false;
   state.activeRequests.clear();

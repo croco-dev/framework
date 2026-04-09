@@ -12,6 +12,9 @@ export type CorsOptions = {
 const DEFAULT_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'];
 const DEFAULT_MAX_AGE = 86400;
 
+/**
+ * 허용된 Origin에 대해 CORS 응답 헤더를 설정하는 미들웨어입니다.
+ */
 export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
   const {
     origins,

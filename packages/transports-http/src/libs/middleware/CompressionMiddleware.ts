@@ -12,6 +12,9 @@ const DEFAULT_ENCODINGS: CompressionEncoding[] = ['br', 'gzip'];
 
 const COMPRESSION_ALGORITHMS: CompressionEncoding[] = ['br', 'gzip', 'deflate'];
 
+/**
+ * 응답 크기와 Accept-Encoding 헤더를 기준으로 압축을 적용하는 미들웨어입니다.
+ */
 export const compressionMiddleware = (options: CompressionOptions = {}): MiddlewareFunction => {
   const { threshold = DEFAULT_THRESHOLD, encodings = DEFAULT_ENCODINGS } = options;
 

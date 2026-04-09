@@ -1,5 +1,5 @@
 /**
- * Cloudflare R2 스토리지 제공자 설정 옵션
+ * Cloudflare R2 제공자 생성에 필요한 설정입니다.
  */
 export type R2Options = {
   /**

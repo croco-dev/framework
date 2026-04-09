@@ -1,6 +1,7 @@
 import type { ProblemDetails } from './Problem';
 import type { ProblemExtensions } from './ProblemExtensions';
 import { validateExtensions } from './ProblemExtensions';
+import { ProblemDetailsParseProblem } from './problems/ProblemDetailsParseProblem';
 
 export type SerializedProblem = {
   type: string;
@@ -12,6 +13,9 @@ export type SerializedProblem = {
   extensions?: ProblemExtensions;
 };
 
+/**
+ * Problem Details를 문자열과 JSON 객체 사이에서 직렬화하고 역직렬화하는 유틸리티입니다.
+ */
 export const ProblemSerializer = {
   /**
    * ProblemDetails를 SerializedProblem으로 변환합니다.
@@ -76,22 +80,22 @@ export const ProblemSerializer = {
    */
   fromJson(json: unknown): ProblemDetails {
     if (typeof json !== 'object' || json === null) {
-      throw new Error('Expected object for ProblemDetails');
+      throw new ProblemDetailsParseProblem('Expected object for ProblemDetails');
     }
 
     const obj = json as Record<string, unknown>;
 
     if (typeof obj.type !== 'string') {
-      throw new Error('Missing or invalid "type" field');
+      throw new ProblemDetailsParseProblem('Missing or invalid "type" field');
     }
     if (typeof obj.title !== 'string') {
-      throw new Error('Missing or invalid "title" field');
+      throw new ProblemDetailsParseProblem('Missing or invalid "title" field');
     }
     if (typeof obj.status !== 'number') {
-      throw new Error('Missing or invalid "status" field');
+      throw new ProblemDetailsParseProblem('Missing or invalid "status" field');
     }
     if (typeof obj.code !== 'string') {
-      throw new Error('Missing or invalid "code" field');
+      throw new ProblemDetailsParseProblem('Missing or invalid "code" field');
     }
 
     const result: ProblemDetails = {
@@ -103,14 +107,14 @@ export const ProblemSerializer = {
 
     if (obj.detail !== undefined) {
       if (typeof obj.detail !== 'string') {
-        throw new Error('Invalid "detail" field');
+        throw new ProblemDetailsParseProblem('Invalid "detail" field');
       }
       result.detail = obj.detail;
     }
 
     if (obj.instance !== undefined) {
       if (typeof obj.instance !== 'string') {
-        throw new Error('Invalid "instance" field');
+        throw new ProblemDetailsParseProblem('Invalid "instance" field');
       }
       result.instance = obj.instance;
     }

@@ -17,6 +17,9 @@ export interface CircuitBreakerOptions {
  */
 export type CircuitBreakerFallback<T = unknown> = () => T | Promise<T>;
 
+/**
+ * 실패율이 높은 의존성 호출을 차단하고 회복 여부를 관리하는 서킷 브레이커입니다.
+ */
 export class CircuitBreaker {
   private readonly circuitId: string;
   private readonly failureThreshold: number;

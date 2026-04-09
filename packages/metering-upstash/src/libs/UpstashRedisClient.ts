@@ -2,11 +2,7 @@ import type { RedisClient } from '@croco/metering-core';
 import type { Redis } from '@upstash/redis';
 
 /**
- * Upstash Redis 어댑터
- *
- * @description
- * @upstash/redis SDK를 metering-core의 RedisClient 인터페이스에 맞게 래핑합니다.
- * 서버리스 환경(Vercel, Cloudflare Workers 등)에 최적화되어 있습니다.
+ * `@upstash/redis`를 `@croco/metering-core`의 RedisClient로 감싸는 어댑터입니다.
  */
 export class UpstashRedisClient implements RedisClient {
   constructor(private readonly redis: Redis) {}
@@ -48,7 +44,7 @@ export class UpstashRedisClient implements RedisClient {
 }
 
 /**
- * Upstash Redis 클라이언트 생성 헬퍼
+ * Upstash Redis 인스턴스를 어댑터로 감싸는 헬퍼 함수입니다.
  */
 export function createUpstashRedisClient(redis: Redis): UpstashRedisClient {
   return new UpstashRedisClient(redis);

@@ -1,5 +1,5 @@
 /**
- * Cloudflare Images 제공자 옵션
+ * Cloudflare Images 제공자 설정입니다.
  */
 export type CloudflareImagesOptions = {
   /**
@@ -40,7 +40,7 @@ export type CloudflareImagesOptions = {
 };
 
 /**
- * Cloudflare Images API 업로드 응답
+ * Cloudflare Images 업로드 응답 구조입니다.
  */
 export type CloudflareUploadResponse = {
   /**
@@ -90,7 +90,7 @@ export type CloudflareUploadResponse = {
 };
 
 /**
- * Cloudflare Images API 이미지 상세 응답
+ * Cloudflare Images 상세 조회 응답 구조입니다.
  */
 export type CloudflareImageDetails = {
   /**
@@ -145,7 +145,7 @@ export type CloudflareImageDetails = {
 };
 
 /**
- * Cloudflare 변환 옵션
+ * Cloudflare 고유 변환 옵션입니다.
  */
 export type CloudflareTransformOptions = {
   /**

@@ -1,5 +1,8 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
+/**
+ * 재시도 루프가 정책에 의해 중단되었을 때 발생하는 Problem입니다.
+ */
 export class RetryAbortedProblem extends Problem {
   readonly code = 'RETRY_ABORTED';
   readonly category = ProblemCategory.InternalServerError;

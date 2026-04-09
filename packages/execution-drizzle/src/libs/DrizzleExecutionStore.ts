@@ -59,7 +59,13 @@ type ExecutionDb = {
   delete(table: unknown): DeleteQuery;
 };
 
+/**
+ * 실행 요청을 Drizzle 테이블에 저장하는 구현체입니다.
+ */
 export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionStore {
+  /**
+   * Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
+   */
   constructor(private readonly db: TDb) {
     super();
   }
@@ -68,6 +74,9 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
     return this.db;
   }
 
+  /**
+   * 새 실행을 생성합니다. idempotencyKey가 있으면 중복 생성을 방지합니다.
+   */
   async create(params: CreateExecutionParams): Promise<Execution> {
     const existing = params.idempotencyKey ? await this.findByIdempotencyKey(params.idempotencyKey) : null;
 
@@ -118,12 +127,18 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
     return this.mapToExecution(result[0]);
   }
 
+  /**
+   * 실행 ID로 단일 실행을 조회합니다.
+   */
   async findById(id: string): Promise<Execution | null> {
     const result = (await this.dbOp.select().from(executions).where(eq(executions.id, id)).limit(1)) as ExecutionRow[];
 
     return result.length > 0 ? this.mapToExecution(result[0]) : null;
   }
 
+  /**
+   * idempotencyKey로 기존 실행을 조회합니다.
+   */
   async findByIdempotencyKey(key: string): Promise<Execution | null> {
     const result = (await this.dbOp
       .select()
@@ -134,6 +149,9 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
     return result.length > 0 ? this.mapToExecution(result[0]) : null;
   }
 
+  /**
+   * 실행 상태와 메타데이터를 부분 업데이트합니다.
+   */
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
     const updateData = {
       ...(data.status !== undefined ? { status: data.status } : {}),
@@ -164,6 +182,9 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
     return this.mapToExecution(result[0]);
   }
 
+  /**
+   * 상태, 타입, 부모 실행 조건으로 실행 목록을 조회합니다.
+   */
   async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
     const conditions = [];
 
@@ -197,6 +218,9 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
     return result.map((row: ExecutionRow) => this.mapToExecution(row));
   }
 
+  /**
+   * 실행을 삭제합니다.
+   */
   async delete(id: string): Promise<void> {
     const result = (await this.dbOp.delete(executions).where(eq(executions.id, id)).returning()) as ExecutionRow[];
 

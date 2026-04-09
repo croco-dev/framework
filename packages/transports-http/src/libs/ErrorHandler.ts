@@ -4,6 +4,9 @@ import { Problem, ProblemCategoryMapper, type ProblemDetails } from '@croco/prob
 import type { CrocoHttpContext } from './types';
 
 @Component()
+/**
+ * 일반 예외와 Problem 예외를 HTTP 응답으로 변환하는 기본 에러 핸들러입니다.
+ */
 export class ErrorHandler {
   constructor(private readonly logger: Logger) {}
 

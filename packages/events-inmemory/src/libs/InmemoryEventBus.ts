@@ -12,6 +12,9 @@ export type EventPublishFailure = {
   error: Error;
 };
 
+/**
+ * 하나 이상의 이벤트 핸들러 실행이 실패했을 때 집계 결과를 담아 반환하는 에러입니다.
+ */
 export class EventPublishFailedError extends Error {
   readonly name = 'EventPublishFailedError';
   readonly cause?: Error;
@@ -25,6 +28,9 @@ export class EventPublishFailedError extends Error {
   }
 }
 
+/**
+ * 이벤트 버스 옵션이 유효하지 않을 때 발생하는 구성 오류입니다.
+ */
 export class InvalidEventBusConfigurationError extends Error {
   readonly name = 'InvalidEventBusConfigurationError';
 
@@ -46,6 +52,9 @@ type RunningHandler = {
   startTime: number;
 };
 
+/**
+ * TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
+ */
 export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implements EventBus<TEvent> {
   private readonly index = new EventSubscriptionIndex<EventHandlerClass<TEvent>>();
   private readonly tracer = getTracer();

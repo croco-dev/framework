@@ -55,6 +55,9 @@ function isTokenVerificationError(error: unknown): boolean {
   );
 }
 
+/**
+ * Authorization 헤더를 검증해 사용자 정보를 요청 객체에 주입하는 Guard입니다.
+ */
 export class AuthGuard implements Guard<ExecutionContext> {
   private readonly verifier: TokenVerifier;
   private readonly headerName: string;

@@ -23,12 +23,24 @@ interface InvitationRow {
   createdAt: Date;
 }
 
+/**
+ * 초대 저장소용 Drizzle 클라이언트 주입 토큰입니다.
+ */
 export const DRIZZLE_INVITATION_TOKEN = new Token<DrizzleInvitationClient>('DRIZZLE_INVITATION_TOKEN');
 
+/**
+ * 초대 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
+ */
 export type { DrizzleInvitationClient };
 
+/**
+ * 초대 엔터티를 Drizzle로 저장하고 조회하는 구현체입니다.
+ */
 @Component()
 export class DrizzleInvitationStore extends InvitationStore {
+  /**
+   * Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기화합니다.
+   */
   constructor(
     @Inject(DRIZZLE_INVITATION_TOKEN) private readonly db: DrizzleInvitationClient,
     private readonly txManager: TxManager<DrizzleInvitationClient>
@@ -36,6 +48,9 @@ export class DrizzleInvitationStore extends InvitationStore {
     super();
   }
 
+  /**
+   * 초대 ID로 초대를 조회합니다.
+   */
   async findById(id: string): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -47,6 +62,9 @@ export class DrizzleInvitationStore extends InvitationStore {
     return this.mapToInvitation(result[0]);
   }
 
+  /**
+   * 토큰 해시로 초대를 조회합니다.
+   */
   async findByTokenHash(tokenHash: string): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -62,6 +80,9 @@ export class DrizzleInvitationStore extends InvitationStore {
     return this.mapToInvitation(result[0]);
   }
 
+  /**
+   * 테넌트와 이메일 조합으로 초대를 조회합니다.
+   */
   async findByTenantAndEmail(tenantId: string, email: string): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -78,6 +99,9 @@ export class DrizzleInvitationStore extends InvitationStore {
     return this.mapToInvitation(result[0]);
   }
 
+  /**
+   * 테넌트의 모든 초대를 조회합니다.
+   */
   async findAllByTenant(tenantId: string): Promise<Invitation[]> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -88,6 +112,9 @@ export class DrizzleInvitationStore extends InvitationStore {
     return result.map((row) => this.mapToInvitation(row));
   }
 
+  /**
+   * 초대를 upsert 방식으로 저장합니다.
+   */
   async save(invitation: Invitation): Promise<Invitation> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -128,6 +155,9 @@ export class DrizzleInvitationStore extends InvitationStore {
     return this.mapToInvitation(result[0]);
   }
 
+  /**
+   * 초대 상태를 변경하고 변경된 초대를 반환합니다.
+   */
   async updateStatus(id: string, status: InvitationStatus): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
     const whereClause =
@@ -142,6 +172,9 @@ export class DrizzleInvitationStore extends InvitationStore {
     return this.mapToInvitation(result[0]);
   }
 
+  /**
+   * 일정 시점 이후 생성된 대기 중 초대 수를 반환합니다.
+   */
   async countPendingByTenant(tenantId: string, since: Date): Promise<number> {
     const client = this.txManager.getClient() ?? this.db;
 

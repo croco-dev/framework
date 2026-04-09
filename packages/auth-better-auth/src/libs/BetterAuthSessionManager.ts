@@ -1,6 +1,9 @@
 import { BetterAuthSessionNotFoundProblem } from './problems/AuthProblems';
 import type { BetterAuthSession, BetterAuthSessionProvider } from './types';
 
+/**
+ * Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입니다.
+ */
 export class BetterAuthSessionManager implements BetterAuthSessionProvider {
   constructor(
     private readonly factory: {

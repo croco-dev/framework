@@ -7,7 +7,7 @@ export type ClerkOrganization = {
   slug: string;
   maxAllowedMemberships: number | null;
   adminDeleteEnabled: boolean;
-  publicMetadata: Record<string, unknown>;
+  publicMetadata: Record<string, unknown> | null;
   privateMetadata: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -27,7 +27,7 @@ export type ClerkOrganizationInvitation = {
   organizationId: string;
   emailAddress: string;
   role: string;
-  status: 'pending' | 'accepted' | 'revoked';
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
   createdAt: Date;
   updatedAt: Date;
 };
@@ -81,7 +81,7 @@ function mapClerkOrganization(org: {
   slug: string;
   maxAllowedMemberships: number | null;
   adminDeleteEnabled: boolean;
-  publicMetadata: Record<string, unknown>;
+  publicMetadata: Record<string, unknown> | null;
   privateMetadata: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
@@ -92,7 +92,7 @@ function mapClerkOrganization(org: {
     slug: org.slug,
     maxAllowedMemberships: org.maxAllowedMemberships,
     adminDeleteEnabled: org.adminDeleteEnabled,
-    publicMetadata: org.publicMetadata,
+    publicMetadata: org.publicMetadata ?? {},
     privateMetadata: org.privateMetadata,
     createdAt: new Date(org.createdAt),
     updatedAt: new Date(org.updatedAt),
@@ -187,26 +187,29 @@ export class ClerkOrganizationService {
     memberships: ClerkOrganizationMembership[];
     totalCount: number;
   }> {
-    const params: Record<string, string | number> = { organizationId };
-
-    if (options?.limit !== undefined) {
-      params.limit = options.limit;
-    }
-    if (options?.offset !== undefined) {
-      params.offset = options.offset;
-    }
+    const params = { organizationId };
 
     const response = await this.clerkClient.organizations.getOrganizationMembershipList(params);
 
-    return {
-      memberships: response.data.map((membership) => ({
+    const memberships = response.data
+      .filter(
+        (
+          membership
+        ): membership is typeof membership & {
+          publicUserData: Exclude<typeof membership.publicUserData, null | undefined>;
+        } => membership.publicUserData != null
+      )
+      .map((membership) => ({
         id: membership.id,
         organizationId: membership.organization.id,
         userId: membership.publicUserData.userId,
         role: membership.role,
         createdAt: new Date(membership.createdAt),
         updatedAt: new Date(membership.updatedAt),
-      })),
+      }));
+
+    return {
+      memberships,
       totalCount: response.totalCount,
     };
   }
@@ -217,6 +220,10 @@ export class ClerkOrganizationService {
       userId: input.userId,
       role: input.role,
     });
+
+    if (membership.publicUserData == null) {
+      throw new Error('publicUserData is null');
+    }
 
     return {
       id: membership.id,
@@ -238,6 +245,10 @@ export class ClerkOrganizationService {
       userId,
       role,
     });
+
+    if (membership.publicUserData == null) {
+      throw new Error('publicUserData is null');
+    }
 
     return {
       id: membership.id,
@@ -270,7 +281,7 @@ export class ClerkOrganizationService {
       organizationId: invitation.organizationId,
       emailAddress: invitation.emailAddress,
       role: invitation.role,
-      status: invitation.status,
+      status: (invitation.status ?? 'revoked') as 'pending' | 'accepted' | 'revoked' | 'expired',
       createdAt: new Date(invitation.createdAt),
       updatedAt: new Date(invitation.updatedAt),
     };
@@ -290,7 +301,7 @@ export class ClerkOrganizationService {
         organizationId: invitation.organizationId,
         emailAddress: invitation.emailAddress,
         role: invitation.role,
-        status: invitation.status ?? 'revoked',
+        status: invitation.status as 'pending' | 'accepted' | 'revoked' | 'expired',
         createdAt: new Date(invitation.createdAt),
         updatedAt: new Date(invitation.updatedAt),
       })),
@@ -312,7 +323,7 @@ export class ClerkOrganizationService {
       organizationId: invitation.organizationId,
       emailAddress: invitation.emailAddress,
       role: invitation.role,
-      status: invitation.status ?? 'revoked',
+      status: (invitation.status ?? 'revoked') as 'pending' | 'accepted' | 'revoked' | 'expired',
       createdAt: new Date(invitation.createdAt),
       updatedAt: new Date(invitation.updatedAt),
     };

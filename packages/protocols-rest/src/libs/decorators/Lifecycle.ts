@@ -7,6 +7,9 @@ import type {
   PipeTransformConstructor,
 } from '../types';
 
+/**
+ * 클래스 또는 메서드에 Guard 목록을 연결합니다.
+ */
 export function UseGuards(...guards: GuardConstructor[]): ClassDecorator & MethodDecorator {
   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
     if (propertyKey) {
@@ -18,6 +21,9 @@ export function UseGuards(...guards: GuardConstructor[]): ClassDecorator & Metho
   };
 }
 
+/**
+ * 클래스 또는 메서드에 Pipe 목록을 연결합니다.
+ */
 export function UsePipes(...pipes: PipeTransformConstructor[]): ClassDecorator & MethodDecorator {
   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
     if (propertyKey) {
@@ -29,6 +35,9 @@ export function UsePipes(...pipes: PipeTransformConstructor[]): ClassDecorator &
   };
 }
 
+/**
+ * 클래스 또는 메서드에 Interceptor 목록을 연결합니다.
+ */
 export function UseInterceptors(...interceptors: InterceptorConstructor[]): ClassDecorator & MethodDecorator {
   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
     if (propertyKey) {
@@ -40,6 +49,9 @@ export function UseInterceptors(...interceptors: InterceptorConstructor[]): Clas
   };
 }
 
+/**
+ * 클래스 또는 메서드에 Exception Filter 목록을 연결합니다.
+ */
 export function UseFilters(...filters: ExceptionFilterConstructor[]): ClassDecorator & MethodDecorator {
   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
     if (propertyKey) {

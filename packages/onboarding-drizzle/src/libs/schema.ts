@@ -1,6 +1,9 @@
 import type { OnboardingState } from '@croco/onboarding-core';
 import { boolean, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 
+/**
+ * 온보딩 상태를 저장하는 PostgreSQL 스키마입니다.
+ */
 export const onboardingStates = pgTable(
   'onboarding_states',
   {

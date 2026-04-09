@@ -5,6 +5,9 @@
 import { MiddlewareProblem } from './problems/MiddlewareProblems';
 import type { Middleware } from './types';
 
+/**
+ * 등록된 미들웨어를 onion 패턴으로 순차 실행하는 체인입니다.
+ */
 export class MiddlewareChain<TContext = Record<string, unknown>> {
   private middlewares: Array<Middleware<TContext>> = [];
 

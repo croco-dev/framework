@@ -1,93 +1,21 @@
 /**
  * @packageDocumentation
  *
- * Invitation and domain policy management for tenant onboarding.
- *
- * @description
- * This package provides domain-driven components for managing user invitations and domain-based auto-join policies.
- * It supports both email and link-based invitations with configurable expiration, role assignment, and status tracking.
- *
- * @remarks
- * - Invitations are token-based and hashed for security
- * - Domain policies enable automatic membership provisioning based on email domain
- * - Events are published for all state changes (created, accepted, declined, revoked)
- * - Public email domains (gmail.com, yahoo.com, etc.) are denylisted for auto-join
- *
- * @example
- * ```typescript
- * import { InvitationManager, InvitationStore, InMemoryInvitationStore } from '@croco/invitation-core';
- *
- * const store = new InMemoryInvitationStore();
- * const manager = new InvitationManager(store, membershipManager, notificationService, eventPublisher);
- *
- * // Create email invitation
- * const token = await manager.createEmailInvitation({
- *   tenantId: 'tenant-1',
- *   inviterId: 'user-1',
- *   email: 'user@example.com',
- *   role: 'member',
- *   expiresInDays: 7,
- * });
- *
- * // Accept invitation
- * const invitation = await manager.acceptInvitation({
- *   token,
- *   userId: 'user-2',
- *   email: 'user@example.com',
- * });
- * ```
- *
- * @see {@link https://github.com/croco-dev/croco}
+ * 이메일 초대, 링크 초대, 도메인 자동 가입 정책을 제공하는 초대 코어 패키지입니다.
  */
 
 /**
- * Domain policy manager for auto-join functionality.
- *
- * @description
- * Manages domain-based policies that automatically grant membership to users
- * with matching email domains. Useful for enterprise scenarios where all employees
- * with a company email should get automatic access.
- *
- * @example
- * ```typescript
- * await domainPolicyManager.addDomainPolicy('tenant-1', 'acme.com', 'member');
- *
- * // User with 'user@acme.com' email will auto-join as 'member'
- * const membership = await domainPolicyManager.tryAutoJoin(
- *   'tenant-1',
- *   'user-123',
- *   'user@acme.com'
- * );
- * ```
+ * 이메일 도메인 자동 가입 정책을 관리하는 매니저입니다.
  */
 export { DomainPolicyManager } from './libs/DomainPolicyManager';
 
 /**
- * Store interface for domain policy persistence.
- *
- * @description
- * Abstract interface for persisting and retrieving domain policies.
- * Implementations include InMemoryDomainPolicyStore for testing
- * and database-backed stores for production.
- *
- * @example
- * ```typescript
- * class MyDomainPolicyStore implements DomainPolicyStore {
- *   async save(policy) { /* DB implementation *\/ }
- *   async findByTenantAndDomain(tenantId, domain) { /* ... *\/ }
- *   // ... other methods
- * }
- * ```
+ * 도메인 정책 저장소 추상 계약입니다.
  */
 export { DomainPolicyStore } from './libs/DomainPolicyStore';
 
 /**
- * Domain policy domain events.
- *
- * @description
- * Events emitted when domain policies are modified or when auto-join occurs.
- * These events can be handled to trigger side effects like audit logging
- * or notification delivery.
+ * 도메인 정책 변경과 자동 가입 시 발행되는 이벤트입니다.
  */
 export {
   DomainAutoJoinedEvent,
@@ -96,22 +24,7 @@ export {
 } from './libs/events/DomainPolicyEvents';
 
 /**
- * Invitation domain events.
- *
- * @description
- * Events emitted during the invitation lifecycle. These events enable
- * event-driven architecture patterns where invitations trigger workflows
- * like welcome emails, audit trails, or analytics.
- *
- * @example
- * ```typescript
- * @RegisterEventHandler(InvitationAcceptedEvent)
- * class SendWelcomeEmail implements EventHandler<InvitationAcceptedEvent> {
- *   async handle(event) {
- *     await this.emailService.send(event.email, 'Welcome!');
- *   }
- * }
- * ```
+ * 초대 생성, 수락, 거절, 취소 과정에서 발행되는 이벤트입니다.
  */
 export {
   InvitationAcceptedEvent,
@@ -121,41 +34,17 @@ export {
 } from './libs/events/InvitationEvents';
 
 /**
- * In-memory implementation of domain policy store.
- *
- * @description
- * An ephemeral store implementation suitable for testing and development.
- * Data is stored in memory and lost on process restart.
- *
- * @example
- * ```typescript
- * const store = new InMemoryDomainPolicyStore();
- * await store.save({ id: '1', tenantId: 't1', domain: 'acme.com', role: 'member', enabled: true, createdAt: new Date() });
- * ```
+ * 테스트와 로컬 개발용 인메모리 도메인 정책 저장소입니다.
  */
 export { InMemoryDomainPolicyStore } from './libs/InMemoryDomainPolicyStore';
 
 /**
- * In-memory implementation of invitation store.
- *
- * @description
- * An ephemeral store implementation suitable for testing and development.
- * Data is stored in memory and lost on process restart.
- *
- * @example
- * ```typescript
- * const store = new InMemoryInvitationStore();
- * await store.save({ id: '1', tenantId: 't1', email: 'user@example.com', role: 'member', status: 'pending', /* ... *\/ });
- * ```
+ * 테스트와 로컬 개발용 인메모리 초대 저장소입니다.
  */
 export { InMemoryInvitationStore } from './libs/InMemoryInvitationStore';
 
 /**
- * Input types for invitation operations.
- *
- * @description
- * Type definitions for inputs to InvitationManager methods.
- * These provide type safety for invitation creation and acceptance.
+ * 초대 생성과 수락에 사용하는 입력 타입입니다.
  */
 export type {
   AcceptInvitationInput,
@@ -164,77 +53,27 @@ export type {
 } from './libs/InvitationManager';
 
 /**
- * Core invitation manager service.
- *
- * @description
- * Orchestrates invitation lifecycle: creation, acceptance, decline, and revocation.
- * Integrates with stores, membership manager, notification service, and event publisher.
- *
- * @example
- * ```typescript
- * const manager = new InvitationManager(
- *   store,
- *   membershipManager,
- *   notificationService,
- *   eventPublisher
- * );
- *
- * const token = await manager.createEmailInvitation({
- *   tenantId: 'tenant-1',
- *   inviterId: 'user-1',
- *   email: 'user@example.com',
- *   role: 'member',
- * });
- * ```
+ * 초대 생성, 수락, 거절, 취소, 재전송을 담당하는 핵심 서비스입니다.
  */
 export { InvitationManager } from './libs/InvitationManager';
 
 /**
- * Store interface for invitation persistence.
- *
- * @description
- * Abstract interface for persisting and retrieving invitations.
- * Implementations include InMemoryInvitationStore for testing
- * and database-backed stores for production.
+ * 초대 저장소 추상 계약입니다.
  */
 export { InvitationStore } from './libs/InvitationStore';
-export { BatchSizeExceededProblem } from './libs/problems/BatchInviteProblems';
+
 /**
- * Domain policy problem types.
- *
- * @description
- * RFC 7807 Problem Details for domain policy errors.
- * Thrown when domain policy validation fails.
- *
- * @example
- * ```typescript
- * try {
- *   await domainPolicyManager.addDomainPolicy('t1', 'gmail.com', 'member');
- * } catch (e) {
- *   if (e instanceof PublicEmailDomainNotAllowedProblem) {
- *     // Handle public email domain error
- *   }
- * }
- * ```
+ * batch invite 크기 제한 위반 시 발생하는 Problem 타입입니다.
+ */
+export { BatchSizeExceededProblem } from './libs/problems/BatchInviteProblems';
+
+/**
+ * 도메인 정책 검증 실패 시 사용하는 Problem 타입입니다.
  */
 export { InvalidAutoJoinRoleProblem, PublicEmailDomainNotAllowedProblem } from './libs/problems/DomainPolicyProblems';
+
 /**
- * Invitation problem types.
- *
- * @description
- * RFC 7807 Problem Details for invitation-related errors.
- * Thrown when invitation operations fail due to invalid state, expiration, or not found.
- *
- * @example
- * ```typescript
- * try {
- *   await manager.acceptInvitation({ token, userId: 'u1' });
- * } catch (e) {
- *   if (e instanceof InvitationExpiredProblem) {
- *     // Handle expired invitation
- *   }
- * }
- * ```
+ * 초대 상태와 토큰 검증 실패 시 사용하는 Problem 타입입니다.
  */
 export {
   InvitationAlreadyAcceptedProblem,
@@ -243,28 +82,24 @@ export {
   InvitationInvalidStatusProblem,
   InvitationNotFoundProblem,
 } from './libs/problems/InvitationProblems';
-export { DuplicateInvitationProblem, InvitationRateLimitExceededProblem } from './libs/problems/RateLimitProblems';
-export { RateLimitedInvitationService } from './libs/RateLimitedInvitationService';
+
 /**
- * Token generation and hashing utilities.
- *
- * @description
- * Cryptographic utilities for secure invitation token handling.
- * Tokens are generated randomly and hashed before storage.
- *
- * @example
- * ```typescript
- * const token = generateToken(); // 'a1b2c3d4...'
- * const hash = hashToken(token);   // SHA-256 hash for storage
- * ```
+ * 초대 중복과 rate limit 초과 시 사용하는 Problem 타입입니다.
+ */
+export { DuplicateInvitationProblem, InvitationRateLimitExceededProblem } from './libs/problems/RateLimitProblems';
+
+/**
+ * 초대 스팸 방지와 batch invite를 제공하는 상위 서비스입니다.
+ */
+export { RateLimitedInvitationService } from './libs/RateLimitedInvitationService';
+
+/**
+ * 안전한 초대 토큰 생성과 해시에 사용하는 유틸리티입니다.
  */
 export { generateToken, hashToken } from './libs/token';
+
 /**
- * Core domain types.
- *
- * @description
- * Type definitions for invitations and domain policies.
- * Includes entity types, enums, and input types.
+ * 초대와 도메인 정책 도메인 타입입니다.
  */
 export type {
   BatchInviteOptions,
@@ -277,20 +112,8 @@ export type {
   InvitationType,
   RateLimitConfig,
 } from './libs/types';
+
 /**
- * Public email domain denylist.
- *
- * @description
- * List of public email domains that are not allowed for domain policy auto-join.
- * Prevents accidental auto-join for generic email providers.
- *
- * @example
- * ```typescript
- * import { PUBLIC_EMAIL_DOMAINS } from '@croco/invitation-core';
- *
- * if (PUBLIC_EMAIL_DOMAINS.includes(extractedDomain)) {
- *   throw new Error('Public email domains not allowed');
- * }
- * ```
+ * 자동 가입에서 제외할 공개 이메일 도메인 목록입니다.
  */
 export { PUBLIC_EMAIL_DOMAINS } from './libs/types';

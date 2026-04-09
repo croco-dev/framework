@@ -15,12 +15,24 @@ type DrizzleMembershipClient = DrizzleDb & NodePgDatabase<Record<string, never>>
 
 type MembershipRow = typeof memberships.$inferSelect;
 
+/**
+ * 멤버십 저장소용 Drizzle 클라이언트 주입 토큰입니다.
+ */
 export const DRIZZLE_TOKEN = new Token<DrizzleMembershipClient>('DRIZZLE_TOKEN');
 
+/**
+ * 멤버십 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
+ */
 export type { DrizzleMembershipClient };
 
+/**
+ * 멤버십 엔터티를 Drizzle로 저장하고 조회하는 구현체입니다.
+ */
 @Component()
 export class DrizzleMembershipStore extends MembershipStore {
+  /**
+   * Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기화합니다.
+   */
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleMembershipClient,
     private readonly txManager: TxManager<DrizzleMembershipClient>
@@ -28,6 +40,9 @@ export class DrizzleMembershipStore extends MembershipStore {
     super();
   }
 
+  /**
+   * 테넌트와 사용자 조합으로 멤버십을 조회합니다.
+   */
   async findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -44,6 +59,9 @@ export class DrizzleMembershipStore extends MembershipStore {
     return this.mapToMembership(rows[0]);
   }
 
+  /**
+   * 테넌트의 모든 멤버십을 조회합니다.
+   */
   async findAllByTenant(tenantId: string): Promise<Membership[]> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -51,6 +69,9 @@ export class DrizzleMembershipStore extends MembershipStore {
     return rows.map((row) => this.mapToMembership(row));
   }
 
+  /**
+   * 사용자의 모든 멤버십을 조회합니다.
+   */
   async findAllByUser(userId: string): Promise<Membership[]> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -58,6 +79,9 @@ export class DrizzleMembershipStore extends MembershipStore {
     return rows.map((row) => this.mapToMembership(row));
   }
 
+  /**
+   * 멤버십을 upsert 방식으로 저장합니다.
+   */
   async save(input: MembershipCreateInput): Promise<Membership> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -82,12 +106,18 @@ export class DrizzleMembershipStore extends MembershipStore {
     return this.mapToMembership(rows[0]);
   }
 
+  /**
+   * 테넌트와 사용자 조합의 멤버십을 삭제합니다.
+   */
   async delete(tenantId: string, userId: string): Promise<void> {
     const client = this.txManager.getClient() ?? this.db;
 
     await client.delete(memberships).where(and(eq(memberships.tenantId, tenantId), eq(memberships.userId, userId)));
   }
 
+  /**
+   * 특정 역할의 멤버 수를 반환합니다.
+   */
   async countByRole(tenantId: string, role: MembershipRole): Promise<number> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -99,6 +129,9 @@ export class DrizzleMembershipStore extends MembershipStore {
     return Number(rows[0]?.total ?? 0);
   }
 
+  /**
+   * 테넌트의 전체 멤버 수를 반환합니다.
+   */
   async countAll(tenantId: string): Promise<number> {
     const client = this.txManager.getClient() ?? this.db;
 

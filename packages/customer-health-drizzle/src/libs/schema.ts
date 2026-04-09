@@ -1,6 +1,9 @@
 import type { HealthStatus, HealthTrend, SignalCategory } from '@croco/customer-health-core';
 import { integer, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
+/**
+ * 테넌트 건강 점수 이력을 저장하는 PostgreSQL 스키마입니다.
+ */
 export const tenantHealthScores = pgTable('tenant_health_scores', {
   tenantId: text('tenant_id').notNull(),
   overallScore: integer('overall_score').notNull(),

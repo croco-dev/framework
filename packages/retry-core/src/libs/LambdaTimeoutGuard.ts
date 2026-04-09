@@ -15,6 +15,9 @@ function readLambdaContext(): LambdaContext | null {
   return lambdaContextStorage.getStore() ?? null;
 }
 
+/**
+ * 지정한 Lambda 컨텍스트를 현재 비동기 실행 범위에 연결합니다.
+ */
 export async function runWithLambdaContext<T>(context: LambdaContext | null, fn: () => T | Promise<T>): Promise<T> {
   return await lambdaContextStorage.run(context, fn);
 }

@@ -14,6 +14,9 @@ export type RetryOrchestratorOptions = RetryPolicyOptions & {
   listeners?: RetryListener[];
 };
 
+/**
+ * 재시도 정책, 백오프, 리스너, 복구 로직을 묶어 실행하는 공용 오케스트레이터입니다.
+ */
 export class RetryOrchestrator {
   static async execute<T>(
     methodName: string,

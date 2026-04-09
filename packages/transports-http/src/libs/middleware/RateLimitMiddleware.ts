@@ -31,6 +31,9 @@ function createContextAdapter(ctx: CrocoHttpContextAdapter): HttpContext {
   };
 }
 
+/**
+ * `@croco/ratelimit-core` 미들웨어를 Croco HTTP 컨텍스트에 맞게 연결합니다.
+ */
 export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): MiddlewareFunction {
   const { skipSuccessfulRequests, skipFailedRequests, ...createOptions } = options;
   const baseMiddleware = createRateLimitMiddleware(createOptions);
@@ -72,6 +75,9 @@ export type RateLimitMiddlewareFactoryOptions = {
   skipFailedRequests?: boolean;
 };
 
+/**
+ * 기본 정책을 캡슐화한 레이트 리밋 미들웨어 팩토리를 생성합니다.
+ */
 export function createRateLimitMiddlewareFactory(options: RateLimitMiddlewareFactoryOptions) {
   const { rateLimiter, defaultPolicy, skipSuccessfulRequests, skipFailedRequests } = options;
 

@@ -1,80 +1,47 @@
 /**
  * @packageDocumentation
  *
- * # @croco/search-core
- *
- * Core search abstraction layer for Croco framework.
- * Provides decorator-based metadata, search engine abstraction, and transform utilities.
- *
- * @example
- * ```typescript
- * import { Searchable, SearchField } from '@croco/search-core';
- *
- * @Searchable({ index: 'users', autoSync: true })
- * class User {
- *   @SearchField({ searchable: true, filterable: true })
- *   name!: string;
- * }
- * ```
+ * 검색 엔진 추상화, 검색 메타데이터, 자동 동기화, 텍스트 변환을 제공하는 검색 코어 패키지입니다.
  */
 
-// Decorator Metadata Keys
-/** @description Metadata key for storing Searchable and SearchField decorator data */
+/**
+ * 검색 데코레이터 메타데이터 키입니다.
+ */
 export { SEARCH_FIELD_METADATA, SEARCHABLE_METADATA } from './libs/decorators/constants';
 
-/** @description Types for Searchable decorator configuration */
+/**
+ * 검색 대상 클래스에 사용하는 메타데이터와 옵션 타입입니다.
+ */
 export type {
   SearchableMetadata,
   SearchableOptions,
 } from './libs/decorators/Searchable';
 
-// Decorators
 /**
- * @description
- * Mark a class as searchable and configure its index behavior.
- *
- * @example
- * ```typescript
- * @Searchable({ index: 'products', autoSync: true })
- * class Product {
- *   @SearchField()
- *   name!: string;
- * }
- * ```
+ * 클래스를 검색 인덱스와 연결하는 데코레이터와 메타데이터 조회 유틸리티입니다.
  */
 export { getSearchableMetadata, isSearchable, Searchable } from './libs/decorators/Searchable';
 
-/** @description Types for SearchField decorator configuration */
+/**
+ * 검색 필드 옵션과 메타데이터 타입입니다.
+ */
 export type {
   SearchFieldMetadata,
   SearchFieldOptions,
 } from './libs/decorators/SearchField';
 
 /**
- * @description
- * Configure search field properties (searchable, filterable, sortable).
- *
- * @example
- * ```typescript
- * class User {
- *   @SearchField({ searchable: true, filterable: true, sortable: true })
- *   email!: string;
- * }
- * ```
+ * 필드별 검색 옵션을 선언하는 데코레이터와 메타데이터 조회 유틸리티입니다.
  */
 export { getSearchFieldsMetadata, SearchField } from './libs/decorators/SearchField';
 
-/** @description Search-related domain events */
+/**
+ * 검색 인덱스 동기화와 삭제 흐름에서 사용하는 이벤트입니다.
+ */
 export * from './libs/events';
 
-// Problems
 /**
- * @description
- * Search-specific problem definitions for error handling.
- * - IndexNotFoundProblem: Index does not exist
- * - MissingTenantProblem: Tenant context not available
- * - StrategyUnavailableProblem: Requested search strategy not available
- * - TransformNotFoundProblem: Required transform function not found
+ * 검색 과정에서 사용하는 Problem 하위 타입들입니다.
  */
 export {
   IndexNotFoundProblem,
@@ -84,105 +51,58 @@ export {
   TransformNotFoundProblem,
 } from './libs/problems/SearchProblems';
 
-// Engine
 /**
- * @description
- * Abstract base class for search engine implementations.
- * All concrete engines (Elasticsearch, Meilisearch, Drizzle, etc.) must extend this class.
- *
- * @example
- * ```typescript
- * class MySearchEngine extends SearchEngine {
- *   capabilities = { fullText: true, filtering: true, sorting: true };
- *
- *   async search(index, query) {
- *     // Implementation
- *   }
- *   // ... other methods
- * }
- * ```
+ * 검색 엔진 구현이 따라야 하는 추상 계약입니다.
  */
 export { SearchEngine } from './libs/SearchEngine';
 
-/** @description Dependencies type for SearchService injection */
+/**
+ * SearchService 생성에 필요한 의존성 타입입니다.
+ */
 export type { SearchServiceDependencies } from './libs/SearchService';
 
 /**
- * @description
- * High-level search service with automatic tenant isolation.
- * Wraps SearchEngine and adds tenantId filtering from Context.
- *
- * @example
- * ```typescript
- * const service = new SearchService({ engine: myEngine });
- * await service.search('users', { query: 'john' });
- * // Automatically filters by current tenant
- * ```
+ * tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
  */
 export { SearchService } from './libs/SearchService';
 
-/** @description Index synchronization utilities */
+/**
+ * 검색 이벤트 기반 자동 동기화 기능입니다.
+ */
 export * from './libs/sync';
 
-/** @description Options for derive transform function */
+/**
+ * 파생 필드 구성을 위한 derive 옵션 타입입니다.
+ */
 export type { DeriveOptions } from './libs/transforms/derive';
 
-// Transforms
 /**
- * @description
- * Create derived search fields from existing data.
- * Useful for ngram, decomposition, romanization, etc.
- *
- * @example
- * ```typescript
- * @SearchField({
- *   derived: [
- *     derive({ type: 'ngram', min: 2, max: 4, source: 'name' })
- *   ]
- * })
- * name!: string;
- * ```
+ * 검색용 파생 필드 구성을 생성하는 유틸리티입니다.
  */
 export { derive } from './libs/transforms/derive';
 
 /**
- * @description
- * Registry for managing search transform functions.
- * InMemorySearchTransformRegistry is the default implementation.
+ * 검색 변환 어댑터 레지스트리와 기본 인메모리 구현체입니다.
  */
 export { InMemorySearchTransformRegistry, SearchTransformRegistry } from './libs/transforms/SearchTransformRegistry';
 
-/** @description Configuration options for text transforms */
+/**
+ * 한국어 텍스트 변환 옵션 타입입니다.
+ */
 export type { DecomposedOptions, InitialsOptions, RomanizedOptions } from './libs/transforms/textTransforms';
 
 /**
- * @description
- * Built-in text transformation utilities for Korean text.
- * Includes ngram, decomposition (choseong/jungseong/jongseong), initials, and romanization.
- *
- * @example
- * ```typescript
- * textTransforms.ngram('안녕하세요', { min: 2, max: 3 });
- * // ['안녕', '녕하', '하세요', '안녕하']
- * ```
+ * ngram, 자모 분해, 초성, 로마자 변환을 제공하는 텍스트 유틸리티입니다.
  */
 export { textTransforms } from './libs/transforms/textTransforms';
 
-/** @description Transform registry and reference types */
+/**
+ * 검색 변환 어댑터와 참조 타입입니다.
+ */
 export type { SearchTransformAdapter, SearchTransformRef } from './libs/transforms/types';
 
-// Types
 /**
- * @description
- * Core type definitions for search functionality.
- * - IndexConfig: Search index configuration
- * - SearchDerivedFieldConfig: Derived field configuration
- * - SearchDocument: Document structure with tenantId
- * - SearchEngineCapabilities: Supported features
- * - SearchFieldConfig: Field-level options
- * - SearchHit: Individual search result
- * - SearchQuery: Query parameters
- * - SearchResult: Search response with hits
+ * 검색 인덱스, 문서, 질의, 결과에 사용하는 핵심 타입입니다.
  */
 export type {
   IndexConfig,

@@ -1,20 +1,16 @@
 # @croco/audit-core
 
-Croco Framework의 감사 로깅 핵심 패키지입니다. 사용자 활동과 상태 변경을 추적하는 감사 로그 기능을 제공합니다.
+감사 로그 데코레이터, 인터셉터, 무결성 검증 계약을 제공하는 감사 코어 패키지입니다.
 
 ## 설치
 
 ```bash
-npm install @croco/audit-core
+pnpm add @croco/audit-core
 ```
 
-## 주요 기능
+## 사용법
 
-### @Auditable 데코레이터
-
-메서드 실행을 자동으로 감사 로그에 기록합니다.
-
-```typescript
+```ts
 import { Auditable } from '@croco/audit-core';
 
 class UserService {
@@ -24,68 +20,46 @@ class UserService {
     resourceIdParam: 'id',
     payloadParam: 'dto',
   })
-  async updateUser(id: string, dto: UpdateUserDto) {
-    // 사용자 업데이트 로직
+  async updateUser(id: string, dto: unknown): Promise<void> {
+    void id;
+    void dto;
   }
 }
 ```
 
-### AuditInterceptor
-
-HTTP 요청에 대한 감사 로그를 자동으로 기록합니다.
-
-```typescript
+```ts
 import { AuditInterceptor } from '@croco/audit-core';
 
 const interceptor = new AuditInterceptor(auditLogRepository);
 ```
 
-### 변조 방지 (Tamper-Proof)
+## API 레퍼런스
 
-감사 로그 무결성을 검증하기 위한 인터페이스를 제공합니다.
+### 핵심 클래스와 함수
 
-```typescript
-import type { AuditIntegrityVerifier, AuditChainVerifier } from '@croco/audit-core';
+- `Auditable`, 메서드 실행 결과를 감사 로그로 기록하는 데코레이터입니다.
+- `AuditInterceptor`, HTTP 요청 흐름에서 감사 로그를 자동 기록합니다.
+- `AuditLogRepository`, 저장소 구현이 따라야 하는 추상 계약입니다.
+- `AuditErrorHandler`, 감사 쓰기 실패 시 재시도 정책을 제공합니다.
+- `fireAndForgetWithRetry`, 비동기 감사 쓰기를 안전하게 실행합니다.
 
-// 구현체는 audit-drizzle 등에서 제공
-class MyIntegrityVerifier implements AuditIntegrityVerifier {
-  verify(entry: AuditLogEntry): boolean {
-    // 무결성 검증 로직
-  }
+### 무결성 관련 타입
 
-  computeHash(entry: Omit<AuditLogEntry, 'integrityHash'>): string {
-    // 해시 계산 로직
-  }
-}
-```
+- `AuditIntegrityVerifier`, `AuditChainVerifier`, `AuditSequenceGenerator`
+- `TamperProofAuditLog`, `AuditIntegrityMetadata`, `AuditIntegrityConfig`
 
-### 에러 핸들링
+### 주요 타입과 상수
 
-fire-and-forget 패턴에 재시도 로직을 포함한 에러 핸들링을 제공합니다.
+- `AuditableOptions`, `AuditLogEntry`, `AuditPayload`, `AuditQuery`
+- `AuditExecutionContext`, `Interceptor`, `CallHandler`
+- `AUDIT_METADATA_KEY`, `AUDIT_PARAM_KEY`, `AUDIT_LOG_REPOSITORY_TOKEN`
 
-```typescript
-import { AuditErrorHandler, fireAndForgetWithRetry } from '@croco/audit-core';
+### 문제 타입
 
-const handler = new AuditErrorHandler({
-  maxRetries: 3,
-  baseDelayMs: 1000,
-  maxDelayMs: 30000,
-});
+- `AuditableDecoratorProblem`
 
-const { promise, abort } = fireAndForgetWithRetry(
-  () => repository.create(entry),
-  { maxRetries: 3 }
-);
-```
+## 구현 포인트
 
-## 타입 안전성
-
-모든 타입은 strict TypeScript 모드에서 안전하게 동작합니다.
-
-- `as any` 사용 없이 타입 추론이 완벽하게 동작
-- 파라미터 파싱은 런타임에 안전하게 처리
-- 모든 외부 입력에 대한 타입 가드 제공
-
-## API 문서
-
-자세한 API 문서는 [Croco Framework Docs](https://croco.dev/docs)에서 확인하세요.
+- 실제 영속 저장소는 `AuditLogRepository`를 구현해 drizzle 같은 패키지에 연결합니다.
+- impersonation 정보와 요청 메타데이터를 payload와 metadata에 함께 남길 수 있습니다.
+- 무결성 검증 계약을 사용하면 tamper-proof audit 체인을 외부 저장소와 결합할 수 있습니다.

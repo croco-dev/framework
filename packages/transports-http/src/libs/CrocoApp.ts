@@ -10,6 +10,9 @@ import { PipelineRunner } from './PipelineRunner';
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
 import type { AppConfig, CompiledRoute, LambdaHandler } from './types';
 
+/**
+ * 컨트롤러를 컴파일해 Hono 앱, Lambda 핸들러, Node 서버로 실행하는 HTTP 애플리케이션입니다.
+ */
 export class CrocoApp {
   private hono: Hono;
   private routes: CompiledRoute[] = [];
@@ -98,6 +101,9 @@ export class CrocoApp {
   }
 }
 
+/**
+ * 기본 의존성을 해석해 CrocoApp 인스턴스를 생성합니다.
+ */
 export function createApp(config: AppConfig): CrocoApp {
   return new CrocoApp(config, resolveLogger(), resolveErrorHandler(), resolveHealthCheckRegistry());
 }

@@ -39,6 +39,9 @@ export type TypedLambdaHandler = (
   isBase64Encoded?: boolean;
 }>;
 
+/**
+ * Hono 앱을 API Gateway v2 형태의 AWS Lambda 핸들러로 연결하는 어댑터입니다.
+ */
 export class CrocoLambdaAdapter {
   constructor(private readonly hono: Hono) {}
 
@@ -101,11 +104,17 @@ export class CrocoLambdaAdapter {
   }
 }
 
+/**
+ * Hono 요청에서 원본 Lambda 이벤트를 추출합니다.
+ */
 export function getLambdaEvent(honoRequest: HonoRequest): LambdaEvent | undefined {
   const env = honoRequest.raw as unknown as { env?: LambdaExecutionEnv };
   return env.env?.event;
 }
 
+/**
+ * Hono 요청에서 원본 Lambda 컨텍스트를 추출합니다.
+ */
 export function getLambdaContext(honoRequest: HonoRequest): LambdaContext | undefined {
   const env = honoRequest.raw as unknown as { env?: LambdaExecutionEnv };
   return env.env?.lambdaContext;

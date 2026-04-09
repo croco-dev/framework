@@ -2,6 +2,9 @@ import type { HealthSignal, SignalCategory } from '@croco/customer-health-core';
 import { SignalProvider } from '@croco/customer-health-core';
 import { Component, Inject, Token } from '@croco/framework-context';
 
+/**
+ * 건강 점수 계산에 필요한 사용량 데이터 구조입니다.
+ */
 export type UsageData = {
   tenantId: string;
   periodStart: Date;
@@ -15,20 +18,35 @@ export type UsageData = {
   }>;
 };
 
+/**
+ * 사용량 데이터를 제공하는 저장소 인터페이스입니다.
+ */
 export interface UsageStorage {
   getUsage(tenantId: string, periodStart: Date, periodEnd: Date): Promise<UsageData>;
 }
 
-const USAGE_STORAGE_TOKEN = new Token<UsageStorage>('USAGE_STORAGE_TOKEN');
+/**
+ * 사용량 저장소 주입에 사용하는 토큰입니다.
+ */
+export const USAGE_STORAGE_TOKEN = new Token<UsageStorage>('USAGE_STORAGE_TOKEN');
 
+/**
+ * 사용량 데이터를 usage 카테고리 신호로 변환하는 구현체입니다.
+ */
 @Component()
 export class MeteringSignalProvider extends SignalProvider {
   readonly category: SignalCategory = 'usage';
 
+  /**
+   * 사용량 저장소를 받아 신호 제공자를 초기화합니다.
+   */
   constructor(@Inject(USAGE_STORAGE_TOKEN) private readonly usageStorage: UsageStorage) {
     super();
   }
 
+  /**
+   * 월간 사용량을 바탕으로 usage 신호를 수집합니다.
+   */
   async collect(tenantId: string): Promise<HealthSignal[]> {
     const now = new Date();
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);

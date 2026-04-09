@@ -33,6 +33,9 @@ function createTimeoutPromise<T>(ms: number): Promise<T> {
   });
 }
 
+/**
+ * AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 매니저입니다.
+ */
 export class TxManager<TClient, TOptions = unknown> implements TransactionContext {
   private readonly als = new AsyncLocalStorage<NullableTxContext<TClient>>();
   private readonly defaultNesting: NestingStrategy;

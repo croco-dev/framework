@@ -174,7 +174,10 @@ describe('ClerkUserService', () => {
 
   describe('deleteUser', () => {
     it('should delete user', async () => {
-      vi.mocked(mockClerkClient.users.deleteUser).mockResolvedValue(undefined);
+      const mockUser = createMockUser('user_123');
+      vi.mocked(mockClerkClient.users.deleteUser).mockResolvedValue(
+        mockUser as unknown as Awaited<ReturnType<typeof mockClerkClient.users.deleteUser>>
+      );
 
       await service.deleteUser('user_123');
 

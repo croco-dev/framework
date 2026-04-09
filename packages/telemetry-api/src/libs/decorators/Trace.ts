@@ -28,6 +28,9 @@ function setTraceOptions(target: object, propertyKey: string | symbol, options: 
   traceOptionsStore.set(target, map);
 }
 
+/**
+ * 비동기 메서드 실행을 Span으로 감싸는 데코레이터입니다.
+ */
 export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
   options: TraceDecoratorOptions = {}
 ): (
@@ -72,6 +75,9 @@ export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
   };
 }
 
+/**
+ * 대상 메서드에 등록된 Trace 옵션을 조회합니다.
+ */
 export function getTraceOptions(_target: unknown, _propertyKey: string | symbol): TraceDecoratorOptions | undefined {
   if (typeof _target !== 'object' || _target === null) {
     return undefined;

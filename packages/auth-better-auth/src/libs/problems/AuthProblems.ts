@@ -1,5 +1,8 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
+/**
+ * Better Auth 팩토리가 초기화되지 않았을 때 발생하는 문제입니다.
+ */
 export class BetterAuthNotInitializedProblem extends Problem {
   readonly code = 'auth-better-auth/not-initialized';
   readonly category = ProblemCategory.InternalServerError;
@@ -9,6 +12,9 @@ export class BetterAuthNotInitializedProblem extends Problem {
   }
 }
 
+/**
+ * 요청한 Better Auth 세션을 찾지 못했을 때 발생하는 문제입니다.
+ */
 export class BetterAuthSessionNotFoundProblem extends Problem {
   readonly code = 'auth-better-auth/session-not-found';
   readonly category = ProblemCategory.NotFound;
@@ -18,6 +24,9 @@ export class BetterAuthSessionNotFoundProblem extends Problem {
   }
 }
 
+/**
+ * 요청한 Better Auth 사용자를 찾지 못했을 때 발생하는 문제입니다.
+ */
 export class BetterAuthUserNotFoundProblem extends Problem {
   readonly code = 'auth-better-auth/user-not-found';
   readonly category = ProblemCategory.NotFound;

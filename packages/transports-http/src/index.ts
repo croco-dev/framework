@@ -6,7 +6,14 @@ import { ParamResolver } from './libs/ParamResolver';
 import { PipelineRunner } from './libs/PipelineRunner';
 import { RouteCompiler } from './libs/RouteCompiler';
 
+/**
+ * Hono 앱을 AWS Lambda 핸들러로 변환하는 어댑터 함수입니다.
+ */
 export { toLambdaHandler } from './libs/adapters/LambdaAdapter';
+
+/**
+ * Hono 앱을 Node.js HTTP 서버로 실행하는 부트스트랩 함수입니다.
+ */
 export { startServer } from './libs/adapters/NodeAdapter';
 
 export type {
@@ -29,6 +36,9 @@ export type {
   PipeProvider,
 } from './libs/types';
 
+/**
+ * HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개 API입니다.
+ */
 export {
   CrocoApp,
   createApp,
@@ -40,30 +50,50 @@ export {
   RouteCompiler,
 };
 
+/**
+ * Lambda 런타임 이벤트와 컨텍스트를 읽는 유틸리티 및 타입입니다.
+ */
 export {
   getLambdaContext,
   getLambdaEvent,
   type LambdaExecutionEnv,
   type TypedLambdaHandler,
 } from './libs/CrocoLambdaAdapter';
+
 export type {
   HealthCheckFunction,
   HealthCheckOptions,
   HealthCheckResult,
   HealthCheckStatus,
 } from './libs/HealthCheckRegistry';
+
+/**
+ * 요청 본문 크기를 제한하는 미들웨어와 바이트 단위 헬퍼입니다.
+ */
 export {
   type BodyLimitOptions,
   bodyLimitMiddleware,
   kb,
   mb,
 } from './libs/middleware/BodyLimitMiddleware';
+
+/**
+ * 응답 압축을 적용하는 미들웨어와 관련 타입입니다.
+ */
 export {
   type CompressionEncoding,
   type CompressionOptions,
   compressionMiddleware,
 } from './libs/middleware/CompressionMiddleware';
+
+/**
+ * CORS 응답 헤더를 설정하는 미들웨어입니다.
+ */
 export { type CorsOptions, corsMiddleware } from './libs/middleware/CorsMiddleware';
+
+/**
+ * graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
+ */
 export {
   type GracefulShutdownOptions,
   gracefulShutdownMiddleware,
@@ -71,12 +101,20 @@ export {
   resetShutdownState,
   setupGracefulShutdown,
 } from './libs/middleware/GracefulShutdownMiddleware';
+
+/**
+ * HTTP 요청에 레이트 리밋 정책을 적용하는 미들웨어 팩토리입니다.
+ */
 export {
   createRateLimitMiddlewareFactory,
   type RateLimitHttpOptions,
   type RateLimitMiddlewareFactoryOptions,
   rateLimitHttpMiddleware,
 } from './libs/middleware/RateLimitMiddleware';
+
+/**
+ * 보안 헤더를 일괄 적용하는 미들웨어입니다.
+ */
 export { type SecurityHeadersOptions, securityHeadersMiddleware } from './libs/middleware/SecurityHeadersMiddleware';
 export type { PipelineConfig } from './libs/PipelineRunner';
 export type { CompileOptions } from './libs/RouteCompiler';

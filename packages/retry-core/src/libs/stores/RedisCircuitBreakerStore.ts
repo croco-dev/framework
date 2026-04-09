@@ -18,6 +18,9 @@ export type RedisCircuitBreakerStoreOptions = {
   onStoreError?: OnStoreError;
 };
 
+/**
+ * Redis를 사용해 서킷 브레이커 상태를 여러 인스턴스 간에 공유하는 저장소입니다.
+ */
 export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
   private readonly redis: UpstashRedisLike;
   private readonly ttlSeconds: number;

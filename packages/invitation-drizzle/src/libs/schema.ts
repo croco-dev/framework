@@ -3,6 +3,9 @@ import { boolean, index, pgTable, text, timestamp, unique } from 'drizzle-orm/pg
 
 type InvitationRole = 'owner' | 'admin' | 'member' | 'viewer';
 
+/**
+ * 초대 엔터티를 저장하는 PostgreSQL 스키마입니다.
+ */
 export const invitations = pgTable(
   'invitations',
   {
@@ -32,6 +35,9 @@ export const invitations = pgTable(
   ]
 );
 
+/**
+ * 도메인 정책 엔터티를 저장하는 PostgreSQL 스키마입니다.
+ */
 export const domainPolicies = pgTable(
   'domain_policies',
   {

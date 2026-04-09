@@ -17,11 +17,17 @@ function isPeekable<I>(obj: unknown): obj is { peek(): Promise<I | null> } {
   return typeof obj === 'object' && obj !== null && 'peek' in obj && typeof obj.peek === 'function';
 }
 
+/**
+ * QStash 청크 실행기에 필요한 옵션입니다.
+ */
 export interface QStashExecutorOptions {
   qstashClient: Client;
   webhookUrl: string;
 }
 
+/**
+ * 배치 Step을 청크 단위로 실행하고 다음 청크를 QStash로 예약하는 실행기입니다.
+ */
 export class QStashChunkExecutor {
   constructor(
     private executionManager: ExecutionManager,

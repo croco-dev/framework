@@ -7,6 +7,9 @@ import { HttpContext } from './HttpContext';
 import { parseTraceParent, type TraceParent, telemetryMiddleware } from './middleware/telemetry';
 import type { CompiledRoute, MiddlewareFunction } from './types';
 
+/**
+ * 컴파일된 라우트를 Hono 인스턴스에 등록하고 공통 미들웨어를 적용합니다.
+ */
 export class CrocoRouteRegistrar {
   constructor(
     private readonly hono: Hono,

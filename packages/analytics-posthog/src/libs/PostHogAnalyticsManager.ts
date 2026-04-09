@@ -3,6 +3,9 @@ import { AnalyticsManager } from '@croco/analytics-core';
 import { Component, Context, type ILogger, Inject, LOGGER_TOKEN } from '@croco/framework-context';
 import type { PostHogClient } from '@croco/integrations-posthog';
 
+/**
+ * Croco Context 정보를 활용해 PostHog 이벤트와 그룹 정보를 전송하는 분석 관리자입니다.
+ */
 @Component()
 export class PostHogAnalyticsManager extends AnalyticsManager {
   constructor(

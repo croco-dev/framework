@@ -5,6 +5,9 @@ export type ValidationIssue = {
   message: string;
 };
 
+/**
+ * 검증 실패 목록을 공통 구조로 담는 기본 Problem입니다.
+ */
 export class ValidationProblem extends Problem {
   readonly code = 'protocols-rest/validation-failed';
   readonly category = ProblemCategory.ValidationError;
@@ -21,6 +24,9 @@ export class ValidationProblem extends Problem {
   }
 }
 
+/**
+ * 요청 입력 검증이 실패했을 때 발생하는 Problem입니다.
+ */
 export class RequestValidationProblem extends Problem {
   readonly code = 'protocols-rest/request-validation-failed';
   readonly category = ProblemCategory.ValidationError;
@@ -41,6 +47,9 @@ export class RequestValidationProblem extends Problem {
   }
 }
 
+/**
+ * 응답 데이터 검증이 실패했을 때 발생하는 Problem입니다.
+ */
 export class ResponseValidationProblem extends Problem {
   readonly code = 'protocols-rest/response-validation-failed';
   readonly category = ProblemCategory.InternalServerError;

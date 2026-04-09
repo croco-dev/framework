@@ -1,6 +1,6 @@
 # @croco/auth-clerk
 
-Clerk 인증 통합 패키지. @croco/auth-core 인터페이스를 Clerk Backend SDK로 구현합니다.
+Clerk Backend SDK를 Croco 인증, 세션, 조직 API에 연결하는 패키지입니다.
 
 ## 설치
 
@@ -8,16 +8,9 @@ Clerk 인증 통합 패키지. @croco/auth-core 인터페이스를 Clerk Backend
 pnpm add @croco/auth-clerk @clerk/backend
 ```
 
-## 환경 변수
-
-```bash
-CLERK_SECRET_KEY=sk_test_...
-CLERK_PUBLISHABLE_KEY=pk_test_...
-```
-
 ## 사용법
 
-### ClerkAuthProvider
+### 1. 토큰 인증
 
 ```typescript
 import { ClerkAuthProvider } from '@croco/auth-clerk';
@@ -30,85 +23,50 @@ const authProvider = new ClerkAuthProvider({
 const user = await authProvider.authenticate(request);
 ```
 
-### ClerkSessionProvider
+### 2. 세션 조회와 해제
 
 ```typescript
 import { ClerkSessionProvider } from '@croco/auth-clerk';
 
-const sessionProvider = new ClerkSessionProvider({
+const sessions = new ClerkSessionProvider({
   secretKey: process.env.CLERK_SECRET_KEY!,
 });
 
-const session = await sessionProvider.getSession('sess_xxx');
-const { sessions, totalCount } = await sessionProvider.listSessions({
-  userId: 'user_xxx',
-  status: 'active',
-});
-await sessionProvider.revokeSession('sess_xxx');
-await sessionProvider.revokeAllSessions('user_xxx');
+const session = await sessions.getSession('sess_123');
+await sessions.revokeAllSessions('user_123');
 ```
 
-### ClerkUserService
+### 3. 사용자와 조직 관리
 
 ```typescript
-import { ClerkUserService } from '@croco/auth-clerk';
+import { ClerkOrganizationService, ClerkUserService } from '@croco/auth-clerk';
 
-const userService = new ClerkUserService({
-  secretKey: process.env.CLERK_SECRET_KEY!,
+const options = { secretKey: process.env.CLERK_SECRET_KEY! };
+const users = new ClerkUserService(options);
+const organizations = new ClerkOrganizationService(options);
+
+await users.createUser({
+  emailAddress: ['owner@example.com'],
+  firstName: 'Croco',
 });
 
-const user = await userService.getUser('user_xxx');
-const { users } = await userService.getUserList({ limit: 10 });
-const newUser = await userService.createUser({
-  emailAddress: ['user@example.com'],
-  firstName: 'John',
-});
-await userService.updateUser('user_xxx', { firstName: 'Jane' });
-await userService.banUser('user_xxx');
-```
-
-### ClerkOrganizationService
-
-```typescript
-import { ClerkOrganizationService } from '@croco/auth-clerk';
-
-const orgService = new ClerkOrganizationService({
-  secretKey: process.env.CLERK_SECRET_KEY!,
-});
-
-const org = await orgService.getOrganization('org_xxx');
-const { organizations } = await orgService.getOrganizationList();
-const newOrg = await orgService.createOrganization({
-  name: 'Acme Inc',
-  createdBy: 'user_xxx',
-});
-
-await orgService.createOrganizationMembership({
-  organizationId: 'org_xxx',
-  userId: 'user_xxx',
-  role: 'org:admin',
-});
-
-await orgService.createOrganizationInvitation({
-  organizationId: 'org_xxx',
-  emailAddress: 'new@example.com',
-  role: 'org:member',
-  inviterUserId: 'user_xxx',
+await organizations.createOrganization({
+  name: 'Croco Team',
+  createdBy: 'user_123',
 });
 ```
 
-### ClerkTenantMapper
+### 4. 테넌트 매핑
 
 ```typescript
 import { ClerkTenantMapper } from '@croco/auth-clerk';
 
 const mapper = new ClerkTenantMapper();
-
-await mapper.register('org_xxx', 'tenant_xxx');
-const tenantId = await mapper.resolve('org_xxx');
+await mapper.register('org_123', 'tenant_123');
+const tenantId = await mapper.resolve('org_123');
 ```
 
-### ClerkWebhookHandler
+### 5. 웹훅 처리
 
 ```typescript
 import { ClerkWebhookHandler } from '@croco/auth-clerk';
@@ -116,11 +74,8 @@ import { ClerkWebhookHandler } from '@croco/auth-clerk';
 const handler = new ClerkWebhookHandler(
   { signingSecret: process.env.CLERK_WEBHOOK_SECRET! },
   {
-    'user.created': async (data) => {
-      console.log('User created:', data.id);
-    },
-    'organization.created': async (data) => {
-      console.log('Org created:', data.id);
+    'user.created': async (event) => {
+      await syncUser(event.id);
     },
   }
 );
@@ -128,11 +83,22 @@ const handler = new ClerkWebhookHandler(
 await handler.handleWebhook(request);
 ```
 
-## API
+## API 레퍼런스
 
-- `ClerkAuthProvider` - JWT 토큰 검증 및 인증
-- `ClerkSessionProvider` - 세션 관리
-- `ClerkUserService` - 사용자 CRUD
-- `ClerkOrganizationService` - 조직/멤버십 관리
-- `ClerkTenantMapper` - 테넌트 매핑
-- `ClerkWebhookHandler` - 웹훅 처리
+| API | 설명 |
+|---|---|
+| `ClerkAuthProvider` | Bearer 토큰을 검증하고 `AuthUser`를 반환합니다. |
+| `ClerkSessionProvider` | Clerk 세션 조회, 목록 조회, 세션 해제를 처리합니다. |
+| `ClerkUserService` | 사용자 조회, 생성, 수정, 삭제, 밴 관리를 제공합니다. |
+| `ClerkOrganizationService` | 조직, 멤버십, 초대 관리를 제공합니다. |
+| `ClerkTenantMapper` | Clerk 조직 ID와 Croco tenant ID를 매핑합니다. |
+| `ClerkWebhookHandler` | Clerk 서명을 검증하고 이벤트별 핸들러를 실행합니다. |
+| `WebhookVerificationProblem` 외 Problem | 토큰, 웹훅, tenant 매핑 오류를 Problem 형태로 제공합니다. |
+
+## 공개 타입
+
+- `ClerkAuthOptions`
+- `ClerkUser`, `CreateClerkUserInput`, `UpdateClerkUserInput`
+- `ClerkOrganization`, `CreateOrganizationInput`, `CreateInvitationInput`
+- `ClerkTenantRequest`, `TenantMappingStore`
+- `WebhookHandlerOptions`, `WebhookEventHandler`, `WebhookEventType`

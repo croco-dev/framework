@@ -56,6 +56,9 @@ function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<
   return resolved;
 }
 
+/**
+ * REST 컨트롤러 메타데이터를 실행 가능한 라우트 정의로 컴파일합니다.
+ */
 export class RouteCompiler {
   private paramResolver = new ParamResolver();
 

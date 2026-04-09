@@ -12,6 +12,9 @@ export type PublishResult<T extends DomainEvent> = {
   error?: Error;
 };
 
+/**
+ * 현재 EventBus 설정을 사용해 이벤트를 즉시 발행하거나 커밋 후 발행으로 예약합니다.
+ */
 export class EventPublisher {
   constructor(private readonly config: EventBusConfig) {}
 

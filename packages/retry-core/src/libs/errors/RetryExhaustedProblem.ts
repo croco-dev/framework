@@ -1,5 +1,8 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
+/**
+ * 최대 재시도 횟수를 모두 소진했을 때 발생하는 Problem입니다.
+ */
 export class RetryExhaustedProblem extends Problem {
   readonly code = 'RETRY_EXHAUSTED';
   readonly category = ProblemCategory.InternalServerError;

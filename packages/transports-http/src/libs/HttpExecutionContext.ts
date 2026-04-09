@@ -6,6 +6,9 @@ type ContextRequest = Request & {
   tenantId?: string;
 };
 
+/**
+ * Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니다.
+ */
 export class HttpExecutionContext implements ExecutionContext {
   constructor(
     private readonly ctx: CrocoHttpContext,

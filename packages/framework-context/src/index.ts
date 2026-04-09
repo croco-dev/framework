@@ -84,6 +84,17 @@ export { ContainerInstance } from 'typedi';
  * ```
  */
 export { Context } from './libs/Context';
+
+/**
+ * 현재 실행 중인 트랜잭션 컨텍스트를 식별하는 DI 토큰입니다.
+ *
+ * @example
+ * ```typescript
+ * import { Container, TRANSACTION_CONTEXT_TOKEN } from '@croco/framework-context';
+ *
+ * const context = Container.get(TRANSACTION_CONTEXT_TOKEN);
+ * ```
+ */
 export { TRANSACTION_CONTEXT_TOKEN } from './libs/TransactionContext';
 
 /**
@@ -138,6 +149,17 @@ export { OnShutdown } from './libs/decorators/OnShutdown';
  * ```
  */
 export { MetadataStorage } from './libs/MetadataStorage';
+
+/**
+ * 프레임워크 로거 인스턴스를 등록하고 조회할 때 사용하는 DI 토큰입니다.
+ *
+ * @example
+ * ```typescript
+ * import { Container, LOGGER_TOKEN } from '@croco/framework-context';
+ *
+ * Container.set(LOGGER_TOKEN, logger);
+ * ```
+ */
 export { LOGGER_TOKEN } from './libs/ILogger';
 
 /**
@@ -339,4 +361,20 @@ export type { ShutdownHook } from './libs/types';
  * ```
  */
 export type { Guard } from './libs/Guard';
+
+/**
+ * Croco 전역 로거가 따라야 하는 최소 인터페이스 타입입니다.
+ *
+ * @example
+ * ```typescript
+ * import type { ILogger } from '@croco/framework-context';
+ *
+ * const logger: ILogger = {
+ *   info: () => undefined,
+ *   warn: () => undefined,
+ *   error: () => undefined,
+ *   debug: () => undefined,
+ * };
+ * ```
+ */
 export type { ILogger } from './libs/ILogger';
