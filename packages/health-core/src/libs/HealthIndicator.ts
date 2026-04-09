@@ -19,3 +19,7 @@ export type HealthIndicatorResult = {
 export interface HealthIndicator {
   check(signal?: AbortSignal): Promise<HealthIndicatorResult>;
 }
+
+export interface ReadinessIndicator extends HealthIndicator {
+  isReady(signal?: AbortSignal): Promise<HealthIndicatorResult>;
+}

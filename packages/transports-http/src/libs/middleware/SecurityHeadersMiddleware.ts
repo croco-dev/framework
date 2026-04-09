@@ -24,6 +24,9 @@ export type ReferrerPolicyValue =
 const DEFAULT_HSTS_MAX_AGE = 31536000;
 const DEFAULT_REFERRER_POLICY: ReferrerPolicyValue = 'strict-origin-when-cross-origin';
 
+/**
+ * 보안 관련 HTTP 헤더를 일괄 적용하는 미들웨어입니다.
+ */
 export const securityHeadersMiddleware = (options: SecurityHeadersOptions = {}): MiddlewareFunction => {
   const {
     contentTypeOptions = true,

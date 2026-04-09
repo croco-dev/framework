@@ -8,6 +8,9 @@ type EventClass<T extends DomainEvent = DomainEvent> = (new (
   eventName: string;
 };
 
+/**
+ * 이벤트 클래스 등록 여부를 메타데이터로 표시할 때 사용하는 키입니다.
+ */
 export const REGISTERED_EVENT_KEY = Symbol('REGISTERED_EVENT');
 
 /**
@@ -98,6 +101,9 @@ export const globalEventRegistry = new EventRegistry();
 
 /**
  * 이벤트 클래스 메타데이터를 저장하는 데코레이터
+ */
+/**
+ * 이벤트 클래스를 레지스트리 메타데이터에 등록하는 데코레이터입니다.
  */
 export function RegisterEvent() {
   return <T extends DomainEvent>(target: EventClass<T>): EventClass<T> => {

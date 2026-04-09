@@ -1,6 +1,9 @@
 import type { z } from 'zod';
 import { RequestValidationProblem, ResponseValidationProblem, type ValidationIssue } from './ValidationProblem';
 
+/**
+ * 요청 데이터를 Zod 스키마로 검증하고 실패 시 요청 검증 Problem을 발생시킵니다.
+ */
 export function validateRequest<T>(
   schema: z.ZodType<T>,
   data: unknown,
@@ -20,6 +23,9 @@ export function validateRequest<T>(
   return result.data;
 }
 
+/**
+ * 응답 데이터를 Zod 스키마로 검증하고 실패 시 응답 검증 Problem을 발생시킵니다.
+ */
 export function validateResponse<T>(schema: z.ZodType<T>, data: unknown): T {
   const result = schema.safeParse(data);
 
@@ -35,6 +41,9 @@ export function validateResponse<T>(schema: z.ZodType<T>, data: unknown): T {
   return result.data;
 }
 
+/**
+ * 동기, 비동기, 안전 파싱 API를 가진 검증 유틸리티를 생성합니다.
+ */
 export function createValidator<T>(schema: z.ZodType<T>) {
   return {
     parse: (data: unknown): T => {

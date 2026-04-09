@@ -10,6 +10,9 @@ interface ContextData {
 
 const contextStorage = new AsyncLocalStorage<ContextData>();
 
+/**
+ * AsyncLocalStorage 기반으로 요청 컨텍스트를 실행하고 조회하는 유틸리티입니다.
+ */
 export class Context {
   private static readonly STORAGE = contextStorage;
 

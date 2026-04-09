@@ -151,6 +151,9 @@ function normalizeCloudinaryError(error: unknown, fallbackMessage: string): Clou
   return normalizedError;
 }
 
+/**
+ * Cloudinary를 이용해 파일 저장과 이미지 변환 URL 생성을 제공하는 구현체입니다.
+ */
 @Component()
 export class CloudinaryProvider extends BaseStorageProvider implements ImageProvider {
   private static operationInFlight = false;

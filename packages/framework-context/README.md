@@ -1,96 +1,67 @@
 # @croco/framework-context
 
-프레임워크 기반 계층 - 공통 Context, DI 컨테이너, 메타데이터 저장소를 제공합니다.
+Croco의 기반 계층입니다. DI 컨테이너, 요청 컨텍스트, 메타데이터 저장소, 종료 훅 관리를 제공합니다.
 
 ## 설치
 
 ```bash
-pnpm add @croco/framework-context
+pnpm add @croco/framework-context reflect-metadata typedi
 ```
 
 ## 사용법
 
-### @Component 데코레이터
+### 컴포넌트 등록과 조회
 
 ```typescript
-import { Component, Container, Context } from '@croco/framework-context';
+import 'reflect-metadata';
+import { Component, Container } from '@croco/framework-context';
 
-@Component() // singleton (기본)
+@Component()
 class UserService {
-  // ...
+  getName() {
+    return 'croco';
+  }
 }
 
-@Component({ scope: 'request' })
-class RequestScopedService {
-  // ...
-}
-
-@Component({ scope: 'transient' })
-class TransientService {
-  // 매번 새 인스턴스
-}
+const service = Container.get(UserService);
 ```
 
-### Context.run()
+### 요청 컨텍스트 실행
 
 ```typescript
 import { Context } from '@croco/framework-context';
 
-const result = Context.run(
-  { requestId: 'req-123' },
-  async () => {
-    // 이 안에서 Context.get()으로 requestId 접근 가능
-    const ctx = Context.get();
-    return doSomething();
-  }
-);
+const requestId = await Context.run({ requestId: 'req-123' }, async () => {
+  return Context.getRequestId();
+});
 ```
 
-### Container.get()
+### 종료 훅 등록
 
 ```typescript
-import { Container } from '@croco/framework-context';
+import { OnShutdown, ShutdownManager } from '@croco/framework-context';
 
-@Service()
-class UserRepository {
-  // ...
+class AppLifecycle {
+  @OnShutdown()
+  async close(): Promise<void> {}
 }
 
-const repo = Container.get(UserRepository);
+ShutdownManager.getInstance().listen();
 ```
 
-## API
+## API 레퍼런스
 
-### Context
-
-| 메서드 | 설명 |
-|--------|------|
-| `Context.run(ctx, fn)` | 요청 컨텍스트 내에서 함수 실행 |
-| `Context.get()` | 현재 컨텍스트 반환 |
-| `Context.getRequestId()` | requestId 반환 |
-| `Context.isActive()` | 컨텍스트 활성 여부 |
-
-### Container
-
-| 메서드 | 설명 |
-|--------|------|
-| `Container.get(token)` | 의존성 해결 |
-| `Container.getMany(tokens)` | 여러 의존성 해결 |
-| `Container.set(token, instance)` | 인스턴스 직접 등록 |
-| `Container.reset()` | 컨테이너 초기화 |
-
-### MetadataStorage
-
-| 메서드 | 설명 |
-|--------|------|
-| `MetadataStorage.define(key, target, value)` | 메타데이터 저장 |
-| `MetadataStorage.get(key, target)` | 메타데이터 조회 |
-| `MetadataStorage.getAll(key)` | 모든 메타데이터 조회 |
+- `Container`: 의존성 등록, 조회, 초기화
+- `Component`: 클래스를 singleton, request, transient scope로 등록
+- `Context`: AsyncLocalStorage 기반 요청 컨텍스트 실행과 조회
+- `MetadataStorage`: 데코레이터 메타데이터 저장과 조회
+- `MiddlewareChain`: onion 패턴 미들웨어 실행
+- `ShutdownManager`, `OnShutdown`: graceful shutdown 훅 수집과 실행
+- `LOGGER_TOKEN`, `TRANSACTION_CONTEXT_TOKEN`: 공용 DI 토큰
+- `CircularDependencyProblem`, `MiddlewareProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
 
 ## Scope
 
-| Scope | 동작 |
-|-------|------|
-| `singleton` | 앱 전체 1개 (기본) |
-| `request` | `Context.run()` 내에서 1개 |
-| `transient` | 매번 새 인스턴스 |
+- `singleton`: 애플리케이션 전체에서 하나의 인스턴스
+- `request`: `Context.run()` 범위마다 하나의 인스턴스
+- `transient`: 조회할 때마다 새 인스턴스

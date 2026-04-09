@@ -50,24 +50,6 @@ describe('TelemetryRuntime', () => {
     await runtime.shutdown();
   });
 
-  it('should log warning when forceFlush fails', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const forceFlush = vi.fn().mockRejectedValue(new Error('flush failed'));
-
-    Object.defineProperty(runtime, 'processor', {
-      value: { forceFlush },
-      configurable: true,
-      writable: true,
-    });
-
-    await runtime.forceFlush();
-
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain('[TelemetryRuntime] forceFlush failed: flush failed');
-
-    warnSpy.mockRestore();
-  });
-
   it('should prefer OTEL_EXPORTER_OTLP_TRACES_ENDPOINT over OTEL_EXPORTER_OTLP_ENDPOINT', async () => {
     const tracesEndpoint = 'http://collector:4318/v1/traces-custom';
     const genericEndpoint = 'http://collector:4318/v1/traces-generic';

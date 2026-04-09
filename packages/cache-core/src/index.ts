@@ -13,3 +13,4 @@ export {
 export { Cacheable, type CacheableOptions } from './libs/decorators/Cacheable';
 export { CacheEvict, type CacheEvictOptions } from './libs/decorators/CacheEvict';
 export { InMemoryCacheStore, type InMemoryCacheStoreOptions } from './libs/InMemoryCacheStore';
+export { CacheDecoratorConfigProblem } from './libs/problems/CacheDecoratorProblems';

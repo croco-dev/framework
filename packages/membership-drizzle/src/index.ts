@@ -1,10 +1,4 @@
 /**
- * @packageDocumentation
- *
- * @croco/membership-drizzle 공개 API
- */
-
-/**
  * Drizzle 기반 멤버십 저장소 구현체와 관련 토큰을 내보냅니다.
  */
 export * from './libs/DrizzleMembershipStore';

@@ -6,8 +6,14 @@ import { and, between, desc, eq, gte, lte, type SQL } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 
+/**
+ * 감사 로그 저장소에서 사용하는 기본 Drizzle SQLite 클라이언트 타입입니다.
+ */
 export type DrizzleDb = BetterSQLite3Database<Record<string, never>>;
 
+/**
+ * 감사 로그 테이블 컬럼 매핑 정의입니다.
+ */
 export type AuditLogTable = {
   id: SQLiteColumn;
   tenantId: SQLiteColumn;
@@ -21,6 +27,9 @@ export type AuditLogTable = {
   createdAt: SQLiteColumn;
 };
 
+/**
+ * 감사 로그 저장소 초기화에 필요한 설정입니다.
+ */
 export type DrizzleAuditLogRepositoryConfig = {
   table: unknown;
   schema: AuditLogTable;
@@ -28,12 +37,18 @@ export type DrizzleAuditLogRepositoryConfig = {
   deserializeJson?: (value: string) => unknown;
 };
 
+/**
+ * 감사 로그 리포지토리를 Drizzle 기반으로 구현한 클래스입니다.
+ */
 export class DrizzleAuditLogRepository extends AuditLogRepository {
   private readonly table: unknown;
   private readonly schema: AuditLogTable;
   private readonly serializeJson: (value: unknown) => string;
   private readonly deserializeJson: (value: string) => unknown;
 
+  /**
+   * DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합니다.
+   */
   constructor(
     private readonly db: DrizzleDb,
     private readonly txManager: TxManager<DrizzleDb>,
@@ -50,6 +65,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     return this.txManager.getClient() ?? this.db;
   }
 
+  /**
+   * 감사 로그 항목을 생성하고 저장된 결과를 반환합니다.
+   */
   async create(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): Promise<AuditLogEntry> {
     const client = this.getClient();
     const now = new Date();
@@ -78,6 +96,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     return this.mapToEntry(inserted as Record<string, unknown>);
   }
 
+  /**
+   * 테넌트 기준으로 감사 로그를 조회합니다.
+   */
   async find(
     query: AuditQuery & { actorId?: string; resourceType?: string; resourceId?: string }
   ): Promise<AuditLogEntry[]> {
@@ -107,6 +128,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
   }
 
+  /**
+   * 기간 범위로 감사 로그를 조회합니다.
+   */
   async findByDateRange(
     tenantId: string,
     startDate: Date,
@@ -126,6 +150,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
   }
 
+  /**
+   * 액터 기준으로 감사 로그를 조회합니다.
+   */
   async findByActor(
     tenantId: string,
     actorId: string,
@@ -155,6 +182,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
   }
 
+  /**
+   * 리소스 기준으로 감사 로그를 조회합니다.
+   */
   async findByResource(
     tenantId: string,
     resourceType: string,

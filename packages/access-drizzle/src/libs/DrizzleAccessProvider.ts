@@ -81,9 +81,18 @@ function assertRelationTupleRow(row: unknown): row is RelationTupleRow & {
 
 const MAX_TRAVERSAL_DEPTH = 10;
 
+/**
+ * 관계 튜플 테이블을 사용하는 AccessProvider 구현체입니다.
+ */
 export class DrizzleAccessProvider implements AccessProvider {
+  /**
+   * Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화합니다.
+   */
   constructor(private readonly db: DrizzleDb) {}
 
+  /**
+   * 요청한 관계가 직접 또는 재귀 관계를 통해 허용되는지 확인합니다.
+   */
   async check(request: CheckRequest): Promise<CheckResult> {
     const result = await this.db.execute(
       sql`
@@ -113,6 +122,9 @@ export class DrizzleAccessProvider implements AccessProvider {
     return { allowed: normalizeAllowedValue(firstRow?.allowed) };
   }
 
+  /**
+   * 관계 튜플을 추가합니다. 중복 튜플은 무시합니다.
+   */
   async grant(request: GrantRequest): Promise<void> {
     await this.db.execute(
       sql`
@@ -123,6 +135,9 @@ export class DrizzleAccessProvider implements AccessProvider {
     );
   }
 
+  /**
+   * 관계 튜플을 삭제합니다.
+   */
   async revoke(request: RevokeRequest): Promise<void> {
     await this.db.execute(
       sql`
@@ -135,6 +150,9 @@ export class DrizzleAccessProvider implements AccessProvider {
     );
   }
 
+  /**
+   * 조건에 맞는 관계 튜플 목록을 조회합니다.
+   */
   async list(request: ListRequest): Promise<RelationTuple[]> {
     const conditions = [sql`tenant_id = ${request.tenantId}`];
 

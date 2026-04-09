@@ -17,6 +17,7 @@ import {
   installWebGraphql,
   installWebTrpc,
 } from './installers/index.js';
+import { DirectoryNotEmptyProblem } from './libs/problems/DirectoryNotEmptyProblem.js';
 import type { GeneratorOptions } from './types.js';
 
 const TEMPLATES_DIR = new URL('../templates', import.meta.url).pathname;
@@ -28,7 +29,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   // Step 1: targetDir 정규화 및 생성 (non-empty 체크)
   const resolvedTarget = resolve(targetDir);
   if (existsSync(resolvedTarget) && readdirSync(resolvedTarget).length > 0) {
-    throw new Error(`Directory '${resolvedTarget}' is not empty.`);
+    throw new DirectoryNotEmptyProblem(resolvedTarget);
   }
   mkdirSync(resolvedTarget, { recursive: true });
 

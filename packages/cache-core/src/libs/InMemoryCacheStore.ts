@@ -1,3 +1,4 @@
+import type { ILogger } from '@croco/framework-context';
 import {
   type CacheGetOrSetOptions,
   type CachePattern,
@@ -38,13 +39,16 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
     evictions: 0,
   };
   private readonly cleanupTimer?: ReturnType<typeof setInterval>;
+  private readonly logger?: ILogger;
 
-  constructor(options: InMemoryCacheStoreOptions = {}) {
+  constructor(options: InMemoryCacheStoreOptions = {}, logger?: ILogger) {
     super();
 
+    this.logger = logger;
+
     if (options.maxEntries === undefined) {
-      console.warn(
-        '[InMemoryCacheStore] maxEntries not set, using default 1000. Set maxEntries to control memory usage.'
+      this.logger?.warn(
+        'InMemoryCacheStore: maxEntries not set, using default 1000. Set maxEntries to control memory usage.'
       );
       this.maxEntries = DEFAULT_MAX_ENTRIES;
     } else {
@@ -111,6 +115,12 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
 
   async clear(): Promise<void> {
     this.store.clear();
+  }
+
+  close(): void {
+    if (this.cleanupTimer !== undefined) {
+      clearInterval(this.cleanupTimer);
+    }
   }
 
   async invalidatePattern(pattern: CachePattern): Promise<number> {

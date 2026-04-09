@@ -1,5 +1,8 @@
 import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
+/**
+ * Better Auth 사용자 테이블 스키마입니다.
+ */
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -10,6 +13,9 @@ export const user = pgTable('user', {
   updatedAt: timestamp('updated_at').notNull(),
 });
 
+/**
+ * Better Auth 세션 테이블 스키마입니다.
+ */
 export const session = pgTable('session', {
   id: text('id').primaryKey(),
   expiresAt: timestamp('expires_at').notNull(),
@@ -23,6 +29,9 @@ export const session = pgTable('session', {
     .references(() => user.id),
 });
 
+/**
+ * Better Auth 계정 연결 테이블 스키마입니다.
+ */
 export const account = pgTable('account', {
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull(),
@@ -41,6 +50,9 @@ export const account = pgTable('account', {
   updatedAt: timestamp('updated_at').notNull(),
 });
 
+/**
+ * Better Auth 검증 토큰 테이블 스키마입니다.
+ */
 export const verification = pgTable('verification', {
   id: text('id').primaryKey(),
   identifier: text('identifier').notNull(),

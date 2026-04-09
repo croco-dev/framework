@@ -23,6 +23,9 @@ function isProblem(error: unknown): error is ProblemLike {
   );
 }
 
+/**
+ * 예외를 Problem Details 형식의 HTTP 응답으로 변환하는 기본 필터입니다.
+ */
 export class HttpExceptionFilter implements ExceptionFilter<unknown, ExecutionContext> {
   catch(exception: unknown, _context: ExecutionContext): HttpExceptionFilterResponse {
     if (isProblem(exception)) {

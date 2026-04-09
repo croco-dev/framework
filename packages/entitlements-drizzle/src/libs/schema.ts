@@ -1,5 +1,8 @@
 import { integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
+/**
+ * 플랜별 entitlement 규칙을 저장하는 PostgreSQL 스키마입니다.
+ */
 export const planEntitlements = pgTable('plan_entitlements', {
   id: text('id').primaryKey(),
   planId: text('plan_id').notNull(),

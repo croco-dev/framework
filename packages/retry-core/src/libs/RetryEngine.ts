@@ -11,6 +11,9 @@ interface RetryHooks {
   beforeWait?: (delay: number, context: RetryContext) => boolean | Promise<boolean>;
 }
 
+/**
+ * 재시도 정책과 백오프 정책을 따라 저수준 재시도 루프를 실행합니다.
+ */
 export async function executeRetryLoop<T>(
   callback: () => Promise<T>,
   options: {

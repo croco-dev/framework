@@ -2,30 +2,25 @@ import { Client } from '@upstash/qstash';
 
 export type QStashTaskRunnerOptions = {
   /**
-   * QStash token for authentication.
+   * QStash 인증 토큰입니다.
    */
   token: string;
   /**
-   * Destination URL where task webhooks are received.
-   * This endpoint will receive the task execution requests.
+   * 태스크 웹훅을 수신할 목적지 URL입니다.
    */
   destinationUrl: string;
   /**
-   * Default delay in seconds before delivering the message.
-   * @default undefined (no delay)
+   * 메시지 전달 전 기본 지연 시간입니다.
    */
   defaultDelay?: number;
   /**
-   * Default headers to include in all requests.
+   * 모든 요청에 공통으로 포함할 기본 헤더입니다.
    */
   defaultHeaders?: Record<string, string>;
 };
 
 /**
- * QStash-based TaskRunner implementation.
- *
- * Publishes tasks to QStash which will deliver them to the configured destination URL.
- * The task will be executed by a webhook receiver at that endpoint.
+ * QStash에 태스크 메시지를 발행하는 태스크 러너입니다.
  */
 export class QStashTaskRunner {
   private readonly client: Client;
@@ -41,25 +36,18 @@ export class QStashTaskRunner {
   }
 
   /**
-   * Execute a task by publishing it to QStash.
-   *
-   * @param taskId - The unique identifier of the task to execute
-   * @param payload - The payload to pass to the task handler
-   * @param options - Optional execution options
-   * @returns The QStash message ID
+   * 태스크 식별자와 페이로드를 QStash에 발행합니다.
    */
   async execute(
     taskId: string,
     payload: unknown,
     options?: {
       /**
-       * Delay in seconds before delivering the message.
-       * Overrides the defaultDelay if provided.
+       * 이번 요청에만 적용할 지연 시간입니다.
        */
       delay?: number;
       /**
-       * Additional headers to include in this request.
-       * Merged with defaultHeaders.
+       * 이번 요청에만 추가할 헤더입니다.
        */
       headers?: Record<string, string>;
     }

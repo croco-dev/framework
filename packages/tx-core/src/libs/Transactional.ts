@@ -6,6 +6,9 @@ import type { Propagation, TransactionalOptions } from './types';
 
 type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
 
+/**
+ * 메서드 실행에 트랜잭션 전파 규칙과 타임아웃을 적용하는 데코레이터입니다.
+ */
 export function Transactional<TOptions = unknown>(options?: TransactionalOptions<TOptions>): MethodDecorator {
   const propagation: Propagation = options?.propagation ?? 'REQUIRED';
   const managerKey = options?.managerKey;

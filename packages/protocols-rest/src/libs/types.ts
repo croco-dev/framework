@@ -20,7 +20,7 @@ export interface ParamMetadata {
   type: ParamType;
   index: number;
   name?: string;
-  pipes?: PipeTransformConstructor[];
+  pipes?: (PipeTransformConstructor | PipeTransform)[];
 }
 
 export interface HttpContext {

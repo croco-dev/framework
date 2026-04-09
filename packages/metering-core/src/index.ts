@@ -75,7 +75,6 @@ export type { MeterMetadata, MeterOptions } from './libs/decorators/Meter';
  *
  * // 메타데이터 조회
  * const metadata = getMeterMetadata(ApiController);
- * console.log(metadata?.meterId); // 'api_calls'
  * ```
  */
 export { getMeterMetadata, hasMeterMetadata, METER_METADATA_KEY, Meter } from './libs/decorators/Meter';
@@ -376,8 +375,6 @@ export type {
  * if (!result.allowed) {
  *   throw new QuotaExceededProblem('api_calls', result.quota, result.currentUsage);
  * }
- *
- * console.log(`현재 사용량: ${result.currentUsage}/${result.quota}`);
  * ```
  */
 export { QuotaManager } from './libs/QuotaManager';
@@ -471,8 +468,6 @@ export type { UsageAggregatorOptions } from './libs/UsageAggregator';
  *
  * // 특정 meter의 사용량 flush
  * const result = await aggregator.flushUsageToDB('tenant-123', 'api_calls');
- * console.log(`${result.recordedCount}개 기록 저장 완료`);
- * console.log(`${result.deletedCount}개 Redis 키 삭제`);
  *
  * // 테넌트 전체 flush
  * const tenantResult = await aggregator.flushAllForTenant('tenant-123');

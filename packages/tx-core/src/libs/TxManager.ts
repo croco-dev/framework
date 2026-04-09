@@ -27,12 +27,15 @@ type AfterCommitHookFailure = {
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
 
-function createTimeoutPromise<T>(ms: number): Promise<T> {
+function createTimeoutPromise<T>(ms: number, timeoutHandle: { id?: ReturnType<typeof setTimeout> }): Promise<T> {
   return new Promise((_, reject) => {
-    setTimeout(() => reject(new TransactionTimeoutProblem(ms)), ms);
+    timeoutHandle.id = setTimeout(() => reject(new TransactionTimeoutProblem(ms)), ms);
   });
 }
 
+/**
+ * AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 매니저입니다.
+ */
 export class TxManager<TClient, TOptions = unknown> implements TransactionContext {
   private readonly als = new AsyncLocalStorage<NullableTxContext<TClient>>();
   private readonly defaultNesting: NestingStrategy;
@@ -89,7 +92,15 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     };
 
     if (timeout !== undefined && timeout > 0) {
-      return Promise.race([executeTransaction(), createTimeoutPromise<T>(timeout)]);
+      const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
+
+      try {
+        return await Promise.race([executeTransaction(), createTimeoutPromise<T>(timeout, timeoutHandle)]);
+      } finally {
+        if (timeoutHandle.id !== undefined) {
+          clearTimeout(timeoutHandle.id);
+        }
+      }
     }
 
     return executeTransaction();
@@ -135,7 +146,15 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     };
 
     if (timeout !== undefined && timeout > 0) {
-      return Promise.race([executeSavepoint(), createTimeoutPromise<T>(timeout)]);
+      const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
+
+      try {
+        return await Promise.race([executeSavepoint(), createTimeoutPromise<T>(timeout, timeoutHandle)]);
+      } finally {
+        if (timeoutHandle.id !== undefined) {
+          clearTimeout(timeoutHandle.id);
+        }
+      }
     }
 
     return executeSavepoint();

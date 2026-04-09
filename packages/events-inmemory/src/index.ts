@@ -25,8 +25,19 @@
  * @packageDocumentation
  */
 
+/**
+ * 인메모리 이벤트 버스의 동시성 제어 전략과 옵션 타입입니다.
+ */
 export type { BackpressureStrategy, EventPublishFailure, InMemoryEventBusOptions } from './libs/InmemoryEventBus';
 /**
- * `@croco/events-core`의 EventBus 인터페이스를 인메모리로 구현한 EventBus입니다.
+ * 하나 이상의 이벤트 핸들러 실행이 실패했을 때 발생하는 집계 에러입니다.
+ */
+/**
+ * `@croco/events-core` EventBus를 인메모리로 구현한 기본 이벤트 버스입니다.
  */
 export { EventPublishFailedError, InMemoryEventBus } from './libs/InmemoryEventBus';
+
+/**
+ * 동시 처리 한도를 초과했을 때 발생하는 Problem 타입입니다.
+ */
+export { BackpressureExceededProblem } from './libs/problems/EventsInmemoryProblems';

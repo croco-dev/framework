@@ -5,12 +5,16 @@ import { Logger } from '@croco/framework-logger';
 import type { TraceInfo } from '@croco/telemetry-api';
 import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
 import { type Context, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
+import { BackpressureExceededProblem } from './problems/EventsInmemoryProblems';
 
 export type EventPublishFailure = {
   handlerName: string;
   error: Error;
 };
 
+/**
+ * 하나 이상의 이벤트 핸들러 실행이 실패했을 때 집계 결과를 담아 반환하는 에러입니다.
+ */
 export class EventPublishFailedError extends Error {
   readonly name = 'EventPublishFailedError';
   readonly cause?: Error;
@@ -21,6 +25,17 @@ export class EventPublishFailedError extends Error {
   ) {
     super(`${failures.length} event handler(s) failed while publishing ${eventName}`);
     this.cause = failures[0]?.error;
+  }
+}
+
+/**
+ * 이벤트 버스 옵션이 유효하지 않을 때 발생하는 구성 오류입니다.
+ */
+export class InvalidEventBusConfigurationError extends Error {
+  readonly name = 'InvalidEventBusConfigurationError';
+
+  constructor(message: string) {
+    super(`Invalid EventBus configuration: ${message}`);
   }
 }
 
@@ -37,6 +52,9 @@ type RunningHandler = {
   startTime: number;
 };
 
+/**
+ * TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
+ */
 export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implements EventBus<TEvent> {
   private readonly index = new EventSubscriptionIndex<EventHandlerClass<TEvent>>();
   private readonly tracer = getTracer();
@@ -46,7 +64,13 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
   private handlerCounter = 0;
 
   constructor(options: InMemoryEventBusOptions = {}) {
-    this.maxConcurrency = options.maxConcurrency ?? Number.POSITIVE_INFINITY;
+    const maxConcurrency = options.maxConcurrency ?? 100;
+    if (!Number.isFinite(maxConcurrency) || maxConcurrency <= 0) {
+      throw new InvalidEventBusConfigurationError(
+        `maxConcurrency must be a positive finite number, got ${maxConcurrency}`
+      );
+    }
+    this.maxConcurrency = maxConcurrency;
     this.backpressureStrategy = options.backpressureStrategy ?? 'block';
   }
 
@@ -110,7 +134,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
           return;
         }
         case 'error': {
-          throw new Error(`Backpressure exceeded: ${currentRunning} handlers already running`);
+          throw new BackpressureExceededProblem(currentRunning);
         }
         case 'block':
         default: {

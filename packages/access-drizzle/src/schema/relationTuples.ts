@@ -1,5 +1,8 @@
 import { index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
+/**
+ * 접근 제어 관계 튜플을 저장하는 기본 스키마입니다.
+ */
 export const relationTuples = pgTable(
   'relation_tuples',
   {

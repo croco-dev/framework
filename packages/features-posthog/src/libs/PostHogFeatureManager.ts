@@ -4,6 +4,9 @@ import type { PostHogClient } from '@croco/integrations-posthog';
 
 type PostHogProperties = Record<string, string>;
 
+/**
+ * PostHog feature flag를 조회하는 FeatureManager 구현체입니다.
+ */
 @Component()
 export class PostHogFeatureManager extends FeatureManager {
   constructor(private readonly posthogClient: PostHogClient) {

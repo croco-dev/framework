@@ -2,6 +2,9 @@ import type { HttpContext as ProtocolHttpContext } from '@croco/protocols-rest';
 import type { Context as HonoContext } from 'hono';
 import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from './types';
 
+/**
+ * Hono 컨텍스트를 Croco 전용 HTTP 컨텍스트 인터페이스로 감싸는 어댑터입니다.
+ */
 export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
   private store = new Map<string, unknown>();
 

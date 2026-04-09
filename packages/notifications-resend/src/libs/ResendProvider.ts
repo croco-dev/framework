@@ -230,4 +230,8 @@ export class ResendProvider implements NotificationProvider {
       };
     }
   }
+
+  async sendBatch(payloads: NotificationPayload[]): Promise<NotificationResult[]> {
+    return Promise.all(payloads.map((payload) => this.send(payload)));
+  }
 }

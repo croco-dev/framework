@@ -1,0 +1,227 @@
+import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from '@croco/metering-core';
+import { MeterRepository } from '@croco/metering-core';
+import { ProblemFactory } from '@croco/problems-core';
+import type { TxManager } from '@croco/tx-core';
+import { and, eq } from 'drizzle-orm';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+
+/**
+ * 미터 저장소에서 사용하는 기본 Drizzle SQLite 클라이언트 타입입니다.
+ */
+export type DrizzleDb = BetterSQLite3Database<Record<string, never>>;
+
+/**
+ * 미터 정의 테이블 컬럼 매핑입니다.
+ */
+export type MeterTable = {
+  id: SQLiteColumn;
+  tenantId: SQLiteColumn;
+  meterId: SQLiteColumn;
+  type: SQLiteColumn;
+  quota: SQLiteColumn;
+  allowOverQuota: SQLiteColumn;
+  metadata: SQLiteColumn;
+  createdAt: SQLiteColumn;
+  updatedAt: SQLiteColumn;
+};
+
+/**
+ * 사용량 기록 테이블 컬럼 매핑입니다.
+ */
+export type UsageRecordTable = {
+  id: SQLiteColumn;
+  tenantId: SQLiteColumn;
+  meterId: SQLiteColumn;
+  value: SQLiteColumn;
+  recordedAt: SQLiteColumn;
+  metadata: SQLiteColumn;
+  idempotencyKey: SQLiteColumn;
+};
+
+/**
+ * 저장소 초기화에 필요한 스키마와 직렬화 설정입니다.
+ */
+export type DrizzleMeterRepositoryConfig = {
+  meterTable: unknown;
+  meterSchema: MeterTable;
+  usageRecordTable: unknown;
+  usageRecordSchema: UsageRecordTable;
+  serializeJson?: (value: unknown) => string;
+  deserializeJson?: (value: string) => unknown;
+};
+
+/**
+ * 미터 정의와 사용량 기록을 Drizzle로 저장하는 저장소입니다.
+ */
+export class DrizzleMeterRepository extends MeterRepository {
+  private readonly meterTable: unknown;
+  private readonly meterSchema: MeterTable;
+  private readonly usageRecordTable: unknown;
+  private readonly usageRecordSchema: UsageRecordTable;
+  private readonly serializeJson: (value: unknown) => string;
+  private readonly deserializeJson: (value: string) => unknown;
+
+  /**
+   * DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합니다.
+   */
+  constructor(
+    private readonly db: DrizzleDb,
+    private readonly txManager: TxManager<DrizzleDb>,
+    config: DrizzleMeterRepositoryConfig
+  ) {
+    super();
+    this.meterTable = config.meterTable;
+    this.meterSchema = config.meterSchema;
+    this.usageRecordTable = config.usageRecordTable;
+    this.usageRecordSchema = config.usageRecordSchema;
+    this.serializeJson = config.serializeJson ?? JSON.stringify;
+    this.deserializeJson = config.deserializeJson ?? JSON.parse;
+  }
+
+  private getClient(): DrizzleDb {
+    return this.txManager.getClient() ?? this.db;
+  }
+
+  /**
+   * 미터 ID와 테넌트 ID로 미터 정의를 조회합니다.
+   */
+  async findByMeterIdAndTenant(meterId: string, tenantId: string): Promise<MeterDefinition | null> {
+    const client = this.getClient();
+
+    const results = await (client as DrizzleDb)
+      .select()
+      .from(this.meterTable as SQLiteTable)
+      .where(and(eq(this.meterSchema.tenantId, tenantId), eq(this.meterSchema.meterId, meterId)))
+      .limit(1);
+
+    if (results.length === 0) {
+      return null;
+    }
+
+    return this.mapToMeterDefinition(results[0] as Record<string, unknown>);
+  }
+
+  /**
+   * 미터 정의를 저장하고 저장된 결과를 반환합니다.
+   */
+  async save(meter: MeterRegistrationOptions): Promise<MeterDefinition> {
+    const client = this.getClient();
+    const now = new Date();
+
+    const values = {
+      tenantId: meter.tenantId,
+      meterId: meter.meterId,
+      type: meter.type,
+      quota: meter.quota ?? null,
+      allowOverQuota: meter.allowOverQuota ? 1 : 0,
+      metadata: this.serializeJson(meter.metadata ?? {}),
+      createdAt: now.getTime(),
+      updatedAt: now.getTime(),
+    };
+
+    const [inserted] = await (client as DrizzleDb)
+      .insert(this.meterTable as SQLiteTable)
+      .values(values)
+      .returning();
+
+    if (!inserted) {
+      throw ProblemFactory.internalServerError('meter/insert-failed', 'Failed to persist meter definition');
+    }
+
+    return this.mapToMeterDefinition(inserted as Record<string, unknown>);
+  }
+
+  /**
+   * 모든 미터 정의를 조회합니다.
+   */
+  async findAll(): Promise<MeterDefinition[]> {
+    const client = this.getClient();
+
+    const results = await (client as DrizzleDb).select().from(this.meterTable as SQLiteTable);
+
+    return (results as Record<string, unknown>[]).map((r) => this.mapToMeterDefinition(r));
+  }
+
+  /**
+   * 특정 테넌트의 미터 정의를 조회합니다.
+   */
+  async findByTenant(tenantId: string): Promise<MeterDefinition[]> {
+    const client = this.getClient();
+
+    const results = await (client as DrizzleDb)
+      .select()
+      .from(this.meterTable as SQLiteTable)
+      .where(eq(this.meterSchema.tenantId, tenantId));
+
+    return (results as Record<string, unknown>[]).map((r) => this.mapToMeterDefinition(r));
+  }
+
+  /**
+   * 사용량 기록을 배치로 저장합니다.
+   */
+  async saveUsageRecords(records: UsageRecord[]): Promise<void> {
+    if (records.length === 0) {
+      return;
+    }
+
+    const client = this.getClient();
+
+    const values = records.map((record) => ({
+      tenantId: record.tenantId,
+      meterId: record.meterId,
+      value: record.value,
+      recordedAt: record.timestamp.getTime(),
+      metadata: this.serializeJson(record.metadata ?? {}),
+      idempotencyKey: record.idempotencyKey,
+    }));
+
+    await (client as DrizzleDb).insert(this.usageRecordTable as SQLiteTable).values(values);
+  }
+
+  private mapToMeterDefinition(raw: Record<string, unknown>): MeterDefinition {
+    return {
+      id: String(raw.id),
+      tenantId: String(raw.tenantId),
+      meterId: String(raw.meterId),
+      type: String(raw.type) as MeterDefinition['type'],
+      quota: raw.quota ? Number(raw.quota) : undefined,
+      allowOverQuota: Boolean(raw.allowOverQuota),
+      metadata: this.deserializeMetadata(raw.metadata),
+      createdAt: this.parseDate(raw.createdAt),
+      updatedAt: this.parseDate(raw.updatedAt),
+    };
+  }
+
+  private deserializeMetadata(value: unknown): Record<string, unknown> | undefined {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+    if (typeof value === 'string') {
+      try {
+        const parsed = this.deserializeJson(value) as Record<string, unknown>;
+        return Object.keys(parsed).length === 0 ? undefined : parsed;
+      } catch {
+        return undefined;
+      }
+    }
+    if (typeof value === 'object' && value !== null) {
+      const obj = value as Record<string, unknown>;
+      return Object.keys(obj).length === 0 ? undefined : obj;
+    }
+    return undefined;
+  }
+
+  private parseDate(value: unknown): Date {
+    if (value instanceof Date) {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return new Date(value);
+    }
+    if (typeof value === 'string') {
+      return new Date(value);
+    }
+    return new Date();
+  }
+}

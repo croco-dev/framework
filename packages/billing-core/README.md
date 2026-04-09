@@ -1,6 +1,6 @@
 # @croco/billing-core
 
-Croco의 빌링 코어 도메인 패키지입니다. 구독 상태 조회, 체크아웃 생성, 통화 값객체, 인보이스/플랜 전환 인터페이스를 제공합니다.
+구독, 체크아웃, 플랜 전환, 통화 계산을 담당하는 빌링 도메인 코어 패키지입니다.
 
 ## 설치
 
@@ -8,19 +8,7 @@ Croco의 빌링 코어 도메인 패키지입니다. 구독 상태 조회, 체�
 pnpm add @croco/billing-core
 ```
 
-## Money 값객체
-
-```ts
-import { Money } from '@croco/billing-core';
-
-const monthly = new Money(9900, 'USD');
-const annualDiscount = monthly.multiply(10).subtract(new Money(9900, 'USD'));
-
-monthly.toString();
-annualDiscount.toFormattedString('en-US');
-```
-
-## BillingService
+## 사용법
 
 ```ts
 import type { BillingGateway } from '@croco/billing-core';
@@ -28,9 +16,9 @@ import { BillingService, InMemoryBillingStore } from '@croco/billing-core';
 
 const store = new InMemoryBillingStore();
 const gateway = {} as BillingGateway;
-const service = new BillingService({ store, gateway });
+const billingService = new BillingService({ store, gateway });
 
-await service.createCheckout({
+await billingService.createCheckout({
   tenantId: 'tenant-123',
   email: 'owner@example.com',
   productId: 'product-pro',
@@ -39,44 +27,47 @@ await service.createCheckout({
 });
 ```
 
-즉시 구독 취소 시 주문 이력이 없는 계정은 자동 정리되어 고아 billing account가 남지 않습니다.
-
-## 플랜 전환과 인보이스 인터페이스
-
 ```ts
-import type {
-  GenerateInvoiceParams,
-  InvoiceGenerator,
-  PlanTransitionService,
-  ProrationCalculator,
-} from '@croco/billing-core';
+import { Money } from '@croco/billing-core';
 
-declare const prorationCalculator: ProrationCalculator;
-declare const planTransitionService: PlanTransitionService;
-declare const invoiceGenerator: InvoiceGenerator;
+const monthly = new Money(9900, 'USD');
+const annual = monthly.multiply(12).subtract(new Money(19800, 'USD'));
 
-await prorationCalculator.calculate({
-  currentPlan,
-  nextPlan,
-  periodStart: new Date('2026-01-01T00:00:00.000Z'),
-  periodEnd: new Date('2026-02-01T00:00:00.000Z'),
-  changeAt: new Date('2026-01-15T00:00:00.000Z'),
-});
-
-await planTransitionService.previewTransition({
-  subscription,
-  currentPlan,
-  nextPlan,
-  effectiveAt: new Date(),
-});
-
-const params: GenerateInvoiceParams = {
-  invoiceId: 'inv-1',
-  billingAccountId: 'account-1',
-  currency: 'USD',
-  lineItems: [],
-  issuedAt: new Date(),
-};
-
-await invoiceGenerator.generate(params);
+monthly.toFormattedString('ko-KR');
+annual.toString();
 ```
+
+## API 레퍼런스
+
+### 핵심 클래스와 인터페이스
+
+- `BillingService`, 테넌트 기준 구독 조회, 체크아웃 생성, 취소, 재개를 처리합니다.
+- `BillingStore`, billing account, subscription, order 저장 계약입니다.
+- `BillingGateway`, 외부 결제 제공자 연동 계약입니다.
+- `InMemoryBillingStore`, 테스트용 인메모리 저장소입니다.
+- `Money`, 통화 안전 계산용 값 객체입니다.
+
+### 확장 포인트
+
+- `PlanRegistry`, 플랜 정의 조회 계약입니다.
+- `PlanTransitionService`, 플랜 전환 미리보기와 적용 인터페이스입니다.
+- `ProrationCalculator`, 일할 계산 인터페이스입니다.
+- `InvoiceGenerator`, 인보이스 생성 인터페이스입니다.
+
+### 주요 타입
+
+- `BillingAccount`, `Subscription`, `Order`, `Invoice`, `Plan`
+- `CreateCheckoutParams`, `CheckoutResult`
+- `CreateBillingCheckoutParams`, `BillingServiceDependencies`
+- `PlanTransitionParams`, `ProrationCalculationParams`, `GenerateInvoiceParams`
+
+### 이벤트와 문제 타입
+
+- 이벤트: `OrderPaidEvent`, `PlanChangedEvent`, `SubscriptionActivatedEvent`, `SubscriptionCanceledEvent`, `SubscriptionPastDueEvent`, `SubscriptionRevokedEvent`
+- 문제 타입: `BillingAccountNotFoundProblem`, `BillingCheckoutCreationProblem`, `SubscriptionNotFoundProblem`, `InvalidMoneyAmountProblem`
+
+## 구현 포인트
+
+- 외부 결제사는 `BillingGateway`를 구현해 연결합니다.
+- 즉시 취소 시 주문 이력이 없으면 billing account와 subscription을 함께 정리합니다.
+- billing 상태 변화는 도메인 이벤트로 다른 SaaS 패키지와 연결할 수 있습니다.

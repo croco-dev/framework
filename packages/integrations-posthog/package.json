@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "posthog-node": "^4.0.0"
   },
   "devDependencies": {

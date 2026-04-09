@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/problems-core": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
     "@upstash/ratelimit": "^2.0.0",
     "@upstash/redis": "^1.34.0"

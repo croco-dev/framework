@@ -22,6 +22,9 @@ class HandlerContainerInstance extends TypeDIContainerInstance {
   }
 }
 
+/**
+ * Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 담당하는 DI 컨테이너입니다.
+ */
 export class Container {
   private static validated = false;
   private static readonly lazyProviders = new Map<TokenIdentifier<unknown>, () => unknown>();

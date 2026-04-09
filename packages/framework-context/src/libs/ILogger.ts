@@ -8,4 +8,7 @@ export interface ILogger {
   child(bindings: Record<string, unknown>): ILogger;
 }
 
+/**
+ * Croco 전역 로거 인스턴스를 등록하고 조회할 때 사용하는 DI 토큰입니다.
+ */
 export const LOGGER_TOKEN = new Token<ILogger>('ILogger');

@@ -8,7 +8,10 @@ import {
   ParamType,
   type PipeTransform,
   type PipeTransformConstructor,
+  RequestValidationProblem,
+  type ValidationIssue,
 } from '@croco/protocols-rest';
+import type { z } from 'zod';
 import type { CrocoHttpContext } from './types';
 
 const PARAM_TYPE_MAP: Record<ParamType, ArgumentMetadata['type']> = {
@@ -20,6 +23,44 @@ const PARAM_TYPE_MAP: Record<ParamType, ArgumentMetadata['type']> = {
   [ParamType.RAW]: 'custom',
 };
 
+class ZodValidationPipe implements PipeTransform<unknown, unknown> {
+  constructor(private readonly schema: z.ZodType) {}
+
+  transform(value: unknown, metadata: ArgumentMetadata): unknown {
+    const result = this.schema.safeParse(value);
+
+    if (!result.success) {
+      const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
+        path: issue.path.join('.') || 'value',
+        message: issue.message,
+      }));
+
+      const source = this.mapMetadataTypeToSource(metadata.type);
+      throw new RequestValidationProblem(source, issues);
+    }
+
+    return result.data;
+  }
+
+  private mapMetadataTypeToSource(type: ArgumentMetadata['type']): 'body' | 'query' | 'params' | 'headers' {
+    switch (type) {
+      case 'body':
+        return 'body';
+      case 'query':
+        return 'query';
+      case 'param':
+        return 'params';
+      case 'header':
+        return 'headers';
+      default:
+        return 'body';
+    }
+  }
+}
+
+/**
+ * 컨트롤러 파라미터 메타데이터를 읽어 실제 메서드 인자 배열로 변환합니다.
+ */
 export class ParamResolver {
   private static readonly PARSED_BODY_PROMISE_KEY = '@croco/transports-http:parsed-body-promise';
 
@@ -96,22 +137,43 @@ export class ParamResolver {
     };
 
     let result = value;
-    for (const PipeClass of param.pipes) {
-      const pipe: PipeTransform = this.resolvePipe(PipeClass);
-      result = await pipe.transform(result, metadata);
+    for (const pipe of param.pipes) {
+      const pipeInstance: PipeTransform = this.resolvePipe(pipe, metadata);
+      result = await pipeInstance.transform(result, metadata);
     }
 
     return result;
   }
 
-  private resolvePipe(PipeClass: PipeTransformConstructor): PipeTransform {
+  private resolvePipe(
+    pipe: PipeTransformConstructor | PipeTransform | z.ZodType,
+    metadata: ArgumentMetadata
+  ): PipeTransform {
+    if (this.isZodSchema(pipe)) {
+      return new ZodValidationPipe(pipe as z.ZodType);
+    }
+
+    if (typeof pipe === 'object' && pipe !== null) {
+      return pipe as PipeTransform;
+    }
+
     try {
-      return Container.get(PipeClass);
+      return Container.get(pipe as PipeTransformConstructor);
     } catch (error) {
       throw ProblemFactory.internalServerError(
         'transports-http/pipe-resolution-failed',
-        `Container did not return an instance for pipe ${PipeClass.name}: ${error instanceof Error ? error.message : String(error)}`
+        `Container did not return an instance for pipe ${pipe.name}: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  private isZodSchema(value: unknown): boolean {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+
+    const zodValue = value as { _def?: unknown; safeParse?: unknown; parse?: unknown };
+
+    return '_def' in zodValue || typeof zodValue.safeParse === 'function' || typeof zodValue.parse === 'function';
   }
 }

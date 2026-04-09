@@ -1,4 +1,5 @@
 import type { CacheStore } from '../CacheStore';
+import { CacheDecoratorConfigProblem } from '../problems/CacheDecoratorProblems';
 
 export interface CacheableOptions<V = unknown> {
   store: CacheStore<string, V>;
@@ -13,7 +14,9 @@ function resolveCachePrefix(options: CacheableOptions<unknown>, methodName: stri
   }
 
   if (options.namespace === undefined) {
-    throw new Error(`@Cacheable requires "namespace" when "keyPrefix" is not provided (method: ${methodName})`);
+    throw new CacheDecoratorConfigProblem(
+      `@Cacheable requires "namespace" when "keyPrefix" is not provided (method: ${methodName})`
+    );
   }
 
   return `${options.namespace}:${methodName}`;

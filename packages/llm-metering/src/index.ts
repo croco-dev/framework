@@ -1,33 +1,17 @@
 /**
  * @packageDocumentation
  *
- * LLM metering and cost tracking package for Croco framework.
- *
- * Provides decorators, events, and services for tracking LLM usage, calculating costs,
- * and enforcing budget limits. Integrates with {@link @croco/llm-core} to automatically
- * meter LLM calls and enforce cost quotas.
- *
- * @example
- * ```typescript
- * import { AiMetered, LlmMeteringService } from '@croco/llm-metering';
- *
- * @Service()
- * class MyService {
- *   constructor(private readonly metering: LlmMeteringService) {}
- *
- *   @AiMetered({ budgetName: 'default' })
- *   async generateText(prompt: string): Promise<string> {
- *     // LLM calls are automatically metered
- *     return 'result';
- *   }
- * }
- * ```
+ * LLM 토큰 사용량과 비용을 기록하고 quota를 강제하는 미터링 패키지입니다.
  */
 
-// Decorator Types
+/**
+ * @AiMetered 데코레이터가 사용하는 메타데이터 타입입니다.
+ */
 export type { AiMeteredMetadata, AiMeteredOptions } from './libs/decorators/AiMetered';
 
-// Decorators
+/**
+ * LLM 호출 결과를 자동으로 계량하는 데코레이터와 서비스 바인딩 유틸리티입니다.
+ */
 export {
   AiMetered,
   getAiMeteredMetadata,
@@ -35,20 +19,34 @@ export {
   setLlmMeteringService,
 } from './libs/decorators/AiMetered';
 
-// Events
+/**
+ * 비용 예산 초과 시 발행되는 이벤트입니다.
+ */
 export { LlmCostBudgetExceededEvent } from './libs/events/LlmCostBudgetExceededEvent';
+
+/**
+ * LLM 사용량 기록 완료 시 발행되는 이벤트입니다.
+ */
 export { LlmUsageRecordedEvent } from './libs/events/LlmUsageRecordedEvent';
 
-// Core Service Types
+/**
+ * LlmMeteringService 입력과 결과에 사용하는 타입입니다.
+ */
 export type { LlmCostRecord, LlmMeteringServiceOptions, LlmUsageEvent } from './libs/LlmMeteringService';
 
-// Core Service
+/**
+ * 토큰 사용량 기록, 비용 계산, quota 확인을 담당하는 핵심 서비스입니다.
+ */
 export { LlmMeteringService } from './libs/LlmMeteringService';
 
-// Pricing
+/**
+ * 기본 가격표와 가격 계산기 구현체입니다.
+ */
 export { defaultPricingTable, PricingTable } from './libs/PricingTable';
 
-// Problem Classes (RFC 7807)
+/**
+ * LLM 미터링 과정에서 사용하는 Problem 하위 타입들입니다.
+ */
 export {
   LlmCostLimitExceededProblem,
   LlmMeteringRecordFailedProblem,
@@ -56,7 +54,9 @@ export {
   PricingNotFoundProblem,
 } from './libs/problems/LlmMeteringProblems';
 
-// Stream Metering Utilities
+/**
+ * 스트리밍 응답에서 사용량을 추출하고 계량하는 유틸리티입니다.
+ */
 export {
   createMeteredAsyncIterable,
   extractUsageFromChunk,
@@ -64,8 +64,12 @@ export {
   type UsageWithModelInfo,
 } from './libs/streamMetering';
 
-// Types
+/**
+ * 비용 예산, 모델 단가, 사용량 기록 타입입니다.
+ */
 export type { LlmCostBudget, LlmEmbeddingUsageRecord, LlmUsageRecord, ModelPricing, UsageAccuracy } from './libs/types';
 
-// Constants
+/**
+ * 기본 meter 이름 상수입니다.
+ */
 export { COMPLETION_TOKENS, COST_USD, EMBEDDING_TOKENS, PROMPT_TOKENS } from './libs/types';

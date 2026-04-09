@@ -3,6 +3,9 @@ import type { ShutdownHook } from './types';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+/**
+ * 프로세스 종료 시그널을 수신하고 등록된 shutdown 훅을 실행하는 매니저입니다.
+ */
 export class ShutdownManager {
   private static instance: ShutdownManager | undefined;
   private hooks: ShutdownHook[] = [];

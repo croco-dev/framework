@@ -5,7 +5,16 @@
  */
 
 /**
- * Resend 기반 이메일 알림 Provider와 설정 타입을 내보냅니다.
+ * Resend 전송 실패를 표현하는 Problem입니다.
  */
 export { ResendNotificationProblem } from './libs/problems/ResendNotificationProblem';
-export * from './libs/ResendProvider';
+
+/**
+ * Resend 전송기 생성에 필요한 설정 타입입니다.
+ */
+export type { ResendConfig } from './libs/ResendProvider';
+
+/**
+ * Resend를 사용해 이메일 알림을 전송하는 NotificationProvider 구현체입니다.
+ */
+export { ResendProvider } from './libs/ResendProvider';

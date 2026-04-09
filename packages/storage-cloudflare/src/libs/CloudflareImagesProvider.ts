@@ -12,6 +12,9 @@ import type {
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 제공하는 구현체입니다.
+ */
 @Component()
 export class CloudflareImagesProvider extends BaseStorageProvider implements ImageProvider {
   private readonly options: CloudflareImagesOptions;

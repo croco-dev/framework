@@ -67,6 +67,9 @@ function extractPermissions(user: Record<string, unknown>): string[] {
   return mergeStringArrays(getNestedValue(user, 'permissions'), getNestedValue(user, 'permission'));
 }
 
+/**
+ * Better Auth 세션을 읽어 Croco의 {@link AuthUser}로 변환하는 인증 제공자입니다.
+ */
 @Component()
 export class BetterAuthProvider implements AuthProvider<Request> {
   constructor(private readonly factory: BetterAuthFactory) {}

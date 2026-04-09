@@ -1,6 +1,6 @@
 # @croco/membership-core
 
-테넌트-사용자 멤버십 관리를 위한 핵심 도메인 로직 패키지입니다. 역할 기반 접근 제어, 소유권 관리, 좌석 제한 통합을 제공합니다.
+테넌트 멤버십, 역할 계층, 소유권 보호, 좌석 제한을 다루는 멤버십 코어 패키지입니다.
 
 ## 설치
 
@@ -8,128 +8,47 @@
 pnpm add @croco/membership-core
 ```
 
-## 핵심 기능
+## 사용법
 
-- 멤버십 라이프사이클 관리: 사용자 추가, 제거, 역할 변경
-- 역할 계층 구조: `owner` > `admin` > `member` > `viewer`
-- 소유권 보호: 마지막 소유자 제거/강등 방지
-- 소유권 이전: 안전한 소유권 이전 인터페이스
-- 좌석 제한 통합: entitlements-core와 연동된 좌석 관리
-- 도메인 이벤트: 멤버십 변경 이벤트 발행
-
-## 빠른 시작
-
-```typescript
-import { MembershipManager, InMemoryMembershipStore } from '@croco/membership-core';
-import { Container } from '@croco/framework-context';
+```ts
+import { InMemoryMembershipStore, MembershipManager } from '@croco/membership-core';
 
 const store = new InMemoryMembershipStore();
-const eventPublisher = Container.get(EventPublisher);
-
-const manager = new MembershipManager(store, eventPublisher);
-
-// 멤버 추가
-const membership = await manager.addMember('tenant-123', 'user-456', 'admin');
-
-// 역할 변경
-await manager.updateRole('tenant-123', 'user-456', 'owner');
-
-// 소유권 이전
-await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner');
-
-// 멤버 제거
-await manager.removeMember('tenant-123', 'user-456');
-```
-
-## 역할 계층
-
-```
-owner (4)   - 테넌트 소유자, 모든 권한
-admin (3)   - 관리자, 대부분의 권한
-member (2)  - 일반 멤버, 제한된 권한
-viewer (1)  - 조회만 가능
-```
-
-## 소유권 보호
-
-### 마지막 소유자 보호
-
-- 마지막 소유자는 제거할 수 없음 (`LastOwnerCannotBeRemovedProblem`)
-- 마지막 소유자의 권한을 변경하려면 먼저 소유권 이전 필요 (`OwnershipTransferRequiredProblem`)
-
-### 소유권 이전
-
-```typescript
-// 소유권을 다른 멤버에게 이전
-await manager.transferOwnership('tenant-123', 'current-owner-id', 'new-owner-id');
-
-// 결과:
-// - 기존 소유자는 'admin'으로 강등
-// - 새 소유자는 'owner'로 승격
-// - 두 이벤트(MembershipUpdatedEvent) 발행
-```
-
-## 좌석 제한 통합
-
-entitlements-core의 좌석 체커를 주입하여 좌석 제한을 적용할 수 있습니다.
-
-```typescript
-import type { SeatLimitChecker } from '@croco/membership-core';
-import type { EntitlementQuotaStatus } from '@croco/entitlements-core';
-
-const seatLimitChecker: SeatLimitChecker = {
-  async checkSeatAvailability(tenantId: string): Promise<EntitlementQuotaStatus> {
-    // quota 체크 로직
-    return { usage: 5, quota: 10, exceeded: false, remaining: 5 };
-  },
-  async getCurrentMemberCount(tenantId: string): Promise<number> {
-    return 5;
-  },
-  async getMaxSeats(tenantId: string): Promise<number> {
-    return 10;
-  },
-};
-
 const manager = new MembershipManager(store, eventPublisher, seatLimitChecker);
 
-// 좌석 초과 시 SeatLimitExceededProblem 발생
-await manager.addMember('tenant-123', 'new-user', 'member');
+await manager.addMember('tenant-123', 'user-1', 'admin');
+await manager.updateRole('tenant-123', 'user-1', 'owner');
+await manager.transferOwnership('tenant-123', 'user-1', 'user-2');
 ```
 
-## 문제 타입
+## API 레퍼런스
 
-| 문제 | 설명 |
-|------|------|
-| `MembershipNotFoundProblem` | 멤버십을 찾을 수 없음 |
-| `AlreadyMemberProblem` | 이미 멤버인 사용자 |
-| `InvalidRoleProblem` | 유효하지 않은 역할 |
-| `LastOwnerCannotBeRemovedProblem` | 마지막 소유자 제거 시도 |
-| `OwnershipTransferRequiredProblem` | 소유권 이전 필요 |
-| `RoleHierarchyViolationProblem` | 역할 계층 위반 |
-| `SeatLimitExceededProblem` | 좌석 제한 초과 |
+### 핵심 클래스
 
-## 도메인 이벤트
+- `MembershipManager`, 멤버 추가, 제거, 역할 변경, 소유권 이전을 담당합니다.
+- `MembershipService`, 동일한 도메인 기능을 서비스 형태로 제공합니다.
+- `MembershipOwnerGuard`, 마지막 소유자 제거와 강등을 막습니다.
+- `InMemoryMembershipStore`, 테스트용 저장소 구현체입니다.
 
-- `MembershipCreatedEvent` - 멤버 추가 시 발행
-- `MembershipUpdatedEvent` - 역할 변경 시 발행
-- `MembershipRemovedEvent` - 멤버 제거 시 발행
+### 저장소와 확장 포인트
 
-## 저장소 인터페이스
+- `MembershipStore`, 영속 저장소 계약입니다.
+- `SeatLimitChecker`, entitlements 기반 좌석 제한 계약입니다.
+- `AbstractMembershipManager`, invitation 같은 상위 패키지가 의존하는 추상 계약입니다.
 
-```typescript
-abstract class MembershipStore {
-  abstract findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null>;
-  abstract findAllByTenant(tenantId: string): Promise<Membership[]>;
-  abstract findAllByUser(userId: string): Promise<Membership[]>;
-  abstract save(input: MembershipCreateInput): Promise<Membership>;
-  abstract delete(tenantId: string, userId: string): Promise<void>;
-  abstract countByRole(tenantId: string, role: MembershipRole): Promise<number>;
-  abstract countAll(tenantId: string): Promise<number>;
-}
-```
+### 주요 타입과 유틸리티
 
-## 테스트
+- `Membership`, `MembershipCreateInput`, `MembershipUpdateInput`, `MembershipRole`
+- `ROLE_HIERARCHY`, `VALID_MEMBERSHIP_ROLES`
+- `isMembershipRole`, `isHigherRole`, `isLowerRole`, `canPromote`, `canDemote`
 
-```bash
-pnpm test --filter=@croco/membership-core
-```
+### 이벤트와 문제 타입
+
+- 이벤트: `MembershipCreatedEvent`, `MembershipUpdatedEvent`, `MembershipRemovedEvent`
+- 문제 타입: `MembershipNotFoundProblem`, `AlreadyMemberProblem`, `InvalidRoleProblem`, `OwnershipTransferRequiredProblem`, `SeatLimitExceededProblem`, `LastOwnerCannotBeRemovedProblem`
+
+## 구현 포인트
+
+- 역할 계층은 `owner > admin > member > viewer` 순서입니다.
+- 마지막 소유자는 제거하거나 바로 강등할 수 없습니다.
+- `SeatLimitChecker`를 주입하면 플랜별 좌석 수를 강제할 수 있습니다.

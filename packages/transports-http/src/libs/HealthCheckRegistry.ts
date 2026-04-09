@@ -15,6 +15,9 @@ export interface HealthCheckOptions {
 }
 
 @Component({ scope: 'singleton' })
+/**
+ * 이름별 헬스체크를 등록하고 readiness 결과를 집계하는 레지스트리입니다.
+ */
 export class HealthCheckRegistry {
   private checks = new Map<string, { fn: HealthCheckFunction; options: HealthCheckOptions }>();
 

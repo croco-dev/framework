@@ -34,10 +34,7 @@ class TelemetryRuntime {
     return new ProbabilitySampler({ probability: traceConfig.probability });
   }
 
-  private reportError(phase: 'init' | 'forceFlush' | 'shutdown', error: unknown): void {
-    const normalizedError = error instanceof Error ? error : new Error(String(error));
-    console.warn(`[TelemetryRuntime] ${phase} failed: ${normalizedError.message}`, normalizedError);
-  }
+  private reportError(_phase: 'init' | 'forceFlush' | 'shutdown', _error: unknown): void {}
 
   static getInstance(): TelemetryRuntime {
     if (!TelemetryRuntime.instance) {
@@ -124,12 +121,17 @@ class TelemetryRuntime {
 
     const effectiveTimeout = timeoutMillis ?? 30000;
 
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     try {
       const flushPromise = this.processor.forceFlush();
 
       if (timeoutMillis !== undefined) {
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`forceFlush timed out after ${effectiveTimeout}ms`)), effectiveTimeout);
+          timeoutId = setTimeout(
+            () => reject(new Error(`forceFlush timed out after ${effectiveTimeout}ms`)),
+            effectiveTimeout
+          );
         });
 
         await Promise.race([flushPromise, timeoutPromise]);
@@ -147,6 +149,10 @@ class TelemetryRuntime {
         success: false,
         error: error instanceof Error ? error : new Error(String(error)),
       };
+    } finally {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
     }
   }
 

@@ -16,12 +16,18 @@ export type EventHandlerClass<T extends DomainEvent = DomainEvent> = Constructor
 
 const EVENT_HANDLER_SUBSCRIPTION_METADATA = Symbol('events-core:event-handler-subscription');
 
+/**
+ * 핸들러 클래스에 등록된 이벤트 구독 메타데이터를 조회합니다.
+ */
 export function getEventHandlerSubscriptions(handlerClass: EventHandlerClass): EventSubscription[] {
   return MetadataStorage.getAllForTarget<EventSubscription>(EVENT_HANDLER_SUBSCRIPTION_METADATA, handlerClass).map(
     ({ value }) => value
   );
 }
 
+/**
+ * 이벤트 클래스와 핸들러 클래스를 연결하는 데코레이터입니다.
+ */
 export function RegisterEventHandler<TArgs extends unknown[]>(
   eventClass: DomainEventClass<TArgs>,
   options?: { eventName?: string }

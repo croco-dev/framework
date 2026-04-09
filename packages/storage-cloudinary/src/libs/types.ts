@@ -1,5 +1,5 @@
 /**
- * Cloudinary 제공자 설정
+ * Cloudinary 제공자 설정입니다.
  */
 export type CloudinaryConfig = {
   /**
@@ -31,7 +31,7 @@ export type CloudinaryConfig = {
 };
 
 /**
- * Cloudinary 업로드 옵션
+ * Cloudinary 업로드에 사용할 확장 옵션입니다.
  */
 export type CloudinaryUploadOptions = {
   /**
@@ -66,7 +66,7 @@ export type CloudinaryUploadOptions = {
 };
 
 /**
- * Cloudinary 변환 옵션 (내부용)
+ * Cloudinary 변환 파라미터 타입입니다.
  */
 export type CloudinaryTransformOptions = {
   width?: number;

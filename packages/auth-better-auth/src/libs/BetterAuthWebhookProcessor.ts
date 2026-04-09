@@ -1,3 +1,4 @@
+import { InvalidWebhookPayloadProblem, InvalidWebhookSignatureProblem } from './problems/WebhookProblems';
 import type {
   BetterAuthSession,
   BetterAuthSessionProvider,
@@ -9,6 +10,9 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+/**
+ * Better Auth 웹훅 서명 검증과 이벤트 분기를 담당하는 처리기입니다.
+ */
 export class BetterAuthWebhookProcessor {
   constructor(
     private options: BetterAuthWebhookOptions,
@@ -27,11 +31,11 @@ export class BetterAuthWebhookProcessor {
     const bodyString = JSON.stringify(body);
 
     if (!this.verifySignature(bodyString, signature)) {
-      throw new Error('Invalid webhook signature');
+      throw new InvalidWebhookSignatureProblem();
     }
 
     if (!isObjectRecord(body) || typeof body.type !== 'string') {
-      throw new Error('Invalid webhook payload');
+      throw new InvalidWebhookPayloadProblem();
     }
 
     const eventType = body.type;
@@ -59,4 +63,7 @@ export class BetterAuthWebhookProcessor {
   }
 }
 
+/**
+ * Better Auth 웹훅 처리에 사용하는 공개 타입들입니다.
+ */
 export type { BetterAuthSession, BetterAuthSessionProvider, BetterAuthWebhookHandler, BetterAuthWebhookOptions };

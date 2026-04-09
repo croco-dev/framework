@@ -17,12 +17,24 @@ interface DomainPolicyRow {
   createdAt: Date;
 }
 
+/**
+ * 도메인 정책 저장소용 Drizzle 클라이언트 주입 토큰입니다.
+ */
 export const DRIZZLE_DOMAIN_POLICY_TOKEN = new Token<DrizzleDomainPolicyClient>('DRIZZLE_DOMAIN_POLICY_TOKEN');
 
+/**
+ * 도메인 정책 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
+ */
 export type { DrizzleDomainPolicyClient };
 
+/**
+ * 도메인 정책 엔터티를 Drizzle로 저장하고 조회하는 구현체입니다.
+ */
 @Component()
 export class DrizzleDomainPolicyStore extends DomainPolicyStore {
+  /**
+   * Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기화합니다.
+   */
   constructor(
     @Inject(DRIZZLE_DOMAIN_POLICY_TOKEN) private readonly db: DrizzleDomainPolicyClient,
     private readonly txManager: TxManager<DrizzleDomainPolicyClient>
@@ -30,6 +42,9 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
     super();
   }
 
+  /**
+   * 테넌트와 도메인 조합으로 정책을 조회합니다.
+   */
   async findByTenantAndDomain(tenantId: string, domain: string): Promise<DomainPolicy | null> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -46,6 +61,9 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
     return this.mapToDomainPolicy(result[0]);
   }
 
+  /**
+   * 테넌트의 모든 도메인 정책을 조회합니다.
+   */
   async findAllByTenant(tenantId: string): Promise<DomainPolicy[]> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -56,6 +74,9 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
     return result.map((row) => this.mapToDomainPolicy(row));
   }
 
+  /**
+   * 도메인 정책을 upsert 방식으로 저장합니다.
+   */
   async save(policy: DomainPolicy): Promise<DomainPolicy> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -83,6 +104,9 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
     return this.mapToDomainPolicy(result[0]);
   }
 
+  /**
+   * 테넌트와 도메인 조합의 정책을 삭제합니다.
+   */
   async delete(tenantId: string, domain: string): Promise<void> {
     const client = this.txManager.getClient() ?? this.db;
 

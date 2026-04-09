@@ -5,5 +5,6 @@ export { RetryExhaustedProblem } from './RetryExhaustedProblem';
 export {
   CircuitBreakerLockProblem,
   CircuitBreakerStateProblem,
+  InvalidRetryConfigurationError,
   LambdaTimeoutProblem,
 } from './RetryInfrastructureProblem';

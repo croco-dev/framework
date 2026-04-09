@@ -50,7 +50,6 @@ export type SimulationConfig = {
  *
  * // Simulate: "What if we reduce churn by 20%?"
  * const simulation = await calculator.simulate({ churnChange: -20 });
- * console.log(`Capacity increases from ${userCC.capacity} to ${simulation.simulated.capacity}`);
  * ```
  */
 export class CarryingCapacityCalculator {

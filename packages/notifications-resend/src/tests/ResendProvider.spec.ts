@@ -289,5 +289,218 @@ describe('ResendProvider', () => {
         }
       );
     });
+
+    it('should send email with template', async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+
+      const payload: NotificationPayload = {
+        to: 'recipient@example.com',
+        subject: 'Welcome',
+        content: '<h1>Welcome</h1>',
+        templateId: 'welcome-template',
+        variables: { name: 'John', email: 'john@example.com' },
+      };
+
+      const result = await provider.send(payload);
+
+      expect(result.success).toBe(true);
+      expect(result.messageId).toBe('msg-123');
+      expect(mockResendClient.emails.send).toHaveBeenCalledWith(
+        {
+          from: 'noreply@example.com',
+          to: 'recipient@example.com',
+          subject: 'Welcome',
+          html: '<h1>Welcome</h1>',
+        },
+        {
+          idempotencyKey: expect.stringMatching(/^resend-/),
+        }
+      );
+    });
+
+    it('should send email with template without subject', async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+
+      const payload: NotificationPayload = {
+        to: 'recipient@example.com',
+        content: '<h1>Welcome</h1>',
+        templateId: 'welcome-template',
+        variables: { name: 'John' },
+      };
+
+      await provider.send(payload);
+
+      expect(mockResendClient.emails.send).toHaveBeenCalledWith(
+        {
+          from: 'noreply@example.com',
+          to: 'recipient@example.com',
+          subject: 'No Subject',
+          html: '<h1>Welcome</h1>',
+        },
+        {
+          idempotencyKey: expect.stringMatching(/^resend-/),
+        }
+      );
+    });
+
+    it('should handle error when sending template with invalid variables', async () => {
+      const templateErrorResponse: CreateEmailResponse = {
+        data: null,
+        error: { message: 'Missing variable: name', name: 'invalid_parameter' },
+      };
+
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(templateErrorResponse);
+
+      const payload: NotificationPayload = {
+        to: 'recipient@example.com',
+        subject: 'Welcome',
+        content: '<h1>Welcome</h1>',
+        templateId: 'welcome-template',
+        variables: { email: 'john@example.com' },
+      };
+
+      const result = await provider.send(payload);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(ResendNotificationProblem);
+      expect(result.error?.message).toBe('Missing variable: name');
+      expect(result.providerResponse).toEqual(templateErrorResponse);
+    });
+
+    it('should send multiple emails in batch', async () => {
+      vi.mocked(mockResendClient.emails.send)
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-1' } })
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-2' } })
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-3' } });
+
+      const payloads: NotificationPayload[] = [
+        {
+          to: 'user1@example.com',
+          subject: 'Batch Email 1',
+          content: '<h1>Email 1</h1>',
+        },
+        {
+          to: 'user2@example.com',
+          subject: 'Batch Email 2',
+          content: '<h1>Email 2</h1>',
+        },
+        {
+          to: 'user3@example.com',
+          subject: 'Batch Email 3',
+          content: '<h1>Email 3</h1>',
+        },
+      ];
+
+      const results = await provider.sendBatch(payloads);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].success).toBe(true);
+      expect(results[0].messageId).toBe('msg-1');
+      expect(results[1].success).toBe(true);
+      expect(results[1].messageId).toBe('msg-2');
+      expect(results[2].success).toBe(true);
+      expect(results[2].messageId).toBe('msg-3');
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle mixed success and failure in batch', async () => {
+      vi.mocked(mockResendClient.emails.send)
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-1' } })
+        .mockResolvedValueOnce(mockErrorResponse)
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-3' } });
+
+      const payloads: NotificationPayload[] = [
+        {
+          to: 'user1@example.com',
+          subject: 'Batch Email 1',
+          content: '<h1>Email 1</h1>',
+        },
+        {
+          to: 'user2@example.com',
+          subject: 'Batch Email 2',
+          content: '<h1>Email 2</h1>',
+        },
+        {
+          to: 'user3@example.com',
+          subject: 'Batch Email 3',
+          content: '<h1>Email 3</h1>',
+        },
+      ];
+
+      const results = await provider.sendBatch(payloads);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].success).toBe(true);
+      expect(results[1].success).toBe(false);
+      expect(results[2].success).toBe(true);
+    });
+
+    it('should send batch emails with templates', async () => {
+      vi.mocked(mockResendClient.emails.send)
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-1' } })
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-2' } });
+
+      const payloads: NotificationPayload[] = [
+        {
+          to: 'user1@example.com',
+          subject: 'Welcome',
+          content: '<h1>Welcome</h1>',
+          templateId: 'welcome-template',
+          variables: { name: 'John' },
+        },
+        {
+          to: 'user2@example.com',
+          subject: 'Welcome',
+          content: '<h1>Welcome</h1>',
+          templateId: 'welcome-template',
+          variables: { name: 'Jane' },
+        },
+      ];
+
+      const results = await provider.sendBatch(payloads);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].success).toBe(true);
+      expect(results[1].success).toBe(true);
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
+      expect(mockResendClient.emails.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          html: '<h1>Welcome</h1>',
+        }),
+        expect.any(Object)
+      );
+      expect(mockResendClient.emails.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          html: '<h1>Welcome</h1>',
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it('should handle empty batch', async () => {
+      const results = await provider.sendBatch([]);
+
+      expect(results).toHaveLength(0);
+      expect(mockResendClient.emails.send).not.toHaveBeenCalled();
+    });
+
+    it('should handle batch with single email', async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValueOnce(mockSuccessResponse);
+
+      const payloads: NotificationPayload[] = [
+        {
+          to: 'user1@example.com',
+          subject: 'Single Email',
+          content: '<h1>Single</h1>',
+        },
+      ];
+
+      const results = await provider.sendBatch(payloads);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].success).toBe(true);
+      expect(results[0].messageId).toBe('msg-123');
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
+    });
   });
 });

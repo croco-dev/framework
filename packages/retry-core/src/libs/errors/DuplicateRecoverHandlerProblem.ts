@@ -1,5 +1,8 @@
 import { Problem, ProblemCategory } from '@croco/problems-core';
 
+/**
+ * 같은 오류 타입에 대한 Recover 핸들러가 중복 등록되면 발생하는 Problem입니다.
+ */
 export class DuplicateRecoverHandlerProblem extends Problem {
   readonly code = 'DUPLICATE_RECOVER_HANDLER';
   readonly category = ProblemCategory.InternalServerError;

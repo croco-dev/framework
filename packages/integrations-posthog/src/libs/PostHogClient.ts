@@ -1,5 +1,6 @@
 import { Component } from '@croco/framework-context';
 import { PostHog } from 'posthog-node';
+import { PostHogConfigProblem } from './problems/PostHogProblems';
 
 export interface PostHogConfig {
   apiKey: string;
@@ -14,7 +15,7 @@ export class PostHogClient {
     const host = config.host ?? process.env.POSTHOG_HOST;
 
     if (!host) {
-      throw new Error(
+      throw new PostHogConfigProblem(
         '[PostHogClient] PostHog host is required. ' + 'Set POSTHOG_HOST environment variable or pass host in config.'
       );
     }

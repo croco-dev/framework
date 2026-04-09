@@ -7,3 +7,4 @@
  */
 export type { PostHogConfig } from './libs/PostHogClient';
 export { PostHogClient } from './libs/PostHogClient';
+export { PostHogConfigProblem } from './libs/problems/PostHogProblems';

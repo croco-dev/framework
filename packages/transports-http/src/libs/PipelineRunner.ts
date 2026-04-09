@@ -27,6 +27,9 @@ export interface PipelineConfig {
   filters: ExceptionFilter<unknown, HttpExecutionContext>[];
 }
 
+/**
+ * Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행합니다.
+ */
 export class PipelineRunner {
   constructor(
     private readonly errorHandler: ErrorHandler,

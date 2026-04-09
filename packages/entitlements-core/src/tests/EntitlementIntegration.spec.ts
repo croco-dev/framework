@@ -211,8 +211,6 @@ describe('EntitlementIntegration', () => {
       ]);
       quotaChecker.setQuotaStatus({ usage: 150, quota: 100, exceeded: true, remaining: -50 });
 
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
       const result = await manager.check('tenant-1', 'api_calls');
 
       expect(result).toEqual({
@@ -226,12 +224,9 @@ describe('EntitlementIntegration', () => {
         overagePolicy: 'WARN',
         planId: 'free',
       });
-      expect(warnSpy).toHaveBeenCalledOnce();
       expect(eventPublisher.publish).toHaveBeenCalledWith(
         expect.objectContaining({ eventName: EntitlementQuotaExceededEvent.eventName })
       );
-
-      warnSpy.mockRestore();
     });
 
     it('should publish overage event and allow metered entitlement when policy is ALLOW_WITH_OVERAGE', async () => {

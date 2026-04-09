@@ -935,12 +935,43 @@ export type {
   TypedRouteConfig,
   TypedRouteHandler,
 } from './libs/types/index';
+
+/**
+ * Zod 스키마로 요청과 응답 검증 함수를 생성하고 실행하는 유틸리티입니다.
+ *
+ * @example
+ * ```typescript
+ * const validator = createValidator({
+ *   request: z.object({ name: z.string() }),
+ * });
+ * ```
+ */
 export {
   createValidator,
   validateRequest,
   validateResponse,
 } from './libs/validators/SchemaValidator';
+
+/**
+ * Zod 스키마 기반 검증 Pipe를 생성하고 실행하는 기본 구현체입니다.
+ *
+ * @example
+ * ```typescript
+ * const pipe = createValidationPipe({
+ *   request: z.object({ page: z.coerce.number().int() }),
+ * });
+ * ```
+ */
 export { createValidationPipe, ValidationPipe } from './libs/validators/ValidationPipe';
+
+/**
+ * 요청/응답 검증 실패를 RFC 7807 Problem으로 표현하는 타입들입니다.
+ *
+ * @example
+ * ```typescript
+ * throw new RequestValidationProblem([{ path: 'email', message: '필수 값입니다.' }]);
+ * ```
+ */
 export {
   RequestValidationProblem,
   ResponseValidationProblem,

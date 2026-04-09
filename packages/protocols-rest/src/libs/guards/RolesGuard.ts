@@ -7,6 +7,9 @@ export type UserWithRoles = {
   roles?: string[];
 };
 
+/**
+ * `@Roles` 메타데이터와 요청 사용자 역할을 비교해 접근을 제어하는 Guard입니다.
+ */
 export class RolesGuard implements Guard<ExecutionContext> {
   canActivate(context: ExecutionContext): boolean {
     const handler = context.getHandler();

@@ -1,4 +1,5 @@
 import type { CacheStore } from '../CacheStore';
+import { CacheDecoratorConfigProblem } from '../problems/CacheDecoratorProblems';
 
 export interface CacheEvictOptions<V = unknown> {
   store: CacheStore<string, V>;
@@ -9,7 +10,9 @@ export interface CacheEvictOptions<V = unknown> {
 
 function resolveEvictionPattern(options: CacheEvictOptions<unknown>, methodName: string): string {
   if (options.namespace === undefined) {
-    throw new Error(`@CacheEvict requires "namespace" when "key" is not provided (method: ${methodName})`);
+    throw new CacheDecoratorConfigProblem(
+      `@CacheEvict requires "namespace" when "key" is not provided (method: ${methodName})`
+    );
   }
 
   return `${options.namespace}:${methodName}:*`;

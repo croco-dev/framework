@@ -8,6 +8,9 @@ export type TracerOptions = {
   version?: string;
 };
 
+/**
+ * 수동 Span 생성에 사용할 OpenTelemetry Tracer를 반환합니다.
+ */
 export function getTracer(options: TracerOptions = {}): Tracer {
   const { name = DEFAULT_TRACER_NAME, version = DEFAULT_TRACER_VERSION } = options;
   return trace.getTracer(name, version);

@@ -53,7 +53,6 @@
  * @RegisterEventHandler(MembershipCreatedEvent)
  * class Handler implements EventHandler<MembershipCreatedEvent> {
  *   async handle(event: MembershipCreatedEvent) {
- *     console.log(`User ${event.data.userId} added to ${event.data.tenantId}`);
  *   }
  * }
  * ```
@@ -70,7 +69,6 @@ export { MembershipCreatedEvent } from './libs/events/MembershipCreatedEvent';
  * @RegisterEventHandler(MembershipRemovedEvent)
  * class Handler implements EventHandler<MembershipRemovedEvent> {
  *   async handle(event: MembershipRemovedEvent) {
- *     console.log(`User ${event.data.userId} removed from ${event.data.tenantId}`);
  *   }
  * }
  * ```
@@ -87,7 +85,6 @@ export { MembershipRemovedEvent } from './libs/events/MembershipRemovedEvent';
  * @RegisterEventHandler(MembershipUpdatedEvent)
  * class Handler implements EventHandler<MembershipUpdatedEvent> {
  *   async handle(event: MembershipUpdatedEvent) {
- *     console.log(`Role changed from ${event.data.oldRole} to ${event.data.newRole}`);
  *   }
  * }
  * ```
@@ -221,7 +218,6 @@ export { MembershipStore } from './libs/MembershipStore';
  *   await service.removeMember('tenant-1', 'last-owner');
  * } catch (err) {
  *   if (err instanceof LastOwnerCannotBeRemovedProblem) {
- *     console.log('Cannot remove last owner');
  *   }
  * }
  * ```
@@ -238,7 +234,6 @@ export { LastOwnerCannotBeRemovedProblem } from './libs/problems/LastOwnerCannot
  *   await service.removeMember('tenant-1', 'last-owner');
  * } catch (err) {
  *   if (err instanceof MembershipConstraintProblem) {
- *     console.log('Membership constraint violated');
  *   }
  * }
  * ```

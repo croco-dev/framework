@@ -1,10 +1,4 @@
 /**
- * @packageDocumentation
- *
- * @croco/execution-drizzle 공개 API
- */
-
-/**
  * Drizzle 기반 실행 저장소 구현체입니다.
  */
 export { DrizzleExecutionStore } from './libs/DrizzleExecutionStore';

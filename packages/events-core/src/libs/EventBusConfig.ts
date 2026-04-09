@@ -9,6 +9,9 @@ export interface EventBusStartOptions {
   resolver?: HandlerResolver;
 }
 
+/**
+ * 전역 EventBus 인스턴스와 핸들러 구독 등록을 관리하는 설정 객체입니다.
+ */
 export class EventBusConfig {
   private static instance?: EventBusConfig;
   private readonly subscriptions: Set<EventSubscription> = new Set();

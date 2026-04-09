@@ -5,6 +5,9 @@ type AfterCommitFailureSummary = {
   message: string;
 };
 
+/**
+ * `@Transactional`이 메서드가 아닌 대상에 적용되면 발생하는 Problem입니다.
+ */
 export class TransactionDecoratorProblem extends Problem {
   readonly code = 'tx-core/decorator-misuse';
   readonly category = ProblemCategory.InternalServerError;
@@ -13,6 +16,9 @@ export class TransactionDecoratorProblem extends Problem {
   }
 }
 
+/**
+ * 활성 트랜잭션 없이 트랜잭션 컨텍스트를 요구할 때 발생하는 Problem입니다.
+ */
 export class TransactionContextProblem extends Problem {
   readonly code = 'tx-core/missing-transaction-context';
   readonly category = ProblemCategory.InternalServerError;
@@ -21,6 +27,9 @@ export class TransactionContextProblem extends Problem {
   }
 }
 
+/**
+ * after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입니다.
+ */
 export class AfterCommitHooksProblem extends Problem {
   readonly code = 'tx-core/after-commit-hooks-failed';
   readonly category = ProblemCategory.InternalServerError;
@@ -37,6 +46,9 @@ export class AfterCommitHooksProblem extends Problem {
   }
 }
 
+/**
+ * 트랜잭션 실행 시간이 제한 시간을 초과했을 때 발생하는 Problem입니다.
+ */
 export class TransactionTimeoutProblem extends Problem {
   readonly code = 'tx-core/transaction-timeout';
   readonly category = ProblemCategory.InternalServerError;

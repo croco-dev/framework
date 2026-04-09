@@ -47,3 +47,11 @@ export class InvalidPermissionActionProblem extends Problem {
     super(undefined, undefined, `Invalid permission action: '${action}'`);
   }
 }
+
+export class ApiKeyCreationFailedProblem extends Problem {
+  readonly code = 'auth-core/api-key-creation-failed';
+  readonly category = ProblemCategory.InternalServerError;
+  constructor(detail = 'Failed to create API key') {
+    super(detail);
+  }
+}

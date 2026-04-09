@@ -4,6 +4,9 @@ import type { CallHandler } from '../interfaces/CallHandler';
 import type { ExecutionContext } from '../interfaces/ExecutionContext';
 import type { Interceptor } from '../interfaces/Interceptor';
 
+/**
+ * 요청 처리 시간과 경로 정보를 로깅하는 기본 Interceptor입니다.
+ */
 export class LoggingInterceptor implements Interceptor<ExecutionContext> {
   constructor(@Inject(LOGGER_TOKEN) private readonly logger: ILogger) {}
 

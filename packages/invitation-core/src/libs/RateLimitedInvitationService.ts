@@ -2,6 +2,7 @@ import { Component } from '@croco/framework-context';
 import type { MembershipRole } from '@croco/membership-core';
 import type { InvitationManager } from './InvitationManager';
 import type { InvitationStore } from './InvitationStore';
+import { BatchSizeExceededProblem } from './problems/BatchInviteProblems';
 import { DuplicateInvitationProblem, InvitationRateLimitExceededProblem } from './problems/RateLimitProblems';
 import type { BatchInviteOptions, BatchInviteResult, RateLimitConfig } from './types';
 
@@ -77,7 +78,7 @@ export class RateLimitedInvitationService {
     const maxBatchSize = options.maxBatchSize ?? 50;
 
     if (emails.length > maxBatchSize) {
-      throw new Error(`Batch size exceeds maximum of ${maxBatchSize}`);
+      throw new BatchSizeExceededProblem(maxBatchSize);
     }
 
     const result: BatchInviteResult = {

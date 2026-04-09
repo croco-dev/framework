@@ -105,7 +105,7 @@ describe('GuardInterceptor', () => {
     const next: GraphQLCallHandler<string> = { handle: vi.fn() };
     const context = createMockContext();
 
-    await expect(interceptor.intercept(context, next)).rejects.toThrow('GUARD_DENIED');
+    await expect(interceptor.intercept(context, next)).rejects.toThrow('Access denied by guard');
     expect(next.handle).not.toHaveBeenCalled();
   });
 });

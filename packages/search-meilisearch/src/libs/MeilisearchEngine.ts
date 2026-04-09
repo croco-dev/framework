@@ -12,6 +12,9 @@ import { TenantTokenNotConfiguredProblem } from './problems/MeilisearchProblems'
 import type { MeilisearchEngineOptions } from './types';
 
 @Component()
+/**
+ * 테넌트 격리와 테넌트 토큰 발급을 지원하는 Meilisearch 검색 엔진입니다.
+ */
 export class MeilisearchEngine extends SearchEngine {
   private readonly client: MeiliSearch;
   private static readonly FILTER_ESCAPE_REGEXP = /([\\"])/g;

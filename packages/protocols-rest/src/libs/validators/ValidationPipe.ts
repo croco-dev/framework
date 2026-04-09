@@ -2,6 +2,9 @@ import type { z } from 'zod';
 import type { ArgumentMetadata, PipeTransform } from '../interfaces/PipeTransform';
 import { RequestValidationProblem } from './ValidationProblem';
 
+/**
+ * 파라미터 값을 Zod 스키마로 검증하는 기본 Pipe 구현체입니다.
+ */
 export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
   constructor(private readonly schema: z.ZodType<T>) {}
 
@@ -37,6 +40,9 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
   }
 }
 
+/**
+ * Zod 스키마 기반 ValidationPipe 인스턴스를 생성합니다.
+ */
 export function createValidationPipe<T>(schema: z.ZodType<T>): ValidationPipe<T> {
   return new ValidationPipe(schema);
 }

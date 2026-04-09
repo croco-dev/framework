@@ -1,6 +1,9 @@
 import type { MembershipRole } from '@croco/membership-core';
 import { pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
 
+/**
+ * 멤버십 엔터티를 저장하는 PostgreSQL 스키마입니다.
+ */
 export const memberships = pgTable(
   'memberships',
   {

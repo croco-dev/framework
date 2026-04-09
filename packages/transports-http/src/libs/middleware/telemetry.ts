@@ -7,6 +7,9 @@ export interface TraceParent {
   traceFlags: number;
 }
 
+/**
+ * W3C `traceparent` 헤더를 파싱해 OpenTelemetry span context 형태로 변환합니다.
+ */
 export function parseTraceParent(header: string | null): TraceParent | null {
   if (!header) {
     return null;
@@ -42,6 +45,9 @@ export function parseTraceParent(header: string | null): TraceParent | null {
   };
 }
 
+/**
+ * HTTP 요청마다 서버 Span을 생성하고 traceId를 컨텍스트에 저장하는 미들웨어입니다.
+ */
 export const telemetryMiddleware =
   (route: string): MiddlewareFunction =>
   async (ctx, next): Promise<void> => {
@@ -93,28 +99,26 @@ export const telemetryMiddleware =
           span.end();
         }
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+    } catch {
       const fallbackTraceId = `telemetry-degraded-${Date.now().toString(36)}`;
 
       ctx.set('traceId', fallbackTraceId);
       ctx.set('telemetryDegraded', true);
 
-      console.warn('Telemetry middleware failed, proceeding without tracing', {
-        route,
-        method: ctx.req.method,
-        path: ctx.req.path,
-        telemetryDegraded: true,
-        errorMessage,
-      });
       await next();
     }
   };
 
+/**
+ * 현재 활성 OpenTelemetry Span을 반환합니다.
+ */
 export function getCurrentSpan() {
   return trace.getSpan(context.active());
 }
 
+/**
+ * 현재 활성 Span의 traceId를 반환합니다.
+ */
 export function getTraceId(): string | undefined {
   const span = getCurrentSpan();
   return span?.spanContext().traceId;
