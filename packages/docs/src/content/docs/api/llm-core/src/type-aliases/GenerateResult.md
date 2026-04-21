@@ -7,7 +7,7 @@ title: "GenerateResult"
 
 > **GenerateResult** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:44](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/types.ts#L44)
+Defined in: [packages/llm-core/src/libs/types.ts:44](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L44)
 
 텍스트 생성 결과
 
@@ -17,7 +17,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:44](https://github.com/croco-de
 
 > `optional` **metadata**: [`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/)
 
-Defined in: [packages/llm-core/src/libs/types.ts:58](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/types.ts#L58)
+Defined in: [packages/llm-core/src/libs/types.ts:58](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L58)
 
 메타데이터
 
@@ -27,7 +27,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:58](https://github.com/croco-de
 
 > **text**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:48](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/types.ts#L48)
+Defined in: [packages/llm-core/src/libs/types.ts:48](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L48)
 
 생성된 텍스트
 
@@ -37,6 +37,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:48](https://github.com/croco-de
 
 > **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-Defined in: [packages/llm-core/src/libs/types.ts:53](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/types.ts#L53)
+Defined in: [packages/llm-core/src/libs/types.ts:53](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L53)
 
 토큰 사용량

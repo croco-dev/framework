@@ -5,7 +5,9 @@ prev: false
 title: "TelemetryRuntime"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L13)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L13)
+
+OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 싱글턴입니다.
 
 ## Methods
 
@@ -13,7 +15,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:13](https://github.com/c
 
 > **forceFlush**(`timeoutMillis?`): `Promise`\<[`ForceFlushResult`](/api/telemetry-sdk-node/src/type-aliases/forceflushresult/)\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:120](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L120)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:117](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L117)
 
 #### Parameters
 
@@ -31,7 +33,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:120](https://github.com/
 
 > **getConfig**(): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:180](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L180)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:186](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L186)
 
 #### Returns
 
@@ -43,7 +45,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:180](https://github.com/
 
 > **init**(`config`): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:49](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L49)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:46](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L46)
 
 #### Parameters
 
@@ -61,7 +63,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:49](https://github.com/c
 
 > **isInitialized**(): `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:176](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L176)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:182](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L182)
 
 #### Returns
 
@@ -73,7 +75,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:176](https://github.com/
 
 > **shutdown**(): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:153](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L153)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:159](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L159)
 
 #### Returns
 
@@ -85,7 +87,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:153](https://github.com/
 
 > `static` **getInstance**(): `TelemetryRuntime`
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:42](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L42)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:39](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L39)
 
 #### Returns
 
@@ -97,7 +99,7 @@ Defined in: [packages/telemetry-sdk-node/src/runtime.ts:42](https://github.com/c
 
 > `static` **reset**(): `Promise`\<`void`\>
 
-Defined in: [packages/telemetry-sdk-node/src/runtime.ts:168](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/runtime.ts#L168)
+Defined in: [packages/telemetry-sdk-node/src/runtime.ts:174](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/runtime.ts#L174)
 
 #### Returns
 

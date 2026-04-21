@@ -5,7 +5,7 @@ prev: false
 title: "EventBus"
 ---
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventBus.ts#L12)
+Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/EventBus.ts#L12)
 
 이벤트 발행/구독 추상화와 구독 엔트리 타입입니다.
 
@@ -25,7 +25,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:12](https://github.com/cr
 
 > **clear**(): `void`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:11](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L11)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L11)
 
 #### Returns
 
@@ -41,7 +41,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:11](ht
 
 > **publish**(`event`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventPublishing.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventPublishing.ts#L8)
+Defined in: [packages/events-core/src/libs/interfaces/EventPublishing.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventPublishing.ts#L8)
 
 #### Parameters
 
@@ -63,7 +63,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventPublishing.ts:8](http
 
 > **subscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L9)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L9)
 
 #### Parameters
 
@@ -85,7 +85,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:9](htt
 
 > **unsubscribe**(`subscription`): `void`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:10](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L10)
+Defined in: [packages/events-core/src/libs/interfaces/EventSubscribing.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventSubscribing.ts#L10)
 
 #### Parameters
 

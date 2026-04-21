@@ -54,6 +54,7 @@ export { SubdomainTenantResolver } from './libs/resolvers/SubdomainTenantResolve
  */
 export type {
   TenantIsolationConfig,
+  TenantIsolationFilter,
   TenantIsolationStrategy,
   TenantIsolationType,
 } from './libs/TenantIsolationStrategy';

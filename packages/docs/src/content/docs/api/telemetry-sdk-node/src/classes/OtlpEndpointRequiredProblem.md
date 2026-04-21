@@ -5,7 +5,9 @@ prev: false
 title: "OtlpEndpointRequiredProblem"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L13)
+Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L19)
+
+OTLP exporter 엔드포인트가 누락되었을 때 발생하는 Problem입니다.
 
 ## Extends
 
@@ -17,7 +19,7 @@ Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:
 
 > **new OtlpEndpointRequiredProblem**(): `OtlpEndpointRequiredProblem`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:17](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L17)
+Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L23)
 
 #### Returns
 
@@ -33,7 +35,7 @@ Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:
 
 > `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L15)
+Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:21](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L21)
 
 #### Overrides
 
@@ -45,7 +47,7 @@ Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:
 
 > `readonly` `optional` **cause**: `Error`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L28)
+Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Inherited from
 
@@ -57,7 +59,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/c
 
 > `readonly` **code**: `"OTLP_ENDPOINT_REQUIRED"` = `'OTLP_ENDPOINT_REQUIRED'`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L14)
+Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts#L20)
 
 #### Overrides
 
@@ -69,7 +71,7 @@ Defined in: [packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L24)
 
 #### Inherited from
 
@@ -81,7 +83,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 
 > `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L27)
+Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L27)
 
 #### Inherited from
 
@@ -93,7 +95,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/c
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L26)
 
 #### Inherited from
 
@@ -141,7 +143,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L25)
 
 #### Inherited from
 
@@ -177,7 +179,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L62)
+Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L62)
 
 ##### Returns
 
@@ -195,7 +197,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L58)
+Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L58)
 
 ##### Returns
 
@@ -211,7 +213,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L66)
+Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L66)
 
 #### Returns
 

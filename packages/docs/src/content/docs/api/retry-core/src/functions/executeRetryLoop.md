@@ -7,9 +7,9 @@ title: "executeRetryLoop"
 
 > **executeRetryLoop**\<`T`\>(`callback`, `options`, `hooks?`): `Promise`\<`T`\>
 
-Defined in: [packages/retry-core/src/libs/RetryEngine.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/RetryEngine.ts#L14)
+Defined in: [packages/retry-core/src/libs/RetryEngine.ts:17](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryEngine.ts#L17)
 
-Low-level retry loop executor used by higher-level retry abstractions.
+재시도 정책과 백오프 정책을 따라 저수준 재시도 루프를 실행합니다.
 
 ## Type Parameters
 

@@ -5,9 +5,9 @@ prev: false
 title: "AuthProvider"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:3](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L3)
 
-Contract for resolving authenticated user identities.
+사용자 인증 정보를 조회하는 공급자 계약입니다.
 
 ## Type Parameters
 
@@ -21,7 +21,7 @@ Contract for resolving authenticated user identities.
 
 > **authenticate**(`request`): `Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/) \| `null`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L4)
+Defined in: [packages/auth-core/src/libs/interfaces/AuthProvider.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/AuthProvider.ts#L4)
 
 #### Parameters
 

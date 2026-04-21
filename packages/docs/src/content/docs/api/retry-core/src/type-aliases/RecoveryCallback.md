@@ -7,7 +7,7 @@ title: "RecoveryCallback"
 
 > **RecoveryCallback**\<`T`\> = (`context`) => `T` \| `Promise`\<`T`\>
 
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:30](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/RetryTemplate.ts#L30)
+Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:31](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryTemplate.ts#L31)
 
 Recovery callback for handling exhausted retries.
 

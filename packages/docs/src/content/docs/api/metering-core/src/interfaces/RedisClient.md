@@ -5,7 +5,7 @@ prev: false
 title: "RedisClient"
 ---
 
-Defined in: [packages/metering-core/src/libs/RedisClient.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/RedisClient.ts#L4)
+Defined in: [packages/metering-core/src/libs/RedisClient.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisClient.ts#L4)
 
 Redis 클라이언트 인터페이스 (ioredis, upstash 등 구현체와 분리)
 
@@ -15,7 +15,7 @@ Redis 클라이언트 인터페이스 (ioredis, upstash 등 구현체와 분리)
 
 > **eval**\<`TResult`\>(`script`, `keys`, `args`): `Promise`\<`TResult`\>
 
-Defined in: [packages/metering-core/src/libs/RedisClient.ts:23](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/RedisClient.ts#L23)
+Defined in: [packages/metering-core/src/libs/RedisClient.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisClient.ts#L23)
 
 Lua 스크립트 실행
 
@@ -49,7 +49,7 @@ Lua 스크립트 실행
 
 > **set**(`key`, `value`, `mode`, `expireMode`, `expire`): `Promise`\<`string` \| `null`\>
 
-Defined in: [packages/metering-core/src/libs/RedisClient.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/RedisClient.ts#L18)
+Defined in: [packages/metering-core/src/libs/RedisClient.ts:18](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisClient.ts#L18)
 
 키 설정 (NX: 존재하지 않을 때만, EX: TTL)
 
@@ -85,7 +85,7 @@ Defined in: [packages/metering-core/src/libs/RedisClient.ts:18](https://github.c
 
 > **zadd**(`key`, `score`, `member`): `Promise`\<`number`\>
 
-Defined in: [packages/metering-core/src/libs/RedisClient.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/RedisClient.ts#L8)
+Defined in: [packages/metering-core/src/libs/RedisClient.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisClient.ts#L8)
 
 Sorted Set에 멤버 추가
 
@@ -113,7 +113,7 @@ Sorted Set에 멤버 추가
 
 > **zrangebyscore**(`key`, `min`, `max`): `Promise`\<`string`[]\>
 
-Defined in: [packages/metering-core/src/libs/RedisClient.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/RedisClient.ts#L13)
+Defined in: [packages/metering-core/src/libs/RedisClient.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisClient.ts#L13)
 
 Sorted Set에서 점수 범위로 멤버 조회
 

@@ -5,7 +5,7 @@ prev: false
 title: "OrderedEventHandler"
 ---
 
-Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:125](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventOrdering.ts#L125)
+Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:125](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventOrdering.ts#L125)
 
 순서 보장 이벤트 핸들러 인터페이스입니다.
 순서가 보장된 이벤트 처리를 위한 추가 메서드를 제공합니다.
@@ -22,7 +22,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:125](http
 
 > **getPartitionKey**(`event`): `string`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:138](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventOrdering.ts#L138)
+Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:138](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventOrdering.ts#L138)
 
 파티션 키를 추출합니다.
 
@@ -46,7 +46,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:138](http
 
 > **handle**(`event`, `context`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:131](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventOrdering.ts#L131)
+Defined in: [packages/events-core/src/libs/interfaces/EventOrdering.ts:131](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventOrdering.ts#L131)
 
 이벤트를 처리합니다.
 

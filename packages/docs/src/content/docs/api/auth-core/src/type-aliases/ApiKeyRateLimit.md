@@ -7,9 +7,9 @@ title: "ApiKeyRateLimit"
 
 > **ApiKeyRateLimit** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:1](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/ApiKey.ts#L1)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:1](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L1)
 
-API key domain model and creation option types.
+API 키 도메인 모델과 생성 관련 타입입니다.
 
 ## Properties
 
@@ -17,7 +17,7 @@ API key domain model and creation option types.
 
 > **duration**: `number`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/ApiKey.ts#L3)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:3](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L3)
 
 ***
 
@@ -25,4 +25,4 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:3](https://github.
 
 > **limit**: `number`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:2](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/interfaces/ApiKey.ts#L2)
+Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:2](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L2)

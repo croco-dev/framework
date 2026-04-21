@@ -5,7 +5,7 @@ prev: false
 title: "MeteringService"
 ---
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:28](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/MeteringService.ts#L28)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/MeteringService.ts#L28)
 
 Usage Metering 핵심 서비스
 
@@ -21,7 +21,7 @@ Usage Metering 핵심 서비스
 
 > **new MeteringService**(`options`): `MeteringService`
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:35](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/MeteringService.ts#L35)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:35](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/MeteringService.ts#L35)
 
 #### Parameters
 
@@ -39,7 +39,7 @@ Defined in: [packages/metering-core/src/libs/MeteringService.ts:35](https://gith
 
 > **getUsage**(`options`): `Promise`\<`number`\>
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:118](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/MeteringService.ts#L118)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:118](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/MeteringService.ts#L118)
 
 사용량 조회
 
@@ -59,7 +59,7 @@ Defined in: [packages/metering-core/src/libs/MeteringService.ts:118](https://git
 
 > **record**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
 
-Defined in: [packages/metering-core/src/libs/MeteringService.ts:50](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/metering-core/src/libs/MeteringService.ts#L50)
+Defined in: [packages/metering-core/src/libs/MeteringService.ts:50](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/MeteringService.ts#L50)
 
 사용량 기록
 

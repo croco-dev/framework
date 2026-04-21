@@ -92,7 +92,9 @@ export function getResourcePermissions(
       if (perm.resource === resource) {
         result.push({ action: perm.action, resourceId: perm.resourceId });
       }
-    } catch {}
+    } catch {
+      // Intentionally ignored: skip malformed permission strings
+    }
   }
 
   return result;

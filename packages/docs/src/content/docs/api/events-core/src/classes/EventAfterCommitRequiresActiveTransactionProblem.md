@@ -5,9 +5,9 @@ prev: false
 title: "EventAfterCommitRequiresActiveTransactionProblem"
 ---
 
-Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:63](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/problems/EventsProblems.ts#L63)
+Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:87](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/problems/EventsProblems.ts#L87)
 
-이벤트 코어에서 사용하는 Problem 하위 타입들입니다.
+활성 트랜잭션 없이 after-commit 발행을 예약하면 발생하는 Problem입니다.
 
 ## Extends
 
@@ -19,7 +19,7 @@ Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:63](https:
 
 > **new EventAfterCommitRequiresActiveTransactionProblem**(): `EventAfterCommitRequiresActiveTransactionProblem`
 
-Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:66](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/problems/EventsProblems.ts#L66)
+Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:90](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/problems/EventsProblems.ts#L90)
 
 #### Returns
 
@@ -35,7 +35,7 @@ Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:66](https:
 
 > `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
-Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:65](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/problems/EventsProblems.ts#L65)
+Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:89](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/problems/EventsProblems.ts#L89)
 
 #### Overrides
 
@@ -47,7 +47,7 @@ Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:65](https:
 
 > `readonly` `optional` **cause**: `Error`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L28)
+Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Inherited from
 
@@ -59,7 +59,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/c
 
 > `readonly` **code**: `"events-core/after-commit-requires-active-transaction"` = `'events-core/after-commit-requires-active-transaction'`
 
-Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:64](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/problems/EventsProblems.ts#L64)
+Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:88](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/problems/EventsProblems.ts#L88)
 
 #### Overrides
 
@@ -71,7 +71,7 @@ Defined in: [packages/events-core/src/libs/problems/EventsProblems.ts:64](https:
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L24)
+Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L24)
 
 #### Inherited from
 
@@ -83,7 +83,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 
 > `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L27)
+Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L27)
 
 #### Inherited from
 
@@ -95,7 +95,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/c
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L26)
+Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L26)
 
 #### Inherited from
 
@@ -143,7 +143,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L25)
+Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L25)
 
 #### Inherited from
 
@@ -179,7 +179,7 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L62)
+Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L62)
 
 ##### Returns
 
@@ -197,7 +197,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L58)
+Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L58)
 
 ##### Returns
 
@@ -213,7 +213,7 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/Problem.ts#L66)
+Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L66)
 
 #### Returns
 

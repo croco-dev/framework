@@ -7,9 +7,9 @@ title: "RetryOrchestratorOptions"
 
 > **RetryOrchestratorOptions** = [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/) & `object`
 
-Defined in: [packages/retry-core/src/libs/RetryOrchestrator.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/RetryOrchestrator.ts#L8)
+Defined in: [packages/retry-core/src/libs/RetryOrchestrator.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryOrchestrator.ts#L8)
 
-Options for configuring the shared retry orchestrator.
+공용 재시도 오케스트레이터 설정 타입입니다.
 
 ## Type Declaration
 

@@ -5,7 +5,7 @@ prev: false
 title: "HealthCheckResult"
 ---
 
-Defined in: [packages/transports-http/src/libs/HealthCheckRegistry.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/HealthCheckRegistry.ts#L6)
+Defined in: [packages/transports-http/src/libs/HealthCheckRegistry.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/HealthCheckRegistry.ts#L6)
 
 ## Indexable
 
@@ -17,4 +17,4 @@ Defined in: [packages/transports-http/src/libs/HealthCheckRegistry.ts:6](https:/
 
 > **status**: [`HealthCheckStatus`](/api/transports-http/src/type-aliases/healthcheckstatus/)
 
-Defined in: [packages/transports-http/src/libs/HealthCheckRegistry.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/HealthCheckRegistry.ts#L7)
+Defined in: [packages/transports-http/src/libs/HealthCheckRegistry.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/HealthCheckRegistry.ts#L7)

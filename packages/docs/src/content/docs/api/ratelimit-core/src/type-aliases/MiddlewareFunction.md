@@ -7,7 +7,9 @@ title: "MiddlewareFunction"
 
 > **MiddlewareFunction** = (`ctx`, `next`) => `Promise`\<`void`\> \| `void`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:16](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L16)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L16)
+
+HTTP 미들웨어 형태로 레이트 리밋을 적용하는 헬퍼와 타입입니다.
 
 ## Parameters
 

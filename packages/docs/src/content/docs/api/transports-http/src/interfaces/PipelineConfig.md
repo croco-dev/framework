@@ -5,7 +5,7 @@ prev: false
 title: "PipelineConfig"
 ---
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:24](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/PipelineRunner.ts#L24)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/PipelineRunner.ts#L24)
 
 ## Properties
 
@@ -13,7 +13,7 @@ Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:24](https://git
 
 > **filters**: `ExceptionFilter`\<`unknown`, [`HttpExecutionContext`](/api/transports-http/src/classes/httpexecutioncontext/)\>[]
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/PipelineRunner.ts#L27)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/PipelineRunner.ts#L27)
 
 ***
 
@@ -21,7 +21,7 @@ Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:27](https://git
 
 > **guards**: [`Guard`](/api/framework-context/src/interfaces/guard/)\<`ExecutionContext`\>[]
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/PipelineRunner.ts#L25)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/PipelineRunner.ts#L25)
 
 ***
 
@@ -29,4 +29,4 @@ Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:25](https://git
 
 > **interceptors**: `Interceptor`\<`ExecutionContext`\>[]
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:26](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/PipelineRunner.ts#L26)
+Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/PipelineRunner.ts#L26)

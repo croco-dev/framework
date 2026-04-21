@@ -5,7 +5,9 @@ prev: false
 title: "ParamResolver"
 ---
 
-Defined in: [packages/transports-http/src/libs/ParamResolver.ts:23](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/ParamResolver.ts#L23)
+Defined in: [packages/transports-http/src/libs/ParamResolver.ts:64](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/ParamResolver.ts#L64)
+
+컨트롤러 파라미터 메타데이터를 읽어 실제 메서드 인자 배열로 변환합니다.
 
 ## Constructors
 
@@ -23,7 +25,7 @@ Defined in: [packages/transports-http/src/libs/ParamResolver.ts:23](https://gith
 
 > **resolveParams**(`ctx`, `controller`, `methodName`): `Promise`\<`unknown`[]\>
 
-Defined in: [packages/transports-http/src/libs/ParamResolver.ts:26](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/ParamResolver.ts#L26)
+Defined in: [packages/transports-http/src/libs/ParamResolver.ts:67](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/ParamResolver.ts#L67)
 
 #### Parameters
 

@@ -5,9 +5,9 @@ prev: false
 title: "CircuitBreaker"
 ---
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L18)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L23)
 
-Circuit breaker implementation for preventing repeated calls to unstable dependencies.
+실패율이 높은 의존성 호출을 차단하고 회복 여부를 관리하는 서킷 브레이커입니다.
 
 ## Constructors
 
@@ -15,7 +15,7 @@ Circuit breaker implementation for preventing repeated calls to unstable depende
 
 > **new CircuitBreaker**(`options`): `CircuitBreaker`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:27](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L27)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:32](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L32)
 
 #### Parameters
 
@@ -33,7 +33,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:27](https://github.c
 
 > **execute**\<`T`\>(`fn`): `Promise`\<`T`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:36](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L36)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:51](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L51)
 
 #### Type Parameters
 
@@ -57,7 +57,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:36](https://github.c
 
 > **forceClose**(): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:257](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L257)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:272](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L272)
 
 #### Returns
 
@@ -69,7 +69,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:257](https://github.
 
 > **forceOpen**(): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:252](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L252)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:267](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L267)
 
 #### Returns
 
@@ -81,7 +81,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:252](https://github.
 
 > **getFailureCount**(): `Promise`\<`number`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:270](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L270)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:285](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L285)
 
 #### Returns
 
@@ -93,7 +93,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:270](https://github.
 
 > **getLastFailureTime**(): `Promise`\<`number` \| `null`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:274](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L274)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:289](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L289)
 
 #### Returns
 
@@ -105,7 +105,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:274](https://github.
 
 > **getState**(): `Promise`\<[`CircuitState`](/api/retry-core/src/enumerations/circuitstate/)\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:266](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L266)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:281](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L281)
 
 #### Returns
 
@@ -117,7 +117,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:266](https://github.
 
 > **reset**(): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:262](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreaker.ts#L262)
+Defined in: [packages/retry-core/src/libs/CircuitBreaker.ts:277](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreaker.ts#L277)
 
 #### Returns
 

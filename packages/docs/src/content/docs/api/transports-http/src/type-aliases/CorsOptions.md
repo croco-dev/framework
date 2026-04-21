@@ -7,7 +7,9 @@ title: "CorsOptions"
 
 > **CorsOptions** = `object`
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L3)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:3](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L3)
+
+CORS 응답 헤더를 설정하는 미들웨어입니다.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:3](h
 
 > `optional` **allowedHeaders**: `string`[]
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L6)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L6)
 
 ***
 
@@ -23,7 +25,7 @@ Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:6](h
 
 > `optional` **credentials**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L7)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L7)
 
 ***
 
@@ -31,7 +33,7 @@ Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:7](h
 
 > `optional` **exposedHeaders**: `string`[]
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L9)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L9)
 
 ***
 
@@ -39,7 +41,7 @@ Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:9](h
 
 > `optional` **maxAge**: `number`
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L8)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L8)
 
 ***
 
@@ -47,7 +49,7 @@ Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:8](h
 
 > `optional` **methods**: `string`[]
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:5](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L5)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:5](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L5)
 
 ***
 
@@ -55,4 +57,4 @@ Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:5](h
 
 > **origins**: `string`[]
 
-Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L4)
+Defined in: [packages/transports-http/src/libs/middleware/CorsMiddleware.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/CorsMiddleware.ts#L4)

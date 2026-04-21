@@ -7,9 +7,9 @@ title: "RoleDefinition"
 
 > **RoleDefinition** = `object`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:3](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L3)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:3](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L3)
 
-Role registry and role definition type.
+역할 정의 타입과 역할 레지스트리 구현체입니다.
 
 ## Properties
 
@@ -17,7 +17,7 @@ Role registry and role definition type.
 
 > `optional` **inherits**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L6)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L6)
 
 ***
 
@@ -25,7 +25,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:6](https://github.com/croc
 
 > **name**: `string`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L4)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L4)
 
 ***
 
@@ -33,4 +33,4 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:4](https://github.com/croc
 
 > **permissions**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:5](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L5)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:5](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L5)

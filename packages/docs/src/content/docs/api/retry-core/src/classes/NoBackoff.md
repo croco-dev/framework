@@ -5,7 +5,7 @@ prev: false
 title: "NoBackoff"
 ---
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:144](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L144)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:144](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L144)
 
 No delay backoff (for testing or immediate retry scenarios).
 
@@ -29,7 +29,7 @@ No delay backoff (for testing or immediate retry scenarios).
 
 > **getDelay**(`_attempt`): `number`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:145](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L145)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:145](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L145)
 
 Calculate delay for the given attempt (0-based)
 
@@ -53,7 +53,7 @@ Calculate delay for the given attempt (0-based)
 
 > **reset**(): `void`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:153](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L153)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:153](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L153)
 
 Reset internal state if any
 
@@ -71,7 +71,7 @@ Reset internal state if any
 
 > **wait**(`_attempt`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:149](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L149)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:149](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L149)
 
 Wait for the calculated delay
 

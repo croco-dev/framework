@@ -7,7 +7,7 @@ title: "ProblemFactory"
 
 > `const` **ProblemFactory**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/ProblemFactory.ts#L15)
+Defined in: [packages/problems-core/src/libs/ProblemFactory.ts:15](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/ProblemFactory.ts#L15)
 
 카테고리별 Problem 인스턴스를 생성하는 팩토리입니다.
 각 메서드는 해당 카테고리에 맞는 HTTP 상태 코드와 함께 Problem 인스턴스를 생성합니다.

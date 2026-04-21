@@ -7,7 +7,9 @@ title: "RateLimitMiddlewareFactoryOptions"
 
 > **RateLimitMiddlewareFactoryOptions** = `object`
 
-Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:68](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L68)
+Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:71](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L71)
+
+HTTP 요청에 레이트 리밋 정책을 적용하는 미들웨어 팩토리입니다.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts
 
 > **defaultPolicy**: `RateLimitPolicy`
 
-Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:70](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L70)
+Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:73](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L73)
 
 ***
 
@@ -23,7 +25,7 @@ Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts
 
 > **rateLimiter**: `RateLimiter`
 
-Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:69](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L69)
+Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:72](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L72)
 
 ***
 
@@ -31,7 +33,7 @@ Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts
 
 > `optional` **skipFailedRequests**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:72](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L72)
+Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:75](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L75)
 
 ***
 
@@ -39,4 +41,4 @@ Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts
 
 > `optional` **skipSuccessfulRequests**: `boolean`
 
-Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:71](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L71)
+Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:74](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L74)

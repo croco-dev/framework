@@ -5,7 +5,7 @@ prev: false
 title: "EventReplay"
 ---
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:84](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventReplay.ts#L84)
+Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:84](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L84)
 
 이벤트 리플레이(Replay) 인터페이스입니다.
 과거 이벤트를 재생성하고 재처리하는 계약을 정의합니다.
@@ -16,7 +16,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:84](https:/
 
 > **createSnapshot**(`metadata?`): `Promise`\<[`EventSnapshot`](/api/events-core/src/type-aliases/eventsnapshot/)\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:104](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventReplay.ts#L104)
+Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:104](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L104)
 
 현재 상태의 스냅샷을 생성합니다.
 
@@ -40,7 +40,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:104](https:
 
 > **deleteSnapshot**(`snapshotId`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:122](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventReplay.ts#L122)
+Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:122](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L122)
 
 특정 스냅샷을 삭제합니다.
 
@@ -62,7 +62,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:122](https:
 
 > **listSnapshots**(): `Promise`\<[`EventSnapshot`](/api/events-core/src/type-aliases/eventsnapshot/)[]\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:116](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventReplay.ts#L116)
+Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:116](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L116)
 
 사용 가능한 스냅샷 목록을 조회합니다.
 
@@ -78,7 +78,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:116](https:
 
 > **replay**(`options?`): `Promise`\<[`ReplayResult`](/api/events-core/src/type-aliases/replayresult/)\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:90](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventReplay.ts#L90)
+Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:90](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L90)
 
 특정 시점부터 이벤트를 리플레이합니다.
 
@@ -102,7 +102,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:90](https:/
 
 > **replayEvents**(`eventIds`): `Promise`\<[`ReplayResult`](/api/events-core/src/type-aliases/replayresult/)\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:97](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventReplay.ts#L97)
+Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:97](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L97)
 
 특정 이벤트만 리플레이합니다.
 
@@ -126,7 +126,7 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:97](https:/
 
 > **restoreSnapshot**(`snapshotId`): `Promise`\<`void`\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:110](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/interfaces/EventReplay.ts#L110)
+Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:110](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L110)
 
 특정 스냅샷으로 복원합니다.
 

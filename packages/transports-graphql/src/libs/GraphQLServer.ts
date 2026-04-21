@@ -134,7 +134,9 @@ export class GraphQLServer {
             logger.info(
               `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || '/graphql'}`
             );
-          } catch {}
+          } catch {
+            // Intentionally ignored: Logger is optional for startup logging
+          }
           resolve();
         }
       });

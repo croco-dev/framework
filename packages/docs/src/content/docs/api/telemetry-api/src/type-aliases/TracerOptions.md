@@ -7,19 +7,9 @@ title: "TracerOptions"
 
 > **TracerOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/tracer.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/tracer.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/tracer.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/tracer.ts#L6)
 
-Options for configuring a Tracer instance.
-
-## Remarks
-
-Used when getting a tracer for advanced/manual tracing scenarios.
-
-## Example
-
-```typescript
-const tracer = getTracer({ name: 'my-service', version: '1.0.0' });
-```
+Tracer 인스턴스를 만들 때 사용하는 옵션 타입입니다.
 
 ## Properties
 
@@ -27,9 +17,7 @@ const tracer = getTracer({ name: 'my-service', version: '1.0.0' });
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/tracer.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/tracer.ts#L7)
-
-Instrumentation name (usually service/module name)
+Defined in: [packages/telemetry-api/src/libs/tracer.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/tracer.ts#L7)
 
 ***
 
@@ -37,6 +25,4 @@ Instrumentation name (usually service/module name)
 
 > `optional` **version**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/tracer.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/tracer.ts#L8)
-
-Instrumentation version for identification
+Defined in: [packages/telemetry-api/src/libs/tracer.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/tracer.ts#L8)

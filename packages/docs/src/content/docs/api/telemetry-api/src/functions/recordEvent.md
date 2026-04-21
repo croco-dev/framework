@@ -7,7 +7,9 @@ title: "recordEvent"
 
 > **recordEvent**(`name`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:42](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/span.ts#L42)
+Defined in: [packages/telemetry-api/src/libs/span.ts:45](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/span.ts#L45)
+
+현재 활성 Span에 이름과 속성을 가진 이벤트를 기록합니다.
 
 ## Parameters
 
@@ -22,5 +24,3 @@ Defined in: [packages/telemetry-api/src/libs/span.ts:42](https://github.com/croc
 ## Returns
 
 `void`
-
-TraceInfo object with trace details, or empty object if no active trace

@@ -7,9 +7,9 @@ title: "getEventFields"
 
 > **getEventFields**(`EventClass`): [`EventFieldMeta`](/api/events-core/src/type-aliases/eventfieldmeta/)[] \| `null`
 
-Defined in: [packages/events-core/src/libs/decorators/EventField.ts:26](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/decorators/EventField.ts#L26)
+Defined in: [packages/events-core/src/libs/decorators/EventField.ts:32](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/decorators/EventField.ts#L32)
 
-이벤트 직렬화 대상 필드를 선언하고 조회하는 데코레이터/유틸리티입니다.
+이벤트 클래스에 등록된 직렬화 필드 메타데이터를 조회합니다.
 
 ## Parameters
 

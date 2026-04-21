@@ -7,7 +7,7 @@ title: "StreamChunk"
 
 > **StreamChunk** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:71](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/types.ts#L71)
+Defined in: [packages/llm-core/src/libs/types.ts:71](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L71)
 
 스트리밍 청크
 
@@ -17,7 +17,7 @@ Defined in: [packages/llm-core/src/libs/types.ts:71](https://github.com/croco-de
 
 > **delta**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:75](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/types.ts#L75)
+Defined in: [packages/llm-core/src/libs/types.ts:75](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L75)
 
 증분 텍스트
 
@@ -27,6 +27,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:75](https://github.com/croco-de
 
 > `optional` **usage**: `Partial`\<[`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)\>
 
-Defined in: [packages/llm-core/src/libs/types.ts:80](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/llm-core/src/libs/types.ts#L80)
+Defined in: [packages/llm-core/src/libs/types.ts:80](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L80)
 
 토큰 사용량 (선택적, 마지막 청크에 포함)

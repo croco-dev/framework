@@ -1,9 +1,17 @@
-import type { SQL } from 'drizzle-orm';
-
 /**
  * Isolation strategy type
  */
 export type TenantIsolationType = 'schema-per-tenant' | 'row-level' | 'hybrid';
+
+/**
+ * ORM-neutral filter representation for tenant isolation.
+ * Concrete implementations (e.g., Drizzle) will convert this to SQL.
+ */
+export type TenantIsolationFilter = {
+  type: 'sql';
+  condition: string;
+  params?: unknown[];
+};
 
 /**
  * Isolation strategy configuration
@@ -16,14 +24,14 @@ export type TenantIsolationConfig =
   | {
       type: 'row-level';
       columnName: string;
-      sqlBuilder: (tenantId: string) => SQL;
+      sqlBuilder: (tenantId: string) => TenantIsolationFilter;
     }
   | {
       type: 'hybrid';
       default: 'schema-per-tenant' | 'row-level';
       getSchemaName: (tenantId: string) => string;
       columnName: string;
-      sqlBuilder: (tenantId: string) => SQL;
+      sqlBuilder: (tenantId: string) => TenantIsolationFilter;
       useRowLevelForTenants?: string[];
     };
 
@@ -50,7 +58,7 @@ export interface TenantIsolationStrategy {
    * @param tenantId - Tenant ID
    * @returns SQL condition or null if not applicable
    */
-  buildFilter(tenantId: string): SQL | null;
+  buildFilter(tenantId: string): TenantIsolationFilter | null;
 
   /**
    * Check if the strategy supports the given isolation type

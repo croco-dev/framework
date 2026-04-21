@@ -7,31 +7,9 @@ title: "TraceDecoratorOptions"
 
 > **TraceDecoratorOptions** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/decorators/Trace.ts#L4)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/decorators/Trace.ts#L4)
 
-Options for configuring the
-
-## Trace
-
-decorator behavior.
-
-## Remarks
-
-Allows customization of the Span name and additional attributes.
-
-## Example
-
-```typescript
-class PaymentService {
-  @Trace({
-    name: 'process-payment',
-    attributes: { 'service.type': 'payment' }
-  })
-  async processPayment(amount: number): Promise<void> {
-    // ...
-  }
-}
-```
+`@Trace` 데코레이터의 동작을 제어하는 옵션 타입입니다.
 
 ## Properties
 
@@ -39,9 +17,9 @@ class PaymentService {
 
 > `optional` **attributes**: `Attributes`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/decorators/Trace.ts#L6)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/decorators/Trace.ts#L6)
 
-Additional key-value pairs to attach to the Span
+Span에 추가할 속성 집합입니다.
 
 ***
 
@@ -49,6 +27,6 @@ Additional key-value pairs to attach to the Span
 
 > `optional` **name**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:5](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/decorators/Trace.ts#L5)
+Defined in: [packages/telemetry-api/src/libs/decorators/Trace.ts:5](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/decorators/Trace.ts#L5)
 
-Custom Span name (defaults to method name)
+Span 이름입니다. 기본값은 메서드 이름입니다.

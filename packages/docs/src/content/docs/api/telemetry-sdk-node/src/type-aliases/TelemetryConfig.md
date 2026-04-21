@@ -7,7 +7,7 @@ title: "TelemetryConfig"
 
 > **TelemetryConfig** = `object`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:94](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L94)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:94](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L94)
 
 Main configuration for the OpenTelemetry SDK.
 
@@ -37,7 +37,7 @@ const config: TelemetryConfig = {
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:102](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L102)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:102](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L102)
 
 Whether telemetry is globally enabled. Default: true
 
@@ -47,7 +47,7 @@ Whether telemetry is globally enabled. Default: true
 
 > `optional` **environment**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:100](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L100)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:100](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L100)
 
 Deployment environment. Default: 'development'
 
@@ -57,7 +57,7 @@ Deployment environment. Default: 'development'
 
 > `optional` **logs**: [`LogsConfig`](/api/telemetry-sdk-node/src/type-aliases/logsconfig/)
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:108](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L108)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:108](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L108)
 
 Logs configuration
 
@@ -67,7 +67,7 @@ Logs configuration
 
 > `optional` **metrics**: [`MetricsConfig`](/api/telemetry-sdk-node/src/type-aliases/metricsconfig/)
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:106](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L106)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:106](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L106)
 
 Metrics configuration
 
@@ -77,7 +77,7 @@ Metrics configuration
 
 > `optional` **resourceAttributes**: `Record`\<`string`, `string` \| `number` \| `boolean`\>
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:110](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L110)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:110](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L110)
 
 Additional resource attributes
 
@@ -87,7 +87,7 @@ Additional resource attributes
 
 > **serviceName**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:96](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L96)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:96](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L96)
 
 Service name (required)
 
@@ -97,7 +97,7 @@ Service name (required)
 
 > `optional` **serviceVersion**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:98](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L98)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:98](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L98)
 
 Service version. Default: '0.0.0'
 
@@ -107,6 +107,6 @@ Service version. Default: '0.0.0'
 
 > `optional` **trace**: [`TraceConfig`](/api/telemetry-sdk-node/src/type-aliases/traceconfig/)
 
-Defined in: [packages/telemetry-sdk-node/src/config.ts:104](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/config.ts#L104)
+Defined in: [packages/telemetry-sdk-node/src/config.ts:104](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/config.ts#L104)
 
 Trace configuration

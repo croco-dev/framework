@@ -31,6 +31,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Dependency audit
+        run: pnpm audit:prod
+
       - name: Biome check
         run: pnpm check
 
@@ -42,6 +45,9 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Core package coverage gate
+        run: pnpm test:coverage:core
 
   changes:
     runs-on: ubuntu-latest

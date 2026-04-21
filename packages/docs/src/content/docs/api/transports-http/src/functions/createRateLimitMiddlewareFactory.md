@@ -7,7 +7,9 @@ title: "createRateLimitMiddlewareFactory"
 
 > **createRateLimitMiddlewareFactory**(`options`): (`policyOverride?`) => [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
 
-Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:75](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L75)
+Defined in: [packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts:81](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts#L81)
+
+기본 정책을 캡슐화한 레이트 리밋 미들웨어 팩토리를 생성합니다.
 
 ## Parameters
 

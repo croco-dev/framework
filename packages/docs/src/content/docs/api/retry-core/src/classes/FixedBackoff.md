@@ -5,7 +5,7 @@ prev: false
 title: "FixedBackoff"
 ---
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:119](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L119)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:119](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L119)
 
 Fixed delay backoff (no exponential growth).
 
@@ -19,7 +19,7 @@ Fixed delay backoff (no exponential growth).
 
 > **new FixedBackoff**(`delayMs?`, `deps?`): `FixedBackoff`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:123](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L123)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:123](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L123)
 
 #### Parameters
 
@@ -41,7 +41,7 @@ Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:123](https://github.c
 
 > **getDelay**(`_attempt`): `number`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:128](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L128)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:128](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L128)
 
 Calculate delay for the given attempt (0-based)
 
@@ -65,7 +65,7 @@ Calculate delay for the given attempt (0-based)
 
 > **reset**(): `void`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:136](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L136)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:136](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L136)
 
 Reset internal state if any
 
@@ -83,7 +83,7 @@ Reset internal state if any
 
 > **wait**(`_attempt`): `Promise`\<`void`\>
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:132](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/BackoffPolicy.ts#L132)
+Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:132](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L132)
 
 Wait for the calculated delay
 

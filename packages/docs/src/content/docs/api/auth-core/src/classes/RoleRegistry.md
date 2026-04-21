@@ -5,9 +5,9 @@ prev: false
 title: "RoleRegistry"
 ---
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L9)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L9)
 
-Role registry and role definition type.
+역할 정의 타입과 역할 레지스트리 구현체입니다.
 
 ## Extends
 
@@ -33,7 +33,7 @@ Role registry and role definition type.
 
 > **getRole**(`name`): [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L16)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L16)
 
 #### Parameters
 
@@ -51,7 +51,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/cro
 
 > **getRolePermissions**(`name`, `visited?`): `string`[]
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L20)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L20)
 
 #### Parameters
 
@@ -77,7 +77,7 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/cro
 
 > **register**(`role`): `void`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:12](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/rbac/Role.ts#L12)
+Defined in: [packages/auth-core/src/libs/rbac/Role.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L12)
 
 #### Parameters
 

@@ -5,7 +5,7 @@ prev: false
 title: "LifecycleHooks"
 ---
 
-Defined in: [packages/framework-context/src/libs/types.ts:29](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L29)
+Defined in: [packages/framework-context/src/libs/types.ts:29](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/types.ts#L29)
 
 요청 라이프사이클 전후와 에러 상황에 실행할 훅 타입입니다.
 
@@ -33,7 +33,7 @@ const hooks: LifecycleHooks = {
 
 > `optional` **onRequestEnd**: (`ctx`, `result?`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:32](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L32)
+Defined in: [packages/framework-context/src/libs/types.ts:32](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/types.ts#L32)
 
 요청 성공 종료 시 호출됩니다.
 
@@ -57,7 +57,7 @@ Defined in: [packages/framework-context/src/libs/types.ts:32](https://github.com
 
 > `optional` **onRequestError**: (`ctx`, `error`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:34](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L34)
+Defined in: [packages/framework-context/src/libs/types.ts:34](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/types.ts#L34)
 
 요청 에러 발생 시 호출됩니다.
 
@@ -81,7 +81,7 @@ Defined in: [packages/framework-context/src/libs/types.ts:34](https://github.com
 
 > `optional` **onRequestStart**: (`ctx`) => `void` \| `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/types.ts:30](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/types.ts#L30)
+Defined in: [packages/framework-context/src/libs/types.ts:30](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/types.ts#L30)
 
 요청 시작 시 호출됩니다.
 

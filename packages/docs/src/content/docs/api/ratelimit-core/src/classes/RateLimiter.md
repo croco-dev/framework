@@ -5,7 +5,9 @@ prev: false
 title: "RateLimiter"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L14)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:14](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimiter.ts#L14)
+
+레이트 리밋 정책 생성 함수와 핵심 RateLimiter 클래스입니다.
 
 ## Type Parameters
 
@@ -19,7 +21,7 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:14](https://github.
 
 > **new RateLimiter**\<`TContext`\>(`store`, `keyBuilder`, `options?`): `RateLimiter`\<`TContext`\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L20)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimiter.ts#L20)
 
 #### Parameters
 
@@ -51,7 +53,7 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:20](https://github.
 
 > **check**(`context`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:36](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L36)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:36](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimiter.ts#L36)
 
 #### Parameters
 
@@ -73,7 +75,7 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:36](https://github.
 
 > **checkWithKey**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:47](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L47)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:47](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimiter.ts#L47)
 
 #### Parameters
 
@@ -95,7 +97,7 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:47](https://github.
 
 > **getStats**(`key?`): `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:56](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimiter.ts#L56)
+Defined in: [packages/ratelimit-core/src/libs/RateLimiter.ts:56](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimiter.ts#L56)
 
 #### Parameters
 

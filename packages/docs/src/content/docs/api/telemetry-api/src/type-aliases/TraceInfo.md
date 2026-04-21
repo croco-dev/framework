@@ -7,21 +7,9 @@ title: "TraceInfo"
 
 > **TraceInfo** = `object`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/span.ts#L9)
+Defined in: [packages/telemetry-api/src/libs/span.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/span.ts#L9)
 
-Information about the current active trace context.
-
-## Remarks
-
-Contains trace ID, span ID, and sampling status for distributed tracing.
-
-## Example
-
-```typescript
-const traceInfo = getActiveTraceInfo();
-console.log('Trace ID:', traceInfo.traceId);
-console.log('Is Sampled:', traceInfo.isValid);
-```
+Span 생성 옵션과 현재 활성 Trace 정보를 표현하는 타입입니다.
 
 ## Properties
 
@@ -29,9 +17,7 @@ console.log('Is Sampled:', traceInfo.isValid);
 
 > `optional` **isValid**: `boolean`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:13](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/span.ts#L13)
-
-Whether this trace is sampled for recording
+Defined in: [packages/telemetry-api/src/libs/span.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/span.ts#L13)
 
 ***
 
@@ -39,9 +25,7 @@ Whether this trace is sampled for recording
 
 > `optional` **spanId**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:11](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/span.ts#L11)
-
-Unique identifier for the current span
+Defined in: [packages/telemetry-api/src/libs/span.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/span.ts#L11)
 
 ***
 
@@ -49,9 +33,7 @@ Unique identifier for the current span
 
 > `optional` **traceFlags**: `number`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:12](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/span.ts#L12)
-
-W3C trace context flags
+Defined in: [packages/telemetry-api/src/libs/span.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/span.ts#L12)
 
 ***
 
@@ -59,6 +41,4 @@ W3C trace context flags
 
 > `optional` **traceId**: `string`
 
-Defined in: [packages/telemetry-api/src/libs/span.ts:10](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-api/src/libs/span.ts#L10)
-
-Unique identifier for the entire trace
+Defined in: [packages/telemetry-api/src/libs/span.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-api/src/libs/span.ts#L10)

@@ -90,7 +90,10 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
 
     try {
       await this.failedEventPublisher.publish(event);
-    } catch {}
+    } catch (error) {
+      // Intentionally ignored: failed event publish should not block sync
+      console.error('Failed to publish search sync failed event', error);
+    }
   }
 
   private getSearchableMetadata(indexName: string): SearchableMetadata | undefined {

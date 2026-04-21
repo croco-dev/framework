@@ -5,9 +5,9 @@ prev: false
 title: "PermissionGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:17](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/guards/PermissionGuard.ts#L17)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:17](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/PermissionGuard.ts#L17)
 
-Guard for permission-based authorization checks.
+권한 기반 인가를 수행하는 가드입니다.
 
 ## Implements
 
@@ -19,7 +19,7 @@ Guard for permission-based authorization checks.
 
 > **new PermissionGuard**(`rbacEngine`): `PermissionGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/guards/PermissionGuard.ts#L18)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:18](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/PermissionGuard.ts#L18)
 
 #### Parameters
 
@@ -37,7 +37,7 @@ Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:18](https://g
 
 > **canActivate**(`context`): `boolean`
 
-Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/guards/PermissionGuard.ts#L20)
+Defined in: [packages/auth-core/src/libs/guards/PermissionGuard.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/PermissionGuard.ts#L20)
 
 #### Parameters
 

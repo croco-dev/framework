@@ -5,7 +5,7 @@ prev: false
 title: "EventSubscription"
 ---
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventBus.ts#L6)
+Defined in: [packages/events-core/src/libs/EventBus.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/EventBus.ts#L6)
 
 이벤트 발행/구독 추상화와 구독 엔트리 타입입니다.
 
@@ -21,7 +21,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:6](https://github.com/cro
 
 > **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:7](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventBus.ts#L7)
+Defined in: [packages/events-core/src/libs/EventBus.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/EventBus.ts#L7)
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:7](https://github.com/cro
 
 > `optional` **handler**: [`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<`TEvent`\>
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventBus.ts#L9)
+Defined in: [packages/events-core/src/libs/EventBus.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/EventBus.ts#L9)
 
 ***
 
@@ -37,4 +37,4 @@ Defined in: [packages/events-core/src/libs/EventBus.ts:9](https://github.com/cro
 
 > **handlerClass**: [`EventHandlerClass`](/api/events-core/src/type-aliases/eventhandlerclass/)\<`TEvent`\>
 
-Defined in: [packages/events-core/src/libs/EventBus.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/events-core/src/libs/EventBus.ts#L8)
+Defined in: [packages/events-core/src/libs/EventBus.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/EventBus.ts#L8)

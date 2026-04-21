@@ -7,7 +7,7 @@ title: "toHttpStatus"
 
 > **toHttpStatus**(`category`): `number`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L9)
+Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L9)
 
 ProblemCategory를 HTTP 상태 코드로 변환합니다.
 

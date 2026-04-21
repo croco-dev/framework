@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
+    "audit:prod": "pnpm audit --audit-level high --prod",
     "check": "biome check .",
     "changeset": "changeset",
     "deploy": "turbo deploy",
@@ -14,6 +15,7 @@
     "prepare": "lefthook install",
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
+    "test:coverage:core": "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true pnpm --filter @croco/framework-context --filter @croco/retry-core --filter @croco/events-core --filter @croco/auth-core --filter @croco/telemetry-api exec vitest run --coverage --config ../../vitest.config.ts",
     "typecheck": "turbo typecheck",
     "version-packages": "changeset version",
     "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",

@@ -433,5 +433,11 @@ pnpm run deploy -- --otp <otp>
 
 ---
 
+## 🤝 기여하기
+
+기여 방법, 개발 환경 설정, 코드 스타일, Git 워크플로우는 [CONTRIBUTING.md](./CONTRIBUTING.md)를 참고하세요.
+
+---
+
 ## 📄 라이선스
 MIT License. Copyright (c) 2026 Croco Team.

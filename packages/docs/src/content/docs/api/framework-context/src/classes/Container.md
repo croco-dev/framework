@@ -5,24 +5,9 @@ prev: false
 title: "Container"
 ---
 
-Defined in: [packages/framework-context/src/libs/Container.ts:25](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L25)
+Defined in: [packages/framework-context/src/libs/Container.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L28)
 
-컴포넌트 scope에 맞춰 의존성을 조회하고 관리하는 DI 컨테이너 클래스입니다.
-
-## Param
-
-`Container.get(token)` 호출 시 조회할 생성자 토큰입니다.
-
-## Example
-
-```typescript
-import { Component, Container } from '@croco/framework-context';
-
-@Component()
-class UserService {}
-
-const service = Container.get(UserService);
-```
+Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 담당하는 DI 컨테이너입니다.
 
 ## Constructors
 
@@ -40,7 +25,7 @@ const service = Container.get(UserService);
 
 > `static` **get**\<`T`\>(`token`): `T`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:30](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L30)
+Defined in: [packages/framework-context/src/libs/Container.ts:33](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L33)
 
 #### Type Parameters
 
@@ -64,7 +49,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:30](https://github
 
 > `static` **getComponentMetadata**(`target`): [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:205](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L205)
+Defined in: [packages/framework-context/src/libs/Container.ts:208](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L208)
 
 #### Parameters
 
@@ -82,7 +67,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:205](https://githu
 
 > `static` **getMany**\<`T`\>(`tokens`): `T`[]
 
-Defined in: [packages/framework-context/src/libs/Container.ts:62](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L62)
+Defined in: [packages/framework-context/src/libs/Container.ts:65](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L65)
 
 #### Type Parameters
 
@@ -106,7 +91,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:62](https://github
 
 > `static` **getOptional**\<`T`\>(`token`): `T` \| `undefined`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:66](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L66)
+Defined in: [packages/framework-context/src/libs/Container.ts:69](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L69)
 
 #### Type Parameters
 
@@ -130,7 +115,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:66](https://github
 
 > `static` **has**\<`T`\>(`token`): `boolean`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:85](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L85)
+Defined in: [packages/framework-context/src/libs/Container.ts:88](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L88)
 
 #### Type Parameters
 
@@ -154,7 +139,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:85](https://github
 
 > `static` **register**\<`T`\>(`token`, `scope`): `void`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:123](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L123)
+Defined in: [packages/framework-context/src/libs/Container.ts:126](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L126)
 
 #### Type Parameters
 
@@ -182,7 +167,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:123](https://githu
 
 > `static` **registerAsync**\<`T`\>(`token`, `factory`): `Promise`\<`T`\>
 
-Defined in: [packages/framework-context/src/libs/Container.ts:128](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L128)
+Defined in: [packages/framework-context/src/libs/Container.ts:131](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L131)
 
 #### Type Parameters
 
@@ -210,7 +195,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:128](https://githu
 
 > `static` **registerLazy**\<`T`\>(`token`, `factory`): `void`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:133](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L133)
+Defined in: [packages/framework-context/src/libs/Container.ts:136](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L136)
 
 #### Type Parameters
 
@@ -238,7 +223,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:133](https://githu
 
 > `static` **remove**\<`T`\>(`token`): `void`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:89](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L89)
+Defined in: [packages/framework-context/src/libs/Container.ts:92](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L92)
 
 #### Type Parameters
 
@@ -262,7 +247,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:89](https://github
 
 > `static` **reset**(): `void`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:95](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L95)
+Defined in: [packages/framework-context/src/libs/Container.ts:98](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L98)
 
 #### Returns
 
@@ -274,7 +259,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:95](https://github
 
 > `static` **set**\<`T`\>(`token`, `instance`): `T`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:78](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L78)
+Defined in: [packages/framework-context/src/libs/Container.ts:81](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L81)
 
 #### Type Parameters
 
@@ -302,7 +287,7 @@ Defined in: [packages/framework-context/src/libs/Container.ts:78](https://github
 
 > `static` **validate**(): `void`
 
-Defined in: [packages/framework-context/src/libs/Container.ts:102](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/Container.ts#L102)
+Defined in: [packages/framework-context/src/libs/Container.ts:105](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Container.ts#L105)
 
 #### Returns
 

@@ -5,9 +5,9 @@ prev: false
 title: "LambdaContext"
 ---
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L8)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L8)
 
-Lambda timeout guard types for integrating retry logic with AWS Lambda execution limits.
+AWS Lambda 남은 실행 시간을 기준으로 재시도를 제어하는 타입입니다.
 
 ## Methods
 
@@ -15,7 +15,7 @@ Lambda timeout guard types for integrating retry logic with AWS Lambda execution
 
 > **getRemainingTimeInMillis**(): `number`
 
-Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L9)
+Defined in: [packages/retry-core/src/libs/LambdaTimeoutGuard.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/LambdaTimeoutGuard.ts#L9)
 
 #### Returns
 

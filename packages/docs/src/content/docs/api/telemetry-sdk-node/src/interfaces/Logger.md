@@ -5,7 +5,7 @@ prev: false
 title: "Logger"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:77](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L77)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:77](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L77)
 
 Logger interface for structured logging.
 Provides methods to emit logs at different severity levels.
@@ -26,7 +26,7 @@ logger.debug('Processing request', { requestId: 'abc123' });
 
 > **debug**(`body`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:99](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L99)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:99](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L99)
 
 Logs a message at DEBUG level.
 
@@ -54,7 +54,7 @@ Additional attributes
 
 > **emit**(`options`): `void`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:83](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L83)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:83](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L83)
 
 Emits a log record.
 
@@ -76,7 +76,7 @@ Log record options
 
 > **error**(`body`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:123](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L123)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:123](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L123)
 
 Logs a message at ERROR level.
 
@@ -104,7 +104,7 @@ Additional attributes
 
 > **fatal**(`body`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:131](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L131)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:131](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L131)
 
 Logs a message at FATAL level.
 
@@ -132,7 +132,7 @@ Additional attributes
 
 > **info**(`body`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:107](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L107)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:107](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L107)
 
 Logs a message at INFO level.
 
@@ -160,7 +160,7 @@ Additional attributes
 
 > **trace**(`body`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:91](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L91)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:91](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L91)
 
 Logs a message at TRACE level.
 
@@ -188,7 +188,7 @@ Additional attributes
 
 > **warn**(`body`, `attributes?`): `void`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:115](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L115)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:115](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L115)
 
 Logs a message at WARN level.
 

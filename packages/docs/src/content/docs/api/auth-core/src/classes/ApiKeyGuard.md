@@ -5,9 +5,9 @@ prev: false
 title: "ApiKeyGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L8)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L8)
 
-Guard for API key based authentication.
+API 키 기반 인증 가드입니다.
 
 ## Implements
 
@@ -19,7 +19,7 @@ Guard for API key based authentication.
 
 > **new ApiKeyGuard**(`apiKeyProvider`): `ApiKeyGuard`
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:9](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L9)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L9)
 
 #### Parameters
 
@@ -37,7 +37,7 @@ Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:9](https://github
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
 
-Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:11](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L11)
+Defined in: [packages/auth-core/src/libs/guards/ApiKeyGuard.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/ApiKeyGuard.ts#L11)
 
 #### Parameters
 

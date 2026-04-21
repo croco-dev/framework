@@ -7,7 +7,7 @@ title: "InMemoryCircuitBreakerStateStoreOptions"
 
 > **InMemoryCircuitBreakerStateStoreOptions** = `object`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:28](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreakerState.ts#L28)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L28)
 
 ## Properties
 
@@ -15,7 +15,7 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:28](https://git
 
 > `optional` **idleTtlMs**: `number`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:30](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreakerState.ts#L30)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:30](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L30)
 
 ***
 
@@ -23,4 +23,4 @@ Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:30](https://git
 
 > `optional` **maxEntries**: `number`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:29](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/retry-core/src/libs/CircuitBreakerState.ts#L29)
+Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:29](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L29)

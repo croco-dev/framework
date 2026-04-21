@@ -5,25 +5,9 @@ prev: false
 title: "ShutdownManager"
 ---
 
-Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:6](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ShutdownManager.ts#L6)
+Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ShutdownManager.ts#L9)
 
-종료 훅을 등록하고 프로세스 시그널에서 graceful shutdown을 실행하는 매니저 클래스입니다.
-
-## Param
-
-`manager.register(hook)`로 등록할 shutdown 훅입니다.
-
-## Example
-
-```typescript
-import { ShutdownManager } from '@croco/framework-context';
-
-const manager = ShutdownManager.getInstance();
-manager.register({
-  onShutdown: async () => {},
-});
-manager.listen();
-```
+프로세스 종료 시그널을 수신하고 등록된 shutdown 훅을 실행하는 매니저입니다.
 
 ## Methods
 
@@ -31,7 +15,7 @@ manager.listen();
 
 > **listen**(): `void`
 
-Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:41](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ShutdownManager.ts#L41)
+Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:44](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ShutdownManager.ts#L44)
 
 #### Returns
 
@@ -43,7 +27,7 @@ Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:41](https://
 
 > **register**(`hook`): `void`
 
-Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:34](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ShutdownManager.ts#L34)
+Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:37](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ShutdownManager.ts#L37)
 
 #### Parameters
 
@@ -61,7 +45,7 @@ Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:34](https://
 
 > **shutdown**(): `Promise`\<`void`\>
 
-Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:54](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ShutdownManager.ts#L54)
+Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:57](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ShutdownManager.ts#L57)
 
 #### Returns
 
@@ -73,7 +57,7 @@ Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:54](https://
 
 > `static` **getInstance**(`timeoutMs?`): `ShutdownManager`
 
-Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:17](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ShutdownManager.ts#L17)
+Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ShutdownManager.ts#L20)
 
 #### Parameters
 
@@ -91,7 +75,7 @@ Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:17](https://
 
 > `static` **reset**(): `void`
 
-Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:24](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/ShutdownManager.ts#L24)
+Defined in: [packages/framework-context/src/libs/ShutdownManager.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ShutdownManager.ts#L27)
 
 #### Returns
 

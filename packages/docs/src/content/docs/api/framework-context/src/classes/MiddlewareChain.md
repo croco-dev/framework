@@ -5,26 +5,9 @@ prev: false
 title: "MiddlewareChain"
 ---
 
-Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/MiddlewareChain.ts#L8)
+Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/MiddlewareChain.ts#L11)
 
-요청 컨텍스트에 미들웨어를 순차 실행하는 onion 패턴 체인 클래스입니다.
-
-## Param
-
-`chain.use(middleware)`에 등록할 미들웨어 함수입니다.
-
-## Example
-
-```typescript
-import { MiddlewareChain } from '@croco/framework-context';
-
-const chain = new MiddlewareChain<{ requestId: string }>();
-chain.use(async (_ctx, next) => {
-  await next();
-});
-
-await chain.execute({ requestId: 'req-123' });
-```
+등록된 미들웨어를 onion 패턴으로 순차 실행하는 체인입니다.
 
 ## Type Parameters
 
@@ -48,7 +31,7 @@ await chain.execute({ requestId: 'req-123' });
 
 > **clear**(): `void`
 
-Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:60](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/MiddlewareChain.ts#L60)
+Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:63](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/MiddlewareChain.ts#L63)
 
 Clear all middlewares
 
@@ -62,7 +45,7 @@ Clear all middlewares
 
 > **execute**\<`T`\>(`ctx`, `finalFn?`): `Promise`\<`T`\>
 
-Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:22](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/MiddlewareChain.ts#L22)
+Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/MiddlewareChain.ts#L25)
 
 Execute middleware chain in onion pattern
 
@@ -92,7 +75,7 @@ Execute middleware chain in onion pattern
 
 > **use**(`middleware`): `this`
 
-Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:14](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/framework-context/src/libs/MiddlewareChain.ts#L14)
+Defined in: [packages/framework-context/src/libs/MiddlewareChain.ts:17](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/MiddlewareChain.ts#L17)
 
 Add middleware to the chain
 

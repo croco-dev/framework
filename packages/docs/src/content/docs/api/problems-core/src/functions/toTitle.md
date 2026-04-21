@@ -7,7 +7,7 @@ title: "toTitle"
 
 > **toTitle**(`category`): `string`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:46](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L46)
+Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:46](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L46)
 
 ProblemCategory를 사람이 읽을 수 있는 제목으로 변환합니다.
 

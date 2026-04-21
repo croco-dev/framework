@@ -5,7 +5,7 @@ prev: false
 title: "AutoInstrumentationConfig"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:45](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L45)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:45](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L45)
 
 Configuration for auto-instrumentation.
 Defines which modules should be automatically instrumented.
@@ -26,7 +26,7 @@ const autoInstrumentConfig: AutoInstrumentationConfig = {
 
 > `optional` **customInstrumentations**: `Instrumentation`\<`InstrumentationConfig`\>[]
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:68](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L68)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:68](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L68)
 
 Custom instrumentation instances to include.
 These are merged with auto-loaded instrumentations.
@@ -37,7 +37,7 @@ These are merged with auto-loaded instrumentations.
 
 > `optional` **enabled**: `boolean`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:50](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L50)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:50](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L50)
 
 Whether auto-instrumentation is enabled.
 
@@ -53,7 +53,7 @@ true
 
 > `optional` **exclude**: `string`[]
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:81](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L81)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:81](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L81)
 
 Patterns for operation names to exclude.
 Supports simple wildcards with '*'.
@@ -70,7 +70,7 @@ Supports simple wildcards with '*'.
 
 > `optional` **excludeModules**: [`AutoInstrumentationModule`](/api/telemetry-sdk-node/src/type-aliases/autoinstrumentationmodule/)[]
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:62](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L62)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:62](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L62)
 
 List of modules to exclude from auto-instrumentation.
 Takes precedence over 'modules'.
@@ -81,7 +81,7 @@ Takes precedence over 'modules'.
 
 > `optional` **include**: `string`[]
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:88](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L88)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:88](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L88)
 
 Patterns for operation names to include (whitelist).
 If specified, only matching operations are instrumented.
@@ -98,7 +98,7 @@ If specified, only matching operations are instrumented.
 
 > `optional` **moduleOptions**: `Record`\<`string`, `Record`\<`string`, `unknown`\>\>
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:74](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L74)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:74](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L74)
 
 Configuration for specific instrumentations.
 Keys are module names, values are module-specific options.
@@ -109,7 +109,7 @@ Keys are module names, values are module-specific options.
 
 > `optional` **modules**: [`AutoInstrumentationModule`](/api/telemetry-sdk-node/src/type-aliases/autoinstrumentationmodule/)[]
 
-Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:56](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L56)
+Defined in: [packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts:56](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts#L56)
 
 List of modules to auto-instrument.
 If not specified, all available modules will be instrumented.

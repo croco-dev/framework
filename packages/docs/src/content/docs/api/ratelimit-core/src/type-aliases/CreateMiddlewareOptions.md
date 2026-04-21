@@ -7,7 +7,9 @@ title: "CreateMiddlewareOptions"
 
 > **CreateMiddlewareOptions** = `object`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:18](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L18)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:18](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L18)
+
+HTTP 미들웨어 형태로 레이트 리밋을 적용하는 헬퍼와 타입입니다.
 
 ## Properties
 
@@ -15,7 +17,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > `optional` **addHeaders**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:23](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L23)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L23)
 
 ***
 
@@ -23,7 +25,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > `optional` **failOpen**: `boolean`
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:22](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L22)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:22](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L22)
 
 ***
 
@@ -31,7 +33,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > `optional` **keySegments**: `KeySegment`[]
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:21](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L21)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:21](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L21)
 
 ***
 
@@ -39,7 +41,7 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > **policy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:20](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L20)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L20)
 
 ***
 
@@ -47,4 +49,4 @@ Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:
 
 > **rateLimiter**: [`RateLimiter`](/api/ratelimit-core/src/classes/ratelimiter/)
 
-Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:19](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L19)
+Defined in: [packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/middleware/rateLimitMiddleware.ts#L19)

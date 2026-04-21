@@ -90,8 +90,8 @@ export class Bootstrap {
 
     const port = serverConfig.port ?? (process.env.PORT || 3000);
     const server = Bootstrap.app.listen(port, () => {
-      console.log(`🚀 Server is running on port ${port}`);
-      console.log(`🔗 Health check: http://localhost:${port}/health`);
+      process.stderr.write(`Server is running on port ${port}\n`);
+      process.stderr.write(`Health check: http://localhost:${port}/health\n`);
     });
 
     if (Bootstrap.shutdownHandler) {
@@ -100,9 +100,9 @@ export class Bootstrap {
     }
 
     const shutdown = async () => {
-      console.log('\n📦 Shutting down gracefully...');
+      process.stderr.write('Shutting down gracefully...\n');
       server.close(() => {
-        console.log('✅ HTTP server closed');
+        process.stderr.write('HTTP server closed\n');
       });
       if (Bootstrap.config?.onShutdown) {
         await Bootstrap.config.onShutdown();

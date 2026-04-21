@@ -5,7 +5,9 @@ prev: false
 title: "FixedWindowInMemoryStore"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:4](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L4)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L4)
+
+메모리 기반 레이트 리밋 저장소 구현체들입니다.
 
 ## Extends
 
@@ -31,7 +33,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:4](https
 
 > **check**(`key`, `policy`): `Promise`\<\{ `limit`: `number`; `remaining`: `number`; `resetAtMs`: `number`; `success`: `boolean`; \}\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:8](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L8)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L8)
 
 #### Parameters
 
@@ -57,7 +59,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:8](https
 
 > **checkFixedWindow**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:47](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/RateLimitStore.ts#L47)
+Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:47](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L47)
 
 #### Parameters
 
@@ -83,7 +85,7 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:47](https://gith
 
 > **expire**(): `Promise`\<`void`\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:68](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L68)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:68](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L68)
 
 #### Returns
 
@@ -99,7 +101,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:68](http
 
 > **getCount**(`key`): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:60](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L60)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:60](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L60)
 
 #### Parameters
 
@@ -121,7 +123,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:60](http
 
 > **getStats**(): `Promise`\<\{ `allowed`: `number`; `denied`: `number`; `total`: `number`; \}\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:87](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L87)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:87](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L87)
 
 #### Returns
 
@@ -137,7 +139,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:87](http
 
 > **increment**(`key`, `amount?`): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:51](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L51)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:51](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L51)
 
 #### Parameters
 
@@ -163,7 +165,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:51](http
 
 > **pruneExpired**(): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:72](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L72)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:72](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L72)
 
 #### Returns
 
@@ -179,7 +181,7 @@ Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:72](http
 
 > **reset**(`key`): `Promise`\<`void`\>
 
-Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:64](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L64)
+Defined in: [packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts:64](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts#L64)
 
 #### Parameters
 

@@ -7,7 +7,9 @@ title: "ProblemSerializer"
 
 > `const` **ProblemSerializer**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemSerializer.ts:15](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/problems-core/src/libs/ProblemSerializer.ts#L15)
+Defined in: [packages/problems-core/src/libs/ProblemSerializer.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/ProblemSerializer.ts#L19)
+
+Problem Details를 문자열과 JSON 객체 사이에서 직렬화하고 역직렬화하는 유틸리티입니다.
 
 ## Type Declaration
 

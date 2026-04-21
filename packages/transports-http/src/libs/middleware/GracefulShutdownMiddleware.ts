@@ -150,7 +150,10 @@ async function drainEventBus(logger: ILogger, timeoutMs: number): Promise<void> 
         }
       }, 100);
     });
-  } catch {}
+  } catch (error) {
+    // Intentionally ignored: drain failure should not block shutdown
+    logger?.warn?.('Event bus drain failed', { error });
+  }
 }
 
 async function performShutdown(

@@ -5,7 +5,7 @@ prev: false
 title: "LogRecord"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:29](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L29)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:29](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L29)
 
 Represents a log record in the OpenTelemetry Log Data Model.
 Structured logging interface for consistent log output.
@@ -26,7 +26,7 @@ logger.emit({
 
 > `optional` **attributes**: `Attributes`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:41](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L41)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:41](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L41)
 
 Additional attributes associated with the log
 
@@ -36,7 +36,7 @@ Additional attributes associated with the log
 
 > **body**: `string` \| `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:39](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L39)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:39](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L39)
 
 The log message body
 
@@ -46,7 +46,7 @@ The log message body
 
 > `optional` **observedTimestamp**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:33](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L33)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:33](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L33)
 
 The observed timestamp (when the event was observed)
 
@@ -56,7 +56,7 @@ The observed timestamp (when the event was observed)
 
 > `optional` **severity**: [`LogSeverity`](/api/telemetry-sdk-node/src/enumerations/logseverity/)
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:35](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L35)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:35](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L35)
 
 Severity level of the log
 
@@ -66,7 +66,7 @@ Severity level of the log
 
 > `optional` **severityText**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:37](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L37)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:37](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L37)
 
 Severity text (e.g., 'INFO', 'ERROR')
 
@@ -76,7 +76,7 @@ Severity text (e.g., 'INFO', 'ERROR')
 
 > `optional` **timestamp**: `number`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:31](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L31)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:31](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L31)
 
 The timestamp when the log was emitted
 
@@ -86,7 +86,7 @@ The timestamp when the log was emitted
 
 > `optional` **traceContext**: `object`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:43](https://github.com/croco-dev/framework/blob/8835d7e83812726201ce484d8ae1219da2389062/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L43)
+Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:43](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L43)
 
 Trace context for correlation with traces
 
