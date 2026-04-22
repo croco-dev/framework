@@ -206,6 +206,27 @@ packages/[name]/
   tsconfig.json
 ```
 
+## Documentation Architecture
+
+| Document | Purpose | Update Trigger |
+|----------|---------|---------------|
+| `README.md` | Entry point, architecture overview, package catalog | Per release/milestone |
+| `CONTRIBUTING.md` | Development workflow, code style, testing guide | Per policy change |
+| `packages/*/README.md` | Package-specific API docs, usage examples | Per package release |
+| `AGENTS.md` | AI coding agent conventions | Per convention change |
+
+### Release Documentation Checklist
+
+Before each release, verify documentation consistency:
+
+- [ ] README.md package catalog tables match `ls packages/` output
+- [ ] Roadmap sections updated (no stale Q*/YYYY dates)
+- [ ] New packages have READMEs with: overview, API surface, dependencies
+- [ ] Deprecated/removed packages removed from catalog
+- [ ] Development workflow commands still accurate
+
+Create a "Release Checklist" issue from the template to track this process.
+
 ## Questions
 
 Open an issue or check existing ones labeled `good first issue`.

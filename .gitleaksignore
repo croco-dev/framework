@@ -1,0 +1,13 @@
+# Gitleaks Ignore File
+#
+# Add fingerprints for confirmed false positives only.
+# Format: one fingerprint per line (from gitleaks SARIF report).
+#
+# False positive process:
+# 1. Review SARIF finding from ci-reports/security/gitleaks.sarif
+# 2. Confirm the finding is not a real secret (test data, example code, etc.)
+# 3. Add the exact fingerprint below (scope minimization)
+# 4. Document reason in the PR description
+#
+# Legacy secrets found in history should be handled as separate remediation tickets.
+# DO NOT add real secrets to this file — rotate them immediately.
