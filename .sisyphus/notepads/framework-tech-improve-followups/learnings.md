@@ -1,0 +1,2 @@
+- Task 3: core coverage warning 스크립트의 baseline/report 산출물은 `.sisyphus`가 아니라 `ci-reports/coverage/*` 같은 repo-managed 경로로 유지한다.
+- Final verification wave: plan-compliance 검증 시 P1-P5 권고와 Task 2-6 evidence를 1:1로 대조하면 scope drift 없이 후속 태스크 반영 여부를 빠르게 판정할 수 있다.

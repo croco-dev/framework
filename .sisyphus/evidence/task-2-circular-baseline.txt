@@ -1,0 +1,21 @@
+
+> croco@ architecture:check:circular /Users/owen/Projects/croco/framework
+> npx --yes madge --circular --extensions ts packages
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "catalog". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "node-linker". This will stop working in the next major version of npm.
+npm warn Unknown project config "node-linker". This will stop working in the next major version of npm.
+- Finding files
+Processed 1206 files (2.8s) (30 warnings)
+
+✖ Found 5 circular dependencies!
+
+1) problems-core/src/libs/Problem.ts > problems-core/src/libs/ProblemExtensions.ts > problems-core/src/libs/problems/InvalidExtensionsProblem.ts
+2) events-core/src/libs/EventBus.ts > events-core/src/libs/EventHandler.ts
+3) events-core/src/libs/EventBus.ts > events-core/src/libs/interfaces/EventSubscribing.ts
+4) auth-core/src/libs/interfaces/AbstractRoleRegistry.ts > auth-core/src/libs/rbac/Role.ts
+5) migration-runner/src/libs/types.ts > migration-runner/src/libs/MigrationStore.ts
+
+ ELIFECYCLE  Command failed with exit code 1.

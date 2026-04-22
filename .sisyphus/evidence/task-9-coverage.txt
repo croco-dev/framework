@@ -1,0 +1,219 @@
+
+> croco@ test:coverage:core /Users/owen/Projects/croco/framework
+> CORE_COVERAGE=true SKIP_ENV_VALIDATION=true pnpm --filter @croco/framework-context --filter @croco/retry-core --filter @croco/events-core --filter @croco/auth-core --filter @croco/telemetry-api exec vitest run --coverage --config ../../vitest.config.ts
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/owen/Projects/croco/framework/packages/telemetry-api[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/owen/Projects/croco/framework/packages/framework-context[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m src/tests/Trace.spec.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m src/tests/MiddlewareChain.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+[2m   Start at [22m 14:25:19
+[2m   Duration [22m 261ms[2m (transform 65ms, setup 0ms, import 107ms, tests 12ms, environment 0ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-----------------|---------|----------|---------|---------|-------------------
+File             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-----------------|---------|----------|---------|---------|-------------------
+All files        |    97.1 |    86.95 |     100 |    97.1 |                   
+ libs            |     100 |    90.47 |     100 |     100 |                   
+  span.ts        |     100 |    88.88 |     100 |     100 | 64,75             
+  tracer.ts      |     100 |      100 |     100 |     100 |                   
+ libs/decorators |   94.73 |       84 |     100 |   94.73 |                   
+  Trace.ts       |   94.73 |       84 |     100 |   94.73 | 56,94             
+-----------------|---------|----------|---------|---------|-------------------
+ [32m✓[39m src/libs/Container.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/tests/ILogger.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+[90mstderr[2m | src/tests/ShutdownManager.spec.ts[2m > [22m[2mShutdownManager[2m > [22m[2mshutdown[2m > [22m[2mshould abort active hooks when timeout is exceeded
+[22m[39m[ShutdownManager] Shutdown timeout exceeded.
+
+ [32m✓[39m src/tests/CircularDependency.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/tests/RequestScoped.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/libs/Middleware.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/tests/ShutdownManager.spec.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/tests/FrameworkContext.spec.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/tests/ApplicationLifecycle.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m92 passed[39m[22m[90m (92)[39m
+[2m   Start at [22m 14:25:19
+[2m   Duration [22m 423ms[2m (transform 996ms, setup 0ms, import 1.36s, tests 105ms, environment 1ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   87.09 |    68.83 |   96.73 |   87.42 |                   
+ src               |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ src/libs          |   86.97 |     68.3 |    97.5 |   87.33 |                   
+  Container.ts     |   81.41 |    62.35 |     100 |   81.16 | ...90,294-295,330 
+  Context.ts       |   86.66 |    68.75 |     100 |   86.66 | 39-45             
+  ILogger.ts       |     100 |      100 |     100 |     100 |                   
+  ...ataStorage.ts |    87.5 |    57.14 |   85.71 |    90.9 | 71-75             
+  Middleware.ts    |       0 |        0 |       0 |       0 |                   
+  ...ewareChain.ts |   95.83 |    91.66 |     100 |   95.65 | 50                
+  ...ownManager.ts |     100 |    93.33 |     100 |     100 | 87                
+  ...ionContext.ts |     100 |      100 |     100 |     100 |                   
+ ...ibs/decorators |      84 |       75 |   88.88 |      84 |                   
+  Component.ts     |     100 |      100 |     100 |     100 |                   
+  OnShutdown.ts    |      80 |       70 |   83.33 |      80 | 15,20-21,32       
+ src/libs/problems |     100 |      100 |     100 |     100 |                   
+  ...ncyProblem.ts |     100 |      100 |     100 |     100 |                   
+  ...reProblems.ts |     100 |      100 |     100 |     100 |                   
+  ...wnProblems.ts |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/owen/Projects/croco/framework/packages/retry-core[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/owen/Projects/croco/framework/packages/events-core[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m src/tests/BackoffPolicy.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/tests/EventSubscriptionIndex.spec.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/tests/ExponentialBackoff.spec.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/CircuitBreakerState.spec.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/tests/EventsProblems.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/tests/LambdaTimeoutGuard.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/tests/EventBus.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/tests/HandlerResolver.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/tests/RedisCircuitBreaker.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/RetryEngine.spec.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/EventRegistry.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/RetryTemplate.spec.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m src/tests/EventBusConfig.spec.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/EventSerializer.spec.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+[90mstdout[2m | src/tests/DomainEvents.spec.ts[2m > [22m[2mHandlerResolver[2m > [22m[2mDefaultHandlerResolver[2m > [22m[2mshould handle events correctly
+[22m[39mResolverTestHandler received: test-data
+
+ [32m✓[39m src/tests/DomainEvents.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/Retryable.spec.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/tests/EventPublisher.spec.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 134[2mms[22m[39m
+ [32m✓[39m src/tests/CircuitBreaker.spec.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 217[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m139 passed[39m[22m[90m (139)[39m
+[2m   Start at [22m 14:25:20
+[2m   Duration [22m 529ms[2m (transform 823ms, setup 0ms, import 1.25s, tests 204ms, environment 1ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   94.21 |    82.82 |     100 |   94.11 |                   
+ src               |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ src/libs          |   93.79 |    82.02 |     100 |    93.7 |                   
+  AggregateRoot.ts |     100 |      100 |     100 |     100 |                   
+  DomainEvent.ts   |   83.33 |       50 |     100 |   83.33 | 26                
+  EventBus.ts      |   90.09 |     77.5 |     100 |   89.89 | ...71-172,193-200 
+  ...tBusConfig.ts |   91.89 |    78.57 |     100 |   91.89 | 34,52,57          
+  EventHandler.ts  |     100 |    66.66 |     100 |     100 | 37                
+  ...tPublisher.ts |   96.77 |     87.5 |     100 |   96.66 | 83                
+  EventRegistry.ts |   95.83 |       80 |     100 |   95.65 | 86                
+  ...Serializer.ts |     100 |      100 |     100 |     100 |                   
+  ...erResolver.ts |     100 |      100 |     100 |     100 |                   
+ ...ibs/decorators |    90.9 |       90 |     100 |      90 |                   
+  EventField.ts    |    90.9 |       90 |     100 |      90 | 16                
+ ...ibs/interfaces |     100 |      100 |     100 |     100 |                   
+  ...etterQueue.ts |     100 |      100 |     100 |     100 |                   
+ src/libs/problems |     100 |      100 |     100 |     100 |                   
+  ...tsProblems.ts |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m116 passed[39m[22m[90m (116)[39m
+[2m   Start at [22m 14:25:20
+[2m   Duration [22m 569ms[2m (transform 1.01s, setup 0ms, import 1.29s, tests 307ms, environment 1ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   78.47 |    75.12 |   71.42 |   79.08 |                   
+ libs              |   88.48 |     81.5 |   86.42 |    89.5 |                   
+  BackoffPolicy.ts |   80.76 |    86.36 |   53.33 |   95.45 | 133               
+  ...uitBreaker.ts |   90.32 |    78.33 |     100 |   90.32 | ...68,193,210,231 
+  ...eakerState.ts |   98.07 |     92.3 |   95.83 |   98.05 | 179,366           
+  ...meoutGuard.ts |   90.47 |    73.68 |      80 |   90.47 | 52,134            
+  Recover.ts       |    57.5 |    63.63 |   77.77 |   55.88 | 89-118            
+  RetryContext.ts  |   79.16 |      100 |   91.66 |   79.16 | 62-66             
+  RetryEngine.ts   |     100 |    95.83 |     100 |     100 | 43                
+  RetryListener.ts |   72.72 |     90.9 |      50 |   71.42 | 75-91             
+  ...chestrator.ts |   97.14 |    86.84 |     100 |   97.14 | 47                
+  RetryPolicy.ts   |   76.47 |    76.19 |      75 |      80 | 75-76,82          
+  RetryTemplate.ts |    87.5 |       75 |     100 |    87.5 | 54                
+  Retryable.ts     |   92.42 |    76.36 |     100 |    92.3 | ...52,162,214,232 
+ libs/errors       |   73.52 |    66.66 |   63.63 |   73.52 |                   
+  ...penProblem.ts |     100 |      100 |     100 |     100 |                   
+  ...lerProblem.ts |     100 |      100 |     100 |     100 |                   
+  ...tedProblem.ts |     100 |      100 |     100 |     100 |                   
+  ...tedProblem.ts |   91.66 |    66.66 |   66.66 |   91.66 | 31                
+  ...ureProblem.ts |   27.27 |      100 |      25 |   27.27 | 7-25,46-49        
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ libs/problems     |       0 |      100 |       0 |       0 |                   
+  ...erProblems.ts |       0 |      100 |       0 |       0 | 7-11              
+ libs/stores       |   48.76 |    44.61 |   41.53 |   49.06 |                   
+  ...eakerStore.ts |   48.76 |    44.61 |   41.53 |   49.06 | ...36,343,376-398 
+-------------------|---------|----------|---------|---------|-------------------
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/owen/Projects/croco/framework/packages/auth-core[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m src/tests/ApiKeyGenerator.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/tests/ApiKeyHasher.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/tests/Role.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/RbacEngine.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/tests/AuthProblems.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/tests/Permission.spec.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/tests/AuthGuard.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m src/tests/PermissionGuard.spec.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/tests/ApiKeyGuard.spec.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m src/tests/UnifiedAuthGuard.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m src/tests/ApiKeySecurity.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/tests/ApiKeyManager.spec.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+[2m      Tests [22m [1m[32m135 passed[39m[22m[90m (135)[39m
+[2m   Start at [22m 14:25:21
+[2m   Duration [22m 610ms[2m (transform 1.71s, setup 0ms, import 2.27s, tests 155ms, environment 1ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    94.3 |    87.71 |      95 |   94.42 |                   
+ libs              |     100 |      100 |     100 |     100 |                   
+  constants.ts     |     100 |      100 |     100 |     100 |                   
+ libs/apikey       |   98.63 |    92.59 |     100 |     100 |                   
+  ...yGenerator.ts |     100 |      100 |     100 |     100 |                   
+  ApiKeyHasher.ts  |     100 |      100 |     100 |     100 |                   
+  ApiKeyManager.ts |   98.07 |    90.47 |     100 |     100 | 34,82,119         
+ ...pikey/problems |     100 |      100 |     100 |     100 |                   
+  ...undProblem.ts |     100 |      100 |     100 |     100 |                   
+ libs/events       |     100 |      100 |     100 |     100 |                   
+  ApiKeyEvents.ts  |     100 |      100 |     100 |     100 |                   
+ libs/guards       |   95.91 |    83.56 |     100 |   95.91 |                   
+  ApiKeyGuard.ts   |     100 |      100 |     100 |     100 |                   
+  AuthGuard.ts     |   94.44 |       75 |     100 |   94.44 | 31                
+  ...ssionGuard.ts |      96 |    90.47 |     100 |      96 | 25                
+  ...dAuthGuard.ts |   96.42 |       80 |     100 |   96.42 | 36                
+  headerUtils.ts   |   93.33 |    83.33 |     100 |   93.33 | 12                
+ libs/interfaces   |       0 |        0 |       0 |       0 |                   
+  ...leRegistry.ts |       0 |        0 |       0 |       0 |                   
+ libs/problems     |   57.14 |       40 |   57.14 |   57.14 |                   
+  AuthProblems.ts  |   57.14 |       40 |   57.14 |   57.14 | 20-31,52-55       
+ libs/rbac         |   97.14 |    94.87 |     100 |   97.01 |                   
+  Permission.ts    |   95.45 |    92.85 |     100 |   95.12 | 26,66             
+  RbacEngine.ts    |     100 |      100 |     100 |     100 |                   
+  Role.ts          |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------

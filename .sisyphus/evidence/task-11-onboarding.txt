@@ -1,0 +1,34 @@
+Task 11: One-command setup / env contract / onboarding flow
+Date: 2026-04-22
+Branch: framework-tech-health-enforcement
+
+## Changes Made
+
+### 1. package.json - setup script added
+Added "setup" script that chains: pnpm install && pnpm build && pnpm typecheck && pnpm test
+Location: scripts.setup in /package.json
+
+### 2. .env.example created
+New file at /.env.example
+Contains commented-out env var keys grouped by integration:
+- Telemetry (OTEL_*)
+- Database (DATABASE_URL)
+- Redis/Upstash (UPSTASH_*)
+- Billing/Polar (POLAR_*)
+- Auth/Clerk (CLERK_*)
+- AWS (AWS_*)
+- NODE_ENV
+
+### 3. CONTRIBUTING.md updated
+- Quick Start section: replaced 5-step manual flow with `pnpm setup` single command
+- Added "Environment Variables" subsection pointing to .env.example
+- Added "Validate Before Pushing" section before Git Workflow with full validation commands
+
+## Onboarding Flow (new contributor path)
+1. git clone + cd framework
+2. pnpm setup  (single command: install + build + typecheck + test)
+3. cp .env.example .env  (only if integrations needed)
+4. git checkout -b feat-<description>
+5. make changes
+6. pnpm check --write  (auto-fix formatting)
+7. git push  (pre-push hook runs test + typecheck)

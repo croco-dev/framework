@@ -1,0 +1,20 @@
+명령: pnpm check
+결과: 실패 (경고/정보 존재)
+
+요약:
+- Biome가 전체 워크스페이스에서 warning 25건, info 7건을 보고함
+- 변경 파일 기준 검토 전에 워크스페이스 전체가 clean 상태가 아님
+- 대표 진단 예시:
+  - packages/framework-context/src/libs/Container.ts: explicit any 경고 3건
+  - packages/framework-context/src/libs/problems/ContextProblems.ts: noUselessConstructor info 2건
+  - packages/framework-logger/src/tests/LoggerChild.spec.ts: unused suppression info 2건
+
+원본 출력 발췌:
+> croco@ check /Users/owen/Projects/croco/framework
+> biome check .
+
+Found 25 warnings.
+Found 7 infos.
+
+판정:
+- Expected outcome "Biome lint + format 통과 확인" 미충족

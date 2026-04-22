@@ -1,0 +1,9 @@
+- 기존 `.sisyphus/plans/framework-tech-health-enforcement.md`와 `.sisyphus/plans/framework-tech-health-remediation.md`는 20260421 계열 진단을 기반으로 한 이전 플랜이며, 이번 플랜은 **20260422 리포트 기준의 후속 운영 승격 플랜**으로 취급한다.
+  - 기존 `.sisyphus/plans/framework-tech-health-enforcement.md`, `.sisyphus/plans/framework-tech-health-remediation.md`와 이번 플랜의 차이를 요약한 delta note를 남긴다.
+  - `.sisyphus/plans/framework-tech-health-enforcement.md` - 이전 enforcement 플랜과의 차이를 확인해야 한다.
+  - `.sisyphus/plans/framework-tech-health-remediation.md` - 이전 remediation 플랜과의 차이를 확인해야 한다.
+  - `.sisyphus/plans/framework-tech-health-enforcement.md` - 과거 enforcement 플랜과 겹치지 않는지 확인해야 한다.
+  - `.sisyphus/plans/framework-tech-health-enforcement.md` - 이전 계획 대비 어떤 owner/milestone이 비어 있었는지 비교할 수 있다.
+  - `.sisyphus/plans/framework-tech-health-enforcement.md`
+  - `.sisyphus/plans/framework-tech-health-remediation.md`
+      2. `grep -E 'framework-tech-health-enforcement|framework-tech-health-remediation' .sisyphus/plans/framework-tech-health-operations-upgrade-20260422.md > .sisyphus/evidence/f1-overlap-inputs.txt || true` 실행

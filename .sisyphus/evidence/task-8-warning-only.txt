@@ -1,0 +1,37 @@
+Task 8 Coverage Warning-Only Evidence
+
+실행 시각: 2026-04-22 13:07 KST
+작업 브랜치: framework-tech-health-enforcement
+
+## 실행 명령
+`pnpm test:coverage:core:warning`
+
+## 결과 요약
+- warning-only 스크립트는 내부에서 기존 강제 경로 `pnpm test:coverage:core`를 그대로 재사용한다.
+- 실행 시간: 약 1995ms
+- coverage 명령 종료 코드: 0
+- warning-only 단계 종료 코드: 0
+- 생성 리포트: `coverage/core-warning/report.md`
+
+## 핵심 패키지 범위
+- `@croco/framework-context`
+- `@croco/retry-core`
+- `@croco/events-core`
+- `@croco/auth-core`
+- `@croco/telemetry-api`
+
+## 경고 결과
+- threshold warning: 없음
+- baseline regression: 없음
+- 콘솔 출력: `Core coverage warning-only report written to /Users/owen/Projects/croco/framework/coverage/core-warning/report.md`
+- 콘솔 출력: `Total core coverage warnings: 0`
+
+## pipeline 지속성 근거
+- `.github/workflows/ci.yml`에 `Core package coverage warning report` step를 추가했고 `continue-on-error: true`를 설정했다.
+- 이어서 별도 `Upload core coverage warning report` artifact 업로드 step와 기존 `Core package coverage gate` step가 그대로 유지된다.
+- 따라서 warning report 단계가 실패하더라도 validate job의 후속 단계는 계속 진행된다.
+
+## enforce 전환 메모
+- threshold는 현재와 동일한 `60/60/60/60`을 유지한다.
+- baseline 대비 하락은 리포트에 warning으로만 남긴다.
+- hard fail 전환은 안정적 baseline 유지가 확인된 뒤 별도 태스크에서 검토한다.

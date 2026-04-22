@@ -1,0 +1,15 @@
+Task 10 Scope Guard
+
+## 상태 전환 기준 문서화 확인
+- 문서 파일: `benchmarks/benchmark-gate-transition.md`
+- workflow summary: `.github/workflows/benchmark.yml`의 `Summarize benchmark gate mode` step
+
+## 명시된 3단계
+1. 현재 enforce: artifact/comment 후 hard fail
+2. warning-only: artifact/comment 유지, hard fail 제거
+3. enforce 전환: threshold coverage + baseline 안정화 후 hard fail 복귀
+
+## 전환 guardrail
+- 누락 threshold가 채워지기 전에는 `BENCHMARK_GATE_MODE`를 `enforce`로 바꾸지 않는다.
+- warning-only artifact/comment로 변동성을 확인하기 전에는 hard fail을 복구하지 않는다.
+- 측정 근거 없이 즉시 enforce 전환하지 않는다.

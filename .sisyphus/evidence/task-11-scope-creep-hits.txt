@@ -1,0 +1,26 @@
+- coverage 확대가 전 저장소 일괄 강제로 번질 위험 → core-adjacent 패키지에 대한 **위험 기반 점진 확대**만 포함한다.
+- benchmark 작업이 성능 최적화로 번질 위험 → regression gate 정의와 운영 연결까지만 포함한다.
+  2. Task 4~5는 **전 저장소 일괄 coverage enforce 또는 전 benchmark 즉시 enforce를 금지**한다.
+  3. Task 6~9는 **README 전면 재작성, docs 플랫폼 교체, 추가 보안 도구 도입, 실제 성능 최적화 구현**으로 확장하지 않는다.
+- coverage stream은 전 저장소 일괄 적용이 아니라 **core-adjacent 패키지의 단계적 확대**일 것
+- benchmark stream은 실제 성능 최적화가 아니라 regression gate 정의와 운영 승격일 것
+- CodeQL/Semgrep/Dependabot 등 보안 도구 확장 도입으로 번지지 말 것
+- benchmark stream을 실제 성능 최적화 프로젝트로 확장하지 말 것
+      1. `grep -E 'CodeQL|Semgrep|Dependabot' .sisyphus/evidence/task-3-gitleaks-policy.md > .sisyphus/evidence/task-3-extra-tools.txt || true` 실행
+  - 전 저장소 일괄 coverage threshold 강제를 설계하지 않는다.
+  - [ ] Oracle Gate 조건대로 전 저장소 일괄 coverage enforce가 포함되지 않는다.
+  Scenario: 전 저장소 일괄 강제 방지
+  - 실제 성능 최적화 과제를 이 stream에 포함하지 않는다.
+  - [ ] Oracle Gate 조건대로 전 benchmark 즉시 enforce 또는 성능 최적화 구현 과제가 포함되지 않는다.
+  Scenario: 성능 최적화 과제 확장 방지
+      1. `grep -E 'runtime optimization|caching|query tuning|성능 최적화|캐시 추가|쿼리 튜닝' .sisyphus/evidence/task-5-regression-policy.md > .sisyphus/evidence/task-5-optimization-hits.txt || true` 실행
+    Failure Indicators: 성능 최적화 구현 과제가 포함됨
+  - README 전면 재작성이나 docs 시스템 개편으로 확장하지 않는다.
+  - [ ] Oracle Gate 조건대로 README 전면 재작성이나 docs 플랫폼 교체가 포함되지 않는다.
+  - 실제 테스트 추가/성능 최적화 구현 과제를 포함하지 않는다.
+  - [ ] Oracle Gate 조건대로 테스트 추가/성능 최적화 구현 과제가 포함되지 않는다.
+      1. `grep -E '새 테스트 추가|대량 테스트 추가|성능 최적화|쿼리 튜닝|캐시 추가|implementation task' .sisyphus/evidence/task-8-quality-gates-plan.md > .sisyphus/evidence/task-8-implementation-hits.txt || true` 실행
+  - [ ] Oracle Gate 조건대로 docs 플랫폼 교체나 package README 전면 재작성 계획이 포함되지 않는다.
+      2. `grep -E 'CodeQL|Semgrep|Dependabot|성능 최적화|README 전면|전 저장소 일괄' .sisyphus/plans/framework-tech-health-operations-upgrade-20260422.md > .sisyphus/evidence/task-11-scope-creep-hits.txt || true` 실행
+  - README 전면 개편, 성능 최적화, 대형 리팩터링, 보안 도구 확장 도입 같은 scope creep가 섞이지 않았는지 검토한다.
+      2. `grep -E 'README 전면|성능 최적화|대형 리팩터링|CodeQL|Semgrep|Dependabot' .sisyphus/plans/framework-tech-health-operations-upgrade-20260422.md > .sisyphus/evidence/f4-scope-creep-hits.txt || true` 실행

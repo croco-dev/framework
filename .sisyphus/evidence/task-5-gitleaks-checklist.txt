@@ -1,0 +1,45 @@
+=== Gitleaks PR Blocking 승격 조건 ===
+
+Date: 2026-04-22
+Source: .github/workflows/ci.yml, task-1-contract.txt
+
+## 현재 상태
+
+- PR: warning-only (continue-on-error=true, ::warning:: 어노테이션)
+- trunk push: blocking (continue-on-error=false, ::error:: 어노테이션, CI 중단)
+
+## 승격 체크리스트
+
+[ ] False positive allowlist 프로세스 정의
+    - .gitleaksignore 사용, fingerprint 기반 항목 관리
+    - PR에서 allowlist 추가 시 사유 기록 필수 (PR 설명 또는 커밋 메시지)
+    - 항목 범위는 정확한 fingerprint 또는 경로로 한정 (와일드카드 금지)
+
+[ ] 예외 처리 절차
+    - 테스트 데이터/fixture의 알려진 패턴은 allowlist에 등록
+    - 신규 allowlist 항목은 보안 담당자 리뷰 필수
+    - 등록 이유와 날짜를 .gitleaksignore 주석으로 기록
+
+[ ] Blocking 전환 조건
+    - false positive rate < 1% 지속 10개 PR
+    - allowlist 관리 프로세스 정착 (담당자 지정, 리뷰 절차 문서화)
+    - 팀 내 gitleaks 규칙 인지도 확인 (온보딩 문서 포함)
+
+[ ] 전환 절차
+    - ci.yml 라인 59의 조건 제거 또는 false로 고정
+    - 변경 전 팀 공지 및 false positive 대응 채널 준비
+
+## 현재 CI 설정 확인
+
+- ci.yml 라인 59: PR에서 continue-on-error=true
+- ci.yml 라인 74-78: PR ::warning:: / trunk ::error:: 구분
+- ci.yml 라인 100-104: False positive 관리 가이드 (SARIF 리뷰 → .gitleaksignore 등록)
+- ci.yml 라인 91: summary에 PR vs trunk 차단 수준 명시
+
+## 참고
+
+task-1-contract.txt 계약 3번:
+  "Gitleaks: trunk push에서 blocking, PR에서 warning-only
+   두 경로의 차단 수준이 비대칭 — 승격 조건 별도 문서화 필요"
+
+이 파일이 해당 문서화 요건을 충족함.

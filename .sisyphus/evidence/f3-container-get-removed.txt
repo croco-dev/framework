@@ -1,0 +1,12 @@
+Container.get() 기본 파라미터 제거 확인 결과: 문제 0건
+
+- 검사 대상:
+  - `packages/transports-http/src/libs/CrocoApp.ts`
+  - `packages/transports-http/src/libs/PipelineRunner.ts`
+  - `packages/transports-http/src/libs/RouteCompiler.ts`
+  - `packages/audit-core/src/libs/AuditInterceptor.ts`
+  - `packages/protocols-rest/src/libs/interceptors/LoggingInterceptor.ts`
+  - `packages/analytics-posthog/src/libs/PostHogAnalyticsManager.ts`
+- `= Container.get(` 검색 결과: 0건
+
+원본 로그: `.sisyphus/evidence/f3-container-get-removed.raw.txt`

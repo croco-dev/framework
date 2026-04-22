@@ -1,0 +1,56 @@
+# Task 12 Scope Guard
+
+Date: 2026-04-22
+Branch: framework-tech-health-enforcement
+
+## 작업 범위 확인
+
+Task 12의 목표는 Task 7~11 결과를 종합해 enforce 전환 조건을 문서화하는 것이며, 실제 CI gate mode를 즉시 `enforce`로 변경하는 작업은 범위 밖이다.
+
+## 수정 파일
+
+- `.sisyphus/evidence/task-12-enforcement-matrix.txt`
+- `.sisyphus/evidence/task-12-scope-guard.txt`
+
+## 읽은 근거 파일
+
+- `.sisyphus/evidence/task-7-warning-only.txt`
+- `.sisyphus/evidence/task-8-warning-only.txt`
+- `.sisyphus/evidence/task-9-warning-only.txt`
+- `.sisyphus/evidence/task-10-warning-only.txt`
+- `.sisyphus/evidence/task-11-onboarding.txt`
+- `.sisyphus/evidence/task-10-scope-guard.txt`
+- `.sisyphus/evidence/task-11-scope-guard.txt`
+- `.github/workflows/ci.yml`
+- `.github/workflows/benchmark.yml`
+- `package.json`
+- `vitest.config.ts`
+- `CONTRIBUTING.md`
+- `.sisyphus/tech-improve/framework-20260421.md`
+
+## 조기 강제 전환 방지 확인
+
+[x] Architecture: baseline 5건 순환 의존이 남아 있으므로 즉시 enforce 제안하지 않음
+[x] Coverage: 현재 hard gate 범위를 넘는 repo-wide 일괄 enforce 제안하지 않음
+[x] Security: baseline 104건 취약점 및 gitleaks false positive 관리 전에는 enforce로 바꾸지 않음
+[x] Performance: threshold 미정의 6건 skip가 남아 있으므로 `BENCHMARK_GATE_MODE` 변경하지 않음
+[x] DX: setup/onboarding smoke check를 새 hard gate로 추가하지 않음
+
+## 수정하지 않은 파일
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/benchmark.yml`
+- `package.json`
+- `vitest.config.ts`
+- `CONTRIBUTING.md`
+- 기존 evidence 파일 전체
+
+## MUST NOT DO 준수
+
+- warning-only 근거 없이 enforce로 직접 변경하지 않았다.
+- 기존 CI 단계 제거 또는 순서 변경을 하지 않았다.
+- evidence 종합 문서화 외의 코드/설정 리팩터링을 하지 않았다.
+
+## 결론
+
+이번 작업은 enforce 전환 조건과 rollback 조건을 문서화하는 데만 한정했고, 조기 강제 전환을 유발할 수 있는 workflow/스크립트 변경은 의도적으로 배제했다.

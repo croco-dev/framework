@@ -1,0 +1,24 @@
+Core Coverage Contract Sync
+
+config의 10개 패키지 목록
+- @croco/framework-context
+- @croco/retry-core
+- @croco/events-core
+- @croco/auth-core
+- @croco/telemetry-api
+- @croco/framework-logger
+- @croco/repository-core
+- @croco/framework-config
+- @croco/problems-core
+- @croco/ratelimit-core
+
+스크립트에서 수정된 문구들
+- baselinePath: `ci-reports/coverage/core-baseline.txt`
+- reportDirectory: `ci-reports/coverage/core-warning`
+- "1차 warning-only 범위는 `vitest.config.ts`의 `CORE_COVERAGE_PACKAGES`에 포함된 패키지로 고정한다."
+- "대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 유지한다."
+
+검증 결과
+- "5개 core" 잔존 문구 없음 확인
+- `.sisyphus/evidence/task-3-coverage-baseline.txt` 잔존 경로 없음 확인
+- `ci-reports/coverage/core-baseline` 새 경로 존재 확인

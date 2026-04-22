@@ -1,0 +1,122 @@
+
+> croco@ bench:check /Users/owen/Projects/croco/framework
+> node --experimental-strip-types scripts/bench-threshold-check.mts --output-json=benchmark-result.json
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/owen/Projects/croco/framework[39m
+
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mCrocoApp constructor[33m 740[2mms[22m[39m
+     [1mname            [22m  [1m        hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m Hono + DI lookup  [34m878,238.44[39m  [36m0.0008[39m  [36m1.5858[39m  [36m0.0011[39m  [36m0.0010[39m  [36m0.0028[39m  [36m0.0055[39m  [36m0.0205[39m  [2m±0.89%[22m  [2m 439120[22m
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mCrocoApp lambdaHandler (10 controllers)[33m 614[2mms[22m[39m
+     [1mname                     [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m boot() + handler creation  [34m66,401.01[39m  [36m0.0107[39m  [36m6.0564[39m  [36m0.0151[39m  [36m0.0135[39m  [36m0.0505[39m  [36m0.0657[39m  [36m0.1347[39m  [2m±2.48%[22m  [2m  33201[22m
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mLambda cold-start simulation[33m 607[2mms[22m[39m
+     [1mname                                                 [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m createApp → lambdaHandler → mock API Gateway v2 event  [34m27,370.63[39m  [36m0.0280[39m  [36m2.3765[39m  [36m0.0365[39m  [36m0.0329[39m  [36m0.1260[39m  [36m0.1850[39m  [36m0.3372[39m  [2m±1.48%[22m  [2m  13686[22m
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mLambda cold-start with headers[33m 606[2mms[22m[39m
+     [1mname                                [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m cold-start with authorization header  [34m27,044.82[39m  [36m0.0294[39m  [36m0.7155[39m  [36m0.0370[39m  [36m0.0330[39m  [36m0.1325[39m  [36m0.1723[39m  [36m0.3693[39m  [2m±1.06%[22m  [2m  13523[22m
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mLambda cold-start with binary body[33m 606[2mms[22m[39m
+     [1mname                               [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m cold-start with base64 encoded body  [34m26,138.45[39m  [36m0.0291[39m  [36m0.4024[39m  [36m0.0383[39m  [36m0.0342[39m  [36m0.1267[39m  [36m0.1509[39m  [36m0.2797[39m  [2m±0.93%[22m  [2m  13070[22m
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mLambda cold-start with query params[33m 607[2mms[22m[39m
+     [1mname                        [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m cold-start with query string  [34m32,894.51[39m  [36m0.0237[39m  [36m1.3689[39m  [36m0.0304[39m  [36m0.0308[39m  [36m0.0708[39m  [36m0.1056[39m  [36m0.2581[39m  [2m±0.87%[22m  [2m  16448[22m
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mLambda cold-start with authorizer context[33m 607[2mms[22m[39m
+     [1mname                                 [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m cold-start with JWT authorizer claims  [34m38,974.95[39m  [36m0.0202[39m  [36m0.3905[39m  [36m0.0257[39m  [36m0.0240[39m  [36m0.0777[39m  [36m0.0938[39m  [36m0.2386[39m  [2m±0.75%[22m  [2m  19488[22m
+
+ [32m✓[39m packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22mCrocoApp benchmarks[2m > [22mLambda cold-start realistic scenario[33m 606[2mms[22m[39m
+     [1mname                                          [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m realistic cold-start with auth, headers, query  [34m39,923.38[39m  [36m0.0210[39m  [36m0.3748[39m  [36m0.0250[39m  [36m0.0241[39m  [36m0.0637[39m  [36m0.0845[39m  [36m0.2438[39m  [2m±0.66%[22m  [2m  19962[22m
+
+ [32m✓[39m packages/events-core/src/tests/EventBus.bench.ts[2m > [22mEventBus benchmarks[2m > [22mEventBusConfig.start (10 handlers)[33m 652[2mms[22m[39m
+     [1mname                       [22m  [1m        hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m should register 10 handlers  [34m407,712.37[39m  [36m0.0020[39m  [36m0.9878[39m  [36m0.0025[39m  [36m0.0023[39m  [36m0.0050[39m  [36m0.0126[39m  [36m0.0493[39m  [2m±0.78%[22m  [2m 203857[22m
+
+ [32m✓[39m packages/events-core/src/tests/EventBus.bench.ts[2m > [22mEventBus benchmarks[2m > [22mEventPublisher.publish single event[33m 849[2mms[22m[39m
+     [1mname                       [22m  [1m          hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m should publish single event  [34m1,828,065.66[39m  [36m0.0004[39m  [36m3.0608[39m  [36m0.0005[39m  [36m0.0005[39m  [36m0.0015[39m  [36m0.0020[39m  [36m0.0098[39m  [2m±1.47%[22m  [2m 914033[22m
+
+ [32m✓[39m packages/events-core/src/tests/EventBus.bench.ts[2m > [22mEventBus benchmarks[2m > [22mDefaultHandlerResolver.resolve × 10[33m 1730[2mms[22m[39m
+     [1mname                      [22m  [1m           hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m should resolve 10 handlers  [34m10,490,779.69[39m  [36m0.0000[39m  [36m0.5493[39m  [36m0.0001[39m  [36m0.0001[39m  [36m0.0002[39m  [36m0.0002[39m  [36m0.0002[39m  [2m±0.31%[22m  [2m5245390[22m
+
+ [32m✓[39m packages/framework-context/src/tests/Container.bench.ts[2m > [22mContainer.register × 50 components[33m 637[2mms[22m[39m
+     [1mname                  [22m  [1m        hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m register 50 singletons  [34m273,729.23[39m  [36m0.0028[39m  [36m3.8318[39m  [36m0.0037[39m  [36m0.0035[39m  [36m0.0092[39m  [36m0.0139[39m  [36m0.0325[39m  [2m±1.60%[22m  [2m 136865[22m
+
+ [32m✓[39m packages/framework-context/src/tests/Container.bench.ts[2m > [22mContainer.validate (50 components)[33m 613[2mms[22m[39m
+     [1mname                              [22m  [1m       hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m Container.validate (50 components)  [34m81,186.89[39m  [36m0.0104[39m  [36m0.2259[39m  [36m0.0123[39m  [36m0.0120[39m  [36m0.0267[39m  [36m0.0399[39m  [36m0.0950[39m  [2m±0.39%[22m  [2m  40594[22m
+
+ [32m✓[39m packages/framework-context/src/tests/Container.bench.ts[2m > [22mContainer.get singleton (warm)[33m 1775[2mms[22m[39m
+     [1mname                          [22m  [1m           hz[22m  [1m   min[22m  [1m   max[22m  [1m  mean[22m  [1m   p75[22m  [1m   p99[22m  [1m  p995[22m  [1m  p999[22m  [1m   rme[22m  [1msamples[22m
+   [32m·[39m Container.get singleton (warm)  [34m11,302,007.21[39m  [36m0.0000[39m  [36m2.4654[39m  [36m0.0001[39m  [36m0.0001[39m  [36m0.0002[39m  [36m0.0002[39m  [36m0.0003[39m  [2m±0.98%[22m  [2m5651004[22m
+
+[1m[46m BENCH [49m[22m [36mSummary
+[39m
+  should register 10 handlers[2m - packages/events-core/src/tests/EventBus.bench.ts[2m > [22m[2mEventBus benchmarks[2m > [22m[2mEventBusConfig.start (10 handlers)[22m
+
+  should publish single event[2m - packages/events-core/src/tests/EventBus.bench.ts[2m > [22m[2mEventBus benchmarks[2m > [22m[2mEventPublisher.publish single event[22m
+
+  should resolve 10 handlers[2m - packages/events-core/src/tests/EventBus.bench.ts[2m > [22m[2mEventBus benchmarks[2m > [22m[2mDefaultHandlerResolver.resolve × 10[22m
+
+  Container.get singleton (cold)[2m - packages/framework-context/src/tests/Container.bench.ts[2m > [22m[2mContainer.get singleton (cold)[22m
+
+  register 50 singletons[2m - packages/framework-context/src/tests/Container.bench.ts[2m > [22m[2mContainer.register × 50 components[22m
+
+  Container.validate (50 components)[2m - packages/framework-context/src/tests/Container.bench.ts[2m > [22m[2mContainer.validate (50 components)[22m
+
+  Container.get singleton (warm)[2m - packages/framework-context/src/tests/Container.bench.ts[2m > [22m[2mContainer.get singleton (warm)[22m
+
+  TelemetryRuntime.init (lambda preset)[2m - packages/telemetry-sdk-node/src/tests/TelemetryRuntime.bench.ts[2m > [22m[2mTelemetryRuntime benchmarks[22m
+[32m    NaNx [39m[90mfaster than [39mlambdaPreset config creation
+
+  Hono + DI lookup[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mCrocoApp constructor[22m
+
+  boot() + handler creation[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mCrocoApp lambdaHandler (10 controllers)[22m
+
+  createApp → lambdaHandler → mock API Gateway v2 event[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mLambda cold-start simulation[22m
+
+  cold-start with authorization header[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mLambda cold-start with headers[22m
+
+  cold-start with base64 encoded body[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mLambda cold-start with binary body[22m
+
+  cold-start with query string[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mLambda cold-start with query params[22m
+
+  cold-start with JWT authorizer claims[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mLambda cold-start with authorizer context[22m
+
+  realistic cold-start with auth, headers, query[2m - packages/transports-http/src/tests/CrocoApp.bench.ts[2m > [22m[2mCrocoApp benchmarks[2m > [22m[2mLambda cold-start realistic scenario[22m
+
+
+╔══════════════════════════════════════════════════════════╗
+║ Cold-Start Benchmark Report                            ║
+╠══════════════════════════════════════════════════════════╣
+║ CrocoApp constructor           p75: 1.0μs      baseline: 2.5
+║ CrocoApp lambdaHandler (10 controllers) p75: 13.5μs     base
+║ Lambda cold-start simulation   p75: 32.9μs     ⚠️  ║
+║ Lambda cold-start with headers p75: 33.0μs     ⚠️  ║
+║ Lambda cold-start with binary body p75: 34.2μs     ⚠️  ║
+║ Lambda cold-start with query params p75: 30.8μs     ⚠️  ║
+║ Lambda cold-start with authorizer context p75: 24.0μs     ⚠️
+║ Lambda cold-start realistic scenario p75: 24.1μs     ⚠️  ║
+║ EventBusConfig.start (10 handlers) p75: 2.3μs      baseline:
+║ EventPublisher.publish single event p75: 0.5μs      baseline
+║ DefaultHandlerResolver.resolve × 10 p75: 0.1μs      baseline
+║ Container.register × 50 components p75: 3.5μs      baseline:
+║ Container.validate (50 components) p75: 12.0μs     baseline:
+║ Container.get singleton (warm) p75: 0.1μs      baseline: 0.3
+║ TelemetryRuntime benchmarks    p75: 0.9μs      baseline: 2.0
+╠══════════════════════════════════════════════════════════╣
+║ Result: ALL PASSED                                         ║
+╚══════════════════════════════════════════════════════════╝
+

@@ -1,0 +1,19 @@
+Task 9 Scope Guard
+
+실행 시각: 2026-04-22 13:15:15 
+작업 브랜치: framework-tech-health-enforcement
+
+## 신규 보안 도구 수
+- 신규 warning-only 보안 도구: 1종 (`gitleaks`)
+- 기존 유지 도구: `pnpm audit:prod`
+- 추가 secret scanning/SAST 도구: 없음
+
+## 변경 범위
+- 수정 파일: `.github/workflows/ci.yml`
+- 미수정 파일: `lefthook.yaml` (로컬 훅 확장하지 않음)
+- 기존 CI 단계 제거: 없음
+
+## 제한 준수 판단
+- secret scanning 또는 SAST 최소 1종 조건 충족: YES (`gitleaks`)
+- 보안 도구 2종 이상 동시 도입 금지 준수: YES
+- 실제 취약점 remediation 미수행: YES

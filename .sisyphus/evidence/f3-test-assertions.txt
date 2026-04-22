@@ -1,0 +1,20 @@
+새 테스트 assertion 확인 결과
+
+- `git diff trunk --name-only -- '*.spec.ts' | xargs grep -l "expect(" | wc -l` 결과: 15
+- 변경된 spec 파일 수: 16
+- 삭제된 파일 포함으로 인해 1개 파일(`packages/repository-core/src/tests/BatchLoad.spec.ts`)은 grep 대상에서 제외됨
+- 실제 신규 추가 spec 파일 3개 모두 `expect(` 포함:
+  - `packages/framework-context/src/tests/ILogger.spec.ts`
+  - `packages/framework-context/src/tests/MiddlewareChain.spec.ts`
+  - `packages/repository-core/src/tests/decorators/BatchLoad.spec.ts`
+- 신규 추가 spec assertion 커버리지: 3/3
+
+검토 메모
+
+- `ILogger.spec.ts`: `LOGGER_TOKEN.name`과 `Logger` 타입 호환성을 검증
+- `MiddlewareChain.spec.ts`: onion 실행 순서, `next()` 중복 호출 에러, 반환값/에러 전파를 검증
+- `decorators/BatchLoad.spec.ts`: 배치 호출 통합, fallback, 결과 재정렬, 에러 전파, 미등록 factory 문제 throw를 검증
+
+원본 로그:
+- `.sisyphus/evidence/f3-test-assertions.raw.txt`
+- `.sisyphus/evidence/f3-added-spec-files-summary.raw.txt`

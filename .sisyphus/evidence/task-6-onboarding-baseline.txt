@@ -1,0 +1,72 @@
+Task 6 Onboarding Baseline
+
+시작 시각: 2026-04-22
+작업 브랜치: framework-tech-health-enforcement
+
+## 저장소 상태 기준점
+- `git status --short` 결과: `?? benchmark-result.json`
+- baseline 측정 작업 자체로 기존 문서/스크립트는 수정하지 않았다.
+
+## setup/install/run 흐름 추출
+### `README.md`
+- `README.md:127-141`
+  - 설치 흐름은 `git clone` → `cd framework` → `pnpm install` → `pnpm build`만 제시된다.
+  - 테스트, 타입체크, lint/check는 시작하기 필수 단계로 연결되지 않는다.
+- `README.md:406-415`
+  - 주요 명령어 목록은 `pnpm install`, `pnpm build`, `pnpm lint`, `pnpm check`, `pnpm format`, `pnpm test`, `pnpm typecheck`를 나열한다.
+  - 개발 서버를 바로 띄우는 저장소 루트 one-command setup/run 가이드는 없다.
+
+### `AGENTS.md`
+- `AGENTS.md:7-25`
+  - 개발용 명령은 `pnpm build`, `pnpm test`, `pnpm check`, `pnpm typecheck` 중심이다.
+  - 설치/초기 bootstrap 절차나 신규 기여자 onboarding 순서는 없다.
+- `AGENTS.md:159-163`
+  - Git hook은 `pre-commit=biome check --write`, `pre-push=pnpm test && pnpm typecheck`, `post-merge=pnpm install`로 설명된다.
+
+### `CONTRIBUTING.md`
+- `CONTRIBUTING.md:5-14`
+  - 전제 조건은 Node.js 22+, pnpm 10+, Git이다.
+  - 버전 확인 예시만 있고 버전 관리 도구 자동 설치/검증 흐름은 없다.
+- `CONTRIBUTING.md:16-36`
+  - Quick Start는 `git clone` → `cd framework` → `pnpm install` → `pnpm build` → `pnpm test` → `pnpm typecheck`의 5단계다.
+  - 성공 기준은 “all four steps pass”라고 적혀 있으나 실제로는 install 이후 4개 명령을 추가 실행해야 하므로 one-command setup이 아니다.
+
+## 루트 scripts baseline (`package.json`)
+- `build`: `turbo build`
+- `dev`: `turbo dev`
+- `test`: `turbo test`
+- `typecheck`: `turbo typecheck`
+- `check`: `biome check .`
+- `format`: `biome format --write .`
+- `lint`: `turbo lint`
+- `prepare`: `lefthook install`
+- 설치/빌드/테스트/린트는 분리되어 있고, 신규 기여자용 `setup`, `bootstrap`, `verify`, `doctor` 같은 단일 진입 스크립트는 없다.
+
+## env contract baseline
+- 저장소 루트 `.env.example` 파일은 존재하지 않는다.
+- README / AGENTS / CONTRIBUTING 어디에도 필수 환경변수 목록, 예시 값, 로컬 개발용 env 준비 절차가 없다.
+- `package.json` script 중 env 계약을 설명하거나 `.env` 생성 흐름을 제공하는 스크립트가 없다.
+
+## 런타임/버전 계약 baseline
+- `.nvmrc` 존재: 값 `22`
+- `package.json` `engines.node`: `>=22`
+- `packageManager`: `pnpm@10.15.1`
+- CONTRIBUTING도 Node.js 22+, pnpm 10+를 명시하므로 버전 기대치는 문서화되어 있다.
+- 다만 버전 검증을 자동화하는 단일 setup 명령이나 `corepack enable` 안내는 없다.
+
+## one-command setup 후보 평가
+- 현재 저장소 루트에서 신규 기여자가 따라야 하는 최소 흐름은 사실상 `pnpm install && pnpm build && pnpm test && pnpm typecheck`다.
+- `prepare`는 `lefthook install`만 수행하므로 개발 환경 검증/빌드/테스트를 포괄하지 못한다.
+- baseline 기준 one-command setup 후보는 아래처럼 추상화 가능하지만, 현재는 구현되어 있지 않다.
+  - 후보 의미: 의존성 설치 + hook 설치 + 빌드 + 테스트 + 타입체크를 한 번에 실행하는 `pnpm setup` 또는 `pnpm verify:local`
+
+## 신규 기여자 기준 누락 요소
+- `.env.example` 부재로 env contract가 없다.
+- 로컬 `.env`를 언제/어떻게 준비해야 하는지 문서가 없다.
+- one-command setup 또는 환경 진단 명령이 없다.
+- build/test/typecheck를 모두 요구하지만 예상 소요 시간, 실패 시 우선순위, 부분 실행 전략 안내가 없다.
+- README 시작하기와 CONTRIBUTING Quick Start가 분리되어 있어 “처음 clone 후 무엇을 어디까지 해야 준비 완료인가”가 한 번에 보이지 않는다.
+
+## 결론
+- 현재 DX/onboarding baseline은 버전 기대치(Node 22 / pnpm 10)는 있으나, env contract와 one-command setup이 부재한 상태다.
+- 신규 기여자는 문서 여러 개를 넘나들며 `install → build → test → typecheck`를 수동 조합해야 한다.

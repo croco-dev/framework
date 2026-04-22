@@ -1,0 +1,34 @@
+Task 5 Scope Guard
+
+시작 시각: 2026-04-22
+작업 브랜치: framework-tech-health-enforcement
+
+## 수행 목적
+- Task 5의 목적은 benchmark baseline 측정과 현재 workflow semantics 문서화다.
+
+## 범위 안에서 수행한 일
+- `.github/workflows/benchmark.yml` 구조 확인
+- `benchmarks/thresholds.json` 정의 상태 확인
+- `package.json`의 `bench:check`, `bench:update` 스크립트 확인
+- `pnpm bench:check --output-json=benchmark-result.json` 실행 및 산출물 확인
+- `benchmarks/` 디렉토리와 `*.bench.ts` 파일 위치 확인
+
+## 범위 밖이라서 하지 않은 일
+- benchmark workflow 수정 없음
+- threshold 추가/수정 없음
+- baseline.json 갱신 없음 (`bench:update` 미실행)
+- benchmark 테스트 코드 수정 없음
+- 성능 최적화 없음
+- observability 플랫폼/추적 인프라 구축 없음
+
+## 최적화 범위 확장 방지 근거
+- 현재 목적은 baseline 측정이며, 실제 수치가 더 좋아 보여도 성능 개선 작업으로 확장하지 않았다.
+- threshold 미정의 6개 항목은 수정하지 않고 evidence로만 남겼다.
+- workflow semantics도 현재 상태를 설명만 했고, warning-only 전환 구현은 수행하지 않았다.
+
+## 대표 benchmark 실체 부재 여부 판정
+- `benchmarks/` 디렉토리 자체에는 실행용 benchmark 테스트 파일이 없다.
+- 그러나 package별 `*.bench.ts` 4개가 존재하므로, benchmark 실체가 없는 것은 아니고 **중앙 benchmark 디렉토리에는 없고 패키지 테스트 파일에 분산**된 상태다.
+
+## 판정
+PASS: Task 5는 baseline 측정 범위에만 머물렀고, 성능 개선/워크플로우 변경으로 확장되지 않았다.

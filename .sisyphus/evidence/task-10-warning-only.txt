@@ -1,0 +1,26 @@
+Task 10 Warning-only Evidence
+
+시작 시각: 2026-04-22
+작업 브랜치: framework-tech-health-enforcement
+
+## 변경 요약
+- `.github/workflows/benchmark.yml`에 `BENCHMARK_GATE_MODE: warning-only`를 추가했다.
+- benchmark step 이후 `ci-reports/benchmark/summary.md`를 생성하도록 추가했다.
+- `benchmark-result.json`과 `ci-reports/benchmark/summary.md`를 `benchmark-warning-report` artifact로 업로드하도록 추가했다.
+- 최종 fail step은 `env.BENCHMARK_GATE_MODE == 'enforce' && steps.bench.outcome == 'failure'`일 때만 실행되도록 변경했다.
+
+## warning-only 흐름 근거
+- benchmark 실행은 계속 `continue-on-error: true`를 유지한다.
+- comment 단계는 기존처럼 `github.event_name == 'pull_request'`에서 계속 실행된다.
+- artifact 업로드는 `if: always()`라서 benchmark 실패 여부와 무관하게 결과를 남긴다.
+- 기본 mode가 `warning-only`이므로 현재는 결과 기록만 남기고 hard fail은 발생하지 않는다.
+
+## evidence 경로 보장
+- workflow artifact: `benchmark-warning-report`
+- artifact 포함 파일:
+  - `benchmark-result.json`
+  - `ci-reports/benchmark/summary.md`
+
+## baseline 근거
+- 현재 저장소 루트의 `benchmark-result.json`은 `allPassed: true`이며, warning-only artifact에 포함될 동일 결과 파일 포맷을 확인했다.
+- `benchmark-result.json`에는 threshold 미정의 6개 benchmark가 `thresholdStatus: "skip"`으로 남아 있어 즉시 enforce 복귀 기준으로는 부적절하다.

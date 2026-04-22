@@ -1,0 +1,31 @@
+Task 3 Scope Guard
+
+시작 시각: 2026-04-22 12:44:39 KST
+작업 브랜치: framework-tech-health-enforcement
+
+## 수행 목적
+- Task 3의 목적은 coverage baseline 측정과 threshold 적용 범위 문서화다.
+
+## 범위 근거
+- `package.json`의 `test:coverage:core`는 아래 5개 패키지만 필터로 지정한다.
+  - `@croco/framework-context`
+  - `@croco/retry-core`
+  - `@croco/events-core`
+  - `@croco/auth-core`
+  - `@croco/telemetry-api`
+- `vitest.config.ts`는 `CORE_COVERAGE_PACKAGES` 목록과 `cwd` 조건을 함께 검사해 threshold 적용 여부를 결정한다.
+- 따라서 threshold는 전 저장소 일괄 강제가 아니라, `CORE_COVERAGE=true`이면서 위 5개 패키지 디렉터리에서 실행된 경우에만 적용된다.
+
+## 금지 사항 준수 확인
+- `vitest.config.ts` 수정 없음
+- 테스트 파일 추가/수정 없음
+- 소스 코드 리팩토링 없음
+- 전 저장소 패키지에 대한 threshold 강제 변경 없음
+
+## 이번 Task에서 생성/수정한 파일
+- `.sisyphus/evidence/task-3-coverage-baseline.txt`
+- `.sisyphus/evidence/task-3-scope-guard.txt`
+- `.sisyphus/notepads/framework-tech-health-enforcement/learnings.md` (append only)
+
+## 판정
+PASS: Task 3는 core coverage baseline 증적만 추가했고, threshold를 전 저장소에 강제하지 않았다.

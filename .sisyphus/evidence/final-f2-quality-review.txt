@@ -1,0 +1,42 @@
+Final Verification F2 — Code Quality Review
+Date: 2026-04-22
+
+실행 명령
+1. pnpm check
+2. grep -n "git checkout main\|origin/main\|base branch: main" CONTRIBUTING.md || echo "NO MATCH (good)"
+3. grep -n "5개 core" scripts/core-coverage-warning-check.mts || echo "NO MATCH (good)"
+4. grep -n "BENCHMARK_GATE_MODE\|continue-on-error" .github/workflows/benchmark.yml
+5. grep -n "gitleaks\|warning-only\|blocking" .github/workflows/ci.yml
+
+결과 요약
+- pnpm check: FAIL(기존 저장소 전반 warning 존재)
+  - 비고: 이번 검증 범위 외 기존 경고가 17건 보고됨. 새 evidence 작업으로 발생한 문제는 아님.
+  - 대표 항목:
+    - packages/events-inmemory/src/libs/InmemoryEventBus.ts: useless switch case
+    - packages/auth-better-auth/src/libs/BetterAuthWebhookProcessor.ts: unused private member/parameter
+    - packages/auth-core/src/libs/decorators/*: noExplicitAny
+    - packages/framework-logger/src/tests/LoggerChild.spec.ts: unused suppression
+    - packages/protocols-rest/src/libs/decorators/Lifecycle.ts: noExplicitAny
+
+grep 검증 결과
+- CONTRIBUTING.md main 잔존 패턴: PASS
+  - 출력: NO MATCH (good)
+
+- scripts/core-coverage-warning-check.mts 의 "5개 core" 잔존 패턴: PASS
+  - 출력: NO MATCH (good)
+
+- benchmark.yml benchmark gate 키워드 확인: PASS
+  - 10: BENCHMARK_GATE_MODE: warning-only
+  - 31: continue-on-error: true
+  - 42: Gate mode summary
+  - 59: warning-only → enforce 승격 조건 안내
+  - 82: enforce 모드에서만 fail step 실행
+
+- ci.yml gitleaks 라우팅 확인: PASS
+  - 75: PR 경로 warning-only 메시지
+  - 77: protected branch 경로 error 메시지
+  - 91: summary에 "blocking on trunk push, warning-only on PR" 명시
+
+판정
+- 품질 검토 관점에서 문서/스크립트 계약은 기대대로 반영됨: PASS
+- 단, `pnpm check`는 기존 저장소 경고로 인해 clean 상태가 아님: FAIL (기존 이슈)

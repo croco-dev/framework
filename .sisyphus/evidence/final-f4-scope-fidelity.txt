@@ -1,0 +1,44 @@
+Final Verification F4 — Scope Fidelity Check
+Date: 2026-04-22
+
+실행 명령
+- git diff --name-only HEAD~1
+- git diff --stat HEAD~1 -- README.md
+
+HEAD~1 대비 변경 파일 목록
+- CONTRIBUTING.md
+- README.md
+- benchmarks/benchmark-gate-transition.md
+- scripts/core-coverage-warning-check.mts
+
+태스크별 허용 범위 비교
+- Task 2 허용 범위: CONTRIBUTING.md
+  - 실제 변경: CONTRIBUTING.md
+  - 판정: PASS
+
+- Task 3 허용 범위: scripts/core-coverage-warning-check.mts
+  - 실제 변경: scripts/core-coverage-warning-check.mts
+  - 판정: PASS
+
+- Task 4 허용 범위: benchmarks/benchmark-gate-transition.md
+  - 실제 변경: benchmarks/benchmark-gate-transition.md
+  - 판정: PASS
+
+- Task 5 허용 범위: evidence 파일만 (ci.yml 수정 없음)
+  - 실제 변경 목록에 .github/workflows/ci.yml 없음
+  - 판정: PASS
+
+- Task 6 허용 범위: README.md
+  - 실제 변경: README.md
+  - 판정: PASS
+
+README 변경 규모 확인
+- `git diff --stat HEAD~1 -- README.md` 기준
+  - README.md | 28 insertions
+  - 삭제 없음
+  - topology 보강 범위로 제한된 소규모 문서 확장으로 판단
+
+최종 판정
+- HEAD~1 대비 변경 파일은 Task 2/3/4/6 허용 범위와 정확히 일치함: PASS
+- Task 5는 evidence-only 요구를 만족하며 ci.yml 직접 수정이 없음: PASS
+- scope creep 징후 없음: PASS

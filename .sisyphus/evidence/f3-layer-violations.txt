@@ -1,0 +1,6 @@
+레이어 위반 확인 결과: 위반 0건
+
+- `packages/protocols-rest/src/` 내 `from '@croco/framework-logger'`: 0건
+- `packages/repository-core/src/` 내 `from '@croco/dataloader-core'`: 0건
+
+원본 로그: `.sisyphus/evidence/f3-layer-violations.raw.txt`

@@ -1,0 +1,332 @@
+
+> croco@ check /Users/owen/Projects/croco/framework
+> biome check .
+
+packages/events-inmemory/src/libs/InmemoryEventBus.ts:139:9 lint/complexity/noUselessSwitchCase  FIXABLE  ━━━━━━━━━━
+
+  i Useless case clause.
+  
+    137 │           throw new BackpressureExceededProblem(currentRunning);
+    138 │         }
+  > 139 │         case 'block':
+        │         ^^^^^^^^^^^^^
+    140 │         default: {
+    141 │           await this.waitForSlot();
+  
+  i because the default clause is present:
+  
+    138 │         }
+    139 │         case 'block':
+  > 140 │         default: {
+        │         ^^^^^^^^^^
+  > 141 │           await this.waitForSlot();
+  > 142 │           return this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
+  > 143 │         }
+        │         ^
+    144 │       }
+    145 │     }
+  
+  i Unsafe fix: Remove the useless case.
+  
+    137 137 │             throw new BackpressureExceededProblem(currentRunning);
+    138 138 │           }
+    139     │ - ········case·'block':
+    140 139 │           default: {
+    141 140 │             await this.waitForSlot();
+  
+
+packages/auth-better-auth/src/libs/BetterAuthWebhookProcessor.ts:20:13 lint/correctness/noUnusedPrivateClassMembers  FIXABLE  ━━━━━━━━━━
+
+  ! This private class member is defined but never used.
+  
+    18 │     private options: BetterAuthWebhookOptions,
+    19 │     private handlers: BetterAuthWebhookHandler,
+  > 20 │     private sessionProvider: BetterAuthSessionProvider
+       │             ^^^^^^^^^^^^^^^
+    21 │   ) {}
+    22 │ 
+  
+  i Unsafe fix: Remove private modifier
+  
+    17 17 │     constructor(
+    18 18 │       private options: BetterAuthWebhookOptions,
+    19    │ - ····private·handlers:·BetterAuthWebhookHandler,
+    20    │ - ····private·sessionProvider:·BetterAuthSessionProvider
+       19 │ + ····private·handlers:·BetterAuthWebhookHandler,_sessionProvider:·BetterAuthSessionProvider
+    21 20 │     ) {}
+    22 21 │   
+  
+
+packages/auth-better-auth/src/libs/BetterAuthWebhookProcessor.ts:23:27 lint/correctness/noUnusedFunctionParameters  FIXABLE  ━━━━━━━━━━
+
+  ! This parameter is unused.
+  
+    21 │   ) {}
+    22 │ 
+  > 23 │   private verifySignature(body: string, signature: string): boolean {
+       │                           ^^^^
+    24 │     const expectedSignature = `sha256=${this.options.signingSecret}`;
+    25 │     return signature === expectedSignature;
+  
+  i Unused parameters might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: If this is intentional, prepend body with an underscore.
+  
+    21 21 │     ) {}
+    22 22 │   
+    23    │ - ··private·verifySignature(body:·string,·signature:·string):·boolean·{
+       23 │ + ··private·verifySignature(_body:·string,·signature:·string):·boolean·{
+    24 24 │       const expectedSignature = `sha256=${this.options.signingSecret}`;
+    25 25 │       return signature === expectedSignature;
+  
+
+packages/auth-clerk/src/libs/ClerkOrganizationService.ts:185:5 lint/correctness/noUnusedFunctionParameters  FIXABLE  ━━━━━━━━━━
+
+  ! This parameter is unused.
+  
+    183 │   async getOrganizationMembershipList(
+    184 │     organizationId: string,
+  > 185 │     options?: { limit?: number; offset?: number }
+        │     ^^^^^^^
+    186 │   ): Promise<{
+    187 │     memberships: ClerkOrganizationMembership[];
+  
+  i Unused parameters might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: If this is intentional, prepend options with an underscore.
+  
+    183 183 │     async getOrganizationMembershipList(
+    184 184 │       organizationId: string,
+    185     │ - ····options?:·{·limit?:·number;·offset?:·number·}
+        185 │ + ····_options?:·{·limit?:·number;·offset?:·number·}
+    186 186 │     ): Promise<{
+    187 187 │       memberships: ClerkOrganizationMembership[];
+  
+
+packages/auth-core/src/libs/decorators/CurrentApiKey.ts:9:48 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+     8 │     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   > 9 │     const existingParams: Map<string | symbol, any[]> =
+       │                                                ^^^
+    10 │       Reflect.getMetadata(ROUTE_PARAMS_METADATA_KEY, target.constructor) || new Map();
+    11 │ 
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/auth-core/src/libs/decorators/CurrentPrincipal.ts:9:48 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+     8 │     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   > 9 │     const existingParams: Map<string | symbol, any[]> =
+       │                                                ^^^
+    10 │       Reflect.getMetadata(ROUTE_PARAMS_METADATA_KEY, target.constructor) || new Map();
+    11 │ 
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/auth-core/src/libs/decorators/User.ts:9:48 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+     8 │     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   > 9 │     const existingParams: Map<string | symbol, any[]> =
+       │                                                ^^^
+    10 │       Reflect.getMetadata(ROUTE_PARAMS_METADATA_KEY, target.constructor) || new Map();
+    11 │ 
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/events-core/src/libs/EventRegistry.ts:6:12 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    5 │ type EventClass<T extends DomainEvent = DomainEvent> = (new (
+  > 6 │   ...args: any[]
+      │            ^^^
+    7 │ ) => T) & {
+    8 │   eventName: string;
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/framework-config/src/decorators/ConfigSchema.ts:9:34 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+     8 │ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   > 9 │ type Constructor = new (...args: any[]) => any;
+       │                                  ^^^
+    10 │ 
+    11 │ export function ConfigSchema(schema: z.ZodType): (target: Constructor) => void {
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/framework-config/src/decorators/ConfigSchema.ts:9:44 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+     8 │ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   > 9 │ type Constructor = new (...args: any[]) => any;
+       │                                            ^^^
+    10 │ 
+    11 │ export function ConfigSchema(schema: z.ZodType): (target: Constructor) => void {
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/framework-logger/src/tests/LoggerChild.spec.ts:59:7 suppressions/unused ━━━━━━━━━━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    57 │   describe('설정 상속', () => {
+    58 │     it('child Logger가 부모의 redact 설정을 상속받아야 함', () => {
+  > 59 │       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
+       │       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    60 │       const childLogger = logger.child({ module: 'Test' });
+    61 │       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
+  
+
+packages/framework-logger/src/tests/LoggerChild.spec.ts:69:7 suppressions/unused ━━━━━━━━━━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    68 │     it('child Logger가 부모와 동일한 ConfigService를 유지해야 함', () => {
+  > 69 │       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
+       │       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    70 │       const childLogger = logger.child({ module: 'Test' });
+    71 │       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
+  
+
+packages/protocols-rest/src/libs/decorators/Lifecycle.ts:14:19 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    12 │  */
+    13 │ export function UseGuards(...guards: GuardConstructor[]): ClassDecorator & MethodDecorator {
+  > 14 │   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+       │                   ^^^
+    15 │     if (propertyKey) {
+    16 │       Reflect.defineMetadata(REST_GUARDS_KEY, guards, target.constructor, propertyKey);
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/protocols-rest/src/libs/decorators/Lifecycle.ts:28:19 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    26 │  */
+    27 │ export function UsePipes(...pipes: PipeTransformConstructor[]): ClassDecorator & MethodDecorator {
+  > 28 │   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+       │                   ^^^
+    29 │     if (propertyKey) {
+    30 │       Reflect.defineMetadata(REST_PIPES_KEY, pipes, target.constructor, propertyKey);
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/protocols-rest/src/libs/decorators/Lifecycle.ts:42:19 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    40 │  */
+    41 │ export function UseInterceptors(...interceptors: InterceptorConstructor[]): ClassDecorator & MethodDecorator {
+  > 42 │   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+       │                   ^^^
+    43 │     if (propertyKey) {
+    44 │       Reflect.defineMetadata(REST_INTERCEPTORS_KEY, interceptors, target.constructor, propertyKey);
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/protocols-rest/src/libs/decorators/Lifecycle.ts:56:19 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    54 │  */
+    55 │ export function UseFilters(...filters: ExceptionFilterConstructor[]): ClassDecorator & MethodDecorator {
+  > 56 │   return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+       │                   ^^^
+    57 │     if (propertyKey) {
+    58 │       Reflect.defineMetadata(REST_FILTERS_KEY, filters, target.constructor, propertyKey);
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts:334:30 lint/correctness/noUnusedFunctionParameters  FIXABLE  ━━━━━━━━━━
+
+  ! This parameter is unused.
+  
+    332 │   }
+    333 │ 
+  > 334 │   private logFallbackWarning(error: unknown): void {
+        │                              ^^^^^
+    335 │     if (this.hasLoggedFallbackWarning) {
+    336 │       return;
+  
+  i Unused parameters might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: If this is intentional, prepend error with an underscore.
+  
+    332 332 │     }
+    333 333 │   
+    334     │ - ··private·logFallbackWarning(error:·unknown):·void·{
+        334 │ + ··private·logFallbackWarning(_error:·unknown):·void·{
+    335 335 │       if (this.hasLoggedFallbackWarning) {
+    336 336 │         return;
+  
+
+packages/transports-http/src/libs/ParamResolver.ts:150:5 lint/correctness/noUnusedFunctionParameters  FIXABLE  ━━━━━━━━━━
+
+  ! This parameter is unused.
+  
+    148 │   private resolvePipe(
+    149 │     pipe: PipeTransformConstructor | PipeTransform | z.ZodType,
+  > 150 │     metadata: ArgumentMetadata
+        │     ^^^^^^^^
+    151 │   ): PipeTransform {
+    152 │     if (this.isZodSchema(pipe)) {
+  
+  i Unused parameters might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: If this is intentional, prepend metadata with an underscore.
+  
+    148 148 │     private resolvePipe(
+    149 149 │       pipe: PipeTransformConstructor | PipeTransform | z.ZodType,
+    150     │ - ····metadata:·ArgumentMetadata
+        150 │ + ····_metadata:·ArgumentMetadata
+    151 151 │     ): PipeTransform {
+    152 152 │       if (this.isZodSchema(pipe)) {
+  
+
+vitest.config.ts format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+    10 10 │   
+    11 11 │   const isCoreCoverageRun = process.env.CORE_COVERAGE === 'true';
+    12    │ - const·coreCoveragePackagePaths·=·CORE_COVERAGE_PACKAGES.map((packageName)·=>·packageName.replace('@croco/',·'packages/'));
+       12 │ + const·coreCoveragePackagePaths·=·CORE_COVERAGE_PACKAGES.map((packageName)·=>
+       13 │ + ··packageName.replace('@croco/',·'packages/')
+       14 │ + );
+    13 15 │   const currentWorkingDirectory = process.cwd().replace(/\\/g, '/');
+    14 16 │   const shouldApplyCoreCoverageThresholds =
+  
+
+Checked 1335 files in 261ms. No fixes applied.
+Found 1 error.
+Found 17 warnings.
+Found 1 info.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+ ELIFECYCLE  Command failed with exit code 1.

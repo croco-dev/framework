@@ -1,0 +1,35 @@
+Task 4 Scope Guard
+
+시작 시각: 2026-04-22 12:47:28 KST
+작업 브랜치: framework-tech-health-enforcement
+
+## 수행 목적
+- Task 4의 목적은 현재 보안 baseline을 측정하고, secret scanning/SAST 부재 상태를 evidence로 남기는 것이다.
+
+## 확인 근거
+- `lefthook.yaml:1-19`
+  - pre-commit은 `biome check --write`만 실행한다.
+  - pre-push는 `test`, `typecheck`만 실행한다.
+  - secret scanning 또는 SAST 관련 훅이 없다.
+- `.github/workflows/ci.yml:15-50`
+  - `validate` job에는 `Dependency audit`, `Biome check`, `Build`, `TypeScript check`, `Test`, `Core package coverage gate`만 있다.
+  - CodeQL, SonarQube, gitleaks, secret scan, semgrep 등 보안 전용 단계가 없다.
+- `.github/workflows/*`
+  - 확인된 워크플로우는 `ci.yml`, `benchmark.yml`, `release.yml`뿐이다.
+  - 보안 전용 워크플로우(`codeql.yml`, `security.yml`, `gitleaks.yml` 등)는 없다.
+
+## 1차 도입 제안 (보안 자동화 1종 제한)
+- 제안 도구: `gitleaks`
+- 선정 이유:
+  - 현재 가장 명확한 공백은 secret scanning 부재다.
+  - `lefthook.yaml`과 GitHub Actions 양쪽에 가볍게 붙일 수 있어 baseline 강화 비용이 낮다.
+  - SAST(CodeQL/SonarQube)보다 도입 범위가 좁고, 이번 Task의 "보안 도구 1종 제한"에 가장 잘 맞는다.
+
+## 금지 사항 준수 확인
+- 여러 보안 도구 동시 도입 없음
+- 실제 취약점 패치 없음
+- CI 워크플로우 수정 없음
+- baseline 측정 및 문서화만 수행
+
+## 판정
+PASS: 현재 baseline은 `pnpm audit:prod` 실패(104건)이며, secret scanning/SAST 자동화는 부재다. 1차 도입 후보는 `gitleaks` 1종으로 제한한다.

@@ -1,0 +1,19 @@
+Task 7 Scope Guard
+
+작업 브랜치: framework-tech-health-enforcement
+
+## 변경 파일
+- `.github/workflows/ci.yml`
+- `package.json`
+- `.sisyphus/evidence/task-7-warning-only.txt`
+- `.sisyphus/evidence/task-7-scope-guard.txt`
+
+## 비변경 확인
+- `packages/**` 소스 파일 변경 없음
+- 순환 의존 리팩터링 없음
+- 기존 CI 단계 제거/대체 없음
+- 새 devDependency 추가 없음
+
+## 근거
+- `git diff --name-only` 결과에 소스 패키지 경로가 포함되지 않음
+- 추가된 내용은 warning-only 재현 스크립트와 CI step, evidence 문서뿐임

@@ -1,0 +1,23 @@
+Task 8 Scope Guard
+
+## 확인 파일
+- `vitest.config.ts`
+- `package.json`
+- `.github/workflows/ci.yml`
+- `scripts/core-coverage-warning-check.mts`
+
+## 범위 제한 확인
+- `CORE_COVERAGE_PACKAGES`는 기존 5개 패키지로 유지된다.
+  - `@croco/framework-context`
+  - `@croco/retry-core`
+  - `@croco/events-core`
+  - `@croco/auth-core`
+  - `@croco/telemetry-api`
+- `test:coverage:core` 스크립트의 `pnpm --filter` 대상도 동일한 5개 패키지로 유지된다.
+- 새 warning-only 스크립트 `test:coverage:core:warning`는 기존 `test:coverage:core` 실행 결과를 읽어 리포트만 추가한다.
+- `.github/workflows/ci.yml`에서는 warning report step만 추가되었고, 기존 hard gate `Core package coverage gate`는 제거되지 않았다.
+
+## 금지 사항 미도입 확인
+- 전 저장소 전체 패키지에 공통 threshold를 강제하는 로직은 추가되지 않았다.
+- 테스트 케이스 수정은 없었다.
+- 기존 CI coverage gate 제거는 없었다.

@@ -1,0 +1,33 @@
+# Task 12: tx-core 동시성 테스트 결과
+
+## 테스트 실행 정보
+- 실행 시간: 2025-04-05
+- 테스트 파일: packages/tx-core/src/tests/TxManager.concurrency.spec.ts
+- 테스트 수: 20개
+- 통과: 20개 (100%)
+
+## 동시성 테스트 시나리오
+
+### 1. 동시 트랜잭션 격리 (concurrent transaction isolation)
+- ✅ should isolate concurrent transactions from each other
+- ✅ should maintain transaction context per async context
+- ✅ should handle race condition between transaction start and check
+
+### 2. 동시 afterCommit hooks (concurrent afterCommit hooks)
+- ✅ should execute afterCommit hooks sequentially in each transaction
+- ✅ should isolate afterCommit hooks between concurrent transactions
+
+### 3. 메모리 압박 시나리오 (memory pressure scenarios)
+- ✅ should handle many concurrent transactions without leaking context (100개 동시 트랜잭션)
+- ✅ should clean up context after transaction completes
+
+### 4. 전파 경계 조건 (propagation boundary conditions)
+- ✅ should handle REQUIRES_NEW within REQUIRED correctly
+- ✅ should reject MANDATORY without existing transaction
+- ✅ should reject NEVER with existing transaction
+- ✅ should handle REQUIRED joining existing transaction
+
+## Race Condition 검증
+- AsyncLocalStorage 기반 컨텍스트 격리 확인
+- 다중 트랜잭션 동시 실행 시 클라이언트 격리 확인
+- afterCommit hooks 순차 실행 보장 확인

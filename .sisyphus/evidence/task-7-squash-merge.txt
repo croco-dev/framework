@@ -1,0 +1,5 @@
+=== Squash Merge 완료 ===
+Date: 2026-04-22T13:24:35Z
+Branch: trunk
+Commit: a00abf6 docs(tech-improve): align repo contracts and guidance
+Branches after:   aa-1152   add-cold-start-benchmarks   add-frontend-cloudflare-package   add-metering-component-decorators   chore/atomic-status-sweep   document-drizzle-implementations   fix-163   fix-166   fix-167   fix-168   fix-170   fix-171   fix-172   fix-173   fix-174   fix-175   fix-176   fix-177   fix-178   fix-179   fix-180   fix-181   fix-184   fix-185   fix-186   fix-187   fix-188   fix-189   fix-190   fix-191   fix-192   fix-193   fix-194   fix-195   fix-196   fix-197   fix-198   fix-199   fix-200   fix-201   fix-202   fix-203   fix-204   fix-205   fix-206   fix-207   fix-229   fix-334   fix-335   fix-344   fix-346   fix-348   fix-454   fix-457   fix-458   fix-459   fix-460   fix-461   fix-490   fix-496   fix-497   fix-498   fix-499   fix-500   fix-taskrunner-di-fallback   fix-transports-lockfile   framework-tech-health-operations-upgrade   issue-fix-18-9   main   ratelimit-redesign   refactor/abc-group-issues   saas-packages-and-readme * trunk 

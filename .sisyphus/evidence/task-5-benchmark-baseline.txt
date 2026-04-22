@@ -1,0 +1,90 @@
+Task 5 Benchmark Baseline
+
+시작 시각: 2026-04-22
+작업 브랜치: framework-tech-health-enforcement
+
+## 목적
+- benchmark workflow의 현재 동작과 semantics를 baseline evidence로 남긴다.
+- 현재 benchmark 산출물(`benchmark-result.json`)과 threshold 적용 범위를 기록한다.
+
+## 실행 명령
+```bash
+pnpm bench:check --output-json=benchmark-result.json
+```
+
+## 실행 결과
+- 종료 코드: 0
+- 실행 시간: 13.365초
+- 결과 요약: `ALL PASSED`
+- 산출물 생성: `benchmark-result.json` 생성 확인
+
+## 스크립트/워크플로우 근거
+- `package.json:21-22`
+  - `bench:check`: `node --experimental-strip-types scripts/bench-threshold-check.mts`
+  - `bench:update`: `node --experimental-strip-types scripts/bench-threshold-check.mts --update-baseline`
+- `.github/workflows/benchmark.yml:25-40`
+  - benchmark step는 `pnpm bench:check --output-json=benchmark-result.json`를 실행한다.
+  - 해당 step는 `continue-on-error: true`라서 즉시 job을 중단하지 않는다.
+  - 이후 `if: steps.bench.outcome == 'failure'` 조건의 별도 step가 `exit 1`을 실행한다.
+  - 따라서 현재 semantics는 true warning-only가 아니라, **artifact/comment를 남길 기회를 보장한 뒤 최종적으로 hard fail하는 gate**다.
+
+## threshold 정의 상태
+- `benchmarks/thresholds.json:3-15` 기준 threshold가 정의된 항목:
+  - Container.register × 50 components
+  - Container.get singleton (cold)
+  - Container.get singleton (warm)
+  - Container.validate (50 components)
+  - CrocoApp constructor
+  - CrocoApp lambdaHandler (10 controllers)
+  - CrocoApp full cold-start simulation
+  - TelemetryRuntime benchmarks
+  - TelemetryRuntime.init (lambda preset)
+  - lambdaPreset config creation
+  - EventBusConfig.start (10 handlers)
+  - EventPublisher.publish single event
+  - DefaultHandlerResolver.resolve × 10
+
+## threshold 미정의 항목
+실행 stderr와 `benchmark-result.json` 기준 아래 6개는 threshold가 없어 `skip` 처리되었다.
+- Lambda cold-start simulation
+- Lambda cold-start with headers
+- Lambda cold-start with binary body
+- Lambda cold-start with query params
+- Lambda cold-start with authorizer context
+- Lambda cold-start realistic scenario
+
+## 대표 benchmark 실체 확인
+- `benchmarks/` 디렉토리에는 `baseline.json`, `thresholds.json`만 존재한다.
+- 실제 benchmark 테스트 파일은 `benchmarks/` 아래가 아니라 다음 4개 package test 파일에 분산되어 있다.
+  - `packages/transports-http/src/tests/CrocoApp.bench.ts`
+  - `packages/framework-context/src/tests/Container.bench.ts`
+  - `packages/events-core/src/tests/EventBus.bench.ts`
+  - `packages/telemetry-sdk-node/src/tests/TelemetryRuntime.bench.ts`
+- 즉, benchmark 디렉토리는 예산/기준선 데이터 저장소 역할이고, 대표 benchmark 테스트 실체는 package별 `*.bench.ts`에 있다.
+
+## benchmark-result.json 요약
+- `allPassed: true`
+- threshold/baseline pass 확인 항목:
+  - CrocoApp constructor — p75 0.000875ms, baseline 0.0025ms
+  - CrocoApp lambdaHandler (10 controllers) — p75 0.009584ms, baseline 0.025ms
+  - EventBusConfig.start (10 handlers) — p75 0.002250ms, baseline 0.009ms
+  - EventPublisher.publish single event — p75 0.000458ms, baseline 0.0015ms
+  - DefaultHandlerResolver.resolve × 10 — p75 0.000084ms, baseline 0.0002ms
+  - Container.register × 50 components — p75 0.003334ms, baseline 0.008ms
+  - Container.validate (50 components) — p75 0.012375ms, baseline 0.025ms
+  - Container.get singleton (warm) — p75 0.000084ms, baseline 0.0003ms
+  - TelemetryRuntime benchmarks — p75 0.000834ms, baseline 0.002ms
+- skip 처리 항목 6개는 threshold/baseline 비교 없이 기록만 남는다.
+
+## 실행 stdout/stderr 핵심 근거
+- stdout 최종 박스: `Result: ALL PASSED`
+- stderr 경고:
+  - `No threshold defined for "Lambda cold-start simulation" - skipping threshold check`
+  - `No threshold defined for "Lambda cold-start with headers" - skipping threshold check`
+  - `No threshold defined for "Lambda cold-start with binary body" - skipping threshold check`
+  - `No threshold defined for "Lambda cold-start with query params" - skipping threshold check`
+  - `No threshold defined for "Lambda cold-start with authorizer context" - skipping threshold check`
+  - `No threshold defined for "Lambda cold-start realistic scenario" - skipping threshold check`
+
+## 판정
+PASS: 현재 benchmark baseline은 재현되며, command는 성공하고 `benchmark-result.json`을 남긴다. 다만 workflow semantics는 warning-only가 아니라 artifact/comment 보존 후 hard fail하는 enforce형 gate다.

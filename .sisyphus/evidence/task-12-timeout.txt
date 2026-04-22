@@ -1,0 +1,41 @@
+# Task 12: tx-core Timeout 테스트 결과
+
+## 테스트 실행 정보
+- 실행 시간: 2025-04-05
+- 테스트 파일: packages/tx-core/src/tests/TxManager.concurrency.spec.ts
+- 테스트 수: 8개 (Timeout 관련)
+- 통과: 8개 (100%)
+
+## Timeout 테스트 시나리오
+
+### 1. run 옵션으로 타임아웃 설정 (timeout with run options)
+- ✅ should timeout when transaction exceeds specified duration
+  - 50ms 타임아웃으로 200ms 지연 트랜잭션 테스트
+- ✅ should complete successfully when transaction is within timeout
+  - 100ms 타임아웃으로 10ms 지연 트랜잭션 테스트
+- ✅ should not timeout when timeout is not specified
+  - 타임아웃 미설정 시 정상 완료 확인
+
+### 2. 기본 설정으로 타임아웃 (timeout with default config)
+- ✅ should use default timeout from config
+  - TxManagerConfig.defaultTimeout 설정 테스트
+- ✅ should allow override of default timeout
+  - run 옵션으로 기본 타임아웃 재정의 테스트
+
+### 3. Savepoint 중첩에서 타임아웃 (timeout with savepoint nesting)
+- ✅ should timeout during savepoint execution
+  - 중첩 트랜잭션(savepoint)에서 타임아웃 테스트
+
+### 4. 타임아웃 오류 상세 정보 (timeout error details)
+- ✅ should include timeout duration in error
+  - TransactionTimeoutProblem에 타임아웃 시간 포함 확인
+
+### 5. @Transactional 데코레이터를 통한 타임아웃 전파
+- ✅ should propagate timeout through @Transactional decorator
+- ✅ should complete successfully when within timeout via decorator
+
+## 구현된 기능
+- TxRunOptions.timeout: 밀리초 단위 타임아웃 설정
+- TxManagerConfig.defaultTimeout: 기본 타임아웃 설정
+- TransactionTimeoutProblem: 타임아웃 발생 시 throw되는 Problem
+- Promise.race 기반 타임아웃 메커니즘
