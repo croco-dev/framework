@@ -516,7 +516,7 @@ Scenario: README 전면 개편 방지 확인
 **Commit**: YES
 - Message: `docs(readme): clarify monorepo topology`
 
-- [ ] 7. `trunk`에 squash merge 및 브랜치 정리
+- [x] 7. `trunk`에 squash merge 및 브랜치 정리
 
 **What to do**:
 - 모든 작업과 최종 검증이 통과한 후 `trunk`로 squash merge 한다.
