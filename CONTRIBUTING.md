@@ -129,10 +129,10 @@ The `pre-push` hook runs `pnpm test` and `pnpm typecheck` automatically, but run
 
 ## Git Workflow
 
-1. **Create a branch** from `main`:
+1. **Create a branch** from `trunk`:
 
    ```bash
-   git checkout main && git pull
+   git checkout trunk && git pull
    git checkout -b fix-login-bug        # or feat-new-feature
    ```
 
@@ -148,6 +148,15 @@ The `pre-push` hook runs `pnpm test` and `pnpm typecheck` automatically, but run
    ```bash
    git push -u origin fix-login-bug
    ```
+
+### Before You Start — External Checks
+
+브랜치 작업을 시작하기 전 다음을 확인한다:
+
+- [ ] 저장소의 기본 브랜치가 `trunk`로 설정되어 있는지 확인 (Repository Settings → Branches → Default branch)
+- [ ] CI/CD 배지가 trunk 브랜치를 가리키는지 확인 (README badges)
+- [ ] GitHub 브랜치 보호 규칙이 trunk에 적용되는지 확인 (Settings → Branches → trunk → Require pull request reviews before merging)
+- [ ] 자동화 봇/리뷰어 설정이 trunk 브랜치를 대상으로 하는지 확인 (CODEOWNERS, branch protection rules)
 
 ### Branch Naming
 

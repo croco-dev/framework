@@ -29,8 +29,8 @@ type BaselineEntry = {
 };
 
 const projectRoot = process.cwd();
-const baselinePath = join(projectRoot, '.sisyphus/evidence/task-3-coverage-baseline.txt');
-const reportDirectory = join(projectRoot, 'coverage', 'core-warning');
+const baselinePath = join(projectRoot, 'ci-reports', 'coverage', 'core-baseline.txt');
+const reportDirectory = join(projectRoot, 'ci-reports', 'coverage', 'core-warning');
 const reportPath = join(reportDirectory, 'report.md');
 const vitestConfigPath = join(projectRoot, 'vitest.config.ts');
 
@@ -224,7 +224,7 @@ function writeReport(results: PackageCoverageResult[], durationMs: number, comma
     '- 적용 조건: `CORE_COVERAGE=true`이고 현재 cwd가 핵심 패키지 경로일 때만 강제 threshold 적용',
     '',
     '## 예외/범위 제한',
-    '- 1차 warning-only 범위는 기존 5개 core 패키지로 고정한다.',
+    '- 1차 warning-only 범위는 `vitest.config.ts`의 `CORE_COVERAGE_PACKAGES`에 포함된 패키지로 고정한다.',
     '- 전 저장소 일괄 threshold 강제는 이번 단계에서 도입하지 않는다.',
     '- baseline 부재는 실패 대신 warning으로 기록한다.',
     '',
@@ -244,7 +244,7 @@ function writeReport(results: PackageCoverageResult[], durationMs: number, comma
     ...(baselineWarnings.length > 0 ? baselineWarnings : []),
     '',
     '## Enforce 전환 메모',
-    '- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 5개 core 패키지부터 유지한다.',
+    '- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 유지한다.',
     '- threshold 상향은 `retry-core functions` 개선 이후 별도 태스크에서 검토한다.',
     '- baseline regression이 연속 0회가 아니라 안정적으로 해소된 이후에만 hard fail 전환을 검토한다.',
   ];

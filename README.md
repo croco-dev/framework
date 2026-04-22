@@ -89,6 +89,34 @@ graph LR
 외부 시스템과의 연동을 추상화합니다.
 - **integrations-posthog**: **PostHog**와 통합되어 제품 분석 이벤트 수집을 지원합니다.
 
+### 📂 Package Grouping
+
+Croco는 80여 개의 패키지를 다음 6개 그룹으로 분류합니다.
+
+| 그룹 | 역할 | 대표 패키지 |
+|------|------|------------|
+| **Core** | 프레임워크 기반 계층 | `framework-context`, `problems-core`, `events-core`, `retry-core` |
+| **Domain** | 비즈니스 도메인 로직 | `billing-core`, `metering-core`, `auth-core`, `membership-core` |
+| **Provider** | 외부 서비스 연동 구현체 | `billing-polar`, `metering-upstash`, `auth-clerk`, `storage-r2` |
+| **Protocol** | API 인터페이스 정의 | `protocols-rest`, `protocols-graphql` |
+| **Transport** | 프로토콜 실행 어댑터 | `transports-http`, `transports-graphql` |
+| **Integration** | 분석/관찰 가능성 통합 | `integrations-posthog`, `telemetry-api`, `logging-pino` |
+
+#### 패키지 상태 표시
+
+- 🟢 production-ready — 안정화, 적극 사용 권장
+- 🟡 beta — 기능 완성, 실사용 검증 중
+- 🔴 alpha/WIP — 개발 중, 사용 시 주의 필요
+- ⚠️ deprecated — 대체 패키지 존재, 마이그레이션 권장
+
+#### 기여자를 위한 읽기 순서
+
+1. `framework-context` — DI 컨테이너, 데코레이터 기반
+2. `problems-core` — 에러 처리 패턴
+3. `protocols-*` → `transports-*` — API 정의 및 실행
+4. 도메인 패키지 (`*-core`) — 비즈니스 로직
+5. Provider 패키지 (`*-polar`, `*-clerk` 등) — 외부 연동
+
 ---
 
 ## ⚡ 주요 기능
