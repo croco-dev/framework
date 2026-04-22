@@ -32,31 +32,40 @@ const projectRoot = process.cwd();
 const baselinePath = join(projectRoot, 'ci-reports', 'coverage', 'core-baseline.txt');
 const reportDirectory = join(projectRoot, 'ci-reports', 'coverage', 'core-warning');
 const reportPath = join(reportDirectory, 'report.md');
+const packageJsonPath = join(projectRoot, 'package.json');
 const vitestConfigPath = join(projectRoot, 'vitest.config.ts');
 
-const { coreCoveragePackages: CORE_COVERAGE_PACKAGES, coreCoverageThresholds: CORE_COVERAGE_THRESHOLDS } =
-  readVitestCoverageConfig();
+const CORE_COVERAGE_PACKAGES = readCoreCoveragePackages();
+const CORE_COVERAGE_THRESHOLDS = readCoreCoverageThresholds();
 
-function readVitestCoverageConfig(): {
-  coreCoveragePackages: string[];
-  coreCoverageThresholds: Record<CoverageMetric, number>;
-} {
-  const source = readFileSync(vitestConfigPath, 'utf-8');
-  const packageSection = source.match(/export const CORE_COVERAGE_PACKAGES = \[([\s\S]*?)\];/);
-  const thresholdSection = source.match(/export const CORE_COVERAGE_THRESHOLDS = \{([\s\S]*?)\};/);
+function readCoreCoveragePackages(): string[] {
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as {
+    scripts?: Record<string, string>;
+  };
+  const coreCoverageCommand = packageJson.scripts?.['test:coverage:core'];
 
-  const packageItems = packageSection?.[1];
-  const thresholdItems = thresholdSection?.[1];
-
-  if (!packageItems || !thresholdItems) {
-    throw new Error(`failed to read core coverage config from ${vitestConfigPath}`);
+  if (!coreCoverageCommand) {
+    throw new Error(`failed to read test:coverage:core script from ${packageJsonPath}`);
   }
 
-  const coreCoveragePackages = packageItems
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => line.replace(/[' ,]/g, ''));
+  const matches = coreCoverageCommand.matchAll(/--filter\s+(@croco\/[\w-]+)/g);
+  const packages = Array.from(matches, ([, packageName]) => packageName);
+
+  if (packages.length === 0) {
+    throw new Error(`failed to read core coverage package filters from ${packageJsonPath}`);
+  }
+
+  return packages;
+}
+
+function readCoreCoverageThresholds(): Record<CoverageMetric, number> {
+  const source = readFileSync(vitestConfigPath, 'utf-8');
+  const thresholdSection = source.match(/export const CORE_COVERAGE_THRESHOLDS = \{([\s\S]*?)\};/);
+  const thresholdItems = thresholdSection?.[1];
+
+  if (!thresholdItems) {
+    throw new Error(`failed to read core coverage config from ${vitestConfigPath}`);
+  }
 
   const coreCoverageThresholds = thresholdItems
     .split('\n')
@@ -83,10 +92,7 @@ function readVitestCoverageConfig(): {
       }
     );
 
-  return {
-    coreCoveragePackages,
-    coreCoverageThresholds,
-  };
+  return coreCoverageThresholds;
 }
 
 function toPackagePath(packageName: string): string {

@@ -48,6 +48,44 @@ import { HealthCheckRegistry } from '@croco/transports-http';
 Container.get(HealthCheckRegistry).register('database', async () => ({ status: 'up' }));
 ```
 
+## Security Middleware Contract
+
+> **Currently unenforced repo-wide.** This section defines the recommended security middleware that HTTP bootstraps should apply. Enforcement is left to each application.
+
+When calling `createApp`, include the following middleware in the `middlewares` array:
+
+```typescript
+import {
+  bodyLimitMiddleware,
+  corsMiddleware,
+  createApp,
+  mb,
+  rateLimitHttpMiddleware,
+  securityHeadersMiddleware,
+} from '@croco/transports-http';
+
+const app = createApp({
+  controllers: [UserController],
+  middlewares: [
+    securityHeadersMiddleware(),       // HSTS, X-Frame-Options, CSP, etc.
+    corsMiddleware({ origin: ['https://example.com'] }), // Cross-Origin policy
+    bodyLimitMiddleware({ maxSize: mb(1) }),              // Request body size cap
+    rateLimitHttpMiddleware({ limit: 100, window: 60 }), // Rate limiting
+  ],
+});
+```
+
+### Required middleware
+
+| Middleware | Export | Purpose |
+|---|---|---|
+| `securityHeadersMiddleware` | `@croco/transports-http` | Sets HTTP security headers: HSTS, X-Frame-Options, X-Content-Type-Options, CSP |
+| `corsMiddleware` | `@croco/transports-http` | Configures Cross-Origin Resource Sharing policy |
+| `bodyLimitMiddleware` | `@croco/transports-http` | Caps request body size to prevent payload-based DoS |
+| `rateLimitHttpMiddleware` | `@croco/transports-http` | Applies rate limiting to HTTP requests |
+
+All four are part of the public API and can be imported directly from `@croco/transports-http`.
+
 ## API 레퍼런스
 
 - 앱 런타임: `createApp`, `CrocoApp`, `ErrorHandler`, `PipelineRunner`, `RouteCompiler`

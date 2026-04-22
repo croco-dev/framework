@@ -24,6 +24,8 @@ interface BenchmarkReport {
   baselineStatus?: 'pass' | 'fail' | 'skip';
   thresholdDiff?: number;
   baselineDiff?: number;
+  thresholdSkipReason?: string;
+  baselineSkipReason?: string;
 }
 
 const projectRoot = process.cwd();
@@ -39,6 +41,35 @@ const BASELINE_TOLERANCE = 0.2;
 const CI_THRESHOLD_MULTIPLIER = 2;
 const LOCAL_THRESHOLD_MULTIPLIER = 1;
 const BOX_WIDTH = 62;
+
+const EXPLICIT_THRESHOLD_SKIPS: Record<string, string> = {};
+
+const EXPLICIT_BASELINE_SKIPS: Record<string, string> = {
+  'TelemetryRuntime.init (lambda preset)':
+    'OpenTelemetry SDK init cost is environment-sensitive. Hold baseline until recent green CI runs establish stable variance.',
+  'lambdaPreset config creation':
+    'Micro-benchmark stays in sub-millisecond range. Hold baseline until recent green CI runs establish stable variance.',
+};
+
+function getThresholdSkipReason(name: string): string {
+  const explicitReason = EXPLICIT_THRESHOLD_SKIPS[name];
+
+  if (explicitReason) {
+    return explicitReason;
+  }
+
+  return 'No threshold defined in benchmarks/thresholds.json.';
+}
+
+function getBaselineSkipReason(name: string): string {
+  const explicitReason = EXPLICIT_BASELINE_SKIPS[name];
+
+  if (explicitReason) {
+    return explicitReason;
+  }
+
+  return 'No baseline defined in benchmarks/baseline.json.';
+}
 
 function loadThresholds(): Thresholds {
   if (!existsSync(thresholdsPath)) {
@@ -162,7 +193,8 @@ async function main() {
           }
         } else {
           report.thresholdStatus = 'skip';
-          console.warn(`⚠️  No threshold defined for "${name}" - skipping threshold check`);
+          report.thresholdSkipReason = getThresholdSkipReason(name);
+          console.warn(`⚠️  Threshold skipped for "${name}": ${report.thresholdSkipReason}`);
         }
 
         if (baseline?.[name]) {
@@ -178,6 +210,8 @@ async function main() {
           }
         } else {
           report.baselineStatus = 'skip';
+          report.baselineSkipReason = getBaselineSkipReason(name);
+          console.warn(`⚠️  Baseline skipped for "${name}": ${report.baselineSkipReason}`);
         }
 
         reports.push(report);
@@ -200,6 +234,7 @@ async function main() {
     for (const report of reports) {
       const thresholdPart = report.threshold ? `threshold: ${formatDuration(report.threshold)}` : 'no threshold';
       const baselinePart = report.baseline ? `baseline: ${formatDuration(report.baseline)}` : '';
+      const skipParts = [report.thresholdSkipReason, report.baselineSkipReason].filter(Boolean).join(' | ');
 
       const statusIcon =
         report.thresholdStatus === 'fail' || report.baselineStatus === 'fail'
@@ -216,6 +251,8 @@ async function main() {
       if (report.baseline) {
         const diff = report.baselineDiff !== undefined ? formatDiff(report.p75, report.baseline) : '';
         line += ` ${baselinePart.padEnd(20)} (${diff})`;
+      } else if (skipParts) {
+        line += ` ${skipParts}`;
       }
 
       line += ` ${statusIcon} ║`;

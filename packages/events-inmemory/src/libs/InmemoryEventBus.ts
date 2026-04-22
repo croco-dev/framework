@@ -136,8 +136,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
         case 'error': {
           throw new BackpressureExceededProblem(currentRunning);
         }
-        case 'block':
-        default: {
+        case 'block': {
           await this.waitForSlot();
           return this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
         }
@@ -268,6 +267,9 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
               const logger = Container.get(Logger);
               logger.error(`EventHandler error (${eventName}):`, normalizedError);
             } catch {
+              // Fallback when DI container cannot resolve Logger.
+              // This is intentional: error logging must not fail silently.
+              // eslint-disable-next-line no-console
               console.error(`EventHandler error (${eventName}):`, normalizedError);
             }
           } finally {

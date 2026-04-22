@@ -1,6 +1,6 @@
 import type { EventHandler } from '@croco/events-core';
 import { RegisterEventHandler } from '@croco/events-core';
-import { Container, MetadataStorage } from '@croco/framework-context';
+import { Container, type ILogger, LOGGER_TOKEN, MetadataStorage } from '@croco/framework-context';
 import { SEARCHABLE_METADATA, type SearchableMetadata } from '../decorators/Searchable';
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../events';
 
@@ -91,8 +91,14 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
     try {
       await this.failedEventPublisher.publish(event);
     } catch (error) {
-      // Intentionally ignored: failed event publish should not block sync
-      console.error('Failed to publish search sync failed event', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      try {
+        const logger = Container.get(LOGGER_TOKEN) as ILogger;
+        logger.error('Failed to publish search sync failed event', normalizedError);
+      } catch {
+        // eslint-disable-next-line no-console
+        console.error('Failed to publish search sync failed event', normalizedError);
+      }
     }
   }
 

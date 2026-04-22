@@ -1,18 +1,11 @@
 import { defineConfig } from 'vitest/config';
 
 export const CORE_COVERAGE_PACKAGES = [
-  // Original core packages
   '@croco/framework-context',
   '@croco/retry-core',
   '@croco/events-core',
   '@croco/auth-core',
   '@croco/telemetry-api',
-  // Core-adjacent packages (Phase 1 expansion — risk-based selection)
-  '@croco/framework-logger',
-  '@croco/repository-core',
-  '@croco/framework-config',
-  '@croco/problems-core',
-  '@croco/ratelimit-core',
 ];
 
 export const CORE_COVERAGE_THRESHOLDS = {

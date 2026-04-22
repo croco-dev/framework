@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
+import { type ILogger, LOGGER_TOKEN } from '@croco/framework-context';
 import type { SQSEvent } from 'aws-lambda';
 import { Container, type ContainerInstance } from 'typedi';
 import { BootstrapError, ContainerInitializationError } from './errors';
@@ -82,15 +83,28 @@ class WorkerRuntime<TD = unknown, TR = unknown> {
             await config.afterJobExecution(job, data, result);
           }
         } catch (error) {
-          console.error(`Error processing job:`, error);
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          try {
+            const logger = Container.get(LOGGER_TOKEN) as ILogger;
+            logger.error('Error processing job', normalizedError);
+          } catch {
+            // eslint-disable-next-line no-console
+            console.error('Error processing job', normalizedError);
+          }
 
           if (config.onJobError && parsedJob) {
-            const normalizedError = error instanceof Error ? error : new Error(String(error));
-
             try {
               await config.onJobError(parsedJob.job, parsedJob.data, normalizedError);
             } catch (onJobErrorFailure) {
-              console.error('onJobError hook failed:', onJobErrorFailure);
+              const onJobErrorError =
+                onJobErrorFailure instanceof Error ? onJobErrorFailure : new Error(String(onJobErrorFailure));
+              try {
+                const logger = Container.get(LOGGER_TOKEN) as ILogger;
+                logger.error('onJobError hook failed', onJobErrorError);
+              } catch {
+                // eslint-disable-next-line no-console
+                console.error('onJobError hook failed', onJobErrorError);
+              }
             }
           }
 

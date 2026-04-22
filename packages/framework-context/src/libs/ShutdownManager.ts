@@ -1,11 +1,10 @@
+import { Container } from 'typedi';
+import { type ILogger, LOGGER_TOKEN } from './ILogger';
 import { ShutdownTimeoutProblem } from './problems/ShutdownProblems';
 import type { ShutdownHook } from './types';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-/**
- * 프로세스 종료 시그널을 수신하고 등록된 shutdown 훅을 실행하는 매니저입니다.
- */
 export class ShutdownManager {
   private static instance: ShutdownManager | undefined;
   private hooks: ShutdownHook[] = [];
@@ -67,7 +66,14 @@ export class ShutdownManager {
         try {
           await hook.onShutdown(controller.signal);
         } catch (error) {
-          console.error('[ShutdownManager] Hook execution failed:', error);
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          try {
+            const logger = Container.get(LOGGER_TOKEN) as ILogger;
+            logger.error('[ShutdownManager] Hook execution failed:', normalizedError);
+          } catch {
+            // eslint-disable-next-line no-console
+            console.error('[ShutdownManager] Hook execution failed:', normalizedError);
+          }
         }
       }
     })();
@@ -76,7 +82,13 @@ export class ShutdownManager {
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
         controller.abort();
-        console.error('[ShutdownManager] Shutdown timeout exceeded.');
+        try {
+          const logger = Container.get(LOGGER_TOKEN) as ILogger;
+          logger.error('[ShutdownManager] Shutdown timeout exceeded.');
+        } catch {
+          // eslint-disable-next-line no-console
+          console.error('[ShutdownManager] Shutdown timeout exceeded.');
+        }
         reject(new ShutdownTimeoutProblem(this.timeoutMs));
       }, this.timeoutMs);
     });
