@@ -2,7 +2,9 @@
   "name": "croco",
   "private": true,
   "scripts": {
+    "architecture:check:circular": "npx --yes madge --circular --extensions ts packages",
     "build": "turbo build",
+    "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
     "check": "biome check .",
     "changeset": "changeset",
@@ -16,6 +18,7 @@
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
     "test:coverage:core": "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true pnpm --filter @croco/framework-context --filter @croco/retry-core --filter @croco/events-core --filter @croco/auth-core --filter @croco/telemetry-api exec vitest run --coverage --config ../../vitest.config.ts",
+    "test:coverage:core:warning": "node --experimental-strip-types scripts/core-coverage-warning-check.mts",
     "typecheck": "turbo typecheck",
     "version-packages": "changeset version",
     "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",

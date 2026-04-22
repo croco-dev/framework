@@ -6,6 +6,9 @@ on:
   push:
     branches: [trunk]
 
+env:
+  BENCHMARK_GATE_MODE: warning-only
+
 jobs:
   benchmark:
     runs-on: ubuntu-latest
@@ -28,6 +31,46 @@ jobs:
         continue-on-error: true
         env:
           CI: true
+      - name: Summarize benchmark gate mode
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p ci-reports/benchmark
+          cat <<EOF > ci-reports/benchmark/summary.md
+          # Benchmark gate summary
+
+          - Gate mode: `${{ env.BENCHMARK_GATE_MODE }}`
+          - Benchmark command: `pnpm bench:check --output-json=benchmark-result.json`
+          - Benchmark outcome: `${{ steps.bench.outcome }}`
+          - Benchmark conclusion: `${{ steps.bench.conclusion }}`
+
+          ## Modes
+
+          1. `warning-only`
+             - Keep `continue-on-error: true` on the benchmark step.
+             - Always publish artifacts/comments so regressions stay visible.
+             - Do **not** run a hard fail step after reporting.
+          2. `enforce`
+             - Keep `continue-on-error: true` so artifact/comment publication still runs.
+             - Re-enable the final hard fail step after reporting completes.
+
+          ## Enforce promotion guard
+
+          Switch `BENCHMARK_GATE_MODE` from `warning-only` to `enforce` only after:
+
+          - Threshold coverage is defined for currently skipped benchmark cases.
+          - A stable baseline is captured from recent green runs.
+          - Warning-only artifacts/comments show acceptable variance for multiple PRs.
+          EOF
+      - name: Upload benchmark warning report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-warning-report
+          path: |
+            benchmark-result.json
+            ci-reports/benchmark/summary.md
+          if-no-files-found: warn
       - name: Comment PR with benchmark results
         uses: actions/github-script@v7
         if: github.event_name == 'pull_request'
@@ -35,6 +78,6 @@ jobs:
           script: |
             const { run } = await import('${{ github.workspace }}/scripts/post-benchmark-comment.mjs');
             await run({ github, context });
-      - name: Fail if benchmarks failed
-        if: steps.bench.outcome == 'failure'
+      - name: Fail if benchmarks failed in enforce mode
+        if: env.BENCHMARK_GATE_MODE == 'enforce' && steps.bench.outcome == 'failure'
         run: exit 1

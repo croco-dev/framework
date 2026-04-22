@@ -31,8 +31,96 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Security audit warning report
+        id: security_audit_warning
+        shell: bash
+        continue-on-error: true
+        run: |
+          mkdir -p ci-reports/security
+          start=$(date +%s)
+          set +e
+          pnpm audit:prod > ci-reports/security/pnpm-audit-prod.txt 2>&1
+          exit_code=$?
+          set -e
+          end=$(date +%s)
+          duration=$((end - start))
+          {
+            echo "exit_code=$exit_code"
+            echo "duration_seconds=$duration"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$exit_code" -ne 0 ]; then
+            echo "::warning::pnpm audit:prod reported production vulnerabilities. See security-warning-report artifact."
+          fi
+          exit "$exit_code"
+
+      - name: Secret scan warning report
+        id: security_gitleaks_warning
+        shell: bash
+        continue-on-error: true
+        run: |
+          mkdir -p ci-reports/security
+          start=$(date +%s)
+          set +e
+          npx gitleaks@latest detect --source . --redact --no-banner --report-format sarif --report-path ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
+          exit_code=$?
+          set -e
+          end=$(date +%s)
+          duration=$((end - start))
+          {
+            echo "exit_code=$exit_code"
+            echo "duration_seconds=$duration"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$exit_code" -ne 0 ]; then
+            echo "::warning::gitleaks detected potential secrets. Review the SARIF/text report before enforcing."
+          fi
+          exit "$exit_code"
+
+      - name: Assemble security warning summary
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p ci-reports/security
+          cat <<EOF > ci-reports/security/summary.md
+          # Security warning summary
+
+          - Existing hard gate retained: \
+            `pnpm audit:prod` (`Dependency audit` step below)
+          - Added warning-only tool: `gitleaks` secret scanning
+          - Warning-only behavior: both steps use `continue-on-error: true` so signals are preserved without stopping the remaining validate steps.
+
+          ## Current run
+
+          - Audit warning exit code: `${{ steps.security_audit_warning.outputs.exit_code || 'unknown' }}`
+          - Audit warning duration (seconds): `${{ steps.security_audit_warning.outputs.duration_seconds || 'unknown' }}`
+          - Gitleaks warning exit code: `${{ steps.security_gitleaks_warning.outputs.exit_code || 'unknown' }}`
+          - Gitleaks warning duration (seconds): `${{ steps.security_gitleaks_warning.outputs.duration_seconds || 'unknown' }}`
+
+          ## False positive management
+
+          1. Review the SARIF/text finding and confirm the secret or dependency path is non-production or test-only data.
+          2. For confirmed false positives, add the fingerprint to `.gitleaksignore` or an explicit allowlist rule in a dedicated Gitleaks config file.
+          3. Keep the ignore entry scoped to the exact fingerprint or path, and document the reason in the pull request before any future enforce rollout.
+
+          ## Runtime impact
+
+          - `pnpm audit:prod` warning report reuses the existing dependency install and should add only the command runtime.
+          - `npx gitleaks@latest` adds one cold-start download plus repository scan time; use the recorded duration above as the baseline for enforce decisions.
+          EOF
+
+      - name: Upload security warning report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-warning-report
+          path: ci-reports/security
+          if-no-files-found: warn
+
       - name: Dependency audit
         run: pnpm audit:prod
+
+      - name: Architecture circular dependency warning
+        run: pnpm architecture:check:circular
+        continue-on-error: true
 
       - name: Biome check
         run: pnpm check
@@ -45,6 +133,18 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Core package coverage warning report
+        run: pnpm test:coverage:core:warning
+        continue-on-error: true
+
+      - name: Upload core coverage warning report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-coverage-warning-report
+          path: coverage/core-warning/report.md
+          if-no-files-found: warn
 
       - name: Core package coverage gate
         run: pnpm test:coverage:core

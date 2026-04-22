@@ -20,20 +20,23 @@ pnpm --version  # should be >= 10
 git clone https://github.com/croco-dev/framework.git
 cd framework
 
-# 2. Install dependencies
-pnpm install
-
-# 3. Build all packages
-pnpm build
-
-# 4. Run tests
-pnpm test
-
-# 5. Type check
-pnpm typecheck
+# 2. Run one-command setup (install + build + typecheck + test)
+pnpm setup
 ```
 
-If all four steps pass, your environment is ready.
+`pnpm setup` runs `pnpm install && pnpm build && pnpm typecheck && pnpm test` in sequence.
+If it exits cleanly, your environment is ready.
+
+### Environment Variables
+
+Most packages work without any env vars in development. If you need to configure integrations:
+
+```bash
+cp .env.example .env
+# Edit .env and fill in only what your integration requires
+```
+
+See `.env.example` for the full list of supported variables with descriptions.
 
 ## Development
 
@@ -108,6 +111,21 @@ describe('MyService', () => {
   });
 });
 ```
+
+## Validate Before Pushing
+
+Before opening a PR, run the full validation suite:
+
+```bash
+pnpm build       # Compile all packages
+pnpm typecheck   # TypeScript type check
+pnpm test        # Run all tests
+pnpm check       # Biome lint + format check
+```
+
+Or run them all at once with `pnpm setup` (same sequence as initial setup).
+
+The `pre-push` hook runs `pnpm test` and `pnpm typecheck` automatically, but running `pnpm check` manually catches formatting issues before the hook fires.
 
 ## Git Workflow
 
