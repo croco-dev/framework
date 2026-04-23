@@ -1,129 +1,78 @@
 ---
 title: Getting Started
-description: Learn how to install and use the Croco Framework
+description: Build and deploy your first Lambda API with Croco in minutes
 ---
 
 ## Introduction
 
-Croco is a TypeScript framework designed with AWS Lambda as a first-class citizen. It provides an opinionated structure for building robust, scalable serverless applications using Domain-Driven Design (DDD) patterns and strong type safety.
+Croco is an opinionated TypeScript framework optimized for AWS Lambda. It combines HTTP routing, DDD events, transactions, and SaaS metrics under one consistent decorator and type system.
 
-Key features include:
-- **Structured Architecture**: Enforces a consistent 4-layer architecture.
-- **Serverless Optimized**: Minimized cold starts and optimized for AWS Lambda.
-- **Built-in Patterns**: Includes event-driven architecture (EDA) and Unit of Work (UoW).
-- **Type Safety**: Leverages TypeScript for safety and developer experience.
+This guide walks you through creating a Lambda-ready REST API in under 5 minutes.
 
-## Installation
-
-Install the core framework package:
+## Install
 
 ```bash
-pnpm add @croco/framework-context
+pnpm add @croco/transports-http @croco/protocols-rest reflect-metadata
 ```
 
-For specific features, install additional packages:
+## Create Your First Endpoint
+
+```typescript
+import 'reflect-metadata';
+import { Controller, Get } from '@croco/protocols-rest';
+import { createApp } from '@croco/transports-http';
+
+@Controller('/api')
+class HealthController {
+  @Get('/health')
+  health() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+}
+```
+
+## Create the App
+
+```typescript
+const app = createApp({
+  controllers: [HealthController],
+});
+```
+
+## Export Lambda Handler
+
+```typescript
+export const handler = app.lambdaHandler();
+```
+
+That's it — `handler` is your AWS Lambda entry point. No additional configuration needed.
+
+## Run Locally (Optional)
+
+For local testing without Lambda:
+
+```typescript
+await app.listen(3000);
+console.log('Server running at http://localhost:3000');
+```
+
+Then test with curl:
 
 ```bash
-# Retry mechanisms and circuit breakers
-pnpm add @croco/retry-core
-
-# Domain events
-pnpm add @croco/events-core @croco/events-inmemory
-
-# Authentication and authorization (if available)
-# pnpm add @croco/auth-core
+curl http://localhost:3000/api/health
 ```
 
-## Basic Usage
+Expected response:
 
-### 1. Setting up the DI Container
-
-The Dependency Injection (DI) container is the heart of Croco. You can register and retrieve services directly using the `Container` API.
-
-```typescript
-import { Container } from '@croco/framework-context';
-
-class SimpleService {
-  getValue(): string {
-    return 'simple';
-  }
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-15T10:30:00.000Z"
 }
-
-// Register an instance
-const service = new SimpleService();
-Container.set(SimpleService, service);
-
-// Retrieve the instance
-const retrieved = Container.get(SimpleService);
-console.log(retrieved.getValue()); // 'simple'
-
-// Reset the container (useful in tests)
-Container.reset();
 ```
-
-### 2. Creating Components
-
-Use the `@Component` decorator to register classes as managed components. You can specify the scope (`singleton`, `request`, or `transient`).
-
-```typescript
-import { Component, Container, Context } from '@croco/framework-context';
-
-@Component() // singleton (default)
-class UserService {
-  getUser(id: string) {
-    return { id, name: 'User' };
-  }
-}
-
-@Component({ scope: 'request' })
-class RequestScopedService {
-  // Created once per request context
-}
-
-@Component({ scope: 'transient' })
-class TransientService {
-  // Created every time it is requested
-}
-
-// Usage
-const userService = Container.get(UserService);
-```
-
-### 3. Implementing Retry Logic
-
-The `@Retryable` decorator from `@croco/retry-core` allows you to automatically retry failed operations with configurable backoff policies.
-
-```typescript
-import { Retryable, NoBackoff } from '@croco/retry-core';
-
-class ExternalService {
-  private attempts = 0;
-
-  @Retryable({
-    maxAttempts: 3,
-    backoffPolicy: new NoBackoff(), // Or ExponentialBackoff, FixedBackoff
-  })
-  async fetchData(): Promise<string> {
-    this.attempts++;
-    if (this.attempts < 3) {
-      throw new Error('Temporary failure');
-    }
-    return 'success';
-  }
-}
-
-// Usage
-const service = new ExternalService();
-const result = await service.fetchData(); // Succeeds on 3rd attempt
-```
-
-## Core Decorators
-
-- **`@Component`**: Registers a class as a managed component in the DI container.
-- **`@Trace`**: Enables distributed tracing for the method (requires telemetry setup).
-- **`@Retryable`**: Automatically retries a method upon failure based on a policy.
 
 ## Next Steps
 
-- [Architecture Overview](/en/guides/architecture/) - Learn about the 4-layer architecture.
-- [Package Guides](/en/guides/) - Explore detailed guides for each package.
+- [Architecture Overview](/en/guides/architecture/) — Understand the 4-layer structure
+- [Events Guide](/en/guides/events-core/) — Add domain event-driven patterns
+- [Retry Guide](/en/guides/retry-core/) — Add resilience with retry policies

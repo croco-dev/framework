@@ -1,40 +1,37 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
-hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../../assets/houston.webp
-  actions:
-    - text: Example Guide
-      link: /guides/example/
-      icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
-      variant: minimal
+title: Croco Framework
+description: AWS Lambda 지향 opinionated TypeScript 프레임워크 — DDD, 트랜잭션, SaaS 지표/미터링을 하나의 타입 시스템으로 조합합니다.
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Next steps
+# Croco Framework
+
+> AWS Lambda 지향 TypeScript 애플리케이션에서 HTTP 진입점, DDD 이벤트, 트랜잭션, SaaS 지표/미터링, 관찰 가능성을 하나의 일관된 데코레이터·타입 시스템으로 묶어 주는 opinionated framework.
+
+## Quick Start
+
+Lambda 기반 REST API를 빠르게 시작하세요.
 
 <CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+  <Card title="Getting Started" icon="rocket">
+    Croco를 설치하고 첫 Lambda API를 만드는 단계별 가이드입니다.
+    [시작하기 →](/en/guides/getting-started/)
+  </Card>
+  <Card title="Architecture" icon="diagram-project">
+    4계층 구조(Core → Protocols → Transports → Integrations)를 이해합니다.
+    [아키텍처 →](/en/guides/architecture/)
+  </Card>
+  <Card title="Package Catalog" icon="package">
+    88개 패키지를 상태별로 탐색합니다. 🟢 production, 🟡 beta, 🔴 alpha.
+    [GitHub README →](https://github.com/your-org/croco#readme)
+  </Card>
+  <Card title="Events Core" icon="broadcast">
+    도메인 이벤트 발행/구독 패턴을 학습합니다.
+    [Events Guide →](/en/guides/events-core/)
+  </Card>
+  <Card title="Retry Core" icon="restart">
+    재시도 정책, 지수 백오프, 서킷 브레이커를 설정합니다.
+    [Retry Guide →](/en/guides/retry-core/)
+  </Card>
 </CardGrid>

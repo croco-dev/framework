@@ -1,49 +1,38 @@
-# Starlight Starter Kit: Basics
+# @croco/docs
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+Croco Framework 공식 문서 사이트입니다. Starlight(Astro 기반)로 구축되었습니다.
 
-```
-pnpm create astro@latest -- --template starlight
-```
+## 명령어
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro + Starlight project, you'll see the following folders and files:
-
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
-```
-
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
-
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
-
-Static assets, like favicons, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
+모든 명령어는 프로젝트 루트(`../../`)에서 실행합니다:
 
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+| `pnpm docs:dev`           | 로컬 개발 서버 시작 (`localhost:4321`)           |
+| `pnpm docs:build`         | 프로덕션 사이트 빌드 (`./dist/`)                 |
 
-## 👀 Want to learn more?
+또는 docs 패키지 내에서 직접 실행:
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+| Command                   | Action                                           |
+| :------------------------ | :----------------------------------------------- |
+| `pnpm dev`                | 로컬 개발 서버 시작                              |
+| `pnpm build`              | 프로덕션 빌드                                    |
+| `pnpm preview`            | 빌드 미리보기                                    |
+
+## 문서 구조
+
+문서 파일은 `src/content/docs/en/`에 위치합니다:
+
+- `index.mdx` — 문서 랜딩 페이지
+- `guides/` — 사용 가이드 (Getting Started, Architecture, etc.)
+
+## 가이드 링크
+
+- [Getting Started](src/content/docs/en/guides/getting-started.mdx) — Croco 설치 및 첫 API
+- [Architecture](src/content/docs/en/guides/architecture.mdx) — 4계층 구조
+- [Events Core](src/content/docs/en/guides/events-core.mdx) — 도메인 이벤트
+- [Retry Core](src/content/docs/en/guides/retry-core.mdx) — 재시도 정책
+
+## 기여
+
+문서 개선 제안이나 버그 보고는 GitHub Issues에서 해주세요.
