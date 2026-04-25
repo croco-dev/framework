@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { InvalidWebhookPayloadProblem, InvalidWebhookSignatureProblem } from './problems/WebhookProblems';
 import type {
   BetterAuthSession,
@@ -14,24 +15,44 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
  * Better Auth 웹훅 서명 검증과 이벤트 분기를 담당하는 처리기입니다.
  */
 export class BetterAuthWebhookProcessor {
+  private static readonly SIGNATURE_HEADER = 'x-better-auth-signature';
+
   constructor(
     private options: BetterAuthWebhookOptions,
     private handlers: BetterAuthWebhookHandler,
-    private sessionProvider: BetterAuthSessionProvider
+    _sessionProvider: BetterAuthSessionProvider
   ) {}
 
-  private verifySignature(body: string, signature: string): boolean {
-    const expectedSignature = `sha256=${this.options.signingSecret}`;
-    return signature === expectedSignature;
+  private verifySignature(rawBody: string, signature: string): boolean {
+    if (!signature) {
+      return false;
+    }
+
+    const expectedSignature = `sha256=${createHmac('sha256', this.options.signingSecret).update(rawBody).digest('hex')}`;
+    const actualSignatureBuffer = Buffer.from(signature);
+    const expectedSignatureBuffer = Buffer.from(expectedSignature);
+
+    if (actualSignatureBuffer.length !== expectedSignatureBuffer.length) {
+      return false;
+    }
+
+    return timingSafeEqual(actualSignatureBuffer, expectedSignatureBuffer);
   }
 
-  async processWebhook(request: { headers: Headers; json: () => Promise<unknown> }): Promise<void> {
-    const signature = request.headers.get('x-better-auth-signature') ?? '';
-    const body = await request.json();
-    const bodyString = JSON.stringify(body);
+  async processWebhook(request: { headers: Headers; text: () => Promise<string> }): Promise<void> {
+    const signature = request.headers.get(BetterAuthWebhookProcessor.SIGNATURE_HEADER) ?? '';
+    const rawBody = await request.text();
 
-    if (!this.verifySignature(bodyString, signature)) {
+    if (!this.verifySignature(rawBody, signature)) {
       throw new InvalidWebhookSignatureProblem();
+    }
+
+    let body: unknown;
+
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      throw new InvalidWebhookPayloadProblem();
     }
 
     if (!isObjectRecord(body) || typeof body.type !== 'string') {
