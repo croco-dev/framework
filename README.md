@@ -93,10 +93,19 @@ graph LR
 
 ## 🚀 Quick Start
 
-> Lambda 기반 REST API를 빠르게 시작하세요. 상세 가이드와 실행 가능한 예제는 준비 중입니다.
+> Lambda 기반 REST API를 빠르게 시작하세요. 상세 가이드와 실행 가능한 예제는 작성 중입니다.
 >
-> **문서**: Getting Started Guide (준비 중)
-> **예제**: Quick Start Example (준비 중)
+> **문서**: Getting Started Guide (작성 중)
+> **예제**: Quick Start Example (작성 중)
+
+#### 패키지 성숙도 안내
+
+Croco는 80여 개의 패키지로 구성되며, 패키지마다 성숙도가 다릅니다. 사용 전 상태를 확인하세요.
+
+- 🟢 production-ready — 안정화, 적극 사용 권장
+- 🟡 beta — 기능 완성, 실사용 검증 중
+- 🔴 alpha/WIP — 개발 중, 사용 시 주의 필요
+- ⚠️ deprecated — 대체 패키지 존재, 마이그레이션 권장
 
 ### 📂 Package Grouping
 
@@ -110,13 +119,6 @@ Croco는 80여 개의 패키지를 다음 6개 그룹으로 분류합니다.
 | **Protocol** | API 인터페이스 정의 | `protocols-rest`, `protocols-graphql` |
 | **Transport** | 프로토콜 실행 어댑터 | `transports-http`, `transports-graphql` |
 | **Integration** | 분석/관찰 가능성 통합 | `integrations-posthog`, `telemetry-api`, `logging-pino` |
-
-#### 패키지 상태 표시
-
-- 🟢 production-ready — 안정화, 적극 사용 권장
-- 🟡 beta — 기능 완성, 실사용 검증 중
-- 🔴 alpha/WIP — 개발 중, 사용 시 주의 필요
-- ⚠️ deprecated — 대체 패키지 존재, 마이그레이션 권장
 
 #### 기여자를 위한 읽기 순서
 
@@ -326,7 +328,6 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `tx-drizzle` | Drizzle ORM 트랜잭션 어댑터 | 🟢 |
 | `retry-core` | 재시도 정책, 지수 백오프, 서킷브레이커 | 🟢 |
 | `billing-core` | 구독, 주문, 결제 도메인 모델 + DDD 이벤트 | 🟢 |
-| `billing-polar` | Polar 결제 플랫폼 연동 (checkout, webhook) | 🟢 |
 | `metering-core` | @Meter/@Metered 데코레이터, 사용량 측정, Quota, Redis 집계, 멱등성 | 🟢 |
 | `metrics-core` | SaaS 핵심 지표 계산 엔진 — MRR, LTV, Churn, NRR, GRR, Quick Ratio, Carrying Capacity | 🟢 |
 | `membership-core` | 팀/조직 멤버십 관리, 역할 할당 | 🟢 |
@@ -378,6 +379,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `create-croco-app` | Croco 프로젝트 생성기 | 🟡 |
 | `esbuild-plugin` | Esbuild 플러그인 | 🟡 |
 | `docs` | Starlight 기반 API 문서 사이트 | 🟡 |
+| `billing-polar` | Polar 결제 플랫폼 연동 (checkout, webhook) | 🟡 |
 
 ### 🔴 Alpha / WIP
 

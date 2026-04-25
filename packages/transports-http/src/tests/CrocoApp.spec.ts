@@ -2,11 +2,16 @@ import 'reflect-metadata';
 import { Container, Context as FrameworkContext } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { Body, Controller, Get, Param, Post, Raw } from '@croco/protocols-rest';
+import { createSlidingWindowPolicy, RateLimitKeyBuilder, RateLimiter, SlidingWindowInMemoryStore } from '@croco/ratelimit-core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
 import { CrocoRouteRegistrar } from '../libs/CrocoRouteRegistrar';
 import { ErrorHandler } from '../libs/ErrorHandler';
 import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
+import { bodyLimitMiddleware, mb } from '../libs/middleware/BodyLimitMiddleware';
+import { corsMiddleware } from '../libs/middleware/CorsMiddleware';
+import { rateLimitHttpMiddleware } from '../libs/middleware/RateLimitMiddleware';
+import { securityHeadersMiddleware } from '../libs/middleware/SecurityHeadersMiddleware';
 import type { LambdaContext, LambdaEvent } from '../libs/types';
 
 describe('CrocoApp', () => {
@@ -146,6 +151,22 @@ describe('CrocoApp', () => {
     };
   }
 
+  function createRequiredSecurityMiddlewares() {
+    const rateLimiter = new RateLimiter(new SlidingWindowInMemoryStore(), new RateLimitKeyBuilder(['ip']), {
+      failOpen: false,
+    });
+
+    return [
+      securityHeadersMiddleware(),
+      corsMiddleware({ origins: ['https://example.com'] }),
+      bodyLimitMiddleware({ limit: mb(1) }),
+      rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy('test', 100, 60000),
+      }),
+    ];
+  }
+
   it('should handle GET request', async () => {
     const app = createApp({ controllers: [TestController] });
 
@@ -154,6 +175,39 @@ describe('CrocoApp', () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({ message: 'Hello, World!' });
+  });
+
+  it('should bootstrap when all required security middlewares are configured', async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: createRequiredSecurityMiddlewares(),
+    });
+
+    const response = await app.fetch(new Request('http://localhost/api/hello'));
+
+    expect(response.status).toBe(200);
+  });
+
+  it('should fail bootstrap when required security middlewares are missing', () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [securityHeadersMiddleware()],
+      securityValidation: 'enforce',
+    });
+
+    expect(() => app.lambdaHandler()).toThrow(/Missing required security middleware/);
+  });
+
+  it("should allow bootstrap when securityValidation is set to off", async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [securityHeadersMiddleware()],
+      securityValidation: 'off',
+    });
+
+    const response = await app.fetch(new Request('http://localhost/api/hello'));
+
+    expect(response.status).toBe(200);
   });
 
   it('should extract path params', async () => {

@@ -15,6 +15,8 @@ export type PipeProvider<T = unknown> = Constructor<T> | T;
 export interface AppConfig {
   controllers: Constructor[];
   middlewares?: MiddlewareFunction[];
+  securityValidation?: 'enforce' | 'warn' | 'off';
+  unsafeSkipSecurityValidation?: true;
   globalFilters?: FilterProvider[];
   globalGuards?: GuardProvider[];
   globalInterceptors?: InterceptorProvider[];

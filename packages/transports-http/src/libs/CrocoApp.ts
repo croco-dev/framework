@@ -1,5 +1,6 @@
 import { Container, type ILogger, LOGGER_TOKEN } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
+import { ProblemFactory } from '@croco/problems-core';
 import { Hono } from 'hono';
 import { CrocoLambdaAdapter } from './CrocoLambdaAdapter';
 import { CrocoRouteRegistrar } from './CrocoRouteRegistrar';
@@ -8,7 +9,33 @@ import { HealthCheckRegistry } from './HealthCheckRegistry';
 import { PipelineRunner } from './PipelineRunner';
 
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
-import type { AppConfig, CompiledRoute, LambdaHandler } from './types';
+import type { AppConfig, CompiledRoute, LambdaHandler, MiddlewareFunction } from './types';
+
+type SecurityValidationMode = NonNullable<AppConfig['securityValidation']>;
+
+type RequiredSecurityMiddleware = {
+  readonly exportName: string;
+  readonly matches: (middleware: MiddlewareFunction) => boolean;
+};
+
+const REQUIRED_SECURITY_MIDDLEWARES: readonly RequiredSecurityMiddleware[] = [
+  {
+    exportName: 'securityHeadersMiddleware',
+    matches: (middleware) => middleware.toString().includes('X-Content-Type-Options'),
+  },
+  {
+    exportName: 'corsMiddleware',
+    matches: (middleware) => middleware.toString().includes('Access-Control-Allow-Origin'),
+  },
+  {
+    exportName: 'bodyLimitMiddleware',
+    matches: (middleware) => middleware.toString().includes('content-length'),
+  },
+  {
+    exportName: 'rateLimitHttpMiddleware',
+    matches: (middleware) => middleware.toString().includes('rateLimitHeaders'),
+  },
+] as const;
 
 /**
  * 컨트롤러를 컴파일해 Hono 앱, Lambda 핸들러, Node 서버로 실행하는 HTTP 애플리케이션입니다.
@@ -34,6 +61,8 @@ export class CrocoApp {
   private boot(options: CompileOptions = {}): void {
     if (this.booted) return;
 
+    this.validateSecurityMiddlewareContract();
+
     this.registerSystemRoutes();
 
     const compiler = new RouteCompiler(this.logger, new PipelineRunner(this.errorHandler, this.logger));
@@ -50,6 +79,53 @@ export class CrocoApp {
     }
 
     this.booted = true;
+  }
+
+  private validateSecurityMiddlewareContract(): void {
+    const validationMode = this.getSecurityValidationMode();
+
+    if (validationMode === 'off') {
+      return;
+    }
+
+    const middlewares = this.config.middlewares ?? [];
+    const missingMiddlewares = REQUIRED_SECURITY_MIDDLEWARES.filter(
+      (requiredMiddleware) => !middlewares.some((middleware) => requiredMiddleware.matches(middleware))
+    );
+
+    if (missingMiddlewares.length === 0) {
+      return;
+    }
+
+    const middlewareList = missingMiddlewares.map(({ exportName }) => exportName).join(', ');
+    const message =
+      `Missing required security middleware: ${middlewareList}. ` +
+      "Add the required middleware or set securityValidation: 'off' (or unsafeSkipSecurityValidation: true) during migration.";
+
+    if (validationMode === 'warn') {
+      this.logger.warn(message);
+      return;
+    }
+
+    throw ProblemFactory.internalServerError('transports-http/security-middleware-validation', message);
+  }
+
+  private getSecurityValidationMode(): SecurityValidationMode {
+    if (this.config.unsafeSkipSecurityValidation) {
+      return 'off';
+    }
+
+    if (this.config.securityValidation) {
+      return this.config.securityValidation;
+    }
+
+    const envMode = process.env.CROCO_HTTP_SECURITY_VALIDATION;
+
+    if (envMode === 'off' || envMode === 'warn' || envMode === 'enforce') {
+      return envMode;
+    }
+
+    return 'enforce';
   }
 
   private registerSystemRoutes(): void {
