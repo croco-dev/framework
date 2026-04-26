@@ -11,6 +11,12 @@ export function installFrontendDeploy(
 ): void {
   if (!options.frontendDeploy) return;
 
+  if (options.frontendDeploy === 'vite-spa') {
+    // TODO(T6): Add template merge from templates/addons/frontend-vite-spa/
+    // Template will be added in T6, skip for now
+    return;
+  }
+
   if (options.frontendDeploy === 'cloudflare-vike') {
     const addonDir =
       options.preset === 'ddd-vike-fullstack'
