@@ -228,5 +228,5 @@ export type ImageProvider = {
    * @param key - 업로드할 파일 식별자
    * @returns 업로드 의도 정보
    */
-  getUploadIntent?(key: string): Promise<UploadIntent>;
+  getUploadIntent?(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent>;
 };

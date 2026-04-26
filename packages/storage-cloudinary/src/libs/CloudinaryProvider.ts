@@ -1,5 +1,6 @@
 import type { Readable } from 'node:stream';
 import { Component } from '@croco/framework-context';
+import { ProblemFactory } from '@croco/problems-core';
 import type { RetryPolicy } from '@croco/retry-core';
 import { RetryTemplate } from '@croco/retry-core';
 import type {
@@ -377,12 +378,17 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     });
   }
 
-  async getUploadIntent(key: string): Promise<UploadIntent> {
+  async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
     this.validateKey(key);
+
+    const ttl = options?.ttlInSeconds ?? this.ttl;
+    if (ttl <= 0) {
+      throw ProblemFactory.invalidArgument('storage/invalid-upload-intent-ttl', 'ttlInSeconds must be greater than 0');
+    }
 
     const uploadUrl = new URL(`/v1_1/${this.cloudName}/image/upload`, this.uploadBaseUrl).toString();
     const publicUrl = this.getPublicUrl(key);
-    const expiresAt = new Date(Date.now() + this.ttl * 1000);
+    const expiresAt = new Date(Date.now() + ttl * 1000);
 
     return {
       uploadUrl,

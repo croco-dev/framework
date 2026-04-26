@@ -24,6 +24,16 @@ export const ProblemFactory = {
     return new GenericProblem(code, ProblemCategory.BadRequest, detail, options);
   },
   /**
+   * InvalidArgument (400) 카테고리의 Problem을 생성합니다.
+   * @param code - 도메인에서 문제를 식별하는 고유 코드
+   * @param detail - 문제의 상세 설명
+   * @param options - RFC 7807 필드 확장을 위한 옵션
+   * @returns Problem 인스턴스
+   */
+  invalidArgument(code: string, detail?: string, options?: ProblemOptions): Problem {
+    return new GenericProblem(code, ProblemCategory.BadRequest, detail, options);
+  },
+  /**
    * Unauthorized (401) 카테고리의 Problem을 생성합니다.
    * @param code - 도메인에서 문제를 식별하는 고유 코드
    * @param detail - 문제의 상세 설명
