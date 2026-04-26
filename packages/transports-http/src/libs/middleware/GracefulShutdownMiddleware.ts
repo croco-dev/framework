@@ -14,6 +14,7 @@ type ShutdownState = {
   isShuttingDown: boolean;
   activeRequests: Set<string>;
   shutdownPromise: Promise<void> | null;
+  signalHandlers: Map<NodeJS.Signals, () => Promise<void>>;
 };
 
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -24,6 +25,7 @@ const state: ShutdownState = {
   isShuttingDown: false,
   activeRequests: new Set<string>(),
   shutdownPromise: null,
+  signalHandlers: new Map(),
 };
 
 function isRunningInLambda(): boolean {
@@ -106,11 +108,17 @@ function setupSignalHandlers(
   logger?: ILogger,
   eventBusDrainTimeoutMs?: number
 ): void {
-  const handler = async (): Promise<void> => {
-    await performShutdown(timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
-  };
-
   for (const signal of signals) {
+    const existingHandler = state.signalHandlers.get(signal);
+    if (existingHandler) {
+      process.off(signal, existingHandler);
+    }
+
+    const handler = async (): Promise<void> => {
+      await performShutdown(timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
+    };
+
+    state.signalHandlers.set(signal, handler);
     process.once(signal, handler);
   }
 }
@@ -229,7 +237,12 @@ async function performShutdown(
 
   if (signals) {
     for (const signal of signals) {
-      process.removeAllListeners(signal);
+      const handler = state.signalHandlers.get(signal);
+
+      if (handler) {
+        process.off(signal, handler);
+        state.signalHandlers.delete(signal);
+      }
     }
   }
 
@@ -262,7 +275,9 @@ export function resetShutdownState(): void {
   state.activeRequests.clear();
   state.shutdownPromise = null;
 
-  ['SIGTERM', 'SIGINT'].forEach((signal) => {
-    process.removeAllListeners(signal);
-  });
+  for (const [signal, handler] of state.signalHandlers.entries()) {
+    process.off(signal, handler);
+  }
+
+  state.signalHandlers.clear();
 }
