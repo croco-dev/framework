@@ -1,9 +1,10 @@
 import type { ExecutionManager } from '@croco/execution-core';
 import type { ILogger } from '@croco/framework-context';
-import { Container, MetadataStorage } from '@croco/framework-context';
+import { Component, Container, MetadataStorage } from '@croco/framework-context';
 import * as telemetry from '@croco/telemetry-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Task } from '../libs/decorators/Task';
+import { TaskRunnerDIFailureProblem } from '../libs/problems/TasksProblems';
 import { TaskRegistry } from '../libs/TaskRegistry';
 import { TaskRunner } from '../libs/TaskRunner';
 import type { TaskMetadata } from '../libs/types';
@@ -36,6 +37,7 @@ describe('TaskRunner', () => {
       timeout: vi.fn().mockResolvedValue(undefined),
     };
 
+    @Component()
     class TestTaskHandler {
       @Task({ name: 'test-task' })
       async handle(payload: { data: string }): Promise<string> {
@@ -49,6 +51,7 @@ describe('TaskRunner', () => {
     }
 
     new TestTaskHandler();
+    Container.set(TestTaskHandler, new TestTaskHandler());
     registry.collectFromMetadata();
   });
 
@@ -104,6 +107,7 @@ describe('TaskRunner', () => {
   });
 
   it('should extract retryable flag from error', async () => {
+    @Component()
     class RetryableTaskHandler {
       @Task({ name: 'retryable-fail' })
       async failWithRetryable(): Promise<string> {
@@ -114,6 +118,7 @@ describe('TaskRunner', () => {
     }
 
     new RetryableTaskHandler();
+    Container.set(RetryableTaskHandler, new RetryableTaskHandler());
     registry.register(
       'retryable-fail',
       RetryableTaskHandler,
@@ -140,6 +145,7 @@ describe('TaskRunner', () => {
   });
 
   it('should extract code from error', async () => {
+    @Component()
     class TaskWithCodeError {
       @Task({ name: 'code-error-task' })
       async failWithCode(): Promise<string> {
@@ -150,6 +156,7 @@ describe('TaskRunner', () => {
     }
 
     new TaskWithCodeError();
+    Container.set(TaskWithCodeError, new TaskWithCodeError());
     registry.register(
       'code-error-task',
       TaskWithCodeError,
@@ -175,6 +182,7 @@ describe('TaskRunner', () => {
   });
 
   it('should resolve class constructors through the container', async () => {
+    @Component()
     class StatelessTaskHandler {
       @Task({ name: 'stateless-task' })
       async process(payload: { value: number }): Promise<number> {
@@ -182,6 +190,7 @@ describe('TaskRunner', () => {
       }
     }
 
+    Container.set(StatelessTaskHandler, new StatelessTaskHandler());
     registry.collectFromMetadata();
     const getSpy = vi.spyOn(Container, 'get');
     const runner = new TaskRunner(mockExecutionManager, registry);
@@ -193,6 +202,7 @@ describe('TaskRunner', () => {
   });
 
   it('should handle non-Error objects in error handling', async () => {
+    @Component()
     class NonErrorTaskHandler {
       @Task({ name: 'non-error-task' })
       async throwString(): Promise<string> {
@@ -201,6 +211,7 @@ describe('TaskRunner', () => {
     }
 
     new NonErrorTaskHandler();
+    Container.set(NonErrorTaskHandler, new NonErrorTaskHandler());
     registry.register(
       'non-error-task',
       NonErrorTaskHandler,
@@ -225,7 +236,7 @@ describe('TaskRunner', () => {
     );
   });
 
-  it('should log and record error when DI resolution fails', async () => {
+  it('should throw Problem when DI resolution fails', async () => {
     class DITaskHandler {
       @Task({ name: 'di-fail-task' })
       async process(payload: { value: number }): Promise<number> {
@@ -253,14 +264,21 @@ describe('TaskRunner', () => {
 
     const runner = new TaskRunner(mockExecutionManager, registry, mockLogger);
 
-    const result = await runner.execute('di-fail-task', { value: 5 });
+    await expect(runner.execute('di-fail-task', { value: 5 })).rejects.toBeInstanceOf(TaskRunnerDIFailureProblem);
 
-    expect(result).toBe(10);
-    expect(mockLogger.warn).toHaveBeenCalledWith('DI resolution failed, falling back to manual instantiation', {
+    expect(mockLogger.warn).toHaveBeenCalledWith('DI resolution failed while creating task instance', {
       target: 'DITaskHandler',
       error: 'DI resolution failed',
     });
     expect(recordErrorSpy).toHaveBeenCalledWith(containerError);
+    expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+      'exec-123',
+      expect.objectContaining({
+        message: "Failed to resolve task 'DITaskHandler'",
+        retryable: false,
+        code: 'tasks-core/task-runner-di-failure',
+      })
+    );
 
     recordErrorSpy.mockRestore();
   });

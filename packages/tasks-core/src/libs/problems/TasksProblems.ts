@@ -23,3 +23,20 @@ export class DuplicateTaskRegistrationProblem extends Problem {
     );
   }
 }
+
+export class TaskRunnerDIFailureProblem extends Problem {
+  constructor(taskName: string, cause: string) {
+    super(
+      'tasks-core/task-runner-di-failure',
+      ProblemCategory.InternalServerError,
+      `Failed to resolve task '${taskName}'`,
+      {
+        extensions: {
+          taskName,
+          cause,
+          retryable: false,
+        },
+      }
+    );
+  }
+}
