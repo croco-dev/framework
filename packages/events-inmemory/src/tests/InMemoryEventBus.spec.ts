@@ -726,6 +726,83 @@ describe('InMemoryEventBus', () => {
       await promise1;
     });
 
+    it('should throw timeout problem when block strategy exceeds configured timeout', async () => {
+      vi.useFakeTimers();
+
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      const timeoutBus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: 'block',
+        backpressureTimeoutMs: 25,
+      });
+
+      Container.set(SlowHandler, new SlowHandler());
+      timeoutBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      const firstPublish = timeoutBus.publish(new TestEvent('first'));
+      await vi.advanceTimersByTimeAsync(1);
+
+      const secondPublish = timeoutBus.publish(new TestEvent('second'));
+      const secondPublishExpectation = expect(secondPublish).rejects.toMatchObject({
+        message: 'Backpressure wait timed out after 25ms',
+      });
+
+      await vi.advanceTimersByTimeAsync(25);
+      await secondPublishExpectation;
+
+      await vi.advanceTimersByTimeAsync(100);
+      await firstPublish;
+      vi.useRealTimers();
+    });
+
+    it('should reject waitForSlot when AbortSignal is aborted', async () => {
+      const controller = new AbortController();
+      const abortBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const waitForSlot = abortBus as unknown as {
+        waitForSlot(signal?: AbortSignal): Promise<void>;
+        runningHandlers: Map<string, unknown>;
+      };
+
+      waitForSlot.runningHandlers.set('handler-1', {
+        eventName: 'TestEvent',
+        handlerName: 'BlockingHandler',
+        startTime: Date.now(),
+      });
+
+      const waitPromise = waitForSlot.waitForSlot(controller.signal);
+      controller.abort();
+
+      await expect(waitPromise).rejects.toMatchObject({
+        message: 'Backpressure wait aborted',
+      });
+    });
+
+    it('should keep existing block behavior when timeout option is omitted', async () => {
+      const executionOrder: string[] = [];
+
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          executionOrder.push(`start-${event.message}`);
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          executionOrder.push(`end-${event.message}`);
+        }
+      }
+
+      const blockBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'block' });
+
+      Container.set(SlowHandler, new SlowHandler());
+      blockBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+
+      await Promise.all([blockBus.publish(new TestEvent('first')), blockBus.publish(new TestEvent('second'))]);
+
+      expect(executionOrder).toEqual(['start-first', 'end-first', 'start-second', 'end-second']);
+    });
+
     it('should track running handlers correctly', async () => {
       let resolveHandler: (() => void) | undefined;
 
