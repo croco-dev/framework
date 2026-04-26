@@ -394,7 +394,7 @@ export class QStashTriggerHandler {
         (trigger) =>
           trigger.type === 'cron' &&
           String(trigger.methodName) === payload.methodName &&
-          this.matchesScheduleId(payload.scheduleId, trigger.options?.name, payload.methodName)
+          this.matchesScheduleId(payload.scheduleId, targetClass.name, trigger.options?.name, payload.methodName)
       );
 
       if (matchingTrigger) {
@@ -411,10 +411,15 @@ export class QStashTriggerHandler {
     return undefined;
   }
 
-  private matchesScheduleId(scheduleId: string, triggerName: string | undefined, methodName: string): boolean {
+  private matchesScheduleId(
+    scheduleId: string,
+    className: string,
+    triggerName: string | undefined,
+    methodName: string
+  ): boolean {
     const identifier = triggerName ?? methodName;
-    const expectedSuffix = `:${identifier}:${methodName}`;
-    return scheduleId.endsWith(expectedSuffix);
+    const expectedScheduleId = `croco-trigger:${className}:${identifier}:${methodName}`;
+    return scheduleId === expectedScheduleId;
   }
 
   private formatTriggerKey(payload: QStashWebhookPayload): string {
