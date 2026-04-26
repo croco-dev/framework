@@ -87,7 +87,7 @@ export class LlmService {
   @Trace({ name: 'llm.embed' })
   async embed(params: EmbedParams): Promise<EmbedResult> {
     try {
-      const model = params.model ?? 'default';
+      const model = params.modelId ?? 'default';
       const llmModel = await this.registry.getModel(model);
       return await llmModel.embed(params);
     } catch (error) {
@@ -98,7 +98,7 @@ export class LlmService {
   @Trace({ name: 'llm.embed_many' })
   async embedMany(params: EmbedManyParams): Promise<EmbedManyResult> {
     try {
-      const model = params.model ?? 'default';
+      const model = params.modelId ?? 'default';
       const llmModel = await this.registry.getModel(model);
       return await llmModel.embedMany(params);
     } catch (error) {

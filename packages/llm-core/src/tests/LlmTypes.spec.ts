@@ -196,12 +196,12 @@ describe('types', () => {
       expect(params.text).toBe('Hello world');
     });
 
-    it('should accept optional model', () => {
+    it('should accept optional modelId', () => {
       const params: EmbedParams = {
         text: 'Hello',
-        model: 'text-embedding-ada-002',
+        modelId: 'text-embedding-ada-002',
       };
-      expect(params.model).toBe('text-embedding-ada-002');
+      expect(params.modelId).toBe('text-embedding-ada-002');
     });
   });
 
@@ -228,12 +228,12 @@ describe('types', () => {
       expect(params.texts).toHaveLength(2);
     });
 
-    it('should accept optional model', () => {
+    it('should accept optional modelId', () => {
       const params: EmbedManyParams = {
         texts: ['Hello'],
-        model: 'text-embedding-ada-002',
+        modelId: 'text-embedding-ada-002',
       };
-      expect(params.model).toBe('text-embedding-ada-002');
+      expect(params.modelId).toBe('text-embedding-ada-002');
     });
   });
 

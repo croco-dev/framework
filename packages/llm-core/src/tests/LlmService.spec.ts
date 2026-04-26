@@ -200,7 +200,7 @@ describe('LlmService', () => {
     it('should generate embedding for single text', async () => {
       const result = await service.embed({
         text: 'Hello world',
-        model: 'embed-model',
+        modelId: 'embed-model',
       });
 
       expect(result.embedding).toBeInstanceOf(Array);
@@ -208,7 +208,7 @@ describe('LlmService', () => {
       expect(result.usage.totalTokens).toBeGreaterThan(0);
     });
 
-    it('should use default model when model is not provided', async () => {
+    it('should use default model when modelId is not provided', async () => {
       registry.registerProvider('default', () => new InMemoryLlmModel('default'));
 
       const result = await service.embed({ text: 'Test' });
@@ -221,7 +221,7 @@ describe('LlmService', () => {
     it('should generate embeddings for multiple texts', async () => {
       const result = await service.embedMany({
         texts: ['Hello', 'World'],
-        model: 'embed-model',
+        modelId: 'embed-model',
       });
 
       expect(result.embeddings).toBeInstanceOf(Array);
@@ -232,7 +232,7 @@ describe('LlmService', () => {
     it('should handle empty array', async () => {
       const result = await service.embedMany({
         texts: [],
-        model: 'embed-model',
+        modelId: 'embed-model',
       });
 
       expect(result.embeddings).toEqual([]);
