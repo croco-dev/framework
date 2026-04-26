@@ -30,7 +30,7 @@ describe('TelemetryMiddleware', () => {
     vi.restoreAllMocks();
   });
 
-  it('should continue request and mark degraded mode when telemetry setup fails', async () => {
+  it('should mark degraded mode without re-entering pipeline when telemetry setup fails', async () => {
     const ctx = createContext();
     const next = vi.fn().mockResolvedValue(undefined);
 
@@ -41,10 +41,24 @@ describe('TelemetryMiddleware', () => {
 
     await middleware(ctx, next);
 
-    expect(next).toHaveBeenCalledTimes(1);
+    expect(next).not.toHaveBeenCalled();
     expect(ctx.get('telemetryDegraded')).toBe(true);
     expect(ctx.get('traceId')).toMatch(/^telemetry-degraded-/);
 
     headerSpy.mockRestore();
+  });
+
+  it('should not call next twice when downstream throws after span setup', async () => {
+    const ctx = createContext();
+    const nextError = new Error('downstream failure');
+    const next = vi.fn().mockRejectedValue(nextError);
+
+    const middleware = telemetryMiddleware('/health');
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined();
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(ctx.get('telemetryDegraded')).toBe(true);
+    expect(ctx.get('traceId')).toMatch(/^telemetry-degraded-/);
   });
 });

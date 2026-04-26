@@ -104,8 +104,6 @@ export const telemetryMiddleware =
 
       ctx.set('traceId', fallbackTraceId);
       ctx.set('telemetryDegraded', true);
-
-      await next();
     }
   };
 
