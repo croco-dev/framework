@@ -27,4 +27,32 @@ describe('crocoSpaViteConfig', () => {
 
     expect(Array.isArray(plugins)).toBe(true);
   });
+
+  it('should create SPA vite config shape with defaults and custom options', async () => {
+    const { createCrocoSpaViteConfig } = await import('../libs/crocoSpaViteConfig');
+
+    expect(createCrocoSpaViteConfig()).toEqual({
+      plugins: [],
+      build: {
+        outDir: 'dist',
+      },
+      base: '/',
+      envPrefix: ['VITE_'],
+    });
+
+    expect(
+      createCrocoSpaViteConfig({
+        outDir: 'build',
+        base: '/custom/',
+        envPrefix: ['CUSTOM_'],
+      })
+    ).toEqual({
+      plugins: [],
+      build: {
+        outDir: 'build',
+      },
+      base: '/custom/',
+      envPrefix: ['CUSTOM_'],
+    });
+  });
 });

@@ -371,6 +371,51 @@ describe('CrocoApp', () => {
     }
   });
 
+  it('should return 404 for missing assets inside asset directories', async () => {
+    const app = createApp({ controllers: [TestController] });
+    const staticDir = await createStaticFixture({
+      'index.html': '<html><body>spa shell</body></html>',
+      'assets/app.js': 'console.log("app")',
+    });
+
+    try {
+      await app.listen(3000, { staticDir, spaFallback: true });
+
+      const response = await app.fetch(
+        new Request('http://localhost/assets/missing.js', {
+          headers: { Accept: 'text/html,application/xhtml+xml' },
+        })
+      );
+
+      expect(response.status).toBe(404);
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should not return SPA html for application json requests', async () => {
+    const app = createApp({ controllers: [TestController] });
+    const staticDir = await createStaticFixture({
+      'index.html': '<html><body>spa shell</body></html>',
+    });
+
+    try {
+      await app.listen(3000, { staticDir, spaFallback: true });
+
+      const response = await app.fetch(
+        new Request('http://localhost/dashboard', {
+          headers: { Accept: 'application/json' },
+        })
+      );
+
+      expect(response.status).toBe(404);
+      expect(response.headers.get('content-type')?.includes('text/html') ?? false).toBe(false);
+      expect(await response.text()).not.toContain('spa shell');
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
+  });
+
   it('should preserve binary body through lambda request/response', async () => {
     const app = createApp({ controllers: [LambdaController] });
     const handler = app.lambdaHandler();
