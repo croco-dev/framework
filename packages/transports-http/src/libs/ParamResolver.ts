@@ -1,4 +1,3 @@
-import { Container } from '@croco/framework-context';
 import { ProblemFactory } from '@croco/problems-core';
 import {
   type ArgumentMetadata,
@@ -63,6 +62,11 @@ class ZodValidationPipe implements PipeTransform<unknown, unknown> {
  */
 export class ParamResolver {
   private static readonly PARSED_BODY_PROMISE_KEY = '@croco/transports-http:parsed-body-promise';
+
+  constructor(
+    private readonly createPipeInstance: (pipe: PipeTransformConstructor) => PipeTransform | null | undefined = () =>
+      undefined
+  ) {}
 
   async resolveParams(ctx: CrocoHttpContext, controller: Constructor, methodName: string | symbol): Promise<unknown[]> {
     const paramsMeta = getParamsMeta(controller, methodName);
@@ -157,14 +161,15 @@ export class ParamResolver {
       return pipe as PipeTransform;
     }
 
-    try {
-      return Container.get(pipe as PipeTransformConstructor);
-    } catch (error) {
+    const pipeInstance = this.createPipeInstance(pipe as PipeTransformConstructor);
+    if (pipeInstance == null) {
       throw ProblemFactory.internalServerError(
         'transports-http/pipe-resolution-failed',
-        `Container did not return an instance for pipe ${pipe.name}: ${error instanceof Error ? error.message : String(error)}`
+        `Container did not return an instance for pipe ${pipe.name}`
       );
     }
+
+    return pipeInstance;
   }
 
   private isZodSchema(value: unknown): boolean {

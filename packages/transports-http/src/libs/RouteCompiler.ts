@@ -60,8 +60,6 @@ function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<
  * REST 컨트롤러 메타데이터를 실행 가능한 라우트 정의로 컴파일합니다.
  */
 export class RouteCompiler {
-  private paramResolver = new ParamResolver();
-
   constructor(
     private readonly logger: ILogger,
     private readonly pipelineRunner: PipelineRunner
@@ -115,6 +113,7 @@ export class RouteCompiler {
     options: CompileOptions
   ): CompiledRoute {
     const fullPath = this.joinPaths(controllerMeta.path, routeMeta.path);
+    const paramResolver = new ParamResolver((pipe) => instantiateProvider(pipe, options.container));
 
     // Instantiate guards/interceptors/filters once at compile time (not per-request)
     const globalGuards = (options.globalGuards || []) as GuardProvider<Guard<ExecutionContext>>[];
@@ -151,7 +150,7 @@ export class RouteCompiler {
       ] as ExceptionFilter<unknown, HttpExecutionContext>[];
 
       const controllerHandler = async (): Promise<unknown> => {
-        const args = await this.paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
+        const args = await paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
         const method = (instance as Record<PropertyKey, unknown>)[routeMeta.methodName];
         if (typeof method !== 'function') {
           throw ProblemFactory.internalServerError(
