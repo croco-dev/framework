@@ -1,6 +1,6 @@
 import 'reflect-metadata';
-import { Body, REST_PARAMS_KEY } from '@croco/protocols-rest';
 import type { PipeTransform } from '@croco/protocols-rest';
+import { Body, REST_PARAMS_KEY } from '@croco/protocols-rest';
 import { describe, expect, it, vi } from 'vitest';
 import { ParamResolver } from '../libs/ParamResolver';
 import type { CrocoHttpContext } from '../libs/types';
