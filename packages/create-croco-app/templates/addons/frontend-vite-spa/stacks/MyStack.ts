@@ -11,7 +11,7 @@ import { Function as SstFunction, StaticSite } from 'sst/aws';
  * 지원 플러그인을 추가하세요.
  */
 
-export async function viteSpaStack() {
+export async function myStack() {
   const api = new SstFunction('Api', {
     handler: 'apps/api/src/handler.ts',
     url: true,
