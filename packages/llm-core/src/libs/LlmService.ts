@@ -50,37 +50,94 @@ export class LlmService {
   }
 
   async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
-    try {
-      const modelId = params.modelId ?? 'default';
-      const model = await this.registry.getModel(modelId);
-      const streamedChunks: string[] = [];
-      const streamUsage: Partial<LlmUsage> = {};
-      let chunkCount = 0;
+    const modelId = params.modelId ?? 'default';
+    const queuedChunks: StreamChunk[] = [];
+    let queuedError: unknown;
+    let isDone = false;
+    let resumeConsumer: (() => void) | undefined;
 
-      for await (const chunk of model.stream(params)) {
-        chunkCount += 1;
-        streamedChunks.push(chunk.delta);
+    const notifyConsumer = (): void => {
+      const consumer = resumeConsumer;
+      resumeConsumer = undefined;
+      consumer?.();
+    };
 
-        if (chunk.usage) {
-          Object.assign(streamUsage, chunk.usage);
-        }
-
-        yield chunk;
+    const waitForProducer = async (): Promise<void> => {
+      if (queuedChunks.length > 0 || queuedError || isDone) {
+        return;
       }
 
-      const text = streamedChunks.join('');
-      const usage = this.buildStreamUsage(params.prompt, text, streamUsage);
-
-      await this.publishCompletionEvent({
-        operation: 'stream',
-        modelId: model.modelId,
-        prompt: params.prompt,
-        text,
-        usage,
-        chunkCount,
+      await new Promise<void>((resolve) => {
+        resumeConsumer = resolve;
       });
-    } catch (error) {
-      throw LlmServiceProblem.fromError(error);
+    };
+
+    const producer = withSpan(
+      async (span) => {
+        try {
+          span.setAttribute('llm.model_id', modelId);
+
+          const model = await this.registry.getModel(modelId);
+          const streamedChunks: string[] = [];
+          const streamUsage: Partial<LlmUsage> = {};
+          let chunkCount = 0;
+
+          for await (const chunk of model.stream(params)) {
+            chunkCount += 1;
+            streamedChunks.push(chunk.delta);
+
+            if (chunk.usage) {
+              Object.assign(streamUsage, chunk.usage);
+            }
+
+            queuedChunks.push(chunk);
+            notifyConsumer();
+          }
+
+          const text = streamedChunks.join('');
+          const usage = this.buildStreamUsage(params.prompt, text, streamUsage);
+
+          await this.publishCompletionEvent({
+            operation: 'stream',
+            modelId: model.modelId,
+            prompt: params.prompt,
+            text,
+            usage,
+            chunkCount,
+          });
+        } catch (error) {
+          throw LlmServiceProblem.fromError(error);
+        } finally {
+          isDone = true;
+          notifyConsumer();
+        }
+      },
+      { name: 'llm.stream' }
+    ).catch((error) => {
+      queuedError = error;
+    });
+
+    try {
+      while (true) {
+        const chunk = queuedChunks.shift();
+
+        if (chunk) {
+          yield chunk;
+          continue;
+        }
+
+        if (queuedError) {
+          throw queuedError;
+        }
+
+        if (isDone) {
+          break;
+        }
+
+        await waitForProducer();
+      }
+    } finally {
+      await producer;
     }
   }
 
