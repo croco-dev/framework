@@ -2,7 +2,12 @@ import 'reflect-metadata';
 import { Container, Context as FrameworkContext } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { Body, Controller, Get, Param, Post, Raw } from '@croco/protocols-rest';
-import { createSlidingWindowPolicy, RateLimitKeyBuilder, RateLimiter, SlidingWindowInMemoryStore } from '@croco/ratelimit-core';
+import {
+  createSlidingWindowPolicy,
+  RateLimiter,
+  RateLimitKeyBuilder,
+  SlidingWindowInMemoryStore,
+} from '@croco/ratelimit-core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
 import { CrocoRouteRegistrar } from '../libs/CrocoRouteRegistrar';
@@ -181,6 +186,7 @@ describe('CrocoApp', () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: createRequiredSecurityMiddlewares(),
+      securityValidation: 'enforce',
     });
 
     const response = await app.fetch(new Request('http://localhost/api/hello'));
@@ -198,7 +204,7 @@ describe('CrocoApp', () => {
     expect(() => app.lambdaHandler()).toThrow(/Missing required security middleware/);
   });
 
-  it("should allow bootstrap when securityValidation is set to off", async () => {
+  it('should allow bootstrap when securityValidation is set to off', async () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: [securityHeadersMiddleware()],
