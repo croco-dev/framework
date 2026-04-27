@@ -3,6 +3,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryLlmModel } from '../libs/InMemoryLlmModel';
 import { InMemoryLlmRegistry } from '../libs/InMemoryLlmRegistry';
 import { LlmService } from '../libs/LlmService';
+import type { StreamChunk, StreamParams } from '../libs/types';
+
+class FailingStreamModel extends InMemoryLlmModel {
+  constructor() {
+    super('failing-stream-model');
+  }
+
+  override async *stream(_params: StreamParams): AsyncIterable<StreamChunk> {
+    yield { delta: 'partial ' };
+    throw new Error('provider stream failed');
+  }
+}
+
+async function collectStream(chunks: AsyncIterable<StreamChunk>): Promise<string[]> {
+  const deltas: string[] = [];
+
+  for await (const chunk of chunks) {
+    deltas.push(chunk.delta);
+  }
+
+  return deltas;
+}
 
 describe('LlmService', () => {
   let service!: LlmService;
@@ -193,6 +215,43 @@ describe('LlmService', () => {
           }),
         })
       );
+    });
+
+    it('should propagate stream model lookup errors to the consumer', async () => {
+      await expect(
+        collectStream(
+          service.stream({
+            prompt: 'Stream test',
+            modelId: 'missing-stream-model',
+          })
+        )
+      ).rejects.toThrow();
+    });
+
+    it('should propagate provider stream errors to the consumer', async () => {
+      registry.registerProvider('failing-stream-model', () => new FailingStreamModel());
+
+      await expect(
+        collectStream(
+          service.stream({
+            prompt: 'Stream test',
+            modelId: 'failing-stream-model',
+          })
+        )
+      ).rejects.toThrow(/provider stream failed/);
+    });
+
+    it('should propagate stream completion event publish errors to the consumer', async () => {
+      vi.mocked(eventBus.publish).mockRejectedValueOnce(new Error('publish failed'));
+
+      await expect(
+        collectStream(
+          service.stream({
+            prompt: 'Stream test',
+            modelId: 'stream-model',
+          })
+        )
+      ).rejects.toThrow(/publish failed/);
     });
   });
 

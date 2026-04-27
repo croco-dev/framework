@@ -53,6 +53,7 @@ export class LlmService {
     const modelId = params.modelId ?? 'default';
     const queuedChunks: StreamChunk[] = [];
     let queuedError: unknown;
+    let hasQueuedError = false;
     let isDone = false;
     let resumeConsumer: (() => void) | undefined;
 
@@ -63,7 +64,7 @@ export class LlmService {
     };
 
     const waitForProducer = async (): Promise<void> => {
-      if (queuedChunks.length > 0 || queuedError || isDone) {
+      if (queuedChunks.length > 0 || hasQueuedError || isDone) {
         return;
       }
 
@@ -115,6 +116,8 @@ export class LlmService {
       { name: 'llm.stream' }
     ).catch((error) => {
       queuedError = error;
+      hasQueuedError = true;
+      notifyConsumer();
     });
 
     try {
@@ -126,7 +129,7 @@ export class LlmService {
           continue;
         }
 
-        if (queuedError) {
+        if (hasQueuedError) {
           throw queuedError;
         }
 
@@ -138,6 +141,10 @@ export class LlmService {
       }
     } finally {
       await producer;
+    }
+
+    if (hasQueuedError) {
+      throw queuedError;
     }
   }
 
