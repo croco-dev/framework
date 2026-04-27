@@ -30,7 +30,7 @@ describe('TelemetryMiddleware', () => {
     vi.restoreAllMocks();
   });
 
-  it('should mark degraded mode without re-entering pipeline when telemetry setup fails', async () => {
+  it('should mark degraded mode and continue pipeline when telemetry setup fails', async () => {
     const ctx = createContext();
     const next = vi.fn().mockResolvedValue(undefined);
 
@@ -41,7 +41,7 @@ describe('TelemetryMiddleware', () => {
 
     await middleware(ctx, next);
 
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
     expect(ctx.get('telemetryDegraded')).toBe(true);
     expect(ctx.get('traceId')).toMatch(/^telemetry-degraded-/);
 
@@ -55,10 +55,9 @@ describe('TelemetryMiddleware', () => {
 
     const middleware = telemetryMiddleware('/health');
 
-    await expect(middleware(ctx, next)).resolves.toBeUndefined();
+    await expect(middleware(ctx, next)).rejects.toThrow(nextError);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect(ctx.get('telemetryDegraded')).toBe(true);
-    expect(ctx.get('traceId')).toMatch(/^telemetry-degraded-/);
+    expect(ctx.get('telemetryDegraded')).toBeUndefined();
   });
 });
