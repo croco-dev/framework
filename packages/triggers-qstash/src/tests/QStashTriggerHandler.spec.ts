@@ -273,6 +273,82 @@ describe('QStashTriggerHandler', () => {
     expect(getSpy).not.toHaveBeenCalledWith(WrongNamedHandler);
   });
 
+  it('커스텀 schedule prefix에서도 class/name/method 식별자로 정확한 핸들러를 매칭해야 한다', async () => {
+    class WrongCustomPrefixHandler {
+      async execute(): Promise<string> {
+        return 'wrong';
+      }
+    }
+
+    class ExactCustomPrefixHandler {
+      async execute(): Promise<string> {
+        return 'exact';
+      }
+    }
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'execute',
+      target: WrongCustomPrefixHandler.prototype,
+      options: {
+        name: 'named-execute',
+      },
+    });
+
+    triggerRegistry.register({
+      type: 'cron',
+      expression: '* * * * *',
+      methodName: 'execute',
+      target: ExactCustomPrefixHandler.prototype,
+      options: {
+        name: 'named-execute',
+      },
+    });
+
+    const targetInstance = new ExactCustomPrefixHandler();
+    Container.set(ExactCustomPrefixHandler, targetInstance);
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const executionManager = {
+      create: vi.fn().mockResolvedValue({ id: 'exec-custom-prefix' }),
+      start: vi.fn().mockResolvedValue({}),
+      complete: vi.fn().mockResolvedValue({}),
+      fail: vi.fn().mockResolvedValue({}),
+      cancel: vi.fn().mockResolvedValue({}),
+      retry: vi.fn().mockResolvedValue({}),
+      updateProgress: vi.fn().mockResolvedValue({}),
+      checkpoint: vi.fn().mockResolvedValue({}),
+      timeout: vi.fn().mockResolvedValue({}),
+    } as unknown as ExecutionManager;
+
+    const getSpy = vi.spyOn(Container, 'get');
+
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: 'tenant-a:ExactCustomPrefixHandler:named-execute:execute',
+        triggerName: 'named-execute',
+        methodName: 'execute',
+        cronExpression: '* * * * *',
+        timestamp: new Date().toISOString(),
+      }),
+      'valid-signature'
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.statusCode).toBe(200);
+    expect(getSpy).toHaveBeenCalledWith(ExactCustomPrefixHandler);
+    expect(getSpy).not.toHaveBeenCalledWith(WrongCustomPrefixHandler);
+  });
+
   it('DI 해석 오류가 발생하면 500으로 반환해야 한다', async () => {
     class ResolverFailureHandler {
       async execute(): Promise<string> {

@@ -418,8 +418,9 @@ export class QStashTriggerHandler {
     methodName: string
   ): boolean {
     const identifier = triggerName ?? methodName;
-    const expectedScheduleId = `croco-trigger:${className}:${identifier}:${methodName}`;
-    return scheduleId === expectedScheduleId;
+    const [payloadClassName, payloadIdentifier, payloadMethodName] = scheduleId.split(':').slice(-3);
+
+    return payloadClassName === className && payloadIdentifier === identifier && payloadMethodName === methodName;
   }
 
   private formatTriggerKey(payload: QStashWebhookPayload): string {
