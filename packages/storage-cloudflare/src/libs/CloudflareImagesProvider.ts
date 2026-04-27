@@ -212,8 +212,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     this.validateKey(key);
 
     const ttl = options?.ttlInSeconds ?? this.ttl;
-    if (ttl <= 0) {
-      throw ProblemFactory.invalidArgument('storage/invalid-upload-intent-ttl', 'ttlInSeconds must be greater than 0');
+    if (!Number.isFinite(ttl) || !Number.isInteger(ttl) || ttl <= 0) {
+      throw ProblemFactory.invalidArgument(
+        'storage/invalid-upload-intent-ttl',
+        'ttlInSeconds must be a positive finite integer'
+      );
     }
 
     const url = `${this.apiBaseUrl}/direct_upload`;

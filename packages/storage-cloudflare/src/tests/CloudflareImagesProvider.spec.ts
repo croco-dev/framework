@@ -665,6 +665,16 @@ describe('CloudflareImagesProvider', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
+    it('should throw Problem when ttlInSeconds is not a finite integer', async () => {
+      for (const ttlInSeconds of [Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
+        await expect(provider.getUploadIntent('new-image.jpg', { ttlInSeconds })).rejects.toMatchObject({
+          code: 'storage/invalid-upload-intent-ttl',
+        });
+      }
+
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
     it('should throw UploadFailedProblem when API returns error', async () => {
       const mockResponse = {
         ok: false,

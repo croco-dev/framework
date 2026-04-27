@@ -772,6 +772,14 @@ describe('CloudinaryProvider', () => {
       });
     });
 
+    it('should throw Problem when ttlInSeconds is not a finite integer', async () => {
+      for (const ttlInSeconds of [Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
+        await expect(provider.getUploadIntent('test-key', { ttlInSeconds })).rejects.toMatchObject({
+          code: 'storage/invalid-upload-intent-ttl',
+        });
+      }
+    });
+
     it('should throw InvalidKeyProblem for invalid key', async () => {
       await expect(provider.getUploadIntent('')).rejects.toThrow(InvalidKeyProblem);
     });
