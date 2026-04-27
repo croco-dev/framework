@@ -105,6 +105,36 @@ type AuditWriteDependencies = {
   logger: ILogger;
 };
 
+function safelyRecordError(error: unknown): void {
+  try {
+    recordError(error);
+  } catch {
+    return;
+  }
+}
+
+function safelyWarn(logger: ILogger, message: string, metadata: Record<string, unknown>): void {
+  try {
+    logger.warn(message, metadata);
+  } catch {
+    return;
+  }
+}
+
+function resolveAuditWriteDependencies(): AuditWriteDependencies | undefined {
+  try {
+    const [repository, logger] = Container.getMany([AUDIT_LOG_REPOSITORY_TOKEN, LOGGER_TOKEN]) as [
+      AuditLogRepository,
+      ILogger,
+    ];
+
+    return { repository, logger };
+  } catch (error) {
+    safelyRecordError(error);
+    return undefined;
+  }
+}
+
 function writeAuditLog(
   config: AuditWriteConfig,
   payload: Record<string, unknown>,
@@ -124,15 +154,10 @@ function writeAuditLog(
   void Promise.resolve()
     .then(() => dependencies.repository.create(entry))
     .catch((error) => {
-      try {
-        recordError(error);
-        dependencies.logger.warn('[Auditable] Failed to write audit log', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } catch {
-        // Empty catch block intentionally suppresses secondary errors in audit logging
-        // eslint-disable-next-line no-empty
-      }
+      safelyRecordError(error);
+      safelyWarn(dependencies.logger, '[Auditable] Failed to write audit log', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
 }
 
@@ -160,11 +185,7 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const context = Context.get();
-      const resolveDependencies = Container.getMany.bind(Container);
-      const [repository, logger] = resolveDependencies([
-        AUDIT_LOG_REPOSITORY_TOKEN,
-        LOGGER_TOKEN,
-      ]) as [AuditLogRepository, ILogger];
+      const dependencies = resolveAuditWriteDependencies();
       const payloadInput = paramMetadata.payloadIndex !== undefined ? args[paramMetadata.payloadIndex] : undefined;
       const resourceIdValue =
         paramMetadata.resourceIdIndex !== undefined ? args[paramMetadata.resourceIdIndex] : undefined;
@@ -190,13 +211,17 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         const result = await originalMethod.apply(this, args);
 
         const payload = buildAuditPayload(args, payloadInput, result, null, options.includeResult ?? true);
-        writeAuditLog(auditConfig, payload, { repository, logger });
+        if (dependencies) {
+          writeAuditLog(auditConfig, payload, dependencies);
+        }
 
         return result;
       } catch (error) {
         const errorObj = error instanceof Error ? error : new Error(String(error));
         const payload = buildAuditPayload(args, payloadInput, null, errorObj, false);
-        writeAuditLog(auditConfig, payload, { repository, logger });
+        if (dependencies) {
+          writeAuditLog(auditConfig, payload, dependencies);
+        }
 
         throw error;
       }
