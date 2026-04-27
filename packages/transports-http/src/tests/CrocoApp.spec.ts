@@ -212,6 +212,7 @@ describe('CrocoApp', () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: createRequiredSecurityMiddlewares(),
+      securityValidation: 'enforce',
     });
 
     const response = await app.fetch(new Request('http://localhost/api/hello'));

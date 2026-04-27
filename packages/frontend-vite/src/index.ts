@@ -7,6 +7,6 @@
  * 플러그인을 제공합니다.
  */
 
-export { crocoSpaViteConfig } from './libs/crocoSpaViteConfig';
+export { createCrocoSpaViteConfig, crocoSpaViteConfig } from './libs/crocoSpaViteConfig';
 export { crocoVitePlugin } from './libs/crocoVitePlugin';
 export type { CrocoSpaOptions, CrocoViteConfig, CrocoViteOptions } from './libs/types';

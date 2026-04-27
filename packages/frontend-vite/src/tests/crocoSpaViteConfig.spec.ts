@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createCrocoSpaViteConfig as createPublicCrocoSpaViteConfig } from '../index';
 import { crocoSpaViteConfig } from '../libs/crocoSpaViteConfig';
 
 describe('crocoSpaViteConfig', () => {
@@ -54,5 +55,9 @@ describe('crocoSpaViteConfig', () => {
       base: '/custom/',
       envPrefix: ['CUSTOM_'],
     });
+  });
+
+  it('should expose SPA vite config creator from package entrypoint', () => {
+    expect(createPublicCrocoSpaViteConfig({ outDir: 'public-build' }).build.outDir).toBe('public-build');
   });
 });
