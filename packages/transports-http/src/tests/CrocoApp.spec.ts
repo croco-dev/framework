@@ -1,8 +1,26 @@
 import 'reflect-metadata';
 import { Container, Context as FrameworkContext } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
-import { Body, Controller, Get, Param, Post, Raw } from '@croco/protocols-rest';
-import { createSlidingWindowPolicy, RateLimitKeyBuilder, RateLimiter, SlidingWindowInMemoryStore } from '@croco/ratelimit-core';
+import {
+  type ArgumentMetadata,
+  Body,
+  Controller,
+  Get,
+  Param,
+  type ParamMetadata,
+  ParamType,
+  type PipeTransform,
+  type PipeTransformConstructor,
+  Post,
+  Raw,
+  REST_PARAMS_KEY,
+} from '@croco/protocols-rest';
+import {
+  createSlidingWindowPolicy,
+  RateLimiter,
+  RateLimitKeyBuilder,
+  SlidingWindowInMemoryStore,
+} from '@croco/ratelimit-core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
 import { CrocoRouteRegistrar } from '../libs/CrocoRouteRegistrar';
@@ -181,6 +199,7 @@ describe('CrocoApp', () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: createRequiredSecurityMiddlewares(),
+      securityValidation: 'enforce',
     });
 
     const response = await app.fetch(new Request('http://localhost/api/hello'));
@@ -198,7 +217,7 @@ describe('CrocoApp', () => {
     expect(() => app.lambdaHandler()).toThrow(/Missing required security middleware/);
   });
 
-  it("should allow bootstrap when securityValidation is set to off", async () => {
+  it('should allow bootstrap when securityValidation is set to off', async () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: [securityHeadersMiddleware()],
@@ -245,6 +264,63 @@ describe('CrocoApp', () => {
     const json = await response.json();
     expect(json.created).toBe(true);
     expect(json.data).toEqual({ name: 'New User' });
+  });
+
+  it('should resolve parameter pipes through the app container', async () => {
+    class PipeDependency {
+      format(value: string): string {
+        return `container:${value}`;
+      }
+    }
+
+    class ContainerBackedPipe implements PipeTransform<unknown, string> {
+      constructor(private readonly dependency: PipeDependency) {}
+
+      transform(value: unknown, metadata: ArgumentMetadata): string {
+        void metadata;
+        const input =
+          value && typeof value === 'object' && 'name' in value ? (value as { name?: unknown }).name : value;
+        return this.dependency.format(String(input));
+      }
+    }
+
+    const ContainerBackedPipeCtor = ContainerBackedPipe as unknown as PipeTransformConstructor;
+
+    @Controller('/pipes')
+    class PipeController {
+      @Post('/body')
+      create(value: string) {
+        return { value };
+      }
+    }
+
+    const params = new Map<string | symbol, ParamMetadata[]>();
+    params.set('create', [
+      {
+        type: ParamType.BODY,
+        index: 0,
+        pipes: [ContainerBackedPipeCtor],
+      },
+    ]);
+    Reflect.defineMetadata(REST_PARAMS_KEY, params, PipeController);
+
+    Container.set(ContainerBackedPipe, new ContainerBackedPipe(new PipeDependency()));
+
+    const app = createApp({
+      controllers: [PipeController],
+      securityValidation: 'off',
+    });
+
+    const response = await app.fetch(
+      new Request('http://localhost/pipes/body', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'croco' }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ value: 'container:croco' });
   });
 
   it('should return 404 for unknown routes', async () => {
