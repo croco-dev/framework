@@ -49,4 +49,29 @@ describe('E2E Vite SPA: generate()', () => {
     expect(viteConfigContent).toContain('crocoSpaViteConfig');
     expect(packageJsonContent).toContain('"vite": "^6.0.0"');
   });
+
+  it('generates vite spa docker file with api build artifacts', { timeout: 120_000 }, async () => {
+    const options: GeneratorOptions = {
+      projectName: 'my-vite-spa-docker',
+      scope: '@test',
+      preset: 'ddd-fullstack',
+      webApps: ['web'],
+      api: 'trpc',
+      apiHosting: 'standalone',
+      backendDeploy: 'docker',
+      frontendDeploy: 'vite-spa',
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    await generate(testDir, options);
+
+    const dockerfileContent = readFileSync(join(testDir, 'web', 'Dockerfile.vite-spa'), 'utf8');
+
+    expect(dockerfileContent).toContain('pnpm turbo build --filter=@{{scope}}/web --filter=@{{scope}}/api');
+    expect(dockerfileContent).toContain('COPY --from=builder --chown=nodejs:nodejs /app/apps/api/dist ./apps/api/dist');
+    expect(dockerfileContent).toContain('CMD ["node", "apps/api/dist/server.js"]');
+  });
 });
