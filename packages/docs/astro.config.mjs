@@ -39,6 +39,7 @@ export default defineConfig({
           ],
           tsconfig: './tsconfig.typedoc.json',
           typeDoc: {
+            disableSources: true,
             excludeInternal: true,
             excludePrivate: true,
             skipErrorChecking: true,
