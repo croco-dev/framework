@@ -5,8 +5,6 @@ prev: false
 title: "DistributedRateLimitStore"
 ---
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:36](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L36)
-
 분산 저장소와 알고리즘별 저장소 추상 계약입니다.
 
 ## Extends
@@ -39,8 +37,6 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:36](https://gith
 
 > `abstract` **check**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:31](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L31)
-
 #### Parameters
 
 ##### key
@@ -65,8 +61,6 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:31](https://gith
 
 > `abstract` **expire**(`key`, `ttlMs`): `Promise`\<`void`\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:40](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L40)
-
 #### Parameters
 
 ##### key
@@ -87,8 +81,6 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:40](https://gith
 
 > `abstract` **getCount**(`key`): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:38](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L38)
-
 #### Parameters
 
 ##### key
@@ -104,8 +96,6 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:38](https://gith
 ### getStats()
 
 > `abstract` **getStats**(`key?`): `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
-
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:32](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L32)
 
 #### Parameters
 
@@ -127,8 +117,6 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:32](https://gith
 
 > `abstract` **increment**(`key`, `amount?`): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:37](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L37)
-
 #### Parameters
 
 ##### key
@@ -149,8 +137,6 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:37](https://gith
 
 > `abstract` **pruneExpired**(): `Promise`\<`number`\>
 
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:33](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L33)
-
 #### Returns
 
 `Promise`\<`number`\>
@@ -164,8 +150,6 @@ Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:33](https://gith
 ### reset()
 
 > `abstract` **reset**(`key`): `Promise`\<`void`\>
-
-Defined in: [packages/ratelimit-core/src/libs/RateLimitStore.ts:39](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/ratelimit-core/src/libs/RateLimitStore.ts#L39)
 
 #### Parameters
 

@@ -7,8 +7,6 @@ title: "Metered"
 
 > **Metered**(`options`): `MethodDecorator`
 
-Defined in: [packages/metering-core/src/libs/decorators/Metered.ts:78](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Metered.ts#L78)
-
 ## Parameters
 
 ### options

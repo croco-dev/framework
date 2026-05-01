@@ -23,6 +23,11 @@ export interface AppConfig {
   globalPipes?: PipeProvider[];
 }
 
+export interface ListenOptions {
+  staticDir?: string;
+  spaFallback?: boolean;
+}
+
 export type MiddlewareFunction = (ctx: CrocoHttpContext, next: () => Promise<void>) => Promise<void> | void;
 
 export interface CrocoHttpContext {

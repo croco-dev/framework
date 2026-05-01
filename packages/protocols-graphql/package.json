@@ -15,9 +15,9 @@
   "dependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
-    "graphql": "^16.10.1",
+    "graphql": "^16.12.0",
     "reflect-metadata": "0.2.2",
-    "type-graphql": "^2.0.0-rc.2"
+    "type-graphql": "^2.0.0-rc.3"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*"

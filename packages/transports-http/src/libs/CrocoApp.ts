@@ -1,7 +1,11 @@
+import { existsSync, statSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { Container, type ILogger, LOGGER_TOKEN } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { ProblemFactory } from '@croco/problems-core';
 import { Hono } from 'hono';
+import { getMimeType } from 'hono/utils/mime';
 import { CrocoLambdaAdapter } from './CrocoLambdaAdapter';
 import { CrocoRouteRegistrar } from './CrocoRouteRegistrar';
 import { ErrorHandler } from './ErrorHandler';
@@ -9,7 +13,7 @@ import { HealthCheckRegistry } from './HealthCheckRegistry';
 import { PipelineRunner } from './PipelineRunner';
 
 import { type CompileOptions, RouteCompiler } from './RouteCompiler';
-import type { AppConfig, CompiledRoute, LambdaHandler, MiddlewareFunction } from './types';
+import type { AppConfig, CompiledRoute, LambdaHandler, ListenOptions, MiddlewareFunction } from './types';
 
 type SecurityValidationMode = NonNullable<AppConfig['securityValidation']>;
 
@@ -44,6 +48,7 @@ export class CrocoApp {
   private hono: Hono;
   private routes: CompiledRoute[] = [];
   private booted = false;
+  private nodeStaticRoutesRegistered = false;
   private routeRegistrar: CrocoRouteRegistrar;
   private lambdaAdapter: CrocoLambdaAdapter;
 
@@ -154,8 +159,13 @@ export class CrocoApp {
     return this.hono;
   }
 
-  async listen(port: number, callback?: () => void): Promise<void> {
+  async listen(port: number, options?: ListenOptions | (() => void), callback?: () => void): Promise<void> {
     this.boot();
+
+    const listenOptions = typeof options === 'function' ? undefined : options;
+    const onListen = typeof options === 'function' ? options : callback;
+
+    this.registerNodeStaticRoutes(listenOptions);
 
     const { serve } = await import('@hono/node-server');
 
@@ -166,7 +176,7 @@ export class CrocoApp {
       },
       () => {
         this.logger.info(`Server running on http://localhost:${port}`);
-        callback?.();
+        onListen?.();
       }
     );
   }
@@ -174,6 +184,93 @@ export class CrocoApp {
   async fetch(request: Request): Promise<Response> {
     this.boot();
     return this.hono.fetch(request);
+  }
+
+  private registerNodeStaticRoutes(options?: ListenOptions): void {
+    if (this.nodeStaticRoutesRegistered || !options?.staticDir) {
+      return;
+    }
+
+    const staticDir = resolve(options.staticDir);
+    const spaFallback = options.spaFallback ?? false;
+
+    this.hono.get('*', async (c, next) => {
+      const requestPath = this.normalizeRequestPath(c.req.path);
+      const filePath = this.resolveStaticFilePath(staticDir, requestPath);
+
+      if (filePath) {
+        return this.respondWithStaticFile(filePath);
+      }
+
+      if (!spaFallback || this.shouldSkipSpaFallback(c.req.path, c.req.header('accept'))) {
+        return next();
+      }
+
+      const indexPath = this.resolveStaticFilePath(staticDir, '/index.html');
+
+      if (!indexPath) {
+        return next();
+      }
+
+      return this.respondWithStaticFile(indexPath);
+    });
+
+    this.nodeStaticRoutesRegistered = true;
+  }
+
+  private normalizeRequestPath(requestPath: string): string {
+    if (requestPath === '/') {
+      return '/index.html';
+    }
+
+    return requestPath;
+  }
+
+  private resolveStaticFilePath(staticDir: string, requestPath: string): string | null {
+    const normalizedRelativePath = normalize(requestPath).replace(/^([/\\])+/, '');
+    const filePath = resolve(join(staticDir, normalizedRelativePath));
+
+    if (!this.isPathInsideDirectory(staticDir, filePath) || !existsSync(filePath)) {
+      return null;
+    }
+
+    if (!statSync(filePath).isFile()) {
+      return null;
+    }
+
+    return filePath;
+  }
+
+  private isPathInsideDirectory(baseDir: string, targetPath: string): boolean {
+    return targetPath === baseDir || targetPath.startsWith(`${baseDir}${sep}`);
+  }
+
+  private shouldSkipSpaFallback(requestPath: string, acceptHeader?: string): boolean {
+    if (extname(requestPath) !== '') {
+      return true;
+    }
+
+    if (!acceptHeader) {
+      return false;
+    }
+
+    const acceptedTypes = acceptHeader
+      .split(',')
+      .map((value) => value.split(';', 1)[0]?.trim().toLowerCase())
+      .filter((value): value is string => Boolean(value));
+
+    return !acceptedTypes.some((value) => value === 'text/html' || value === '*/*');
+  }
+
+  private async respondWithStaticFile(filePath: string): Promise<Response> {
+    const file = await readFile(filePath);
+    const contentType = getMimeType(filePath) ?? 'application/octet-stream';
+
+    return new Response(file, {
+      headers: {
+        'content-type': contentType,
+      },
+    });
   }
 }
 

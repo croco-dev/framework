@@ -7,8 +7,6 @@ title: "ProblemCategoryMapper"
 
 > `const` **ProblemCategoryMapper**: `object`
 
-Defined in: [packages/problems-core/src/libs/ProblemCategoryMapper.ts:81](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/ProblemCategoryMapper.ts#L81)
-
 ProblemCategory와 HTTP 상태 코드 및 제목 간의 매핑을 제공합니다.
 RFC 7807 Problem Details 형식과 호환됩니다.
 

@@ -5,8 +5,6 @@ prev: false
 title: "RetryExhaustedProblem"
 ---
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L6)
-
 최대 재시도 횟수를 모두 소진했을 때 발생하는 Problem입니다.
 
 ## Extends
@@ -18,8 +16,6 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:6](htt
 ### Constructor
 
 > **new RetryExhaustedProblem**(`message`, `lastError?`, `attempts?`, `methodName?`): `RetryExhaustedProblem`
-
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L10)
 
 #### Parameters
 
@@ -53,15 +49,11 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:10](ht
 
 > `readonly` **attempts**: `number` = `0`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L13)
-
 ***
 
 ### category
 
 > `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
-
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L8)
 
 #### Overrides
 
@@ -73,8 +65,6 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:8](htt
 
 > `readonly` `optional` **cause**: `Error`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L28)
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
@@ -84,8 +74,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/c
 ### code
 
 > `readonly` **code**: `"RETRY_EXHAUSTED"` = `'RETRY_EXHAUSTED'`
-
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L7)
 
 #### Overrides
 
@@ -97,8 +85,6 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:7](htt
 
 > `readonly` `optional` **detail**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L24)
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
@@ -108,8 +94,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 ### extensions?
 
 > `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
-
-Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L27)
 
 #### Inherited from
 
@@ -121,8 +105,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/c
 
 > `readonly` `optional` **instance**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L26)
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
@@ -133,15 +115,11 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/c
 
 > `readonly` **lastError**: `Error` \| `null` = `null`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L12)
-
 ***
 
 ### message
 
 > **message**: `string`
-
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 #### Inherited from
 
@@ -153,15 +131,11 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 > `readonly` `optional` **methodName**: `string`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:14](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L14)
-
 ***
 
 ### name
 
 > **name**: `string`
-
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 #### Inherited from
 
@@ -173,8 +147,6 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 > `optional` **stack**: `string`
 
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
@@ -185,8 +157,6 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 > `readonly` **type**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L25)
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
@@ -196,8 +166,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/c
 ### stackTraceLimit
 
 > `static` **stackTraceLimit**: `number`
-
-Defined in: node\_modules/@types/node/globals.d.ts:68
 
 The `Error.stackTraceLimit` property specifies the number of stack frames
 collected by a stack trace (whether generated by `new Error().stack` or
@@ -221,8 +189,6 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L62)
-
 ##### Returns
 
 `number`
@@ -239,8 +205,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L58)
-
 ##### Returns
 
 `string`
@@ -255,8 +219,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/c
 
 > **getOriginalError**(): `Error`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:30](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L30)
-
 #### Returns
 
 `Error`
@@ -266,8 +228,6 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:30](ht
 ### toJSON()
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
-
-Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L66)
 
 #### Returns
 
@@ -282,8 +242,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/c
 ### captureStackTrace()
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
-
-Defined in: node\_modules/@types/node/globals.d.ts:52
 
 Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -353,8 +311,6 @@ a();
 
 > `static` **fromContext**(`methodName`, `attempts`, `lastError`): `RetryExhaustedProblem`
 
-Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts#L25)
-
 #### Parameters
 
 ##### methodName
@@ -378,8 +334,6 @@ Defined in: [packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:25](ht
 ### prepareStackTrace()
 
 > `static` **prepareStackTrace**(`err`, `stackTraces`): `any`
-
-Defined in: node\_modules/@types/node/globals.d.ts:56
 
 #### Parameters
 

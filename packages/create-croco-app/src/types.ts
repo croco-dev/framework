@@ -6,7 +6,7 @@ export type GeneratorOptions = {
   api?: 'graphql' | 'trpc';
   apiHosting: 'standalone' | 'nextjs';
   backendDeploy?: 'docker' | 'lambda';
-  frontendDeploy?: 'opennext' | 'vercel' | 'docker' | 'cloudflare-vike';
+  frontendDeploy?: 'opennext' | 'vercel' | 'docker' | 'cloudflare-vike' | 'vite-spa';
   db: ('postgres' | 'mongodb' | 'redis')[];
   agentRules: boolean;
   installDeps: boolean;

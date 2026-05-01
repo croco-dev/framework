@@ -7,8 +7,6 @@ title: "LlmUsage"
 
 > **LlmUsage** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:224](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L224)
-
 토큰 사용량
 
 ## Properties
@@ -16,8 +14,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:224](https://github.com/croco-d
 ### accuracy?
 
 > `optional` **accuracy**: [`UsageAccuracy`](/api/llm-core/src/type-aliases/usageaccuracy/)
-
-Defined in: [packages/llm-core/src/libs/types.ts:243](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L243)
 
 정확도
 
@@ -27,8 +23,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:243](https://github.com/croco-d
 
 > **completionTokens**: `number`
 
-Defined in: [packages/llm-core/src/libs/types.ts:233](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L233)
-
 출력 토큰 수
 
 ***
@@ -37,8 +31,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:233](https://github.com/croco-d
 
 > **promptTokens**: `number`
 
-Defined in: [packages/llm-core/src/libs/types.ts:228](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L228)
-
 입력 토큰 수
 
 ***
@@ -46,7 +38,5 @@ Defined in: [packages/llm-core/src/libs/types.ts:228](https://github.com/croco-d
 ### totalTokens
 
 > **totalTokens**: `number`
-
-Defined in: [packages/llm-core/src/libs/types.ts:238](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L238)
 
 총 토큰 수
