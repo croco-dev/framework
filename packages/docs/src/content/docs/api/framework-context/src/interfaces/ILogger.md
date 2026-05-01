@@ -5,8 +5,6 @@ prev: false
 title: "ILogger"
 ---
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:3](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ILogger.ts#L3)
-
 Croco 전역 로거가 따라야 하는 최소 인터페이스 타입입니다.
 
 ## Example
@@ -28,8 +26,6 @@ const logger: ILogger = {
 
 > **child**(`bindings`): `ILogger`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ILogger.ts#L8)
-
 #### Parameters
 
 ##### bindings
@@ -45,8 +41,6 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:8](https://github.co
 ### debug()
 
 > **debug**(`message`, `context?`): `void`
-
-Defined in: [packages/framework-context/src/libs/ILogger.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ILogger.ts#L4)
 
 #### Parameters
 
@@ -68,8 +62,6 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:4](https://github.co
 
 > **error**(`message`, `context?`): `void`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ILogger.ts#L7)
-
 #### Parameters
 
 ##### message
@@ -90,8 +82,6 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:7](https://github.co
 
 > **info**(`message`, `context?`): `void`
 
-Defined in: [packages/framework-context/src/libs/ILogger.ts:5](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ILogger.ts#L5)
-
 #### Parameters
 
 ##### message
@@ -111,8 +101,6 @@ Defined in: [packages/framework-context/src/libs/ILogger.ts:5](https://github.co
 ### warn()
 
 > **warn**(`message`, `context?`): `void`
-
-Defined in: [packages/framework-context/src/libs/ILogger.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/ILogger.ts#L6)
 
 #### Parameters
 

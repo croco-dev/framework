@@ -5,8 +5,6 @@ prev: false
 title: "RetryTemplate"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:50](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryTemplate.ts#L50)
-
 Programmatic retry template.
 
 ## Example
@@ -25,8 +23,6 @@ const result = await template.execute(
 
 > **new RetryTemplate**(`options?`): `RetryTemplate`
 
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:51](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryTemplate.ts#L51)
-
 #### Parameters
 
 ##### options?
@@ -42,8 +38,6 @@ Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:51](https://github.co
 ### execute()
 
 > **execute**\<`T`\>(`callback`, `recovery?`): `Promise`\<`T`\>
-
-Defined in: [packages/retry-core/src/libs/RetryTemplate.ts:65](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryTemplate.ts#L65)
 
 Execute operation with retry logic.
 

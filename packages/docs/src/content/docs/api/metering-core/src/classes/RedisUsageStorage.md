@@ -5,8 +5,6 @@ prev: false
 title: "RedisUsageStorage"
 ---
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L13)
-
 Redis 기반 UsageStorage 구현체
 
 ## Description
@@ -24,8 +22,6 @@ Redis 기반 UsageStorage 구현체
 
 > **new RedisUsageStorage**(`redis`): `RedisUsageStorage`
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:43](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L43)
-
 #### Parameters
 
 ##### redis
@@ -41,8 +37,6 @@ Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:43](https://gi
 ### checkAndRecordWithinQuota()
 
 > **checkAndRecordWithinQuota**(`options`): `Promise`\<[`AtomicQuotaCheckResult`](/api/metering-core/src/type-aliases/atomicquotacheckresult/)\>
-
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:85](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L85)
 
 #### Parameters
 
@@ -63,8 +57,6 @@ Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:85](https://gi
 ### fetchUsageRecords()
 
 > **fetchUsageRecords**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)[]\>
-
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:105](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L105)
 
 Usage 데이터 조회 (배치 저장용)
 Redis에서 특정 기간의 usage records 조회
@@ -89,8 +81,6 @@ Redis에서 특정 기간의 usage records 조회
 
 > **getUsage**(`options`): `Promise`\<`number`\>
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:57](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L57)
-
 Usage 조회 (특정 기간 합산)
 
 #### Parameters
@@ -112,8 +102,6 @@ Usage 조회 (특정 기간 합산)
 ### isIdempotent()
 
 > **isIdempotent**(`tenantId`, `meterId`, `idempotencyKey`, `ttlSeconds`): `Promise`\<`boolean`\>
-
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:75](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L75)
 
 Idempotency 체크 (SET NX 기반)
 
@@ -151,8 +139,6 @@ true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
 > **record**(`usage`): `Promise`\<`void`\>
 
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:45](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L45)
-
 Usage 기록 (즉시 flush)
 Redis Sorted Set에 저장
 
@@ -175,8 +161,6 @@ Redis Sorted Set에 저장
 ### resetBillingCycle()
 
 > **resetBillingCycle**(`tenantId`, `meterId?`): `Promise`\<`void`\>
-
-Defined in: [packages/metering-core/src/libs/RedisUsageStorage.ts:208](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/RedisUsageStorage.ts#L208)
 
 빌링 주기 리셋
 현재 빌링 주기의 모든 usage 데이터를 삭제합니다.

@@ -5,8 +5,6 @@ prev: false
 title: "MetricsApi"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts:118](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts#L118)
-
 Metrics API provides methods to create and use metric instruments.
 This is a Croco abstraction over OpenTelemetry Metrics API.
 
@@ -25,8 +23,6 @@ const gauge = metrics.createGauge({ name: 'active.connections' });
 ### createCounter()
 
 > **createCounter**(`options`): [`Counter`](/api/telemetry-sdk-node/src/interfaces/counter/)
-
-Defined in: [packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts:125](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts#L125)
 
 Creates a new Counter instrument.
 
@@ -50,8 +46,6 @@ A Counter instance
 
 > **createGauge**(`options`): [`Gauge`](/api/telemetry-sdk-node/src/interfaces/gauge/)
 
-Defined in: [packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts:141](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts#L141)
-
 Creates a new Gauge instrument.
 
 #### Parameters
@@ -73,8 +67,6 @@ A Gauge instance
 ### createHistogram()
 
 > **createHistogram**(`options`): [`Histogram`](/api/telemetry-sdk-node/src/interfaces/histogram/)
-
-Defined in: [packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts:133](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts#L133)
 
 Creates a new Histogram instrument.
 

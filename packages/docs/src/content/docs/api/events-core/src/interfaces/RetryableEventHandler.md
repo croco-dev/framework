@@ -5,8 +5,6 @@ prev: false
 title: "RetryableEventHandler"
 ---
 
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:104](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L104)
-
 재시도 가능한 이벤트 핸들러를 위한 인터페이스입니다.
 
 ## Methods
@@ -14,8 +12,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:104](ht
 ### getRetryPolicy()
 
 > **getRetryPolicy**(): `Partial`\<[`DeadLetterPolicy`](/api/events-core/src/type-aliases/deadletterpolicy/)\>
-
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:108](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L108)
 
 핸들러의 재시도 정책을 반환합니다.
 
@@ -28,8 +24,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:108](ht
 ### onExhaustedRetries()?
 
 > `optional` **onExhaustedRetries**\<`TEvent`\>(`event`, `error`): `Promise`\<`void`\>
-
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:115](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L115)
 
 재시도 횟수를 초과했을 때 호출됩니다.
 

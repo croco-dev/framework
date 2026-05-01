@@ -7,8 +7,6 @@ title: "UsageQueryOptions"
 
 > **UsageQueryOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/types.ts:56](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L56)
-
 Usage 조회 옵션
 
 ## Properties
@@ -17,15 +15,11 @@ Usage 조회 옵션
 
 > `optional` **endDate**: `Date`
 
-Defined in: [packages/metering-core/src/libs/types.ts:61](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L61)
-
 ***
 
 ### meterId
 
 > **meterId**: `string`
-
-Defined in: [packages/metering-core/src/libs/types.ts:58](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L58)
 
 ***
 
@@ -33,20 +27,14 @@ Defined in: [packages/metering-core/src/libs/types.ts:58](https://github.com/cro
 
 > **period**: [`AggregationPeriod`](/api/metering-core/src/type-aliases/aggregationperiod/)
 
-Defined in: [packages/metering-core/src/libs/types.ts:59](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L59)
-
 ***
 
 ### startDate?
 
 > `optional` **startDate**: `Date`
 
-Defined in: [packages/metering-core/src/libs/types.ts:60](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L60)
-
 ***
 
 ### tenantId
 
 > **tenantId**: `string`
-
-Defined in: [packages/metering-core/src/libs/types.ts:57](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L57)

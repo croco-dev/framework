@@ -7,8 +7,6 @@ title: "EventSnapshot"
 
 > **EventSnapshot** = `object`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:60](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L60)
-
 스냅샷 정보입니다.
 
 ## Properties
@@ -16,8 +14,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:60](https:/
 ### createdAt
 
 > **createdAt**: `Date`
-
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:65](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L65)
 
 스냅샷 생성 시간
 
@@ -27,8 +23,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:65](https:/
 
 > **eventCount**: `number`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:74](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L74)
-
 이벤트 수
 
 ***
@@ -36,8 +30,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:74](https:/
 ### eventRange
 
 > **eventRange**: `object`
-
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:68](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L68)
 
 포함된 이벤트 범위
 
@@ -55,8 +47,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:68](https:/
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:77](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L77)
-
 메타데이터
 
 ***
@@ -64,7 +54,5 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:77](https:/
 ### snapshotId
 
 > **snapshotId**: `string`
-
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:62](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L62)
 
 스냅샷 ID
