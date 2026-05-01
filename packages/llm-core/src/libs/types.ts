@@ -170,7 +170,7 @@ export type EmbedParams = {
   /**
    * 모델 ID (선택)
    */
-  model?: string;
+  modelId?: string;
 };
 
 /**
@@ -200,7 +200,7 @@ export type EmbedManyParams = {
   /**
    * 모델 ID (선택)
    */
-  model?: string;
+  modelId?: string;
 };
 
 /**

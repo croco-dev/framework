@@ -50,44 +50,108 @@ export class LlmService {
   }
 
   async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
-    try {
-      const modelId = params.modelId ?? 'default';
-      const model = await this.registry.getModel(modelId);
-      const streamedChunks: string[] = [];
-      const streamUsage: Partial<LlmUsage> = {};
-      let chunkCount = 0;
+    const modelId = params.modelId ?? 'default';
+    const queuedChunks: StreamChunk[] = [];
+    let queuedError: unknown;
+    let hasQueuedError = false;
+    let isDone = false;
+    let resumeConsumer: (() => void) | undefined;
 
-      for await (const chunk of model.stream(params)) {
-        chunkCount += 1;
-        streamedChunks.push(chunk.delta);
+    const notifyConsumer = (): void => {
+      const consumer = resumeConsumer;
+      resumeConsumer = undefined;
+      consumer?.();
+    };
 
-        if (chunk.usage) {
-          Object.assign(streamUsage, chunk.usage);
-        }
-
-        yield chunk;
+    const waitForProducer = async (): Promise<void> => {
+      if (queuedChunks.length > 0 || hasQueuedError || isDone) {
+        return;
       }
 
-      const text = streamedChunks.join('');
-      const usage = this.buildStreamUsage(params.prompt, text, streamUsage);
-
-      await this.publishCompletionEvent({
-        operation: 'stream',
-        modelId: model.modelId,
-        prompt: params.prompt,
-        text,
-        usage,
-        chunkCount,
+      await new Promise<void>((resolve) => {
+        resumeConsumer = resolve;
       });
-    } catch (error) {
-      throw LlmServiceProblem.fromError(error);
+    };
+
+    const producer = withSpan(
+      async (span) => {
+        try {
+          span.setAttribute('llm.model_id', modelId);
+
+          const model = await this.registry.getModel(modelId);
+          const streamedChunks: string[] = [];
+          const streamUsage: Partial<LlmUsage> = {};
+          let chunkCount = 0;
+
+          for await (const chunk of model.stream(params)) {
+            chunkCount += 1;
+            streamedChunks.push(chunk.delta);
+
+            if (chunk.usage) {
+              Object.assign(streamUsage, chunk.usage);
+            }
+
+            queuedChunks.push(chunk);
+            notifyConsumer();
+          }
+
+          const text = streamedChunks.join('');
+          const usage = this.buildStreamUsage(params.prompt, text, streamUsage);
+
+          await this.publishCompletionEvent({
+            operation: 'stream',
+            modelId: model.modelId,
+            prompt: params.prompt,
+            text,
+            usage,
+            chunkCount,
+          });
+        } catch (error) {
+          throw LlmServiceProblem.fromError(error);
+        } finally {
+          isDone = true;
+          notifyConsumer();
+        }
+      },
+      { name: 'llm.stream' }
+    ).catch((error) => {
+      queuedError = error;
+      hasQueuedError = true;
+      notifyConsumer();
+    });
+
+    try {
+      while (true) {
+        const chunk = queuedChunks.shift();
+
+        if (chunk) {
+          yield chunk;
+          continue;
+        }
+
+        if (hasQueuedError) {
+          throw queuedError;
+        }
+
+        if (isDone) {
+          break;
+        }
+
+        await waitForProducer();
+      }
+    } finally {
+      await producer;
+    }
+
+    if (hasQueuedError) {
+      throw queuedError;
     }
   }
 
   @Trace({ name: 'llm.embed' })
   async embed(params: EmbedParams): Promise<EmbedResult> {
     try {
-      const model = params.model ?? 'default';
+      const model = params.modelId ?? 'default';
       const llmModel = await this.registry.getModel(model);
       return await llmModel.embed(params);
     } catch (error) {
@@ -98,7 +162,7 @@ export class LlmService {
   @Trace({ name: 'llm.embed_many' })
   async embedMany(params: EmbedManyParams): Promise<EmbedManyResult> {
     try {
-      const model = params.model ?? 'default';
+      const model = params.modelId ?? 'default';
       const llmModel = await this.registry.getModel(model);
       return await llmModel.embedMany(params);
     } catch (error) {
