@@ -16,7 +16,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/retry-core": "workspace:*",
     "@croco/storage-core": "workspace:*",
-    "cloudinary": "^2.9.0"
+    "cloudinary": "^2.10.0"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*"
