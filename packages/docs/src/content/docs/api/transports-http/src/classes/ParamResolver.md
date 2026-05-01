@@ -11,7 +11,13 @@ title: "ParamResolver"
 
 ### Constructor
 
-> **new ParamResolver**(): `ParamResolver`
+> **new ParamResolver**(`createPipeInstance?`): `ParamResolver`
+
+#### Parameters
+
+##### createPipeInstance?
+
+(`pipe`) => `PipeTransform`\<`unknown`, `unknown`\> \| `null` \| `undefined`
 
 #### Returns
 

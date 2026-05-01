@@ -136,6 +136,7 @@ describe('@Auditable', () => {
 
     await Promise.resolve();
 
+    expect(result).toEqual({ ok: true, resourceId: 'project-2', payload: { name: 'new-project' } });
     expect(createSpy).toHaveBeenCalledTimes(1);
 
     if (createDeferred.resolve) {
@@ -219,6 +220,32 @@ describe('@Auditable', () => {
         }),
         diff: { status: { before: 'ACTIVE', after: 'DELETED' } },
       })
+    );
+  });
+
+  it('should execute decorated method when audit dependencies are missing', async () => {
+    vi.spyOn(Context, 'get').mockReturnValue({
+      requestId: 'req-missing-audit',
+      tenantId: 'tenant-missing-audit',
+      user: { id: 'actor-missing-audit' },
+    } as RequestContextStub);
+
+    class TestService {
+      @Auditable({
+        action: 'project.update',
+        resourceType: 'Project',
+        resourceIdParam: 'resourceId',
+        payloadParam: 'payload',
+      })
+      async update(resourceId: string, payload: { name: string }): Promise<string> {
+        return `updated:${resourceId}:${payload.name}`;
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.update('project-missing-audit', { name: 'still-runs' })).resolves.toBe(
+      'updated:project-missing-audit:still-runs'
     );
   });
 

@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
-import { Container, type ILogger, LOGGER_TOKEN } from '@croco/framework-context';
+import { type Constructor, Container, type ILogger, LOGGER_TOKEN } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import { ProblemFactory } from '@croco/problems-core';
 import { Hono } from 'hono';
@@ -73,6 +73,7 @@ export class CrocoApp {
     const compiler = new RouteCompiler(this.logger, new PipelineRunner(this.errorHandler, this.logger));
     this.routes = compiler.compile(this.config.controllers, {
       ...options,
+      container: options.container ?? createRouteCompileContainer(),
       globalGuards: this.config.globalGuards,
       globalInterceptors: this.config.globalInterceptors,
       globalFilters: this.config.globalFilters,
@@ -295,4 +296,12 @@ function resolveErrorHandler(): ErrorHandler {
 
 function resolveHealthCheckRegistry(): HealthCheckRegistry {
   return Container.get(HealthCheckRegistry);
+}
+
+function createRouteCompileContainer(): NonNullable<CompileOptions['container']> {
+  return {
+    get<T>(type: Constructor<T>): T {
+      return Container.getOptional(type) ?? new type();
+    },
+  };
 }

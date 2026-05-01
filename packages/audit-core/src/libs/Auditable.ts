@@ -1,5 +1,6 @@
-import { Container, Context, LOGGER_TOKEN } from '@croco/framework-context';
+import { Container, Context, type ILogger, LOGGER_TOKEN } from '@croco/framework-context';
 import { recordError } from '@croco/telemetry-api';
+import type { AuditLogRepository } from './AuditLogRepository';
 import { AUDIT_LOG_REPOSITORY_TOKEN } from './AuditLogRepositoryToken';
 import { AuditableDecoratorProblem } from './problems/AuditableDecoratorProblem';
 import type { AuditableOptions, AuditLogEntry } from './types';
@@ -99,7 +100,46 @@ type AuditWriteConfig = {
   metadata: Record<string, unknown>;
 };
 
-function writeAuditLog(config: AuditWriteConfig, payload: Record<string, unknown>): void {
+type AuditWriteDependencies = {
+  repository: AuditLogRepository;
+  logger: ILogger;
+};
+
+function safelyRecordError(error: unknown): void {
+  try {
+    recordError(error);
+  } catch {
+    return;
+  }
+}
+
+function safelyWarn(logger: ILogger, message: string, metadata: Record<string, unknown>): void {
+  try {
+    logger.warn(message, metadata);
+  } catch {
+    return;
+  }
+}
+
+function resolveAuditWriteDependencies(): AuditWriteDependencies | undefined {
+  try {
+    const [repository, logger] = Container.getMany([AUDIT_LOG_REPOSITORY_TOKEN, LOGGER_TOKEN]) as [
+      AuditLogRepository,
+      ILogger,
+    ];
+
+    return { repository, logger };
+  } catch (error) {
+    safelyRecordError(error);
+    return undefined;
+  }
+}
+
+function writeAuditLog(
+  config: AuditWriteConfig,
+  payload: Record<string, unknown>,
+  dependencies: AuditWriteDependencies
+): void {
   const entry: Omit<AuditLogEntry, 'id' | 'createdAt'> = {
     tenantId: config.tenantId,
     actorId: config.actorId,
@@ -112,21 +152,12 @@ function writeAuditLog(config: AuditWriteConfig, payload: Record<string, unknown
   };
 
   void Promise.resolve()
-    .then(() => {
-      const repository = Container.get(AUDIT_LOG_REPOSITORY_TOKEN);
-      return repository.create(entry);
-    })
+    .then(() => dependencies.repository.create(entry))
     .catch((error) => {
-      try {
-        recordError(error);
-        const logger = Container.get(LOGGER_TOKEN);
-        logger.warn('[Auditable] Failed to write audit log', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } catch {
-        // Empty catch block intentionally suppresses secondary errors in audit logging
-        // eslint-disable-next-line no-empty
-      }
+      safelyRecordError(error);
+      safelyWarn(dependencies.logger, '[Auditable] Failed to write audit log', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
 }
 
@@ -154,6 +185,7 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const context = Context.get();
+      const dependencies = resolveAuditWriteDependencies();
       const payloadInput = paramMetadata.payloadIndex !== undefined ? args[paramMetadata.payloadIndex] : undefined;
       const resourceIdValue =
         paramMetadata.resourceIdIndex !== undefined ? args[paramMetadata.resourceIdIndex] : undefined;
@@ -179,13 +211,17 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         const result = await originalMethod.apply(this, args);
 
         const payload = buildAuditPayload(args, payloadInput, result, null, options.includeResult ?? true);
-        writeAuditLog(auditConfig, payload);
+        if (dependencies) {
+          writeAuditLog(auditConfig, payload, dependencies);
+        }
 
         return result;
       } catch (error) {
         const errorObj = error instanceof Error ? error : new Error(String(error));
         const payload = buildAuditPayload(args, payloadInput, null, errorObj, false);
-        writeAuditLog(auditConfig, payload);
+        if (dependencies) {
+          writeAuditLog(auditConfig, payload, dependencies);
+        }
 
         throw error;
       }

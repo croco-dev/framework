@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { PipeTransform } from '@croco/protocols-rest';
 import { Body, REST_PARAMS_KEY } from '@croco/protocols-rest';
 import { describe, expect, it, vi } from 'vitest';
 import { ParamResolver } from '../libs/ParamResolver';
@@ -121,7 +122,7 @@ describe('ParamResolver', () => {
         type: string;
         index: number;
         name?: string;
-        pipes?: Array<new (...args: any[]) => { transform(value: unknown): unknown }>;
+        pipes?: Array<new (...args: unknown[]) => PipeTransform<unknown, unknown>>;
       }>
     >();
     params.set('create', [
@@ -134,7 +135,7 @@ describe('ParamResolver', () => {
 
     Reflect.defineMetadata(REST_PARAMS_KEY, params, TestController);
 
-    const resolver = new ParamResolver();
+    const resolver = new ParamResolver(() => undefined);
     const ctx = createMockHttpContext(vi.fn(async () => ({ ok: true })) as CrocoHttpContext['json']);
 
     await expect(resolver.resolveParams(ctx, TestController, 'create')).rejects.toThrow(
