@@ -1,4 +1,7 @@
 import 'reflect-metadata';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { Container, Context as FrameworkContext } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
 import {
@@ -21,7 +24,8 @@ import {
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
 } from '@croco/ratelimit-core';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { serve } from '@hono/node-server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../libs/CrocoApp';
 import { CrocoRouteRegistrar } from '../libs/CrocoRouteRegistrar';
 import { ErrorHandler } from '../libs/ErrorHandler';
@@ -32,9 +36,17 @@ import { rateLimitHttpMiddleware } from '../libs/middleware/RateLimitMiddleware'
 import { securityHeadersMiddleware } from '../libs/middleware/SecurityHeadersMiddleware';
 import type { LambdaContext, LambdaEvent } from '../libs/types';
 
+vi.mock('@hono/node-server', () => ({
+  serve: vi.fn((_options: unknown, callback?: () => void) => {
+    callback?.();
+    return {};
+  }),
+}));
+
 describe('CrocoApp', () => {
   beforeEach(() => {
     Container.reset();
+    vi.mocked(serve).mockClear();
     const logger = {
       info: () => {},
       warn: () => {},
@@ -185,6 +197,20 @@ describe('CrocoApp', () => {
     ];
   }
 
+  async function createStaticFixture(files: Record<string, string>): Promise<string> {
+    const directory = await mkdtemp(join(tmpdir(), 'croco-transports-http-'));
+
+    await Promise.all(
+      Object.entries(files).map(async ([filePath, contents]) => {
+        const absolutePath = join(directory, filePath);
+        await mkdir(dirname(absolutePath), { recursive: true });
+        await writeFile(absolutePath, contents);
+      })
+    );
+
+    return directory;
+  }
+
   it('should handle GET request', async () => {
     const app = createApp({ controllers: [TestController] });
 
@@ -329,6 +355,136 @@ describe('CrocoApp', () => {
     const response = await app.fetch(new Request('http://localhost/unknown'));
 
     expect(response.status).toBe(404);
+  });
+
+  it('should serve static assets and keep listen callback compatibility', async () => {
+    const app = createApp({ controllers: [TestController] });
+    const staticDir = await createStaticFixture({
+      'index.html': '<html><body>spa</body></html>',
+      'assets/app.js': 'console.log("app")',
+    });
+    const callback = vi.fn();
+
+    try {
+      await app.listen(3000, callback);
+
+      expect(vi.mocked(serve)).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      await app.listen(3001, { staticDir, spaFallback: true }, callback);
+
+      expect(vi.mocked(serve)).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(2);
+
+      const assetResponse = await app.fetch(new Request('http://localhost/assets/app.js'));
+
+      expect(assetResponse.status).toBe(200);
+      expect(assetResponse.headers.get('content-type')).toContain('text/javascript');
+      expect(await assetResponse.text()).toContain('console.log');
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should return index.html for SPA routes when fallback is enabled', async () => {
+    const app = createApp({ controllers: [TestController] });
+    const staticDir = await createStaticFixture({
+      'index.html': '<html><body>spa shell</body></html>',
+    });
+
+    try {
+      await app.listen(3000, { staticDir, spaFallback: true });
+
+      const response = await app.fetch(
+        new Request('http://localhost/dashboard', {
+          headers: { Accept: 'text/html,application/xhtml+xml' },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/html');
+      expect(await response.text()).toContain('spa shell');
+
+      const apiResponse = await app.fetch(new Request('http://localhost/api/hello'));
+
+      expect(apiResponse.status).toBe(200);
+      expect(await apiResponse.json()).toEqual({ message: 'Hello, World!' });
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should not use SPA fallback for extension paths or non-html accept headers', async () => {
+    const app = createApp({ controllers: [TestController] });
+    const staticDir = await createStaticFixture({
+      'index.html': '<html><body>spa shell</body></html>',
+    });
+
+    try {
+      await app.listen(3000, { staticDir, spaFallback: true });
+
+      const assetLikeResponse = await app.fetch(
+        new Request('http://localhost/missing.js', {
+          headers: { Accept: 'text/html' },
+        })
+      );
+
+      const jsonResponse = await app.fetch(
+        new Request('http://localhost/dashboard', {
+          headers: { Accept: 'application/json' },
+        })
+      );
+
+      expect(assetLikeResponse.status).toBe(404);
+      expect(jsonResponse.status).toBe(404);
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should return 404 for missing assets inside asset directories', async () => {
+    const app = createApp({ controllers: [TestController] });
+    const staticDir = await createStaticFixture({
+      'index.html': '<html><body>spa shell</body></html>',
+      'assets/app.js': 'console.log("app")',
+    });
+
+    try {
+      await app.listen(3000, { staticDir, spaFallback: true });
+
+      const response = await app.fetch(
+        new Request('http://localhost/assets/missing.js', {
+          headers: { Accept: 'text/html,application/xhtml+xml' },
+        })
+      );
+
+      expect(response.status).toBe(404);
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should not return SPA html for application json requests', async () => {
+    const app = createApp({ controllers: [TestController] });
+    const staticDir = await createStaticFixture({
+      'index.html': '<html><body>spa shell</body></html>',
+    });
+
+    try {
+      await app.listen(3000, { staticDir, spaFallback: true });
+
+      const response = await app.fetch(
+        new Request('http://localhost/dashboard', {
+          headers: { Accept: 'application/json' },
+        })
+      );
+
+      expect(response.status).toBe(404);
+      expect(response.headers.get('content-type')?.includes('text/html') ?? false).toBe(false);
+      expect(await response.text()).not.toContain('spa shell');
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
   });
 
   it('should preserve binary body through lambda request/response', async () => {

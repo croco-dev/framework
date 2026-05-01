@@ -24,7 +24,7 @@
     "@croco/membership-core": "workspace:*",
     "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
-    "drizzle-orm": "^0.44.2"
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

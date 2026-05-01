@@ -7,8 +7,6 @@ title: "isDistributedStore"
 
 > **isDistributedStore**(`_store`): `_store is CircuitBreakerStateStore`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:178](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L178)
-
 주어진 저장소가 분산 환경을 지원하는지 확인합니다.
 
 :::caution[Deprecated]

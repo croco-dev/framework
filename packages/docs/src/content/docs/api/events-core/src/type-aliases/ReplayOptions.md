@@ -7,8 +7,6 @@ title: "ReplayOptions"
 
 > **ReplayOptions** = `object`
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L11)
-
 이벤트 리플레이 옵션입니다.
 
 ## Properties
@@ -16,8 +14,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:11](https:/
 ### batchSize?
 
 > `optional` **batchSize**: `number`
-
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L28)
 
 배치 크기
 
@@ -27,8 +23,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:28](https:/
 
 > `optional` **eventTypes**: `string`[]
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L19)
-
 특정 이벤트 타입만 리플레이
 
 ***
@@ -36,8 +30,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:19](https:/
 ### from?
 
 > `optional` **from**: `Date`
-
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L13)
 
 시작 시간
 
@@ -47,8 +39,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:13](https:/
 
 > `optional` **mode**: [`ReplayMode`](/api/events-core/src/type-aliases/replaymode/)
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L25)
-
 리플레이 모드 (fast: 속도 우선, accurate: 정확성 우선)
 
 ***
@@ -56,8 +46,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:25](https:/
 ### onProgress()?
 
 > `optional` **onProgress**: (`processed`, `total`) => `void`
-
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:31](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L31)
 
 진행 상황 콜백
 
@@ -81,8 +69,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:31](https:/
 
 > `optional` **partitionKeys**: `string`[]
 
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:22](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L22)
-
 특정 파티션 키만 리플레이
 
 ***
@@ -90,7 +76,5 @@ Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:22](https:/
 ### to?
 
 > `optional` **to**: `Date`
-
-Defined in: [packages/events-core/src/libs/interfaces/EventReplay.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventReplay.ts#L16)
 
 종료 시간

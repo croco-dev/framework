@@ -5,8 +5,6 @@ prev: false
 title: "RetryPolicyOptions"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryPolicy.ts#L20)
-
 Options for configuring retry behavior.
 
 ## Extended by
@@ -20,8 +18,6 @@ Options for configuring retry behavior.
 
 > `optional` **maxAttempts**: `number`
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:31](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryPolicy.ts#L31)
-
 Maximum attempts (default: 3)
 
 ***
@@ -29,8 +25,6 @@ Maximum attempts (default: 3)
 ### noRetryFor?
 
 > `optional` **noRetryFor**: (`message?`) => `Error`[]
-
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryPolicy.ts#L25)
 
 Exception classes to never retry
 
@@ -50,8 +44,6 @@ Exception classes to never retry
 
 > `optional` **retryFor**: (`message?`) => `Error`[]
 
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:22](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryPolicy.ts#L22)
-
 Exception classes to retry (empty = retry all except noRetryFor)
 
 #### Parameters
@@ -69,7 +61,5 @@ Exception classes to retry (empty = retry all except noRetryFor)
 ### retryForCategories?
 
 > `optional` **retryForCategories**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
-
-Defined in: [packages/retry-core/src/libs/RetryPolicy.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryPolicy.ts#L28)
 
 ProblemCategory values to retry (croco integration)

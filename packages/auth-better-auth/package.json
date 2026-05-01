@@ -24,7 +24,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "better-auth": "^1.1.0",
-    "drizzle-orm": "^0.30.0"
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",

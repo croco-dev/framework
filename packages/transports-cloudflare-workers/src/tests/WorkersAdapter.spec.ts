@@ -52,7 +52,7 @@ describe('WorkersAdapter', () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
-    app = createApp({ controllers: [TestController] });
+    app = createApp({ controllers: [TestController], securityValidation: 'off' });
   });
 
   describe('toWorkersHandler', () => {

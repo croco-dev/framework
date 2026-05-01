@@ -7,8 +7,6 @@ title: "MeterMetadata"
 
 > **MeterMetadata** = `object`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Meter.ts#L13)
-
 Meter 클래스 데코레이터의 메타데이터 타입입니다.
 
 ## Description
@@ -21,15 +19,11 @@ Meter 클래스 데코레이터의 메타데이터 타입입니다.
 
 > **allowOverQuota**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:17](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Meter.ts#L17)
-
 ***
 
 ### meterId
 
 > **meterId**: `string`
-
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:14](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Meter.ts#L14)
 
 ***
 
@@ -37,12 +31,8 @@ Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:14](https://git
 
 > `optional` **quota**: `number`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Meter.ts#L16)
-
 ***
 
 ### type
 
 > **type**: [`MeterType`](/api/metering-core/src/type-aliases/metertype/)
-
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:15](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Meter.ts#L15)

@@ -28,8 +28,6 @@ class UserService {
 
 > **Inject**(): `Function`
 
-Defined in: node\_modules/typedi/types/decorators/inject.decorator.d.ts:6
-
 Injects a service into a class property or constructor parameter.
 
 ### Returns
@@ -39,8 +37,6 @@ Injects a service into a class property or constructor parameter.
 ## Call Signature
 
 > **Inject**(`typeFn`): `Function`
-
-Defined in: node\_modules/typedi/types/decorators/inject.decorator.d.ts:7
 
 Injects a service into a class property or constructor parameter.
 
@@ -58,8 +54,6 @@ Injects a service into a class property or constructor parameter.
 
 > **Inject**(`serviceName?`): `Function`
 
-Defined in: node\_modules/typedi/types/decorators/inject.decorator.d.ts:8
-
 Injects a service into a class property or constructor parameter.
 
 ### Parameters
@@ -75,8 +69,6 @@ Injects a service into a class property or constructor parameter.
 ## Call Signature
 
 > **Inject**(`token`): `Function`
-
-Defined in: node\_modules/typedi/types/decorators/inject.decorator.d.ts:9
 
 Injects a service into a class property or constructor parameter.
 
