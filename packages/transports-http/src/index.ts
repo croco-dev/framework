@@ -32,6 +32,7 @@ export type {
   LambdaRequestContext,
   LambdaRequestContextWithAuthorizer,
   LambdaResponse,
+  ListenOptions,
   MiddlewareFunction,
   PipeProvider,
 } from './libs/types';

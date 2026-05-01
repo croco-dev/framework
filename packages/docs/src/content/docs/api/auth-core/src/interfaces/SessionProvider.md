@@ -5,8 +5,6 @@ prev: false
 title: "SessionProvider"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/SessionProvider.ts#L26)
-
 세션 조회와 관리에 사용하는 타입과 공급자 계약입니다.
 
 ## Methods
@@ -14,8 +12,6 @@ Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:26](https
 ### getSession()
 
 > **getSession**(`sessionId`): `Promise`\<[`Session`](/api/auth-core/src/type-aliases/session/) \| `null`\>
-
-Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/SessionProvider.ts#L27)
 
 #### Parameters
 
@@ -33,8 +29,6 @@ Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:27](https
 
 > **listSessions**(`options`): `Promise`\<[`SessionListResult`](/api/auth-core/src/type-aliases/sessionlistresult/)\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/SessionProvider.ts#L28)
-
 #### Parameters
 
 ##### options
@@ -51,8 +45,6 @@ Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:28](https
 
 > **revokeAllSessions**(`userId`): `Promise`\<`void`\>
 
-Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:30](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/SessionProvider.ts#L30)
-
 #### Parameters
 
 ##### userId
@@ -68,8 +60,6 @@ Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:30](https
 ### revokeSession()
 
 > **revokeSession**(`sessionId`): `Promise`\<`void`\>
-
-Defined in: [packages/auth-core/src/libs/interfaces/SessionProvider.ts:29](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/SessionProvider.ts#L29)
 
 #### Parameters
 

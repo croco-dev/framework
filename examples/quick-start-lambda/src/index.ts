@@ -12,6 +12,7 @@ class HealthController {
 
 const app = createApp({
   controllers: [HealthController],
+  securityValidation: 'off',
 });
 
 export const handler = app.lambdaHandler();

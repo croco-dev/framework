@@ -11,6 +11,14 @@ export function installFrontendDeploy(
 ): void {
   if (!options.frontendDeploy) return;
 
+  const appTargetDir = join(targetDir, 'apps', webAppName ?? 'web');
+
+  if (options.frontendDeploy === 'vite-spa') {
+    const addonDir = join(TEMPLATES_DIR, 'addons', 'frontend-vite-spa');
+    mergeInto(addonDir, appTargetDir, { projectName: options.projectName, scope: options.scope });
+    return;
+  }
+
   if (options.frontendDeploy === 'cloudflare-vike') {
     const addonDir =
       options.preset === 'ddd-vike-fullstack'
@@ -25,6 +33,5 @@ export function installFrontendDeploy(
 
   const addonKey = `frontend-${options.frontendDeploy}`;
   const addonDir = join(TEMPLATES_DIR, 'addons', addonKey);
-  const appTargetDir = join(targetDir, 'apps', webAppName ?? 'web');
   mergeInto(addonDir, appTargetDir, { projectName: options.projectName, scope: options.scope });
 }

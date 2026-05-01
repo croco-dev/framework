@@ -5,8 +5,6 @@ prev: false
 title: "ContainerInstance"
 ---
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:11
-
 TypeDI can have multiple containers.
 One container is ContainerInstance.
 
@@ -15,8 +13,6 @@ One container is ContainerInstance.
 ### Constructor
 
 > **new ContainerInstance**(`id`): `ContainerInstance`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:16
 
 #### Parameters
 
@@ -34,8 +30,6 @@ Defined in: node\_modules/typedi/types/container-instance.class.d.ts:16
 
 > `readonly` **id**: `string`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:13
-
 Container instance id.
 
 ## Methods
@@ -45,8 +39,6 @@ Container instance id.
 #### Call Signature
 
 > **get**\<`T`\>(`type`): `T`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:28
 
 Retrieves the service with given name or type from the service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
@@ -71,8 +63,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 > **get**\<`T`\>(`type`): `T`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:29
-
 Retrieves the service with given name or type from the service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
 
@@ -95,8 +85,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 #### Call Signature
 
 > **get**\<`T`\>(`id`): `T`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:30
 
 Retrieves the service with given name or type from the service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
@@ -121,8 +109,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 > **get**\<`T`\>(`id`): `T`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:31
-
 Retrieves the service with given name or type from the service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
 
@@ -145,8 +131,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 #### Call Signature
 
 > **get**\<`T`\>(`id`): `T`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:32
 
 Retrieves the service with given name or type from the service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
@@ -175,8 +159,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 > **getMany**\<`T`\>(`type`): `T`[]
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:37
-
 Gets all instances registered in the container of the given service identifier.
 Used when service defined with multiple: true flag.
 
@@ -199,8 +181,6 @@ Used when service defined with multiple: true flag.
 #### Call Signature
 
 > **getMany**\<`T`\>(`type`): `T`[]
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:38
 
 Gets all instances registered in the container of the given service identifier.
 Used when service defined with multiple: true flag.
@@ -225,8 +205,6 @@ Used when service defined with multiple: true flag.
 
 > **getMany**\<`T`\>(`id`): `T`[]
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:39
-
 Gets all instances registered in the container of the given service identifier.
 Used when service defined with multiple: true flag.
 
@@ -250,8 +228,6 @@ Used when service defined with multiple: true flag.
 
 > **getMany**\<`T`\>(`id`): `T`[]
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:40
-
 Gets all instances registered in the container of the given service identifier.
 Used when service defined with multiple: true flag.
 
@@ -274,8 +250,6 @@ Used when service defined with multiple: true flag.
 #### Call Signature
 
 > **getMany**\<`T`\>(`id`): `T`[]
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:41
 
 Gets all instances registered in the container of the given service identifier.
 Used when service defined with multiple: true flag.
@@ -304,8 +278,6 @@ Used when service defined with multiple: true flag.
 
 > **has**\<`T`\>(`type`): `boolean`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:21
-
 Checks if the service with given name or type is registered service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
 
@@ -329,8 +301,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 > **has**\<`T`\>(`id`): `boolean`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:22
-
 Checks if the service with given name or type is registered service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
 
@@ -353,8 +323,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 #### Call Signature
 
 > **has**\<`T`\>(`id`): `boolean`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:23
 
 Checks if the service with given name or type is registered service container.
 Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
@@ -381,8 +349,6 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 > **remove**(`identifierOrIdentifierArray`): `this`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:56
-
 Removes services with a given service identifiers.
 
 #### Parameters
@@ -400,8 +366,6 @@ Removes services with a given service identifiers.
 ### reset()
 
 > **reset**(`options?`): `this`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:60
 
 Completely resets the container by removing all previously registered services from it.
 
@@ -425,8 +389,6 @@ Completely resets the container by removing all previously registered services f
 
 > **set**\<`T`\>(`service`): `this`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:45
-
 Sets a value for the given type or service name in the container.
 
 ##### Type Parameters
@@ -448,8 +410,6 @@ Sets a value for the given type or service name in the container.
 #### Call Signature
 
 > **set**\<`T`\>(`type`, `instance`): `this`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:46
 
 Sets a value for the given type or service name in the container.
 
@@ -476,8 +436,6 @@ Sets a value for the given type or service name in the container.
 #### Call Signature
 
 > **set**\<`T`\>(`type`, `instance`): `this`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:47
 
 Sets a value for the given type or service name in the container.
 
@@ -505,8 +463,6 @@ Sets a value for the given type or service name in the container.
 
 > **set**\<`T`\>(`name`, `instance`): `this`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:48
-
 Sets a value for the given type or service name in the container.
 
 ##### Type Parameters
@@ -532,8 +488,6 @@ Sets a value for the given type or service name in the container.
 #### Call Signature
 
 > **set**\<`T`\>(`token`, `instance`): `this`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:49
 
 Sets a value for the given type or service name in the container.
 
@@ -561,8 +515,6 @@ Sets a value for the given type or service name in the container.
 
 > **set**\<`T`\>(`token`, `instance`): `this`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:50
-
 Sets a value for the given type or service name in the container.
 
 ##### Type Parameters
@@ -589,8 +541,6 @@ Sets a value for the given type or service name in the container.
 
 > **set**\<`T`\>(`metadata`): `this`
 
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:51
-
 Sets a value for the given type or service name in the container.
 
 ##### Type Parameters
@@ -612,8 +562,6 @@ Sets a value for the given type or service name in the container.
 #### Call Signature
 
 > **set**\<`T`\>(`metadataArray`): `this`
-
-Defined in: node\_modules/typedi/types/container-instance.class.d.ts:52
 
 Sets a value for the given type or service name in the container.
 

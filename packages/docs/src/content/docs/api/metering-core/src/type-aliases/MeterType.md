@@ -7,8 +7,6 @@ title: "MeterType"
 
 > **MeterType** = `"COUNT"` \| `"UNIQUE_COUNT"` \| `"CUSTOM_EVENT"`
 
-Defined in: [packages/metering-core/src/libs/types.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L7)
-
 Meter 유형
 - COUNT: 단순 횟수 카운트 (API 호출)
 - UNIQUE_COUNT: 고유 값 카운트 (MAU/DAU)

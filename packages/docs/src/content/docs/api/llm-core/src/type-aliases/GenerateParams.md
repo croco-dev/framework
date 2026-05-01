@@ -7,8 +7,6 @@ title: "GenerateParams"
 
 > **GenerateParams** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L4)
-
 텍스트 생성 파라미터
 
 ## Properties
@@ -16,8 +14,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:4](https://github.com/croco-dev
 ### maxTokens?
 
 > `optional` **maxTokens**: `number`
-
-Defined in: [packages/llm-core/src/libs/types.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L28)
 
 최대 생성 토큰 수
 
@@ -27,8 +23,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:28](https://github.com/croco-de
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/llm-core/src/libs/types.ts:38](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L38)
-
 메타데이터
 
 ***
@@ -36,8 +30,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:38](https://github.com/croco-de
 ### modelId?
 
 > `optional` **modelId**: `string`
-
-Defined in: [packages/llm-core/src/libs/types.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L8)
 
 모델 ID
 
@@ -47,8 +39,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:8](https://github.com/croco-dev
 
 > **prompt**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L13)
-
 사용자 프롬프트
 
 ***
@@ -56,8 +46,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:13](https://github.com/croco-de
 ### stopSequences?
 
 > `optional` **stopSequences**: `string`[]
-
-Defined in: [packages/llm-core/src/libs/types.ts:33](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L33)
 
 정지 시퀀스 목록
 
@@ -67,8 +55,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:33](https://github.com/croco-de
 
 > `optional` **systemPrompt**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:18](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L18)
-
 시스템 프롬프트
 
 ***
@@ -76,7 +62,5 @@ Defined in: [packages/llm-core/src/libs/types.ts:18](https://github.com/croco-de
 ### temperature?
 
 > `optional` **temperature**: `number`
-
-Defined in: [packages/llm-core/src/libs/types.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L23)
 
 샘플링 온도 (0-2)

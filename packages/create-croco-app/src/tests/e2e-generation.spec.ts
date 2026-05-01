@@ -90,6 +90,27 @@ describe('E2E: generate()', () => {
     expect(existsSync(join(testDir, 'apps', 'web', 'vercel.json'))).toBe(true);
   });
 
+  it('generates ddd-vike-fullstack with worker security validation opt-out', { timeout: 120_000 }, async () => {
+    const options: GeneratorOptions = {
+      projectName: 'my-vike-fullstack',
+      scope: '@test',
+      preset: 'ddd-vike-fullstack',
+      webApps: ['web'],
+      frontendDeploy: 'cloudflare-vike',
+      apiHosting: 'standalone',
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    await generate(testDir, options);
+
+    const workerContent = readFileSync(join(testDir, 'api-worker', 'src', 'index.ts'), 'utf8');
+
+    expect(workerContent).toContain("securityValidation: 'off'");
+  });
+
   it('generates ddd-api with graphql + lambda + mongodb', { timeout: 120_000 }, async () => {
     const options: GeneratorOptions = {
       projectName: 'my-api',

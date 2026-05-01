@@ -268,7 +268,12 @@ jobs:
       - name: Link Checker
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --verbose --no-progress --root-dir 'packages/docs/dist' 'packages/docs/dist/**/*.html'
+          args: >-
+            --verbose
+            --no-progress
+            --root-dir 'packages/docs/dist'
+            --exclude '^https://github\.com/croco-dev/framework(#readme)?$'
+            'packages/docs/dist/**/*.html'
           fail: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

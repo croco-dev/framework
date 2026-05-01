@@ -162,6 +162,8 @@ packages/[name]/
 - pre-push: `pnpm test && pnpm typecheck`
 - post-merge: `pnpm install`
 
+이 저장소의 기본 브랜치는 main이 아니라 trunk다. 브랜치 관련 예시와 기준은 trunk를 기준으로 해석한다.
+
 ## Telemetry & Tracing
 
 Croco는 OpenTelemetry 표준을 기반으로 한 분산 추적(Distributed Tracing)을 제공합니다.

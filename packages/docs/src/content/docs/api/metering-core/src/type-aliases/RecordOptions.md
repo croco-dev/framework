@@ -7,8 +7,6 @@ title: "RecordOptions"
 
 > **RecordOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/types.ts:45](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L45)
-
 record() 메서드 옵션
 
 ## Properties
@@ -17,15 +15,11 @@ record() 메서드 옵션
 
 > `optional` **idempotencyKey**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:49](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L49)
-
 ***
 
 ### metadata?
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
-
-Defined in: [packages/metering-core/src/libs/types.ts:50](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L50)
 
 ***
 
@@ -33,20 +27,14 @@ Defined in: [packages/metering-core/src/libs/types.ts:50](https://github.com/cro
 
 > **meterId**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:47](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L47)
-
 ***
 
 ### tenantId
 
 > **tenantId**: `string`
 
-Defined in: [packages/metering-core/src/libs/types.ts:46](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L46)
-
 ***
 
 ### value?
 
 > `optional` **value**: `number`
-
-Defined in: [packages/metering-core/src/libs/types.ts:48](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/types.ts#L48)

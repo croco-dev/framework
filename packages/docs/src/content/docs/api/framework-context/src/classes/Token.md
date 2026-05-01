@@ -5,8 +5,6 @@ prev: false
 title: "Token"
 ---
 
-Defined in: node\_modules/typedi/types/token.class.d.ts:5
-
 Used to create unique typed service identifier.
 Useful when service has only interface, but don't have a class.
 
@@ -21,8 +19,6 @@ Useful when service has only interface, but don't have a class.
 ### Constructor
 
 > **new Token**\<`T`\>(`name?`): `Token`\<`T`\>
-
-Defined in: node\_modules/typedi/types/token.class.d.ts:10
 
 #### Parameters
 
@@ -41,5 +37,3 @@ Token name, optional and only used for debugging purposes.
 ### name?
 
 > `optional` **name**: `string`
-
-Defined in: node\_modules/typedi/types/token.class.d.ts:6
