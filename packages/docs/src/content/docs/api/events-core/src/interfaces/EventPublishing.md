@@ -5,8 +5,6 @@ prev: false
 title: "EventPublishing"
 ---
 
-Defined in: [packages/events-core/src/libs/interfaces/EventPublishing.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventPublishing.ts#L7)
-
 이벤트 발행 인터페이스입니다.
 이벤트 버스에서 이벤트를 발행하는 기능만 제공합니다.
 
@@ -25,8 +23,6 @@ Defined in: [packages/events-core/src/libs/interfaces/EventPublishing.ts:7](http
 ### publish()
 
 > **publish**(`event`): `Promise`\<`void`\>
-
-Defined in: [packages/events-core/src/libs/interfaces/EventPublishing.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/EventPublishing.ts#L8)
 
 #### Parameters
 

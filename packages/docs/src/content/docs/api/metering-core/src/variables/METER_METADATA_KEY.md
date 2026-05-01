@@ -7,8 +7,6 @@ title: "METER_METADATA_KEY"
 
 > `const` **METER\_METADATA\_KEY**: *typeof* `METER_METADATA_KEY`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Meter.ts#L4)
-
 Meter 클래스 데코레이터와 메타데이터 조회 헬퍼입니다.
 
 ## Description

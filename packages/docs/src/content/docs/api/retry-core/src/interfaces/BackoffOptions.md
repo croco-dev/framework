@@ -5,8 +5,6 @@ prev: false
 title: "BackoffOptions"
 ---
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L4)
-
 Configuration for backoff behavior.
 
 ## Properties
@@ -14,8 +12,6 @@ Configuration for backoff behavior.
 ### delay?
 
 > `optional` **delay**: `number`
-
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L6)
 
 Initial delay in milliseconds (default: 1000)
 
@@ -25,8 +21,6 @@ Initial delay in milliseconds (default: 1000)
 
 > `optional` **jitter**: `boolean`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:15](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L15)
-
 Enable Full Jitter randomization (default: true)
 
 ***
@@ -35,8 +29,6 @@ Enable Full Jitter randomization (default: true)
 
 > `optional` **maxDelay**: `number`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L12)
-
 Maximum delay cap in milliseconds (default: 30000)
 
 ***
@@ -44,7 +36,5 @@ Maximum delay cap in milliseconds (default: 30000)
 ### multiplier?
 
 > `optional` **multiplier**: `number`
-
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L9)
 
 Multiplier for exponential backoff (default: 2)

@@ -5,8 +5,6 @@ prev: false
 title: "ExponentialBackoff"
 ---
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:61](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L61)
-
 Exponential backoff with Full Jitter.
 
 Implements AWS-recommended pattern to prevent Thundering Herd:
@@ -27,8 +25,6 @@ https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
 
 > **new ExponentialBackoff**(`options?`, `deps?`): `ExponentialBackoff`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:69](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L69)
-
 #### Parameters
 
 ##### options?
@@ -48,8 +44,6 @@ Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:69](https://github.co
 ### getDelay()
 
 > **getDelay**(`attempt`): `number`
-
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:86](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L86)
 
 Calculate delay for attempt (0-based index).
 
@@ -76,8 +70,6 @@ With jitter: random(0, cap) - Full Jitter
 
 > **reset**(): `void`
 
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:111](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L111)
-
 Reset (no-op for stateless implementation).
 
 #### Returns
@@ -93,8 +85,6 @@ Reset (no-op for stateless implementation).
 ### wait()
 
 > **wait**(`attempt`): `Promise`\<`void`\>
-
-Defined in: [packages/retry-core/src/libs/BackoffPolicy.ts:101](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/BackoffPolicy.ts#L101)
 
 Wait for the calculated delay.
 

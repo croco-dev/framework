@@ -5,8 +5,6 @@ prev: false
 title: "InMemoryLlmModel"
 ---
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L19)
-
 테스트용 인메모리 모델 구현체입니다.
 
 ## Extends
@@ -18,8 +16,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:19](https://github.c
 ### Constructor
 
 > **new InMemoryLlmModel**(`modelId`, `responses?`): `InMemoryLlmModel`
-
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:34](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L34)
 
 #### Parameters
 
@@ -45,8 +41,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:34](https://github.c
 
 > `readonly` **capabilities**: [`LlmCapabilities`](/api/llm-core/src/type-aliases/llmcapabilities/)
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L24)
-
 LLM 기능 플래그
 
 #### Overrides
@@ -58,8 +52,6 @@ LLM 기능 플래그
 ### modelId
 
 > `readonly` **modelId**: `string`
-
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L23)
 
 모델 식별자
 
@@ -73,8 +65,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:23](https://github.c
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`LlmModel`](/api/llm-core/src/classes/llmmodel/)\>
 
-Defined in: [packages/llm-core/src/libs/LlmModel.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/LlmModel.ts#L25)
-
 #### Inherited from
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`token`](/api/llm-core/src/classes/llmmodel/#token)
@@ -84,8 +74,6 @@ Defined in: [packages/llm-core/src/libs/LlmModel.ts:25](https://github.com/croco
 ### callTool()
 
 > **callTool**(`params`): `Promise`\<[`ToolCallResult`](/api/llm-core/src/type-aliases/toolcallresult/)\>
-
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:102](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L102)
 
 툴 호출
 
@@ -113,8 +101,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:102](https://github.
 
 > **embed**(`params`): `Promise`\<[`EmbedResult`](/api/llm-core/src/type-aliases/embedresult/)\>
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:151](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L151)
-
 임베딩 생성 (단일 텍스트)
 
 #### Parameters
@@ -140,8 +126,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:151](https://github.
 ### embedMany()
 
 > **embedMany**(`params`): `Promise`\<[`EmbedManyResult`](/api/llm-core/src/type-aliases/embedmanyresult/)\>
-
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:165](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L165)
 
 임베딩 생성 (배치)
 
@@ -169,8 +153,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:165](https://github.
 
 > **generate**(`params`): `Promise`\<[`GenerateResult`](/api/llm-core/src/type-aliases/generateresult/)\>
 
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:44](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L44)
-
 텍스트 생성
 
 #### Parameters
@@ -196,8 +178,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:44](https://github.c
 ### generateObject()
 
 > **generateObject**\<`T`\>(`params`): `Promise`\<`T`\>
-
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:92](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L92)
 
 객체 생성
 
@@ -230,8 +210,6 @@ Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:92](https://github.c
 ### stream()
 
 > **stream**(`params`): `AsyncIterable`\<[`StreamChunk`](/api/llm-core/src/type-aliases/streamchunk/)\>
-
-Defined in: [packages/llm-core/src/libs/InMemoryLlmModel.ts:63](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/InMemoryLlmModel.ts#L63)
 
 스트리밍 텍스트 생성
 

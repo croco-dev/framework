@@ -5,8 +5,6 @@ prev: false
 title: "LoggerOptions"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:137](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L137)
-
 Options for creating a Logger instance.
 
 ## Properties
@@ -14,8 +12,6 @@ Options for creating a Logger instance.
 ### attributes?
 
 > `optional` **attributes**: `Attributes`
-
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:145](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L145)
 
 Optional attributes to include with all logs
 
@@ -25,8 +21,6 @@ Optional attributes to include with all logs
 
 > **name**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:139](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L139)
-
 The name of the logger
 
 ***
@@ -35,8 +29,6 @@ The name of the logger
 
 > `optional` **schemaUrl**: `string`
 
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:143](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L143)
-
 Optional schema URL for the logger
 
 ***
@@ -44,7 +36,5 @@ Optional schema URL for the logger
 ### version?
 
 > `optional` **version**: `string`
-
-Defined in: [packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts:141](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/logs/LogsApi.ts#L141)
 
 Optional version of the logger
