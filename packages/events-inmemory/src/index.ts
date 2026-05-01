@@ -40,4 +40,4 @@ export { EventPublishFailedError, InMemoryEventBus } from './libs/InmemoryEventB
 /**
  * 동시 처리 한도를 초과했을 때 발생하는 Problem 타입입니다.
  */
-export { BackpressureExceededProblem } from './libs/problems/EventsInmemoryProblems';
+export { BackpressureExceededProblem, BackpressureTimeoutProblem } from './libs/problems/EventsInmemoryProblems';

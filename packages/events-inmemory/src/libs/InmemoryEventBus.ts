@@ -5,7 +5,7 @@ import { Logger } from '@croco/framework-logger';
 import type { TraceInfo } from '@croco/telemetry-api';
 import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
 import { type Context, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
-import { BackpressureExceededProblem } from './problems/EventsInmemoryProblems';
+import { BackpressureExceededProblem, BackpressureTimeoutProblem } from './problems/EventsInmemoryProblems';
 
 export type EventPublishFailure = {
   handlerName: string;
@@ -44,6 +44,7 @@ export type BackpressureStrategy = 'drop' | 'block' | 'error';
 export type InMemoryEventBusOptions = {
   maxConcurrency?: number;
   backpressureStrategy?: BackpressureStrategy;
+  backpressureTimeoutMs?: number;
 };
 
 type RunningHandler = {
@@ -60,8 +61,10 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
   private readonly tracer = getTracer();
   private readonly maxConcurrency: number;
   private readonly backpressureStrategy: BackpressureStrategy;
+  private readonly backpressureTimeoutMs?: number;
   private runningHandlers = new Map<string, RunningHandler>();
   private handlerCounter = 0;
+  private readonly slotWaiters = new Set<() => void>();
 
   constructor(options: InMemoryEventBusOptions = {}) {
     const maxConcurrency = options.maxConcurrency ?? 100;
@@ -72,6 +75,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
     }
     this.maxConcurrency = maxConcurrency;
     this.backpressureStrategy = options.backpressureStrategy ?? 'block';
+    this.backpressureTimeoutMs = options.backpressureTimeoutMs;
   }
 
   async publish(event: TEvent): Promise<void> {
@@ -161,19 +165,63 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
     }
   }
 
-  private async waitForSlot(): Promise<void> {
-    if (this.runningHandlers.size === 0) {
+  private hasAvailableSlot(): boolean {
+    return this.runningHandlers.size < this.maxConcurrency;
+  }
+
+  private async waitForSlot(signal?: AbortSignal): Promise<void> {
+    if (this.hasAvailableSlot()) {
       return;
     }
 
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (this.runningHandlers.size < this.maxConcurrency) {
-          clearInterval(checkInterval);
-          resolve();
+    if (signal?.aborted) {
+      throw BackpressureTimeoutProblem.aborted();
+    }
+
+    return new Promise((resolve, reject) => {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutMs = this.backpressureTimeoutMs;
+
+      const cleanup = () => {
+        this.slotWaiters.delete(onSlotAvailable);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
-      }, 10);
+        signal?.removeEventListener('abort', onAbort);
+      };
+
+      const onAbort = () => {
+        cleanup();
+        reject(BackpressureTimeoutProblem.aborted());
+      };
+
+      const onSlotAvailable = () => {
+        if (!this.hasAvailableSlot()) {
+          return;
+        }
+
+        cleanup();
+        resolve();
+      };
+
+      this.slotWaiters.add(onSlotAvailable);
+
+      if (timeoutMs !== undefined) {
+        timeoutId = setTimeout(() => {
+          cleanup();
+          reject(BackpressureTimeoutProblem.timeout(timeoutMs));
+        }, timeoutMs);
+      }
+
+      signal?.addEventListener('abort', onAbort, { once: true });
+      onSlotAvailable();
     });
+  }
+
+  private notifySlotAvailable(): void {
+    for (const waiter of this.slotWaiters) {
+      waiter();
+    }
   }
 
   private async executeSubscriberWithTracking(
@@ -191,6 +239,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
       return await this.executeSubscriber(handlerClass, baseEvent, eventName);
     } finally {
       this.runningHandlers.delete(handlerId);
+      this.notifySlotAvailable();
     }
   }
 
@@ -360,12 +409,15 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
         this.runningHandlers.delete(id);
       }
     }
+
+    this.notifySlotAvailable();
   }
 
   clear(): void {
     this.index.clear();
     this.runningHandlers.clear();
     this.handlerCounter = 0;
+    this.notifySlotAvailable();
   }
 
   getRunningHandlerCount(): number {

@@ -17,6 +17,12 @@ title: "InMemoryEventBusOptions"
 
 ***
 
+### backpressureTimeoutMs?
+
+> `optional` **backpressureTimeoutMs**: `number`
+
+***
+
 ### maxConcurrency?
 
 > `optional` **maxConcurrency**: `number`

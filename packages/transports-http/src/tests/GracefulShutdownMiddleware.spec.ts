@@ -2,9 +2,8 @@ import 'reflect-metadata';
 
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createApp } from '../libs/CrocoApp';
 import { ErrorHandler } from '../libs/ErrorHandler';
 import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
 import {
@@ -12,6 +11,7 @@ import {
   gracefulShutdownMiddleware,
   isShuttingDown,
   resetShutdownState,
+  setupGracefulShutdown,
 } from '../libs/middleware/GracefulShutdownMiddleware';
 
 describe('GracefulShutdownMiddleware', () => {
@@ -101,6 +101,26 @@ describe('GracefulShutdownMiddleware', () => {
 
       expect(getActiveRequestCount()).toBe(0);
       expect(isShuttingDown()).toBe(false);
+    });
+
+    it('should preserve external signal listeners after shutdown', async () => {
+      const externalListener = vi.fn();
+      const signal = 'SIGINT';
+
+      process.on(signal, externalListener);
+
+      gracefulShutdownMiddleware({
+        signals: [signal],
+        isLambdaEnvironment: false,
+      });
+
+      const shutdown = setupGracefulShutdown({ signals: [signal] });
+      await shutdown();
+
+      process.emit(signal);
+
+      expect(externalListener).toHaveBeenCalledTimes(1);
+      process.off(signal, externalListener);
     });
   });
 });

@@ -51,6 +51,8 @@ export function parseTraceParent(header: string | null): TraceParent | null {
 export const telemetryMiddleware =
   (route: string): MiddlewareFunction =>
   async (ctx, next): Promise<void> => {
+    let nextCalled = false;
+
     try {
       const tracer = trace.getTracer('croco-http', '0.0.1');
 
@@ -80,6 +82,7 @@ export const telemetryMiddleware =
 
       return await context.with(trace.setSpan(context.active(), span), async () => {
         try {
+          nextCalled = true;
           await next();
 
           const status = ctx.res.status;
@@ -89,17 +92,23 @@ export const telemetryMiddleware =
           span.setAttribute('http.status_code', status);
         } catch (error) {
           ctx.res.status = 500;
-          span.recordException(error as Error);
+          const spanError = error instanceof Error ? error : new Error(String(error));
+
+          span.recordException(spanError);
           span.setStatus({
             code: SpanStatusCode.ERROR,
-            message: (error as Error).message,
+            message: spanError.message,
           });
           throw error;
         } finally {
           span.end();
         }
       });
-    } catch {
+    } catch (error) {
+      if (nextCalled) {
+        throw error;
+      }
+
       const fallbackTraceId = `telemetry-degraded-${Date.now().toString(36)}`;
 
       ctx.set('traceId', fallbackTraceId);
