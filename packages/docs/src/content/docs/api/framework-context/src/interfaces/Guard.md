@@ -5,8 +5,6 @@ prev: false
 title: "Guard"
 ---
 
-Defined in: [packages/framework-context/src/libs/Guard.ts:1](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Guard.ts#L1)
-
 요청을 계속 처리할 수 있는지 판단하는 Guard 인터페이스입니다.
 
 ## Example
@@ -34,8 +32,6 @@ Guard 실행 컨텍스트 타입입니다.
 ### canActivate()
 
 > **canActivate**(`context`): `boolean` \| `Promise`\<`boolean`\>
-
-Defined in: [packages/framework-context/src/libs/Guard.ts:2](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/framework-context/src/libs/Guard.ts#L2)
 
 #### Parameters
 

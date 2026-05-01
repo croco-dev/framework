@@ -20,7 +20,7 @@
     "@clack/prompts": "^0.9.0",
     "commander": "^12.0.0",
     "fs-extra": "^11.0.0",
-    "handlebars": "^4.7.0",
+    "handlebars": "^4.7.9",
     "picocolors": "^1.0.0"
   },
   "devDependencies": {

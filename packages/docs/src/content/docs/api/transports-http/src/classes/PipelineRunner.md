@@ -5,8 +5,6 @@ prev: false
 title: "PipelineRunner"
 ---
 
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:33](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/PipelineRunner.ts#L33)
-
 Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행합니다.
 
 ## Constructors
@@ -14,8 +12,6 @@ Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행�
 ### Constructor
 
 > **new PipelineRunner**(`errorHandler`, `logger`): `PipelineRunner`
-
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:34](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/PipelineRunner.ts#L34)
 
 #### Parameters
 
@@ -36,8 +32,6 @@ Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:34](https://git
 ### run()
 
 > **run**(`execContext`, `handler`, `config`): `Promise`\<`unknown`\>
-
-Defined in: [packages/transports-http/src/libs/PipelineRunner.ts:39](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/PipelineRunner.ts#L39)
 
 #### Parameters
 

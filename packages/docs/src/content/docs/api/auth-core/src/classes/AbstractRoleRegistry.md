@@ -5,8 +5,6 @@ prev: false
 title: "AbstractRoleRegistry"
 ---
 
-Defined in: [packages/auth-core/src/libs/interfaces/AbstractRoleRegistry.ts:3](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/AbstractRoleRegistry.ts#L3)
-
 역할 레지스트리 구현이 따라야 하는 추상 계약입니다.
 
 ## Extended by
@@ -28,8 +26,6 @@ Defined in: [packages/auth-core/src/libs/interfaces/AbstractRoleRegistry.ts:3](h
 ### getRolePermissions()
 
 > `abstract` **getRolePermissions**(`name`, `visited?`): `string`[]
-
-Defined in: [packages/auth-core/src/libs/interfaces/AbstractRoleRegistry.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/AbstractRoleRegistry.ts#L4)
 
 #### Parameters
 

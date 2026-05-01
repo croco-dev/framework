@@ -5,8 +5,6 @@ prev: false
 title: "RoleRegistry"
 ---
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L9)
-
 역할 정의 타입과 역할 레지스트리 구현체입니다.
 
 ## Extends
@@ -33,8 +31,6 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:9](https://github.com/croc
 
 > **getRole**(`name`): [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L16)
-
 #### Parameters
 
 ##### name
@@ -50,8 +46,6 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:16](https://github.com/cro
 ### getRolePermissions()
 
 > **getRolePermissions**(`name`, `visited?`): `string`[]
-
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L20)
 
 #### Parameters
 
@@ -76,8 +70,6 @@ Defined in: [packages/auth-core/src/libs/rbac/Role.ts:20](https://github.com/cro
 ### register()
 
 > **register**(`role`): `void`
-
-Defined in: [packages/auth-core/src/libs/rbac/Role.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/rbac/Role.ts#L12)
 
 #### Parameters
 

@@ -7,8 +7,6 @@ title: "ApiKey"
 
 > **ApiKey** = `object`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L6)
-
 API 키 도메인 모델과 생성 관련 타입입니다.
 
 ## Properties
@@ -17,15 +15,11 @@ API 키 도메인 모델과 생성 관련 타입입니다.
 
 > `optional` **allowedIps**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L20)
-
 ***
 
 ### createdAt
 
 > **createdAt**: `Date`
-
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:15](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L15)
 
 ***
 
@@ -33,15 +27,11 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:15](https://github
 
 > **createdBy**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:14](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L14)
-
 ***
 
 ### expiresAt
 
 > **expiresAt**: `Date` \| `null`
-
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L16)
 
 ***
 
@@ -49,15 +39,11 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:16](https://github
 
 > **hash**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L10)
-
 ***
 
 ### id
 
 > **id**: `string`
-
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:7](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L7)
 
 ***
 
@@ -65,15 +51,11 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:7](https://github.
 
 > **lastUsedAt**: `Date` \| `null`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:18](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L18)
-
 ***
 
 ### name
 
 > **name**: `string`
-
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L12)
 
 ***
 
@@ -81,15 +63,11 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:12](https://github
 
 > **permissions**: `string`[]
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L11)
-
 ***
 
 ### prefix
 
 > **prefix**: `string`
-
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L8)
 
 ***
 
@@ -97,15 +75,11 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:8](https://github.
 
 > `optional` **rateLimit**: [`ApiKeyRateLimit`](/api/auth-core/src/type-aliases/apikeyratelimit/)
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L19)
-
 ***
 
 ### revokedAt
 
 > **revokedAt**: `Date` \| `null`
-
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:17](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L17)
 
 ***
 
@@ -113,12 +87,8 @@ Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:17](https://github
 
 > **shortToken**: `string`
 
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L9)
-
 ***
 
 ### tenantId
 
 > **tenantId**: `string`
-
-Defined in: [packages/auth-core/src/libs/interfaces/ApiKey.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/interfaces/ApiKey.ts#L13)

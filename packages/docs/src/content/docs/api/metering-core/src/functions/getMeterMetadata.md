@@ -7,8 +7,6 @@ title: "getMeterMetadata"
 
 > **getMeterMetadata**(`target`): [`MeterMetadata`](/api/metering-core/src/type-aliases/metermetadata/) \| `undefined`
 
-Defined in: [packages/metering-core/src/libs/decorators/Meter.ts:51](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/decorators/Meter.ts#L51)
-
 클래스에서 Meter 메타데이터 조회
 
 ## Parameters

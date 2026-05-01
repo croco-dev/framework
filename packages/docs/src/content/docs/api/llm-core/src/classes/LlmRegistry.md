@@ -5,8 +5,6 @@ prev: false
 title: "LlmRegistry"
 ---
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/LlmRegistry.ts#L11)
-
 LLM 레지스트리 추상 클래스
 
 ## Description
@@ -34,15 +32,11 @@ Token 기반 DI를 지원하며, 다중 제공자 관리를 지원합니다.
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`LlmRegistry`\>
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/LlmRegistry.ts#L12)
-
 ## Methods
 
 ### getModel()
 
 > `abstract` **getModel**(`modelId`): `Promise`\<[`LlmModel`](/api/llm-core/src/classes/llmmodel/)\>
-
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/LlmRegistry.ts#L20)
 
 모델 조회
 
@@ -66,8 +60,6 @@ LLM 모델 인스턴스
 
 > `abstract` **listModels**(): `Promise`\<`string`[]\>
 
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/LlmRegistry.ts#L27)
-
 사용 가능한 모델 목록 조회
 
 #### Returns
@@ -81,8 +73,6 @@ Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:27](https://github.com/cr
 ### registerProvider()
 
 > `abstract` **registerProvider**(`providerId`, `factory`): `void`
-
-Defined in: [packages/llm-core/src/libs/LlmRegistry.ts:35](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/LlmRegistry.ts#L35)
 
 제공자 등록
 

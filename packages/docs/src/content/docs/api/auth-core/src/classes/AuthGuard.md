@@ -5,8 +5,6 @@ prev: false
 title: "AuthGuard"
 ---
 
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/AuthGuard.ts#L23)
-
 사용자 인증을 검사하는 기본 인증 가드입니다.
 
 ## Implements
@@ -18,8 +16,6 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:23](https://github.
 ### Constructor
 
 > **new AuthGuard**(`authProvider`): `AuthGuard`
-
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/AuthGuard.ts#L24)
 
 #### Parameters
 
@@ -36,8 +32,6 @@ Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:24](https://github.
 ### canActivate()
 
 > **canActivate**(`context`): `Promise`\<`boolean`\>
-
-Defined in: [packages/auth-core/src/libs/guards/AuthGuard.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/auth-core/src/libs/guards/AuthGuard.ts#L26)
 
 #### Parameters
 

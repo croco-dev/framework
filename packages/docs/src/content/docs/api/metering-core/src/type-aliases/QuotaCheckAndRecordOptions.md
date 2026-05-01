@@ -7,8 +7,6 @@ title: "QuotaCheckAndRecordOptions"
 
 > **QuotaCheckAndRecordOptions** = `object`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/QuotaManager.ts#L10)
-
 QuotaManager 동작에 사용되는 옵션 및 결과 타입입니다.
 
 ## Description
@@ -21,15 +19,11 @@ Quota 검증 및 기록 작업의 옵션과 결과를 정의합니다.
 
 > **allowOverQuota**: `boolean`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:15](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/QuotaManager.ts#L15)
-
 ***
 
 ### meterId
 
 > **meterId**: `string`
-
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/QuotaManager.ts#L12)
 
 ***
 
@@ -37,15 +31,11 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:12](https://github.
 
 > **quota**: `number`
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:14](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/QuotaManager.ts#L14)
-
 ***
 
 ### tenantId
 
 > **tenantId**: `string`
-
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/QuotaManager.ts#L11)
 
 ***
 
@@ -53,12 +43,8 @@ Defined in: [packages/metering-core/src/libs/QuotaManager.ts:11](https://github.
 
 > **usageRecord**: [`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)
 
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/QuotaManager.ts#L16)
-
 ***
 
 ### value
 
 > **value**: `number`
-
-Defined in: [packages/metering-core/src/libs/QuotaManager.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/metering-core/src/libs/QuotaManager.ts#L13)

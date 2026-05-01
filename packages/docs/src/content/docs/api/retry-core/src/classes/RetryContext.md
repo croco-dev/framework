@@ -5,8 +5,6 @@ prev: false
 title: "RetryContext"
 ---
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:5](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L5)
-
 Context object passed to retry operations and listeners.
 Tracks retry state across attempts.
 
@@ -15,8 +13,6 @@ Tracks retry state across attempts.
 ### Constructor
 
 > **new RetryContext**(`methodName`, `args`, `maxAttempts`): `RetryContext`
-
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L12)
 
 #### Parameters
 
@@ -42,23 +38,17 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:12](https://github.com
 
 > `readonly` **args**: `unknown`[]
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:14](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L14)
-
 ***
 
 ### maxAttempts
 
 > `readonly` **maxAttempts**: `number`
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:15](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L15)
-
 ***
 
 ### methodName
 
 > `readonly` **methodName**: `string`
-
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:13](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L13)
 
 ## Accessors
 
@@ -67,8 +57,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:13](https://github.com
 #### Get Signature
 
 > **get** **attempt**(): `number`
-
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L20)
 
 ##### Returns
 
@@ -82,8 +70,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:20](https://github.com
 
 > **get** **elapsedTimeMs**(): `number`
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L28)
-
 ##### Returns
 
 `number`
@@ -95,8 +81,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:28](https://github.com
 #### Get Signature
 
 > **get** **exhausted**(): `boolean`
-
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:36](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L36)
 
 ##### Returns
 
@@ -110,8 +94,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:36](https://github.com
 
 > **get** **lastError**(): `Error` \| `null`
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:32](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L32)
-
 ##### Returns
 
 `Error` \| `null`
@@ -124,8 +106,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:32](https://github.com
 
 > **get** **remainingAttempts**(): `number`
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L24)
-
 ##### Returns
 
 `number`
@@ -135,8 +115,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:24](https://github.com
 ### getAttribute()
 
 > **getAttribute**\<`T`\>(`key`): `T` \| `undefined`
-
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:52](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L52)
 
 #### Type Parameters
 
@@ -160,8 +138,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:52](https://github.com
 
 > **incrementAttempt**(): `void`
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:40](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L40)
-
 #### Returns
 
 `void`
@@ -172,8 +148,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:40](https://github.com
 
 > **reset**(): `void`
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:61](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L61)
-
 #### Returns
 
 `void`
@@ -183,8 +157,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:61](https://github.com
 ### setAttribute()
 
 > **setAttribute**(`key`, `value`): `void`
-
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:57](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L57)
 
 #### Parameters
 
@@ -206,8 +178,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:57](https://github.com
 
 > **setExhausted**(): `void`
 
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:48](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L48)
-
 #### Returns
 
 `void`
@@ -217,8 +187,6 @@ Defined in: [packages/retry-core/src/libs/RetryContext.ts:48](https://github.com
 ### setLastError()
 
 > **setLastError**(`error`): `void`
-
-Defined in: [packages/retry-core/src/libs/RetryContext.ts:44](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/RetryContext.ts#L44)
 
 #### Parameters
 

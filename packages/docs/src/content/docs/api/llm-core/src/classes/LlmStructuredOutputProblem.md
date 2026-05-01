@@ -5,8 +5,6 @@ prev: false
 title: "LlmStructuredOutputProblem"
 ---
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:47](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L47)
-
 서비스 계층에서 발생하는 Problem 하위 타입들입니다.
 
 ## Extends
@@ -18,8 +16,6 @@ Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:47](https:
 ### Constructor
 
 > **new LlmStructuredOutputProblem**(`message`, `cause?`): `LlmStructuredOutputProblem`
-
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:50](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L50)
 
 #### Parameters
 
@@ -45,8 +41,6 @@ Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:50](https:
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L23)
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
@@ -56,8 +50,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:23](https://github.com/c
 ### cause?
 
 > `readonly` `optional` **cause**: `Error`
-
-Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L28)
 
 #### Inherited from
 
@@ -69,8 +61,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:28](https://github.com/c
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L22)
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
@@ -80,8 +70,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:22](https://github.com/c
 ### detail?
 
 > `readonly` `optional` **detail**: `string`
-
-Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L24)
 
 #### Inherited from
 
@@ -93,8 +81,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:24](https://github.com/c
 
 > `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L27)
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
@@ -104,8 +90,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:27](https://github.com/c
 ### instance?
 
 > `readonly` `optional` **instance**: `string`
-
-Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L26)
 
 #### Inherited from
 
@@ -117,8 +101,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:26](https://github.com/c
 
 > **message**: `string`
 
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
@@ -128,8 +110,6 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 ### name
 
 > **name**: `string`
-
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 #### Inherited from
 
@@ -141,8 +121,6 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 > `optional` **stack**: `string`
 
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
-
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
@@ -152,8 +130,6 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 ### type
 
 > `readonly` **type**: `string`
-
-Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L25)
 
 #### Inherited from
 
@@ -165,15 +141,11 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:25](https://github.com/c
 
 > `readonly` `static` **CODE**: `"STRUCTURED_OUTPUT_ERROR"` = `'STRUCTURED_OUTPUT_ERROR'`
 
-Defined in: [packages/llm-core/src/libs/problems/LlmServiceProblem.ts:48](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/problems/LlmServiceProblem.ts#L48)
-
 ***
 
 ### stackTraceLimit
 
 > `static` **stackTraceLimit**: `number`
-
-Defined in: node\_modules/@types/node/globals.d.ts:68
 
 The `Error.stackTraceLimit` property specifies the number of stack frames
 collected by a stack trace (whether generated by `new Error().stack` or
@@ -197,8 +169,6 @@ not capture any frames.
 
 > **get** **status**(): `number`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L62)
-
 ##### Returns
 
 `number`
@@ -215,8 +185,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:62](https://github.com/c
 
 > **get** **title**(): `string`
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L58)
-
 ##### Returns
 
 `string`
@@ -231,8 +199,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:58](https://github.com/c
 
 > **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/problems-core/src/libs/Problem.ts#L66)
-
 #### Returns
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
@@ -246,8 +212,6 @@ Defined in: [packages/problems-core/src/libs/Problem.ts:66](https://github.com/c
 ### captureStackTrace()
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
-
-Defined in: node\_modules/@types/node/globals.d.ts:52
 
 Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -316,8 +280,6 @@ a();
 ### prepareStackTrace()
 
 > `static` **prepareStackTrace**(`err`, `stackTraces`): `any`
-
-Defined in: node\_modules/@types/node/globals.d.ts:56
 
 #### Parameters
 

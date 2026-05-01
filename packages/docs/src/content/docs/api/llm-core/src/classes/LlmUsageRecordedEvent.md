@@ -5,8 +5,6 @@ prev: false
 title: "LlmUsageRecordedEvent"
 ---
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L4)
-
 LLM 사용량 기록 이벤트입니다.
 
 ## Extends
@@ -18,8 +16,6 @@ LLM 사용량 기록 이벤트입니다.
 ### Constructor
 
 > **new LlmUsageRecordedEvent**(`modelId`, `usage`, `operation`): `LlmUsageRecordedEvent`
-
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L8)
 
 #### Parameters
 
@@ -49,8 +45,6 @@ Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:8](https
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/DomainEvent.ts#L18)
-
 #### Inherited from
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
@@ -60,8 +54,6 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com
 ### metadata
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
-
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/DomainEvent.ts#L20)
 
 #### Inherited from
 
@@ -73,23 +65,17 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com
 
 > `readonly` **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L9)
-
 ***
 
 ### operation
 
 > `readonly` **operation**: `"generate"` \| `"stream"` \| `"embed"` \| `"embedMany"` \| `"generateObject"` \| `"callTool"`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L11)
-
 ***
 
 ### timestamp
 
 > `readonly` **timestamp**: `Date`
-
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/DomainEvent.ts#L19)
 
 #### Inherited from
 
@@ -101,23 +87,17 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com
 
 > `readonly` **type**: `"llm.usage_recorded"` = `'llm.usage_recorded'`
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:5](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L5)
-
 ***
 
 ### usage
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L10)
-
 ***
 
 ### eventName
 
 > `static` **eventName**: `string` = `'llm.usage_recorded'`
-
-Defined in: [packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmUsageRecordedEvent.ts#L6)
 
 #### Overrides
 
