@@ -208,8 +208,16 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     return this.buildTransformUrlDefault(key, options);
   }
 
-  async getUploadIntent(key: string): Promise<UploadIntent> {
+  async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
     this.validateKey(key);
+
+    const ttl = options?.ttlInSeconds ?? this.ttl;
+    if (!Number.isFinite(ttl) || !Number.isInteger(ttl) || ttl <= 0) {
+      throw ProblemFactory.invalidArgument(
+        'storage/invalid-upload-intent-ttl',
+        'ttlInSeconds must be a positive finite integer'
+      );
+    }
 
     const url = `${this.apiBaseUrl}/direct_upload`;
 
@@ -220,7 +228,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        maxDurationSeconds: this.ttl,
+        maxDurationSeconds: ttl,
         metadata: {
           originalKey: key,
         },
@@ -247,7 +255,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
     const uploadUrl = result.result.uploadURL;
     const publicUrl = this.buildImageUrl(result.result.id, this.options.defaultVariant ?? 'public');
-    const expiresAt = new Date(Date.now() + this.ttl * 1000);
+    const expiresAt = new Date(Date.now() + ttl * 1000);
 
     return {
       uploadUrl,

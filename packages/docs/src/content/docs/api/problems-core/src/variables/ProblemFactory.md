@@ -204,6 +204,38 @@ RFC 7807 필드 확장을 위한 옵션
 
 Problem 인스턴스
 
+### invalidArgument()
+
+> **invalidArgument**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)
+
+InvalidArgument (400) 카테고리의 Problem을 생성합니다.
+
+#### Parameters
+
+##### code
+
+`string`
+
+도메인에서 문제를 식별하는 고유 코드
+
+##### detail?
+
+`string`
+
+문제의 상세 설명
+
+##### options?
+
+[`ProblemOptions`](/api/problems-core/src/type-aliases/problemoptions/)
+
+RFC 7807 필드 확장을 위한 옵션
+
+#### Returns
+
+[`Problem`](/api/problems-core/src/classes/problem/)
+
+Problem 인스턴스
+
 ### notFound()
 
 > **notFound**(`code`, `detail?`, `options?`): [`Problem`](/api/problems-core/src/classes/problem/)

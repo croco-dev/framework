@@ -1,5 +1,4 @@
 import { Container } from '@croco/framework-context';
-import { Problem } from '@croco/problems-core';
 import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from '@croco/storage-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloudflareImagesProvider } from '../libs/CloudflareImagesProvider';
@@ -609,6 +608,71 @@ describe('CloudflareImagesProvider', () => {
       expect(intent.uploadUrl).toBe(mockUploadUrl);
       expect(intent.publicUrl).toBe('https://imagedelivery.net/test-account-hash/uploaded-image-id/public');
       expect(intent.expiresAt).toBeInstanceOf(Date);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/direct_upload',
+        expect.objectContaining({
+          body: JSON.stringify({
+            maxDurationSeconds: 3600,
+            metadata: {
+              originalKey: 'new-image.jpg',
+            },
+          }),
+        })
+      );
+    });
+
+    it('should apply ttlInSeconds option to upload intent', async () => {
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            uploadURL: 'https://upload.cloudflare.com/example',
+            id: 'uploaded-image-id',
+          },
+          errors: [],
+        }),
+      });
+
+      const intent = await provider.getUploadIntent('new-image.jpg', { ttlInSeconds: 120 });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/direct_upload',
+        expect.objectContaining({
+          body: JSON.stringify({
+            maxDurationSeconds: 120,
+            metadata: {
+              originalKey: 'new-image.jpg',
+            },
+          }),
+        })
+      );
+      expect(intent.expiresAt.getTime()).toBe(now + 120 * 1000);
+
+      vi.restoreAllMocks();
+    });
+
+    it('should throw Problem when ttlInSeconds is zero or negative', async () => {
+      await expect(provider.getUploadIntent('new-image.jpg', { ttlInSeconds: 0 })).rejects.toMatchObject({
+        code: 'storage/invalid-upload-intent-ttl',
+      });
+      await expect(provider.getUploadIntent('new-image.jpg', { ttlInSeconds: -1 })).rejects.toMatchObject({
+        code: 'storage/invalid-upload-intent-ttl',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should throw Problem when ttlInSeconds is not a finite integer', async () => {
+      for (const ttlInSeconds of [Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
+        await expect(provider.getUploadIntent('new-image.jpg', { ttlInSeconds })).rejects.toMatchObject({
+          code: 'storage/invalid-upload-intent-ttl',
+        });
+      }
+
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('should throw UploadFailedProblem when API returns error', async () => {

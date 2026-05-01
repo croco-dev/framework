@@ -751,6 +751,35 @@ describe('CloudinaryProvider', () => {
       expect(intent.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 3600 * 1000);
     });
 
+    it('should apply ttlInSeconds option to upload intent', async () => {
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+      vi.mocked(cloudinary.url).mockReturnValue('https://res.cloudinary.com/test-cloud/image/upload/test-key');
+
+      const intent = await provider.getUploadIntent('test-key', { ttlInSeconds: 120 });
+
+      expect(intent.expiresAt.getTime()).toBe(now + 120 * 1000);
+
+      vi.restoreAllMocks();
+    });
+
+    it('should throw Problem when ttlInSeconds is zero or negative', async () => {
+      await expect(provider.getUploadIntent('test-key', { ttlInSeconds: 0 })).rejects.toMatchObject({
+        code: 'storage/invalid-upload-intent-ttl',
+      });
+      await expect(provider.getUploadIntent('test-key', { ttlInSeconds: -1 })).rejects.toMatchObject({
+        code: 'storage/invalid-upload-intent-ttl',
+      });
+    });
+
+    it('should throw Problem when ttlInSeconds is not a finite integer', async () => {
+      for (const ttlInSeconds of [Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
+        await expect(provider.getUploadIntent('test-key', { ttlInSeconds })).rejects.toMatchObject({
+          code: 'storage/invalid-upload-intent-ttl',
+        });
+      }
+    });
+
     it('should throw InvalidKeyProblem for invalid key', async () => {
       await expect(provider.getUploadIntent('')).rejects.toThrow(InvalidKeyProblem);
     });
