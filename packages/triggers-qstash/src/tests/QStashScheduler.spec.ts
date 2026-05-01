@@ -386,4 +386,49 @@ describe('QStashScheduler', () => {
       'Duplicate QStash schedule ID detected: croco-trigger:DuplicateScheduleJob:shared:run'
     );
   });
+
+  it('scheduleId 인자를 포함하여 스케줄을 생성해야 한다', async () => {
+    class ScheduleIdTestJob {
+      async run(): Promise<void> {}
+    }
+
+    const metadata: CronTriggerMetadata = {
+      type: 'cron',
+      expression: '*/5 * * * *',
+      methodName: 'run',
+      target: ScheduleIdTestJob.prototype,
+      options: {},
+    };
+    triggerRegistry.register(metadata);
+
+    const list = vi.fn().mockResolvedValue([]);
+    const create = vi.fn().mockResolvedValue({});
+    const deleteSchedule = vi.fn();
+
+    const client = {
+      schedules: {
+        list,
+        create,
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: 'https://api.example.com/webhooks/qstash',
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.created).toBe(1);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId: 'croco-trigger:ScheduleIdTestJob:run:run',
+        cron: '*/5 * * * *',
+        destination: 'https://api.example.com/webhooks/qstash',
+        method: 'POST',
+      })
+    );
+  });
 });

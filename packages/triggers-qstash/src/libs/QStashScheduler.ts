@@ -287,6 +287,7 @@ export class QStashScheduler {
     try {
       if (!existing) {
         await this.client.schedules.create({
+          scheduleId,
           cron: metadata.expression,
           destination: this.webhookUrl,
           method: 'POST' as const,
