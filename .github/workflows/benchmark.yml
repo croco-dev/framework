@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p ci-reports/benchmark
-          cat <<EOF > ci-reports/benchmark/summary.md
+          cat <<'EOF' > ci-reports/benchmark/summary.md
           # Benchmark gate summary
 
           - Gate mode: `${{ env.BENCHMARK_GATE_MODE }}`
@@ -74,6 +74,7 @@ jobs:
       - name: Comment PR with benchmark results
         uses: actions/github-script@v7
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         with:
           script: |
             const { run } = await import('${{ github.workspace }}/scripts/post-benchmark-comment.mjs');
