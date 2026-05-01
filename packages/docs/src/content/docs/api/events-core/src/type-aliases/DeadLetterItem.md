@@ -7,8 +7,6 @@ title: "DeadLetterItem"
 
 > **DeadLetterItem**\<`TEvent`\> = `object`
 
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L6)
-
 죽은 편지 큐(DLQ)에 저장된 이벤트 항목입니다.
 
 ## Type Parameters
@@ -23,8 +21,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:6](http
 
 > **event**: `TEvent`
 
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L8)
-
 원본 이벤트
 
 ***
@@ -32,8 +28,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:8](http
 ### failedAt
 
 > **failedAt**: `Date`
-
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:14](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L14)
 
 실패 시간
 
@@ -43,8 +37,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:14](htt
 
 > `optional` **handlerId**: `string`
 
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L23)
-
 핸들러 식별자 (어떤 핸들러에서 실패했는지)
 
 ***
@@ -52,8 +44,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:23](htt
 ### lastError?
 
 > `optional` **lastError**: `string`
-
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L20)
 
 마지막 에러 메시지
 
@@ -63,8 +53,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:20](htt
 
 > `optional` **metadata**: `Record`\<`string`, `unknown`\>
 
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:26](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L26)
-
 추가 메타데이터
 
 ***
@@ -73,8 +61,6 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:26](htt
 
 > **reason**: `string`
 
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L11)
-
 실패 원인
 
 ***
@@ -82,7 +68,5 @@ Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:11](htt
 ### retryCount
 
 > **retryCount**: `number`
-
-Defined in: [packages/events-core/src/libs/interfaces/DeadLetterQueue.ts:17](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/interfaces/DeadLetterQueue.ts#L17)
 
 재시도 횟수

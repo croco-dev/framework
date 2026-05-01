@@ -5,8 +5,6 @@ prev: false
 title: "LlmGeneratedEvent"
 ---
 
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:4](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L4)
-
 텍스트 생성 완료 시 발행되는 이벤트입니다.
 
 ## Extends
@@ -18,8 +16,6 @@ Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:4](https://g
 ### Constructor
 
 > **new LlmGeneratedEvent**(`modelId`, `prompt`, `result`, `usage`): `LlmGeneratedEvent`
-
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L8)
 
 #### Parameters
 
@@ -53,8 +49,6 @@ Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:8](https://g
 
 > `readonly` **eventName**: `string`
 
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/DomainEvent.ts#L18)
-
 #### Inherited from
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
@@ -64,8 +58,6 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:18](https://github.com
 ### metadata
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
-
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/DomainEvent.ts#L20)
 
 #### Inherited from
 
@@ -77,15 +69,11 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:20](https://github.com
 
 > `readonly` **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L9)
-
 ***
 
 ### prompt
 
 > `readonly` **prompt**: `string`
-
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L10)
 
 ***
 
@@ -93,15 +81,11 @@ Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:10](https://
 
 > `readonly` **result**: `string`
 
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L11)
-
 ***
 
 ### timestamp
 
 > `readonly` **timestamp**: `Date`
-
-Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/events-core/src/libs/DomainEvent.ts#L19)
 
 #### Inherited from
 
@@ -113,23 +97,17 @@ Defined in: [packages/events-core/src/libs/DomainEvent.ts:19](https://github.com
 
 > `readonly` **type**: `"llm.generated"` = `'llm.generated'`
 
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:6](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L6)
-
 ***
 
 ### usage
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:12](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L12)
-
 ***
 
 ### eventName
 
 > `static` **eventName**: `string` = `'llm.generated'`
-
-Defined in: [packages/llm-core/src/libs/events/LlmGeneratedEvent.ts:5](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/events/LlmGeneratedEvent.ts#L5)
 
 #### Overrides
 

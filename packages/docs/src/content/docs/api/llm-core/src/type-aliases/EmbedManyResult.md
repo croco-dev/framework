@@ -7,8 +7,6 @@ title: "EmbedManyResult"
 
 > **EmbedManyResult** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:209](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L209)
-
 배치 임베딩 결과
 
 ## Properties
@@ -17,8 +15,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:209](https://github.com/croco-d
 
 > **embeddings**: `number`[][]
 
-Defined in: [packages/llm-core/src/libs/types.ts:213](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L213)
-
 임베딩 벡터 목록
 
 ***
@@ -26,7 +22,5 @@ Defined in: [packages/llm-core/src/libs/types.ts:213](https://github.com/croco-d
 ### usage
 
 > **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
-
-Defined in: [packages/llm-core/src/libs/types.ts:218](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L218)
 
 토큰 사용량

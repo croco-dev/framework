@@ -5,8 +5,6 @@ prev: false
 title: "Histogram"
 ---
 
-Defined in: [packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts:35](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts#L35)
-
 Histogram is a synchronous instrument that records the distribution of values.
 Histograms are useful for measuring things like request latency or response sizes.
 
@@ -22,8 +20,6 @@ histogram.record(150, { method: 'GET', status: 200 });
 ### record()
 
 > **record**(`value`, `attributes?`, `context?`): `void`
-
-Defined in: [packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts:43](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/telemetry-sdk-node/src/libs/metrics/MetricsApi.ts#L43)
 
 Records a value in the histogram.
 
