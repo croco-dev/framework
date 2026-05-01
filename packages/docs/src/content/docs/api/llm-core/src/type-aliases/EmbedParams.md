@@ -11,9 +11,9 @@ title: "EmbedParams"
 
 ## Properties
 
-### model?
+### modelId?
 
-> `optional` **model**: `string`
+> `optional` **modelId**: `string`
 
 모델 ID (선택)
 
