@@ -13,7 +13,7 @@ title: "rateLimitHttpMiddleware"
 
 ### options
 
-[`RateLimitHttpOptions`](/api/transports-http/src/type-aliases/ratelimithttpoptions/)
+`any`
 
 ## Returns
 
