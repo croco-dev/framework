@@ -3,6 +3,18 @@
 import starlight from '@astrojs/starlight';
 import { defineConfig } from 'astro/config';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
+import { sanitizeTypeDocIndex } from './scripts/sanitize-typedoc-index.mjs';
+
+function sanitizeGeneratedTypeDocIndex() {
+  return {
+    name: 'sanitize-generated-typedoc-index',
+    hooks: {
+      'config:setup': async () => {
+        await sanitizeTypeDocIndex();
+      },
+    },
+  };
+}
 
 // https://astro.build/config
 export default defineConfig({
@@ -49,6 +61,7 @@ export default defineConfig({
             collapsed: false,
           },
         }),
+        sanitizeGeneratedTypeDocIndex(),
       ],
       sidebar: [
         {
