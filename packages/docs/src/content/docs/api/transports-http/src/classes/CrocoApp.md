@@ -5,8 +5,6 @@ prev: false
 title: "CrocoApp"
 ---
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:16](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/CrocoApp.ts#L16)
-
 컨트롤러를 컴파일해 Hono 앱, Lambda 핸들러, Node 서버로 실행하는 HTTP 애플리케이션입니다.
 
 ## Constructors
@@ -14,8 +12,6 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:16](https://github.co
 ### Constructor
 
 > **new CrocoApp**(`config`, `logger`, `errorHandler`, `healthCheckRegistry`): `CrocoApp`
-
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:23](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/CrocoApp.ts#L23)
 
 #### Parameters
 
@@ -45,8 +41,6 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:23](https://github.co
 
 > **fetch**(`request`): `Promise`\<`Response`\>
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:98](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/CrocoApp.ts#L98)
-
 #### Parameters
 
 ##### request
@@ -63,8 +57,6 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:98](https://github.co
 
 > **getHono**(): `Hono`
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:76](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/CrocoApp.ts#L76)
-
 #### Returns
 
 `Hono`
@@ -75,8 +67,6 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:76](https://github.co
 
 > **lambdaHandler**(): [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
 
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:71](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/CrocoApp.ts#L71)
-
 #### Returns
 
 [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
@@ -85,15 +75,17 @@ Defined in: [packages/transports-http/src/libs/CrocoApp.ts:71](https://github.co
 
 ### listen()
 
-> **listen**(`port`, `callback?`): `Promise`\<`void`\>
-
-Defined in: [packages/transports-http/src/libs/CrocoApp.ts:81](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/transports-http/src/libs/CrocoApp.ts#L81)
+> **listen**(`port`, `options?`, `callback?`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### port
 
 `number`
+
+##### options?
+
+[`ListenOptions`](/api/transports-http/src/interfaces/listenoptions/) | () => `void`
 
 ##### callback?
 

@@ -5,8 +5,6 @@ prev: false
 title: "CircuitState"
 ---
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:8](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L8)
-
 Circuit Breaker 상태를 나타내는 열거형.
 
 - CLOSED: 정상 상태, 모든 요청 허용
@@ -19,20 +17,14 @@ Circuit Breaker 상태를 나타내는 열거형.
 
 > **CLOSED**: `"CLOSED"`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:9](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L9)
-
 ***
 
 ### HALF\_OPEN
 
 > **HALF\_OPEN**: `"HALF_OPEN"`
 
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:11](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L11)
-
 ***
 
 ### OPEN
 
 > **OPEN**: `"OPEN"`
-
-Defined in: [packages/retry-core/src/libs/CircuitBreakerState.ts:10](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/retry-core/src/libs/CircuitBreakerState.ts#L10)

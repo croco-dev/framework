@@ -7,8 +7,6 @@ title: "LlmModelConfig"
 
 > **LlmModelConfig** = `object`
 
-Defined in: [packages/llm-core/src/libs/types.ts:274](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L274)
-
 LLM 모델 설정
 
 ## Properties
@@ -16,8 +14,6 @@ LLM 모델 설정
 ### apiKey?
 
 > `optional` **apiKey**: `string`
-
-Defined in: [packages/llm-core/src/libs/types.ts:283](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L283)
 
 API 키
 
@@ -27,8 +23,6 @@ API 키
 
 > `optional` **baseUrl**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:288](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L288)
-
 기본 URL
 
 ***
@@ -37,8 +31,6 @@ Defined in: [packages/llm-core/src/libs/types.ts:288](https://github.com/croco-d
 
 > **modelId**: `string`
 
-Defined in: [packages/llm-core/src/libs/types.ts:278](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L278)
-
 모델 ID
 
 ***
@@ -46,7 +38,5 @@ Defined in: [packages/llm-core/src/libs/types.ts:278](https://github.com/croco-d
 ### timeout?
 
 > `optional` **timeout**: `number`
-
-Defined in: [packages/llm-core/src/libs/types.ts:293](https://github.com/croco-dev/framework/blob/f424c308c28377c4af3b393f40504d808c3cb4a4/packages/llm-core/src/libs/types.ts#L293)
 
 타임아웃 (ms)
