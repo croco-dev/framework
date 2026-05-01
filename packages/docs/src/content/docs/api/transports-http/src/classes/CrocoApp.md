@@ -29,7 +29,7 @@ title: "CrocoApp"
 
 ##### healthCheckRegistry
 
-[`HealthCheckRegistry`](/api/transports-http/src/interfaces/healthcheckregistry/)
+[`HealthCheckRegistry`](/api/transports-http/src/classes/healthcheckregistry/)
 
 #### Returns
 

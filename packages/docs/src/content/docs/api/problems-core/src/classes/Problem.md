@@ -30,6 +30,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`EventTransactionContextUnavailableProblem`](/api/events-core/src/classes/eventtransactioncontextunavailableproblem/)
 - [`UnknownEventTypeProblem`](/api/events-core/src/classes/unknowneventtypeproblem/)
 - [`BackpressureExceededProblem`](/api/events-inmemory/src/classes/backpressureexceededproblem/)
+- [`BackpressureTimeoutProblem`](/api/events-inmemory/src/classes/backpressuretimeoutproblem/)
 - [`ApiKeyCreationFailedProblem`](/api/auth-core/src/classes/apikeycreationfailedproblem/)
 - [`ApiKeyExpiredProblem`](/api/auth-core/src/classes/apikeyexpiredproblem/)
 - [`ApiKeyRevokedProblem`](/api/auth-core/src/classes/apikeyrevokedproblem/)
