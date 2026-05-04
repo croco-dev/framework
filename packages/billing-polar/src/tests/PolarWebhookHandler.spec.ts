@@ -18,6 +18,9 @@ function createMockStore(): BillingStore {
     deleteSubscription: vi.fn(),
     saveOrder: vi.fn(),
     findOrdersByAccount: vi.fn(),
+    reserveWebhook: vi.fn(),
+    completeWebhook: vi.fn(),
+    failWebhook: vi.fn(),
     isWebhookProcessed: vi.fn(),
     markWebhookProcessed: vi.fn(),
   };
@@ -26,6 +29,7 @@ function createMockStore(): BillingStore {
 function createMockEventPublisher(): EventPublisher {
   const mockPublisher = {
     publish: vi.fn(),
+    publishNow: vi.fn(),
     publishMany: vi.fn(),
   } as unknown as EventPublisher;
   return mockPublisher;
@@ -89,13 +93,14 @@ describe('PolarWebhookHandler', () => {
       expect(result.eventId).toBe('evt-123');
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockEventPublisher.publish).not.toHaveBeenCalled();
-      expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
     });
 
     it('should process webhook only once for concurrent requests', async () => {
       vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
-      vi.mocked(mockStore.markWebhookProcessed).mockResolvedValue(undefined);
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.saveSubscription).mockImplementation(async () => {
         await new Promise((resolve) => {
           setTimeout(resolve, 10);
@@ -134,13 +139,14 @@ describe('PolarWebhookHandler', () => {
       expect(firstResult.eventId).toBe('evt-race-1');
       expect(secondResult.eventId).toBe('evt-race-1');
       expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
-      expect(mockEventPublisher.publish).toHaveBeenCalledTimes(1);
-      expect(mockStore.markWebhookProcessed).toHaveBeenCalledTimes(1);
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
+      expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
+      expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
     });
 
-    it('markWebhookProcessed에서 중복 충돌이 나면 이미 처리된 이벤트로 간주하고 스킵', async () => {
+    it('reserveWebhook에서 중복 충돌이 나면 이미 처리된 이벤트로 간주하고 스킵', async () => {
       vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
-      vi.mocked(mockStore.markWebhookProcessed).mockRejectedValue(
+      vi.mocked(mockStore.reserveWebhook).mockRejectedValue(
         new Error('duplicate key value violates unique constraint "processed_webhooks_event_id_key"')
       );
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
@@ -166,14 +172,17 @@ describe('PolarWebhookHandler', () => {
       expect(result.eventId).toBe('evt-dup-conflict');
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockEventPublisher.publish).not.toHaveBeenCalled();
-      expect(mockStore.markWebhookProcessed).toHaveBeenCalledTimes(1);
+      expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
+      expect(mockStore.completeWebhook).not.toHaveBeenCalled();
     });
   });
 
   describe('subscription 이벤트 처리', () => {
     beforeEach(() => {
       vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
-      vi.mocked(mockStore.markWebhookProcessed).mockResolvedValue(undefined);
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.failWebhook).mockResolvedValue(undefined);
     });
 
     it('subscription.created 이벤트 처리 → store 업데이트 + 이벤트 발행', async () => {
@@ -201,12 +210,9 @@ describe('PolarWebhookHandler', () => {
 
       expect(result.success).toBe(true);
       expect(mockStore.saveSubscription).toHaveBeenCalled();
-      expect(mockEventPublisher.publish).toHaveBeenCalled();
-      expect(mockStore.markWebhookProcessed).toHaveBeenCalledWith({
-        eventId: 'evt-123',
-        eventType: 'subscription.created',
-        processedAt: expect.any(Date),
-      });
+      expect(mockEventPublisher.publishNow).toHaveBeenCalled();
+      expect(mockStore.reserveWebhook).toHaveBeenCalledWith('evt-123', 'subscription.created');
+      expect(mockStore.completeWebhook).toHaveBeenCalledWith('evt-123');
     });
 
     it('subscription.canceled에서 currentPeriodEnd가 null이면 실패 처리', async () => {
@@ -232,6 +238,8 @@ describe('PolarWebhookHandler', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('currentPeriodEnd is required');
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
     });
 
     it('should return a failure result for unknown status', async () => {
@@ -257,14 +265,44 @@ describe('PolarWebhookHandler', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('Event processing failed:');
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
-      expect(mockStore.markWebhookProcessed).not.toHaveBeenCalled();
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+    });
+
+    it('handler 실패 시 reserveWebhook 상태가 fail로 해제되어 재시도 가능', async () => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.saveSubscription).mockRejectedValueOnce(new Error('temporary store failure'));
+
+      const eventData = {
+        id: 'evt-retryable-failure',
+        type: 'subscription.created',
+        data: {
+          id: 'sub-retryable-failure',
+          customer: { externalId: 'tenant-retryable-failure', metadata: {} },
+          product: { id: 'plan-pro' },
+          status: 'active',
+          currentPeriodEnd: '2026-02-01T00:00:00Z',
+          cancelAtPeriodEnd: false,
+        },
+      };
+
+      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+
+      const result = await handler.handle(JSON.stringify(eventData), { 'webhook-id': 'evt-retryable-failure' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('temporary store failure');
+      expect(mockStore.reserveWebhook).toHaveBeenCalledWith('evt-retryable-failure', 'subscription.created');
+      expect(mockStore.failWebhook).toHaveBeenCalledWith('evt-retryable-failure');
+      expect(mockStore.completeWebhook).not.toHaveBeenCalled();
     });
   });
 
   describe('order 이벤트 처리', () => {
     beforeEach(() => {
       vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
-      vi.mocked(mockStore.markWebhookProcessed).mockResolvedValue(undefined);
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
     });
 
     it('order.paid 이벤트 처리 → store 저장 + 이벤트 발행', async () => {
@@ -297,12 +335,9 @@ describe('PolarWebhookHandler', () => {
         reason: 'subscription_cycle',
         paidAt: expect.any(Date),
       });
-      expect(mockEventPublisher.publish).toHaveBeenCalled();
-      expect(mockStore.markWebhookProcessed).toHaveBeenCalledWith({
-        eventId: 'evt-456',
-        eventType: 'order.paid',
-        processedAt: expect.any(Date),
-      });
+      expect(mockEventPublisher.publishNow).toHaveBeenCalled();
+      expect(mockStore.reserveWebhook).toHaveBeenCalledWith('evt-456', 'order.paid');
+      expect(mockStore.completeWebhook).toHaveBeenCalledWith('evt-456');
     });
   });
 
@@ -348,11 +383,12 @@ describe('PolarWebhookHandler', () => {
     });
   });
 
-  describe('처리 완료 후 markWebhookProcessed 호출', () => {
+  describe('처리 완료 후 completeWebhook 호출', () => {
     it('성공적인 이벤트 처리 후 webhook 처리 기록 저장', async () => {
       vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
-      vi.mocked(mockStore.markWebhookProcessed).mockResolvedValue(undefined);
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
 
       const eventData = {
         id: 'evt-999',
@@ -376,12 +412,10 @@ describe('PolarWebhookHandler', () => {
 
       expect(result.success).toBe(true);
       expect(result.eventId).toBe('evt-999');
-      expect(mockStore.markWebhookProcessed).toHaveBeenCalledTimes(1);
-      expect(mockStore.markWebhookProcessed).toHaveBeenCalledWith({
-        eventId: 'evt-999',
-        eventType: 'subscription.canceled',
-        processedAt: expect.any(Date),
-      });
+      expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
+      expect(mockStore.reserveWebhook).toHaveBeenCalledWith('evt-999', 'subscription.canceled');
+      expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
+      expect(mockStore.completeWebhook).toHaveBeenCalledWith('evt-999');
     });
   });
 });
