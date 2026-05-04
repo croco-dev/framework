@@ -15,6 +15,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "migrate:up": "migrate up",
+    "migrate:status": "migrate status",
+    "migrate:down": "migrate down",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -25,6 +28,7 @@
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
+    "@croco/migration-runner": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
