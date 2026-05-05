@@ -1,5 +1,11 @@
-import { integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import { integer as sqliteInteger, sqliteTable, text as sqliteText } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  integer as sqliteInteger,
+  sqliteTable,
+  text as sqliteText,
+  uniqueIndex as sqliteUniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 /**
  * PostgreSQL용 미터 정의 스키마입니다.
@@ -19,15 +25,23 @@ export const metersPg = pgTable('meters', {
 /**
  * PostgreSQL용 사용량 기록 스키마입니다.
  */
-export const usageRecordsPg = pgTable('usage_records', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  tenantId: text('tenant_id').notNull(),
-  meterId: text('meter_id').notNull(),
-  value: integer('value').notNull().default(1),
-  recordedAt: timestamp('recorded_at').notNull().defaultNow(),
-  metadata: jsonb('metadata').notNull().default({}),
-  idempotencyKey: text('idempotency_key'),
-});
+export const usageRecordsPg = pgTable(
+  'usage_records',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    meterId: text('meter_id').notNull(),
+    value: integer('value').notNull().default(1),
+    recordedAt: timestamp('recorded_at').notNull().defaultNow(),
+    metadata: jsonb('metadata').notNull().default({}),
+    idempotencyKey: text('idempotency_key'),
+  },
+  (table) => [
+    uniqueIndex('usage_records_idempotency_unique')
+      .on(table.tenantId, table.meterId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
+  ]
+);
 
 /**
  * SQLite용 미터 정의 스키마입니다.
@@ -47,12 +61,20 @@ export const metersSqlite = sqliteTable('meters', {
 /**
  * SQLite용 사용량 기록 스키마입니다.
  */
-export const usageRecordsSqlite = sqliteTable('usage_records', {
-  id: sqliteInteger('id').primaryKey({ autoIncrement: true }),
-  tenantId: sqliteText('tenant_id').notNull(),
-  meterId: sqliteText('meter_id').notNull(),
-  value: sqliteInteger('value').notNull().default(1),
-  recordedAt: sqliteInteger('recorded_at').notNull(),
-  metadata: sqliteText('metadata').notNull().default('{}'),
-  idempotencyKey: sqliteText('idempotency_key'),
-});
+export const usageRecordsSqlite = sqliteTable(
+  'usage_records',
+  {
+    id: sqliteInteger('id').primaryKey({ autoIncrement: true }),
+    tenantId: sqliteText('tenant_id').notNull(),
+    meterId: sqliteText('meter_id').notNull(),
+    value: sqliteInteger('value').notNull().default(1),
+    recordedAt: sqliteInteger('recorded_at').notNull(),
+    metadata: sqliteText('metadata').notNull().default('{}'),
+    idempotencyKey: sqliteText('idempotency_key'),
+  },
+  (table) => [
+    sqliteUniqueIndex('usage_records_idempotency_unique')
+      .on(table.tenantId, table.meterId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
+  ]
+);
