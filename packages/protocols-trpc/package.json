@@ -18,6 +18,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@croco/protocols-rest": "workspace:*",
+    "@trpc/client": "11.17.0",
     "@croco/utils-tsconfig": "workspace:*"
   },
   "publishConfig": {
