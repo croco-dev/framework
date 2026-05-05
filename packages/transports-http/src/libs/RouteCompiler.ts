@@ -1,17 +1,14 @@
 import type { Guard, ILogger } from '@croco/framework-context';
 import { ProblemFactory } from '@croco/problems-core';
+import { extractRouteIR, type RouteIR } from '@croco/protocols-core';
 import {
   type Constructor,
-  type ControllerMetadata,
   type ExceptionFilter,
   type ExecutionContext,
-  getControllerMeta,
   getFilters,
   getGuards,
   getInterceptors,
-  getRouteMeta,
   type Interceptor,
-  type RouteMetadata,
 } from '@croco/protocols-rest';
 import { HttpExecutionContext } from './HttpExecutionContext';
 import { ParamResolver } from './ParamResolver';
@@ -69,16 +66,14 @@ export class RouteCompiler {
     const routes: CompiledRoute[] = [];
 
     for (const controller of controllers) {
-      const controllerMeta = getControllerMeta(controller);
-      if (!controllerMeta) {
+      const routeIRs = extractRouteIR(controller);
+      if (routeIRs.length === 0) {
         this.logger.warn(`[RouteCompiler] ${controller.name} is not decorated with @Controller`);
         continue;
       }
 
-      const routesMeta = getRouteMeta(controller);
-
-      for (const routeMeta of routesMeta) {
-        const compiledRoute = this.compileRoute(controller, controllerMeta, routeMeta, options);
+      for (const routeIR of routeIRs) {
+        const compiledRoute = this.compileRouteFromIR(controller, routeIR, options);
         routes.push(compiledRoute);
       }
     }
@@ -106,13 +101,8 @@ export class RouteCompiler {
     }
   }
 
-  private compileRoute(
-    controller: Constructor,
-    controllerMeta: ControllerMetadata,
-    routeMeta: RouteMetadata,
-    options: CompileOptions
-  ): CompiledRoute {
-    const fullPath = this.joinPaths(controllerMeta.path, routeMeta.path);
+  private compileRouteFromIR(controller: Constructor, routeIR: RouteIR, options: CompileOptions): CompiledRoute {
+    const fullPath = this.joinPaths('', routeIR.path);
     const paramResolver = new ParamResolver((pipe) => instantiateProvider(pipe, options.container));
 
     // Instantiate guards/interceptors/filters once at compile time (not per-request)
@@ -124,9 +114,9 @@ export class RouteCompiler {
       ExceptionFilter<unknown, HttpExecutionContext>
     >[];
 
-    const routeGuards = getGuards(controller, routeMeta.methodName);
-    const routeInterceptors = getInterceptors(controller, routeMeta.methodName);
-    const routeFilters = getFilters(controller, routeMeta.methodName);
+    const routeGuards = getGuards(controller, routeIR.methodName);
+    const routeInterceptors = getInterceptors(controller, routeIR.methodName);
+    const routeFilters = getFilters(controller, routeIR.methodName);
 
     const handler = async (ctx: CrocoHttpContext): Promise<unknown> => {
       const instance = (
@@ -135,7 +125,7 @@ export class RouteCompiler {
           : new (controller as new (...args: unknown[]) => unknown)()
       ) as object;
 
-      const execContext = new HttpExecutionContext(ctx, controller, routeMeta.methodName);
+      const execContext = new HttpExecutionContext(ctx, controller, routeIR.methodName);
       const guards = [
         ...globalGuards.map((guard) => instantiateProvider(guard, options.container)),
         ...routeGuards.map((guard) => instantiateProvider(guard, options.container)),
@@ -150,12 +140,12 @@ export class RouteCompiler {
       ] as ExceptionFilter<unknown, HttpExecutionContext>[];
 
       const controllerHandler = async (): Promise<unknown> => {
-        const args = await paramResolver.resolveParams(ctx, controller, routeMeta.methodName);
-        const method = (instance as Record<PropertyKey, unknown>)[routeMeta.methodName];
+        const args = await paramResolver.resolveParams(ctx, controller, routeIR.methodName);
+        const method = (instance as Record<PropertyKey, unknown>)[routeIR.methodName];
         if (typeof method !== 'function') {
           throw ProblemFactory.internalServerError(
             'transports-http/route-method-not-function',
-            `Method ${String(routeMeta.methodName)} is not a function`
+            `Method ${String(routeIR.methodName)} is not a function`
           );
         }
         const typedMethod = method as (...args: unknown[]) => unknown;
@@ -170,11 +160,11 @@ export class RouteCompiler {
     };
 
     return {
-      method: routeMeta.method,
-      path: fullPath || '/',
+      method: routeIR.httpMethod,
+      path: fullPath,
       handler,
       controllerInstance: undefined,
-      methodName: routeMeta.methodName,
+      methodName: routeIR.methodName,
     };
   }
 

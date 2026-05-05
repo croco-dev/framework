@@ -1,4 +1,5 @@
 # @croco/frontend-vite
+> Croco Presentation Tier — 5th layer: Framework → Protocols → Transports → Integrations → Presentation
 
 Cloudflare Workers + Vite + Vike 통합 플러그인 패키지입니다.
 

@@ -1,0 +1,44 @@
+# {{projectName}}
+
+Croco HTTP API와 Vike SSR React 앱을 AWS Lambda, S3, CloudFront로 배포하는 템플릿입니다.
+
+## 구조
+
+- `apps/api-server` — Croco REST API와 Vike SSR Lambda 엔트리
+- `apps/console-web` — Vike SSR React 페이지와 클라이언트 정적 자산
+- `dist/api` — Lambda에 배포할 Node.js 22 번들 출력
+- `dist/client` — S3에 업로드할 정적 자산 출력
+
+## 로컬 개발
+
+```bash
+pnpm install
+pnpm dev:api
+pnpm dev:web
+```
+
+API 서버는 `http://localhost:3001`, Vite 개발 서버는 `http://localhost:3000`에서 실행됩니다.
+
+## 빌드
+
+```bash
+pnpm build:api && pnpm build:web
+```
+
+빌드 결과는 다음 위치에 생성됩니다.
+
+- Lambda bundle: `dist/api/`
+- S3 assets: `dist/client/`
+
+## 배포
+
+1. `pnpm build:api && pnpm build:web`로 Lambda 번들과 정적 자산을 생성합니다.
+2. `dist/client/`의 파일을 S3 버킷에 업로드합니다.
+3. `dist/api/`의 Lambda 번들을 Node.js 22 런타임 함수로 배포합니다.
+4. API Gateway HTTP API를 Lambda에 연결합니다.
+5. CloudFront 배포를 만들고 S3 오리진과 API Gateway 오리진을 추가합니다.
+6. CloudFront 동작을 구성합니다.
+   - 정적 자산 경로는 S3 오리진으로 라우팅합니다.
+   - SSR 및 `/api/*` 요청은 API Gateway 오리진으로 라우팅합니다.
+
+정적 자산은 S3에서 제공하고, 페이지 SSR과 API 요청은 Lambda에서 처리합니다.

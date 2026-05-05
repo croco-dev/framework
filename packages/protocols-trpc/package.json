@@ -1,0 +1,40 @@
+{
+  "name": "@croco/protocols-trpc",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@croco/protocols-core": "workspace:*",
+    "@trpc/server": "^11.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@croco/protocols-rest": "workspace:*",
+    "@trpc/client": "11.17.0",
+    "@croco/utils-tsconfig": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

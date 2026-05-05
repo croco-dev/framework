@@ -1,0 +1,20 @@
+{
+  "name": "{{projectName}}",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:api": "pnpm --filter {{scope}}/api-server dev",
+    "dev:web": "pnpm --filter {{scope}}/console-web dev",
+    "build": "turbo build",
+    "build:api": "pnpm --filter {{scope}}/api-server build",
+    "build:web": "pnpm --filter {{scope}}/console-web build",
+    "typecheck": "turbo typecheck",
+    "check": "biome check .",
+    "check:write": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.12",
+    "turbo": "latest",
+    "typescript": "^5.8.0"
+  }
+}

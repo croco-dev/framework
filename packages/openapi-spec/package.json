@@ -1,0 +1,48 @@
+{
+  "name": "@croco/openapi-spec",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@croco/protocols-core": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/utils-tsconfig": "workspace:*",
+    "@redocly/cli": "^2.30.3",
+    "orval": "8.9.1",
+    "reflect-metadata": "0.2.2",
+    "vitest": "4.0.16"
+  },
+  "vitest": {
+    "include": [
+      "src/**/*.test.ts",
+      "src/**/*.spec.ts"
+    ]
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

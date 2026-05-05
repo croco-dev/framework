@@ -4,7 +4,11 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ES2022",
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@croco/*": ["../*/src/index.ts"]
+    }
   },
   "files": [
     "../framework-context/src/index.ts",

@@ -1,4 +1,5 @@
 # @croco/frontend-react
+> Croco Presentation Tier — 5th layer: Framework → Protocols → Transports → Integrations → Presentation
 
 React 앱에서 Croco의 SSR 기능을 사용하기 위한 유틸리티 패키지입니다.
 

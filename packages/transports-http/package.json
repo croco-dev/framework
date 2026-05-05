@@ -17,6 +17,7 @@
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
     "@types/aws-lambda": "^8.10.0",

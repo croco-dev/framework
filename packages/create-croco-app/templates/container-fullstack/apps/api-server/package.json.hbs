@@ -1,0 +1,16 @@
+{
+  "name": "{{scope}}/api-server",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --outDir dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/transports-http": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
+    "@hono/node-server": "^1.0.0"
+  }
+}

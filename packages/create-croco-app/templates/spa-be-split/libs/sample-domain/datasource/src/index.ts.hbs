@@ -1,0 +1,21 @@
+import type { CreateSampleUserInput, SampleUser } from '{{scope}}/sample-domain';
+
+const seedUsers: readonly SampleUser[] = [
+  { id: 'user-1', name: 'Ada Lovelace', email: 'ada@example.com' },
+  { id: 'user-2', name: 'Grace Hopper', email: 'grace@example.com' },
+];
+
+export class SampleUserStore {
+  private users: SampleUser[] = [...seedUsers];
+
+  list(): readonly SampleUser[] {
+    return this.users;
+  }
+
+  create(input: CreateSampleUserInput): SampleUser {
+    const user = { id: `user-${this.users.length + 1}`, ...input };
+    this.users = [...this.users, user];
+
+    return user;
+  }
+}

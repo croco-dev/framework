@@ -1,0 +1,25 @@
+{
+  "name": "{{scope}}/api-server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
+    "@croco/transports-http": "workspace:*",
+    "reflect-metadata": "0.2.2"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0"
+  }
+}
