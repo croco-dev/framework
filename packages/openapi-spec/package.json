@@ -13,11 +13,14 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.4",
-    "@croco/protocols-core": "workspace:*"
+    "@croco/protocols-core": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@croco/protocols-rest": "workspace:*",
     "@croco/utils-tsconfig": "workspace:*",
     "@redocly/cli": "^2.30.3",
+    "reflect-metadata": "0.2.2",
     "vitest": "4.0.16"
   },
   "vitest": {

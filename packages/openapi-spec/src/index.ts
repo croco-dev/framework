@@ -1,1 +1,1 @@
-export {};
+export { emitOpenAPI } from './libs/emitOpenAPI';
