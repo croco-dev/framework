@@ -1,0 +1,23 @@
+{
+  "name": "{{scope}}/api-server",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/lambda.ts --format esm --platform node --target node22 --out-dir ../../dist/api --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/transports-http": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
+    "vike": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.146",
+    "@types/node": "^22",
+    "tsx": "^4.20.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.0"
+  }
+}
