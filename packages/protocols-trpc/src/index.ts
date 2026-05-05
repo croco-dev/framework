@@ -1,1 +1,1 @@
-export {};
+export { createTrpcRouter } from './libs/createTrpcRouter';
