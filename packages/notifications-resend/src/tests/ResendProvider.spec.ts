@@ -88,6 +88,43 @@ describe('ResendProvider', () => {
       );
     });
 
+    it('should use provided idempotency key', async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+
+      const payload: NotificationPayload = {
+        to: 'recipient@example.com',
+        subject: 'Test Subject',
+        content: '<h1>Test Content</h1>',
+      };
+
+      await provider.send(payload, { idempotencyKey: 'fixed-key' });
+
+      expect(mockResendClient.emails.send).toHaveBeenCalledWith(
+        {
+          from: 'noreply@example.com',
+          to: 'recipient@example.com',
+          subject: 'Test Subject',
+          html: '<h1>Test Content</h1>',
+        },
+        { idempotencyKey: 'fixed-key' }
+      );
+    });
+
+    it('should use generated resend idempotency key without options', async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+
+      const payload: NotificationPayload = {
+        to: 'recipient@example.com',
+        content: '<h1>Test Content</h1>',
+      };
+
+      await provider.send(payload);
+
+      expect(mockResendClient.emails.send).toHaveBeenCalledWith(expect.any(Object), {
+        idempotencyKey: expect.stringMatching(/^resend-[0-9a-f-]{36}$/),
+      });
+    });
+
     it('should send email without subject using default', async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 

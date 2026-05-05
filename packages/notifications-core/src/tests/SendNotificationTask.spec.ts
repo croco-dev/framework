@@ -84,6 +84,28 @@ describe('SendNotificationTask', () => {
       });
     });
 
+    it('should pass idempotency key to provider send options', async () => {
+      const mockResult = { success: true, messageId: 'msg-123' };
+      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
+
+      const payload: NotificationJobPayload = {
+        providerName: 'resend',
+        to: 'test@example.com',
+        content: 'Test Content',
+        idempotencyKey: 'fixed-key',
+      };
+
+      await task.handle(payload);
+
+      expect(mockProvider.send).toHaveBeenCalledWith(
+        {
+          to: 'test@example.com',
+          content: 'Test Content',
+        },
+        { idempotencyKey: 'fixed-key' }
+      );
+    });
+
     it('should include templateId and variables in provider send call', async () => {
       const mockResult = { success: true, messageId: 'msg-123' };
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);

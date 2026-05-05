@@ -6,6 +6,7 @@ import {
   type NotificationPayload,
   type NotificationProvider,
   type NotificationResult,
+  type NotificationSendOptions,
 } from '@croco/notifications-core';
 import { type RetryPolicy, RetryTemplate } from '@croco/retry-core';
 import { type CreateEmailOptions, type CreateEmailResponse, Resend } from 'resend';
@@ -181,10 +182,11 @@ export class ResendProvider implements NotificationProvider {
     return NotificationChannel.EMAIL;
   }
 
-  async send(payload: NotificationPayload): Promise<NotificationResult> {
+  async send(payload: NotificationPayload, options?: NotificationSendOptions): Promise<NotificationResult> {
     try {
       const { to, subject, content } = payload;
-      const idempotencyKey = `resend-${randomUUID()}`;
+      // 직접 호출에서 안정 키가 없을 때의 호환 경로이며, retry-dedupe를 보장하지 않는다.
+      const idempotencyKey = options?.idempotencyKey ?? `resend-${randomUUID()}`;
 
       const emailOptions: CreateEmailOptions = {
         from: this.config.from,
