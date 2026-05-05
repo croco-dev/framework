@@ -1,0 +1,51 @@
+# {{projectName}}
+
+Croco REST API와 Vite React SPA를 분리한 pnpm workspace 템플릿입니다.
+
+## 개발
+
+```bash
+pnpm install
+pnpm dev:api
+pnpm dev:web
+```
+
+- API 서버: `http://localhost:3000`
+- SPA 개발 서버: Vite 기본 포트
+- RPC 클라이언트 생성: `pnpm codegen`
+
+## 구조
+
+```text
+apps/api-server        Croco transports-http + protocols-rest Node 서버
+apps/console-web       Vite + React SPA
+libs/sample-domain     service/domain/datasource/feature/page/ui 예시 경계
+libs/shared/provider-rpc  rpc-codegen 산출물 위치
+```
+
+## 빌드
+
+```bash
+pnpm build
+pnpm typecheck
+```
+
+## 배포 가이드
+
+### SPA
+
+`apps/console-web`를 빌드한 뒤 `dist/`를 정적 호스팅에 배포합니다.
+
+- AWS: S3 정적 웹 호스팅 + CloudFront
+- Cloudflare: Pages 프로젝트에 `apps/console-web/dist` 업로드
+
+런타임 API 주소는 `VITE_API_URL`로 지정합니다.
+
+### API
+
+기본 템플릿은 Node 서버로 실행됩니다.
+
+- AWS Lambda: `@croco/transports-http`의 Lambda 핸들러를 노출하는 엔트리로 교체해 배포합니다.
+- Cloudflare Workers: Workers 전송 어댑터를 사용하는 API 엔트리를 추가해 배포합니다.
+
+운영 환경에서는 CORS origin, 본문 크기 제한, rate limit 정책을 서비스 요구사항에 맞게 조정하세요.

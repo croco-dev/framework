@@ -1,0 +1,14 @@
+import type { CreateSampleUserInput, SampleUser } from '{{scope}}/sample-domain';
+import { SampleUserStore } from '{{scope}}/sample-domain-datasource';
+
+export class SampleUserService {
+  constructor(private readonly store = new SampleUserStore()) {}
+
+  listUsers(): readonly SampleUser[] {
+    return this.store.list();
+  }
+
+  createUser(input: CreateSampleUserInput): SampleUser {
+    return this.store.create(input);
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "{{scope}}/sample-domain-service",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --clean --dts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "{{scope}}/sample-domain": "workspace:*",
+    "{{scope}}/sample-domain-datasource": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.0"
+  }
+}

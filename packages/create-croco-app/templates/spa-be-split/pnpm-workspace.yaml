@@ -1,0 +1,9 @@
+packages:
+  - 'apps/**/*'
+  - 'libs/**/*'
+
+onlyBuiltDeps:
+  - esbuild
+  - lefthook
+  - sharp
+  - unrs-resolver
