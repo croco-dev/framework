@@ -121,7 +121,7 @@ describe('emitOpenAPI', () => {
     });
   });
 
-  it('should emit multiple routes and pass Redocly lint', { timeout: 30000 }, () => {
+  it('should emit multiple routes and pass Redocly lint', { timeout: 120000 }, () => {
     const createItemSchema = z.object({ name: z.string().min(1) });
 
     @Controller('/items')
@@ -157,9 +157,10 @@ function expectRedoclyLintPasses(spec: object): void {
 
   try {
     writeFileSync(specPath, JSON.stringify(spec, null, 2));
-    execFileSync('npx', ['@redocly/cli', 'lint', '--format=stylish', specPath], {
+    execFileSync('pnpm', ['exec', 'redocly', 'lint', '--format=stylish', specPath], {
       cwd: join(__dirname, '../..'),
       stdio: 'pipe',
+      timeout: 100000,
     });
   } finally {
     rmSync(tempDirectory, { force: true, recursive: true });
