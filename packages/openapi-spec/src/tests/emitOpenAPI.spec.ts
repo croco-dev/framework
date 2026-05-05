@@ -66,6 +66,61 @@ describe('emitOpenAPI', () => {
     });
   });
 
+  it('should handle Zod refined and transformed schemas without crashing', () => {
+    const refinedObjectSchema = z.object({ name: z.string().min(1) }).refine((body) => body.name.length > 2);
+
+    @Controller('/zod-effects')
+    class ZodEffectsController {
+      @Post('/email')
+      createEmail(
+        @Body(
+          z
+            .string()
+            .email()
+            .refine((value) => value.length > 5)
+        )
+        _body: string
+      ): void {}
+
+      @Post('/object')
+      createObject(@Body(refinedObjectSchema) _body: z.infer<typeof refinedObjectSchema>): void {}
+
+      @Post('/transform')
+      createTransform(@Body(z.string().transform((value) => value.trim())) _body: string): void {}
+    }
+
+    const spec = emitOpenAPI([ZodEffectsController]);
+
+    expect(spec.paths?.['/zod-effects/email']?.post?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        'application/json': {
+          schema: { type: 'string' },
+        },
+      },
+    });
+    expect(spec.paths?.['/zod-effects/object']?.post?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: { name: { type: 'string', minLength: 1 } },
+            required: ['name'],
+          },
+        },
+      },
+    });
+    expect(spec.paths?.['/zod-effects/transform']?.post?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        'application/json': {
+          schema: { type: 'string' },
+        },
+      },
+    });
+  });
+
   it('should emit multiple routes and pass Redocly lint', () => {
     const createItemSchema = z.object({ name: z.string().min(1) });
 

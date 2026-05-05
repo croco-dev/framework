@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import type { z } from 'zod';
+import type { ParamIR, RouteIR } from './RouteIR';
 import {
   type Constructor,
   type ControllerMetadata,
@@ -8,10 +10,7 @@ import {
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
   type RouteMetadata,
-  ValidationPipe,
-} from '@croco/protocols-rest';
-import type { z } from 'zod';
-import type { ParamIR, RouteIR } from './RouteIR';
+} from './sharedTypes';
 
 export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
   const controllerMeta = Reflect.getMetadata(REST_CONTROLLER_KEY, controllerCtor) as ControllerMetadata | undefined;
@@ -70,7 +69,9 @@ function mapParamKind(type: ParamType): ParamIR['kind'] {
 }
 
 function extractSchema(paramMeta: ParamMetadata): z.ZodType | null {
-  const pipe = paramMeta.pipes?.find((candidate) => candidate instanceof ValidationPipe);
+  const pipe = paramMeta.pipes?.find(
+    (candidate) => candidate && typeof candidate === 'object' && 'schema' in candidate
+  );
 
   if (!pipe) {
     return null;

@@ -23,7 +23,7 @@ title: "createRateLimitMiddlewareFactory"
 
 #### policyOverride?
 
-`any`
+`RateLimitPolicy`
 
 ### Returns
 

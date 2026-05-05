@@ -13,7 +13,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@croco/protocols-rest": "workspace:*",
     "reflect-metadata": "0.2.2",
     "zod": "^3.23.8"
   },

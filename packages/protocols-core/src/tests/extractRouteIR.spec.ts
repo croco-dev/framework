@@ -1,8 +1,8 @@
 import 'reflect-metadata';
-import { Body, Controller, Get, Param, Post, Query } from '@croco/protocols-rest';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { extractRouteIR } from '../libs/extractRouteIR';
+import { Body, Controller, Get, Param, Post, Query } from './helpers/test-decorators';
 
 describe('extractRouteIR', () => {
   it('should extract a GET route with a path param', () => {

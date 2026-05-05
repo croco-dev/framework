@@ -74,7 +74,7 @@ function toRequestConfig(route: RouteIR): RouteConfig['request'] {
   const params = toZodObject(route.params.filter((param) => param.kind === 'path'));
   const query = toZodObject(route.params.filter((param) => param.kind === 'query'));
   const headers = toZodObject(route.params.filter((param) => param.kind === 'header'));
-  const bodySchema = route.inputSchema ?? route.params.find((param) => param.kind === 'body')?.schema;
+  const bodySchema = unwrapZodEffects(route.inputSchema ?? route.params.find((param) => param.kind === 'body')?.schema);
 
   return {
     ...(bodySchema
@@ -106,7 +106,7 @@ function toZodObject(params: ParamIR[]): z.ZodObject<Record<string, ZodType>> | 
 }
 
 function withParameterMetadata(param: ParamIR): ZodType {
-  const schema = param.schema ?? z.string();
+  const schema = unwrapZodEffects(param.schema) ?? z.string();
   const location = toOpenAPIParamLocation(param.kind);
 
   return schema.openapi({
@@ -116,6 +116,14 @@ function withParameterMetadata(param: ParamIR): ZodType {
       required: param.kind === 'path',
     },
   });
+}
+
+function unwrapZodEffects(schema: ZodType | null | undefined): ZodType | null | undefined {
+  if (!schema || !(schema instanceof z.ZodEffects)) {
+    return schema;
+  }
+
+  return unwrapZodEffects(schema.innerType());
 }
 
 function toOpenAPIParamLocation(kind: ParamIR['kind']): OpenAPIParamLocation {
