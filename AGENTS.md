@@ -269,7 +269,8 @@ service:
 
 ## Architecture Notes
 
-- 4-계층: Framework → Protocols → Transports → Integrations
+- 5-계층: Framework → Protocols → Transports → Integrations → Presentation
+- **Presentation** (신규): frontend-react/frontend-vite/frontend-cloudflare + 신규 codegen 패키지(rpc-codegen, openapi-spec). 사용자 코드(apps/console-web)와 직접 닿는 어댑터 계층.
 - DI: typedi + 커스텀 Container 래퍼
 - AsyncLocalStorage: request-scoped context
 - 이벤트 기반 아키텍처 (events-core + events-inmemory)
