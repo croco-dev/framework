@@ -79,29 +79,40 @@ export class MeteringService {
           usageRecord,
         });
 
-        await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
-        idempotencyCompleted = true;
-
         if (quotaResult.exceeded && this.eventBus) {
           await this.eventBus.publish(new QuotaExceededEvent(tenantId, meterId, quotaResult.newUsage, meter.quota));
         }
 
-        this.quotaManager.validateOrThrow({
-          meterId,
-          quota: meter.quota,
-          allowOverQuota,
-          exceeded: quotaResult.exceeded,
-          newUsage: quotaResult.newUsage,
-        });
+        if (quotaResult.exceeded && !allowOverQuota) {
+          // Quota exceeded is not retryable - complete idempotency so the same key is never replayed
+          await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
+          idempotencyCompleted = true;
+          this.quotaManager.validateOrThrow({
+            meterId,
+            quota: meter.quota,
+            allowOverQuota,
+            exceeded: quotaResult.exceeded,
+            newUsage: quotaResult.newUsage,
+          });
+        } else {
+          this.quotaManager.validateOrThrow({
+            meterId,
+            quota: meter.quota,
+            allowOverQuota,
+            exceeded: quotaResult.exceeded,
+            newUsage: quotaResult.newUsage,
+          });
+        }
       } else {
         await this.usageStorage.record(usageRecord);
-        await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
-        idempotencyCompleted = true;
       }
 
       if (this.eventBus) {
         await this.eventBus.publish(new UsageRecordedEvent(tenantId, meterId, value, idempotencyKey, metadata));
       }
+
+      await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
+      idempotencyCompleted = true;
 
       return usageRecord;
     } catch (error) {

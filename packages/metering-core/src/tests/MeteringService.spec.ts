@@ -317,6 +317,83 @@ describe('MeteringService', () => {
 
       expect(result.metadata).toEqual({ userId: 'user-1', action: 'create' });
     });
+
+    it('BUG-12 publish 실패 후 retry 시 재진입 가능해야 한다 - quota branch', async () => {
+      const meter = createMeter({ quota: 100, allowOverQuota: true });
+      const checkAndRecordWithinQuota = mockStorage.checkAndRecordWithinQuota;
+
+      if (!checkAndRecordWithinQuota) {
+        throw new Error('Expected atomic quota check support');
+      }
+
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 50 });
+      vi.mocked(mockIdempotency.ensureIdempotencyKey).mockImplementation((key?: string) => key ?? 'generated-key');
+
+      let firstCall = true;
+      vi.mocked(mockEventBus.publish).mockImplementation(async () => {
+        if (firstCall) {
+          firstCall = false;
+          throw new Error('publish failure');
+        }
+      });
+
+      await expect(
+        service.record({
+          tenantId: 'tenant-1',
+          meterId: 'api_calls',
+          value: 5,
+          idempotencyKey: 'idem-publish-fail-quota',
+        })
+      ).rejects.toThrow('publish failure');
+
+      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(false);
+
+      const result = await service.record({
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 5,
+        idempotencyKey: 'idem-publish-fail-quota',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.idempotencyKey).toBe('idem-publish-fail-quota');
+    });
+
+    it('BUG-12 publish 실패 후 retry 시 재진입 가능해야 한다 - non-quota branch', async () => {
+      const meter = createMeter({ quota: undefined });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
+      vi.mocked(mockIdempotency.ensureIdempotencyKey).mockImplementation((key?: string) => key ?? 'generated-key');
+
+      let firstCall = true;
+      vi.mocked(mockEventBus.publish).mockImplementation(async () => {
+        if (firstCall) {
+          firstCall = false;
+          throw new Error('publish failure');
+        }
+      });
+
+      await expect(
+        service.record({
+          tenantId: 'tenant-1',
+          meterId: 'api_calls',
+          value: 1,
+          idempotencyKey: 'idem-publish-fail-non-quota',
+        })
+      ).rejects.toThrow('publish failure');
+
+      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(false);
+
+      const result = await service.record({
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 1,
+        idempotencyKey: 'idem-publish-fail-non-quota',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.idempotencyKey).toBe('idem-publish-fail-non-quota');
+    });
   });
 
   describe('getUsage', () => {

@@ -22,11 +22,15 @@ export interface NotificationResult {
   error?: Error;
 }
 
+export type NotificationSendOptions = {
+  idempotencyKey?: string;
+};
+
 export interface NotificationProvider {
   /**
    * Send a notification via this provider
    */
-  send(payload: NotificationPayload): Promise<NotificationResult>;
+  send(payload: NotificationPayload, options?: NotificationSendOptions): Promise<NotificationResult>;
 
   /**
    * Get the channel this provider supports
@@ -41,4 +45,5 @@ export interface NotificationProvider {
 
 export interface NotificationJobPayload extends NotificationPayload {
   providerName: string;
+  idempotencyKey?: string;
 }

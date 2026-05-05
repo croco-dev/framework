@@ -113,6 +113,47 @@ describe('NotificationService', () => {
       });
     });
 
+    it('should include idempotency key in job payload when options provide it', async () => {
+      service.registerProvider(emailProvider, true);
+
+      const payload = {
+        to: 'test@example.com',
+        subject: 'Test Subject',
+        content: 'Test Content',
+      };
+
+      await service.send(NotificationChannel.EMAIL, payload, { idempotencyKey: 'fixed-key' });
+
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
+        ...payload,
+        providerName: 'email-provider',
+        idempotencyKey: 'fixed-key',
+      });
+    });
+
+    it('should use provider name from options when it matches the requested channel', async () => {
+      const smsProvider = createProvider('sms-provider', NotificationChannel.SMS);
+
+      service.registerProvider(emailProvider, true);
+      service.registerProvider(smsProvider);
+
+      const payload = {
+        to: 'test@example.com',
+        content: 'Test Content',
+      };
+
+      await service.send(NotificationChannel.SMS, payload, {
+        providerName: 'sms-provider',
+        idempotencyKey: 'fixed-key',
+      });
+
+      expect(executeSpy).toHaveBeenCalledWith('send-notification', {
+        ...payload,
+        providerName: 'sms-provider',
+        idempotencyKey: 'fixed-key',
+      });
+    });
+
     it('should send notification with empty-string default provider name', async () => {
       const unnamedProvider = createProvider('', NotificationChannel.EMAIL);
 

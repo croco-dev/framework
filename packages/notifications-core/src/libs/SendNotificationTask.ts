@@ -23,14 +23,17 @@ export class SendNotificationTask {
     maxAttempts: SEND_NOTIFICATION_MAX_ATTEMPTS,
   })
   async handle(payload: NotificationJobPayload): Promise<void> {
-    const { providerName, ...notificationPayload } = payload;
+    const { providerName, idempotencyKey, ...notificationPayload } = payload;
 
     const provider = this.registry.getProvider(providerName);
     if (!provider) {
       throw new NotificationProviderNotFoundProblem(providerName);
     }
 
-    const result = await provider.send(notificationPayload);
+    const result =
+      idempotencyKey === undefined
+        ? await provider.send(notificationPayload)
+        : await provider.send(notificationPayload, { idempotencyKey });
 
     if (!result.success) {
       if (result.error instanceof Problem || result.error instanceof Error) {

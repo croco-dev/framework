@@ -255,6 +255,44 @@ describe('InMemoryBillingStore', () => {
     });
   });
 
+  describe('webhook reservation lifecycle', () => {
+    it('should reject a completed webhook when reserving the same event again', async () => {
+      await store.reserveWebhook('event-1', 'subscription.created');
+      await store.completeWebhook('event-1');
+
+      await expect(store.reserveWebhook('event-1', 'subscription.created')).rejects.toBeInstanceOf(
+        WebhookAlreadyProcessedProblem
+      );
+      expect(await store.isWebhookProcessed('event-1')).toBe(true);
+    });
+
+    it('should allow reserving the same event after a failed reservation', async () => {
+      await store.reserveWebhook('event-1', 'subscription.created');
+      await store.failWebhook('event-1');
+
+      await expect(store.reserveWebhook('event-1', 'subscription.created')).resolves.toBeUndefined();
+      expect(await store.isWebhookProcessed('event-1')).toBe(false);
+    });
+
+    it('should reject completion when the webhook was not reserved', async () => {
+      await expect(store.completeWebhook('event-1')).rejects.toBeInstanceOf(WebhookAlreadyProcessedProblem);
+    });
+
+    it('should return false while a webhook is reserved but not completed', async () => {
+      await store.reserveWebhook('event-1', 'subscription.created');
+
+      expect(await store.isWebhookProcessed('event-1')).toBe(false);
+    });
+
+    it('should reject duplicate webhook reservations', async () => {
+      await store.reserveWebhook('event-1', 'subscription.created');
+
+      await expect(store.reserveWebhook('event-1', 'subscription.created')).rejects.toBeInstanceOf(
+        WebhookAlreadyProcessedProblem
+      );
+    });
+  });
+
   describe('reset', () => {
     it('should clear all data', async () => {
       const account: BillingAccount = {

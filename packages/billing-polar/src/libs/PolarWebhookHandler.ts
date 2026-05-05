@@ -15,10 +15,6 @@ export type WebhookDependencies = {
   eventPublisher: EventPublisher;
 };
 
-type RollbackCapableBillingStore = BillingStore & {
-  unmarkWebhookProcessed?: (eventId: string) => Promise<void>;
-};
-
 type PolarSubscriptionEventType =
   | 'subscription.created'
   | 'subscription.updated'
@@ -96,7 +92,7 @@ export class PolarWebhookHandler {
       return { success: false, error: 'Missing event ID or type' };
     }
 
-    if (await this.store.isWebhookProcessed(eventId)) {
+    if (await this.isWebhookCompleted(eventId)) {
       return { success: true, eventId };
     }
 
@@ -120,7 +116,7 @@ export class PolarWebhookHandler {
     eventType: string,
     data: unknown
   ): Promise<WebhookHandlerResult> {
-    let isWebhookMarked = false;
+    let rollbackErrorMessage: string | null = null;
 
     try {
       const parsedEvent = this.parseEvent(eventType, data);
@@ -129,12 +125,16 @@ export class PolarWebhookHandler {
         return { success: true, eventId };
       }
 
-      isWebhookMarked = true;
-      await this.processParsedEvent(parsedEvent);
+      try {
+        await this.processParsedEvent(parsedEvent);
+        await this.store.completeWebhook(eventId);
+      } catch (error) {
+        rollbackErrorMessage = await this.tryRollbackWebhook(eventId);
+        throw error;
+      }
 
       return { success: true, eventId };
     } catch (error) {
-      const rollbackErrorMessage = isWebhookMarked ? await this.tryRollbackWebhook(eventId) : null;
       const baseErrorMessage = `Event processing failed: ${this.getErrorMessage(error)}`;
 
       return {
@@ -149,11 +149,7 @@ export class PolarWebhookHandler {
 
   private async reserveWebhook(eventId: string, eventType: string): Promise<boolean> {
     try {
-      await this.store.markWebhookProcessed({
-        eventId,
-        eventType,
-        processedAt: new Date(),
-      });
+      await this.store.reserveWebhook(eventId, eventType);
       return true;
     } catch (error) {
       if (this.isDuplicateWebhookError(error)) {
@@ -161,6 +157,15 @@ export class PolarWebhookHandler {
       }
       throw error;
     }
+  }
+
+  private async isWebhookCompleted(eventId: string): Promise<boolean> {
+    const isWebhookProcessed = Reflect.get(this.store, 'isWebhookProcessed');
+    if (typeof isWebhookProcessed !== 'function') {
+      return false;
+    }
+
+    return isWebhookProcessed.call(this.store, eventId);
   }
 
   private async processParsedEvent(event: ParsedWebhookEvent): Promise<void> {
@@ -303,7 +308,7 @@ export class PolarWebhookHandler {
     );
 
     for (const event of domainEvents) {
-      await this.eventPublisher.publish(event);
+      await this.eventPublisher.publishNow(event);
     }
   }
 
@@ -325,7 +330,7 @@ export class PolarWebhookHandler {
     });
 
     for (const event of domainEvents) {
-      await this.eventPublisher.publish(event);
+      await this.eventPublisher.publishNow(event);
     }
   }
 
@@ -345,21 +350,9 @@ export class PolarWebhookHandler {
         throw new BillingStatusMappingProblem(polarStatus);
     }
   }
-  private isRollbackCapable(store: BillingStore): store is RollbackCapableBillingStore {
-    return (
-      'unmarkWebhookProcessed' in store &&
-      typeof (store as RollbackCapableBillingStore).unmarkWebhookProcessed === 'function'
-    );
-  }
-
   private async tryRollbackWebhook(eventId: string): Promise<string | null> {
-    if (!this.isRollbackCapable(this.store)) {
-      return null;
-    }
     try {
-      if (this.store.unmarkWebhookProcessed) {
-        await this.store.unmarkWebhookProcessed(eventId);
-      }
+      await this.store.failWebhook(eventId);
       return null;
     } catch (error) {
       return this.getErrorMessage(error);

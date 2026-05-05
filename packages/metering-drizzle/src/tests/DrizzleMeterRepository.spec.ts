@@ -43,6 +43,12 @@ describe('DrizzleMeterRepository', () => {
       )
     `);
 
+    sqlite.exec(`
+      CREATE UNIQUE INDEX usage_records_idempotency_unique
+        ON usage_records (tenant_id, meter_id, idempotency_key)
+        WHERE idempotency_key IS NOT NULL
+    `);
+
     const adapter = createDrizzleTxAdapter(db as unknown as Parameters<typeof createDrizzleTxAdapter>[0]);
     txManager = new TxManager(adapter, { defaultNesting: 'join' });
 
@@ -172,31 +178,6 @@ describe('DrizzleMeterRepository', () => {
     });
 
     it('should return empty array when no meters', async () => {
-      const repo = new DrizzleMeterRepository(db, txManager, {
-        meterTable: metersSqlite,
-        meterSchema: {
-          id: metersSqlite.id,
-          tenantId: metersSqlite.tenantId,
-          meterId: metersSqlite.meterId,
-          type: metersSqlite.type,
-          quota: metersSqlite.quota,
-          allowOverQuota: metersSqlite.allowOverQuota,
-          metadata: metersSqlite.metadata,
-          createdAt: metersSqlite.createdAt,
-          updatedAt: metersSqlite.updatedAt,
-        },
-        usageRecordTable: usageRecordsSqlite,
-        usageRecordSchema: {
-          id: usageRecordsSqlite.id,
-          tenantId: usageRecordsSqlite.tenantId,
-          meterId: usageRecordsSqlite.meterId,
-          value: usageRecordsSqlite.value,
-          recordedAt: usageRecordsSqlite.recordedAt,
-          metadata: usageRecordsSqlite.metadata,
-          idempotencyKey: usageRecordsSqlite.idempotencyKey,
-        },
-      });
-
       const sqlite2 = new Database(':memory:');
       const db2 = drizzle(sqlite2) as DrizzleDb;
       sqlite2.exec(`
@@ -321,6 +302,54 @@ describe('DrizzleMeterRepository', () => {
       expect(result[0].meter_id).toBe('api_calls');
       expect(result[0].value).toBe(5);
       expect(result[0].idempotency_key).toBe('idem-1');
+    });
+
+    it('should ignore duplicate idempotency keys', async () => {
+      const record = {
+        id: 'record-1',
+        tenantId: 'tenant-1',
+        meterId: 'api_calls',
+        value: 1,
+        timestamp: new Date(),
+        idempotencyKey: 'idem-1',
+      };
+
+      await repository.saveUsageRecords([record]);
+      await repository.saveUsageRecords([record]);
+
+      const result = sqlite.prepare('SELECT * FROM usage_records WHERE idempotency_key = ?').all('idem-1');
+      expect(result).toHaveLength(1);
+    });
+
+    it('should keep latest usage record when deduplicating idempotency rows', () => {
+      sqlite.exec('DROP INDEX usage_records_idempotency_unique');
+
+      const insert = sqlite.prepare(`
+        INSERT INTO usage_records (tenant_id, meter_id, value, recorded_at, metadata, idempotency_key)
+        VALUES (?, ?, ?, ?, '{}', ?)
+      `);
+      insert.run('tenant-1', 'api_calls', 1, 1000, 'idem-1');
+      insert.run('tenant-1', 'api_calls', 2, 3000, 'idem-1');
+      insert.run('tenant-1', 'api_calls', 3, 2000, 'idem-1');
+
+      sqlite.exec(`
+        DELETE FROM usage_records AS a
+         WHERE EXISTS (
+           SELECT 1
+             FROM usage_records AS b
+            WHERE a.tenant_id = b.tenant_id
+              AND a.meter_id = b.meter_id
+              AND a.idempotency_key = b.idempotency_key
+              AND a.idempotency_key IS NOT NULL
+              AND (a.recorded_at < b.recorded_at
+                   OR (a.recorded_at = b.recorded_at AND a.id < b.id))
+         )
+      `);
+
+      const result = sqlite
+        .prepare('SELECT recorded_at, value FROM usage_records WHERE idempotency_key = ?')
+        .all('idem-1') as Array<{ recorded_at: number; value: number }>;
+      expect(result).toEqual([{ recorded_at: 3000, value: 2 }]);
     });
   });
 

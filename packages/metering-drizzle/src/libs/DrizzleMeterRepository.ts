@@ -176,7 +176,10 @@ export class DrizzleMeterRepository extends MeterRepository {
       idempotencyKey: record.idempotencyKey,
     }));
 
-    await (client as DrizzleDb).insert(this.usageRecordTable as SQLiteTable).values(values);
+    await (client as DrizzleDb)
+      .insert(this.usageRecordTable as SQLiteTable)
+      .values(values)
+      .onConflictDoNothing();
   }
 
   private mapToMeterDefinition(raw: Record<string, unknown>): MeterDefinition {

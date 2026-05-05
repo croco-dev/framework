@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import type { EventPublisher } from '@croco/events-core';
 import type { Membership, MembershipManager } from '@croco/membership-core';
 import { NotificationChannel, type NotificationService } from '@croco/notifications-core';
+import type { TxManager } from '@croco/tx-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   InvitationAcceptedEvent,
@@ -27,6 +28,8 @@ describe('InvitationManager', () => {
   let publish!: ReturnType<typeof vi.fn>;
   let addMember!: ReturnType<typeof vi.fn>;
   let send!: ReturnType<typeof vi.fn>;
+  let txManager!: Pick<TxManager<unknown>, 'run' | 'onAfterCommit'>;
+  let afterCommitHooks!: Array<() => void | Promise<void>>;
   let sequence = 0;
 
   const createInvitation = (token: string, overrides: Partial<Invitation> = {}): Invitation => {
@@ -56,6 +59,20 @@ describe('InvitationManager', () => {
     publish = vi.fn();
     addMember = vi.fn();
     send = vi.fn();
+    afterCommitHooks = [];
+    txManager = {
+      async run<T>(fn: () => Promise<T>): Promise<T> {
+        afterCommitHooks = [];
+        const result = await fn();
+        for (const hook of afterCommitHooks) {
+          await hook();
+        }
+        return result;
+      },
+      onAfterCommit: vi.fn((hook: () => void | Promise<void>) => {
+        afterCommitHooks.push(hook);
+      }),
+    };
     sequence = 0;
 
     manager = new InvitationManager(
@@ -65,7 +82,8 @@ describe('InvitationManager', () => {
       {
         publish,
         publishMany: vi.fn(),
-      } as unknown as EventPublisher
+      } as unknown as EventPublisher,
+      txManager as TxManager<unknown>
     );
   });
 
@@ -238,6 +256,41 @@ describe('InvitationManager', () => {
         email: 'member@croco.dev',
       })
     ).rejects.toBeInstanceOf(InvitationAlreadyAcceptedProblem);
+  });
+
+  it('should allow only one concurrent accept attempt to create membership', async () => {
+    await store.save(createInvitation('concurrent-token'));
+
+    addMember.mockResolvedValue({
+      id: 'mem-1',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      role: 'member',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    } as Membership);
+
+    const results = await Promise.allSettled([
+      manager.acceptInvitation({
+        token: 'concurrent-token',
+        userId: 'user-1',
+        email: 'member@croco.dev',
+      }),
+      manager.acceptInvitation({
+        token: 'concurrent-token',
+        userId: 'user-2',
+        email: 'member@croco.dev',
+      }),
+    ]);
+
+    const accepted = results.find((result) => result.status === 'fulfilled');
+    const rejected = results.find((result) => result.status === 'rejected');
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(accepted?.status === 'fulfilled' ? accepted.value.status : null).toBe('accepted');
+    expect(rejected?.status === 'rejected' ? rejected.reason : null).toBeInstanceOf(InvitationAlreadyAcceptedProblem);
+    expect(addMember).toHaveBeenCalledTimes(1);
   });
 
   it('should throw InvitationEmailMismatchProblem when email does not match', async () => {

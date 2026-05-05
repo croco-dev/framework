@@ -172,6 +172,30 @@ export class DrizzleInvitationStore extends InvitationStore {
     return this.mapToInvitation(result[0]);
   }
 
+  async compareAndSetStatus(
+    id: string,
+    expected: InvitationStatus,
+    desired: InvitationStatus,
+    meta: { acceptedAt?: Date; rejectedAt?: Date } = {}
+  ): Promise<Invitation | null> {
+    const client = this.txManager.getClient() ?? this.db;
+
+    const result = (await client
+      .update(invitations)
+      .set({
+        status: desired,
+        acceptedAt: meta.acceptedAt,
+      })
+      .where(and(eq(invitations.id, id), eq(invitations.status, expected)))
+      .returning()) as InvitationRow[];
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    return this.mapToInvitation(result[0]);
+  }
+
   /**
    * 일정 시점 이후 생성된 대기 중 초대 수를 반환합니다.
    */
