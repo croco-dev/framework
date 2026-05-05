@@ -2,6 +2,8 @@ import type { BillingAccount, Order, ProcessedWebhook, Subscription } from '../t
 import { BillingStore } from './BillingStore';
 import { WebhookAlreadyProcessedProblem } from './problems/BillingProblems';
 
+type WebhookState = 'RESERVED' | 'COMPLETED';
+
 /**
  * In-memory billing store for testing and development.
  * NOT suitable for production multi-instance deployments.
@@ -13,7 +15,7 @@ export class InMemoryBillingStore extends BillingStore {
   private readonly subscriptions = new Map<string, Subscription>();
   private readonly subscriptionsByExternalId = new Map<string, Subscription>();
   private readonly orders = new Map<string, Order[]>();
-  private readonly processedWebhooks = new Set<string>();
+  private readonly processedWebhooks = new Map<string, WebhookState>();
 
   async findAccountByTenantId(tenantId: string): Promise<BillingAccount | null> {
     return this.accountsByTenantId.get(tenantId) ?? null;
@@ -88,15 +90,32 @@ export class InMemoryBillingStore extends BillingStore {
   }
 
   async isWebhookProcessed(eventId: string): Promise<boolean> {
-    return this.processedWebhooks.has(eventId);
+    return this.processedWebhooks.get(eventId) === 'COMPLETED';
   }
 
   async markWebhookProcessed(webhook: ProcessedWebhook): Promise<void> {
-    if (this.processedWebhooks.has(webhook.eventId)) {
-      throw new WebhookAlreadyProcessedProblem(webhook.eventId);
+    await this.reserveWebhook(webhook.eventId, webhook.eventType);
+    await this.completeWebhook(webhook.eventId);
+  }
+
+  async reserveWebhook(eventId: string, _eventType: string): Promise<void> {
+    if (this.processedWebhooks.has(eventId)) {
+      throw new WebhookAlreadyProcessedProblem(eventId);
     }
 
-    this.processedWebhooks.add(webhook.eventId);
+    this.processedWebhooks.set(eventId, 'RESERVED');
+  }
+
+  async completeWebhook(eventId: string): Promise<void> {
+    if (this.processedWebhooks.get(eventId) !== 'RESERVED') {
+      throw new WebhookAlreadyProcessedProblem(eventId);
+    }
+
+    this.processedWebhooks.set(eventId, 'COMPLETED');
+  }
+
+  async failWebhook(eventId: string): Promise<void> {
+    this.processedWebhooks.delete(eventId);
   }
 
   /**
