@@ -1,11 +1,6 @@
 import 'reflect-metadata';
 import type { z } from 'zod';
-import {
-  ParamType,
-  REST_CONTROLLER_KEY,
-  REST_PARAMS_KEY,
-  REST_ROUTES_KEY,
-} from '../../libs/sharedTypes';
+import { type ControllerMetadata, ParamType, REST_CONTROLLER_KEY, REST_PARAMS_KEY, REST_ROUTES_KEY, type RouteMetadata } from '../../libs/sharedTypes';
 
 export function Controller(path: string): ClassDecorator {
   return (target) => {
@@ -39,7 +34,7 @@ export function Header(name: string, schema?: z.ZodType): ParameterDecorator {
   return createParamDecorator(ParamType.HEADER, name, schema);
 }
 
-function createRouteDecorator(method: HttpMethod, path: string): MethodDecorator {
+function createRouteDecorator(method: string, path: string): MethodDecorator {
   return (target, propertyKey) => {
     const ctor = target.constructor;
     const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
@@ -65,5 +60,3 @@ function createParamDecorator(
     Reflect.defineMetadata(REST_PARAMS_KEY, paramsMap, paramCtor);
   };
 }
-
-
