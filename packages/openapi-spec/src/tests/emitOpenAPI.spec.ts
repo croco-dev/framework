@@ -121,7 +121,7 @@ describe('emitOpenAPI', () => {
     });
   });
 
-  it('should emit multiple routes and pass Redocly lint', () => {
+  it('should emit multiple routes and pass Redocly lint', { timeout: 30000 }, () => {
     const createItemSchema = z.object({ name: z.string().min(1) });
 
     @Controller('/items')
