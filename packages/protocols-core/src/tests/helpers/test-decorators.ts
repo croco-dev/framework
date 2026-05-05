@@ -62,7 +62,8 @@ function createParamDecorator(
 
     const paramCtor = target.constructor;
     const paramsMap =
-      (Reflect.getMetadata(REST_PARAMS_KEY, paramCtor) as Map<string | symbol, ParamMetadata[]> | undefined) ?? new Map();
+      (Reflect.getMetadata(REST_PARAMS_KEY, paramCtor) as Map<string | symbol, ParamMetadata[]> | undefined) ??
+      new Map();
     const methodParams = paramsMap.get(propertyKey) ?? [];
 
     methodParams.push({ type, index: parameterIndex, name, pipes: schema ? [{ schema }] : undefined });
