@@ -1602,9 +1602,6 @@ importers:
 
   packages/protocols-core:
     dependencies:
-      '@croco/protocols-rest':
-        specifier: workspace:*
-        version: link:../protocols-rest
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2
@@ -1685,7 +1682,7 @@ importers:
         specifier: workspace:*
         version: link:../shared/utils-tsconfig
       '@trpc/client':
-        specifier: ^11.0.0
+        specifier: 11.17.0
         version: 11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3)
 
   packages/ratelimit-core:
