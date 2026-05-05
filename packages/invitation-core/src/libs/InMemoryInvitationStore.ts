@@ -52,6 +52,27 @@ export class InMemoryInvitationStore extends InvitationStore {
     return updated;
   }
 
+  async compareAndSetStatus(
+    id: string,
+    expected: InvitationStatus,
+    desired: InvitationStatus,
+    meta: { acceptedAt?: Date; rejectedAt?: Date } = {}
+  ): Promise<Invitation | null> {
+    const invitation = this.storage.get(id);
+    if (!invitation || invitation.status !== expected) {
+      return null;
+    }
+
+    const updated: Invitation = {
+      ...invitation,
+      status: desired,
+      acceptedAt: meta.acceptedAt ?? invitation.acceptedAt,
+    };
+
+    this.storage.set(id, updated);
+    return updated;
+  }
+
   async countPendingByTenant(tenantId: string, since: Date): Promise<number> {
     let count = 0;
 

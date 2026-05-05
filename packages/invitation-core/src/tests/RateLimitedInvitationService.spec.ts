@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import type { EventPublisher } from '@croco/events-core';
 import type { MembershipManager } from '@croco/membership-core';
 import type { NotificationService } from '@croco/notifications-core';
+import type { TxManager } from '@croco/tx-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryInvitationStore } from '../libs/InMemoryInvitationStore';
 import { InvitationManager } from '../libs/InvitationManager';
@@ -16,6 +17,8 @@ describe('RateLimitedInvitationService', () => {
   let store!: InMemoryInvitationStore;
   let publish!: ReturnType<typeof vi.fn>;
   let send!: ReturnType<typeof vi.fn>;
+  let txManager!: Pick<TxManager<unknown>, 'run' | 'onAfterCommit'>;
+  let afterCommitHooks!: Array<() => void | Promise<void>>;
 
   const createInvitation = (overrides: Partial<Invitation> = {}): Invitation => {
     const now = new Date();
@@ -42,6 +45,20 @@ describe('RateLimitedInvitationService', () => {
     store = new InMemoryInvitationStore();
     publish = vi.fn();
     send = vi.fn();
+    afterCommitHooks = [];
+    txManager = {
+      async run<T>(fn: () => Promise<T>): Promise<T> {
+        afterCommitHooks = [];
+        const result = await fn();
+        for (const hook of afterCommitHooks) {
+          await hook();
+        }
+        return result;
+      },
+      onAfterCommit: vi.fn((hook: () => void | Promise<void>) => {
+        afterCommitHooks.push(hook);
+      }),
+    };
 
     manager = new InvitationManager(
       store,
@@ -50,7 +67,8 @@ describe('RateLimitedInvitationService', () => {
       {
         publish,
         publishMany: vi.fn(),
-      } as unknown as EventPublisher
+      } as unknown as EventPublisher,
+      txManager as TxManager<unknown>
     );
 
     service = new RateLimitedInvitationService(manager, store, {

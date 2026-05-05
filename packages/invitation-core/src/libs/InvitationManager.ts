@@ -3,6 +3,7 @@ import type { EventPublisher } from '@croco/events-core';
 import { Component } from '@croco/framework-context';
 import type { AbstractMembershipManager, MembershipRole } from '@croco/membership-core';
 import { NotificationChannel, type NotificationPayload, type NotificationService } from '@croco/notifications-core';
+import type { TxManager } from '@croco/tx-core';
 import {
   InvitationAcceptedEvent,
   InvitationCreatedEvent,
@@ -50,7 +51,8 @@ export class InvitationManager {
     private readonly store: InvitationStore,
     private readonly membershipManager: AbstractMembershipManager,
     private readonly notificationService: NotificationService,
-    private readonly eventPublisher: EventPublisher
+    private readonly eventPublisher: EventPublisher,
+    private readonly txManager: TxManager<unknown>
   ) {}
 
   async createEmailInvitation(input: CreateEmailInvitationInput): Promise<string> {
@@ -129,25 +131,32 @@ export class InvitationManager {
       }
     }
 
-    await this.membershipManager.addMember(invitation.tenantId, input.userId, invitation.role);
+    return this.txManager.run(async () => {
+      const accepted = await this.store.compareAndSetStatus(invitation.id, 'pending', 'accepted', {
+        acceptedAt: new Date(),
+      });
 
-    const accepted = await this.updateInvitation(invitation, {
-      status: 'accepted',
-      acceptedAt: new Date(),
+      if (!accepted) {
+        throw new InvitationAlreadyAcceptedProblem(invitation.id);
+      }
+
+      await this.membershipManager.addMember(invitation.tenantId, input.userId, invitation.role);
+
+      this.txManager.onAfterCommit(() =>
+        this.publishSafely(
+          new InvitationAcceptedEvent({
+            invitationId: accepted.id,
+            tenantId: accepted.tenantId,
+            userId: input.userId,
+            email: accepted.email,
+            role: accepted.role,
+            type: accepted.type,
+          })
+        )
+      );
+
+      return accepted;
     });
-
-    await this.publishSafely(
-      new InvitationAcceptedEvent({
-        invitationId: accepted.id,
-        tenantId: accepted.tenantId,
-        userId: input.userId,
-        email: accepted.email,
-        role: accepted.role,
-        type: accepted.type,
-      })
-    );
-
-    return accepted;
   }
 
   async declineInvitation(token: string): Promise<Invitation> {
