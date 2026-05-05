@@ -1,4 +1,5 @@
 # @croco/frontend-cloudflare
+> Croco Presentation Tier — 5th layer: Framework → Protocols → Transports → Integrations → Presentation
 
 Cloudflare Workers 환경에서 SSR 핸들러를 제공하는 패키지입니다.
 
