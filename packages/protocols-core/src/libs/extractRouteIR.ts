@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import {
   type Constructor,
-  ParamType,
   type ControllerMetadata,
   type ParamMetadata,
+  ParamType,
   REST_CONTROLLER_KEY,
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
