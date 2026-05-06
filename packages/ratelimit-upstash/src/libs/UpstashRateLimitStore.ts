@@ -251,10 +251,10 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
 
     const now = Date.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
-    const redisKey = `${this.prefix}:${key}:${windowStart}`;
+    const redisKey = `${this.prefix}:${key}`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000);
 
-    const result = (await this.redis.eval(fixedWindowLua, [redisKey], [policy.limit, ttlSeconds])) as [
+    const result = (await this.redis.eval(fixedWindowLua, [redisKey], [policy.limit, ttlSeconds, windowStart])) as [
       number,
       number,
       number,
@@ -301,11 +301,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   }
 
   async reset(key: string): Promise<void> {
-    const pattern = `${this.prefix}:${key}*`;
-    const keys = await this.redis.keys(pattern);
-    if (keys.length > 0) {
-      await this.redis.del(...keys);
-    }
+    await this.redis.del(`${this.prefix}:${key}`);
   }
 
   async expire(key: string, ttlMs: number): Promise<void> {
