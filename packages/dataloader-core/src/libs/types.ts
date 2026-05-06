@@ -15,7 +15,7 @@ export type BatchLoaderOptions<K, V> = {
 
   /**
    * Maximum number of items to batch in a single request.
-   * Defaults to Infinity.
+   * Defaults to 100.
    */
   maxBatchSize?: number;
 

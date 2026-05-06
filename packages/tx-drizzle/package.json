@@ -23,10 +23,10 @@
     "@croco/utils-tsconfig": "workspace:*",
     "@types/better-sqlite3": "7.6.13",
     "better-sqlite3": "^11.10.0",
-    "drizzle-orm": "0.44.2"
+    "drizzle-orm": "catalog:"
   },
   "peerDependencies": {
-    "drizzle-orm": ">=0.30.0"
+    "drizzle-orm": "catalog:"
   },
   "publishConfig": {
     "access": "public",

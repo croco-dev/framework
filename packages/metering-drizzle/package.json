@@ -25,7 +25,7 @@
     "@croco/metering-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tx-core": "workspace:*",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@croco/migration-runner": "workspace:*",

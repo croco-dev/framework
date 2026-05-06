@@ -31,8 +31,8 @@ describe('InMemoryInvitationStore compareAndSetStatus', () => {
     await store.save(createInvitation({ id: 'inv-1', status: 'pending' }));
 
     const results = await Promise.all([
-      store.compareAndSetStatus('inv-1', 'pending', 'accepted', { acceptedAt }),
-      store.compareAndSetStatus('inv-1', 'pending', 'accepted', { acceptedAt }),
+      store.compareAndSetStatus('tenant-1', 'inv-1', 'pending', 'accepted', { acceptedAt }),
+      store.compareAndSetStatus('tenant-1', 'inv-1', 'pending', 'accepted', { acceptedAt }),
     ]);
 
     const successful = results.filter((result): result is Invitation => result !== null);

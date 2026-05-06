@@ -158,10 +158,12 @@ export class DrizzleInvitationStore extends InvitationStore {
   /**
    * 초대 상태를 변경하고 변경된 초대를 반환합니다.
    */
-  async updateStatus(id: string, status: InvitationStatus): Promise<Invitation | null> {
+  async updateStatus(tenantId: string, id: string, status: InvitationStatus): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
     const whereClause =
-      status === 'accepted' ? and(eq(invitations.id, id), eq(invitations.status, 'pending')) : eq(invitations.id, id);
+      status === 'accepted'
+        ? and(eq(invitations.tenantId, tenantId), eq(invitations.id, id), eq(invitations.status, 'pending'))
+        : and(eq(invitations.tenantId, tenantId), eq(invitations.id, id));
 
     const result = (await client.update(invitations).set({ status }).where(whereClause).returning()) as InvitationRow[];
 
@@ -173,6 +175,7 @@ export class DrizzleInvitationStore extends InvitationStore {
   }
 
   async compareAndSetStatus(
+    tenantId: string,
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
@@ -186,7 +189,7 @@ export class DrizzleInvitationStore extends InvitationStore {
         status: desired,
         acceptedAt: meta.acceptedAt,
       })
-      .where(and(eq(invitations.id, id), eq(invitations.status, expected)))
+      .where(and(eq(invitations.tenantId, tenantId), eq(invitations.id, id), eq(invitations.status, expected)))
       .returning()) as InvitationRow[];
 
     if (result.length === 0) {

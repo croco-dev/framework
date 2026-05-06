@@ -37,9 +37,9 @@ export class InMemoryInvitationStore extends InvitationStore {
     return invitation;
   }
 
-  async updateStatus(id: string, status: InvitationStatus): Promise<Invitation | null> {
+  async updateStatus(tenantId: string, id: string, status: InvitationStatus): Promise<Invitation | null> {
     const invitation = this.storage.get(id);
-    if (!invitation) {
+    if (!invitation || invitation.tenantId !== tenantId) {
       return null;
     }
 
@@ -53,13 +53,14 @@ export class InMemoryInvitationStore extends InvitationStore {
   }
 
   async compareAndSetStatus(
+    tenantId: string,
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
     meta: { acceptedAt?: Date; rejectedAt?: Date } = {}
   ): Promise<Invitation | null> {
     const invitation = this.storage.get(id);
-    if (!invitation || invitation.status !== expected) {
+    if (!invitation || invitation.tenantId !== tenantId || invitation.status !== expected) {
       return null;
     }
 

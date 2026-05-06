@@ -132,7 +132,7 @@ export class InvitationManager {
     }
 
     return this.txManager.run(async () => {
-      const accepted = await this.store.compareAndSetStatus(invitation.id, 'pending', 'accepted', {
+      const accepted = await this.store.compareAndSetStatus(invitation.tenantId, invitation.id, 'pending', 'accepted', {
         acceptedAt: new Date(),
       });
 

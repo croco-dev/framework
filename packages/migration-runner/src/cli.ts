@@ -2,8 +2,8 @@
 import { Command } from 'commander';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+import type { DatabaseClient } from './libs/db-types';
 import { MigrationRunner } from './libs/MigrationRunner';
-import type { DatabaseClient } from './libs/MigrationStore';
 import { DatabaseUrlRequiredProblem } from './libs/problems/DatabaseUrlRequiredProblem';
 import { UnsupportedDialectProblem } from './libs/problems/UnsupportedDialectProblem';
 
