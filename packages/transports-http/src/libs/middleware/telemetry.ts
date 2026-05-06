@@ -1,4 +1,4 @@
-import { context, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import { context, propagation, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { MiddlewareFunction } from '../types';
 
 export interface TraceParent {
@@ -45,6 +45,15 @@ export function parseTraceParent(header: string | null): TraceParent | null {
   };
 }
 
+const headerGetter = {
+  keys(carrier: Record<string, string>): string[] {
+    return Object.keys(carrier);
+  },
+  get(carrier: Record<string, string>, key: string): string | undefined {
+    return carrier[key] ?? carrier[key.toLowerCase()];
+  },
+};
+
 /**
  * HTTP 요청마다 서버 Span을 생성하고 traceId를 컨텍스트에 저장하는 미들웨어입니다.
  */
@@ -57,7 +66,7 @@ export const telemetryMiddleware =
       const tracer = trace.getTracer('croco-http', '0.0.1');
 
       const traceParentHeader = ctx.header('traceparent');
-      const parsedTrace = traceParentHeader ? parseTraceParent(traceParentHeader) : null;
+      const parentContext = propagation.extract(context.active(), ctx.req.headers, headerGetter);
 
       const attributes = {
         'http.method': ctx.req.method,
@@ -71,11 +80,8 @@ export const telemetryMiddleware =
 
       const span = tracer.startSpan(
         `HTTP ${ctx.req.method} ${route}`,
-        {
-          kind: SpanKind.SERVER,
-          attributes,
-        },
-        parsedTrace ? trace.setSpan(context.active(), trace.wrapSpanContext(parsedTrace)) : undefined
+        { kind: SpanKind.SERVER, attributes },
+        parentContext
       );
 
       ctx.set('traceId', span.spanContext().traceId);

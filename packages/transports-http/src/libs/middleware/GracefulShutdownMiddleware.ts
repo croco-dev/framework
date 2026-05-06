@@ -21,12 +21,20 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS = 10000;
 const DEFAULT_SIGNALS: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
 
-const state: ShutdownState = {
-  isShuttingDown: false,
-  activeRequests: new Set<string>(),
-  shutdownPromise: null,
-  signalHandlers: new Map(),
-};
+function createMiddlewareState(): ShutdownState {
+  const state = {
+    isShuttingDown: false,
+    activeRequests: new Set<string>(),
+    shutdownPromise: null,
+    signalHandlers: new Map(),
+  };
+
+  states.add(state);
+  return state;
+}
+
+const states = new Set<ShutdownState>();
+let currentState = createMiddlewareState();
 
 function isRunningInLambda(): boolean {
   return !!(process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AWS_EXECUTION_ENV);
@@ -46,6 +54,8 @@ function noopLogger(): ILogger {
  * shutdown 상태에서 새 요청을 차단하고 활성 요청 완료를 기다리는 미들웨어입니다.
  */
 export const gracefulShutdownMiddleware = (options: GracefulShutdownOptions = {}): MiddlewareFunction => {
+  const state = createMiddlewareState();
+  currentState = state;
   const {
     timeoutMs = DEFAULT_TIMEOUT_MS,
     onShutdown,
@@ -55,7 +65,7 @@ export const gracefulShutdownMiddleware = (options: GracefulShutdownOptions = {}
   } = options;
 
   if (!isLambdaEnvironment) {
-    setupSignalHandlers(signals, timeoutMs, onShutdown, logger, options.eventBusDrainTimeoutMs);
+    setupSignalHandlers(state, signals, timeoutMs, onShutdown, logger, options.eventBusDrainTimeoutMs);
   }
 
   return async (ctx, next): Promise<void> => {
@@ -98,10 +108,14 @@ export function setupGracefulShutdown(options: GracefulShutdownOptions = {}): ()
     eventBusDrainTimeoutMs,
   } = options;
 
-  return () => performShutdown(timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
+  const state = createMiddlewareState();
+  currentState = state;
+
+  return () => performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
 }
 
 function setupSignalHandlers(
+  state: ShutdownState,
   signals: NodeJS.Signals[],
   timeoutMs: number,
   onShutdown?: () => void | Promise<void>,
@@ -109,17 +123,12 @@ function setupSignalHandlers(
   eventBusDrainTimeoutMs?: number
 ): void {
   for (const signal of signals) {
-    const existingHandler = state.signalHandlers.get(signal);
-    if (existingHandler) {
-      process.off(signal, existingHandler);
-    }
-
     const handler = async (): Promise<void> => {
-      await performShutdown(timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
+      await performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
     };
 
     state.signalHandlers.set(signal, handler);
-    process.once(signal, handler);
+    process.on(signal, handler);
   }
 }
 
@@ -165,6 +174,7 @@ async function drainEventBus(logger: ILogger, timeoutMs: number): Promise<void> 
 }
 
 async function performShutdown(
+  state: ShutdownState,
   timeoutMs: number,
   onShutdown?: () => void | Promise<void>,
   signals?: NodeJS.Signals[],
@@ -257,27 +267,32 @@ function generateRequestId(): string {
  * 현재 처리 중인 활성 요청 수를 반환합니다.
  */
 export function getActiveRequestCount(): number {
-  return state.activeRequests.size;
+  return currentState.activeRequests.size;
 }
 
 /**
  * 현재 프로세스가 shutdown 단계인지 반환합니다.
  */
 export function isShuttingDown(): boolean {
-  return state.isShuttingDown;
+  return currentState.isShuttingDown;
 }
 
 /**
  * 테스트와 재초기화를 위해 shutdown 상태를 초기화합니다.
  */
 export function resetShutdownState(): void {
-  state.isShuttingDown = false;
-  state.activeRequests.clear();
-  state.shutdownPromise = null;
+  for (const state of states) {
+    state.isShuttingDown = false;
+    state.activeRequests.clear();
+    state.shutdownPromise = null;
 
-  for (const [signal, handler] of state.signalHandlers.entries()) {
-    process.off(signal, handler);
+    for (const [signal, handler] of state.signalHandlers.entries()) {
+      process.off(signal, handler);
+    }
+
+    state.signalHandlers.clear();
   }
 
-  state.signalHandlers.clear();
+  states.clear();
+  currentState = createMiddlewareState();
 }

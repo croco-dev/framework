@@ -12,6 +12,10 @@ export type PublishResult<T extends DomainEvent> = {
   error?: Error;
 };
 
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 /**
  * 현재 EventBus 설정을 사용해 이벤트를 즉시 발행하거나 커밋 후 발행으로 예약합니다.
  */
@@ -64,10 +68,10 @@ export class EventPublisher {
     const results: PublishResult<DomainEvent>[] = [];
     for (const event of events) {
       try {
-        await this.publish(event);
+        await this.publishNow(event);
         results.push({ event, success: true });
       } catch (error) {
-        results.push({ event, success: false, error: error as Error });
+        results.push({ event, success: false, error: toError(error) });
       }
     }
     return results;
@@ -77,10 +81,10 @@ export class EventPublisher {
     const results = await Promise.all(
       events.map(async (event): Promise<PublishResult<DomainEvent>> => {
         try {
-          await this.publish(event);
+          await this.publishNow(event);
           return { event, success: true };
         } catch (error) {
-          return { event, success: false, error: error as Error };
+          return { event, success: false, error: toError(error) };
         }
       })
     );

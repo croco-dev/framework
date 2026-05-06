@@ -94,6 +94,34 @@ describe('EventBusConfig', () => {
       config.setEventBus(secondBus as EventBus);
       expect(config.getEventBus()).toBe(secondBus);
     });
+
+    it('should reconnect started subscriptions when event bus is updated', async () => {
+      const config = EventBusConfig.getInstance();
+      const firstBus = new MockEventBus();
+      const secondBus = new MockEventBus();
+      const customHandler = new TestHandler();
+      const customResolver = {
+        resolve(): EventHandler<TestEvent> {
+          return customHandler;
+        },
+      };
+
+      config.setEventBus(firstBus as EventBus);
+      config.subscribe({
+        eventName: 'TestEvent',
+        handlerClass: TestHandler as EventHandlerClass,
+      });
+      await config.start({ handlers: [], resolver: customResolver as HandlerResolver });
+
+      config.setEventBus(secondBus as EventBus);
+
+      expect(secondBus.subscriptions).toHaveLength(1);
+      expect(secondBus.subscriptions[0]).toMatchObject({
+        eventName: 'TestEvent',
+        handlerClass: TestHandler,
+        handler: customHandler,
+      });
+    });
   });
 
   describe('subscribe', () => {

@@ -32,28 +32,19 @@ function createPatternRegex(pattern: CachePattern): RegExp {
 export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   private readonly store = new Map<string, CacheEntry<V>>();
   private readonly inFlightLoads = new Map<string, Promise<V | undefined>>();
-  private readonly maxEntries: number | null;
+  private readonly maxEntries: number;
   private readonly stats: Omit<CacheStats, 'size'> = {
     hits: 0,
     misses: 0,
     evictions: 0,
   };
   private readonly cleanupTimer?: ReturnType<typeof setInterval>;
-  private readonly logger?: ILogger;
 
-  constructor(options: InMemoryCacheStoreOptions = {}, logger?: ILogger) {
+  constructor(options: InMemoryCacheStoreOptions = { maxEntries: DEFAULT_MAX_ENTRIES }, logger?: ILogger) {
     super();
 
-    this.logger = logger;
-
-    if (options.maxEntries === undefined) {
-      this.logger?.warn(
-        'InMemoryCacheStore: maxEntries not set, using default 1000. Set maxEntries to control memory usage.'
-      );
-      this.maxEntries = DEFAULT_MAX_ENTRIES;
-    } else {
-      this.maxEntries = options.maxEntries;
-    }
+    void logger;
+    this.maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
 
     if (options.cleanupIntervalMs !== undefined) {
       this.cleanupTimer = setInterval(() => {
@@ -220,10 +211,6 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   private evictOverflow(): void {
-    if (this.maxEntries === null) {
-      return;
-    }
-
     while (this.store.size > this.maxEntries) {
       const oldestKey = this.store.keys().next().value;
 
