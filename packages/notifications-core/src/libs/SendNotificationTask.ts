@@ -8,7 +8,21 @@ import {
 } from './problems/NotificationProblems';
 import type { NotificationJobPayload, NotificationProvider } from './types';
 
-const SEND_NOTIFICATION_MAX_ATTEMPTS = Number(process.env.NOTIFICATIONS_SEND_MAX_ATTEMPTS ?? 3);
+function parseMaxAttempts(envValue: string | undefined, defaultValue: number): number {
+  if (envValue === undefined) return defaultValue;
+
+  const parsed = Number(envValue);
+
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
+    throw new Error(
+      `Invalid NOTIFICATIONS_SEND_MAX_ATTEMPTS value '${envValue}'. Must be an integer between 1 and 10.`
+    );
+  }
+
+  return parsed;
+}
+
+const SEND_NOTIFICATION_MAX_ATTEMPTS = parseMaxAttempts(process.env.NOTIFICATIONS_SEND_MAX_ATTEMPTS, 3);
 
 @Component()
 export class SendNotificationTask {
