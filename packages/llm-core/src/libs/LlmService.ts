@@ -51,7 +51,6 @@ export class LlmService {
     }
   }
 
-  @Trace({ name: 'llm.stream' })
   async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
     const modelId = params.modelId ?? 'default';
     const queuedChunks: StreamChunk[] = [];
