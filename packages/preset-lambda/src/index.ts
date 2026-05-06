@@ -1,4 +1,4 @@
-import { defineCrocoPreset, type CrocoPreset, type CrocoPresetConfig } from '@croco/framework-preset';
+import { type CrocoPreset, type CrocoPresetConfig, defineCrocoPreset } from '@croco/framework-preset';
 
 export type LambdaPresetOptions = {
   readonly region?: string;
@@ -23,6 +23,6 @@ export function createLambdaPreset(options?: LambdaPresetOptions): CrocoPreset {
   });
 }
 
-export { createLambdaHandler } from './handler';
 export type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse } from './handler';
+export { createLambdaHandler } from './handler';
 export type { CrocoPreset, CrocoPresetConfig };

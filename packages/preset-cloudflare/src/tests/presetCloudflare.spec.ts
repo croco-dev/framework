@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-
-import { createCloudflarePreset, createWorkerFetchHandler } from '../index';
 import type { ExecutionContext } from '../fetch';
+import { createCloudflarePreset, createWorkerFetchHandler } from '../index';
 
 const createExecutionContext = (): ExecutionContext => ({
   waitUntil: vi.fn(),

@@ -13,7 +13,9 @@ export type CloudflareFetchHandler = (
   ctx: ExecutionContext
 ) => Response | Promise<Response>;
 
-export function createWorkerFetchHandler(honoApp: { readonly fetch: (req: Request) => Promise<Response> }): CloudflareFetchHandler {
+export function createWorkerFetchHandler(honoApp: {
+  readonly fetch: (req: Request) => Promise<Response>;
+}): CloudflareFetchHandler {
   return async (request: Request, _env: CloudflareFetchEnv, _ctx: ExecutionContext): Promise<Response> => {
     return honoApp.fetch(request);
   };

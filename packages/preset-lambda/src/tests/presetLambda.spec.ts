@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-
-import { createLambdaHandler, createLambdaPreset } from '../index';
 import type { LambdaEvent } from '../handler';
+import { createLambdaHandler, createLambdaPreset } from '../index';
 
 describe('createLambdaPreset', () => {
   it('returns a lambda preset', () => {

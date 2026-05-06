@@ -1,4 +1,4 @@
-import { defineCrocoPreset, type CrocoPreset } from '@croco/framework-preset';
+import { type CrocoPreset, defineCrocoPreset } from '@croco/framework-preset';
 
 export type CloudflarePresetOptions = {
   readonly name?: string;
@@ -22,5 +22,5 @@ export function createCloudflarePreset(options?: CloudflarePresetOptions): Croco
   });
 }
 
-export { createWorkerFetchHandler } from './fetch';
 export type { CloudflareFetchEnv, CloudflareFetchHandler } from './fetch';
+export { createWorkerFetchHandler } from './fetch';
