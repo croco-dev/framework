@@ -12,11 +12,21 @@ export class PostHogClient {
   private client: PostHog;
 
   constructor(config: PostHogConfig) {
-    const host = config.host ?? process.env.POSTHOG_HOST;
+    const envHost = process.env.POSTHOG_HOST;
+    const host = config.host ?? envHost;
 
     if (!host) {
       throw new PostHogConfigProblem(
-        '[PostHogClient] PostHog host is required. ' + 'Set POSTHOG_HOST environment variable or pass host in config.'
+        '[PostHogClient] PostHog host is required for data residency compliance. ' +
+          'Set host in config or POSTHOG_HOST env var. ' +
+          'Default (app.posthog.com) routes data to US servers.'
+      );
+    }
+
+    if (!config.host && envHost) {
+      console.warn(
+        '[PostHogClient] POSTHOG_HOST env var is used for PostHog host. ' +
+          'Set host explicitly in config to confirm data residency compliance.'
       );
     }
 

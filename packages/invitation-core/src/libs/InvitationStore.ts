@@ -6,8 +6,9 @@ export abstract class InvitationStore {
   abstract findByTenantAndEmail(tenantId: string, email: string): Promise<Invitation | null>;
   abstract findAllByTenant(tenantId: string): Promise<Invitation[]>;
   abstract save(invitation: Invitation): Promise<Invitation>;
-  abstract updateStatus(id: string, status: InvitationStatus): Promise<Invitation | null>;
+  abstract updateStatus(tenantId: string, id: string, status: InvitationStatus): Promise<Invitation | null>;
   abstract compareAndSetStatus(
+    tenantId: string,
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,

@@ -18,10 +18,10 @@
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*",
-    "drizzle-orm": "0.44.2"
+    "drizzle-orm": "catalog:"
   },
   "peerDependencies": {
-    "drizzle-orm": ">=0.30.0"
+    "drizzle-orm": "catalog:"
   },
   "publishConfig": {
     "access": "public",

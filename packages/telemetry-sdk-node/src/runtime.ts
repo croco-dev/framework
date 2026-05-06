@@ -2,12 +2,12 @@ import type { NodeSDK } from '@opentelemetry/sdk-node';
 import type { BatchSpanProcessor, Sampler } from '@opentelemetry/sdk-trace-base';
 import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import type { TelemetryConfig } from './config';
-import { OtlpEndpointRequiredProblem } from './libs/problems/TelemetryProblems';
+import { OtlpEndpointRequiredProblem, TelemetryRuntimeProblem } from './libs/problems/TelemetryProblems';
 
 type ForceFlushResult = {
   success: boolean;
   flushedSpans?: number;
-  error?: Error;
+  error?: TelemetryRuntimeProblem;
 };
 
 class TelemetryRuntime {
@@ -34,7 +34,9 @@ class TelemetryRuntime {
     return new ProbabilitySampler({ probability: traceConfig.probability });
   }
 
-  private reportError(_phase: 'init' | 'forceFlush' | 'shutdown', _error: unknown): void {}
+  private createRuntimeProblem(phase: 'init' | 'forceFlush' | 'shutdown', error: unknown): TelemetryRuntimeProblem {
+    return error instanceof TelemetryRuntimeProblem ? error : new TelemetryRuntimeProblem(phase, error);
+  }
 
   static getInstance(): TelemetryRuntime {
     if (!TelemetryRuntime.instance) {
@@ -110,7 +112,7 @@ class TelemetryRuntime {
       this.initialized = false;
       this.sdk = null;
       this.processor = null;
-      this.reportError('init', error);
+      throw this.createRuntimeProblem('init', error);
     }
   }
 
@@ -129,7 +131,7 @@ class TelemetryRuntime {
       if (timeoutMillis !== undefined) {
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutId = setTimeout(
-            () => reject(new Error(`forceFlush timed out after ${effectiveTimeout}ms`)),
+            () => reject(new TelemetryRuntimeProblem('forceFlush', `timed out after ${effectiveTimeout}ms`)),
             effectiveTimeout
           );
         });
@@ -144,10 +146,9 @@ class TelemetryRuntime {
         flushedSpans: this.processor ? undefined : 0,
       };
     } catch (error) {
-      this.reportError('forceFlush', error);
       return {
         success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: this.createRuntimeProblem('forceFlush', error),
       };
     } finally {
       if (timeoutId !== undefined) {
@@ -167,7 +168,7 @@ class TelemetryRuntime {
       this.processor = null;
       this.initialized = false;
     } catch (error) {
-      this.reportError('shutdown', error);
+      throw this.createRuntimeProblem('shutdown', error);
     }
   }
 

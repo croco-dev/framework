@@ -2,29 +2,63 @@ import type { AuditLogEntry, AuditQuery } from '@croco/audit-core';
 import { AuditLogRepository } from '@croco/audit-core';
 import { ProblemFactory } from '@croco/problems-core';
 import type { TxManager } from '@croco/tx-core';
-import { and, between, desc, eq, gte, lte, type SQL } from 'drizzle-orm';
+import { type AnyColumn, and, between, desc, eq, gte, lte, type SQL, type Table } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+type InsertReturningQuery = {
+  returning(): Promise<unknown[]>;
+};
+
+type InsertValuesQuery = {
+  values(values: Record<string, unknown>): InsertReturningQuery;
+};
+
+type SelectOrderQuery = {
+  orderBy(order: SQL<unknown>): Promise<unknown[]>;
+};
+
+type SelectOffsetQuery = {
+  offset(offset: number): SelectOrderQuery;
+};
+
+type SelectLimitQuery = {
+  limit(limit: number): SelectOffsetQuery;
+};
+
+type SelectWhereQuery = {
+  where(condition: SQL<unknown> | undefined): SelectLimitQuery;
+};
+
+type SelectFromQuery = {
+  from(table: Table): SelectWhereQuery;
+};
+
+type DrizzleQueryClient = {
+  insert(table: Table): InsertValuesQuery;
+  select(): SelectFromQuery;
+};
 
 /**
- * 감사 로그 저장소에서 사용하는 기본 Drizzle SQLite 클라이언트 타입입니다.
+ * 감사 로그 저장소에서 사용하는 기본 Drizzle 클라이언트 타입입니다.
  */
-export type DrizzleDb = BetterSQLite3Database<Record<string, never>>;
+export type DrizzleDb = DrizzleQueryClient &
+  (BetterSQLite3Database<Record<string, never>> | NodePgDatabase<Record<string, never>>);
 
 /**
  * 감사 로그 테이블 컬럼 매핑 정의입니다.
  */
 export type AuditLogTable = {
-  id: SQLiteColumn;
-  tenantId: SQLiteColumn;
-  actorId: SQLiteColumn;
-  action: SQLiteColumn;
-  resourceType: SQLiteColumn;
-  resourceId: SQLiteColumn;
-  payload: SQLiteColumn;
-  diff: SQLiteColumn;
-  metadata: SQLiteColumn;
-  createdAt: SQLiteColumn;
+  id: AnyColumn;
+  tenantId: AnyColumn;
+  actorId: AnyColumn;
+  action: AnyColumn;
+  resourceType: AnyColumn;
+  resourceId: AnyColumn;
+  payload: AnyColumn;
+  diff: AnyColumn;
+  metadata: AnyColumn;
+  createdAt: AnyColumn;
 };
 
 /**
@@ -61,7 +95,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     this.deserializeJson = config.deserializeJson ?? JSON.parse;
   }
 
-  private getClient(): DrizzleDb {
+  private getClient(): DrizzleQueryClient {
     return this.txManager.getClient() ?? this.db;
   }
 
@@ -84,8 +118,8 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       createdAt: now,
     };
 
-    const [inserted] = await (client as DrizzleDb)
-      .insert(this.table as SQLiteTable)
+    const [inserted] = await client
+      .insert(this.table as Table)
       .values(values)
       .returning();
 
@@ -117,9 +151,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
 
     const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
 
-    const results = await (client as DrizzleDb)
+    const results = await client
       .select()
-      .from(this.table as SQLiteTable)
+      .from(this.table as Table)
       .where(whereClause)
       .limit(query.limit ?? 50)
       .offset(query.offset ?? 0)
@@ -139,9 +173,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
   ): Promise<AuditLogEntry[]> {
     const client = this.getClient();
 
-    const results = await (client as DrizzleDb)
+    const results = await client
       .select()
-      .from(this.table as SQLiteTable)
+      .from(this.table as Table)
       .where(and(eq(this.schema.tenantId, tenantId), between(this.schema.createdAt, startDate, endDate)))
       .limit(options?.limit ?? 50)
       .offset(options?.offset ?? 0)
@@ -171,9 +205,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
 
     const whereClause = and(...conditions);
 
-    const results = await (client as DrizzleDb)
+    const results = await client
       .select()
-      .from(this.table as SQLiteTable)
+      .from(this.table as Table)
       .where(whereClause)
       .limit(options?.limit ?? 50)
       .offset(options?.offset ?? 0)
@@ -193,9 +227,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
   ): Promise<AuditLogEntry[]> {
     const client = this.getClient();
 
-    const results = await (client as DrizzleDb)
+    const results = await client
       .select()
-      .from(this.table as SQLiteTable)
+      .from(this.table as Table)
       .where(
         and(
           eq(this.schema.tenantId, tenantId),
