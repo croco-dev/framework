@@ -1,6 +1,6 @@
 import { Container } from 'typedi';
-import { ModuleContext } from './ModuleContext';
 import { detectCircularDependency } from './CircularDependencyDetector';
+import { ModuleContext } from './ModuleContext';
 import type { ModuleOptions } from './types';
 
 type CrocoModuleInternal = ModuleOptions;

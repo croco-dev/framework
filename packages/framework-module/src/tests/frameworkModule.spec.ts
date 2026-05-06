@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import { Container, Service as Component, Token } from 'typedi';
+import { Service as Component, Container, Token } from 'typedi';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { CrocoModule, ModuleContext, detectCircularDependency } from '../index';
+import { CrocoModule, detectCircularDependency, ModuleContext } from '../index';
 import type { ModuleOptions } from '../types';
 
 @Component()

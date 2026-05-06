@@ -1,5 +1,5 @@
-import { initializeModules, registerModule, resetModules } from './ModuleRegistry';
 import type { ModuleContext } from './ModuleContext';
+import { initializeModules, registerModule, resetModules } from './ModuleRegistry';
 import type { ModuleOptions } from './types';
 
 export class CrocoModule {

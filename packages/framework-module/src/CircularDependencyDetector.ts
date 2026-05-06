@@ -6,10 +6,7 @@ export function detectCircularDependency(modules: readonly ModuleOptions[]): str
   const adjList = new Map<string, string[]>();
 
   for (const mod of modules) {
-    adjList.set(
-      mod.name,
-      mod.imports?.map((importedModule) => importedModule.name) ?? []
-    );
+    adjList.set(mod.name, mod.imports?.map((importedModule) => importedModule.name) ?? []);
   }
 
   const color = new Map<string, Color>();
