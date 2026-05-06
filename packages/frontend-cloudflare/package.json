@@ -5,6 +5,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "build": "tsup",
+    "dev": "wrangler dev",
+    "publish": "pnpm build && npx wrangler deploy",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "biome check ."
@@ -22,6 +25,17 @@
     ]
   },
   "publishConfig": {
-    "access": "public"
-  }
+    "access": "public",
+    "main": "./dist/worker.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/worker.js",
+        "types": "./dist/index.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ]
 }

@@ -1,0 +1,3 @@
+name = "croco-frontend-cloudflare"
+main = "dist/worker.js"
+compatibility_date = "2026-05-06"
