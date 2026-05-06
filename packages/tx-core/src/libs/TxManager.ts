@@ -27,9 +27,16 @@ type AfterCommitHookFailure = {
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
 
-function createTimeoutPromise<T>(ms: number, timeoutHandle: { id?: ReturnType<typeof setTimeout> }): Promise<T> {
+function createTimeoutPromise<T>(
+  ms: number,
+  timeoutHandle: { id?: ReturnType<typeof setTimeout> },
+  controller: AbortController
+): Promise<T> {
   return new Promise((_, reject) => {
-    timeoutHandle.id = setTimeout(() => reject(new TransactionTimeoutProblem(ms)), ms);
+    timeoutHandle.id = setTimeout(() => {
+      controller.abort();
+      reject(new TransactionTimeoutProblem(ms));
+    }, ms);
   });
 }
 
@@ -72,17 +79,22 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
 
   private async executeRoot<T>(fn: () => Promise<T>, options?: TOptions, timeout?: number): Promise<T> {
     const afterCommitHooks: AfterCommitHook[] = [];
+    const controller = new AbortController();
 
     const executeTransaction = async (): Promise<T> => {
-      const result = await this.adapter.transaction(async (client) => {
-        const context: TxContext<TClient> = {
-          client,
-          afterCommitHooks,
-          isRoot: true,
-        };
+      const result = await this.adapter.transaction(
+        async (client) => {
+          const context: TxContext<TClient> = {
+            client,
+            afterCommitHooks,
+            isRoot: true,
+          };
 
-        return this.setupContext(context, fn);
-      }, options);
+          return this.setupContext(context, fn);
+        },
+        options,
+        controller.signal
+      );
 
       if (afterCommitHooks.length > 0) {
         await this.setupContext(null, () => this.executeAfterCommitHooks(afterCommitHooks));
@@ -95,7 +107,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
 
       try {
-        return await Promise.race([executeTransaction(), createTimeoutPromise<T>(timeout, timeoutHandle)]);
+        return await Promise.race([executeTransaction(), createTimeoutPromise<T>(timeout, timeoutHandle, controller)]);
       } finally {
         if (timeoutHandle.id !== undefined) {
           clearTimeout(timeoutHandle.id);
@@ -119,6 +131,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
 
     const nestedHooks: AfterCommitHook[] = [];
     let shouldMergeNestedHooks = false;
+    const controller = new AbortController();
 
     const executeSavepoint = async (): Promise<T> => {
       const result = await this.adapter.savepoint(
@@ -135,7 +148,8 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
 
           return nestedResult;
         },
-        options
+        options,
+        controller.signal
       );
 
       if (shouldMergeNestedHooks) {
@@ -149,7 +163,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
 
       try {
-        return await Promise.race([executeSavepoint(), createTimeoutPromise<T>(timeout, timeoutHandle)]);
+        return await Promise.race([executeSavepoint(), createTimeoutPromise<T>(timeout, timeoutHandle, controller)]);
       } finally {
         if (timeoutHandle.id !== undefined) {
           clearTimeout(timeoutHandle.id);

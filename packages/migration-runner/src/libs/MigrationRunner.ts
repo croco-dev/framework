@@ -1,5 +1,6 @@
+import type { DatabaseClient } from './db-types';
 import { MigrationScanner } from './MigrationScanner';
-import { type DatabaseClient, MigrationStore } from './MigrationStore';
+import { MigrationStore } from './MigrationStore';
 import { MissingDownFunctionProblem } from './problems/MissingDownFunctionProblem';
 import { MissingUpFunctionProblem } from './problems/MissingUpFunctionProblem';
 import type { MigrationFile, MigrationStatus } from './types';
@@ -52,8 +53,10 @@ export class MigrationRunner {
         throw new MissingUpFunctionProblem(file.id, file.name);
       }
 
-      await file.up(this.db);
-      await this.store.recordMigration(this.db, file.id, file.name);
+      await this.runInTransaction(async (tx) => {
+        await file.up(tx);
+        await this.store.recordMigration(tx, file.id, file.name);
+      });
       runIds.push(`${file.id}_${file.name}`);
     }
 
@@ -92,11 +95,22 @@ export class MigrationRunner {
         throw new MissingDownFunctionProblem(file.id, file.name);
       }
 
-      await file.down(this.db);
-      await this.store.removeMigration(this.db, file.id);
+      await this.runInTransaction(async (tx) => {
+        await file.down(tx);
+        await this.store.removeMigration(tx, file.id);
+      });
       revertedIds.push(`${file.id}_${file.name}`);
     }
 
     return revertedIds;
+  }
+
+  private async runInTransaction(fn: (tx: DatabaseClient) => Promise<void>): Promise<void> {
+    if (!this.db.transaction) {
+      await fn(this.db);
+      return;
+    }
+
+    await this.db.transaction(fn);
   }
 }

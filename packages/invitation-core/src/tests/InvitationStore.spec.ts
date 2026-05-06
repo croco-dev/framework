@@ -68,14 +68,14 @@ describe('InMemoryInvitationStore', () => {
   it('should update status of existing invitation', async () => {
     await store.save(createInvitation({ id: 'inv-1', status: 'pending' }));
 
-    const updated = await store.updateStatus('inv-1', 'accepted');
+    const updated = await store.updateStatus('tenant-1', 'inv-1', 'accepted');
 
     expect(updated).not.toBeNull();
     expect(updated?.status).toBe('accepted');
   });
 
   it('should return null when updating status of missing invitation', async () => {
-    const updated = await store.updateStatus('unknown', 'revoked');
+    const updated = await store.updateStatus('tenant-1', 'unknown', 'revoked');
 
     expect(updated).toBeNull();
   });
@@ -83,7 +83,7 @@ describe('InMemoryInvitationStore', () => {
   it('should preserve existing fields when updating status', async () => {
     await store.save(createInvitation({ id: 'inv-1', email: 'keep@croco.dev', status: 'pending' }));
 
-    const updated = await store.updateStatus('inv-1', 'declined');
+    const updated = await store.updateStatus('tenant-1', 'inv-1', 'declined');
 
     expect(updated?.email).toBe('keep@croco.dev');
     expect(updated?.status).toBe('declined');
