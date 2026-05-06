@@ -11,6 +11,7 @@ import {
   ApiKeyUsedEvent,
 } from '../libs/events/ApiKeyEvents';
 import type { ApiKey, CreateApiKeyOptions } from '../libs/interfaces/ApiKey';
+import { ForbiddenProblem } from '../libs/problems/AuthProblems';
 
 type MockEventBus = {
   publish: ReturnType<typeof vi.fn>;
@@ -253,6 +254,49 @@ describe('ApiKeyManager', () => {
       await manager.verify(createdKey.key);
 
       expect(mockStore.updateLastUsed).toHaveBeenCalledWith(createdKey.id);
+    });
+
+    it('should allow verification from an allowed IP address', async () => {
+      const restrictedKey = await manager.create({
+        name: 'Restricted Key',
+        tenantId: 'tenant_123',
+        permissions: ['read:users'],
+        allowedIps: ['192.168.1.1'],
+      });
+
+      const principal = await manager.verify(restrictedKey.key, '192.168.1.1');
+
+      expect(principal?.id).toBe(restrictedKey.id);
+    });
+
+    it('should throw ForbiddenProblem when IP address is not allowed', async () => {
+      const restrictedKey = await manager.create({
+        name: 'Restricted Key',
+        tenantId: 'tenant_123',
+        permissions: ['read:users'],
+        allowedIps: ['192.168.1.1'],
+      });
+
+      await expect(manager.verify(restrictedKey.key, '10.0.0.1')).rejects.toThrow(ForbiddenProblem);
+    });
+
+    it('should skip allowed IP checks when no IP address is provided', async () => {
+      const restrictedKey = await manager.create({
+        name: 'Restricted Key',
+        tenantId: 'tenant_123',
+        permissions: ['read:users'],
+        allowedIps: ['192.168.1.1'],
+      });
+
+      const principal = await manager.verify(restrictedKey.key);
+
+      expect(principal?.id).toBe(restrictedKey.id);
+    });
+
+    it('should skip allowed IP checks when key has no allowed IP restrictions', async () => {
+      const principal = await manager.verify(createdKey.key, '10.0.0.1');
+
+      expect(principal?.id).toBe(createdKey.id);
     });
 
     it('should publish ApiKeyUsedEvent on successful verification', async () => {
