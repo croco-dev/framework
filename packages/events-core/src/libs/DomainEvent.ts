@@ -15,6 +15,7 @@ export type DomainEventMetadata = {
 export abstract class DomainEvent {
   public static eventName?: string;
 
+  public readonly eventId: string;
   public readonly eventName: string;
   public readonly timestamp: Date;
   public metadata: DomainEventMetadata;
@@ -26,6 +27,7 @@ export abstract class DomainEvent {
       throw new EventDefinitionProblem();
     }
 
+    this.eventId = Math.random().toString(36).substring(2, 15);
     this.eventName = ctor.eventName;
     this.timestamp = new Date();
     this.metadata = {};
