@@ -5,7 +5,7 @@
 ## 설치
 
 ```bash
-pnpm add @croco/search-core
+pnpm add @croco/search-core @croco/events-core
 ```
 
 ## 사용법
