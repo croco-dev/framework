@@ -29,11 +29,10 @@ const txManager = new TxManager(adapter, { defaultNesting: 'join' });
 Container.set(TxManager, txManager);
 ```
 
-### 2. @croco/utils-node의 containerSetup에서 등록
+### 2. TxManager 등록
 
 ```ts
 import 'reflect-metadata';
-import { createServer } from '@croco/utils-node';
 import { Container } from 'typedi';
 import { TxManager } from '@croco/tx-core';
 import { createDrizzleTxAdapter } from '@croco/tx-drizzle';
@@ -43,10 +42,10 @@ import { Pool } from 'pg';
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
 
-const app = await createServer({
-  controllers: [UserController],
-  containerSetup: [
-    () => {
+const adapter = createDrizzleTxAdapter(db);
+const txManager = new TxManager(adapter, { defaultNesting: 'join' });
+
+Container.set(TxManager, txManager);
       const adapter = createDrizzleTxAdapter(db);
       const txManager = new TxManager(adapter, { defaultNesting: 'join' });
       Container.set(TxManager, txManager);

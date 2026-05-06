@@ -17,7 +17,6 @@
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
-    "@croco/utils-tsconfig": "workspace:*",
     "@cloudflare/workers-types": "^4.0.0",
     "vitest": "4.0.16"
   },

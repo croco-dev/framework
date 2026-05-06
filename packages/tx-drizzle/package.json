@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "@croco/dataloader-core": "workspace:*",
-    "@croco/utils-tsconfig": "workspace:*",
     "@types/better-sqlite3": "7.6.13",
     "better-sqlite3": "^11.10.0",
     "drizzle-orm": "catalog:"

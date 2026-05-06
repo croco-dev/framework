@@ -17,7 +17,7 @@ title: "AuthProvider"
 
 ### authenticate()
 
-> **authenticate**(`request`): `Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/) \| `null`\>
+> **authenticate**(`request`): `Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/)\>
 
 #### Parameters
 
@@ -27,4 +27,4 @@ title: "AuthProvider"
 
 #### Returns
 
-`Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/) \| `null`\>
+`Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/)\>

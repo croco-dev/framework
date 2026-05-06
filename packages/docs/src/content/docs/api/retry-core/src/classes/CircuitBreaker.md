@@ -79,11 +79,11 @@ title: "CircuitBreaker"
 
 ### getLastFailureTime()
 
-> **getLastFailureTime**(): `Promise`\<`number` \| `null`\>
+> **getLastFailureTime**(): `Promise`\<`number`\>
 
 #### Returns
 
-`Promise`\<`number` \| `null`\>
+`Promise`\<`number`\>
 
 ***
 

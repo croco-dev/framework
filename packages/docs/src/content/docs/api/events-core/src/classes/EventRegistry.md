@@ -34,7 +34,7 @@ title: "EventRegistry"
 
 ### get()
 
-> **get**\<`T`\>(`eventType`): `EventClass`\<`T`\> \| `undefined`
+> **get**\<`T`\>(`eventType`): `EventClass`\<`T`\>
 
 이벤트 타입 이름으로 등록된 클래스를 조회합니다.
 
@@ -54,7 +54,7 @@ title: "EventRegistry"
 
 #### Returns
 
-`EventClass`\<`T`\> \| `undefined`
+`EventClass`\<`T`\>
 
 등록된 이벤트 클래스 또는 undefined
 

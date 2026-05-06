@@ -92,11 +92,11 @@ Tracks retry state across attempts.
 
 #### Get Signature
 
-> **get** **lastError**(): `Error` \| `null`
+> **get** **lastError**(): `Error`
 
 ##### Returns
 
-`Error` \| `null`
+`Error`
 
 ***
 
@@ -114,7 +114,7 @@ Tracks retry state across attempts.
 
 ### getAttribute()
 
-> **getAttribute**\<`T`\>(`key`): `T` \| `undefined`
+> **getAttribute**\<`T`\>(`key`): `T`
 
 #### Type Parameters
 
@@ -130,7 +130,7 @@ Tracks retry state across attempts.
 
 #### Returns
 
-`T` \| `undefined`
+`T`
 
 ***
 

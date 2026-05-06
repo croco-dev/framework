@@ -17,7 +17,7 @@ API 키를 인증 주체로 해석하는 공급자 계약입니다.
 
 ### authenticate()
 
-> **authenticate**(`request`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/) \| `null`\>
+> **authenticate**(`request`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)\>
 
 #### Parameters
 
@@ -27,4 +27,4 @@ API 키를 인증 주체로 해석하는 공급자 계약입니다.
 
 #### Returns
 
-`Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/) \| `null`\>
+`Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)\>

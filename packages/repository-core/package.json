@@ -12,7 +12,6 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "@types/node": "^20.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",

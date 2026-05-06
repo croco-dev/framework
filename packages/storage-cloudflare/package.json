@@ -16,9 +16,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/framework-context": "workspace:*"
   },
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public",
     "main": "./dist/index.js",

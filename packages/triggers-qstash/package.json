@@ -20,7 +20,6 @@
     "@upstash/qstash": "^2.9.0"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "vitest": "4.0.16"
   },
   "publishConfig": {

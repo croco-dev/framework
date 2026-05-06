@@ -18,9 +18,7 @@
     "typedi": "0.10.0",
     "zod": "4.3.6"
   },
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public",
     "main": "./dist/index.js",

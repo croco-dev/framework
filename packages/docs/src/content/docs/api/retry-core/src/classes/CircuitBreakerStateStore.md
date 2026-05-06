@@ -94,7 +94,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 ### getLastFailureTime()
 
-> `abstract` **getLastFailureTime**(`circuitId`): `Promise`\<`number` \| `null`\>
+> `abstract` **getLastFailureTime**(`circuitId`): `Promise`\<`number`\>
 
 마지막 실패 시간을 가져옵니다.
 
@@ -108,7 +108,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 #### Returns
 
-`Promise`\<`number` \| `null`\>
+`Promise`\<`number`\>
 
 타임스탬프 (ms) 또는 null (기본값: null)
 

@@ -1,5 +1,0 @@
-{
-  "exclude": ["node_modules"],
-  "extends": "@croco/utils-tsconfig/tsconfig.react.json",
-  "include": ["src/**/*.ts"]
-}

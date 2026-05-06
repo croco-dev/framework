@@ -20,7 +20,6 @@
     "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "vitest": "4.0.16"
   },
   "publishConfig": {

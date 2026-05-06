@@ -19,7 +19,7 @@ title: "runWithLambdaContext"
 
 ### context
 
-[`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/) | `null`
+[`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/)
 
 ### fn
 

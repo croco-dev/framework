@@ -41,10 +41,6 @@ title: "EventPublishFailedError"
 
 > `readonly` `optional` **cause**: `Error`
 
-#### Overrides
-
-`Error.cause`
-
 ***
 
 ### eventName

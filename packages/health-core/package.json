@@ -11,9 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public",
     "main": "./dist/index.js",

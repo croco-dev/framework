@@ -26,7 +26,6 @@
     "reflect-metadata": "0.2.2"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "@hono/node-server": "^1.0.0",
     "vitest": "4.0.16"
   },

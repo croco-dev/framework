@@ -22,7 +22,6 @@
     "@croco/storage-core": "workspace:*"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "@types/node": "^22.10.5"
   },
   "publishConfig": {

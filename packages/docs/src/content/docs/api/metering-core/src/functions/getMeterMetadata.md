@@ -5,7 +5,7 @@ prev: false
 title: "getMeterMetadata"
 ---
 
-> **getMeterMetadata**(`target`): [`MeterMetadata`](/api/metering-core/src/type-aliases/metermetadata/) \| `undefined`
+> **getMeterMetadata**(`target`): [`MeterMetadata`](/api/metering-core/src/type-aliases/metermetadata/)
 
 클래스에서 Meter 메타데이터 조회
 
@@ -17,4 +17,4 @@ title: "getMeterMetadata"
 
 ## Returns
 
-[`MeterMetadata`](/api/metering-core/src/type-aliases/metermetadata/) \| `undefined`
+[`MeterMetadata`](/api/metering-core/src/type-aliases/metermetadata/)

@@ -43,7 +43,7 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 ### getComponentMetadata()
 
-> `static` **getComponentMetadata**(`target`): [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
+> `static` **getComponentMetadata**(`target`): [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/)
 
 #### Parameters
 
@@ -53,7 +53,7 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 #### Returns
 
-[`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
+[`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/)
 
 ***
 
@@ -81,7 +81,7 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 ### getOptional()
 
-> `static` **getOptional**\<`T`\>(`token`): `T` \| `undefined`
+> `static` **getOptional**\<`T`\>(`token`): `T`
 
 #### Type Parameters
 
@@ -97,7 +97,7 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 #### Returns
 
-`T` \| `undefined`
+`T`
 
 ***
 

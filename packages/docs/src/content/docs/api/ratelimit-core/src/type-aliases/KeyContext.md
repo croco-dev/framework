@@ -13,7 +13,7 @@ title: "KeyContext"
 
 ### get()
 
-> **get**\<`T`\>(`key`): `T` \| `undefined`
+> **get**\<`T`\>(`key`): `T`
 
 #### Type Parameters
 
@@ -29,4 +29,4 @@ title: "KeyContext"
 
 #### Returns
 
-`T` \| `undefined`
+`T`

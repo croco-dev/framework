@@ -29,7 +29,7 @@ HTTP 미들웨어 형태로 레이트 리밋을 적용하는 헬퍼와 타입입
 
 ### get()
 
-> **get**\<`T`\>(`key`): `T` \| `undefined`
+> **get**\<`T`\>(`key`): `T`
 
 #### Type Parameters
 
@@ -45,7 +45,7 @@ HTTP 미들웨어 형태로 레이트 리밋을 적용하는 헬퍼와 타입입
 
 #### Returns
 
-`T` \| `undefined`
+`T`
 
 ***
 

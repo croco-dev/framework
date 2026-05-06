@@ -1,5 +1,5 @@
 {
-  "extends": "@croco/utils-tsconfig/tsconfig.react.json",
+  "extends": "../../tsconfig/tsconfig.react.json",
   "compilerOptions": {
     "outDir": "./dist",
     "types": ["@cloudflare/workers-types"]

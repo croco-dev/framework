@@ -20,7 +20,6 @@
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "^22",
     "better-sqlite3": "^11.10.0",

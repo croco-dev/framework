@@ -1,6 +1,6 @@
 {
   "exclude": ["node_modules"],
-  "extends": "@croco/utils-tsconfig/tsconfig.node.json",
+  "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

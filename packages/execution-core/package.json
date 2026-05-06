@@ -16,7 +16,6 @@
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "vitest": "4.0.16"
   },
   "publishConfig": {

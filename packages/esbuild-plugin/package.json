@@ -12,7 +12,6 @@
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "esbuild": "^0.20.2",
     "typescript": "^5.0.0"
   },

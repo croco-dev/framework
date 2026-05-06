@@ -47,7 +47,7 @@ title: "TenantMappingProvider"
 
 ### resolve()
 
-> **resolve**(`externalOrgId`): `Promise`\<`string` \| `null`\>
+> **resolve**(`externalOrgId`): `Promise`\<`string`\>
 
 #### Parameters
 
@@ -57,4 +57,4 @@ title: "TenantMappingProvider"
 
 #### Returns
 
-`Promise`\<`string` \| `null`\>
+`Promise`\<`string`\>

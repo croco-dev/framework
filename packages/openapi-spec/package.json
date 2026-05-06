@@ -18,7 +18,6 @@
   },
   "devDependencies": {
     "@croco/protocols-rest": "workspace:*",
-    "@croco/utils-tsconfig": "workspace:*",
     "@redocly/cli": "^2.30.3",
     "orval": "8.9.1",
     "reflect-metadata": "0.2.2",
