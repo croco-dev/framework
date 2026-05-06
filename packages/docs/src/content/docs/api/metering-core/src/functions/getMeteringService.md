@@ -5,10 +5,10 @@ prev: false
 title: "getMeteringService"
 ---
 
-> **getMeteringService**(): [`MeteringService`](/api/metering-core/src/classes/meteringservice/) \| `null`
+> **getMeteringService**(): [`MeteringService`](/api/metering-core/src/classes/meteringservice/)
 
 MeteringService 인스턴스 조회
 
 ## Returns
 
-[`MeteringService`](/api/metering-core/src/classes/meteringservice/) \| `null`
+[`MeteringService`](/api/metering-core/src/classes/meteringservice/)

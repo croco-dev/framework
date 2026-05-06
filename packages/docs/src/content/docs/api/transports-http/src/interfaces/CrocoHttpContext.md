@@ -27,7 +27,7 @@ title: "CrocoHttpContext"
 
 ### get()
 
-> **get**\<`T`\>(`key`): `T` \| `undefined`
+> **get**\<`T`\>(`key`): `T`
 
 #### Type Parameters
 
@@ -43,13 +43,13 @@ title: "CrocoHttpContext"
 
 #### Returns
 
-`T` \| `undefined`
+`T`
 
 ***
 
 ### header()
 
-> **header**(`name`): `string` \| `undefined`
+> **header**(`name`): `string`
 
 #### Parameters
 
@@ -59,7 +59,7 @@ title: "CrocoHttpContext"
 
 #### Returns
 
-`string` \| `undefined`
+`string`
 
 ***
 
@@ -107,7 +107,7 @@ title: "CrocoHttpContext"
 
 ### param()
 
-> **param**(`name`): `string` \| `undefined`
+> **param**(`name`): `string`
 
 #### Parameters
 
@@ -117,13 +117,13 @@ title: "CrocoHttpContext"
 
 #### Returns
 
-`string` \| `undefined`
+`string`
 
 ***
 
 ### query()
 
-> **query**(`name`): `string` \| `undefined`
+> **query**(`name`): `string`
 
 #### Parameters
 
@@ -133,7 +133,7 @@ title: "CrocoHttpContext"
 
 #### Returns
 
-`string` \| `undefined`
+`string`
 
 ***
 

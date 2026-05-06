@@ -16,9 +16,7 @@
     "reflect-metadata": "0.2.2",
     "typedi": "0.10.0"
   },
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public",
     "main": "./dist/index.js",

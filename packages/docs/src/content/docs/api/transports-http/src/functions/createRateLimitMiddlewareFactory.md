@@ -23,7 +23,7 @@ title: "createRateLimitMiddlewareFactory"
 
 #### policyOverride?
 
-[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+`RateLimitPolicy`
 
 ### Returns
 

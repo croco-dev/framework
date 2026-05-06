@@ -13,7 +13,7 @@ MeteringService 인스턴스 설정 (앱 부트스트랩에서 호출)
 
 ### service
 
-[`MeteringService`](/api/metering-core/src/classes/meteringservice/) | `null`
+[`MeteringService`](/api/metering-core/src/classes/meteringservice/)
 
 ## Returns
 

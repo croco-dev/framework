@@ -16,7 +16,6 @@
     "ulid": "^3.0.2"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "peerDependencies": {

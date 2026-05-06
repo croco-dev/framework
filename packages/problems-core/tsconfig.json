@@ -5,6 +5,6 @@
     "target": "es2022"
   },
   "exclude": ["node_modules"],
-  "extends": "@croco/utils-tsconfig/tsconfig.node.json",
+  "extends": "../../tsconfig/tsconfig.node.json",
   "include": ["src/**/*.ts"]
 }

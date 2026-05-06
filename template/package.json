@@ -9,7 +9,5 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {},
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  }
+  "devDependencies": {}
 }

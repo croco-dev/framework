@@ -17,9 +17,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*"
   },
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public",
     "main": "./dist/index.js",

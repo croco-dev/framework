@@ -18,9 +18,7 @@
     "@croco/storage-core": "workspace:*",
     "cloudinary": "^2.10.0"
   },
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public",
     "main": "./dist/index.js",

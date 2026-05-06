@@ -17,7 +17,7 @@ title: "ParamResolver"
 
 ##### createPipeInstance?
 
-(`pipe`) => `PipeTransform`\<`unknown`, `unknown`\> \| `null` \| `undefined`
+(`pipe`) => `PipeTransform`\<`unknown`, `unknown`\>
 
 #### Returns
 

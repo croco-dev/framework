@@ -21,7 +21,6 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "vite": "^6.0.0",
     "vike": "^0.4.0",
     "@cloudflare/vite-plugin": "^1.0.0",

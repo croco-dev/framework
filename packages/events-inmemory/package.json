@@ -11,9 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*"
-  },
+  "devDependencies": {},
   "dependencies": {
     "@croco/events-core": "workspace:*",
     "@croco/framework-context": "workspace:*",

@@ -25,7 +25,7 @@ title: "RetryExhaustedProblem"
 
 ##### lastError?
 
-`Error` | `null`
+`Error` = `null`
 
 ##### attempts?
 
@@ -113,7 +113,7 @@ title: "RetryExhaustedProblem"
 
 ### lastError
 
-> `readonly` **lastError**: `Error` \| `null` = `null`
+> `readonly` **lastError**: `Error` = `null`
 
 ***
 
@@ -323,7 +323,7 @@ a();
 
 ##### lastError
 
-`Error` | `null`
+`Error`
 
 #### Returns
 

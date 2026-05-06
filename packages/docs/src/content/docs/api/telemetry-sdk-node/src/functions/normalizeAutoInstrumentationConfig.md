@@ -14,9 +14,9 @@ Filters out unavailable modules and applies defaults.
 
 ### config
 
-User-provided configuration
+[`AutoInstrumentationConfig`](/api/telemetry-sdk-node/src/interfaces/autoinstrumentationconfig/)
 
-[`AutoInstrumentationConfig`](/api/telemetry-sdk-node/src/interfaces/autoinstrumentationconfig/) | `undefined`
+User-provided configuration
 
 ### environment
 

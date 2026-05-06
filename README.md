@@ -374,7 +374,6 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `framework-config` | 설정 관리 | 🟡 |
 | `framework-logger` | 프레임워크 로깅 유틸리티 | 🟡 |
 | `notifications-core` | 알림 추상화, 채널 라우팅, 템플릿 엔진 | 🟡 |
-| `utils-node` | Node.js 유틸리티 | 🟡 |
 | `shared` | 공유 유틸리티 | 🟡 |
 | `create-croco-app` | Croco 프로젝트 생성기 | 🟡 |
 | `esbuild-plugin` | Esbuild 플러그인 | 🟡 |

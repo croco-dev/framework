@@ -13,13 +13,13 @@ HTTP 요청에 레이트 리밋 정책을 적용하는 미들웨어 팩토리입
 
 ### defaultPolicy
 
-> **defaultPolicy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+> **defaultPolicy**: `RateLimitPolicy`
 
 ***
 
 ### rateLimiter
 
-> **rateLimiter**: [`RateLimiter`](/api/ratelimit-core/src/classes/ratelimiter/)
+> **rateLimiter**: `RateLimiter`
 
 ***
 

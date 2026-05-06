@@ -27,11 +27,11 @@ OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 �
 
 ### getConfig()
 
-> **getConfig**(): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
+> **getConfig**(): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/)
 
 #### Returns
 
-[`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
+[`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/)
 
 ***
 

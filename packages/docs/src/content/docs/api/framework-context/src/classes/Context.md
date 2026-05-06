@@ -21,73 +21,73 @@ AsyncLocalStorage 기반으로 요청 컨텍스트를 실행하고 조회하는 
 
 ### get()
 
-> `static` **get**(): [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) \| `null`
+> `static` **get**(): [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
 
 #### Returns
 
-[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) \| `null`
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
 
 ***
 
 ### getActiveTraceId()
 
-> `static` **getActiveTraceId**(): `string` \| `null`
+> `static` **getActiveTraceId**(): `string`
 
 Get active trace ID from request context propagation
 
 #### Returns
 
-`string` \| `null`
+`string`
 
 ***
 
 ### getCache()
 
-> `static` **getCache**(): `Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\> \| `undefined`
+> `static` **getCache**(): `Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\>
 
 #### Returns
 
-`Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\> \| `undefined`
+`Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\>
 
 ***
 
 ### getCreatedAt()
 
-> `static` **getCreatedAt**(): `number` \| `null`
+> `static` **getCreatedAt**(): `number`
 
 #### Returns
 
-`number` \| `null`
+`number`
 
 ***
 
 ### getCurrentUser()
 
-> `static` **getCurrentUser**(): `UserContext` \| `null` \| `undefined`
+> `static` **getCurrentUser**(): `UserContext`
 
 #### Returns
 
-`UserContext` \| `null` \| `undefined`
+`UserContext`
 
 ***
 
 ### getRequestId()
 
-> `static` **getRequestId**(): `string` \| `null`
+> `static` **getRequestId**(): `string`
 
 #### Returns
 
-`string` \| `null`
+`string`
 
 ***
 
 ### getTenantId()
 
-> `static` **getTenantId**(): `string` \| `null`
+> `static` **getTenantId**(): `string`
 
 #### Returns
 
-`string` \| `null`
+`string`
 
 ***
 

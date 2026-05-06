@@ -15,7 +15,6 @@
     "@croco/execution-core": "workspace:*"
   },
   "devDependencies": {
-    "@croco/utils-tsconfig": "workspace:*",
     "vitest": "4.0.16",
     "tsup": "^8.0.0"
   },
