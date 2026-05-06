@@ -136,7 +136,7 @@ describe('DefaultEventSerializer', () => {
         },
       });
 
-      expect(serialized.eventId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(serialized.eventId).toBe(event.eventId);
       expect(new Date(serialized.occurredAt)).toBeInstanceOf(Date);
     });
 
@@ -156,6 +156,13 @@ describe('DefaultEventSerializer', () => {
       const serialized = serializer.serialize(event);
 
       expect(serialized.payload).not.toHaveProperty('eventName');
+    });
+
+    it('should not include eventId in payload', () => {
+      const event = new TestEvent('test', 1);
+      const serialized = serializer.serialize(event);
+
+      expect(serialized.payload).not.toHaveProperty('eventId');
     });
 
     it('should not include timestamp in payload', () => {
