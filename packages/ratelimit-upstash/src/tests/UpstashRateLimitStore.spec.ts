@@ -73,11 +73,7 @@ describe('UpstashFixedWindowStore', () => {
     const policy = createFixedWindowPolicy('test', 10, 60000);
     await customStore.check('test-key', policy);
 
-    expect(mockRedis.eval).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.arrayContaining([expect.stringContaining('custom:test-key:')]),
-      [10, 60]
-    );
+    expect(mockRedis.eval).toHaveBeenCalledWith(expect.any(String), ['custom:test-key'], [10, 60, expect.any(Number)]);
   });
 
   it('should throw error for invalid policy', async () => {
@@ -87,13 +83,12 @@ describe('UpstashFixedWindowStore', () => {
   });
 
   it('should reset keys', async () => {
-    mockRedis.keys.mockResolvedValue(['key1', 'key2']);
     mockRedis.del.mockResolvedValue(2);
 
     await store.reset('test-key');
 
-    expect(mockRedis.keys).toHaveBeenCalledWith('ratelimit:fixed:test-key*');
-    expect(mockRedis.del).toHaveBeenCalledWith('key1', 'key2');
+    expect(mockRedis.keys).not.toHaveBeenCalled();
+    expect(mockRedis.del).toHaveBeenCalledWith('ratelimit:fixed:test-key');
   });
 
   it('should handle getCount', async () => {

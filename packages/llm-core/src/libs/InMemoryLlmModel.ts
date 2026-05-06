@@ -71,6 +71,10 @@ export class InMemoryLlmModel extends LlmModel {
     const promptTokens = params.prompt.length;
 
     for (let i = 0; i < chunks.length; i++) {
+      if (params.signal?.aborted) {
+        return;
+      }
+
       const chunk = chunks[i];
       if (chunk) {
         yield {

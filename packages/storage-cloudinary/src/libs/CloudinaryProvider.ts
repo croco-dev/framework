@@ -157,9 +157,6 @@ function normalizeCloudinaryError(error: unknown, fallbackMessage: string): Clou
  */
 @Component()
 export class CloudinaryProvider extends BaseStorageProvider implements ImageProvider {
-  private static operationInFlight = false;
-  private static operationWaiters: Array<() => void> = [];
-
   private readonly cloudName: string;
   private readonly apiKey: string;
   private readonly apiSecret: string;
@@ -433,9 +430,6 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   }
 
   private async withConfiguredCloudinary<T>(operation: () => Promise<T>): Promise<T> {
-    const release = CloudinaryProvider.operationInFlight
-      ? await this.waitForCloudinaryLock()
-      : this.acquireCloudinaryLock();
     const previousConfig = { ...(cloudinary.config() ?? {}) };
 
     cloudinary.config(this.getCloudinaryConfig());
@@ -444,32 +438,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
       return await operation();
     } finally {
       cloudinary.config(previousConfig);
-      release();
     }
-  }
-
-  private acquireCloudinaryLock(): () => void {
-    CloudinaryProvider.operationInFlight = true;
-    return () => this.releaseCloudinaryLock();
-  }
-
-  private async waitForCloudinaryLock(): Promise<() => void> {
-    await new Promise<void>((resolve) => {
-      CloudinaryProvider.operationWaiters.push(resolve);
-    });
-
-    return () => this.releaseCloudinaryLock();
-  }
-
-  private releaseCloudinaryLock(): void {
-    const nextWaiter = CloudinaryProvider.operationWaiters.shift();
-
-    if (nextWaiter) {
-      nextWaiter();
-      return;
-    }
-
-    CloudinaryProvider.operationInFlight = false;
   }
 
   private buildTransformParams(options: CloudinaryTransformOptions): string | undefined {

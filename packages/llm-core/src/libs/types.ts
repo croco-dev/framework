@@ -63,6 +63,7 @@ export type GenerateResult = {
  */
 export type StreamParams = Omit<GenerateParams, 'modelId'> & {
   modelId?: string;
+  signal?: AbortSignal;
 };
 
 /**

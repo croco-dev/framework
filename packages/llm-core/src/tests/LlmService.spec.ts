@@ -16,6 +16,26 @@ class FailingStreamModel extends InMemoryLlmModel {
   }
 }
 
+class CountingStreamModel extends InMemoryLlmModel {
+  produced = 0;
+  observedAbort = false;
+
+  constructor() {
+    super('counting-stream-model');
+  }
+
+  override async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
+    try {
+      while (!params.signal?.aborted) {
+        this.produced += 1;
+        yield { delta: `${this.produced} ` };
+      }
+    } finally {
+      this.observedAbort = params.signal?.aborted ?? false;
+    }
+  }
+}
+
 async function collectStream(chunks: AsyncIterable<StreamChunk>): Promise<string[]> {
   const deltas: string[] = [];
 
@@ -252,6 +272,58 @@ describe('LlmService', () => {
           })
         )
       ).rejects.toThrow(/publish failed/);
+    });
+
+    it('should stop producing when the consumer breaks from the stream', async () => {
+      const model = new CountingStreamModel();
+      registry.registerProvider('counting-stream-model', () => model);
+
+      for await (const _chunk of service.stream({
+        prompt: 'Count',
+        modelId: 'counting-stream-model',
+      })) {
+        break;
+      }
+
+      expect(model.observedAbort).toBe(true);
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        expect.objectContaining({ eventName: 'llm.stream_completed', modelId: 'counting-stream-model' })
+      );
+    });
+
+    it('should pause the producer when the stream buffer is full', async () => {
+      const model = new CountingStreamModel();
+      registry.registerProvider('buffered-stream-model', () => model);
+
+      const iterator = service
+        .stream({
+          prompt: 'Count',
+          modelId: 'buffered-stream-model',
+        })
+        [Symbol.asyncIterator]();
+
+      await expect(iterator.next()).resolves.toMatchObject({ done: false });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(model.produced).toBe(1001);
+
+      await iterator.return?.();
+    });
+
+    it('should stop streaming when the abort signal is aborted', async () => {
+      const model = new CountingStreamModel();
+      const abortController = new AbortController();
+      registry.registerProvider('abortable-stream-model', () => model);
+
+      for await (const _chunk of service.stream({
+        prompt: 'Count',
+        modelId: 'abortable-stream-model',
+        signal: abortController.signal,
+      })) {
+        abortController.abort();
+      }
+
+      expect(model.observedAbort).toBe(true);
     });
   });
 

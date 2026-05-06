@@ -25,6 +25,7 @@ export {
  */
 export {
   FixedWindowInMemoryStore,
+  type InMemoryRateLimitStoreOptions,
   SlidingWindowInMemoryStore,
   TokenBucketInMemoryStore,
 } from './libs/InMemoryRateLimitStore';
