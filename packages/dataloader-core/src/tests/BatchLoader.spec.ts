@@ -1,5 +1,6 @@
 import type { ILogger } from '@croco/framework-context';
 import { Context } from '@croco/framework-context';
+import type { Span } from '@opentelemetry/api';
 import * as otelApi from '@opentelemetry/api';
 import { ROOT_CONTEXT } from '@opentelemetry/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +8,25 @@ import { BatchResultLengthMismatchProblem } from '../index';
 import { createBatchLoader } from '../libs/createBatchLoader';
 
 describe('BatchLoader', () => {
+  const createSpan = (): Span => ({
+    spanContext: vi.fn(() => ({
+      traceId: '11111111111111111111111111111111',
+      spanId: '2222222222222222',
+      traceFlags: 1,
+      isRemote: false,
+    })),
+    setAttribute: vi.fn(),
+    setAttributes: vi.fn(),
+    addEvent: vi.fn(),
+    addLink: vi.fn(),
+    addLinks: vi.fn(),
+    setStatus: vi.fn(),
+    updateName: vi.fn(),
+    end: vi.fn(),
+    isRecording: vi.fn(() => true),
+    recordException: vi.fn(),
+  });
+
   const batchFn = vi.fn(async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> => {
     return keys.map((key) => {
       if (key === -1) return new Error('Error for -1');
@@ -89,6 +109,27 @@ describe('BatchLoader', () => {
     });
   });
 
+  it('should mark batch span as ERROR when an item fails', async () => {
+    const span = createSpan();
+    vi.spyOn(otelApi.trace, 'getTracer').mockReturnValue({
+      startActiveSpan: async <T>(_name: string, fn: (activeSpan: Span) => T) => fn(span),
+      startSpan: vi.fn(() => span),
+    } as ReturnType<typeof otelApi.trace.getTracer>);
+
+    const loader = createBatchLoader<number, string>({
+      name: 'item-failure-loader',
+      batchFn,
+    });
+
+    await expect(loader.load(-1)).rejects.toThrow('Error for -1');
+
+    expect(span.recordException).toHaveBeenCalledWith(expect.objectContaining({ message: 'Error for -1' }));
+    expect(span.setStatus).toHaveBeenCalledWith({
+      code: expect.any(Number),
+      message: 'Error for -1',
+    });
+  });
+
   it('should handle maxBatchSize', async () => {
     await Context.run({ requestId: 'test' }, async () => {
       const loader = createBatchLoader<number, string>({
@@ -106,6 +147,24 @@ describe('BatchLoader', () => {
       expect(batchFn).toHaveBeenCalledTimes(2);
       expect(batchFn).toHaveBeenCalledWith([1, 2]);
       expect(batchFn).toHaveBeenCalledWith([3]);
+    });
+  });
+
+  it('should use 100 as the default maxBatchSize', async () => {
+    await Context.run({ requestId: 'test-default-batch-size' }, async () => {
+      const loader = createBatchLoader<number, string>({
+        name: 'default-batch-size-loader',
+        batchFn: batchFn,
+      });
+
+      await Promise.all(Array.from({ length: 101 }, (_, index) => loader.load(index + 1)));
+
+      expect(batchFn).toHaveBeenCalledTimes(2);
+      expect(batchFn).toHaveBeenNthCalledWith(
+        1,
+        Array.from({ length: 100 }, (_, index) => index + 1)
+      );
+      expect(batchFn).toHaveBeenNthCalledWith(2, [101]);
     });
   });
 
@@ -169,6 +228,29 @@ describe('BatchLoader', () => {
       await expect(loader.load(1)).resolves.toBe('Value: 1');
 
       expect(fn).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('should mark batch span as ERROR when the batch function throws', async () => {
+    const span = createSpan();
+    vi.spyOn(otelApi.trace, 'getTracer').mockReturnValue({
+      startActiveSpan: async <T>(_name: string, fn: (activeSpan: Span) => T) => fn(span),
+      startSpan: vi.fn(() => span),
+    } as ReturnType<typeof otelApi.trace.getTracer>);
+
+    const loader = createBatchLoader<number, string>({
+      name: 'batch-failure-loader',
+      batchFn: async () => {
+        throw new Error('batch failed');
+      },
+    });
+
+    await expect(loader.load(1)).rejects.toThrow('batch failed');
+
+    expect(span.recordException).toHaveBeenCalledWith(expect.objectContaining({ message: 'batch failed' }));
+    expect(span.setStatus).toHaveBeenCalledWith({
+      code: expect.any(Number),
+      message: 'batch failed',
     });
   });
 
