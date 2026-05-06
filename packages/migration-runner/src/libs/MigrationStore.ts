@@ -1,9 +1,6 @@
 import { sql } from 'drizzle-orm';
+import type { DatabaseClient } from './db-types';
 import type { MigrationRecord } from './types';
-
-export type DatabaseClient = {
-  execute: (query: unknown) => Promise<unknown>;
-};
 
 export class MigrationStore {
   private readonly tableName: string;

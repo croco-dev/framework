@@ -24,3 +24,13 @@ export class OtlpEndpointRequiredProblem extends Problem {
     super('OTLP endpoint is required for telemetry');
   }
 }
+
+export class TelemetryRuntimeProblem extends Problem {
+  readonly code = 'TELEMETRY_RUNTIME_ERROR';
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(phase: 'init' | 'forceFlush' | 'shutdown', cause: unknown) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(`Telemetry ${phase} failed: ${detail}`);
+  }
+}

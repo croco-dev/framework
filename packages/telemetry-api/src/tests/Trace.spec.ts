@@ -1,4 +1,11 @@
-import { context, type SpanOptions as OtelSpanOptions, type Span, type Tracer, trace } from '@opentelemetry/api';
+import {
+  context,
+  type Exception,
+  type SpanOptions as OtelSpanOptions,
+  type Span,
+  type Tracer,
+  trace,
+} from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { TraceDecoratorOptions } from '../libs/decorators/Trace';
@@ -37,6 +44,7 @@ function decorateMethodWithTrace(target: object, methodName: string, options: Tr
 function createMockSpan() {
   const setAttribute = vi.fn();
   const setStatus = vi.fn();
+  const recordException = vi.fn();
   const end = vi.fn();
 
   const spanContext = () => ({
@@ -57,13 +65,14 @@ function createMockSpan() {
     updateName: vi.fn(),
     end,
     isRecording: vi.fn(() => true),
-    recordException: vi.fn(),
+    recordException,
   } as unknown as Span;
 
   return {
     span,
     setAttribute,
     setStatus,
+    recordException,
     end,
   };
 }
@@ -134,7 +143,7 @@ describe('Trace', () => {
     await service.run();
   });
 
-  it('should handle errors in decorated methods', async () => {
+  it('should record exception details for decorated method errors', async () => {
     const mockSpan = createMockSpan();
 
     vi.spyOn(tracerModule, 'getTracer').mockReturnValue(createMockTracer(mockSpan.span));
@@ -154,6 +163,35 @@ describe('Trace', () => {
     expect(mockSpan.setStatus).toHaveBeenCalledWith({
       code: expect.any(Number),
       message: 'Test error',
+    });
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Error',
+        message: 'Test error',
+        stack: expect.stringContaining('Test error'),
+      })
+    );
+  });
+
+  it('should record non-Error exception messages for decorated method failures', async () => {
+    const mockSpan = createMockSpan();
+
+    vi.spyOn(tracerModule, 'getTracer').mockReturnValue(createMockTracer(mockSpan.span));
+
+    class TestService {
+      async failingMethod(): Promise<void> {
+        throw 'string failure';
+      }
+    }
+
+    decorateMethodWithTrace(TestService.prototype, 'failingMethod', { name: 'string-failure-operation' });
+
+    const service = new TestService();
+
+    await expect(service.failingMethod()).rejects.toBe('string failure');
+
+    expect(mockSpan.recordException).toHaveBeenCalledWith({
+      message: 'string failure',
     });
   });
 
@@ -293,6 +331,25 @@ describe('recordError', () => {
       },
       { name: 'test-operation' }
     );
+  });
+
+  it('should record Error name, message, and stack on the provided span', () => {
+    const mockSpan = createMockSpan();
+    const error = new TypeError('broken value');
+
+    recordError(error, mockSpan.span);
+
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining<Exception>({
+        name: 'TypeError',
+        message: 'broken value',
+        stack: expect.stringContaining('TypeError: broken value'),
+      })
+    );
+    expect(mockSpan.setStatus).toHaveBeenCalledWith({
+      code: expect.any(Number),
+      message: 'broken value',
+    });
   });
 });
 

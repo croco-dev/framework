@@ -43,7 +43,7 @@ export class DefaultEventSerializer implements EventSerializer {
   serialize<T extends DomainEvent>(event: T): SerializedEvent {
     return {
       eventType: event.eventName,
-      eventId: this.generateEventId(),
+      eventId: event.eventId,
       occurredAt: event.timestamp.toISOString(),
       aggregateId: this.extractAggregateId(event),
       payload: this.extractPayload(event),
@@ -58,10 +58,6 @@ export class DefaultEventSerializer implements EventSerializer {
     }
 
     return this.reconstructEvent(EventClass, data) as T;
-  }
-
-  private generateEventId(): string {
-    return crypto.randomUUID();
   }
 
   private extractAggregateId(event: DomainEvent): string | undefined {
@@ -86,7 +82,7 @@ export class DefaultEventSerializer implements EventSerializer {
     }
 
     const result: Record<string, unknown> = {};
-    const reservedKeys = new Set(['eventName', 'timestamp', 'metadata']);
+    const reservedKeys = new Set(['eventId', 'eventName', 'timestamp', 'metadata']);
     for (const key in event) {
       if (!reservedKeys.has(key)) {
         result[key] = obj[key];
