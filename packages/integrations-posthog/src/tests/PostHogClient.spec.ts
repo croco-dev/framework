@@ -13,17 +13,26 @@ vi.mock('posthog-node', () => {
   };
 });
 
+const HOST_REQUIRED_MESSAGE =
+  '[PostHogClient] PostHog host is required for data residency compliance. ' +
+  'Set host in config or POSTHOG_HOST env var. ' +
+  'Default (app.posthog.com) routes data to US servers.';
+
 describe('PostHogClient', () => {
   let client!: PostHogClient;
+  let warnSpy!: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     Container.reset();
     vi.clearAllMocks();
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.stubEnv('POSTHOG_HOST', 'https://test.posthog.com');
     client = new PostHogClient({ apiKey: 'test-key' });
+    warnSpy.mockClear();
   });
 
   afterEach(() => {
+    warnSpy.mockRestore();
     vi.unstubAllEnvs();
   });
 
@@ -44,9 +53,7 @@ describe('PostHogClient', () => {
 
   it('should throw error when host is not provided', () => {
     vi.unstubAllEnvs();
-    expect(() => new PostHogClient({ apiKey: 'new-key' })).toThrow(
-      '[PostHogClient] PostHog host is required. ' + 'Set POSTHOG_HOST environment variable or pass host in config.'
-    );
+    expect(() => new PostHogClient({ apiKey: 'new-key' })).toThrow(HOST_REQUIRED_MESSAGE);
   });
 
   it('should create PostHog client with custom host', () => {
@@ -58,9 +65,10 @@ describe('PostHogClient', () => {
     expect(PostHog).toHaveBeenLastCalledWith('custom-key', {
       host: 'https://custom.posthog.com',
     });
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('data residency compliance'));
   });
 
-  it('should fallback to POSTHOG_HOST when host is not provided', () => {
+  it('should fallback to POSTHOG_HOST with a data residency warning when host is not provided', () => {
     vi.stubEnv('POSTHOG_HOST', 'https://env.posthog.example');
 
     new PostHogClient({ apiKey: 'env-key' });
@@ -68,6 +76,10 @@ describe('PostHogClient', () => {
     expect(PostHog).toHaveBeenLastCalledWith('env-key', {
       host: 'https://env.posthog.example',
     });
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[PostHogClient] POSTHOG_HOST env var is used for PostHog host. ' +
+        'Set host explicitly in config to confirm data residency compliance.'
+    );
 
     vi.unstubAllEnvs();
   });
@@ -75,9 +87,7 @@ describe('PostHogClient', () => {
   it('should throw error when POSTHOG_HOST is empty string', () => {
     vi.stubEnv('POSTHOG_HOST', '');
 
-    expect(() => new PostHogClient({ apiKey: 'env-key' })).toThrow(
-      '[PostHogClient] PostHog host is required. ' + 'Set POSTHOG_HOST environment variable or pass host in config.'
-    );
+    expect(() => new PostHogClient({ apiKey: 'env-key' })).toThrow(HOST_REQUIRED_MESSAGE);
 
     vi.unstubAllEnvs();
   });

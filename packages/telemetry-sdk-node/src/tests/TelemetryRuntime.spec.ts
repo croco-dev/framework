@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TelemetryRuntimeProblem } from '../libs/problems/TelemetryProblems';
 import { TelemetryRuntime } from '../runtime';
 
 describe('TelemetryRuntime', () => {
@@ -110,5 +111,47 @@ describe('TelemetryRuntime', () => {
     ).resolves.not.toThrow();
 
     vi.unstubAllEnvs();
+  });
+
+  it('should return Problem details when forceFlush fails', async () => {
+    const processor = {
+      forceFlush: vi.fn().mockRejectedValue(new Error('export failed')),
+    };
+
+    Object.assign(runtime, { processor });
+
+    const result = await runtime.forceFlush();
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
+    expect(result.error?.message).toBe('Telemetry forceFlush failed: export failed');
+  });
+
+  it('should return Problem details when forceFlush times out', async () => {
+    vi.useFakeTimers();
+    const processor = {
+      forceFlush: vi.fn(() => new Promise<void>(() => {})),
+    };
+
+    Object.assign(runtime, { processor });
+
+    const resultPromise = runtime.forceFlush(10);
+    await vi.advanceTimersByTimeAsync(10);
+    const result = await resultPromise;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
+    expect(result.error?.message).toBe('Telemetry forceFlush failed: timed out after 10ms');
+    vi.useRealTimers();
+  });
+
+  it('should propagate shutdown failures as Problem details', async () => {
+    const sdk = {
+      shutdown: vi.fn().mockRejectedValue(new Error('shutdown failed')),
+    };
+
+    Object.assign(runtime, { sdk });
+
+    await expect(runtime.shutdown()).rejects.toThrow('Telemetry shutdown failed: shutdown failed');
   });
 });
