@@ -1,6 +1,6 @@
 import type { ILogger } from '@croco/framework-context';
 import { recordError } from '@croco/telemetry-api';
-import { context, trace } from '@opentelemetry/api';
+import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import { BatchResultLengthMismatchProblem, InvalidBatchLoaderConfigurationError } from './problems/BatchLoaderProblems';
 import type { BatchLoader, BatchLoaderOptions } from './types';
 
@@ -24,7 +24,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
   private scheduled = false;
 
   constructor(options: BatchLoaderOptions<K, V>, logger: ILogger = noopLogger) {
-    const maxBatchSize = options.maxBatchSize ?? 50;
+    const maxBatchSize = options.maxBatchSize ?? 100;
     if (!Number.isFinite(maxBatchSize) || maxBatchSize <= 0) {
       throw new InvalidBatchLoaderConfigurationError(
         `maxBatchSize must be a positive finite number, got ${maxBatchSize}`
@@ -134,6 +134,11 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
         results.forEach((result, index) => {
           const callback = callbacks[index];
           if (result instanceof Error) {
+            span.recordException(result);
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: result.message,
+            });
             this.clear(keys[index]);
             callback.reject(result);
           } else {
@@ -143,6 +148,10 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         span.recordException(err);
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: err.message,
+        });
 
         keys.forEach((key) => {
           this.clear(key);

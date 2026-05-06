@@ -1,4 +1,4 @@
-import type { DatabaseClient } from './MigrationStore';
+import type { DatabaseClient } from './db-types';
 
 export type MigrationDirection = 'up' | 'down';
 

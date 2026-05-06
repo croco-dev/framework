@@ -1,4 +1,5 @@
-import { type Attributes, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
+import { type Attributes, context, type Span, trace } from '@opentelemetry/api';
+import { recordError } from '../span.js';
 import { getTracer } from '../tracer.js';
 
 export type TraceDecoratorOptions = {
@@ -7,6 +8,28 @@ export type TraceDecoratorOptions = {
 };
 
 const traceOptionsStore = new WeakMap<object, Map<string | symbol, TraceDecoratorOptions>>();
+
+type TraceableReturn<ReturnType> = Promise<ReturnType> | AsyncIterable<ReturnType>;
+type TraceableMethod<Args extends unknown[], ReturnType> = (...args: Args) => TraceableReturn<ReturnType>;
+
+function isAsyncIterable<ReturnType>(value: unknown): value is AsyncIterable<ReturnType> {
+  return typeof value === 'object' && value !== null && Symbol.asyncIterator in value;
+}
+
+function traceAsyncIterable<ReturnType>(iterable: AsyncIterable<ReturnType>, span: Span): AsyncIterable<ReturnType> {
+  return (async function* () {
+    try {
+      for await (const item of iterable) {
+        yield item;
+      }
+    } catch (error) {
+      recordError(error, span);
+      throw error;
+    } finally {
+      span.end();
+    }
+  })();
+}
 
 function cloneOptions(options: TraceDecoratorOptions): TraceDecoratorOptions {
   return {
@@ -33,13 +56,9 @@ function setTraceOptions(target: object, propertyKey: string | symbol, options: 
  */
 export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
   options: TraceDecoratorOptions = {}
-): (
-  _target: object,
-  propertyKey: string | symbol,
-  descriptor: TypedPropertyDescriptor<(...args: Args) => Promise<ReturnType>>
-) => TypedPropertyDescriptor<(...args: Args) => Promise<ReturnType>> | undefined {
+): (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => PropertyDescriptor | undefined {
   return (_target, propertyKey, descriptor) => {
-    const originalMethod = descriptor.value;
+    const originalMethod = descriptor.value as TraceableMethod<Args, ReturnType> | undefined;
 
     if (!originalMethod) {
       return descriptor;
@@ -47,7 +66,7 @@ export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
 
     setTraceOptions(_target, propertyKey, options);
 
-    descriptor.value = async function (this: unknown, ...args: Args): Promise<ReturnType> {
+    descriptor.value = function (this: unknown, ...args: Args): TraceableReturn<ReturnType> {
       const span = getTracer().startSpan(options.name ?? String(propertyKey));
       const spanAttributes = options.attributes ?? {};
       const spanContext = trace.setSpan(context.active(), span);
@@ -56,20 +75,29 @@ export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
         span.setAttribute(key, value as Parameters<Span['setAttribute']>[1]);
       }
 
-      return await context.with(spanContext, async () => {
+      return context.with(spanContext, () => {
         try {
-          return await originalMethod.apply(this, args);
+          const result = originalMethod.apply(this, args);
+
+          if (isAsyncIterable<ReturnType>(result)) {
+            return traceAsyncIterable(result, span);
+          }
+
+          return result
+            .catch((error) => {
+              recordError(error, span);
+              throw error;
+            })
+            .finally(() => {
+              span.end();
+            });
         } catch (error) {
-          span.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: error instanceof Error ? error.message : String(error),
-          });
-          throw error;
-        } finally {
+          recordError(error, span);
           span.end();
+          throw error;
         }
       });
-    } as (...args: Args) => Promise<ReturnType>;
+    } as (...args: Args) => TraceableReturn<ReturnType>;
 
     return descriptor;
   };

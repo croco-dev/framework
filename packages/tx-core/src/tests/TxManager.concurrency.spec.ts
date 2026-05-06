@@ -282,6 +282,39 @@ describe('TxManager Transaction Timeout', () => {
       ).rejects.toThrow(TransactionTimeoutProblem);
     });
 
+    it('should abort underlying transaction work when timeout fires', async () => {
+      let transactionSignal!: AbortSignal;
+      const transaction = async <T>(
+        _fn: (client: { id: string }) => Promise<T>,
+        _options?: unknown,
+        signal?: AbortSignal
+      ): Promise<T> => {
+        if (!signal) throw new TransactionTimeoutProblem(50);
+        transactionSignal = signal;
+
+        return await new Promise<T>((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(new TransactionTimeoutProblem(50)), { once: true });
+        });
+      };
+      const abortableAdapter: TxAdapter<{ id: string }> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+        savepoint: vi.fn(async (client, fn) => fn(client)),
+        supportsSavepoint: () => true,
+      };
+      txManager = new TxManager(abortableAdapter);
+
+      await expect(
+        txManager.run(
+          async () => {
+            return 'result';
+          },
+          { timeout: 50 }
+        )
+      ).rejects.toThrow(TransactionTimeoutProblem);
+
+      expect(transactionSignal.aborted).toBe(true);
+    });
+
     it('should complete successfully when transaction is within timeout', async () => {
       fastAdapter = createMockAdapter({ delay: 10 });
       txManager = new TxManager(fastAdapter);

@@ -25,7 +25,8 @@
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/repository-core": "workspace:*",
-    "@croco/telemetry-api": "workspace:*"
+    "@croco/telemetry-api": "workspace:*",
+    "@opentelemetry/api": "^1.9.0"
   },
   "devDependencies": {
     "@croco/utils-tsconfig": "workspace:*",

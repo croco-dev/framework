@@ -1,8 +1,6 @@
 import 'reflect-metadata';
 import type { Invitation } from '@croco/invitation-core';
 import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type DrizzleInvitationClient, DrizzleInvitationStore } from '../libs/DrizzleInvitationStore';
 
@@ -24,12 +22,15 @@ const createInvitation = (overrides: Partial<Invitation> = {}): Invitation => {
 };
 
 const createUpdateChain = (rows: Invitation[]) => {
+  const where = vi.fn().mockReturnValue({
+    returning: vi.fn().mockResolvedValue(rows),
+  });
+
   return {
     set: vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue(rows),
-      }),
+      where,
     }),
+    where,
   };
 };
 
@@ -138,15 +139,16 @@ describe('DrizzleInvitationStore', () => {
     const accepted = createInvitation({ status: 'accepted' });
     mockDb.update.mockReturnValue(createUpdateChain([accepted]));
 
-    const updated = await store.updateStatus('inv-1', 'accepted');
+    const updated = await store.updateStatus('tenant-1', 'inv-1', 'accepted');
 
     expect(updated?.status).toBe('accepted');
+    expect(mockDb.update.mock.results[0].value.where).toHaveBeenCalledTimes(1);
   });
 
   it('should return null when updating missing invitation', async () => {
     mockDb.update.mockReturnValue(createUpdateChain([]));
 
-    const updated = await store.updateStatus('missing', 'revoked');
+    const updated = await store.updateStatus('tenant-1', 'missing', 'revoked');
 
     expect(updated).toBeNull();
   });
@@ -156,10 +158,20 @@ describe('DrizzleInvitationStore', () => {
 
     mockDb.update.mockReturnValueOnce(createUpdateChain([accepted])).mockReturnValueOnce(createUpdateChain([]));
 
-    const first = await store.updateStatus('inv-1', 'accepted');
-    const second = await store.updateStatus('inv-1', 'accepted');
+    const first = await store.updateStatus('tenant-1', 'inv-1', 'accepted');
+    const second = await store.updateStatus('tenant-1', 'inv-1', 'accepted');
 
     expect(first?.status).toBe('accepted');
     expect(second).toBeNull();
+  });
+
+  it('should scope compare-and-set status updates by tenant', async () => {
+    const accepted = createInvitation({ id: 'inv-1', tenantId: 'tenant-1', status: 'accepted' });
+    mockDb.update.mockReturnValue(createUpdateChain([accepted]));
+
+    const updated = await store.compareAndSetStatus('tenant-1', 'inv-1', 'pending', 'accepted');
+
+    expect(updated?.tenantId).toBe('tenant-1');
+    expect(mockDb.update.mock.results[0].value.where).toHaveBeenCalledTimes(1);
   });
 });

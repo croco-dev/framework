@@ -2,7 +2,7 @@ import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from '@cr
 import { MeterRepository } from '@croco/metering-core';
 import { ProblemFactory } from '@croco/problems-core';
 import type { TxManager } from '@croco/tx-core';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, getTableColumns } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 
@@ -167,19 +167,31 @@ export class DrizzleMeterRepository extends MeterRepository {
 
     const client = this.getClient();
 
+    const columns = getTableColumns(this.usageRecordTable as SQLiteTable);
+    const columnKeys = this.getUsageRecordColumnKeys(columns);
     const values = records.map((record) => ({
-      tenantId: record.tenantId,
-      meterId: record.meterId,
-      value: record.value,
-      recordedAt: record.timestamp.getTime(),
-      metadata: this.serializeJson(record.metadata ?? {}),
-      idempotencyKey: record.idempotencyKey,
+      [columnKeys.tenantId]: record.tenantId,
+      [columnKeys.meterId]: record.meterId,
+      [columnKeys.value]: record.value,
+      [columnKeys.recordedAt]: record.timestamp.getTime(),
+      [columnKeys.metadata]: this.serializeJson(record.metadata ?? {}),
+      [columnKeys.idempotencyKey]: record.idempotencyKey,
     }));
 
     await (client as DrizzleDb)
       .insert(this.usageRecordTable as SQLiteTable)
       .values(values)
       .onConflictDoNothing();
+  }
+
+  private getUsageRecordColumnKeys(columns: Record<string, SQLiteColumn>): Record<keyof UsageRecordTable, string> {
+    return Object.fromEntries(
+      Object.entries(this.usageRecordSchema).map(([schemaKey, schemaColumn]) => {
+        const columnKey =
+          Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ?? schemaKey;
+        return [schemaKey, columnKey];
+      })
+    ) as Record<keyof UsageRecordTable, string>;
   }
 
   private mapToMeterDefinition(raw: Record<string, unknown>): MeterDefinition {
