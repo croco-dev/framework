@@ -32,6 +32,49 @@ describe('ShutdownManager', () => {
 
       expect(instance1).not.toBe(instance2);
     });
+
+    it('should reconfigure singleton timeout on later calls', async () => {
+      vi.useFakeTimers();
+
+      const manager = ShutdownManager.getInstance(1000);
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      ShutdownManager.getInstance(50);
+
+      manager.register({
+        onShutdown: async () => {
+          await new Promise(() => {});
+        },
+      });
+
+      const rejected = expect(manager.shutdown()).rejects.toThrow('Shutdown timeout exceeded after 50ms');
+
+      await vi.advanceTimersByTimeAsync(50);
+
+      await rejected;
+
+      vi.useRealTimers();
+      errorSpy.mockRestore();
+    });
+  });
+
+  describe('configure', () => {
+    it('should remove registered listeners so listen can register with current configuration', () => {
+      const manager = ShutdownManager.getInstance();
+      const processOnSpy = vi.spyOn(process, 'on');
+      const processOffSpy = vi.spyOn(process, 'off');
+
+      manager.listen();
+      manager.configure(100);
+      manager.listen();
+
+      expect(processOffSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+      expect(processOffSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+      expect(processOnSpy).toHaveBeenCalledTimes(4);
+
+      processOnSpy.mockRestore();
+      processOffSpy.mockRestore();
+    });
   });
 
   describe('register', () => {

@@ -19,8 +19,15 @@ export class ShutdownManager {
   static getInstance(timeoutMs?: number): ShutdownManager {
     if (!ShutdownManager.instance) {
       ShutdownManager.instance = new ShutdownManager(timeoutMs);
+    } else if (timeoutMs !== undefined) {
+      ShutdownManager.instance.configure(timeoutMs);
     }
     return ShutdownManager.instance;
+  }
+
+  configure(timeoutMs: number): void {
+    this.timeoutMs = timeoutMs;
+    this.removeAllListeners();
   }
 
   static reset(): void {

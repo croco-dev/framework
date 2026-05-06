@@ -20,6 +20,7 @@ export type AuditableOptions = {
   resourceIdParam?: string;
   payloadParam?: string;
   includeResult?: boolean;
+  throwOnFailure?: boolean;
 };
 
 export type AuditQuery = {

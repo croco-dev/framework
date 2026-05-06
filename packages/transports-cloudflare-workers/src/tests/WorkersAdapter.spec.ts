@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Container } from '@croco/framework-context';
 import { Logger } from '@croco/framework-logger';
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@croco/protocols-rest';
+import { Body, Controller, Delete, Get, Param, Post, Put, Raw } from '@croco/protocols-rest';
 import type { CrocoApp } from '@croco/transports-http';
 import { createApp, ErrorHandler } from '@croco/transports-http';
 import { HealthCheckRegistry } from '@croco/transports-http/src/libs/HealthCheckRegistry';
@@ -37,6 +37,13 @@ describe('WorkersAdapter', () => {
     @Delete('/users/:id')
     deleteUser(@Param('id') id: string) {
       return { deleted: true, id };
+    }
+
+    @Get('/env')
+    getEnv(@Raw() raw: unknown) {
+      const env = typeof raw === 'object' && raw !== null && 'env' in raw ? raw.env : undefined;
+
+      return { value: typeof env === 'object' && env !== null && 'TEST_VALUE' in env ? env.TEST_VALUE : null };
     }
   }
 
@@ -150,6 +157,19 @@ describe('WorkersAdapter', () => {
       const response = await handler.fetch(request, env, ctx);
 
       expect(response.status).toBe(404);
+    });
+
+    it('should inject Cloudflare env when injectEnv is enabled', async () => {
+      const handler = toWorkersHandler(app, { injectEnv: true });
+      const request = new Request('http://localhost/api/env');
+      const env = { TEST_VALUE: 'from-worker-env' };
+      const ctx = mockExecutionContext;
+
+      const response = await handler.fetch(request, env, ctx);
+
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json).toEqual({ value: 'from-worker-env' });
     });
   });
 });

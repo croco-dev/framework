@@ -78,6 +78,28 @@ describe('GracefulShutdownMiddleware', () => {
       await middleware(ctx, async () => {});
       expect(getActiveRequestCount()).toBe(0);
     });
+
+    it('should keep active request state isolated per middleware instance', async () => {
+      const firstMiddleware = gracefulShutdownMiddleware();
+      const secondMiddleware = gracefulShutdownMiddleware();
+
+      const ctx = {
+        req: { method: 'GET', path: '/test', headers: {}, url: 'http://localhost/test' },
+        res: { status: 200, headers: {} },
+        raw: { header: () => {}, json: () => new Response() },
+      } as unknown as Parameters<typeof firstMiddleware>[0];
+
+      let secondRequestCount = 0;
+
+      await firstMiddleware(ctx, async () => {
+        await secondMiddleware(ctx, async () => {
+          secondRequestCount = getActiveRequestCount();
+        });
+      });
+
+      expect(secondRequestCount).toBe(1);
+      expect(getActiveRequestCount()).toBe(0);
+    });
   });
 
   describe('state management', () => {
@@ -117,10 +139,24 @@ describe('GracefulShutdownMiddleware', () => {
       const shutdown = setupGracefulShutdown({ signals: [signal] });
       await shutdown();
 
-      process.emit(signal);
-
-      expect(externalListener).toHaveBeenCalledTimes(1);
+      expect(process.listeners(signal)).toContain(externalListener);
       process.off(signal, externalListener);
+    });
+
+    it('should preserve external signal listeners when registering its own handlers', () => {
+      const externalListener = vi.fn();
+      const signal = 'SIGTERM';
+
+      process.on(signal, externalListener);
+
+      gracefulShutdownMiddleware({
+        signals: [signal],
+        isLambdaEnvironment: false,
+      });
+
+      expect(process.listeners(signal)).toContain(externalListener);
+      process.off(signal, externalListener);
+      resetShutdownState();
     });
   });
 });

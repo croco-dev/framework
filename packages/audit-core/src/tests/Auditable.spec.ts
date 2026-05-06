@@ -371,5 +371,64 @@ describe('@Auditable', () => {
       expect(endTime - startTime).toBeLessThan(50);
       expect(createCallCount).toBe(1);
     });
+
+    it('should propagate audit log write failure when throwOnFailure is enabled', async () => {
+      const auditError = new Error('audit persistence failed');
+      const createSpy = vi.fn(async () => {
+        throw auditError;
+      });
+
+      const repository = {
+        create: createSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+
+      const loggerMock: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      vi.spyOn(Container, 'get').mockImplementation((token) => {
+        if (token === LOGGER_TOKEN) {
+          return loggerMock;
+        }
+        return repository;
+      });
+
+      vi.spyOn(Context, 'get').mockReturnValue({
+        requestId: 'req-6',
+        tenantId: 'tenant-6',
+        user: { id: 'actor-6' },
+      } as RequestContextStub);
+
+      class TestService {
+        @Auditable({
+          action: 'project.create',
+          resourceType: 'Project',
+          resourceIdParam: 'resourceId',
+          payloadParam: 'payload',
+          throwOnFailure: true,
+        })
+        async create(resourceId: string, payload: { name: string }): Promise<string> {
+          return `created:${resourceId}:${payload.name}`;
+        }
+      }
+
+      const service = new TestService();
+
+      await expect(service.create('project-6', { name: 'strict-project' })).rejects.toThrow(auditError);
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(loggerMock.warn).toHaveBeenCalledWith(
+        '[Auditable] Failed to write audit log',
+        expect.objectContaining({
+          error: 'audit persistence failed',
+        })
+      );
+    });
   });
 });

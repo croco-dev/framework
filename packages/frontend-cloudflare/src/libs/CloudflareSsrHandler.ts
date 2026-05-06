@@ -1,8 +1,10 @@
 import type { SsrHandlerOptions, SsrWorkerEnv } from './types';
 
 export function createSsrHandler(
-  _options: SsrHandlerOptions = {}
+  options: SsrHandlerOptions = {}
 ): (request: Request, env: SsrWorkerEnv, ctx: ExecutionContext) => Promise<Response> {
+  const apiBindingName = options.apiBindingName ?? 'API_WORKER';
+
   return async (request, env, _ctx) => {
     const url = new URL(request.url);
 
@@ -17,9 +19,11 @@ export function createSsrHandler(
       }
     }
 
-    if (env.API_WORKER && url.pathname.startsWith('/api/')) {
+    const apiWorker = (env as SsrWorkerEnv & Record<string, Fetcher | undefined>)[apiBindingName];
+
+    if (apiWorker && url.pathname.startsWith('/api/')) {
       try {
-        const apiResponse = await env.API_WORKER.fetch(request);
+        const apiResponse = await apiWorker.fetch(request);
         if (apiResponse) {
           return apiResponse;
         }
