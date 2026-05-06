@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "paths": {
+      "@croco/framework-preset": ["../framework-preset/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

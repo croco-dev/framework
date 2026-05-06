@@ -1,0 +1,44 @@
+{
+  "name": "@croco/preset-lambda",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/framework-preset": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "8.5.1",
+    "vitest": "4.0.16"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      },
+      "./entry": {
+        "import": "./dist/handler.js",
+        "require": "./dist/handler.cjs",
+        "types": "./dist/handler.d.ts"
+      },
+      "./handler": {
+        "import": "./dist/handler.js",
+        "require": "./dist/handler.cjs",
+        "types": "./dist/handler.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "paths": {
+      "@croco/framework-preset": ["../framework-preset/src/index.ts"],
+      "@croco/preset-cloudflare": ["../preset-cloudflare/src/index.ts"],
+      "@croco/preset-cloudflare/src/*": ["../preset-cloudflare/src/*"],
+      "@croco/preset-lambda": ["../preset-lambda/src/index.ts"],
+      "@croco/preset-lambda/src/*": ["../preset-lambda/src/*"],
+      "@croco/preset-node": ["../preset-node/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

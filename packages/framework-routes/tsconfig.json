@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "paths": {
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/protocols-rest": ["../protocols-rest/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
