@@ -1,9 +1,0 @@
-F2 Specificity Review:
-- Generic term hits found in plan are all negative constraints: "- generic 권고("테스트를 늘려라", "성능을 높여라", "보안을 강화하라")를 태스크로 쓰지 말 것"
-- These explicitly EXCLUDE generic recommendations, not propose them
-- Anti-slop: PASS — plan is evidence-grounded throughout
-- Expected Result/Evidence: present for every task
-Specificity: PASS
-Evidence-grounding: PASS
-Anti-slop: PASS
-VERDICT: APPROVE

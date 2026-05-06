@@ -1,7 +1,0 @@
-검증 항목:
-- grep "expect(true).toBe(true)" in FrameworkContext.spec.ts
-- 결과: 0 matches
-
-대체 assertion:
-- Container.register(SimpleService, 'transient') 후
-- Container.getComponentMetadata(SimpleService) === { scope: 'transient', target: SimpleService }

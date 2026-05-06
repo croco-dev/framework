@@ -1,1 +1,0 @@
-scope guard pass: hits are all negative constraints (Do NOT do X), not proposed out-of-scope work

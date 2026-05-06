@@ -1,5 +1,0 @@
-ADDED_SPEC_WITH_EXPECT_COUNT=3
-ADDED_SPEC_TOTAL_COUNT=3
-packages/framework-context/src/tests/ILogger.spec.ts
-packages/framework-context/src/tests/MiddlewareChain.spec.ts
-packages/repository-core/src/tests/decorators/BatchLoad.spec.ts

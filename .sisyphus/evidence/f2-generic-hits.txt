@@ -1,2 +1,0 @@
-- generic 권고("테스트를 늘려라", "성능을 높여라", "보안을 강화하라")를 태스크로 쓰지 말 것
-      1. `grep -E '테스트를 늘려라|성능을 높여라|보안을 강화하라|AI' .sisyphus/plans/framework-tech-health-operations-upgrade-20260422.md > .sisyphus/evidence/f2-generic-hits.txt || true` 실행

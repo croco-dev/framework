@@ -1,1 +1,0 @@
-- Final verification wave: `pnpm check`는 이번 검증 범위와 무관한 기존 저장소 경고 17건 때문에 clean 상태가 아니었다. 최종 검증 리포트에는 새 작업 회귀가 아니라 기존 repo-wide warning임을 분리해서 기록한다.

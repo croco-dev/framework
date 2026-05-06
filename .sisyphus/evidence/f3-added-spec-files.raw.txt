@@ -1,3 +1,0 @@
-packages/framework-context/src/tests/ILogger.spec.ts
-packages/framework-context/src/tests/MiddlewareChain.spec.ts
-packages/repository-core/src/tests/decorators/BatchLoad.spec.ts

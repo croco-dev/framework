@@ -3,6 +3,5 @@
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit"
-  },
-  "workbench.colorTheme": "Default Dark Modern"
+  }
 }

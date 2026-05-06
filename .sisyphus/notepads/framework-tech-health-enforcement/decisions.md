@@ -1,3 +1,0 @@
-- 2026-04-22 Task 8: warning-only coverage는 기존 hard gate를 대체하지 않고 validate job 앞단에 별도 step으로 추가한다. 이렇게 해야 baseline/경고 가시성을 확보하면서도 기존 enforce 경로(`pnpm test:coverage:core`)를 보존할 수 있다.
-- 2026-04-22 Task 9: 보안 자동화는 신규 도구를 `gitleaks` 1종으로 제한하고, `pnpm audit:prod`는 warning report step과 기존 hard gate step를 병행한다. 이렇게 해야 기존 보안 차단선을 유지하면서도 secret scanning 신호를 warning-only로 수집할 수 있고, `lefthook.yaml`까지 범위를 넓히지 않아 Task 9의 scope guard를 지킬 수 있다.
-- 2026-04-22 Task 12: enforce 승격 판단은 단일 green run이 아니라 baseline debt 해소 + 여러 warning-only 실행 안정화 + false positive 관리 절차 확인의 3조건을 공통 템플릿으로 문서화한다. 기존 hard gate가 있는 축(Coverage, Dependency audit)은 대체가 아니라 범위 확대 기준으로만 정리한다.

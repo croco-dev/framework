@@ -1,2 +1,0 @@
-trunk
-a00abf6 docs(tech-improve): align repo contracts and guidance

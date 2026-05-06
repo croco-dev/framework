@@ -1,9 +1,0 @@
-
-> croco@ check /Users/owen/Projects/croco/framework
-> biome check .
-
-Checked 1336 files in 194ms. No fixes applied.
-Found 2 errors.
-Found 17 warnings.
-Found 1 info.
- ELIFECYCLE  Command failed with exit code 1.

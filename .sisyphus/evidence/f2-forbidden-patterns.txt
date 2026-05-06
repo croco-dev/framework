@@ -1,3 +1,0 @@
-packages/transports-graphql/coverage/libs/GraphQLServer.ts.html:          } catch {}
-packages/transports-http/coverage/libs/middleware/GracefulShutdownMiddleware.ts.html:  } catch {}
-packages/auth-core/src/tests/Permission.spec.ts:    it('should return true if user has any of the required permissions', () => {

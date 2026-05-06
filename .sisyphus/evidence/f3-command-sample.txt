@@ -1,6 +1,0 @@
-git branch --show-current
-pnpm check
-pnpm typecheck
-pnpm test
-pnpm test:coverage:core
-pnpm bench:check --output-json=benchmark-result.json
