@@ -52,6 +52,13 @@ describe('DomainEvent', () => {
     expect(event.timestamp.getTime()).toBeLessThanOrEqual(after.getTime());
   });
 
+  it('should have stable eventId set automatically', () => {
+    const event = new TestEvent('test');
+
+    expect(event.eventId).toMatch(/^[a-z0-9]+$/);
+    expect(event.eventId).toBe(event.eventId);
+  });
+
   it('should store provided data', () => {
     const event = new TestEvent('hello');
     expect(event.data).toBe('hello');

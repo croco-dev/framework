@@ -9,13 +9,17 @@ export interface EventBusStartOptions {
   resolver?: HandlerResolver;
 }
 
+type StartedSubscription = EventSubscription & {
+  handler: NonNullable<EventSubscription['handler']>;
+};
+
 /**
  * 전역 EventBus 인스턴스와 핸들러 구독 등록을 관리하는 설정 객체입니다.
  */
 export class EventBusConfig {
   private static instance?: EventBusConfig;
   private readonly subscriptions: Set<EventSubscription> = new Set();
-  private readonly startedSubscriptionKeys: Set<string> = new Set();
+  private readonly startedSubscriptions: Map<string, StartedSubscription> = new Map();
   private eventBus?: EventBus;
 
   public static getInstance(): EventBusConfig {
@@ -38,7 +42,9 @@ export class EventBusConfig {
 
   public setEventBus(eventBus: EventBus): void {
     this.eventBus = eventBus;
-    this.startedSubscriptionKeys.clear();
+    for (const subscription of this.startedSubscriptions.values()) {
+      this.eventBus.subscribe(subscription);
+    }
   }
 
   public subscribe(subscription: EventSubscription): void {
@@ -53,17 +59,17 @@ export class EventBusConfig {
     }
 
     const subscriptionKey = this.createSubscriptionKey(subscription);
-    if (!this.startedSubscriptionKeys.has(subscriptionKey)) {
+    if (!this.startedSubscriptions.has(subscriptionKey)) {
       return;
     }
 
     this.eventBus.unsubscribe(subscription);
-    this.startedSubscriptionKeys.delete(subscriptionKey);
+    this.startedSubscriptions.delete(subscriptionKey);
   }
 
   public clear(): void {
     this.subscriptions.clear();
-    this.startedSubscriptionKeys.clear();
+    this.startedSubscriptions.clear();
     this.eventBus?.clear();
   }
 
@@ -83,16 +89,18 @@ export class EventBusConfig {
     for (const subscription of this.subscriptions) {
       const subscriptionKey = this.createSubscriptionKey(subscription);
 
-      if (this.startedSubscriptionKeys.has(subscriptionKey)) {
+      if (this.startedSubscriptions.has(subscriptionKey)) {
         continue;
       }
 
       const handler = resolver.resolve(subscription.handlerClass);
-      this.eventBus.subscribe({
+      const startedSubscription = {
         ...subscription,
         handler,
-      });
-      this.startedSubscriptionKeys.add(subscriptionKey);
+      };
+
+      this.eventBus.subscribe(startedSubscription);
+      this.startedSubscriptions.set(subscriptionKey, startedSubscription);
     }
   }
 
