@@ -98,6 +98,7 @@ type AuditWriteConfig = {
   resourceId: string;
   diff: Record<string, unknown> | null;
   metadata: Record<string, unknown>;
+  throwOnError?: boolean;
 };
 
 type AuditWriteDependencies = {
@@ -135,11 +136,11 @@ function resolveAuditWriteDependencies(): AuditWriteDependencies | undefined {
   }
 }
 
-function writeAuditLog(
+async function writeAuditLog(
   config: AuditWriteConfig,
   payload: Record<string, unknown>,
   dependencies: AuditWriteDependencies
-): void {
+): Promise<void> {
   const entry: Omit<AuditLogEntry, 'id' | 'createdAt'> = {
     tenantId: config.tenantId,
     actorId: config.actorId,
@@ -151,14 +152,18 @@ function writeAuditLog(
     metadata: config.metadata,
   };
 
-  void Promise.resolve()
-    .then(() => dependencies.repository.create(entry))
-    .catch((error) => {
-      safelyRecordError(error);
-      safelyWarn(dependencies.logger, '[Auditable] Failed to write audit log', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+  try {
+    await dependencies.repository.create(entry);
+  } catch (error) {
+    safelyRecordError(error);
+    safelyWarn(dependencies.logger, '[Auditable] Failed to write audit log', {
+      error: error instanceof Error ? error.message : String(error),
     });
+
+    if (config.throwOnError) {
+      throw error;
+    }
+  }
 }
 
 export const AUDIT_PARAM_KEY = Symbol('audit:param');
@@ -205,26 +210,36 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
               targetUserId: impersonation.targetUserId,
             }
           : {},
+        throwOnError: options.throwOnFailure,
       };
 
+      let result: unknown;
       try {
-        const result = await originalMethod.apply(this, args);
-
-        const payload = buildAuditPayload(args, payloadInput, result, null, options.includeResult ?? true);
-        if (dependencies) {
-          writeAuditLog(auditConfig, payload, dependencies);
-        }
-
-        return result;
+        result = await originalMethod.apply(this, args);
       } catch (error) {
         const errorObj = error instanceof Error ? error : new Error(String(error));
         const payload = buildAuditPayload(args, payloadInput, null, errorObj, false);
         if (dependencies) {
-          writeAuditLog(auditConfig, payload, dependencies);
+          if (options.throwOnFailure) {
+            await writeAuditLog(auditConfig, payload, dependencies);
+          } else {
+            void writeAuditLog(auditConfig, payload, dependencies);
+          }
         }
 
         throw error;
       }
+
+      const payload = buildAuditPayload(args, payloadInput, result, null, options.includeResult ?? true);
+      if (dependencies) {
+        if (options.throwOnFailure) {
+          await writeAuditLog(auditConfig, payload, dependencies);
+        } else {
+          void writeAuditLog(auditConfig, payload, dependencies);
+        }
+      }
+
+      return result;
     };
 
     return descriptor;
