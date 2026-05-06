@@ -1,0 +1,37 @@
+{
+  "name": "@croco/preset-cloudflare",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsup && cp dist/index.d.mts dist/index.d.ts && cp dist/fetch.d.mts dist/fetch.d.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/framework-preset": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "8.5.1",
+    "vitest": "4.0.16"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "types": "./dist/index.d.ts"
+      },
+      "./fetch": {
+        "import": "./dist/fetch.mjs",
+        "types": "./dist/fetch.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}
