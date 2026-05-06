@@ -1,9 +1,38 @@
 import { FixedWindowStore, SlidingWindowStore, TokenBucketStore } from './RateLimitStore';
 import type { FixedWindowPolicy, SlidingWindowPolicy, TokenBucketPolicy } from './types';
 
+export type InMemoryRateLimitStoreOptions = {
+  pruneIntervalMs?: number;
+};
+
+const DEFAULT_PRUNE_INTERVAL_MS = 60000;
+
 export class FixedWindowInMemoryStore extends FixedWindowStore {
   private readonly windows = new Map<string, { count: number; windowStart: number; windowMs: number }>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
+  private readonly pruneTimer?: ReturnType<typeof setInterval>;
+
+  constructor(options: InMemoryRateLimitStoreOptions = {}) {
+    super();
+
+    const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
+    if (pruneIntervalMs > 0) {
+      this.pruneTimer = setInterval(() => {
+        void this.pruneExpired();
+      }, pruneIntervalMs);
+      this.pruneTimer.unref?.();
+    }
+  }
+
+  close(): void {
+    if (this.pruneTimer !== undefined) {
+      clearInterval(this.pruneTimer);
+    }
+  }
+
+  destroy(): void {
+    this.close();
+  }
 
   async check(
     key: string,
@@ -92,6 +121,29 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
 export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   private readonly windows = new Map<string, { timestamps: number[]; windowMs: number }>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
+  private readonly pruneTimer?: ReturnType<typeof setInterval>;
+
+  constructor(options: InMemoryRateLimitStoreOptions = {}) {
+    super();
+
+    const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
+    if (pruneIntervalMs > 0) {
+      this.pruneTimer = setInterval(() => {
+        void this.pruneExpired();
+      }, pruneIntervalMs);
+      this.pruneTimer.unref?.();
+    }
+  }
+
+  close(): void {
+    if (this.pruneTimer !== undefined) {
+      clearInterval(this.pruneTimer);
+    }
+  }
+
+  destroy(): void {
+    this.close();
+  }
 
   async check(
     key: string,
@@ -188,8 +240,31 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
 }
 
 export class TokenBucketInMemoryStore extends TokenBucketStore {
-  private readonly buckets = new Map<string, { tokens: number; lastRefill: number }>();
+  private readonly buckets = new Map<string, { tokens: number; lastRefill: number; ttlMs: number }>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
+  private readonly pruneTimer?: ReturnType<typeof setInterval>;
+
+  constructor(options: InMemoryRateLimitStoreOptions = {}) {
+    super();
+
+    const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
+    if (pruneIntervalMs > 0) {
+      this.pruneTimer = setInterval(() => {
+        void this.pruneExpired();
+      }, pruneIntervalMs);
+      this.pruneTimer.unref?.();
+    }
+  }
+
+  close(): void {
+    if (this.pruneTimer !== undefined) {
+      clearInterval(this.pruneTimer);
+    }
+  }
+
+  destroy(): void {
+    this.close();
+  }
 
   async check(
     key: string,
@@ -216,8 +291,8 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     return this.buckets.get(key) ?? null;
   }
 
-  protected async setBucket(key: string, entry: { tokens: number; lastRefill: number }): Promise<void> {
-    this.buckets.set(key, entry);
+  protected async setBucket(key: string, entry: { tokens: number; lastRefill: number }, ttlMs: number): Promise<void> {
+    this.buckets.set(key, { ...entry, ttlMs });
   }
 
   async increment(): Promise<number> {
@@ -237,8 +312,19 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
   }
 
   async pruneExpired(): Promise<number> {
-    this.buckets.clear();
-    return 0;
+    const now = Date.now();
+    let deletedCount = 0;
+
+    for (const [key, entry] of this.buckets.entries()) {
+      if (now <= entry.lastRefill + entry.ttlMs) {
+        continue;
+      }
+
+      this.buckets.delete(key);
+      deletedCount++;
+    }
+
+    return deletedCount;
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
