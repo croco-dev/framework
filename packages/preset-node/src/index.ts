@@ -1,4 +1,4 @@
-import { defineCrocoPreset, type CrocoPreset, type CrocoPresetConfig } from '@croco/framework-preset';
+import { type CrocoPreset, type CrocoPresetConfig, defineCrocoPreset } from '@croco/framework-preset';
 
 export type CreateNodeServerPresetOptions = {
   readonly port?: number;
@@ -23,6 +23,6 @@ export function createNodeServerPreset(options?: CreateNodeServerPresetOptions):
   });
 }
 
-export { createNodeEntry } from './entry';
 export type { NodeEntryOptions } from './entry';
+export { createNodeEntry } from './entry';
 export type { CrocoPreset, CrocoPresetConfig };

@@ -29,12 +29,15 @@ export function createNodeEntry(honoApp: { readonly fetch: Hono['fetch'] }, opti
 
     const request = new Request(url.toString(), {
       method: req.method,
-      headers: Object.entries(req.headers).reduce((acc, [key, value]) => {
-        if (value) {
-          acc[key] = Array.isArray(value) ? value.join(', ') : value;
-        }
-        return acc;
-      }, {} as Record<string, string>),
+      headers: Object.entries(req.headers).reduce(
+        (acc, [key, value]) => {
+          if (value) {
+            acc[key] = Array.isArray(value) ? value.join(', ') : value;
+          }
+          return acc;
+        },
+        {} as Record<string, string>
+      ),
       body: ['GET', 'HEAD'].includes(req.method ?? '') ? undefined : body,
     });
 

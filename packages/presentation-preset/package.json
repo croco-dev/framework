@@ -13,6 +13,9 @@
     "@croco/framework-preset": "workspace:*"
   },
   "devDependencies": {
+    "@croco/preset-cloudflare": "workspace:*",
+    "@croco/preset-lambda": "workspace:*",
+    "@croco/preset-node": "workspace:*",
     "tsup": "8.5.1",
     "vitest": "4.0.16"
   },
