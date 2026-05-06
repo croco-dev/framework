@@ -10,6 +10,7 @@ import type {
   RotateApiKeyResult,
 } from '../interfaces/ApiKey';
 import type { ApiKeyPrincipal } from '../interfaces/Principal';
+import { ForbiddenProblem } from '../problems/AuthProblems';
 import { ApiKeyGenerator } from './ApiKeyGenerator';
 import { ApiKeyHasher } from './ApiKeyHasher';
 import type { ApiKeyStore } from './ApiKeyStore';
@@ -71,7 +72,7 @@ export class ApiKeyManager {
     };
   }
 
-  async verify(rawKey: string): Promise<ApiKeyPrincipal | null> {
+  async verify(rawKey: string, ip?: string): Promise<ApiKeyPrincipal | null> {
     const parsed = this.generator.parse(rawKey);
     if (!parsed) return null;
 
@@ -83,6 +84,9 @@ export class ApiKeyManager {
     if (!this.hasher.verify(longToken, keyData.hash)) return null;
     if (keyData.revokedAt) return null;
     if (keyData.expiresAt && keyData.expiresAt < new Date()) return null;
+    if (ip && keyData.allowedIps && !keyData.allowedIps.includes(ip)) {
+      throw new ForbiddenProblem('API key is not allowed from this IP address');
+    }
 
     const degradedStates = await Promise.all([
       this.runSideEffect('ApiKey updateLastUsed failed', this.store.updateLastUsed(keyData.id)),
