@@ -20,6 +20,8 @@ import type {
   ToolCallResult,
 } from './types';
 
+const MAX_STREAM_BUFFER_CHUNKS = 1000;
+
 export class LlmService {
   static readonly token = new Token<LlmService>('LlmService');
 
@@ -49,6 +51,7 @@ export class LlmService {
     }
   }
 
+  @Trace({ name: 'llm.stream' })
   async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
     const modelId = params.modelId ?? 'default';
     const queuedChunks: StreamChunk[] = [];
@@ -56,6 +59,8 @@ export class LlmService {
     let hasQueuedError = false;
     let isDone = false;
     let resumeConsumer: (() => void) | undefined;
+    let resumeProducer: (() => void) | undefined;
+    const abortController = new AbortController();
 
     const notifyConsumer = (): void => {
       const consumer = resumeConsumer;
@@ -73,26 +78,86 @@ export class LlmService {
       });
     };
 
+    const notifyProducer = (): void => {
+      const producer = resumeProducer;
+      resumeProducer = undefined;
+      producer?.();
+    };
+
+    const waitForBufferSpace = async (): Promise<void> => {
+      if (queuedChunks.length < MAX_STREAM_BUFFER_CHUNKS || abortController.signal.aborted) {
+        return;
+      }
+
+      await new Promise<void>((resolve) => {
+        resumeProducer = resolve;
+      });
+    };
+
+    const cancelProducer = (): void => {
+      if (!abortController.signal.aborted) {
+        abortController.abort();
+      }
+      queuedChunks.length = 0;
+      notifyConsumer();
+      notifyProducer();
+    };
+
+    const removeAbortListener = params.signal
+      ? (() => {
+          const abort = (): void => cancelProducer();
+          params.signal.addEventListener('abort', abort, { once: true });
+          return () => params.signal?.removeEventListener('abort', abort);
+        })()
+      : undefined;
+
+    if (params.signal?.aborted) {
+      cancelProducer();
+    }
+
     const producer = withSpan(
       async (span) => {
         try {
           span.setAttribute('llm.model_id', modelId);
 
           const model = await this.registry.getModel(modelId);
+          const streamParams = { ...params, signal: abortController.signal };
+          const chunkIterator = model.stream(streamParams)[Symbol.asyncIterator]();
           const streamedChunks: string[] = [];
           const streamUsage: Partial<LlmUsage> = {};
           let chunkCount = 0;
 
-          for await (const chunk of model.stream(params)) {
-            chunkCount += 1;
-            streamedChunks.push(chunk.delta);
+          try {
+            while (true) {
+              await waitForBufferSpace();
+              if (abortController.signal.aborted) {
+                break;
+              }
 
-            if (chunk.usage) {
-              Object.assign(streamUsage, chunk.usage);
+              const result = await chunkIterator.next();
+              if (result.done) {
+                break;
+              }
+
+              const chunk = result.value;
+              chunkCount += 1;
+              streamedChunks.push(chunk.delta);
+
+              if (chunk.usage) {
+                Object.assign(streamUsage, chunk.usage);
+              }
+
+              queuedChunks.push(chunk);
+              notifyConsumer();
             }
+          } finally {
+            if (abortController.signal.aborted) {
+              await chunkIterator.return?.();
+            }
+          }
 
-            queuedChunks.push(chunk);
-            notifyConsumer();
+          if (abortController.signal.aborted) {
+            return;
           }
 
           const text = streamedChunks.join('');
@@ -107,6 +172,10 @@ export class LlmService {
             chunkCount,
           });
         } catch (error) {
+          if (abortController.signal.aborted) {
+            return;
+          }
+
           throw LlmServiceProblem.fromError(error);
         } finally {
           isDone = true;
@@ -125,6 +194,7 @@ export class LlmService {
         const chunk = queuedChunks.shift();
 
         if (chunk) {
+          notifyProducer();
           yield chunk;
           continue;
         }
@@ -140,6 +210,8 @@ export class LlmService {
         await waitForProducer();
       }
     } finally {
+      cancelProducer();
+      removeAbortListener?.();
       await producer;
     }
 
