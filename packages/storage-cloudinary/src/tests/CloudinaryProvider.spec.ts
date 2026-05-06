@@ -46,6 +46,48 @@ describe('CloudinaryProvider', () => {
     expect(cloudinary.config).not.toHaveBeenCalled();
   });
 
+  it('should run Cloudinary operations from different instances concurrently', async () => {
+    const firstProvider = new CloudinaryProvider(mockConfig);
+    const secondProvider = new CloudinaryProvider({
+      cloudName: 'other-cloud',
+      apiKey: 'other-api-key',
+      apiSecret: 'other-api-secret',
+      secure: true,
+    });
+    let activeUploads = 0;
+    let maxActiveUploads = 0;
+    const resolvers: Array<() => void> = [];
+    const mockUploadStream = vi.fn(
+      (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
+        activeUploads += 1;
+        maxActiveUploads = Math.max(maxActiveUploads, activeUploads);
+
+        return {
+          end: vi.fn(() => {
+            resolvers.push(() => {
+              activeUploads -= 1;
+              callback(undefined, { public_id: 'test-key' });
+            });
+          }),
+        };
+      }
+    );
+
+    vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(mockUploadStream as unknown as UploadStream);
+
+    const firstUpload = firstProvider.put('first-key', Buffer.from('first'));
+    const secondUpload = secondProvider.put('second-key', Buffer.from('second'));
+
+    await vi.waitFor(() => expect(resolvers).toHaveLength(2));
+
+    expect(maxActiveUploads).toBe(2);
+
+    for (const resolve of resolvers) {
+      resolve();
+    }
+    await expect(Promise.all([firstUpload, secondUpload])).resolves.toEqual([undefined, undefined]);
+  });
+
   describe('put()', () => {
     it('should upload buffer data successfully', async () => {
       const mockUploadStream = vi.fn(
