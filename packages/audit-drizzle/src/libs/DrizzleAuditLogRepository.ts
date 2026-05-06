@@ -2,7 +2,7 @@ import type { AuditLogEntry, AuditQuery } from '@croco/audit-core';
 import { AuditLogRepository } from '@croco/audit-core';
 import { ProblemFactory } from '@croco/problems-core';
 import type { TxManager } from '@croco/tx-core';
-import { and, between, desc, eq, gte, lte, type AnyColumn, type SQL, type Table } from 'drizzle-orm';
+import { type AnyColumn, and, between, desc, eq, gte, lte, type SQL, type Table } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -118,7 +118,10 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       createdAt: now,
     };
 
-    const [inserted] = await client.insert(this.table as Table).values(values).returning();
+    const [inserted] = await client
+      .insert(this.table as Table)
+      .values(values)
+      .returning();
 
     if (!inserted) {
       throw ProblemFactory.internalServerError('audit/insert-failed', 'Failed to persist audit log entry');

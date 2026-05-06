@@ -187,7 +187,8 @@ export class DrizzleMeterRepository extends MeterRepository {
   private getUsageRecordColumnKeys(columns: Record<string, SQLiteColumn>): Record<keyof UsageRecordTable, string> {
     return Object.fromEntries(
       Object.entries(this.usageRecordSchema).map(([schemaKey, schemaColumn]) => {
-        const columnKey = Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ?? schemaKey;
+        const columnKey =
+          Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ?? schemaKey;
         return [schemaKey, columnKey];
       })
     ) as Record<keyof UsageRecordTable, string>;
