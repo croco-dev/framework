@@ -15,6 +15,7 @@
     "reflect-metadata": "0.2.2"
   },
   "devDependencies": {
+    "@croco/protocols-core": "workspace:*",
     "tsup": "8.5.1",
     "vitest": "4.0.16"
   },
@@ -30,5 +31,7 @@
       }
     }
   },
-  "files": ["dist"]
+  "files": [
+    "dist"
+  ]
 }

@@ -1,5 +1,5 @@
-import { readControllerMetadata } from './metadata-reader';
 import type { CompiledRouteInfo } from './metadata-reader';
+import { readControllerMetadata } from './metadata-reader';
 
 export type CompiledController = {
   readonly basePath: string;

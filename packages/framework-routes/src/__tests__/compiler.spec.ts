@@ -3,8 +3,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { compileRoutes, generateModule, generateRouteRegistrationCode } from '../compiler';
 import type { CompiledController } from '../compiler';
+import { compileRoutes, generateModule, generateRouteRegistrationCode } from '../compiler';
 
 describe('compiler', () => {
   const mockControllers: readonly CompiledController[] = [
