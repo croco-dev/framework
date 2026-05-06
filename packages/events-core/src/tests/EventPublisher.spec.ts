@@ -283,6 +283,25 @@ describe('EventPublisher', () => {
       expect(results[2].success).toBe(true);
     });
 
+    it('should convert non-Error failures into Error results', async () => {
+      const stringFailureEventBus = {
+        async publish(): Promise<void> {
+          throw 'string failure';
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      config.setEventBus(stringFailureEventBus);
+
+      const [result] = await publisher.publishMany([new TestEvent('failure')]);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(Error);
+      expect(result.error?.message).toBe('string failure');
+    });
+
     it('should handle single event array', async () => {
       const events = [new TestEvent('single')];
 
@@ -325,6 +344,25 @@ describe('EventPublisher', () => {
 
       expect(completionOrder).toEqual(['EventC', 'EventB', 'EventA']);
       expect(maxInFlightCount).toBeGreaterThan(1);
+    });
+
+    it('should convert non-Error failures into Error results', async () => {
+      const stringFailureEventBus = {
+        async publish(): Promise<void> {
+          throw 'parallel string failure';
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      config.setEventBus(stringFailureEventBus);
+
+      const [result] = await publisher.publishManyParallel([new TestEvent('failure')]);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(Error);
+      expect(result.error?.message).toBe('parallel string failure');
     });
   });
 
@@ -470,13 +508,9 @@ describe('EventPublisher', () => {
 
       await publisher.publishMany([...events]);
 
-      expect(mockEventBus.publishedEvents).toHaveLength(0);
-
-      expect(registeredHook).not.toBeUndefined();
-      await registeredHook?.();
-
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(events[0]);
+      expect(registeredHook).toBeUndefined();
     });
   });
 });
