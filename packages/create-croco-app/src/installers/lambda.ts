@@ -9,5 +9,9 @@ export function installLambda(
   options: Pick<GeneratorOptions, 'projectName' | 'scope' | 'api'>
 ): void {
   const addonDir = join(TEMPLATES_DIR, 'addons/lambda');
-  mergeInto(addonDir, targetDir, { projectName: options.projectName, scope: options.scope });
+  mergeInto(addonDir, targetDir, {
+    projectName: options.projectName,
+    scope: options.scope,
+    handlerPath: options.api === 'graphql' ? 'apps/graphql-api/src/handler.handler' : 'apps/api/src/handler.handler',
+  });
 }

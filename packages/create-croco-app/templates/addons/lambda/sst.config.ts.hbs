@@ -11,7 +11,7 @@ export default $config({
   },
   async run() {
     const api = new sst.aws.Function('Api', {
-      handler: 'apps/api/src/handler.handler',
+      handler: '{{handlerPath}}',
       url: true,
     });
 

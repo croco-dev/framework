@@ -49,7 +49,6 @@ export function createProgram(): Command {
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean) as GeneratorOptions['db'];
-        cliOptions.db = (rawOptions.db as string).split(',').map((s) => s.trim()) as GeneratorOptions['db'];
         if (rawOptions.agentRules === false) cliOptions.agentRules = false;
         if (rawOptions.install === false) cliOptions.installDeps = false;
         if (rawOptions.git === false) cliOptions.initGit = false;
