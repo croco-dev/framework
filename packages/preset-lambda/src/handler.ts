@@ -1,28 +1,6 @@
-export type LambdaEvent = {
-  readonly httpMethod: string;
-  readonly path: string;
-  readonly headers?: Record<string, string>;
-  readonly queryStringParameters?: Record<string, string | null> | null;
-  readonly body?: string | null;
-  readonly isBase64Encoded?: boolean;
-};
+import type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse } from '@croco/transports-http';
 
-export type LambdaContext = {
-  readonly functionName?: string;
-  readonly functionVersion?: string;
-  readonly invokedFunctionArn?: string;
-  readonly awsRequestId?: string;
-  readonly getRemainingTimeInMillis?: () => number;
-};
-
-export type LambdaResponse = {
-  readonly statusCode: number;
-  readonly headers: Record<string, string>;
-  readonly body: string;
-  readonly isBase64Encoded: boolean;
-};
-
-export type LambdaHandler = (event: LambdaEvent, context: LambdaContext) => Promise<LambdaResponse>;
+export type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse };
 
 export function createLambdaHandler(honoApp: { readonly fetch: (req: Request) => Promise<Response> }): LambdaHandler {
   return async (event: LambdaEvent, _context: LambdaContext): Promise<LambdaResponse> => {
