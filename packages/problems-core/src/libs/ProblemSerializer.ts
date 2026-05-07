@@ -1,7 +1,7 @@
 import type { ProblemDetails } from './Problem';
 import type { ProblemExtensions } from './ProblemExtensions';
-import { validateExtensions } from './ProblemExtensions';
 import { ProblemDetailsParseProblem } from './problems/ProblemDetailsParseProblem';
+import { validateExtensions } from './validators/validateExtensions';
 
 export type SerializedProblem = {
   type: string;

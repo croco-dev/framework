@@ -25,8 +25,7 @@ export { EventField, getEventFields } from './libs/decorators/EventField';
 /**
  * 이벤트 발행/구독 추상화와 구독 엔트리 타입입니다.
  */
-export type { EventBus, EventSubscription } from './libs/EventBus';
-
+export type { EventBus } from './libs/EventBus';
 /**
  * 이벤트 이름 패턴 매칭을 최적화하는 구독 인덱스입니다.
  */
@@ -123,3 +122,4 @@ export {
   EventTransactionContextUnavailableProblem,
   UnknownEventTypeProblem,
 } from './libs/problems/EventsProblems';
+export type { EventSubscription } from './libs/types/EventSubscription';

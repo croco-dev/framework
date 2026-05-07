@@ -1,8 +1,9 @@
-import type { EventBus, EventSubscription } from './EventBus';
+import type { EventBus } from './EventBus';
 import { type EventHandlerClass, getEventHandlerSubscriptions } from './EventHandler';
 import type { HandlerResolver } from './HandlerResolver';
 import { DefaultHandlerResolver } from './HandlerResolver';
 import { EventBusNotSetProblem } from './problems/EventsProblems';
+import type { EventSubscription } from './types/EventSubscription';
 
 export interface EventBusStartOptions {
   handlers: EventHandlerClass[];

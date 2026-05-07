@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainEvent } from '../libs/DomainEvent';
-import type { EventBus, EventSubscription } from '../libs/EventBus';
+import type { EventBus } from '../libs/EventBus';
 import type { EventHandler, EventHandlerClass } from '../libs/EventHandler';
+import type { EventSubscription } from '../libs/types/EventSubscription';
 
 class TestEvent extends DomainEvent {
   static eventName = 'TestEvent';

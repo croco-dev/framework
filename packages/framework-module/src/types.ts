@@ -1,7 +1,4 @@
-import type { Token } from 'typedi';
 import type { ModuleContext } from './ModuleContext';
-
-export type Constructor<T = unknown> = new (...args: unknown[]) => T;
 
 export type ModuleOptions = {
   readonly name: string;
@@ -16,5 +13,3 @@ export interface CrocoModule {
   readonly start?: (ctx: ModuleContext) => void | Promise<void>;
   readonly imports?: readonly CrocoModule[];
 }
-
-export type ModuleToken<T> = Constructor<T> | Token<T> | string;

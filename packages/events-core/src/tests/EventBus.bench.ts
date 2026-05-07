@@ -2,12 +2,13 @@ import { Container } from '@croco/framework-context';
 import { bench, describe } from 'vitest';
 
 import { DomainEvent } from '../libs/DomainEvent';
-import type { EventBus, EventSubscription } from '../libs/EventBus';
+import type { EventBus } from '../libs/EventBus';
 import { EventBusConfig } from '../libs/EventBusConfig';
 import type { EventHandler } from '../libs/EventHandler';
 import { RegisterEventHandler } from '../libs/EventHandler';
 import { EventPublisher } from '../libs/EventPublisher';
 import { DefaultHandlerResolver } from '../libs/HandlerResolver';
+import type { EventSubscription } from '../libs/types/EventSubscription';
 
 class MockEventBus implements EventBus {
   subscribedEvents: EventSubscription[] = [];

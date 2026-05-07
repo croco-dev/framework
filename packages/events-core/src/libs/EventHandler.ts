@@ -1,6 +1,6 @@
 import { type Constructor, MetadataStorage } from '@croco/framework-context';
 import type { DomainEvent } from './DomainEvent';
-import type { EventSubscription } from './EventBus';
+import type { EventSubscription } from './types/EventSubscription';
 
 export interface EventHandler<T extends DomainEvent = DomainEvent> {
   handle(event: T): Promise<void> | void;
