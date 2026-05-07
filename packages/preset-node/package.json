@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/framework-preset": "workspace:*"
+    "@croco/framework-preset": "workspace:*",
+    "@hono/node-server": "^1.0.0",
+    "hono": "^4.12.15"
   },
   "devDependencies": {
     "tsup": "8.5.1",

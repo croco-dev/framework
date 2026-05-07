@@ -1629,6 +1629,12 @@ importers:
       '@croco/framework-preset':
         specifier: workspace:*
         version: link:../framework-preset
+      '@hono/node-server':
+        specifier: ^1.0.0
+        version: 1.19.9(hono@4.12.15)
+      hono:
+        specifier: ^4.12.15
+        version: 4.12.15
     devDependencies:
       tsup:
         specifier: 8.5.1
