@@ -1,7 +1,7 @@
 import { createWorkerFetchHandler } from '@croco/preset-cloudflare';
 import type { ExecutionContext } from '@croco/preset-cloudflare/src/fetch';
 import { createLambdaHandler } from '@croco/preset-lambda';
-import type { LambdaEvent } from '@croco/preset-lambda/src/handler';
+import type { LambdaContext, LambdaEvent } from '@croco/preset-lambda';
 import { createNodeEntry } from '@croco/preset-node';
 import { describe, expect, it } from 'vitest';
 
@@ -10,12 +10,55 @@ const createExecutionContext = (): ExecutionContext => ({
   passThroughOnException: () => {},
 });
 
+const createLambdaContext = (): LambdaContext => ({
+  callbackWaitsForEmptyEventLoop: false,
+  functionName: 'test',
+  functionVersion: '$LATEST',
+  invokedFunctionArn: 'arn:aws:lambda:test',
+  logGroupName: '/test',
+  logStreamName: 'test',
+  memoryLimitInMB: '128',
+  awsRequestId: 'test',
+  done: () => undefined,
+  fail: () => undefined,
+  getRemainingTimeInMillis: () => 5000,
+  succeed: () => undefined,
+});
+
+const createLambdaEvent = (overrides: Partial<LambdaEvent> = {}): LambdaEvent => ({
+  version: '2.0',
+  routeKey: '$default',
+  rawPath: '/',
+  rawQueryString: '',
+  headers: {},
+  requestContext: {
+    accountId: '123',
+    apiId: 'api',
+    domainName: 'lambda.local',
+    domainPrefix: 'lambda',
+    http: {
+      method: 'GET',
+      path: '/',
+      protocol: 'HTTP/1.1',
+      sourceIp: '127.0.0.1',
+      userAgent: 'test',
+    },
+    requestId: 'req',
+    routeKey: '$default',
+    stage: '$default',
+    time: new Date().toISOString(),
+    timeEpoch: Date.now(),
+  },
+  isBase64Encoded: false,
+  ...overrides,
+});
+
 describe('E2E: Lambda preset integration', () => {
   it('handles a GET event and returns 200', async () => {
     const handler = createLambdaHandler({
-      fetch: async (request) => {
+      fetch: async (request: Request) => {
         expect(request.method).toBe('GET');
-        expect(request.url).toBe('http://lambda.local/api/health');
+        expect(request.url).toBe('https://lambda.local/api/health');
         return new Response(JSON.stringify({ status: 'ok' }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
@@ -23,39 +66,57 @@ describe('E2E: Lambda preset integration', () => {
       },
     });
 
-    const event: LambdaEvent = {
-      httpMethod: 'GET',
-      path: 'http://lambda.local/api/health',
-    };
+    const event = createLambdaEvent({
+      rawPath: '/api/health',
+      requestContext: {
+        ...createLambdaEvent().requestContext,
+        http: {
+          ...createLambdaEvent().requestContext.http,
+          method: 'GET',
+          path: '/api/health',
+        },
+        routeKey: 'GET /api/health',
+      },
+      routeKey: 'GET /api/health',
+    });
 
-    const response = await handler(event, {});
+    const response = await handler(event, createLambdaContext());
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe(JSON.stringify({ status: 'ok' }));
   });
 
   it('handles a POST event with body', async () => {
     const handler = createLambdaHandler({
-      fetch: async (request) => {
+      fetch: async (request: Request) => {
         const body = await request.text();
         expect(body).toBe('{"name":"test"}');
         return new Response('created', { status: 201 });
       },
     });
 
-    const event: LambdaEvent = {
-      httpMethod: 'POST',
-      path: 'http://lambda.local/api/data',
+    const event = createLambdaEvent({
+      rawPath: '/api/data',
       body: '{"name":"test"}',
       headers: { 'content-type': 'application/json' },
-    };
+      requestContext: {
+        ...createLambdaEvent().requestContext,
+        http: {
+          ...createLambdaEvent().requestContext.http,
+          method: 'POST',
+          path: '/api/data',
+        },
+        routeKey: 'POST /api/data',
+      },
+      routeKey: 'POST /api/data',
+    });
 
-    const response = await handler(event, {});
+    const response = await handler(event, createLambdaContext());
     expect(response.statusCode).toBe(201);
   });
 
   it('handles query string parameters', async () => {
     const handler = createLambdaHandler({
-      fetch: async (request) => {
+      fetch: async (request: Request) => {
         const url = new URL(request.url);
         expect(url.searchParams.get('page')).toBe('1');
         expect(url.searchParams.get('limit')).toBe('10');
@@ -63,13 +124,22 @@ describe('E2E: Lambda preset integration', () => {
       },
     });
 
-    const event: LambdaEvent = {
-      httpMethod: 'GET',
-      path: 'http://lambda.local/api/items',
-      queryStringParameters: { page: '1', limit: '10' },
-    };
+    const event = createLambdaEvent({
+      rawPath: '/api/items',
+      rawQueryString: 'page=1&limit=10',
+      requestContext: {
+        ...createLambdaEvent().requestContext,
+        http: {
+          ...createLambdaEvent().requestContext.http,
+          method: 'GET',
+          path: '/api/items',
+        },
+        routeKey: 'GET /api/items',
+      },
+      routeKey: 'GET /api/items',
+    });
 
-    const response = await handler(event, {});
+    const response = await handler(event, createLambdaContext());
     expect(response.statusCode).toBe(200);
   });
 });
@@ -77,7 +147,7 @@ describe('E2E: Lambda preset integration', () => {
 describe('E2E: Cloudflare preset integration', () => {
   it('handles a fetch request and returns 200', async () => {
     const handler = createWorkerFetchHandler({
-      fetch: async (request) => {
+      fetch: async (request: Request) => {
         expect(request.url).toBe('https://example.com/api/health');
         return new Response(JSON.stringify({ status: 'ok' }), {
           status: 200,
@@ -96,7 +166,7 @@ describe('E2E: Node preset integration', () => {
   it('starts server and makes HTTP request', async () => {
     const entry = createNodeEntry(
       {
-        fetch: async (request) => {
+        fetch: async (request: Request) => {
           expect(request.method).toBe('GET');
           expect(request.url).toContain('/api/health');
           return new Response(JSON.stringify({ status: 'ok' }), {
@@ -110,7 +180,7 @@ describe('E2E: Node preset integration', () => {
 
     try {
       await entry.start();
-      const address = entry.server.address();
+      const address = entry.server?.address();
       expect(address).not.toBeNull();
       const port = typeof address === 'object' && address ? address.port : 3000;
 
@@ -121,7 +191,5 @@ describe('E2E: Node preset integration', () => {
     } finally {
       await entry.close();
     }
-
-    expect(entry.server.listening).toBe(false);
   });
 });

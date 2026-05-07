@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-
-import { defineCrocoPreset } from '../index';
 import type { CrocoPresetConfig } from '../index';
+import { defineCrocoPreset } from '../index';
 
 describe('defineCrocoPreset', () => {
   it('returns a preset with the configured name', () => {
