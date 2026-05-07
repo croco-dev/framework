@@ -76,4 +76,34 @@ describe('defineCrocoPreset', () => {
     expect(preset.hooks).toEqual({});
     expect(Object.isFrozen(preset.hooks)).toBe(true);
   });
+
+  it('merges hooks at key level when extended with partial hooks', () => {
+    const buildBefore = async () => preset;
+    const originalBuildAfter = async () => {};
+    const newBuildAfter = async () => {};
+
+    const preset = defineCrocoPreset({
+      name: 'node',
+      entry: 'src/server.ts',
+      output: {
+        dir: 'dist',
+        format: 'dual',
+      },
+      hooks: {
+        'build:before': buildBefore,
+        'build:after': originalBuildAfter,
+      },
+    });
+
+    const extended = preset.extend({
+      hooks: {
+        'build:after': newBuildAfter,
+      },
+    });
+
+    expect(extended.hooks['build:before']).toBe(buildBefore);
+    expect(extended.hooks['build:after']).toBe(newBuildAfter);
+    expect(preset.hooks['build:after']).toBe(originalBuildAfter);
+    expect(Object.isFrozen(extended.hooks)).toBe(true);
+  });
 });
