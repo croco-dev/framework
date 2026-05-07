@@ -1,6 +1,7 @@
 import type { DomainEvent } from './DomainEvent';
 import type { EventPublishing } from './interfaces/EventPublishing';
 import type { EventSubscribing } from './interfaces/EventSubscribing';
+import type { EventNamePattern } from './types/EventSubscription';
 
 export interface EventBus<TEvent extends DomainEvent = DomainEvent>
   extends EventPublishing<TEvent>,
