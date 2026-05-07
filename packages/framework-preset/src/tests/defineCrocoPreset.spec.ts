@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { defineCrocoPreset } from '../index';
+import type { CrocoPresetConfig } from '../index';
 
 describe('defineCrocoPreset', () => {
   it('returns a preset with the configured name', () => {
@@ -78,9 +79,9 @@ describe('defineCrocoPreset', () => {
   });
 
   it('merges hooks at key level when extended with partial hooks', () => {
-    const buildBefore = async () => preset;
-    const originalBuildAfter = async () => {};
-    const newBuildAfter = async () => {};
+    const buildBefore = async (config: CrocoPresetConfig) => config;
+    const originalBuildAfter = async (): Promise<void> => {};
+    const newBuildAfter = async (): Promise<void> => {};
 
     const preset = defineCrocoPreset({
       name: 'node',
