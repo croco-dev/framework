@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { LambdaContext, LambdaEvent } from '@croco/transports-http';
+import { describe, expect, it } from 'vitest';
 import { createLambdaHandler, createLambdaPreset } from '../index';
 
 const lambdaContext: LambdaContext = {

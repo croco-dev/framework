@@ -21,39 +21,31 @@ function getServerPort(server: NodeEntry['server']): number {
 }
 
 describe('createNodeEntry E2E', () => {
-  it(
-    'starts a server and handles HTTP requests',
-    async () => {
-      const app = new Hono();
-      app.get('/test', (c) => c.json({ status: 'ok' }));
-      entry = createNodeEntry({ fetch: app.fetch }, { port: 0, hostname: '127.0.0.1' });
+  it('starts a server and handles HTTP requests', async () => {
+    const app = new Hono();
+    app.get('/test', (c) => c.json({ status: 'ok' }));
+    entry = createNodeEntry({ fetch: app.fetch }, { port: 0, hostname: '127.0.0.1' });
 
-      await entry.start();
-      const port = getServerPort(entry.server);
+    await entry.start();
+    const port = getServerPort(entry.server);
 
-      const response = await fetch(`http://127.0.0.1:${port}/test`);
+    const response = await fetch(`http://127.0.0.1:${port}/test`);
 
-      expect(response.status).toBe(200);
-      expect(response.headers.get('content-type')).toContain('application/json');
-      await expect(response.json()).resolves.toEqual({ status: 'ok' });
-    },
-    10000
-  );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    await expect(response.json()).resolves.toEqual({ status: 'ok' });
+  }, 10000);
 
-  it(
-    'rejects when another server uses the same port',
-    async () => {
-      const app = new Hono();
-      app.get('/test', (c) => c.text('ok'));
-      entry = createNodeEntry({ fetch: app.fetch }, { port: 0, hostname: '127.0.0.1' });
+  it('rejects when another server uses the same port', async () => {
+    const app = new Hono();
+    app.get('/test', (c) => c.text('ok'));
+    entry = createNodeEntry({ fetch: app.fetch }, { port: 0, hostname: '127.0.0.1' });
 
-      await entry.start();
-      const port = getServerPort(entry.server);
-      const conflictingEntry = createNodeEntry({ fetch: app.fetch }, { port, hostname: '127.0.0.1' });
+    await entry.start();
+    const port = getServerPort(entry.server);
+    const conflictingEntry = createNodeEntry({ fetch: app.fetch }, { port, hostname: '127.0.0.1' });
 
-      await expect(conflictingEntry.start()).rejects.toThrow();
-      await conflictingEntry.close();
-    },
-    10000
-  );
+    await expect(conflictingEntry.start()).rejects.toThrow();
+    await conflictingEntry.close();
+  }, 10000);
 });

@@ -24,6 +24,12 @@ export function createNodeEntry(honoApp: { readonly fetch: Hono['fetch'] }, opti
     },
     start: async () => {
       return new Promise<void>((resolve, reject) => {
+        const handleStartError = (error: Error) => {
+          server?.off('error', handleStartError);
+          server = null;
+          reject(error);
+        };
+
         try {
           server = serve(
             {
@@ -32,9 +38,11 @@ export function createNodeEntry(honoApp: { readonly fetch: Hono['fetch'] }, opti
               hostname,
             },
             () => {
+              server?.off('error', handleStartError);
               resolve();
             }
           ) as unknown as HTTPServer;
+          server.once?.('error', handleStartError);
         } catch (err) {
           reject(err);
         }
