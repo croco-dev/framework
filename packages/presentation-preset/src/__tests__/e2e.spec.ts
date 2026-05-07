@@ -1,7 +1,7 @@
 import { createWorkerFetchHandler } from '@croco/preset-cloudflare';
 import type { ExecutionContext } from '@croco/preset-cloudflare/src/fetch';
-import { createLambdaHandler } from '@croco/preset-lambda';
 import type { LambdaContext, LambdaEvent } from '@croco/preset-lambda';
+import { createLambdaHandler } from '@croco/preset-lambda';
 import { createNodeEntry } from '@croco/preset-node';
 import { describe, expect, it } from 'vitest';
 
