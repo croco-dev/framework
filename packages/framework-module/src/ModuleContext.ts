@@ -1,5 +1,5 @@
 import type { ContainerInstance } from 'typedi';
-import type { ModuleToken } from './types';
+import type { ModuleToken } from './types/ModuleToken';
 
 export class ModuleContext {
   private readonly container: ContainerInstance;

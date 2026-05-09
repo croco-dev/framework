@@ -22,7 +22,7 @@ export function defineCrocoPreset(config: CrocoPresetConfig): CrocoPreset {
           ...presetConfig.output,
           ...partial.output,
         },
-        hooks: partial.hooks ?? presetConfig.hooks,
+        hooks: { ...presetConfig.hooks, ...partial.hooks },
       });
     },
   });

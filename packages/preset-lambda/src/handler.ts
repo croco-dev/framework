@@ -1,68 +1,22 @@
-export type LambdaEvent = {
-  readonly httpMethod: string;
-  readonly path: string;
-  readonly headers?: Record<string, string>;
-  readonly queryStringParameters?: Record<string, string | null> | null;
-  readonly body?: string | null;
-  readonly isBase64Encoded?: boolean;
-};
+import type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse } from '@croco/transports-http';
+import { CrocoLambdaAdapter } from '@croco/transports-http';
+import { Hono } from 'hono';
+import type { LambdaPresetOptions } from './index';
 
-export type LambdaContext = {
-  readonly functionName?: string;
-  readonly functionVersion?: string;
-  readonly invokedFunctionArn?: string;
-  readonly awsRequestId?: string;
-  readonly getRemainingTimeInMillis?: () => number;
-};
+export type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse };
 
-export type LambdaResponse = {
-  readonly statusCode: number;
-  readonly headers: Record<string, string>;
-  readonly body: string;
-  readonly isBase64Encoded: boolean;
-};
+export function createLambdaHandler(
+  honoApp: Hono | { readonly fetch: (req: Request) => Promise<Response> },
+  options?: LambdaPresetOptions
+): LambdaHandler {
+  void options;
 
-export type LambdaHandler = (event: LambdaEvent, context: LambdaContext) => Promise<LambdaResponse>;
-
-export function createLambdaHandler(honoApp: { readonly fetch: (req: Request) => Promise<Response> }): LambdaHandler {
-  return async (event: LambdaEvent, _context: LambdaContext): Promise<LambdaResponse> => {
-    const queryString = event.queryStringParameters
-      ? `?${new URLSearchParams(filterQueryParameters(event.queryStringParameters)).toString()}`
-      : '';
-    const url = `${event.path}${queryString}`;
-    const method = event.httpMethod;
-    const request = new Request(url, {
-      method,
-      headers: event.headers ?? {},
-      body: ['GET', 'HEAD'].includes(method) ? undefined : readBody(event),
-    });
-
-    const response = await honoApp.fetch(request);
-    const responseHeaders: Record<string, string> = {};
-
-    response.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
-    });
-
-    return {
-      statusCode: response.status,
-      headers: responseHeaders,
-      body: await response.text(),
-      isBase64Encoded: false,
-    };
-  };
-}
-
-function filterQueryParameters(queryStringParameters: Record<string, string | null>): [string, string][] {
-  return Object.entries(queryStringParameters).filter((entry): entry is [string, string] => entry[1] !== null);
-}
-
-function readBody(event: LambdaEvent): string | undefined {
-  const body = event.body ?? undefined;
-
-  if (event.isBase64Encoded && body) {
-    return Buffer.from(body, 'base64').toString('utf-8');
+  if (honoApp instanceof Hono) {
+    return new CrocoLambdaAdapter(honoApp).createHandler();
   }
 
-  return body;
+  const hono = new Hono();
+  hono.all('/*', (c) => honoApp.fetch(c.req.raw));
+
+  return new CrocoLambdaAdapter(hono).createHandler();
 }

@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { ParamIR, RouteIR } from '@croco/protocols-core';
+import type { RouteIR } from '@croco/protocols-core';
 
 export type GenerateClientOptions = {
   readonly reactQuery?: boolean;
@@ -17,6 +17,8 @@ export function generateClientFiles(routes: RouteIR[], outDir: string, options: 
   return groupRoutesByDomain(routes).map((domainRoutes) => {
     const filePath = path.join(outDir, `${domainRoutes.domain}.ts`);
     const content = generateDomainClient(domainRoutes, options);
+
+    assertNoZodImport(content);
 
     fs.writeFileSync(filePath, content);
 
@@ -40,11 +42,13 @@ function groupRoutesByDomain(routes: RouteIR[]): DomainRoutes[] {
 function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClientOptions): string {
   const clientName = `${domainRoutes.domain}Client`;
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
+  const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
+  const types = [...inputTypes, ...outputTypes];
   const clientMethods = domainRoutes.routes.map(generateClientMethod).join('\n');
   const imports = options.reactQuery ? "import { useMutation, useQuery } from '@tanstack/react-query';\n" : '';
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : '';
 
-  return `${imports}${inputTypes.join('\n')}
+  return `${imports}${types.join('\n')}
 export const ${clientName} = {
 ${clientMethods}
 };
@@ -56,24 +60,55 @@ function generateInputType(route: RouteIR): string {
     return '';
   }
 
-  return `export type ${getInputTypeName(route)} = Record<string, unknown>;`;
+  if (hasLegacyBodyInput(route)) {
+    return `export type ${getInputTypeName(route)} = ${zodTypeToTypeScript(route.inputSchemas.body)};`;
+  }
+
+  const fields = getInputSchemaEntries(route).map(([name, schema]) => `${name}: ${zodTypeToTypeScript(schema)};`);
+
+  return `export type ${getInputTypeName(route)} = { ${fields.join(' ')} };`;
+}
+
+function generateOutputType(route: RouteIR): string {
+  if (!route.outputSchema) {
+    return '';
+  }
+
+  return `export type ${getOutputTypeName(route)} = ${zodTypeToTypeScript(route.outputSchema)};`;
 }
 
 function generateClientMethod(route: RouteIR): string {
   const input = needsInput(route) ? `input${hasRequiredInput(route) ? '' : '?'}: ${getInputTypeName(route)}` : '';
   const fetchOptions = getFetchOptions(route);
+  const response = getResponseExpression(route);
 
-  return `  ${route.methodName}: (${input}) => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => response.json()),`;
+  if (hasStructuredInput(route)) {
+    return `  ${route.methodName}: (${input}) => {
+    const path = ${getPathExpression(route)};
+${getQueryStatements(route)}    return fetch(${getUrlExpression(route)}, ${fetchOptions}).then((response) => ${response});
+  },`;
+  }
+
+  return `  ${route.methodName}: (${input}) => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${response}),`;
 }
 
 function getFetchOptions(route: RouteIR): string {
   const options = [`method: '${route.httpMethod.toUpperCase()}'`];
 
   if (hasBody(route)) {
-    options.push('body: JSON.stringify(input)');
+    options.push(`body: JSON.stringify(${hasStructuredInput(route) ? 'input.body' : 'input'})`);
+    options.push("headers: { 'Content-Type': 'application/json' }");
   }
 
   return `{ ${options.join(', ')} }`;
+}
+
+function getResponseExpression(route: RouteIR): string {
+  if (!route.outputSchema) {
+    return 'response.json()';
+  }
+
+  return `response.json() as Promise<${getOutputTypeName(route)}>`;
 }
 
 function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {
@@ -98,35 +133,164 @@ function generateReactQueryHook(route: RouteIR, clientName: string): string {
 }`;
 }
 
+function zodTypeToTypeScript(schema: unknown): string {
+  const schemaName = getSchemaName(schema);
+
+  if (schemaName === 'ZodString') {
+    return 'string';
+  }
+
+  if (schemaName === 'ZodNumber') {
+    return 'number';
+  }
+
+  if (schemaName === 'ZodBoolean') {
+    return 'boolean';
+  }
+
+  if (schemaName === 'ZodOptional') {
+    return `${zodTypeToTypeScript(getInnerSchema(schema))} | undefined`;
+  }
+
+  if (schemaName === 'ZodNullable') {
+    return `${zodTypeToTypeScript(getInnerSchema(schema))} | null`;
+  }
+
+  if (schemaName === 'ZodDefault') {
+    return zodTypeToTypeScript(getInnerSchema(schema));
+  }
+
+  if (schemaName === 'ZodArray') {
+    return `${zodTypeToTypeScript(getArrayElementSchema(schema))}[]`;
+  }
+
+  if (schemaName === 'ZodObject') {
+    return getObjectTypeScript(schema);
+  }
+
+  return 'unknown';
+}
+
+function getSchemaName(schema: unknown): string {
+  if (!schema || typeof schema !== 'object') {
+    return '';
+  }
+
+  return schema.constructor.name;
+}
+
+function getInnerSchema(schema: unknown): unknown {
+  if (!schema || typeof schema !== 'object' || !('_def' in schema)) {
+    return undefined;
+  }
+
+  const definition = schema._def as { readonly innerType?: unknown };
+
+  return definition.innerType;
+}
+
+function getArrayElementSchema(schema: unknown): unknown {
+  if (!schema || typeof schema !== 'object' || !('_def' in schema)) {
+    return undefined;
+  }
+
+  const definition = schema._def as { readonly type?: unknown };
+
+  return definition.type;
+}
+
+function getObjectTypeScript(schema: unknown): string {
+  const fields = Object.entries(getObjectShape(schema)).map(([key, value]) => `${key}: ${zodTypeToTypeScript(value)};`);
+
+  return `{ ${fields.join(' ')} }`;
+}
+
+function getObjectShape(schema: unknown): Record<string, unknown> {
+  if (!schema || typeof schema !== 'object') {
+    return {};
+  }
+
+  if ('shape' in schema) {
+    const shape = schema.shape;
+
+    return shape && typeof shape === 'object' ? (shape as Record<string, unknown>) : {};
+  }
+
+  if (!('_def' in schema)) {
+    return {};
+  }
+
+  const definition = schema._def as { readonly shape?: unknown };
+  const shape = typeof definition.shape === 'function' ? definition.shape() : definition.shape;
+
+  return shape && typeof shape === 'object' ? (shape as Record<string, unknown>) : {};
+}
+
 function getPathExpression(route: RouteIR): string {
-  const pathParams = route.params.filter((param) => param.kind === 'path' && param.name.length > 0);
+  const pathParams = getPathParamNames(route);
 
   if (pathParams.length === 0) {
     return `'${route.path}'`;
   }
 
   const pathExpression = pathParams.reduce(
-    (currentPath, param) => currentPath.split(`:${param.name}`).join(`\${input.${param.name}}`),
+    (currentPath, paramName) => currentPath.split(`:${paramName}`).join(`\${input.path.${paramName}}`),
     route.path
   );
 
   return `\`${pathExpression}\``;
 }
 
+function getPathParamNames(route: RouteIR): string[] {
+  if (!route.inputSchemas.path) {
+    return [];
+  }
+
+  return Object.keys(getObjectShape(route.inputSchemas.path));
+}
+
+function getQueryStatements(route: RouteIR): string {
+  if (!route.inputSchemas.query) {
+    return '';
+  }
+
+  return `    const query = new URLSearchParams(input.query).toString();
+    const url = query ? \`${'${path}'}?${'${query}'}\` : path;
+`;
+}
+
+function getUrlExpression(route: RouteIR): string {
+  return route.inputSchemas.query ? 'url' : 'path';
+}
+
+function getInputSchemaEntries(route: RouteIR): [string, unknown][] {
+  const entries: [string, unknown | null][] = [
+    ['body', route.inputSchemas.body],
+    ['path', route.inputSchemas.path],
+    ['query', route.inputSchemas.query],
+  ];
+
+  return entries.filter((entry): entry is [string, unknown] => entry[1] !== null);
+}
+
 function needsInput(route: RouteIR): boolean {
-  return route.params.some(isInputParam);
+  return getInputSchemaEntries(route).length > 0;
 }
 
 function hasRequiredInput(route: RouteIR): boolean {
-  return hasBody(route) || route.params.some((param) => param.kind === 'path');
+  return needsInput(route);
 }
 
 function hasBody(route: RouteIR): boolean {
-  return route.params.some((param) => param.kind === 'body');
+  return route.inputSchemas.body !== null;
 }
 
-function isInputParam(param: ParamIR): boolean {
-  return param.kind === 'path' || param.kind === 'query' || param.kind === 'body';
+function hasStructuredInput(route: RouteIR): boolean {
+  return Boolean(route.inputSchemas.path || route.inputSchemas.query);
+}
+
+function hasLegacyBodyInput(route: RouteIR): boolean {
+  return Boolean(route.inputSchemas.body && !route.inputSchemas.path && !route.inputSchemas.query);
 }
 
 function getDomainName(route: RouteIR): string {
@@ -137,6 +301,16 @@ function getDomainName(route: RouteIR): string {
 
 function getInputTypeName(route: RouteIR): string {
   return `${toPascalCase(route.methodName)}Input`;
+}
+
+function getOutputTypeName(route: RouteIR): string {
+  return `${toPascalCase(route.methodName)}Output`;
+}
+
+function assertNoZodImport(content: string): void {
+  if (content.includes('from \'zod\'') || content.includes('import { z }') || content.includes('zod')) {
+    throw new Error('Generated client must not import zod.');
+  }
 }
 
 function toCamelCase(value: string): string {

@@ -38,6 +38,8 @@ export const REST_FILTERS_KEY = Symbol.for('croco:rest:filters');
  */
 export const REST_ROLES_KEY = Symbol.for('croco:rest:roles');
 
+export const RESPONSE_SCHEMA_KEY = Symbol.for('croco:rest:responseSchema');
+
 export enum HttpMethod {
   GET = 'GET',
   POST = 'POST',

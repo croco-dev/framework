@@ -5,6 +5,12 @@ export type RouteHandler<Req extends Record<string, unknown> = Record<string, un
   request: Req
 ) => Res | Promise<Res>;
 
+export type RouteInputSchemas = {
+  body: z.ZodType | null;
+  path: z.ZodType | null;
+  query: z.ZodType | null;
+};
+
 export type TypedRouteConfig<
   Body extends z.ZodType | undefined = undefined,
   Query extends z.ZodType | undefined = undefined,
@@ -16,6 +22,7 @@ export type TypedRouteConfig<
   body?: Body;
   query?: Query;
   params?: Params;
+  inputSchemas?: RouteInputSchemas;
   response?: Response;
 };
 

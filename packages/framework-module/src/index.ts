@@ -18,4 +18,5 @@ export class CrocoModule {
 
 export { detectCircularDependency } from './CircularDependencyDetector';
 export { ModuleContext } from './ModuleContext';
-export type { CrocoModule as CrocoModuleDefinition, ModuleOptions, ModuleToken } from './types';
+export type { CrocoModule as CrocoModuleDefinition, ModuleOptions } from './types';
+export type { ModuleToken } from './types/ModuleToken';

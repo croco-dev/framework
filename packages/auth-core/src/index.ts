@@ -170,10 +170,8 @@ export { RbacEngine } from './libs/rbac/RbacEngine';
 /**
  * 역할 정의 타입과 역할 레지스트리 구현체입니다.
  */
-export {
-  type RoleDefinition,
-  RoleRegistry,
-} from './libs/rbac/Role';
+export { RoleRegistry } from './libs/rbac/Role';
+export type { RoleDefinition } from './libs/rbac/RoleDefinition';
 
 /**
  * auth-core에서 재노출하는 추가 공개 타입입니다.

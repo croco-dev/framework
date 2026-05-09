@@ -52,18 +52,16 @@ export { ProblemCategory } from './libs/ProblemCategory';
  * ProblemCategory를 HTTP 상태 코드와 제목으로 매핑하는 유틸리티입니다.
  */
 export { ProblemCategoryMapper, toHttpStatus, toTitle } from './libs/ProblemCategoryMapper';
-export {
-  isValidExtensions,
-  type ProblemExtensions,
-  validateExtensions,
-} from './libs/ProblemExtensions';
-
+export type { ProblemExtensions } from './libs/ProblemExtensions';
 /**
  * 자주 쓰는 Problem 인스턴스를 빠르게 생성하는 팩토리입니다.
  */
 export { ProblemFactory } from './libs/ProblemFactory';
-
 /**
  * Problem Details를 직렬화하고 역직렬화하는 유틸리티입니다.
  */
 export { ProblemSerializer } from './libs/ProblemSerializer';
+export {
+  isValidExtensions,
+  validateExtensions,
+} from './libs/validators/validateExtensions';
