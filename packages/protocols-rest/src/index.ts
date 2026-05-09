@@ -78,9 +78,11 @@
  * const type: ParamType = ParamType.QUERY;
  * ```
  */
+
 export {
   HttpMethod,
   ParamType,
+  RESPONSE_SCHEMA_KEY,
   REST_CONTROLLER_KEY,
   REST_FILTERS_KEY,
   REST_GUARDS_KEY,
@@ -90,7 +92,6 @@ export {
   REST_ROLES_KEY,
   REST_ROUTES_KEY,
 } from './libs/constants';
-
 /**
  * 클래스에 REST 컨트롤러 기본 경로 메타데이터를 등록합니다.
  *
@@ -362,7 +363,7 @@ export { UseFilters, UseGuards, UseInterceptors, UsePipes } from './libs/decorat
  * ```
  */
 export { Body, Ctx, Header, Param, Query, Raw } from './libs/decorators/Params';
-
+export { ResponseSchema } from './libs/decorators/ResponseSchema';
 /**
  * 메서드에 필요한 역할 목록을 등록합니다.
  *
@@ -409,7 +410,6 @@ export { Roles } from './libs/decorators/Roles';
  * ```
  */
 export type { HttpExceptionFilterResponse, ProblemLike } from './libs/filters/HttpExceptionFilter';
-
 /**
  * 예외를 RFC 7807 형태의 HTTP 응답으로 변환하는 기본 Exception Filter입니다.
  *
@@ -448,7 +448,6 @@ export { HttpExceptionFilter } from './libs/filters/HttpExceptionFilter';
  * ```
  */
 export type { AuthGuardOptions, TokenVerifier } from './libs/guards/AuthGuard';
-
 /**
  * Authorization 헤더를 검증하고 검증된 사용자 정보를 요청 객체에 주입하는 Guard입니다.
  *
@@ -460,7 +459,6 @@ export type { AuthGuardOptions, TokenVerifier } from './libs/guards/AuthGuard';
  * ```
  */
 export { AuthGuard } from './libs/guards/AuthGuard';
-
 /**
  * 역할 정보를 포함한 요청 사용자 객체의 최소 형태입니다.
  *
@@ -472,7 +470,6 @@ export { AuthGuard } from './libs/guards/AuthGuard';
  * ```
  */
 export type { UserWithRoles } from './libs/guards/RolesGuard';
-
 /**
  * @Roles 메타데이터와 요청 사용자 역할을 비교해 접근 여부를 결정하는 Guard입니다.
  *
@@ -748,7 +745,7 @@ export type {
   InferRequestType,
   InferResponseType,
   RequestSchema,
-  ResponseSchema,
+  ResponseSchema as ResponseSchemaType,
   RouteSchema,
 } from './libs/schemas/ValidationSchema';
 /**

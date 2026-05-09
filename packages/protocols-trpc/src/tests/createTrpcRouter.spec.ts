@@ -105,6 +105,7 @@ describe('createTrpcRouter', () => {
         path: '/users',
         params: [{ kind: 'body', name: '', schema: createUserSchema }],
         inputSchema: createUserSchema,
+        inputSchemas: { body: createUserSchema, path: null, query: null },
         outputSchema: userSchema,
         domain: null,
       },

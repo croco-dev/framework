@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import type { z } from 'zod';
-import type { ParamIR, RouteIR } from './RouteIR';
+import type { ParamIR, RouteInputSchemas, RouteIR } from './RouteIR';
+import { buildPathSchema, buildQuerySchema } from './schemaBuilder';
 import {
   type Constructor,
   type ControllerMetadata,
@@ -11,6 +12,8 @@ import {
   REST_ROUTES_KEY,
   type RouteMetadata,
 } from './sharedTypes';
+
+const RESPONSE_SCHEMA_KEY = Symbol.for('croco:rest:responseSchema');
 
 export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
   const controllerMeta = Reflect.getMetadata(REST_CONTROLLER_KEY, controllerCtor) as ControllerMetadata | undefined;
@@ -25,7 +28,9 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
 
   return routesMeta.map((routeMeta) => {
     const params = extractParams(paramsMap?.get(routeMeta.methodName) ?? []);
-    const bodyParam = params.find((param) => param.kind === 'body');
+    const inputSchemas = extractInputSchemas(params);
+    const outputSchema =
+      (Reflect.getMetadata(RESPONSE_SCHEMA_KEY, controllerCtor, routeMeta.methodName) as z.ZodType | undefined) ?? null;
 
     return {
       controllerName: controllerCtor.name,
@@ -33,8 +38,9 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       httpMethod: routeMeta.method,
       path: joinPaths(controllerMeta.path, routeMeta.path),
       params,
-      inputSchema: bodyParam?.schema ?? null,
-      outputSchema: null,
+      inputSchema: inputSchemas.body,
+      inputSchemas,
+      outputSchema,
       domain: null,
     };
   });
@@ -49,6 +55,14 @@ function extractParams(paramsMeta: ParamMetadata[]): ParamIR[] {
       name: paramMeta.name ?? '',
       schema: extractSchema(paramMeta),
     }));
+}
+
+function extractInputSchemas(params: ParamIR[]): RouteInputSchemas {
+  return {
+    body: params.find((param) => param.kind === 'body')?.schema ?? null,
+    path: buildPathSchema(params),
+    query: buildQuerySchema(params),
+  };
 }
 
 function mapParamKind(type: ParamType): ParamIR['kind'] {
