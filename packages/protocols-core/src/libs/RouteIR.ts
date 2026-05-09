@@ -7,9 +7,16 @@ export interface RouteIR {
   path: string;
   params: ParamIR[];
   inputSchema: z.ZodType | null;
+  inputSchemas: RouteInputSchemas;
   outputSchema: z.ZodType | null;
   domain: string | null;
 }
+
+export type RouteInputSchemas = {
+  body: z.ZodType | null;
+  path: z.ZodType | null;
+  query: z.ZodType | null;
+};
 
 export interface ParamIR {
   kind: 'path' | 'query' | 'body' | 'header' | 'ctx';
