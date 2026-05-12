@@ -144,7 +144,7 @@ jobs:
             echo "Circular dependency check passed (no allowlist, no violations)"
           fi
 
-      - name: Biome check
+      - name: Lint & Format Check
         run: pnpm check
 
       - name: Build

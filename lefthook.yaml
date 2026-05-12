@@ -2,9 +2,12 @@ pre-commit:
   parallel: true
   stage_fixed: true
   commands:
-    biome:
+    oxlint:
+      glob: "*.{ts,tsx,js,jsx}"
+      run: pnpm oxlint --fix --fix-type safe {staged_files} && git add {staged_files}
+    oxfmt:
       glob: "*.{ts,tsx,js,jsx,json}"
-      run: pnpm biome check --write {staged_files}
+      run: pnpm oxfmt --write {staged_files} && git add {staged_files}
 
 pre-push:
   commands:
