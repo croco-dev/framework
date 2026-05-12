@@ -238,4 +238,6 @@ Create a "Release Checklist" issue from the template to track this process.
 
 ## Questions
 
+For Croco CLI usage, see `packages/cli/README.md`.
+
 Open an issue or check existing ones labeled `good first issue`.

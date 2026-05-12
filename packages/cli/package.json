@@ -1,0 +1,35 @@
+{
+  "name": "@croco/cli",
+  "version": "0.0.1",
+  "private": true,
+  "bin": {
+    "croco": "./dist/bin/croco.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --exclude src/tests/integration/**",
+    "test:e2e": "vitest run src/tests/integration",
+    "lint": "oxlint ."
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.1",
+    "@croco/migration-runner": "workspace:*",
+    "@croco/openapi-spec": "workspace:*",
+    "@croco/rpc-codegen": "workspace:*",
+    "citty": "^0.1.6",
+    "ts-morph": "^24.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.5",
+    "vitest": "^4.0.0"
+  }
+}

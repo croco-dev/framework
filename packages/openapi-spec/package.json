@@ -1,6 +1,9 @@
 {
   "name": "@croco/openapi-spec",
   "version": "0.0.1",
+  "bin": {
+    "croco-openapi-spec": "./dist/cli.js"
+  },
   "files": [
     "dist"
   ],
@@ -20,7 +23,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "build": "tsup src/index.ts src/cli.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -29,6 +32,7 @@
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@croco/protocols-core": "workspace:*",
+    "ts-morph": "^24.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
