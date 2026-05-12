@@ -15,7 +15,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint ."
   },
   "dependencies": {
     "@croco/metering-core": "workspace:*",

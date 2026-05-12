@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
-    "lint": "biome check .",
+    "lint": "oxlint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

@@ -6,6 +6,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsup && cp dist/index.d.mts dist/index.d.ts && cp dist/fetch.d.mts dist/fetch.d.ts",
+    "lint": "oxlint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

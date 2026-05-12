@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsup src/index.ts src/cli.ts --format esm,cjs --minify --clean --dts",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
-    "lint": "biome check .",
+    "lint": "oxlint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

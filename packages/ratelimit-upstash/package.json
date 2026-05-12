@@ -15,6 +15,7 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "oxlint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

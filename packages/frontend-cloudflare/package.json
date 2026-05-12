@@ -10,7 +10,7 @@
     "publish": "pnpm build && npx wrangler deploy",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check ."
+    "lint": "oxlint ."
   },
   "peerDependencies": {},
   "dependencies": {

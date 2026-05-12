@@ -80,7 +80,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "lint": "biome check .",
+    "lint": "oxlint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
+    "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

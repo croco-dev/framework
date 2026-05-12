@@ -21,7 +21,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint ."
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",

@@ -16,7 +16,8 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint ."
   },
   "dependencies": {
     "@croco/events-core": "workspace:*",

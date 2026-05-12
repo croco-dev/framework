@@ -6,7 +6,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "lint": "biome check .",
+    "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

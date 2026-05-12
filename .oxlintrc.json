@@ -1,0 +1,40 @@
+{
+  "plugins": ["typescript", "import", "react", "jest", "unicorn", "node"],
+  "jsPlugins": [
+    {
+      "name": "@croco/oxlint-rules",
+      "specifier": "./packages/oxlint-rules/src/index.ts"
+    }
+  ],
+  "rules": {
+    "no-unused-vars": "error",
+    "typescript/no-unused-vars": "error",
+    "typescript/consistent-type-imports": "off",
+    "typescript/no-non-null-assertion": "error",
+    "no-explicit-any": "warn",
+    "typescript/no-explicit-any": "off",
+    "typescript/no-wrapper-object-types": "off",
+    "no-unsafe-optional-chaining": "off",
+    "no-undef": "off",
+    "no-restricted-globals": "off",
+    "@croco/oxlint-rules/no-cross-domain-import": "off",
+    "@croco/oxlint-rules/no-datasource-import": "off",
+    "@croco/oxlint-rules/type-graphql-explicit-type": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
+      "rules": {
+        "no-explicit-any": "off",
+        "no-unused-vars": "off",
+        "typescript/no-unused-vars": "off",
+        "jest/no-conditional-expect": "off",
+        "jest/valid-expect": "off",
+        "jest/no-standalone-expect": "off",
+        "jest/require-to-throw-message": "off",
+        "jest/expect-expect": "off",
+        "react/no-children-prop": "off"
+      }
+    }
+  ]
+}
