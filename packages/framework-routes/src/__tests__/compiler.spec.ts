@@ -62,6 +62,6 @@ describe("compiler", () => {
   it("keeps reflect-metadata external in the bundle config", async () => {
     const config = await readFile(new URL("../../tsup.config.ts", import.meta.url), "utf-8");
 
-    expect(config).toContain("external: ['reflect-metadata']");
+    expect(config).toContain('external: ["reflect-metadata"]');
   });
 });

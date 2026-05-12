@@ -4,7 +4,7 @@ pre-commit:
   commands:
     oxlint:
       glob: "*.{ts,tsx,js,jsx}"
-      run: pnpm oxlint --fix --fix-type safe {staged_files} && git add {staged_files}
+      run: pnpm oxlint --fix {staged_files} && git add {staged_files}
     oxfmt:
       glob: "*.{ts,tsx,js,jsx,json}"
       run: pnpm oxfmt --write {staged_files} && git add {staged_files}

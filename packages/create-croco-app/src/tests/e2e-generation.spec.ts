@@ -115,7 +115,7 @@ describe("E2E: generate()", () => {
 
       const workerContent = readFileSync(join(testDir, "api-worker", "src", "index.ts"), "utf8");
 
-      expect(workerContent).toContain("securityValidation: 'off'");
+      expect(workerContent).toContain('securityValidation: "off"');
     },
   );
 
@@ -151,8 +151,8 @@ describe("E2E: generate()", () => {
       "utf8",
     );
 
-    expect(handlerContent).toContain("from '@croco/telemetry-sdk-node';");
-    expect(handlerContent).toContain("import { createSchema } from './schema.js';");
+    expect(handlerContent).toContain('from "@croco/telemetry-sdk-node";');
+    expect(handlerContent).toContain('import { createSchema } from "./schema.js";');
     expect(handlerContent).toContain("const telemetryReady = telemetry.init(");
     expect(handlerContent).toContain("await telemetryReady;");
     expect(handlerContent).toContain("const lambdaHandler = await lambdaHandlerPromise;");
