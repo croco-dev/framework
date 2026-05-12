@@ -65,12 +65,14 @@ describe('rpc-codegen e2e', () => {
     expect(health.outputSchema).toBeNull();
 
     const content = fs.readFileSync(files[0], 'utf-8');
-    expect(content).toContain('export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; };');
+    expect(content).toContain(
+      'export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; };'
+    );
     expect(content).toContain('export type CreateUserInput = { name: string; };');
     expect(content).toContain('export type CreateUserOutput = { id: string; name: string; };');
     expect(content).toContain('const path = `/users/${input.path.id}`;');
     expect(content).toContain('const query = new URLSearchParams(input.query).toString();');
-    expect(content).toContain('return fetch(url, { method: \'GET\' }).then((response) => response.json());');
+    expect(content).toContain("return fetch(url, { method: 'GET' }).then((response) => response.json());");
     expect(content).toContain(
       "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })"
     );

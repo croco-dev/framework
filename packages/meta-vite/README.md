@@ -1,6 +1,6 @@
 # @croco/meta-vite
 
-Croco-native Vite SSR/RSC meta-framework.
+Croco-native Vite SSR/RSC meta-framework. Croco의 유일한 SSR 엔진입니다. 모든 서버 렌더링 페이지는 `@croco/meta-vite`를 통해 제공됩니다.
 
 ## Installation
 
@@ -15,7 +15,9 @@ Requires Vite 6+ and React 19+.
 - **SSR**: Server-side rendering with React 19, head metadata injection, XSS-safe HTML shell
 - **RSC**: React Server Components with Flight payload embedding and browser hydration
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
-- **ISR**: TTL-only incremental static regeneration via CacheStore
+- **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`)
+- **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
+- **Server Actions**: `createServerAction()` for form POST handling with Zod validation. `createServerActionHandler()` integrates with the `apiRoutes` dispatch pipeline
 - **Provider adapters**: Cloudflare Workers, AWS Lambda, Node.js with API-first/page-fallback composition
 - **Vite 6 plugin**: `crocoMetaVitePlugin` with client/ssr/rsc environment configuration
 
@@ -56,6 +58,52 @@ const handler = createMetaFetchHandler({
 // Lambda: createLambdaComposedHandler(...)
 ```
 
+### 4. SSR Page + API Route (combined)
+
+```typescript
+import { defineRoute, defineApiRoute, RouteRegistry, RenderServer, createMetaFetchHandler } from '@croco/meta-vite';
+
+// Page route
+const registry = new RouteRegistry();
+registry.register(defineRoute({
+  path: '/',
+  component: HomePage,
+  mode: 'ssr',
+}));
+
+// API routes
+const apiRoutes = [
+  defineApiRoute({
+    path: '/api/hello',
+    method: 'GET',
+    handler: async (request: Request): Promise<Response> => {
+      return new Response(JSON.stringify({ message: 'Hello from API!' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+  }),
+  defineApiRoute({
+    path: '/api/users',
+    method: 'POST',
+    handler: async (request: Request): Promise<Response> => {
+      const body = await request.json();
+      return new Response(JSON.stringify({ created: body }), { status: 201 });
+    },
+  }),
+];
+
+// Compose pages and APIs under a single handler
+const server = new RenderServer(registry.compile());
+const handler = createMetaFetchHandler({
+  apiRoutes,
+  pageHandler: server,
+});
+
+// /api/* → API routes, /* → SSR pages
+const response = await handler(new Request('https://example.com/api/hello'));
+```
+
 ## Route Modes
 
 | Mode | Description | Revalidate |
@@ -78,8 +126,6 @@ const handler = createMetaFetchHandler({
 - **ISR non-durable**: InMemoryCacheStore is local/dev/single-process. Production durable ISR (KV, Redis, S3) requires a custom adapter.
 - **Cloudflare streaming**: Cloudflare Workers support streaming Response bodies, but InMemory ISR is not durable across Worker isolates.
 - **RSC dev mode**: RSC routes require full reload during development. HMR-based RSC updates are deferred.
-- **No API co-location**: `/api` route co-location with page routes is deferred. Use existing Croco REST/RPC controllers with `createMetaFetchHandler` for composition.
-- **No Server Actions framework**: Minimal RSC server action validation exists; full Server Actions abstraction is deferred.
 
 ## Diagnostics
 
@@ -119,6 +165,25 @@ Common errors and their diagnostics:
 | `createIsrHandler` | function | Legacy ISR handler with string-based API and `IsrCacheAdapter`. |
 | `IsrCacheAdapter` | type | Cache adapter contract with `getOrSet` and `invalidate`. |
 | `IsrCacheStore` | type | `CacheStore<string, Response>` subset for ISR middleware. |
+| `AbstractCacheStoreAdapter` | class | Abstract base class implementing `IsrCacheStore.getOrSet`. Subclasses implement `_get`, `_set`, `_delete`. |
+| `RedisCacheStoreAdapter` | class | Redis-backed ISR cache adapter extending `AbstractCacheStoreAdapter`. Uses ioredis, supports TTL and pattern-based `invalidatePattern()`. |
+
+### API Routes
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `defineApiRoute` | function | Register an API route with path, HTTP method, and fetch-style handler. Returns the same definition for build plugin consumption. |
+| `ApiRouteDefinition` | type | `{ path: string; method?: ApiMethod; handler: (request: Request) => Promise<Response> }` |
+| `ApiMethod` | type | `'GET' \| 'POST' \| 'PUT' \| 'DELETE' \| 'PATCH'` |
+
+### Server Actions
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `createServerAction` | function | Register a server action with name, optional Zod schema, and handler. Throws on duplicate name. |
+| `createServerActionHandler` | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Integrates with `apiRoutes` dispatch. |
+| `dispatchServerAction` | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Returns 404 or 400 JSON on failure. |
+| `ServerActionConfig` | type | `{ name: string; schema?: ZodSchema<T>; handler: (data: T, context?: RuntimeContext) => Promise<Response> \| Response }` |
 
 ### SSG
 

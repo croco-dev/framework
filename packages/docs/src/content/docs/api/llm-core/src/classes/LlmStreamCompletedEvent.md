@@ -51,6 +51,16 @@ title: "LlmStreamCompletedEvent"
 
 ***
 
+### eventId
+
+> `readonly` **eventId**: `string`
+
+#### Inherited from
+
+[`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
+
+***
+
 ### eventName
 
 > `readonly` **eventName**: `string`

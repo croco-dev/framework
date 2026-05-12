@@ -19,11 +19,11 @@ export function installFrontendDeploy(
     return;
   }
 
-  if (options.frontendDeploy === 'cloudflare-vike') {
+  if (options.frontendDeploy === 'cloudflare-meta-vite') {
     const addonDir =
       options.preset === 'ddd-vike-fullstack'
-        ? join(TEMPLATES_DIR, 'addons', 'web-vike-fullstack')
-        : join(TEMPLATES_DIR, 'addons', 'web-vike');
+        ? join(TEMPLATES_DIR, 'addons', 'web-meta-vite-fullstack')
+        : join(TEMPLATES_DIR, 'addons', 'web-meta-vite');
     const installTargetDir =
       options.preset === 'ddd-vike-fullstack' ? targetDir : join(targetDir, 'apps', webAppName ?? 'web');
 

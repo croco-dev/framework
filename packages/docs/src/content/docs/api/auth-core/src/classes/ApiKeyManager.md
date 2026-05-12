@@ -107,11 +107,15 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 ### verify()
 
-> **verify**(`rawKey`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)\>
+> **verify**(`rawKey`, `ip?`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)\>
 
 #### Parameters
 
 ##### rawKey
+
+`string`
+
+##### ip?
 
 `string`
 

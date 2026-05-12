@@ -18,7 +18,7 @@ export function createProgram(): Command {
     .option('--api-hosting <hosting>', 'API hosting (standalone|nextjs)')
     .option('--web-apps <apps>', 'Comma-separated web app names')
     .option('--backend-deploy <deploy>', 'Backend deploy (docker|lambda)')
-    .option('--frontend-deploy <deploy>', 'Frontend deploy (opennext|vercel|docker|cloudflare-vike)')
+    .option('--frontend-deploy <deploy>', 'Frontend deploy (opennext|vercel|docker|cloudflare-meta-vite)')
     .option('--db <dbs>', 'Comma-separated DB types (postgres,mongodb,redis)')
     .option('--no-agent-rules', 'Skip agent rules')
     .option('--no-install', 'Skip dependency installation')

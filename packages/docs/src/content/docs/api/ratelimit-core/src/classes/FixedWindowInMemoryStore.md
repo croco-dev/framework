@@ -15,13 +15,19 @@ title: "FixedWindowInMemoryStore"
 
 ### Constructor
 
-> **new FixedWindowInMemoryStore**(): `FixedWindowInMemoryStore`
+> **new FixedWindowInMemoryStore**(`options?`): `FixedWindowInMemoryStore`
+
+#### Parameters
+
+##### options?
+
+[`InMemoryRateLimitStoreOptions`](/api/ratelimit-core/src/type-aliases/inmemoryratelimitstoreoptions/) = `{}`
 
 #### Returns
 
 `FixedWindowInMemoryStore`
 
-#### Inherited from
+#### Overrides
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`constructor`](/api/ratelimit-core/src/classes/fixedwindowstore/#constructor)
 
@@ -72,6 +78,26 @@ title: "FixedWindowInMemoryStore"
 #### Inherited from
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`checkFixedWindow`](/api/ratelimit-core/src/classes/fixedwindowstore/#checkfixedwindow)
+
+***
+
+### close()
+
+> **close**(): `void`
+
+#### Returns
+
+`void`
+
+***
+
+### destroy()
+
+> **destroy**(): `void`
+
+#### Returns
+
+`void`
 
 ***
 

@@ -25,6 +25,22 @@ manager.listen();
 
 ## Methods
 
+### configure()
+
+> **configure**(`timeoutMs`): `void`
+
+#### Parameters
+
+##### timeoutMs
+
+`number`
+
+#### Returns
+
+`void`
+
+***
+
 ### listen()
 
 > **listen**(): `void`

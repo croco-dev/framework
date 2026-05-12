@@ -49,3 +49,26 @@ export type RenderRouteComponentProps = {
   readonly request: Request;
   readonly context?: RuntimeContext;
 };
+
+/**
+ * HTTP methods supported by API routes.
+ */
+export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+/**
+ * API route definition accepted by defineApiRoute().
+ */
+export type ApiRouteDefinition = {
+  path: string;
+  method?: ApiMethod;
+  handler: (request: Request) => Promise<Response>;
+};
+
+/**
+ * Internal API route IR (intermediate representation).
+ */
+export type ApiRouteIR = {
+  path: string;
+  method?: ApiMethod;
+  handler: (request: Request) => Promise<Response>;
+};

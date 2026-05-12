@@ -1,52 +1,47 @@
+import { createLambdaComposedHandler } from '@croco/meta-vite';
 import type { LambdaContext, LambdaEvent, LambdaResponse } from '@croco/transports-http';
 import { createCrocoApp } from './app';
 
-const lambdaHandler = createCrocoApp().lambdaHandler();
+const app = createCrocoApp();
 
-export async function handler(event: LambdaEvent, context: LambdaContext): Promise<LambdaResponse> {
-  const apiResponse = await tryApiRequest(event, context);
-  if (apiResponse) {
-    return apiResponse;
+const apiHandler = {
+  match: (request: Request) => new URL(request.url).pathname.startsWith('/api/'),
+  handle: async (request: Request, _event: unknown, _lambdaContext: unknown): Promise<Response> => {
+    const fetchHandler = app.lambdaHandler();
+    return fetchHandler(request);
+  },
+};
+
+let pageHandler: ((request: Request) => Promise<Response>) | null = null;
+
+async function getPageHandler() {
+  if (!pageHandler) {
+    const { RouteRegistry } = await import('@croco/meta-vite');
+    const { RenderServer } = await import('@croco/meta-vite');
+
+    const registry = new RouteRegistry();
+    const server = new RenderServer(registry.compile());
+    pageHandler = async (request: Request) => server.handle(request);
   }
-
-  return renderSsrPage(event);
+  return pageHandler;
 }
 
-async function tryApiRequest(event: LambdaEvent, context: LambdaContext): Promise<LambdaResponse | null> {
-  if (!event.rawPath.startsWith('/api/')) {
-    return null;
-  }
+const handler = createLambdaComposedHandler({
+  apiHandlers: [apiHandler],
+  pageHandler: async (request: Request) => {
+    const pageFn = await getPageHandler();
+    return pageFn(request);
+  },
+});
 
-  return lambdaHandler(event, context);
-}
-
-async function renderSsrPage(event: LambdaEvent): Promise<LambdaResponse> {
-  const { renderPage } = await import('vike/server');
-  const pageContext = await renderPage({
-    urlOriginal: createRequestUrl(event),
-    headersOriginal: new Headers(event.headers ?? {}),
-  });
-
-  const httpResponse = pageContext.httpResponse;
-  if (!httpResponse) {
-    return {
-      statusCode: 404,
-      headers: { 'content-type': 'text/plain; charset=utf-8' },
-      body: 'Page not found',
-    };
-  }
+export async function lambdaHandler(event: LambdaEvent, context: LambdaContext): Promise<LambdaResponse> {
+  const response = await handler(event, context);
 
   return {
-    statusCode: httpResponse.statusCode,
-    headers: Object.fromEntries(httpResponse.headers),
-    body: await httpResponse.getBody(),
+    statusCode: response.status,
+    headers: Object.fromEntries(response.headers),
+    body: await response.text(),
   };
 }
 
-function createRequestUrl(event: LambdaEvent): string {
-  const host = event.headers?.host ?? 'lambda.local';
-  const path = event.rawPath || '/';
-  const query = event.rawQueryString ? `?${event.rawQueryString}` : '';
-
-  return `https://${host}${path}${query}`;
-}
+export { lambdaHandler as handler };

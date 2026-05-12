@@ -1,10 +1,26 @@
-/**
- * Croco 앱에서 Vike 페이지 설정의 기본값을 제공한다.
- * 사용자는 각 페이지의 +config.ts에서 이 함수의 반환값을 spread하여 사용한다.
- */
-export function createCrocoPageConfig(options?: { ssr?: boolean }) {
+import type { RenderMode } from '@croco/meta-vite';
+
+export type CrocoPageOptions = {
+  /** SSR 렌더링 여부 (default: true) */
+  ssr?: boolean;
+  /** 페이지 경로 */
+  path?: string;
+  /** head 메타데이터 반환 함수 */
+  head?: () => { title?: string; description?: string };
+  /** ISR revalidate 시간(ms) */
+  revalidate?: number;
+};
+
+export type CrocoPageConfig = {
+  mode: RenderMode;
+  head?: () => { title?: string; description?: string };
+  revalidateMs?: number;
+};
+
+export function createCrocoPageConfig(options?: CrocoPageOptions): CrocoPageConfig {
   return {
-    ssr: options?.ssr ?? true,
-    passToClient: ['data', 'title', 'description'] as const,
+    mode: options?.ssr === false ? 'ssg' : 'ssr',
+    head: options?.head,
+    revalidateMs: options?.revalidate,
   };
 }

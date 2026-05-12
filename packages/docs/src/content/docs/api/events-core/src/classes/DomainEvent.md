@@ -28,6 +28,12 @@ title: "DomainEvent"
 
 ## Properties
 
+### eventId
+
+> `readonly` **eventId**: `string`
+
+***
+
 ### eventName
 
 > `readonly` **eventName**: `string`

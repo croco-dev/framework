@@ -5,7 +5,7 @@ prev: false
 title: "Trace"
 ---
 
-> **Trace**\<`Args`, `ReturnType`\>(`options?`): (`_target`, `propertyKey`, `descriptor`) => `TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\>
+> **Trace**\<`Args`, `ReturnType`\>(`options?`): (`_target`, `propertyKey`, `descriptor`) => `PropertyDescriptor`
 
 비동기 메서드 실행을 Span으로 감싸는 데코레이터입니다.
 
@@ -27,7 +27,7 @@ title: "Trace"
 
 ## Returns
 
-> (`_target`, `propertyKey`, `descriptor`): `TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\>
+> (`_target`, `propertyKey`, `descriptor`): `PropertyDescriptor`
 
 ### Parameters
 
@@ -41,8 +41,8 @@ title: "Trace"
 
 #### descriptor
 
-`TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\>
+`PropertyDescriptor`
 
 ### Returns
 
-`TypedPropertyDescriptor`\<(...`args`) => `Promise`\<`ReturnType`\>\>
+`PropertyDescriptor`

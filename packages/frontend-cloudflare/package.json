@@ -13,7 +13,9 @@
     "lint": "biome check ."
   },
   "peerDependencies": {},
-  "dependencies": {},
+  "dependencies": {
+    "@croco/meta-vite": "workspace:*"
+  },
   "devDependencies": {
     "@croco/frontend-react": "workspace:*",
     "@cloudflare/workers-types": "^4.20250214.0",

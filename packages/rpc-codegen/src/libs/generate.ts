@@ -308,7 +308,7 @@ function getOutputTypeName(route: RouteIR): string {
 }
 
 function assertNoZodImport(content: string): void {
-  if (content.includes('from \'zod\'') || content.includes('import { z }') || content.includes('zod')) {
+  if (content.includes("from 'zod'") || content.includes('import { z }') || content.includes('zod')) {
     throw new Error('Generated client must not import zod.');
   }
 }

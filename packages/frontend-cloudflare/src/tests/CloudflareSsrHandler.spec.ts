@@ -2,12 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createSsrHandler } from '../libs/CloudflareSsrHandler';
 import type { SsrWorkerEnv } from '../libs/types';
 
-vi.mock('vike/server', () => ({
-  renderPage: vi.fn(),
-}));
-
 describe('createSsrHandler', () => {
-  it('createSsrHandler() returns { fetch } object', () => {
+  it('createSsrHandler() returns a function', () => {
     const handler = createSsrHandler();
 
     expect(handler).toBeInstanceOf(Function);

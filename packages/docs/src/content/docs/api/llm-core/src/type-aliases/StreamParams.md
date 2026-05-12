@@ -14,3 +14,7 @@ title: "StreamParams"
 ### modelId?
 
 > `optional` **modelId**: `string`
+
+### signal?
+
+> `optional` **signal**: `AbortSignal`

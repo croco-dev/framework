@@ -160,7 +160,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
   }
 
   // 8. frontendDeploy (fullstack only)
-  let frontendDeploy: 'opennext' | 'vercel' | 'docker' | 'cloudflare-vike' | undefined;
+  let frontendDeploy: 'opennext' | 'vercel' | 'docker' | 'cloudflare-meta-vite' | undefined;
   if (preset === 'ddd-fullstack' || preset === 'ddd-vike-fullstack') {
     const frontendChoice =
       cliArgs.frontendDeploy ??
@@ -168,7 +168,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
         message: 'Frontend deployment target:',
         options: [
           { value: 'opennext', label: 'OpenNext (Cloudflare)', hint: 'Edge deployment' },
-          { value: 'cloudflare-vike', label: 'Cloudflare Vike', hint: 'SSR Worker deployment' },
+          { value: 'cloudflare-meta-vite', label: 'Cloudflare Meta Vite', hint: 'SSR Worker deployment' },
           { value: 'vercel', label: 'Vercel', hint: 'Vercel platform' },
           { value: 'docker', label: 'Docker', hint: 'Containerized' },
         ],
@@ -177,7 +177,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       p.cancel('Operation cancelled');
       process.exit(0);
     }
-    frontendDeploy = frontendChoice as 'opennext' | 'vercel' | 'docker' | 'cloudflare-vike';
+    frontendDeploy = frontendChoice as 'opennext' | 'vercel' | 'docker' | 'cloudflare-meta-vite';
   }
 
   // 9. db

@@ -91,7 +91,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
 
   // Step 7: frontend deploy
-  if (options.frontendDeploy === 'cloudflare-vike' && isVikeFullstackPreset) {
+  if (options.frontendDeploy === 'cloudflare-meta-vite' && isVikeFullstackPreset) {
     installFrontendDeploy(resolvedTarget, undefined, {
       ...vars,
       preset: options.preset,

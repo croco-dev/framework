@@ -1,8 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { RouteIR } from '@croco/protocols-core';
-import { z } from 'zod';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { generateClientFiles } from '../libs/generate';
 
 const TEMP_DIR = path.join(__dirname, 'codegen-temp');

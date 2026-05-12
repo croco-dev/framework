@@ -12,6 +12,9 @@
 // - ISR types: CacheStore integration for TTL-only ISR
 // - head(): minimal metadata API helper
 
+export type { ServerActionConfig } from './libs/actions/serverActions';
+// Server actions
+export { createServerAction, createServerActionHandler, dispatchServerAction } from './libs/actions/serverActions';
 export type { SsgRenderedArtifact, SsgRenderFunction } from './libs/build/ssgPrerender';
 // Build helpers
 export { prerenderSsgRoutes, renderRouteToString } from './libs/build/ssgPrerender';
@@ -31,13 +34,17 @@ export type { MetaFetchHandlerOptions } from './libs/render/composeHandler';
 export { createMetaFetchHandler } from './libs/render/composeHandler';
 export { RenderServer } from './libs/render/renderServer';
 export type { CrocoApiHandlerResult, CrocoFetchHandler, RuntimeContext } from './libs/render/types';
+export { defineApiRoute } from './libs/routes/defineApiRoute';
 export { defineRoute } from './libs/routes/defineRoute';
 // Head metadata
 export type { HeadMetadata } from './libs/routes/head';
 export { head } from './libs/routes/head';
-export { RouteRegistry } from './libs/routes/routeRegistry';
+export { RouteConflictError, RouteRegistry } from './libs/routes/routeRegistry';
 // Route definitions
 export type {
+  ApiMethod,
+  ApiRouteDefinition,
+  ApiRouteIR,
   PageRouteDefinition,
   PageRouteIR,
   RenderMode,

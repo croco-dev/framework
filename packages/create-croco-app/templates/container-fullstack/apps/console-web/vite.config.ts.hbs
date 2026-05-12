@@ -1,7 +1,6 @@
-import react from '@vitejs/plugin-react';
-import vike from 'vike/plugin';
+import { crocoMetaVitePlugin } from '@croco/meta-vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react(), vike()],
+  plugins: [crocoMetaVitePlugin()],
 });

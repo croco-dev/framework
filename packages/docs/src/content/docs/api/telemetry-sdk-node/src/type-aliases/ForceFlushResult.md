@@ -11,7 +11,7 @@ title: "ForceFlushResult"
 
 ### error?
 
-> `optional` **error**: `Error`
+> `optional` **error**: `TelemetryRuntimeProblem`
 
 ***
 

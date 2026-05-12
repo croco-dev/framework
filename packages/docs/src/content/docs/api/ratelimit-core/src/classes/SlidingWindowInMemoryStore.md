@@ -15,13 +15,19 @@ title: "SlidingWindowInMemoryStore"
 
 ### Constructor
 
-> **new SlidingWindowInMemoryStore**(): `SlidingWindowInMemoryStore`
+> **new SlidingWindowInMemoryStore**(`options?`): `SlidingWindowInMemoryStore`
+
+#### Parameters
+
+##### options?
+
+[`InMemoryRateLimitStoreOptions`](/api/ratelimit-core/src/type-aliases/inmemoryratelimitstoreoptions/) = `{}`
 
 #### Returns
 
 `SlidingWindowInMemoryStore`
 
-#### Inherited from
+#### Overrides
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`constructor`](/api/ratelimit-core/src/classes/slidingwindowstore/#constructor)
 
@@ -72,6 +78,26 @@ title: "SlidingWindowInMemoryStore"
 #### Inherited from
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`checkSlidingWindow`](/api/ratelimit-core/src/classes/slidingwindowstore/#checkslidingwindow)
+
+***
+
+### close()
+
+> **close**(): `void`
+
+#### Returns
+
+`void`
+
+***
+
+### destroy()
+
+> **destroy**(): `void`
+
+#### Returns
+
+`void`
 
 ***
 

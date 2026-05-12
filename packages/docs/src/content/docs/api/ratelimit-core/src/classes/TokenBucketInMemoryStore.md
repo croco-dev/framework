@@ -15,13 +15,19 @@ title: "TokenBucketInMemoryStore"
 
 ### Constructor
 
-> **new TokenBucketInMemoryStore**(): `TokenBucketInMemoryStore`
+> **new TokenBucketInMemoryStore**(`options?`): `TokenBucketInMemoryStore`
+
+#### Parameters
+
+##### options?
+
+[`InMemoryRateLimitStoreOptions`](/api/ratelimit-core/src/type-aliases/inmemoryratelimitstoreoptions/) = `{}`
 
 #### Returns
 
 `TokenBucketInMemoryStore`
 
-#### Inherited from
+#### Overrides
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`constructor`](/api/ratelimit-core/src/classes/tokenbucketstore/#constructor)
 
@@ -72,6 +78,26 @@ title: "TokenBucketInMemoryStore"
 #### Inherited from
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`checkTokenBucket`](/api/ratelimit-core/src/classes/tokenbucketstore/#checktokenbucket)
+
+***
+
+### close()
+
+> **close**(): `void`
+
+#### Returns
+
+`void`
+
+***
+
+### destroy()
+
+> **destroy**(): `void`
+
+#### Returns
+
+`void`
 
 ***
 

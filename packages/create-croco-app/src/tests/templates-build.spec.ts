@@ -69,15 +69,15 @@ function checkSpaBeSplitStructure() {
 
 function checkSsrLambdaStructure() {
   checkFileExists('ssr-lambda', 'apps', 'api-server', 'package.json.hbs');
-  checkFileContains('ssr-lambda', ['apps', 'api-server', 'src', 'lambda.ts'], /export async function handler/);
+  checkFileContains('ssr-lambda', ['apps', 'api-server', 'src', 'lambda.ts'], /export { lambdaHandler as handler }/);
   checkFileExists('ssr-lambda', 'apps', 'console-web', 'package.json.hbs');
 
   const pageFiles = listPageFiles('ssr-lambda');
-  expect(pageFiles).toContain('+config.ts');
-  expect(pageFiles).toContain(join('index', '+Page.tsx'));
+  expect(pageFiles).toContain('route.ts');
+  expect(pageFiles).toContain(join('index', 'Page.tsx'));
   checkFileContains(
     'ssr-lambda',
-    ['apps', 'console-web', 'pages', 'index', '+Page.tsx'],
+    ['apps', 'console-web', 'pages', 'index', 'Page.tsx'],
     /export default function \w+\(/
   );
 }
@@ -92,8 +92,8 @@ function checkContainerFullstackStructure() {
   checkFileExists('container-fullstack', 'apps', 'console-web', 'package.json.hbs');
 
   const pageFiles = listPageFiles('container-fullstack');
-  expect(pageFiles).toContain('+config.ts');
-  checkFileContains('container-fullstack', ['apps', 'console-web', 'pages', '+config.ts'], /ssr:\s*true/);
+  expect(pageFiles).toContain('route.ts');
+  checkFileContains('container-fullstack', ['apps', 'console-web', 'pages', 'route.ts'], /mode:\s*['"]ssr['"]/);
 }
 
 describe.each(['spa-be-split', 'ssr-lambda', 'container-fullstack'])('Template: %s', (template) => {

@@ -6,7 +6,7 @@ export default defineConfig({
   },
   format: ['esm'],
   platform: 'neutral',
-  external: ['vike/server'],
+
   clean: true,
   minify: true,
   outExtension: () => ({ js: '.js' }),

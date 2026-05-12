@@ -7,8 +7,6 @@ title: "RoleDefinition"
 
 > **RoleDefinition** = `object`
 
-역할 정의 타입과 역할 레지스트리 구현체입니다.
-
 ## Properties
 
 ### inherits?

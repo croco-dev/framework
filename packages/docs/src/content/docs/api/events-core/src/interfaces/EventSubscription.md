@@ -5,8 +5,6 @@ prev: false
 title: "EventSubscription"
 ---
 
-이벤트 발행/구독 추상화와 구독 엔트리 타입입니다.
-
 ## Type Parameters
 
 ### TEvent
@@ -23,10 +21,10 @@ title: "EventSubscription"
 
 ### handler?
 
-> `optional` **handler**: [`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<`TEvent`\>
+> `optional` **handler**: `EventHandler`\<`TEvent`\>
 
 ***
 
 ### handlerClass
 
-> **handlerClass**: [`EventHandlerClass`](/api/events-core/src/type-aliases/eventhandlerclass/)\<`TEvent`\>
+> **handlerClass**: `EventHandlerClass`\<`TEvent`\>

@@ -96,7 +96,7 @@ describe('E2E: generate()', () => {
       scope: '@test',
       preset: 'ddd-vike-fullstack',
       webApps: ['web'],
-      frontendDeploy: 'cloudflare-vike',
+      frontendDeploy: 'cloudflare-meta-vite',
       apiHosting: 'standalone',
       db: [],
       agentRules: false,
