@@ -1,4 +1,5 @@
 import type { ResolverData } from "type-graphql";
+import type { GraphQLGuard } from "./GuardTypes";
 
 export type TypedResolver<
   TSource = unknown,
@@ -21,5 +22,5 @@ export type GuardedResolver<
   TReturn = unknown,
 > = {
   resolver: TypedResolver<TSource, TContext, TArgs, TReturn>;
-  guards: Array<new () => import("./GuardTypes").GraphQLGuard>;
+  guards: Array<new () => GraphQLGuard>;
 };

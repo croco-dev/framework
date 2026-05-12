@@ -1,4 +1,5 @@
 import type { RuntimeContext } from "../render/types";
+import type { ZodSchema } from "zod";
 
 /**
  * Server Action configuration.
@@ -16,7 +17,7 @@ export type ServerActionConfig<T = unknown> = {
   /** Unique identifier for this action */
   name: string;
   /** Optional Zod schema for input validation */
-  schema?: import("zod").ZodSchema<T>;
+  schema?: ZodSchema<T>;
   /** Action handler receiving parsed/validated data and optional runtime context */
   handler: (data: T, context?: RuntimeContext) => Promise<Response> | Response;
 };

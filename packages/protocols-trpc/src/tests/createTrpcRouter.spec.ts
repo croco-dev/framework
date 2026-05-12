@@ -38,7 +38,10 @@ const mocked = vi.hoisted(() => ({
 }));
 
 vi.mock("@croco/protocols-core", async (importActual) => {
-  const actual = await importActual<typeof import("@croco/protocols-core")>();
+  const actual =
+    await importActual<
+      Parameters<typeof vi.mock>[1] extends (v: infer F) => Promise<unknown> ? F : never
+    >();
 
   return {
     ...actual,

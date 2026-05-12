@@ -84,7 +84,7 @@ export class ParamResolver {
 
     const sortedParams = [...paramsMeta].sort((a, b) => a.index - b.index);
     const maxIndex = Math.max(...sortedParams.map((p) => p.index));
-    const args: unknown[] = new Array(maxIndex + 1).fill(undefined);
+    const args: unknown[] = Array.from({ length: maxIndex + 1 }).fill(undefined) as unknown[];
     const cachedBody = await this.resolveBody(ctx, sortedParams);
 
     for (const param of sortedParams) {

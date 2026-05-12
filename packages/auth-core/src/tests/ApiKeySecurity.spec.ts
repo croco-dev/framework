@@ -3,6 +3,7 @@ import { ApiKeyGenerator } from "../libs/apikey/ApiKeyGenerator";
 import { ApiKeyHasher } from "../libs/apikey/ApiKeyHasher";
 import { ApiKeyManager } from "../libs/apikey/ApiKeyManager";
 import type { ApiKey, CreateApiKeyOptions } from "../libs/interfaces/ApiKey";
+import type { EventBus } from "@croco/events-core";
 
 describe("ApiKey Security", () => {
   let manager!: ApiKeyManager;
@@ -233,7 +234,7 @@ describe("ApiKey Security", () => {
         mockStore,
         generator,
         hasher,
-        mockEventBus as unknown as import("@croco/events-core").EventBus,
+        mockEventBus as unknown as EventBus,
       );
 
       const options: CreateApiKeyOptions = {

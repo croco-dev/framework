@@ -158,7 +158,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
     validateTransition(execution.status, "cancelled");
 
     const metadata = reason
-      ? { ...(execution.metadata ?? {}), cancellationReason: reason }
+      ? { ...execution.metadata, cancellationReason: reason }
       : execution.metadata;
 
     return this.store.update(id, {
@@ -215,7 +215,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
 
     return this.store.update(id, {
       checkpoints: {
-        ...(execution.checkpoints ?? {}),
+        ...execution.checkpoints,
         [key]: value,
       },
     });

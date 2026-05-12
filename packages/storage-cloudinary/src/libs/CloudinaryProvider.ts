@@ -449,7 +449,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   }
 
   private async withConfiguredCloudinary<T>(operation: () => Promise<T>): Promise<T> {
-    const previousConfig = { ...(cloudinary.config() ?? {}) };
+    const previousConfig = { ...cloudinary.config() };
 
     cloudinary.config(this.getCloudinaryConfig());
 

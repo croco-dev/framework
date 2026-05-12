@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { type EventBus, EventBusConfig } from "@croco/events-core";
+import { type EventBus, EventBusConfig, type EventSubscription } from "@croco/events-core";
 import type { RequestContext } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -8,7 +8,7 @@ import { AuthProvider, ImpersonationStore } from "../libs/interfaces";
 import type { ImpersonationConfig, ImpersonationState } from "../libs/types";
 
 class MockEventBus implements EventBus {
-  private subscriptions = new Set<import("@croco/events-core").EventSubscription>();
+  private subscriptions = new Set<EventSubscription>();
 
   async publish(event: any): Promise<void> {
     const eventName = event.constructor.eventName;
@@ -19,11 +19,11 @@ class MockEventBus implements EventBus {
     }
   }
 
-  subscribe(subscription: import("@croco/events-core").EventSubscription): void {
+  subscribe(subscription: EventSubscription): void {
     this.subscriptions.add(subscription);
   }
 
-  unsubscribe(subscription: import("@croco/events-core").EventSubscription): void {
+  unsubscribe(subscription: EventSubscription): void {
     this.subscriptions.delete(subscription);
   }
 

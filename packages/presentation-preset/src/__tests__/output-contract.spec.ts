@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { BuildArtifact, DeployTarget, OutputContract } from "../output-contract";
 
 describe("OutputContract types", () => {
   it("compiles with valid BuildArtifact", () => {
-    const artifact: import("../output-contract").BuildArtifact = {
+    const artifact: BuildArtifact = {
       path: "index.js",
       format: "esm",
       type: "code",
@@ -11,7 +12,7 @@ describe("OutputContract types", () => {
   });
 
   it("compiles with valid OutputContract", () => {
-    const contract: import("../output-contract").OutputContract = {
+    const contract: OutputContract = {
       presetName: "node",
       buildTime: new Date().toISOString(),
       format: "dual",
@@ -27,7 +28,7 @@ describe("OutputContract types", () => {
   });
 
   it("accepts DeployTarget with runtime constraints", () => {
-    const target: import("../output-contract").DeployTarget = {
+    const target: DeployTarget = {
       target: "lambda",
       output: {
         presetName: "lambda",

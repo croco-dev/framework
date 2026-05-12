@@ -232,7 +232,7 @@ export class ComponentScanner {
   }
 
   private isTypeScriptFile(filePath: string): boolean {
-    return /\.(ts|tsx)$/.test(filePath) && !/\.d\.ts$/.test(filePath);
+    return /\.(ts|tsx)$/.test(filePath) && !filePath.endsWith(".d.ts");
   }
 
   private isExcluded(filePath: string, scanRoot: string): boolean {

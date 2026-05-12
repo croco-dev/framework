@@ -1,12 +1,12 @@
 import { Container } from "@croco/framework-context";
 import type { NotificationPayload } from "@croco/notifications-core";
 import { NotificationChannel } from "@croco/notifications-core";
-import type { CreateEmailResponse } from "resend";
+import type { CreateEmailResponse, Resend } from "resend";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ResendNotificationProblem } from "../libs/problems/ResendNotificationProblem";
 import { ResendProvider } from "../libs/ResendProvider";
 
-type MockResendClient = InstanceType<(typeof import("resend"))["Resend"]>;
+type MockResendClient = InstanceType<typeof Resend>;
 
 // Mock resend package
 vi.mock("resend", () => {
