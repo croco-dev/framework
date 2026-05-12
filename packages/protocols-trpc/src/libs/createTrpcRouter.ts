@@ -1,6 +1,11 @@
-import type { RouteIR } from '@croco/protocols-core';
-import { extractRouteIR } from '@croco/protocols-core';
-import { type AnyProcedure, type AnyRouter, initTRPC, type TRPCCreateRouterOptions } from '@trpc/server';
+import type { RouteIR } from "@croco/protocols-core";
+import { extractRouteIR } from "@croco/protocols-core";
+import {
+  type AnyProcedure,
+  type AnyRouter,
+  initTRPC,
+  type TRPCCreateRouterOptions,
+} from "@trpc/server";
 
 type ControllerConstructor = (new () => object) & Function;
 type RouteHandler = (input?: unknown) => unknown;
@@ -32,10 +37,13 @@ export function createTrpcRouter(controllers: Function[]): AnyRouter {
 
 function createProcedure(controllerInstance: object, route: RouteIR): AnyProcedure {
   const procedureWithInput = route.inputSchema ? t.procedure.input(route.inputSchema) : t.procedure;
-  const procedure = route.outputSchema ? procedureWithInput.output(route.outputSchema) : procedureWithInput;
-  const resolver = ({ input }: { readonly input: unknown }) => callRoute(controllerInstance, route.methodName, input);
+  const procedure = route.outputSchema
+    ? procedureWithInput.output(route.outputSchema)
+    : procedureWithInput;
+  const resolver = ({ input }: { readonly input: unknown }) =>
+    callRoute(controllerInstance, route.methodName, input);
 
-  if (route.httpMethod === 'GET') {
+  if (route.httpMethod === "GET") {
     return procedure.query(resolver);
   }
 
@@ -53,11 +61,11 @@ function callRoute(controllerInstance: object, methodName: string, input: unknow
 }
 
 function getDomainName(route: RouteIR): string {
-  const domain = route.domain ?? route.controllerName.replace(/Controller$/, '');
+  const domain = route.domain ?? route.controllerName.replace(/Controller$/, "");
 
   return domain.charAt(0).toLowerCase() + domain.slice(1);
 }
 
 function isRouteHandler(value: unknown): value is RouteHandler {
-  return typeof value === 'function';
+  return typeof value === "function";
 }

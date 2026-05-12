@@ -11,23 +11,23 @@ pnpm add @croco/batch-qstash @upstash/qstash
 ## 사용법
 
 ```typescript
-import { Client } from '@upstash/qstash';
-import { QStashChunkExecutor } from '@croco/batch-qstash';
+import { Client } from "@upstash/qstash";
+import { QStashChunkExecutor } from "@croco/batch-qstash";
 
 const executor = new QStashChunkExecutor(executionManager, {
   qstashClient: new Client({ token: process.env.QSTASH_TOKEN! }),
-  webhookUrl: 'https://api.example.com/batch/next',
+  webhookUrl: "https://api.example.com/batch/next",
 });
 
-const result = await executor.executeChunk('execution-1', step);
+const result = await executor.executeChunk("execution-1", step);
 ```
 
 ## API 레퍼런스
 
-| API | 설명 |
-|---|---|
-| `QStashChunkExecutor` | 청크 실행, 체크포인트 저장, 다음 청크 예약을 수행합니다. |
-| `QStashExecutorOptions` | `qstashClient`, `webhookUrl`을 받는 옵션 타입입니다. |
+| API                     | 설명                                                     |
+| ----------------------- | -------------------------------------------------------- |
+| `QStashChunkExecutor`   | 청크 실행, 체크포인트 저장, 다음 청크 예약을 수행합니다. |
+| `QStashExecutorOptions` | `qstashClient`, `webhookUrl`을 받는 옵션 타입입니다.     |
 
 ## 동작 메모
 

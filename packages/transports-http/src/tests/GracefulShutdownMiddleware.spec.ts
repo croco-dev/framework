@@ -1,36 +1,41 @@
-import 'reflect-metadata';
+import "reflect-metadata";
 
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ErrorHandler } from '../libs/ErrorHandler';
-import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
+import { ErrorHandler } from "../libs/ErrorHandler";
+import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import {
   getActiveRequestCount,
   gracefulShutdownMiddleware,
   isShuttingDown,
   resetShutdownState,
   setupGracefulShutdown,
-} from '../libs/middleware/GracefulShutdownMiddleware';
+} from "../libs/middleware/GracefulShutdownMiddleware";
 
-describe('GracefulShutdownMiddleware', () => {
+describe("GracefulShutdownMiddleware", () => {
   beforeEach(() => {
     Container.reset();
-    const logger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} } as unknown as Logger;
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    } as unknown as Logger;
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
     resetShutdownState();
   });
 
-  describe('gracefulShutdownMiddleware', () => {
-    it('should allow requests when not shutting down', async () => {
+  describe("gracefulShutdownMiddleware", () => {
+    it("should allow requests when not shutting down", async () => {
       const middleware = gracefulShutdownMiddleware();
       let nextCalled = false;
 
       const ctx = {
-        req: { method: 'GET', path: '/test', headers: {}, url: 'http://localhost/test' },
+        req: { method: "GET", path: "/test", headers: {}, url: "http://localhost/test" },
         res: { status: 200, headers: {} },
         raw: { header: () => {}, json: () => new Response() },
       } as unknown as Parameters<typeof middleware>[0];
@@ -42,13 +47,13 @@ describe('GracefulShutdownMiddleware', () => {
       expect(nextCalled).toBe(true);
     });
 
-    it('should track active requests', async () => {
+    it("should track active requests", async () => {
       const middleware = gracefulShutdownMiddleware();
 
       expect(getActiveRequestCount()).toBe(0);
 
       const ctx = {
-        req: { method: 'GET', path: '/test', headers: {}, url: 'http://localhost/test' },
+        req: { method: "GET", path: "/test", headers: {}, url: "http://localhost/test" },
         res: { status: 200, headers: {} },
         raw: { header: () => {}, json: () => new Response() },
       } as unknown as Parameters<typeof middleware>[0];
@@ -63,14 +68,14 @@ describe('GracefulShutdownMiddleware', () => {
       expect(getActiveRequestCount()).toBe(0);
     });
 
-    it('should track shutdown state', async () => {
+    it("should track shutdown state", async () => {
       resetShutdownState();
       const middleware = gracefulShutdownMiddleware();
 
       expect(isShuttingDown()).toBe(false);
 
       const ctx = {
-        req: { method: 'GET', path: '/test', headers: {}, url: 'http://localhost/test' },
+        req: { method: "GET", path: "/test", headers: {}, url: "http://localhost/test" },
         res: { status: 200, headers: {} },
         raw: { header: () => {}, json: () => new Response() },
       } as unknown as Parameters<typeof middleware>[0];
@@ -79,12 +84,12 @@ describe('GracefulShutdownMiddleware', () => {
       expect(getActiveRequestCount()).toBe(0);
     });
 
-    it('should keep active request state isolated per middleware instance', async () => {
+    it("should keep active request state isolated per middleware instance", async () => {
       const firstMiddleware = gracefulShutdownMiddleware();
       const secondMiddleware = gracefulShutdownMiddleware();
 
       const ctx = {
-        req: { method: 'GET', path: '/test', headers: {}, url: 'http://localhost/test' },
+        req: { method: "GET", path: "/test", headers: {}, url: "http://localhost/test" },
         res: { status: 200, headers: {} },
         raw: { header: () => {}, json: () => new Response() },
       } as unknown as Parameters<typeof firstMiddleware>[0];
@@ -102,17 +107,17 @@ describe('GracefulShutdownMiddleware', () => {
     });
   });
 
-  describe('state management', () => {
-    it('should report shutdown state correctly', () => {
+  describe("state management", () => {
+    it("should report shutdown state correctly", () => {
       resetShutdownState();
       expect(isShuttingDown()).toBe(false);
     });
 
-    it('should reset state correctly', () => {
+    it("should reset state correctly", () => {
       const middleware = gracefulShutdownMiddleware();
 
       const ctx = {
-        req: { method: 'GET', path: '/test', headers: {}, url: 'http://localhost/test' },
+        req: { method: "GET", path: "/test", headers: {}, url: "http://localhost/test" },
         res: { status: 200, headers: {} },
         raw: { header: () => {}, json: () => new Response() },
       } as unknown as Parameters<typeof middleware>[0];
@@ -125,9 +130,9 @@ describe('GracefulShutdownMiddleware', () => {
       expect(isShuttingDown()).toBe(false);
     });
 
-    it('should preserve external signal listeners after shutdown', async () => {
+    it("should preserve external signal listeners after shutdown", async () => {
       const externalListener = vi.fn();
-      const signal = 'SIGINT';
+      const signal = "SIGINT";
 
       process.on(signal, externalListener);
 
@@ -143,9 +148,9 @@ describe('GracefulShutdownMiddleware', () => {
       process.off(signal, externalListener);
     });
 
-    it('should preserve external signal listeners when registering its own handlers', () => {
+    it("should preserve external signal listeners when registering its own handlers", () => {
       const externalListener = vi.fn();
-      const signal = 'SIGTERM';
+      const signal = "SIGTERM";
 
       process.on(signal, externalListener);
 

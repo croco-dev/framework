@@ -13,7 +13,7 @@ Lambda 런타임 이벤트와 컨텍스트를 읽는 유틸리티, 타입, 그�
 
 > **event**: [`LambdaEvent`](/api/transports-http/src/type-aliases/lambdaevent/)
 
-***
+---
 
 ### lambdaContext
 

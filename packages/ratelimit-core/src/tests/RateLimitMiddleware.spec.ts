@@ -1,14 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createRateLimitMiddleware, type HttpContext } from '../libs/middleware/rateLimitMiddleware';
-import { RateLimitExceededProblem } from '../libs/problems/RateLimitExceededProblem';
-import type { RateLimiter } from '../libs/RateLimiter';
-import type { RateLimitPolicy, RateLimitResult } from '../libs/types';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createRateLimitMiddleware,
+  type HttpContext,
+} from "../libs/middleware/rateLimitMiddleware";
+import { RateLimitExceededProblem } from "../libs/problems/RateLimitExceededProblem";
+import type { RateLimiter } from "../libs/RateLimiter";
+import type { RateLimitPolicy, RateLimitResult } from "../libs/types";
 
-describe('createRateLimitMiddleware', () => {
+describe("createRateLimitMiddleware", () => {
   let mockRateLimiter!: RateLimiter;
   const policy: RateLimitPolicy = {
-    name: 'test-global',
-    algorithm: 'sliding',
+    name: "test-global",
+    algorithm: "sliding",
     limit: 100,
     windowMs: 3600000,
   };
@@ -29,13 +32,13 @@ describe('createRateLimitMiddleware', () => {
     resetAtMs: Date.now() + 3600000,
   };
 
-  const createContext = (overrides: Partial<HttpContext['req']> = {}): HttpContext => {
+  const createContext = (overrides: Partial<HttpContext["req"]> = {}): HttpContext => {
     const store = new Map<string, unknown>();
     return {
       req: {
-        method: 'GET',
-        path: '/api/test',
-        headers: { 'x-forwarded-for': '192.168.1.1' },
+        method: "GET",
+        path: "/api/test",
+        headers: { "x-forwarded-for": "192.168.1.1" },
         ...overrides,
       },
       set: <T>(key: string, value: T) => {
@@ -51,7 +54,7 @@ describe('createRateLimitMiddleware', () => {
     } as unknown as RateLimiter;
   });
 
-  it('should allow request within limit', async () => {
+  it("should allow request within limit", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
@@ -62,10 +65,10 @@ describe('createRateLimitMiddleware', () => {
     await middleware(ctx, next);
 
     expect(next).toHaveBeenCalled();
-    expect(ctx.get('rateLimitResult')).toEqual(successResult);
+    expect(ctx.get("rateLimitResult")).toEqual(successResult);
   });
 
-  it('should throw RateLimitExceededProblem when limit exceeded', async () => {
+  it("should throw RateLimitExceededProblem when limit exceeded", async () => {
     vi.mocked(mockRateLimiter.checkWithKey).mockResolvedValue(failedResult);
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
@@ -78,40 +81,46 @@ describe('createRateLimitMiddleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('should extract IP from x-forwarded-for header', async () => {
+  it("should extract IP from x-forwarded-for header", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
-      keySegments: ['ip'],
+      keySegments: ["ip"],
     });
-    const ctx = createContext({ headers: { 'x-forwarded-for': '10.0.0.1, 192.168.1.1' } });
+    const ctx = createContext({ headers: { "x-forwarded-for": "10.0.0.1, 192.168.1.1" } });
     const next = vi.fn().mockResolvedValue(undefined);
 
     await middleware(ctx, next);
 
-    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(expect.stringContaining('10.0.0.1'), policy);
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
+      expect.stringContaining("10.0.0.1"),
+      policy,
+    );
   });
 
-  it('should fallback to cf-connecting-ip when x-forwarded-for is empty', async () => {
+  it("should fallback to cf-connecting-ip when x-forwarded-for is empty", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
-      keySegments: ['ip'],
+      keySegments: ["ip"],
     });
     const ctx = createContext({
       headers: {
-        'x-forwarded-for': '   ',
-        'cf-connecting-ip': '203.0.113.7',
+        "x-forwarded-for": "   ",
+        "cf-connecting-ip": "203.0.113.7",
       },
     });
     const next = vi.fn().mockResolvedValue(undefined);
 
     await middleware(ctx, next);
 
-    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(expect.stringContaining('203.0.113.7'), policy);
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
+      expect.stringContaining("203.0.113.7"),
+      policy,
+    );
   });
 
-  it('should store rate limit headers in context', async () => {
+  it("should store rate limit headers in context", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
@@ -122,13 +131,13 @@ describe('createRateLimitMiddleware', () => {
 
     await middleware(ctx, next);
 
-    const headers = ctx.get<Record<string, string>>('rateLimitHeaders');
+    const headers = ctx.get<Record<string, string>>("rateLimitHeaders");
     expect(headers).not.toBeUndefined();
-    expect(headers?.['X-RateLimit-Limit']).toBe('100');
-    expect(headers?.['X-RateLimit-Remaining']).toBe('99');
+    expect(headers?.["X-RateLimit-Limit"]).toBe("100");
+    expect(headers?.["X-RateLimit-Remaining"]).toBe("99");
   });
 
-  it('should not add headers when addHeaders is false', async () => {
+  it("should not add headers when addHeaders is false", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
@@ -139,20 +148,23 @@ describe('createRateLimitMiddleware', () => {
 
     await middleware(ctx, next);
 
-    expect(ctx.get('rateLimitHeaders')).toBeUndefined();
+    expect(ctx.get("rateLimitHeaders")).toBeUndefined();
   });
 
-  it('should include route in key when keySegments includes route', async () => {
+  it("should include route in key when keySegments includes route", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
-      keySegments: ['ip', 'route'],
+      keySegments: ["ip", "route"],
     });
-    const ctx = createContext({ method: 'POST', path: '/api/orders' });
+    const ctx = createContext({ method: "POST", path: "/api/orders" });
     const next = vi.fn().mockResolvedValue(undefined);
 
     await middleware(ctx, next);
 
-    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(expect.stringContaining('POST:/api/orders'), policy);
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
+      expect.stringContaining("POST:/api/orders"),
+      policy,
+    );
   });
 });

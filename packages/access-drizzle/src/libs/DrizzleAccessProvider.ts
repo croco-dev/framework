@@ -6,8 +6,8 @@ import type {
   ListRequest,
   RelationTuple,
   RevokeRequest,
-} from '@croco/access-core';
-import { sql } from 'drizzle-orm';
+} from "@croco/access-core";
+import { sql } from "drizzle-orm";
 
 interface DrizzleDb {
   execute: (query: SQLWrapper) => Promise<{ rows: unknown[] }>;
@@ -31,27 +31,29 @@ function isResourceObject(value: string): value is `${string}:${string}` {
   return /^[^:]+:[^:]+$/.test(value);
 }
 
-function isSubject(value: string): value is `user:${string}` | `role:${string}` | `group:${string}` {
+function isSubject(
+  value: string,
+): value is `user:${string}` | `role:${string}` | `group:${string}` {
   return /^(user|role|group):[^:]+$/.test(value);
 }
 
 function normalizeAllowedValue(value: unknown): boolean {
-  if (typeof value === 'boolean') {
+  if (typeof value === "boolean") {
     return value;
   }
 
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     return value === 1;
   }
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
 
-    if (normalized === '1' || normalized === 'true' || normalized === 't') {
+    if (normalized === "1" || normalized === "true" || normalized === "t") {
       return true;
     }
 
-    if (normalized === '0' || normalized === 'false' || normalized === 'f') {
+    if (normalized === "0" || normalized === "false" || normalized === "f") {
       return false;
     }
   }
@@ -63,14 +65,14 @@ function assertRelationTupleRow(row: unknown): row is RelationTupleRow & {
   object: `${string}:${string}`;
   subject: `user:${string}` | `role:${string}` | `group:${string}`;
 } {
-  if (!row || typeof row !== 'object') {
+  if (!row || typeof row !== "object") {
     return false;
   }
 
   const record = row as Record<string, unknown>;
-  const isObjectString = typeof record.object === 'string';
-  const isRelationString = typeof record.relation === 'string';
-  const isSubjectString = typeof record.subject === 'string';
+  const isObjectString = typeof record.object === "string";
+  const isRelationString = typeof record.relation === "string";
+  const isSubjectString = typeof record.subject === "string";
 
   if (!isObjectString || !isRelationString || !isSubjectString) {
     return false;
@@ -115,7 +117,7 @@ export class DrizzleAccessProvider implements AccessProvider {
         SELECT EXISTS(
           SELECT 1 FROM reachable WHERE object = ${request.object}
         ) as allowed
-      `
+      `,
     );
 
     const firstRow = result.rows[0] as AllowedRow | undefined;
@@ -131,7 +133,7 @@ export class DrizzleAccessProvider implements AccessProvider {
         INSERT INTO relation_tuples (tenant_id, object, relation, subject)
         VALUES (${request.tenantId}, ${request.tuple.object}, ${request.tuple.relation}, ${request.tuple.subject})
         ON CONFLICT (tenant_id, object, relation, subject) DO NOTHING
-      `
+      `,
     );
   }
 
@@ -146,7 +148,7 @@ export class DrizzleAccessProvider implements AccessProvider {
           AND object = ${request.tuple.object}
           AND relation = ${request.tuple.relation}
           AND subject = ${request.tuple.subject}
-      `
+      `,
     );
   }
 
@@ -173,7 +175,7 @@ export class DrizzleAccessProvider implements AccessProvider {
         SELECT object, relation, subject
         FROM relation_tuples
         WHERE ${whereClause}
-      `
+      `,
     );
 
     const tuples: RelationTuple[] = [];

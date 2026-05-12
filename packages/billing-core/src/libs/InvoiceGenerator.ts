@@ -1,4 +1,4 @@
-import type { Invoice, InvoiceLineItem, InvoiceStatus } from '../types';
+import type { Invoice, InvoiceLineItem, InvoiceStatus } from "../types";
 
 export type GenerateInvoiceParams = {
   invoiceId: string;

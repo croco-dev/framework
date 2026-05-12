@@ -1,7 +1,7 @@
-import { CasingCache } from 'drizzle-orm/casing';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
-import { PgTrgmStrategy } from '../libs/strategies/PgTrgmStrategy';
+import { CasingCache } from "drizzle-orm/casing";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { PgTrgmStrategy } from "../libs/strategies/PgTrgmStrategy";
 
 type PgTrgmStrategyPrivate = {
   similarityThreshold: number;
@@ -11,7 +11,7 @@ const mockDb = {
   execute: vi.fn(),
 } as unknown as NodePgDatabase<Record<string, never>>;
 
-describe('PgTrgmStrategy', () => {
+describe("PgTrgmStrategy", () => {
   let strategy!: PgTrgmStrategy;
 
   beforeEach(() => {
@@ -19,23 +19,23 @@ describe('PgTrgmStrategy', () => {
     strategy = new PgTrgmStrategy();
   });
 
-  it('should initialize with default threshold', () => {
+  it("should initialize with default threshold", () => {
     expect((strategy as unknown as PgTrgmStrategyPrivate).similarityThreshold).toBe(0.3);
   });
 
-  it('should initialize with custom threshold', () => {
+  it("should initialize with custom threshold", () => {
     strategy = new PgTrgmStrategy({ threshold: 0.5 });
     expect((strategy as unknown as PgTrgmStrategyPrivate).similarityThreshold).toBe(0.5);
   });
 
-  describe('buildSearchQuery', () => {
-    it('should build correct search query', () => {
-      const query = { query: 'test query' };
-      const sqlObj = strategy.buildSearchQuery('users', query, 'tenant-123');
+  describe("buildSearchQuery", () => {
+    it("should build correct search query", () => {
+      const query = { query: "test query" };
+      const sqlObj = strategy.buildSearchQuery("users", query, "tenant-123");
 
       const sqlString = sqlObj.toQuery({
         escapeName: (x: string) => `"${x}"`,
-        escapeParam: () => '$1',
+        escapeParam: () => "$1",
         escapeString: (x: string) => `'${x}'`,
         casing: new CasingCache(),
       }).sql;
@@ -46,14 +46,14 @@ describe('PgTrgmStrategy', () => {
     });
   });
 
-  describe('buildIndexQuery', () => {
-    it('should build correct index query', () => {
-      const document = { id: 'doc-1', title: 'Hello World', tenantId: 'tenant-123' };
-      const sqlObj = strategy.buildIndexQuery('users', document, 'tenant-123');
+  describe("buildIndexQuery", () => {
+    it("should build correct index query", () => {
+      const document = { id: "doc-1", title: "Hello World", tenantId: "tenant-123" };
+      const sqlObj = strategy.buildIndexQuery("users", document, "tenant-123");
 
       const sqlString = sqlObj.toQuery({
         escapeName: (x: string) => `"${x}"`,
-        escapeParam: () => '$1',
+        escapeParam: () => "$1",
         escapeString: (x: string) => `'${x}'`,
         casing: new CasingCache(),
       }).sql;
@@ -65,12 +65,12 @@ describe('PgTrgmStrategy', () => {
     });
   });
 
-  describe('buildDeleteQuery', () => {
-    it('should build correct delete query', () => {
-      const sqlObj = strategy.buildDeleteQuery('users', 'doc-1', 'tenant-123');
+  describe("buildDeleteQuery", () => {
+    it("should build correct delete query", () => {
+      const sqlObj = strategy.buildDeleteQuery("users", "doc-1", "tenant-123");
       const sqlString = sqlObj.toQuery({
         escapeName: (x: string) => `"${x}"`,
-        escapeParam: () => '$1',
+        escapeParam: () => "$1",
         escapeString: (x: string) => `'${x}'`,
         casing: new CasingCache(),
       }).sql;
@@ -81,14 +81,14 @@ describe('PgTrgmStrategy', () => {
     });
   });
 
-  describe('getRequiredExtensions', () => {
-    it('should return pg_trgm', () => {
-      expect(strategy.getRequiredExtensions()).toEqual(['pg_trgm']);
+  describe("getRequiredExtensions", () => {
+    it("should return pg_trgm", () => {
+      expect(strategy.getRequiredExtensions()).toEqual(["pg_trgm"]);
     });
   });
 
-  describe('checkCapability', () => {
-    it('should return true if extension exists', async () => {
+  describe("checkCapability", () => {
+    it("should return true if extension exists", async () => {
       (mockDb.execute as Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
 
       const result = await strategy.checkCapability(mockDb);
@@ -96,7 +96,7 @@ describe('PgTrgmStrategy', () => {
       expect(mockDb.execute).toHaveBeenCalled();
     });
 
-    it('should return false if extension does not exist', async () => {
+    it("should return false if extension does not exist", async () => {
       (mockDb.execute as Mock).mockResolvedValue({ rows: [] });
 
       const result = await strategy.checkCapability(mockDb);
@@ -104,8 +104,8 @@ describe('PgTrgmStrategy', () => {
     });
   });
 
-  describe('getCapabilities', () => {
-    it('should return correct capabilities', () => {
+  describe("getCapabilities", () => {
+    it("should return correct capabilities", () => {
       const capabilities = strategy.getCapabilities();
       expect(capabilities).toEqual({
         facetedSearch: false,

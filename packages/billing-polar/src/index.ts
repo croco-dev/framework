@@ -46,7 +46,7 @@
  * });
  * ```
  */
-export { PolarBillingGateway } from './libs/PolarBillingGateway';
+export { PolarBillingGateway } from "./libs/PolarBillingGateway";
 
 // Event Mapper
 /**
@@ -68,11 +68,11 @@ export { PolarBillingGateway } from './libs/PolarBillingGateway';
  * const domainEvent = mapper.toDomainEvent(polarEvent);
  * ```
  */
-export { PolarEventMapper } from './libs/PolarEventMapper';
+export { PolarEventMapper } from "./libs/PolarEventMapper";
 /**
  * Dependencies for Polar webhook handler.
  */
-export type { WebhookDependencies } from './libs/PolarWebhookHandler';
+export type { WebhookDependencies } from "./libs/PolarWebhookHandler";
 
 // Webhook
 /**
@@ -93,7 +93,7 @@ export type { WebhookDependencies } from './libs/PolarWebhookHandler';
  * const result = await handler.handle(rawPayload, signature);
  * ```
  */
-export { PolarWebhookHandler } from './libs/PolarWebhookHandler';
+export { PolarWebhookHandler } from "./libs/PolarWebhookHandler";
 
 // Types
 /**
@@ -115,4 +115,4 @@ export { PolarWebhookHandler } from './libs/PolarWebhookHandler';
  * };
  * ```
  */
-export type { PolarConfig, WebhookHandlerResult } from './types';
+export type { PolarConfig, WebhookHandlerResult } from "./types";

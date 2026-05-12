@@ -1,10 +1,10 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export enum ExecutionProblemCode {
-  NOT_FOUND = 'execution/not-found',
-  CONFLICT = 'execution/conflict',
-  MAX_RETRIES_EXCEEDED = 'execution/max-retries-exceeded',
-  INVALID_STATE_TRANSITION = 'execution/invalid-state-transition',
+  NOT_FOUND = "execution/not-found",
+  CONFLICT = "execution/conflict",
+  MAX_RETRIES_EXCEEDED = "execution/max-retries-exceeded",
+  INVALID_STATE_TRANSITION = "execution/invalid-state-transition",
 }
 
 /**
@@ -30,10 +30,18 @@ export class ExecutionProblems {
   }
 
   static maxRetriesExceeded(detail: string): ExecutionProblem {
-    return new ExecutionProblem(ExecutionProblemCode.MAX_RETRIES_EXCEEDED, ProblemCategory.Conflict, detail);
+    return new ExecutionProblem(
+      ExecutionProblemCode.MAX_RETRIES_EXCEEDED,
+      ProblemCategory.Conflict,
+      detail,
+    );
   }
 
   static invalidStateTransition(detail: string): ExecutionProblem {
-    return new ExecutionProblem(ExecutionProblemCode.INVALID_STATE_TRANSITION, ProblemCategory.Conflict, detail);
+    return new ExecutionProblem(
+      ExecutionProblemCode.INVALID_STATE_TRANSITION,
+      ProblemCategory.Conflict,
+      detail,
+    );
   }
 }

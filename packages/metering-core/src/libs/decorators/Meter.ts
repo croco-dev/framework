@@ -1,7 +1,7 @@
-import 'reflect-metadata';
-import type { MeterType } from '../types';
+import "reflect-metadata";
+import type { MeterType } from "../types";
 
-export const METER_METADATA_KEY = Symbol('meter:definition');
+export const METER_METADATA_KEY = Symbol("meter:definition");
 
 export type MeterOptions = {
   meterId: string;
@@ -36,7 +36,7 @@ export function Meter(options: MeterOptions): ClassDecorator {
   return (target: Function) => {
     const metadata: MeterMetadata = {
       meterId: options.meterId,
-      type: options.type ?? 'COUNT',
+      type: options.type ?? "COUNT",
       quota: options.quota,
       allowOverQuota: options.allowOverQuota ?? false,
     };

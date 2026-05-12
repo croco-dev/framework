@@ -10,13 +10,15 @@ pnpm dev
 ```
 
 Then test:
+
 ```bash
 curl http://localhost:3000/api/health
 ```
 
 Expected response:
+
 ```json
-{"status":"ok","message":"Croco Quick Start is running!"}
+{ "status": "ok", "message": "Croco Quick Start is running!" }
 ```
 
 ## Deploy

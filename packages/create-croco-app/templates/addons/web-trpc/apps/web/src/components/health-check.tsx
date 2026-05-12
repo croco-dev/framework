@@ -1,5 +1,5 @@
-'use client';
-import { trpc } from '../lib/trpc';
+"use client";
+import { trpc } from "../lib/trpc";
 
 export function HealthCheck() {
   const { data, isLoading, error } = trpc.health.useQuery();

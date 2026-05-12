@@ -1,5 +1,5 @@
-import type { ILogger } from '@croco/framework-context';
-import type { MiddlewareFunction } from '../types';
+import type { ILogger } from "@croco/framework-context";
+import type { MiddlewareFunction } from "../types";
 
 export type GracefulShutdownOptions = {
   timeoutMs?: number;
@@ -19,7 +19,7 @@ type ShutdownState = {
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS = 10000;
-const DEFAULT_SIGNALS: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+const DEFAULT_SIGNALS: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
 
 function createMiddlewareState(): ShutdownState {
   const state = {
@@ -53,7 +53,9 @@ function noopLogger(): ILogger {
 /**
  * shutdown 상태에서 새 요청을 차단하고 활성 요청 완료를 기다리는 미들웨어입니다.
  */
-export const gracefulShutdownMiddleware = (options: GracefulShutdownOptions = {}): MiddlewareFunction => {
+export const gracefulShutdownMiddleware = (
+  options: GracefulShutdownOptions = {},
+): MiddlewareFunction => {
   const state = createMiddlewareState();
   currentState = state;
   const {
@@ -65,19 +67,26 @@ export const gracefulShutdownMiddleware = (options: GracefulShutdownOptions = {}
   } = options;
 
   if (!isLambdaEnvironment) {
-    setupSignalHandlers(state, signals, timeoutMs, onShutdown, logger, options.eventBusDrainTimeoutMs);
+    setupSignalHandlers(
+      state,
+      signals,
+      timeoutMs,
+      onShutdown,
+      logger,
+      options.eventBusDrainTimeoutMs,
+    );
   }
 
   return async (ctx, next): Promise<void> => {
     if (state.isShuttingDown) {
       ctx.res.status = 503;
-      ctx.raw.header('Retry-After', '10');
-      ctx.raw.header('Connection', 'close');
+      ctx.raw.header("Retry-After", "10");
+      ctx.raw.header("Connection", "close");
       throw ctx.jsonResponse(
         {
-          error: 'Server is shutting down',
+          error: "Server is shutting down",
         },
-        503
+        503,
       );
     }
 
@@ -111,7 +120,8 @@ export function setupGracefulShutdown(options: GracefulShutdownOptions = {}): ()
   const state = createMiddlewareState();
   currentState = state;
 
-  return () => performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
+  return () =>
+    performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
 }
 
 function setupSignalHandlers(
@@ -120,7 +130,7 @@ function setupSignalHandlers(
   timeoutMs: number,
   onShutdown?: () => void | Promise<void>,
   logger?: ILogger,
-  eventBusDrainTimeoutMs?: number
+  eventBusDrainTimeoutMs?: number,
 ): void {
   for (const signal of signals) {
     const handler = async (): Promise<void> => {
@@ -134,18 +144,18 @@ function setupSignalHandlers(
 
 async function drainEventBus(logger: ILogger, timeoutMs: number): Promise<void> {
   try {
-    const { EventBusConfig } = await import('@croco/events-core');
+    const { EventBusConfig } = await import("@croco/events-core");
     const config = EventBusConfig.getInstance();
     const eventBus = config.getEventBus();
 
-    if (!eventBus || typeof eventBus !== 'object') {
+    if (!eventBus || typeof eventBus !== "object") {
       return;
     }
 
     const startTime = Date.now();
 
     const eventBusWithRunningCount = eventBus as { getRunningHandlerCount?: () => number };
-    if (typeof eventBusWithRunningCount.getRunningHandlerCount !== 'function') {
+    if (typeof eventBusWithRunningCount.getRunningHandlerCount !== "function") {
       return;
     }
 
@@ -155,21 +165,21 @@ async function drainEventBus(logger: ILogger, timeoutMs: number): Promise<void> 
 
         if (runningCount === 0) {
           clearInterval(checkInterval);
-          logger.info('Event bus drained successfully');
+          logger.info("Event bus drained successfully");
           resolve();
           return;
         }
 
         if (Date.now() - startTime > timeoutMs) {
           clearInterval(checkInterval);
-          logger.warn('Event bus drain timeout exceeded', { runningCount });
+          logger.warn("Event bus drain timeout exceeded", { runningCount });
           resolve();
         }
       }, 100);
     });
   } catch (error) {
     // Intentionally ignored: drain failure should not block shutdown
-    logger?.warn?.('Event bus drain failed', { error });
+    logger?.warn?.("Event bus drain failed", { error });
   }
 }
 
@@ -179,7 +189,7 @@ async function performShutdown(
   onShutdown?: () => void | Promise<void>,
   signals?: NodeJS.Signals[],
   logger?: ILogger,
-  eventBusDrainTimeoutMs?: number
+  eventBusDrainTimeoutMs?: number,
 ): Promise<void> {
   const log = logger ?? noopLogger();
 
@@ -188,7 +198,7 @@ async function performShutdown(
   }
 
   state.isShuttingDown = true;
-  log.info('Graceful shutdown initiated', { timeoutMs });
+  log.info("Graceful shutdown initiated", { timeoutMs });
 
   const startTime = Date.now();
   const drainTimeout = eventBusDrainTimeoutMs ?? DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS;
@@ -220,7 +230,7 @@ async function performShutdown(
     };
 
     timeout = setTimeout(() => {
-      log.error('Shutdown timeout exceeded', { elapsedMs: Date.now() - startTime });
+      log.error("Shutdown timeout exceeded", { elapsedMs: Date.now() - startTime });
       resolveOnce();
     }, timeoutMs);
 
@@ -232,16 +242,19 @@ async function performShutdown(
   });
 
   await state.shutdownPromise;
-  log.info('Active requests completed', { elapsedMs: Date.now() - startTime });
+  log.info("Active requests completed", { elapsedMs: Date.now() - startTime });
 
   await drainEventBus(log, drainTimeout);
 
   if (onShutdown) {
     try {
       await onShutdown();
-      log.info('Custom shutdown hook completed');
+      log.info("Custom shutdown hook completed");
     } catch (error) {
-      log.error('Custom shutdown hook failed', error instanceof Error ? error : new Error(String(error)));
+      log.error(
+        "Custom shutdown hook failed",
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -256,7 +269,7 @@ async function performShutdown(
     }
   }
 
-  log.info('Graceful shutdown completed', { elapsedMs: Date.now() - startTime });
+  log.info("Graceful shutdown completed", { elapsedMs: Date.now() - startTime });
 }
 
 function generateRequestId(): string {

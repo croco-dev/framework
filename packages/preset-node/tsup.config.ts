@@ -1,13 +1,13 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: {
-    index: 'src/index.ts',
-    entry: 'src/entry.ts',
+    index: "src/index.ts",
+    entry: "src/entry.ts",
   },
-  format: ['esm', 'cjs'],
+  format: ["esm", "cjs"],
   dts: true,
   clean: true,
   minify: false,
-  noExternal: ['@croco/framework-preset'],
+  noExternal: ["@croco/framework-preset"],
 });

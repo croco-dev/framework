@@ -1,7 +1,7 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class InvitationRateLimitExceededProblem extends Problem {
-  readonly code = 'INVITATION_RATE_LIMIT_EXCEEDED';
+  readonly code = "INVITATION_RATE_LIMIT_EXCEEDED";
   readonly category = ProblemCategory.TooManyRequests;
 
   constructor(limit: string) {
@@ -10,7 +10,7 @@ export class InvitationRateLimitExceededProblem extends Problem {
 }
 
 export class DuplicateInvitationProblem extends Problem {
-  readonly code = 'DUPLICATE_INVITATION';
+  readonly code = "DUPLICATE_INVITATION";
   readonly category = ProblemCategory.Conflict;
 
   constructor(tenantId: string, email: string) {

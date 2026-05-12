@@ -1,8 +1,8 @@
-import type { Guard } from '@croco/framework-context';
-import type { HttpMethod, ParamType } from './constants';
-import type { ExceptionFilter } from './interfaces/ExceptionFilter';
-import type { Interceptor } from './interfaces/Interceptor';
-import type { PipeTransform } from './interfaces/PipeTransform';
+import type { Guard } from "@croco/framework-context";
+import type { HttpMethod, ParamType } from "./constants";
+import type { ExceptionFilter } from "./interfaces/ExceptionFilter";
+import type { Interceptor } from "./interfaces/Interceptor";
+import type { PipeTransform } from "./interfaces/PipeTransform";
 
 export interface ControllerMetadata {
   path: string;

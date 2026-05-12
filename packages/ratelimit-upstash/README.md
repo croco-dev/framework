@@ -11,31 +11,31 @@ pnpm add @croco/ratelimit-upstash @croco/ratelimit-core @upstash/redis
 ## 사용법
 
 ```typescript
-import { Redis } from '@upstash/redis';
-import { UpstashSlidingWindowStore } from '@croco/ratelimit-upstash';
-import { RateLimiter, createSlidingWindowPolicy } from '@croco/ratelimit-core';
+import { Redis } from "@upstash/redis";
+import { UpstashSlidingWindowStore } from "@croco/ratelimit-upstash";
+import { RateLimiter, createSlidingWindowPolicy } from "@croco/ratelimit-core";
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-const store = new UpstashSlidingWindowStore({ redis, prefix: 'ratelimit' });
+const store = new UpstashSlidingWindowStore({ redis, prefix: "ratelimit" });
 const limiter = new RateLimiter(store, ({ ip }) => ip);
-const policy = createSlidingWindowPolicy('api', 100, 60_000);
+const policy = createSlidingWindowPolicy("api", 100, 60_000);
 
-const result = await limiter.check({ ip: '127.0.0.1' }, policy);
+const result = await limiter.check({ ip: "127.0.0.1" }, policy);
 ```
 
 ## API 레퍼런스
 
-| API | 설명 |
-|---|---|
-| `UpstashSlidingWindowStore` | 슬라이딩 윈도우 제한을 수행합니다. |
-| `UpstashTokenBucketStore` | 토큰 버킷 제한을 수행합니다. |
-| `UpstashFixedWindowStore` | 고정 윈도우 제한을 수행합니다. |
-| `UpstashRateLimitStoreOptions` | `redis`와 `prefix`를 받는 공통 옵션 타입입니다. |
-| `InvalidRateLimitPolicyProblem` | 저장소와 정책 타입이 맞지 않을 때 발생합니다. |
+| API                             | 설명                                            |
+| ------------------------------- | ----------------------------------------------- |
+| `UpstashSlidingWindowStore`     | 슬라이딩 윈도우 제한을 수행합니다.              |
+| `UpstashTokenBucketStore`       | 토큰 버킷 제한을 수행합니다.                    |
+| `UpstashFixedWindowStore`       | 고정 윈도우 제한을 수행합니다.                  |
+| `UpstashRateLimitStoreOptions`  | `redis`와 `prefix`를 받는 공통 옵션 타입입니다. |
+| `InvalidRateLimitPolicyProblem` | 저장소와 정책 타입이 맞지 않을 때 발생합니다.   |
 
 ## 동작 메모
 

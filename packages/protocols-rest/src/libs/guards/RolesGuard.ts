@@ -1,7 +1,7 @@
-import 'reflect-metadata';
-import type { Guard } from '@croco/framework-context';
-import { REST_ROLES_KEY } from '../constants';
-import type { ExecutionContext } from '../interfaces/ExecutionContext';
+import "reflect-metadata";
+import type { Guard } from "@croco/framework-context";
+import { REST_ROLES_KEY } from "../constants";
+import type { ExecutionContext } from "../interfaces/ExecutionContext";
 
 export type UserWithRoles = {
   roles?: string[];
@@ -15,7 +15,9 @@ export class RolesGuard implements Guard<ExecutionContext> {
     const handler = context.getHandler();
     const target = context.getClass();
 
-    const requiredRoles = Reflect.getMetadata(REST_ROLES_KEY, target, handler) as string[] | undefined;
+    const requiredRoles = Reflect.getMetadata(REST_ROLES_KEY, target, handler) as
+      | string[]
+      | undefined;
 
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;

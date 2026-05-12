@@ -1,12 +1,12 @@
-import type { EventBus } from '@croco/events-core';
-import { Container } from '@croco/framework-context';
-import type { MeteringService } from '@croco/metering-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AiMetered, setLlmMeteringService } from '../../libs/decorators/AiMetered';
-import { LlmMeteringService } from '../../libs/LlmMeteringService';
-import { LlmMeteringRecordFailedProblem } from '../../libs/problems/LlmMeteringProblems';
+import type { EventBus } from "@croco/events-core";
+import { Container } from "@croco/framework-context";
+import type { MeteringService } from "@croco/metering-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AiMetered, setLlmMeteringService } from "../../libs/decorators/AiMetered";
+import { LlmMeteringService } from "../../libs/LlmMeteringService";
+import { LlmMeteringRecordFailedProblem } from "../../libs/problems/LlmMeteringProblems";
 
-describe('@AiMetered decorator', () => {
+describe("@AiMetered decorator", () => {
   let mockMeteringService!: MeteringService;
   let mockEventBus!: EventBus;
   let llmMeteringService!: LlmMeteringService;
@@ -16,7 +16,7 @@ describe('@AiMetered decorator', () => {
 
     // Mock MeteringService
     mockMeteringService = {
-      record: vi.fn().mockResolvedValue({ id: 'test-record-id', tenantId: 'tenant-123' }),
+      record: vi.fn().mockResolvedValue({ id: "test-record-id", tenantId: "tenant-123" }),
       getUsage: vi.fn().mockResolvedValue(1000),
     } as unknown as MeteringService;
 
@@ -35,51 +35,51 @@ describe('@AiMetered decorator', () => {
     setLlmMeteringService(llmMeteringService);
   });
 
-  describe('generate/stream methods', () => {
-    it('should automatically record usage when method returns GenerateResult', async () => {
+  describe("generate/stream methods", () => {
+    it("should automatically record usage when method returns GenerateResult", async () => {
       class TestService {
-        tenantId = 'tenant-123';
+        tenantId = "tenant-123";
 
         @AiMetered()
         async generateText(_prompt: string) {
           // Simulate LlmService.generate() response
           return {
-            text: 'Hello, world!',
+            text: "Hello, world!",
             usage: {
               promptTokens: 10,
               completionTokens: 20,
               totalTokens: 30,
-              accuracy: 'EXACT' as const,
+              accuracy: "EXACT" as const,
             },
             metadata: {
-              modelId: 'gpt-4',
-              provider: 'openai',
+              modelId: "gpt-4",
+              provider: "openai",
             },
           };
         }
       }
 
       const service = new TestService();
-      const result = await service.generateText('test');
+      const result = await service.generateText("test");
 
-      expect(result.text).toBe('Hello, world!');
+      expect(result.text).toBe("Hello, world!");
       expect(mockMeteringService.record).toHaveBeenCalled();
     });
 
-    it('should extract usage from result and record 3 meters', async () => {
+    it("should extract usage from result and record 3 meters", async () => {
       class TestService {
         @AiMetered()
         async generate() {
           return {
-            text: 'Response',
+            text: "Response",
             usage: {
               promptTokens: 100,
               completionTokens: 50,
               totalTokens: 150,
             },
             metadata: {
-              modelId: 'gpt-4',
-              provider: 'openai',
+              modelId: "gpt-4",
+              provider: "openai",
             },
           };
         }
@@ -92,7 +92,7 @@ describe('@AiMetered decorator', () => {
       expect(mockMeteringService.record).toHaveBeenCalledTimes(3);
     });
 
-    it('should use custom idempotencyKeyExtractor', async () => {
+    it("should use custom idempotencyKeyExtractor", async () => {
       class TestService {
         @AiMetered({
           idempotencyKeyExtractor: (args) => args[0] as string,
@@ -101,59 +101,59 @@ describe('@AiMetered decorator', () => {
           return {
             text,
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            metadata: { modelId: "gpt-4", provider: "openai" },
           };
         }
       }
 
       const service = new TestService();
-      await service.generate('custom-key-123', 'test');
+      await service.generate("custom-key-123", "test");
 
       expect(mockMeteringService.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          idempotencyKey: 'custom-key-123:prompt',
-        })
+          idempotencyKey: "custom-key-123:prompt",
+        }),
       );
     });
 
-    it('should use custom metadataExtractor', async () => {
+    it("should use custom metadataExtractor", async () => {
       class TestService {
         @AiMetered({
           metadataExtractor: (args, _result) => ({
-            customField: 'custom-value',
+            customField: "custom-value",
             prompt: args[0],
           }),
         })
         async generate(_prompt: string) {
           return {
-            text: 'Response',
+            text: "Response",
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            metadata: { modelId: "gpt-4", provider: "openai" },
           };
         }
       }
 
       const service = new TestService();
-      await service.generate('my prompt');
+      await service.generate("my prompt");
 
       expect(mockMeteringService.record).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: expect.objectContaining({
-            customField: 'custom-value',
-            prompt: 'my prompt',
+            customField: "custom-value",
+            prompt: "my prompt",
           }),
-        })
+        }),
       );
     });
 
-    it('should generate stable default idempotency keys for identical inputs', async () => {
+    it("should generate stable default idempotency keys for identical inputs", async () => {
       class TestService {
         @AiMetered()
         async generate(prompt: string, options: { temperature: number }) {
           return {
             text: prompt,
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            metadata: { modelId: "gpt-4", provider: "openai" },
             options,
           };
         }
@@ -161,8 +161,8 @@ describe('@AiMetered decorator', () => {
 
       const service = new TestService();
 
-      await service.generate('hello', { temperature: 0.7 });
-      await service.generate('hello', { temperature: 0.7 });
+      await service.generate("hello", { temperature: 0.7 });
+      await service.generate("hello", { temperature: 0.7 });
 
       const firstKey = vi.mocked(mockMeteringService.record).mock.calls[0]?.[0]?.idempotencyKey;
       const secondKey = vi.mocked(mockMeteringService.record).mock.calls[3]?.[0]?.idempotencyKey;
@@ -170,14 +170,14 @@ describe('@AiMetered decorator', () => {
       expect(firstKey).toBe(secondKey);
     });
 
-    it('should ignore object key order when generating default idempotency keys', async () => {
+    it("should ignore object key order when generating default idempotency keys", async () => {
       class TestService {
         @AiMetered()
         async generate(payload: Record<string, unknown>) {
           return {
-            text: 'Response',
+            text: "Response",
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            metadata: { modelId: "gpt-4", provider: "openai" },
             payload,
           };
         }
@@ -194,7 +194,7 @@ describe('@AiMetered decorator', () => {
       expect(firstKey).toBe(secondKey);
     });
 
-    it('BUG-07 스트림 결과의 토큰 사용량 기록', async () => {
+    it("BUG-07 스트림 결과의 토큰 사용량 기록", async () => {
       class TestService {
         @AiMetered()
         stream() {
@@ -202,14 +202,14 @@ describe('@AiMetered decorator', () => {
         }
 
         private async *createStream() {
-          yield { delta: 'Hello ' };
+          yield { delta: "Hello " };
           yield {
-            delta: 'world',
+            delta: "world",
             usage: {
               promptTokens: 11,
               completionTokens: 12,
               totalTokens: 23,
-              accuracy: 'EXACT' as const,
+              accuracy: "EXACT" as const,
             },
           };
         }
@@ -223,35 +223,35 @@ describe('@AiMetered decorator', () => {
         chunks.push(chunk.delta);
       }
 
-      expect(chunks.join('')).toBe('Hello world');
+      expect(chunks.join("")).toBe("Hello world");
       expect(mockMeteringService.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          meterId: 'llm.prompt_tokens',
+          meterId: "llm.prompt_tokens",
           value: 11,
           metadata: expect.objectContaining({
-            operationType: 'stream',
+            operationType: "stream",
           }),
-        })
+        }),
       );
       expect(mockMeteringService.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          meterId: 'llm.completion_tokens',
+          meterId: "llm.completion_tokens",
           value: 12,
-        })
+        }),
       );
       expect(mockMeteringService.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          meterId: 'llm.cost_usd',
+          meterId: "llm.cost_usd",
           metadata: expect.objectContaining({
-            operationType: 'stream',
+            operationType: "stream",
           }),
-        })
+        }),
       );
     });
   });
 
-  describe('embed/embedMany methods', () => {
-    it('should record embedding usage for embed results', async () => {
+  describe("embed/embedMany methods", () => {
+    it("should record embedding usage for embed results", async () => {
       class TestService {
         @AiMetered()
         async embed(_text: string) {
@@ -261,42 +261,42 @@ describe('@AiMetered decorator', () => {
               tokens: 5,
             },
             metadata: {
-              modelId: 'text-embedding-3-small',
-              provider: 'openai',
+              modelId: "text-embedding-3-small",
+              provider: "openai",
             },
           };
         }
       }
 
       const service = new TestService();
-      const result = await service.embed('test');
+      const result = await service.embed("test");
 
       expect(result.embedding).toEqual([0.1, 0.2, 0.3]);
       expect(mockMeteringService.record).toHaveBeenCalled();
     });
   });
 
-  describe('metering failure behavior', () => {
-    it('should throw when metering fails', async () => {
+  describe("metering failure behavior", () => {
+    it("should throw when metering fails", async () => {
       class TestService {
         @AiMetered()
         async generate() {
           return {
-            text: 'Response',
+            text: "Response",
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            metadata: { modelId: "gpt-4", provider: "openai" },
           };
         }
       }
 
       // Mock record to throw
-      vi.mocked(mockMeteringService.record).mockRejectedValue(new Error('Metering failed'));
+      vi.mocked(mockMeteringService.record).mockRejectedValue(new Error("Metering failed"));
 
       const service = new TestService();
       await expect(service.generate()).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
 
-    it('should work when LlmMeteringService is not set', async () => {
+    it("should work when LlmMeteringService is not set", async () => {
       // Clear service
       setLlmMeteringService(null as unknown as LlmMeteringService);
 
@@ -304,9 +304,9 @@ describe('@AiMetered decorator', () => {
         @AiMetered()
         async generate() {
           return {
-            text: 'Response',
+            text: "Response",
             usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-            metadata: { modelId: 'gpt-4', provider: 'openai' },
+            metadata: { modelId: "gpt-4", provider: "openai" },
           };
         }
       }
@@ -315,24 +315,27 @@ describe('@AiMetered decorator', () => {
       const result = await service.generate();
 
       // Should return result without metering
-      expect(result.text).toBe('Response');
+      expect(result.text).toBe("Response");
       expect(mockMeteringService.record).not.toHaveBeenCalled();
     });
   });
 
-  describe('metadata storage', () => {
-    it('should store metadata on the method', () => {
+  describe("metadata storage", () => {
+    it("should store metadata on the method", () => {
       class TestService {
         @AiMetered({
-          tenantId: 'custom-tenant',
+          tenantId: "custom-tenant",
         })
         async generate() {
-          return { text: 'test', usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 } };
+          return {
+            text: "test",
+            usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          };
         }
       }
 
       const prototype = TestService.prototype;
-      const descriptor = Object.getOwnPropertyDescriptor(prototype, 'generate');
+      const descriptor = Object.getOwnPropertyDescriptor(prototype, "generate");
       expect(descriptor).not.toBeUndefined();
     });
   });

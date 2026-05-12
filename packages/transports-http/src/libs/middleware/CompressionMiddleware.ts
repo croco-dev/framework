@@ -1,16 +1,16 @@
-import type { MiddlewareFunction } from '../types';
+import type { MiddlewareFunction } from "../types";
 
 export type CompressionOptions = {
   threshold?: number;
   encodings?: CompressionEncoding[];
 };
 
-export type CompressionEncoding = 'gzip' | 'br' | 'deflate';
+export type CompressionEncoding = "gzip" | "br" | "deflate";
 
 const DEFAULT_THRESHOLD = 1024;
-const DEFAULT_ENCODINGS: CompressionEncoding[] = ['br', 'gzip'];
+const DEFAULT_ENCODINGS: CompressionEncoding[] = ["br", "gzip"];
 
-const COMPRESSION_ALGORITHMS: CompressionEncoding[] = ['br', 'gzip', 'deflate'];
+const COMPRESSION_ALGORITHMS: CompressionEncoding[] = ["br", "gzip", "deflate"];
 
 /**
  * 응답 크기와 Accept-Encoding 헤더를 기준으로 압축을 적용하는 미들웨어입니다.
@@ -23,8 +23,8 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
 
     if (ctx.res.status >= 300) return;
 
-    const acceptEncoding = ctx.header('accept-encoding') ?? '';
-    const contentType = ctx.header('content-type') ?? '';
+    const acceptEncoding = ctx.header("accept-encoding") ?? "";
+    const contentType = ctx.header("content-type") ?? "";
 
     if (!shouldCompress(contentType)) return;
 
@@ -37,36 +37,41 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
     const compressed = await compressBody(body, encoding);
     if (!compressed) return;
 
-    ctx.raw.header('Content-Encoding', encoding);
-    ctx.raw.header('Vary', 'Accept-Encoding');
+    ctx.raw.header("Content-Encoding", encoding);
+    ctx.raw.header("Vary", "Accept-Encoding");
 
-    ctx.res.headers['content-encoding'] = encoding;
+    ctx.res.headers["content-encoding"] = encoding;
   };
 };
 
 function shouldCompress(contentType: string): boolean {
-  const type = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
+  const type = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 
   const compressibleTypes = [
-    'text/',
-    'application/json',
-    'application/javascript',
-    'application/xml',
-    'application/rss+xml',
-    'application/atom+xml',
-    'application/xhtml+xml',
-    'image/svg+xml',
+    "text/",
+    "application/json",
+    "application/javascript",
+    "application/xml",
+    "application/rss+xml",
+    "application/atom+xml",
+    "application/xhtml+xml",
+    "image/svg+xml",
   ];
 
   return compressibleTypes.some((t) => type.startsWith(t));
 }
 
-function selectEncoding(acceptEncoding: string, preferred: CompressionEncoding[]): CompressionEncoding | null {
+function selectEncoding(
+  acceptEncoding: string,
+  preferred: CompressionEncoding[],
+): CompressionEncoding | null {
   const accepted = acceptEncoding
     .toLowerCase()
-    .split(',')
-    .map((e) => e.trim().split(';')[0].trim())
-    .filter((e): e is CompressionEncoding => COMPRESSION_ALGORITHMS.includes(e as CompressionEncoding));
+    .split(",")
+    .map((e) => e.trim().split(";")[0].trim())
+    .filter((e): e is CompressionEncoding =>
+      COMPRESSION_ALGORITHMS.includes(e as CompressionEncoding),
+    );
 
   for (const encoding of preferred) {
     if (accepted.includes(encoding)) {
@@ -92,22 +97,22 @@ async function getResponseBody(ctx: { raw: { res: { body: unknown } } }): Promis
     return Buffer.from(body);
   }
 
-  if (typeof body === 'string') {
-    return Buffer.from(body, 'utf-8');
+  if (typeof body === "string") {
+    return Buffer.from(body, "utf-8");
   }
 
   return null;
 }
 
 async function compressBody(body: Buffer, encoding: CompressionEncoding): Promise<Buffer | null> {
-  const zlib = await import('node:zlib');
+  const zlib = await import("node:zlib");
 
   try {
     switch (encoding) {
-      case 'gzip': {
+      case "gzip": {
         return zlib.gzipSync(body, { level: zlib.constants.Z_DEFAULT_COMPRESSION });
       }
-      case 'br': {
+      case "br": {
         return zlib.brotliCompressSync(body, {
           params: {
             [zlib.constants.BROTLI_PARAM_QUALITY]: 4,
@@ -115,7 +120,7 @@ async function compressBody(body: Buffer, encoding: CompressionEncoding): Promis
           },
         });
       }
-      case 'deflate': {
+      case "deflate": {
         return zlib.deflateSync(body, { level: zlib.constants.Z_DEFAULT_COMPRESSION });
       }
       default:

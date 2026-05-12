@@ -1,7 +1,7 @@
-import { Component } from '@croco/framework-context';
-import type { MeterRepository } from './MeterRepository';
-import { InvalidMeterProblem } from './problems/InvalidMeterProblem';
-import type { MeterDefinition, MeterRegistrationOptions } from './types';
+import { Component } from "@croco/framework-context";
+import type { MeterRepository } from "./MeterRepository";
+import { InvalidMeterProblem } from "./problems/InvalidMeterProblem";
+import type { MeterDefinition, MeterRegistrationOptions } from "./types";
 
 /**
  * Meter 정의 레지스트리
@@ -24,7 +24,7 @@ export class MeterRegistry {
 
   constructor(
     private readonly repository: MeterRepository,
-    private readonly cacheTtlMs: number = MeterRegistry.DEFAULT_CACHE_TTL_MS
+    private readonly cacheTtlMs: number = MeterRegistry.DEFAULT_CACHE_TTL_MS,
   ) {}
 
   /**

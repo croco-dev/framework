@@ -1,21 +1,23 @@
-import type { BillingStore, PlanRegistry } from '@croco/billing-core';
-import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from '@croco/billing-core';
-import { type DomainEvent, type EventHandler, RegisterEventHandler } from '@croco/events-core';
-import type { MetricsRepository, Money, PlanProvider } from '@croco/metrics-core';
-import { MrrCalculator } from '@croco/metrics-core';
+import type { BillingStore, PlanRegistry } from "@croco/billing-core";
+import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from "@croco/billing-core";
+import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
+import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
+import { MrrCalculator } from "@croco/metrics-core";
 
 @RegisterEventHandler(OrderPaidEvent)
 @RegisterEventHandler(PlanChangedEvent)
 @RegisterEventHandler(SubscriptionCanceledEvent)
 export class BillingEventHandler
-  implements EventHandler<OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent>, PlanProvider
+  implements
+    EventHandler<OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent>,
+    PlanProvider
 {
   private readonly calculator = new MrrCalculator();
 
   constructor(
     private readonly planRegistry: PlanRegistry,
     private readonly billingStore: BillingStore,
-    private readonly metricsRepository: MetricsRepository
+    private readonly metricsRepository: MetricsRepository,
   ) {}
 
   async getPlan(planId: string) {
@@ -67,9 +69,14 @@ export class BillingEventHandler
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
-    const movement = this.createMRRMovement(mrr, 'new');
+    const movement = this.createMRRMovement(mrr, "new");
 
-    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, event.timestamp, this.getEventId(event));
+    await this.metricsRepository.recordMRRMovement(
+      event.tenantId,
+      movement,
+      event.timestamp,
+      this.getEventId(event),
+    );
   }
 
   private async handlePlanChanged(event: PlanChangedEvent): Promise<void> {
@@ -78,7 +85,9 @@ export class BillingEventHandler
       return;
     }
 
-    const subscription = await this.billingStore.findSubscriptionByExternalId(event.externalSubscriptionId);
+    const subscription = await this.billingStore.findSubscriptionByExternalId(
+      event.externalSubscriptionId,
+    );
     if (subscription === null) {
       return;
     }
@@ -92,20 +101,36 @@ export class BillingEventHandler
     const previousMrrAmount = this.calculator.normalizeMRR(
       previousPlan.amount,
       previousPlan.interval,
-      previousPlan.intervalCount
+      previousPlan.intervalCount,
     );
-    const newMrrAmount = this.calculator.normalizeMRR(newPlan.amount, newPlan.interval, newPlan.intervalCount);
-    const movementType = this.calculator.classifyMRRMovement(true, false, previousMrrAmount, newMrrAmount);
+    const newMrrAmount = this.calculator.normalizeMRR(
+      newPlan.amount,
+      newPlan.interval,
+      newPlan.intervalCount,
+    );
+    const movementType = this.calculator.classifyMRRMovement(
+      true,
+      false,
+      previousMrrAmount,
+      newMrrAmount,
+    );
 
     const mrrDiff = Math.abs(newMrrAmount - previousMrrAmount);
     const mrr: Money = { amount: mrrDiff, currency: newPlan.currency };
     const movement = this.createMRRMovement(mrr, movementType);
 
-    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, event.timestamp, this.getEventId(event));
+    await this.metricsRepository.recordMRRMovement(
+      event.tenantId,
+      movement,
+      event.timestamp,
+      this.getEventId(event),
+    );
   }
 
   private async handleSubscriptionCanceled(event: SubscriptionCanceledEvent): Promise<void> {
-    const subscription = await this.billingStore.findSubscriptionByExternalId(event.externalSubscriptionId);
+    const subscription = await this.billingStore.findSubscriptionByExternalId(
+      event.externalSubscriptionId,
+    );
     if (subscription === null) {
       return;
     }
@@ -117,19 +142,24 @@ export class BillingEventHandler
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
-    const movement = this.createMRRMovement(mrr, 'churned');
+    const movement = this.createMRRMovement(mrr, "churned");
 
-    await this.metricsRepository.recordMRRMovement(event.tenantId, movement, event.timestamp, this.getEventId(event));
+    await this.metricsRepository.recordMRRMovement(
+      event.tenantId,
+      movement,
+      event.timestamp,
+      this.getEventId(event),
+    );
   }
 
   private createMRRMovement(
     mrr: Money,
-    type: 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation' | 'unchanged'
+    type: "new" | "expansion" | "contraction" | "churned" | "reactivation" | "unchanged",
   ) {
     const empty: Money = { amount: 0, currency: mrr.currency };
 
     switch (type) {
-      case 'new':
+      case "new":
         return {
           new: mrr,
           expansion: empty,
@@ -138,7 +168,7 @@ export class BillingEventHandler
           reactivation: empty,
           net: mrr,
         };
-      case 'expansion':
+      case "expansion":
         return {
           new: empty,
           expansion: mrr,
@@ -147,7 +177,7 @@ export class BillingEventHandler
           reactivation: empty,
           net: mrr,
         };
-      case 'contraction':
+      case "contraction":
         return {
           new: empty,
           expansion: empty,
@@ -156,7 +186,7 @@ export class BillingEventHandler
           reactivation: empty,
           net: { amount: -mrr.amount, currency: mrr.currency },
         };
-      case 'churned':
+      case "churned":
         return {
           new: empty,
           expansion: empty,
@@ -165,7 +195,7 @@ export class BillingEventHandler
           reactivation: empty,
           net: { amount: -mrr.amount, currency: mrr.currency },
         };
-      case 'reactivation':
+      case "reactivation":
         return {
           new: empty,
           expansion: empty,
@@ -174,7 +204,7 @@ export class BillingEventHandler
           reactivation: mrr,
           net: mrr,
         };
-      case 'unchanged':
+      case "unchanged":
         return {
           new: empty,
           expansion: empty,

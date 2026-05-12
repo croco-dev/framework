@@ -1,7 +1,10 @@
-import type { CCComparisonResult, CCResult } from '../types';
-import type { ActiveUserProvider } from './interfaces/ActiveUserProvider';
-import type { MetricsRepository } from './interfaces/MetricsRepository';
-import { CarryingCapacitySimulationProblem, CarryingCapacityTenantRequiredProblem } from './problems/MetricsProblems';
+import type { CCComparisonResult, CCResult } from "../types";
+import type { ActiveUserProvider } from "./interfaces/ActiveUserProvider";
+import type { MetricsRepository } from "./interfaces/MetricsRepository";
+import {
+  CarryingCapacitySimulationProblem,
+  CarryingCapacityTenantRequiredProblem,
+} from "./problems/MetricsProblems";
 
 /**
  * Configuration for User Carrying Capacity calculation.
@@ -55,7 +58,7 @@ export type SimulationConfig = {
 export class CarryingCapacityCalculator {
   constructor(
     private readonly userProvider: ActiveUserProvider,
-    private readonly metricsRepository: MetricsRepository
+    private readonly metricsRepository: MetricsRepository,
   ) {}
 
   /**
@@ -86,7 +89,7 @@ export class CarryingCapacityCalculator {
     const retention = await this.metricsRepository.getRetentionMetrics(tenantId, {
       from: periodStart,
       to: now,
-      granularity: 'day',
+      granularity: "day",
     });
 
     const dailyChurnRate = -Math.log(retention.nrr / 100) / 30;
@@ -119,7 +122,7 @@ export class CarryingCapacityCalculator {
     const movements = await this.metricsRepository.getMRRHistory(tenantId, {
       from: periodStart,
       to: now,
-      granularity: 'month',
+      granularity: "month",
     });
 
     const totalNewMRR = movements.reduce((sum, m) => sum + m.new.amount, 0);
@@ -128,7 +131,7 @@ export class CarryingCapacityCalculator {
     const retention = await this.metricsRepository.getRetentionMetrics(tenantId, {
       from: periodStart,
       to: now,
-      granularity: 'month',
+      granularity: "month",
     });
 
     const churnFactor = 1 - retention.nrr / 100;
@@ -160,7 +163,9 @@ export class CarryingCapacityCalculator {
     const baseline = await this.calculateUserCC({ lookbackDays: 30, tenantId: changes.tenantId });
 
     if (!baseline) {
-      throw new CarryingCapacitySimulationProblem('Cannot simulate: baseline CC is null (infinite capacity)');
+      throw new CarryingCapacitySimulationProblem(
+        "Cannot simulate: baseline CC is null (infinite capacity)",
+      );
     }
 
     const inflowMultiplier = changes.inflowChange ? 1 + changes.inflowChange / 100 : 1;
@@ -170,7 +175,9 @@ export class CarryingCapacityCalculator {
     const simulatedDailyChurnRate = Math.max(0, baseline.dailyChurnRate * churnMultiplier);
 
     if (simulatedDailyChurnRate <= 0) {
-      throw new CarryingCapacitySimulationProblem('Simulated churn rate is zero → infinite capacity');
+      throw new CarryingCapacitySimulationProblem(
+        "Simulated churn rate is zero → infinite capacity",
+      );
     }
 
     const simulatedCapacity = simulatedDailyInflow / simulatedDailyChurnRate;
@@ -198,7 +205,12 @@ export class CarryingCapacityCalculator {
   /**
    * Build CCResult from calculated values.
    */
-  private buildCCResult(capacity: number, current: number, dailyInflow: number, dailyChurnRate: number): CCResult {
+  private buildCCResult(
+    capacity: number,
+    current: number,
+    dailyInflow: number,
+    dailyChurnRate: number,
+  ): CCResult {
     const headroom = Math.max(0, capacity - current);
     const headroomPercent = (headroom / capacity) * 100;
 

@@ -1,17 +1,21 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class LlmProblem extends Problem {}
 
 export class LlmProviderNotFoundProblem extends Problem {
-  static readonly CODE = 'LLM_PROVIDER_NOT_FOUND';
+  static readonly CODE = "LLM_PROVIDER_NOT_FOUND";
 
   constructor(provider: string) {
-    super(LlmProviderNotFoundProblem.CODE, ProblemCategory.NotFound, `LLM provider not found: ${provider}`);
+    super(
+      LlmProviderNotFoundProblem.CODE,
+      ProblemCategory.NotFound,
+      `LLM provider not found: ${provider}`,
+    );
   }
 }
 
 export class LlmTokenLimitExceededProblem extends Problem {
-  static readonly CODE = 'TOKEN_LIMIT_EXCEEDED';
+  static readonly CODE = "TOKEN_LIMIT_EXCEEDED";
 
   constructor(limit: number, requested: number) {
     super(
@@ -23,13 +27,13 @@ export class LlmTokenLimitExceededProblem extends Problem {
           limit,
           requested,
         },
-      }
+      },
     );
   }
 }
 
 export class LlmRateLimitProblem extends Problem {
-  static readonly CODE = 'RATE_LIMIT_EXCEEDED';
+  static readonly CODE = "RATE_LIMIT_EXCEEDED";
 
   constructor(retryAfter: number, retryAt?: string) {
     const detail = retryAt
@@ -51,23 +55,27 @@ export class LlmRateLimitProblem extends Problem {
             extensions: {
               retryAfter,
             },
-          }
+          },
     );
   }
 }
 
 export class InvalidLlmResponseProblem extends Problem {
   constructor(response: string) {
-    super('llm-core/invalid-llm-response', ProblemCategory.InternalServerError, `Invalid JSON response: ${response}`);
+    super(
+      "llm-core/invalid-llm-response",
+      ProblemCategory.InternalServerError,
+      `Invalid JSON response: ${response}`,
+    );
   }
 }
 
 export class LlmServiceNotInitializedProblem extends Problem {
   constructor() {
     super(
-      'llm-core/llm-service-not-initialized',
+      "llm-core/llm-service-not-initialized",
       ProblemCategory.InternalServerError,
-      'LlmService not initialized. Call setLlmService() first.'
+      "LlmService not initialized. Call setLlmService() first.",
     );
   }
 }
@@ -75,9 +83,9 @@ export class LlmServiceNotInitializedProblem extends Problem {
 export class InvalidLlmPromptProblem extends Problem {
   constructor(actualType: string) {
     super(
-      'llm-core/invalid-llm-prompt',
+      "llm-core/invalid-llm-prompt",
       ProblemCategory.BadRequest,
-      `@Llm decorated methods require the first argument to be a string prompt, received: ${actualType}`
+      `@Llm decorated methods require the first argument to be a string prompt, received: ${actualType}`,
     );
   }
 }

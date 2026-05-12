@@ -1,5 +1,5 @@
-import type { Plan, Subscription } from '../types';
-import type { ProrationCalculation } from './ProrationCalculator';
+import type { Plan, Subscription } from "../types";
+import type { ProrationCalculation } from "./ProrationCalculator";
 
 export type PlanTransitionParams = {
   subscription: Subscription;

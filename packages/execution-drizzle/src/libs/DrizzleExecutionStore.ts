@@ -4,11 +4,11 @@ import {
   ExecutionProblems,
   ExecutionStore,
   type ListExecutionsOptions,
-} from '@croco/execution-core';
-import { and, asc, eq, isNull } from 'drizzle-orm';
-import { ulid } from 'ulid';
-import type { ExecutionRow, NewExecutionRow } from './schema';
-import { executions } from './schema';
+} from "@croco/execution-core";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { ulid } from "ulid";
+import type { ExecutionRow, NewExecutionRow } from "./schema";
+import { executions } from "./schema";
 
 type AwaitableQueryResult = PromiseLike<unknown>;
 
@@ -78,7 +78,9 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
    * 새 실행을 생성합니다. idempotencyKey가 있으면 중복 생성을 방지합니다.
    */
   async create(params: CreateExecutionParams): Promise<Execution> {
-    const existing = params.idempotencyKey ? await this.findByIdempotencyKey(params.idempotencyKey) : null;
+    const existing = params.idempotencyKey
+      ? await this.findByIdempotencyKey(params.idempotencyKey)
+      : null;
 
     if (existing) {
       return existing;
@@ -87,7 +89,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
     const newExecution: NewExecutionRow = {
       id: this.generateId(),
       type: params.type,
-      status: 'pending',
+      status: "pending",
       payload: params.payload ?? null,
       result: null,
       error: null,
@@ -120,10 +122,15 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
         return duplicated;
       }
 
-      throw ExecutionProblems.conflict(`Execution with idempotency key '${params.idempotencyKey}' already exists`);
+      throw ExecutionProblems.conflict(
+        `Execution with idempotency key '${params.idempotencyKey}' already exists`,
+      );
     }
 
-    const result = (await this.dbOp.insert(executions).values(newExecution).returning()) as ExecutionRow[];
+    const result = (await this.dbOp
+      .insert(executions)
+      .values(newExecution)
+      .returning()) as ExecutionRow[];
     return this.mapToExecution(result[0]);
   }
 
@@ -131,7 +138,11 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
    * 실행 ID로 단일 실행을 조회합니다.
    */
   async findById(id: string): Promise<Execution | null> {
-    const result = (await this.dbOp.select().from(executions).where(eq(executions.id, id)).limit(1)) as ExecutionRow[];
+    const result = (await this.dbOp
+      .select()
+      .from(executions)
+      .where(eq(executions.id, id))
+      .limit(1)) as ExecutionRow[];
 
     return result.length > 0 ? this.mapToExecution(result[0]) : null;
   }
@@ -198,7 +209,9 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
 
     if (options.parentId !== undefined) {
       conditions.push(
-        options.parentId === null ? isNull(executions.parentId) : eq(executions.parentId, options.parentId)
+        options.parentId === null
+          ? isNull(executions.parentId)
+          : eq(executions.parentId, options.parentId),
       );
     }
 
@@ -222,7 +235,10 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
    * 실행을 삭제합니다.
    */
   async delete(id: string): Promise<void> {
-    const result = (await this.dbOp.delete(executions).where(eq(executions.id, id)).returning()) as ExecutionRow[];
+    const result = (await this.dbOp
+      .delete(executions)
+      .where(eq(executions.id, id))
+      .returning()) as ExecutionRow[];
 
     if (result.length === 0) {
       throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
@@ -236,7 +252,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
       status: row.status,
       payload: row.payload ?? undefined,
       result: row.result ?? undefined,
-      error: (row.error as Execution['error']) ?? undefined,
+      error: (row.error as Execution["error"]) ?? undefined,
       attempts: row.attempts,
       maxAttempts: row.maxAttempts,
       createdAt: row.createdAt,
@@ -246,9 +262,9 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
       timeout: row.timeout ?? undefined,
       idempotencyKey: row.idempotencyKey ?? undefined,
       parentId: row.parentId ?? undefined,
-      metadata: (row.metadata as Execution['metadata']) ?? undefined,
-      checkpoints: (row.checkpoints as Execution['checkpoints']) ?? undefined,
-      progress: (row.progress as Execution['progress']) ?? undefined,
+      metadata: (row.metadata as Execution["metadata"]) ?? undefined,
+      checkpoints: (row.checkpoints as Execution["checkpoints"]) ?? undefined,
+      progress: (row.progress as Execution["progress"]) ?? undefined,
     };
   }
 

@@ -28,6 +28,7 @@ pnpm typecheck --filter=@croco/events-core  # 단일 패키지
 ## Code Style
 
 Biome 설정 기준:
+
 - Indent: 2 spaces
 - Line width: 120 characters
 - Quote style: single quotes
@@ -40,9 +41,10 @@ Biome 설정 기준:
 ## Import Order
 
 Biome 자동 정렬 순서:
+
 1. 외부 패키지 (reflect-metadata, typedi 등)
-2. 내부 @croco/* 패키지
-3. 상대 경로 (./libs/*, ../types)
+2. 내부 @croco/\* 패키지
+3. 상대 경로 (./libs/\*, ../types)
 4. Type imports 별도 분리
 
 ## Naming Conventions
@@ -59,7 +61,11 @@ Biome 자동 정렬 순서:
 
 ```typescript
 export function Retryable(options: RetryableOptions = {}): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const originalMethod = descriptor.value;
     // ... 래핑 로직
     return descriptor;
@@ -68,7 +74,7 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
 
 export function Component(options?: ComponentOptions): ClassDecorator {
   return (target: object) => {
-    Container.register(target, options?.scope ?? 'singleton');
+    Container.register(target, options?.scope ?? "singleton");
   };
 }
 ```
@@ -76,9 +82,10 @@ export function Component(options?: ComponentOptions): ClassDecorator {
 ## Error Handling
 
 RFC 7807 Problem 기반:
+
 ```typescript
 export class NotFoundProblem extends Problem {
-  readonly code = 'NOT_FOUND';
+  readonly code = "NOT_FOUND";
   readonly category = ProblemCategory.NOT_FOUND;
 
   constructor(resource: string, id: string) {
@@ -87,28 +94,28 @@ export class NotFoundProblem extends Problem {
 }
 
 // Problem 하위클래스만 throw, 일반 Error 금지
-throw new NotFoundProblem('User', userId);
+throw new NotFoundProblem("User", userId);
 ```
 
 ## Test Patterns (Vitest)
 
 ```typescript
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe('ClassName', () => {
-  let instance!: ClassName;  // definite assignment
+describe("ClassName", () => {
+  let instance!: ClassName; // definite assignment
 
   beforeEach(() => {
-    Container.reset();  // 항상 DI 컨테이너 리셋
+    Container.reset(); // 항상 DI 컨테이너 리셋
     instance = new ClassName();
   });
 
-  it('should do something', async () => {
+  it("should do something", async () => {
     const result = await instance.method();
     expect(result).toBe(expected);
   });
 
-  it('should handle errors', async () => {
+  it("should handle errors", async () => {
     await expect(instance.failingMethod()).rejects.toThrow(SomeError);
   });
 });
@@ -137,9 +144,9 @@ export type Constructor<T = unknown> = new (...args: unknown[]) => T;
 
 ```typescript
 // 카테고리별 그룹화, types 마지막
-export { Container, Context } from './libs/Container';
-export { Component } from './libs/decorators/Component';
-export type { ComponentMetadata, Scope, Token } from './libs/types';
+export { Container, Context } from "./libs/Container";
+export { Component } from "./libs/decorators/Component";
+export type { ComponentMetadata, Scope, Token } from "./libs/types";
 ```
 
 ## Package Structure
@@ -192,20 +199,22 @@ Croco는 OpenTelemetry 표준을 기반으로 한 분산 추적(Distributed Trac
 
 ```typescript
 // 1. 애플리케이션 시작 시 SDK 초기화 (전역 스코프)
-import { TelemetryRuntime, lambdaPreset } from '@croco/telemetry-sdk-node';
+import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();
-await telemetry.init(lambdaPreset({
-  serviceName: 'my-service',
-  probability: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-}));
+await telemetry.init(
+  lambdaPreset({
+    serviceName: "my-service",
+    probability: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+  }),
+);
 
 // 2. 서비스 클래스에서 @Trace 데코레이터 사용
-import { Trace } from '@croco/telemetry-api';
+import { Trace } from "@croco/telemetry-api";
 
 @Service()
 class OrderService {
-  @Trace({ name: 'order.create' })
+  @Trace({ name: "order.create" })
   async createOrder(dto: CreateOrderDto): Promise<Order> {
     // 자동으로 추적됨
     return this.repository.save(dto);
@@ -232,6 +241,7 @@ OpenTelemetry 공식 문서와 달리, Croco에서는 Exec Wrapper 방식을 사
 2. 핸들러 반환 전에 `forceFlush()` 호출
 
 이유:
+
 - Layer 의존성 제거
 - 콜드 스타트 최적화
 - 초기화 타이밍 직접 제어
@@ -261,11 +271,11 @@ service:
 
 ### 샘플링 전략
 
-| 환경 | 확률 | 설명 |
-|------|------|------|
-| development | 1.0 (100%) | 모든 요청 추적 |
-| staging | 0.5 ~ 1.0 | 50~100% 추적 |
-| production | 0.01 ~ 0.1 | 1~10% 추적 (비용 절감) |
+| 환경        | 확률       | 설명                   |
+| ----------- | ---------- | ---------------------- |
+| development | 1.0 (100%) | 모든 요청 추적         |
+| staging     | 0.5 ~ 1.0  | 50~100% 추적           |
+| production  | 0.01 ~ 0.1 | 1~10% 추적 (비용 절감) |
 
 ## Architecture Notes
 
@@ -275,7 +285,6 @@ service:
 - AsyncLocalStorage: request-scoped context
 - 이벤트 기반 아키텍처 (events-core + events-inmemory)
 - 분산 추적: OpenTelemetry OTLP 기반 (@croco/telemetry-api + @croco/telemetry-sdk-node)
-
 
 ## Dependency Rules
 

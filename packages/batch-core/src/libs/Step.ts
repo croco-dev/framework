@@ -1,6 +1,6 @@
-import type { ItemProcessor } from './interfaces/ItemProcessor';
-import type { ItemReader } from './interfaces/ItemReader';
-import type { ItemWriter } from './interfaces/ItemWriter';
+import type { ItemProcessor } from "./interfaces/ItemProcessor";
+import type { ItemReader } from "./interfaces/ItemReader";
+import type { ItemWriter } from "./interfaces/ItemWriter";
 
 export interface StepOptions<I, O> {
   name: string;

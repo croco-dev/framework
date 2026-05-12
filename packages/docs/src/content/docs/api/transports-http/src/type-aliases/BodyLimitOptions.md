@@ -15,13 +15,13 @@ title: "BodyLimitOptions"
 
 > `optional` **limit**: `number`
 
-***
+---
 
 ### message?
 
 > `optional` **message**: `string`
 
-***
+---
 
 ### statusCode?
 

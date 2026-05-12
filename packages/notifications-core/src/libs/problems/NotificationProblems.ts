@@ -1,10 +1,10 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
-import type { NotificationChannel } from '../types';
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { NotificationChannel } from "../types";
 
 export class NotificationProviderNotConfiguredProblem extends Problem {
   constructor(channel: NotificationChannel) {
     super(
-      'notifications-core/provider-not-configured',
+      "notifications-core/provider-not-configured",
       ProblemCategory.InternalServerError,
       `No provider found for channel ${channel}`,
       {
@@ -12,7 +12,7 @@ export class NotificationProviderNotConfiguredProblem extends Problem {
           channel,
           retryable: false,
         },
-      }
+      },
     );
   }
 }
@@ -20,7 +20,7 @@ export class NotificationProviderNotConfiguredProblem extends Problem {
 export class NotificationProviderNotRegisteredProblem extends Problem {
   constructor(providerName: string) {
     super(
-      'notifications-core/provider-not-registered',
+      "notifications-core/provider-not-registered",
       ProblemCategory.InternalServerError,
       `Provider ${providerName} is not registered`,
       {
@@ -28,7 +28,7 @@ export class NotificationProviderNotRegisteredProblem extends Problem {
           providerName,
           retryable: false,
         },
-      }
+      },
     );
   }
 }
@@ -36,7 +36,7 @@ export class NotificationProviderNotRegisteredProblem extends Problem {
 export class NotificationProviderAlreadyRegisteredProblem extends Problem {
   constructor(providerName: string) {
     super(
-      'notifications-core/provider-already-registered',
+      "notifications-core/provider-already-registered",
       ProblemCategory.InternalServerError,
       `Provider ${providerName} is already registered`,
       {
@@ -44,7 +44,7 @@ export class NotificationProviderAlreadyRegisteredProblem extends Problem {
           providerName,
           retryable: false,
         },
-      }
+      },
     );
   }
 }
@@ -52,7 +52,7 @@ export class NotificationProviderAlreadyRegisteredProblem extends Problem {
 export class NotificationDefaultProviderConflictProblem extends Problem {
   constructor(channel: NotificationChannel, existingProviderName: string, providerName: string) {
     super(
-      'notifications-core/default-provider-conflict',
+      "notifications-core/default-provider-conflict",
       ProblemCategory.InternalServerError,
       `Default provider for channel ${channel} is already registered as ${existingProviderName}`,
       {
@@ -62,15 +62,19 @@ export class NotificationDefaultProviderConflictProblem extends Problem {
           providerName,
           retryable: false,
         },
-      }
+      },
     );
   }
 }
 
 export class NotificationProviderChannelMismatchProblem extends Problem {
-  constructor(providerName: string, requestedChannel: NotificationChannel, actualChannel: NotificationChannel) {
+  constructor(
+    providerName: string,
+    requestedChannel: NotificationChannel,
+    actualChannel: NotificationChannel,
+  ) {
     super(
-      'notifications-core/provider-channel-mismatch',
+      "notifications-core/provider-channel-mismatch",
       ProblemCategory.InternalServerError,
       `Provider ${providerName} supports channel ${actualChannel}, not ${requestedChannel}`,
       {
@@ -80,7 +84,7 @@ export class NotificationProviderChannelMismatchProblem extends Problem {
           actualChannel,
           retryable: false,
         },
-      }
+      },
     );
   }
 }
@@ -88,7 +92,7 @@ export class NotificationProviderChannelMismatchProblem extends Problem {
 export class NotificationProviderNotFoundProblem extends Problem {
   constructor(providerName: string) {
     super(
-      'notifications-core/provider-not-found',
+      "notifications-core/provider-not-found",
       ProblemCategory.InternalServerError,
       `Provider ${providerName} not found`,
       {
@@ -96,7 +100,7 @@ export class NotificationProviderNotFoundProblem extends Problem {
           providerName,
           retryable: false,
         },
-      }
+      },
     );
   }
 }
@@ -104,15 +108,15 @@ export class NotificationProviderNotFoundProblem extends Problem {
 export class NotificationDeliveryFailedProblem extends Problem {
   constructor(providerName: string) {
     super(
-      'notifications-core/delivery-failed',
+      "notifications-core/delivery-failed",
       ProblemCategory.InternalServerError,
-      'Notification failed without error details',
+      "Notification failed without error details",
       {
         extensions: {
           providerName,
           retryable: true,
         },
-      }
+      },
     );
   }
 }

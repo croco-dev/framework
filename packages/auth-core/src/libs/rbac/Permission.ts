@@ -1,6 +1,9 @@
-import { InvalidPermissionActionProblem, InvalidPermissionFormatProblem } from '../problems/AuthProblems';
+import {
+  InvalidPermissionActionProblem,
+  InvalidPermissionFormatProblem,
+} from "../problems/AuthProblems";
 
-export type PermissionAction = 'read' | 'write' | 'delete' | 'manage';
+export type PermissionAction = "read" | "write" | "delete" | "manage";
 
 export type Permission = {
   resource: string;
@@ -8,14 +11,14 @@ export type Permission = {
   resourceId?: string;
 };
 
-const VALID_ACTIONS = ['read', 'write', 'delete', 'manage'] as const;
+const VALID_ACTIONS = ["read", "write", "delete", "manage"] as const;
 
 function isPermissionAction(action: string): action is PermissionAction {
   return VALID_ACTIONS.some((validAction) => validAction === action);
 }
 
 export function parsePermission(permission: string): Permission {
-  const parts = permission.split(':');
+  const parts = permission.split(":");
   if (parts.length < 2 || parts.length > 3) {
     throw new InvalidPermissionFormatProblem(permission);
   }
@@ -54,7 +57,7 @@ export function hasPermission(userPermissions: string[], required: string): bool
       if (userPerm.resource !== requiredPerm.resource) {
         return false;
       }
-      if (userPerm.action === 'manage') {
+      if (userPerm.action === "manage") {
         return true;
       }
       if (userPerm.action !== requiredPerm.action) {
@@ -74,7 +77,7 @@ export function hasResourcePermission(
   userPermissions: string[],
   resource: string,
   action: PermissionAction,
-  resourceId?: string
+  resourceId?: string,
 ): boolean {
   const required = resourceId ? `${resource}:${action}:${resourceId}` : `${resource}:${action}`;
   return hasPermission(userPermissions, required);
@@ -82,7 +85,7 @@ export function hasResourcePermission(
 
 export function getResourcePermissions(
   userPermissions: string[],
-  resource: string
+  resource: string,
 ): Array<{ action: PermissionAction; resourceId?: string }> {
   const result: Array<{ action: PermissionAction; resourceId?: string }> = [];
 
@@ -100,10 +103,16 @@ export function getResourcePermissions(
   return result;
 }
 
-export function hasAnyPermission(userPermissions: string[], requiredPermissions: string[]): boolean {
+export function hasAnyPermission(
+  userPermissions: string[],
+  requiredPermissions: string[],
+): boolean {
   return requiredPermissions.some((perm) => hasPermission(userPermissions, perm));
 }
 
-export function hasAllPermissions(userPermissions: string[], requiredPermissions: string[]): boolean {
+export function hasAllPermissions(
+  userPermissions: string[],
+  requiredPermissions: string[],
+): boolean {
   return requiredPermissions.every((perm) => hasPermission(userPermissions, perm));
 }

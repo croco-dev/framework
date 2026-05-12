@@ -1,7 +1,7 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class InvitationNotFoundProblem extends Problem {
-  readonly code = 'INVITATION_NOT_FOUND';
+  readonly code = "INVITATION_NOT_FOUND";
   readonly category = ProblemCategory.NotFound;
 
   constructor(tokenOrId: string) {
@@ -12,7 +12,7 @@ export class InvitationNotFoundProblem extends Problem {
 }
 
 export class InvitationExpiredProblem extends Problem {
-  readonly code = 'INVITATION_EXPIRED';
+  readonly code = "INVITATION_EXPIRED";
   readonly category = ProblemCategory.Gone;
 
   constructor(invitationId: string) {
@@ -23,7 +23,7 @@ export class InvitationExpiredProblem extends Problem {
 }
 
 export class InvitationAlreadyAcceptedProblem extends Problem {
-  readonly code = 'INVITATION_ALREADY_ACCEPTED';
+  readonly code = "INVITATION_ALREADY_ACCEPTED";
   readonly category = ProblemCategory.Conflict;
 
   constructor(invitationId: string) {
@@ -34,7 +34,7 @@ export class InvitationAlreadyAcceptedProblem extends Problem {
 }
 
 export class InvitationEmailMismatchProblem extends Problem {
-  readonly code = 'INVITATION_EMAIL_MISMATCH';
+  readonly code = "INVITATION_EMAIL_MISMATCH";
   readonly category = ProblemCategory.Forbidden;
 
   constructor(invitationId: string, expectedEmail: string | null, providedEmail: string | null) {
@@ -45,12 +45,17 @@ export class InvitationEmailMismatchProblem extends Problem {
 }
 
 export class InvitationInvalidStatusProblem extends Problem {
-  readonly code = 'INVITATION_INVALID_STATUS';
+  readonly code = "INVITATION_INVALID_STATUS";
   readonly category = ProblemCategory.Conflict;
 
   constructor(invitationId: string, status: string, operation: string) {
-    super(undefined, undefined, `Cannot ${operation} invitation '${invitationId}' with status '${status}'`, {
-      extensions: { invitationId, status, operation },
-    });
+    super(
+      undefined,
+      undefined,
+      `Cannot ${operation} invitation '${invitationId}' with status '${status}'`,
+      {
+        extensions: { invitationId, status, operation },
+      },
+    );
   }
 }

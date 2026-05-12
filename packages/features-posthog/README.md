@@ -23,17 +23,17 @@ pnpm add @croco/integrations-posthog
 PostHogFeatureManager를 DI 컨테이너에 등록합니다.
 
 ```typescript
-import { Container } from '@croco/framework-context';
-import { PostHogFeatureManager } from '@croco/features-posthog';
-import { PostHogClient } from '@croco/integrations-posthog';
+import { Container } from "@croco/framework-context";
+import { PostHogFeatureManager } from "@croco/features-posthog";
+import { PostHogClient } from "@croco/integrations-posthog";
 
 const posthogClient = new PostHogClient({
   apiKey: process.env.POSTHOG_API_KEY!,
-  host: 'https://app.posthog.com',
+  host: "https://app.posthog.com",
 });
 
 Container.register(PostHogFeatureManager, {
-  scope: 'singleton',
+  scope: "singleton",
   useFactory: () => new PostHogFeatureManager(posthogClient),
 });
 ```
@@ -41,15 +41,15 @@ Container.register(PostHogFeatureManager, {
 ### 서비스에서 사용
 
 ```typescript
-import { Service } from '@croco/framework-context';
-import { FeatureManager } from '@croco/features-core';
+import { Service } from "@croco/framework-context";
+import { FeatureManager } from "@croco/features-core";
 
 @Service()
 class OrderService {
   constructor(private readonly features: FeatureManager) {}
 
   async createOrder(dto: CreateOrderDto) {
-    const isNewFlow = await this.features.isEnabled('new-order-flow', {
+    const isNewFlow = await this.features.isEnabled("new-order-flow", {
       userId: dto.userId,
     });
 
@@ -60,12 +60,12 @@ class OrderService {
   }
 
   async getDiscount(userId: string) {
-    const variant = await this.features.getVariant('discount-variant', { userId });
+    const variant = await this.features.getVariant("discount-variant", { userId });
 
     switch (variant) {
-      case '20_percent':
+      case "20_percent":
         return 0.2;
-      case '15_percent':
+      case "15_percent":
         return 0.15;
       default:
         return 0.1;
@@ -85,6 +85,7 @@ PostHog Feature Flags와 통합하는 FeatureManager 구현체입니다.
 Feature 플래그가 활성화되어 있는지 확인합니다.
 
 **Context 자동 주입:**
+
 - `context.userId`가 있으면 사용
 - 없으면 `Context.getCurrentUser().id` 사용
 - 없으면 `Context.getRequestId()`로 익명 사용자 생성
@@ -95,6 +96,7 @@ Feature 플래그가 활성화되어 있는지 확인합니다.
 Feature 플래그의 변형(variant) 값을 가져옵니다. A/B 테스트, 다변량 실험에 사용합니다.
 
 **반환값:**
+
 - 플래그가 비활성화: `false`
 - 활성화: 변형 값 (문자열, 객체 등)
 
@@ -102,12 +104,12 @@ Feature 플래그의 변형(variant) 값을 가져옵니다. A/B 테스트, 다�
 
 PostHog로 전달되는 컨텍스트:
 
-| 소스 | PostHog 매핑 |
-|------|-------------|
-| `context.userId` | `distinctId` |
-| `context.tenantId` | `groups.tenant` |
-| `context.groups` | `groups` (전달) |
-| `context.*` | `personProperties` (문자열 변환) |
+| 소스               | PostHog 매핑                     |
+| ------------------ | -------------------------------- |
+| `context.userId`   | `distinctId`                     |
+| `context.tenantId` | `groups.tenant`                  |
+| `context.groups`   | `groups` (전달)                  |
+| `context.*`        | `personProperties` (문자열 변환) |
 
 ## 라이선스
 

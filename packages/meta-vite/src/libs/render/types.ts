@@ -4,7 +4,7 @@
  * Render core must guard before accessing optional fields.
  */
 export type RuntimeContext = {
-  platform: 'cloudflare' | 'lambda' | 'node';
+  platform: "cloudflare" | "lambda" | "node";
   env?: unknown;
   executionContext?: unknown;
   event?: unknown;

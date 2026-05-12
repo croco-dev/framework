@@ -1,7 +1,7 @@
-import { HealthSignalRegistry, type SignalProvider } from '@croco/customer-health-core';
-import { Component, Inject } from '@croco/framework-context';
-import type { BillingSignalProvider } from './BillingSignalProvider';
-import type { MeteringSignalProvider } from './MeteringSignalProvider';
+import { HealthSignalRegistry, type SignalProvider } from "@croco/customer-health-core";
+import { Component, Inject } from "@croco/framework-context";
+import type { BillingSignalProvider } from "./BillingSignalProvider";
+import type { MeteringSignalProvider } from "./MeteringSignalProvider";
 
 /**
  * 기본 건강 신호 제공자 조합을 반환하는 레지스트리입니다.
@@ -13,7 +13,7 @@ export class DrizzleHealthSignalRegistry extends HealthSignalRegistry {
    */
   constructor(
     @Inject() private readonly meteringProvider: MeteringSignalProvider,
-    @Inject() private readonly billingProvider: BillingSignalProvider
+    @Inject() private readonly billingProvider: BillingSignalProvider,
   ) {
     super();
   }

@@ -1,9 +1,9 @@
-import type { Readable } from 'node:stream';
-import { Readable as ReadableImpl } from 'node:stream';
-import { FileNotFoundProblem } from './problems/FileNotFoundProblem';
-import { InvalidKeyProblem } from './problems/InvalidKeyProblem';
-import { UploadFailedProblem } from './problems/UploadFailedProblem';
-import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from './types';
+import type { Readable } from "node:stream";
+import { Readable as ReadableImpl } from "node:stream";
+import { FileNotFoundProblem } from "./problems/FileNotFoundProblem";
+import { InvalidKeyProblem } from "./problems/InvalidKeyProblem";
+import { UploadFailedProblem } from "./problems/UploadFailedProblem";
+import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from "./types";
 
 type StoredObject = {
   data: Buffer;
@@ -20,7 +20,7 @@ export class InMemoryStorageProvider implements StorageProvider {
   private storage = new Map<string, StoredObject>();
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'https://example.com') {
+  constructor(baseUrl: string = "https://example.com") {
     this.baseUrl = baseUrl;
   }
 
@@ -49,7 +49,7 @@ export class InMemoryStorageProvider implements StorageProvider {
 
       this.storage.set(key, { data: buffer, metadata });
     } catch (error) {
-      throw new UploadFailedProblem(key, error instanceof Error ? error.message : 'Unknown error');
+      throw new UploadFailedProblem(key, error instanceof Error ? error.message : "Unknown error");
     }
   }
 
@@ -128,16 +128,16 @@ export class InMemoryStorageProvider implements StorageProvider {
   }
 
   private validateKey(key: string): void {
-    if (!key || typeof key !== 'string') {
-      throw new InvalidKeyProblem(key, 'Key must be a non-empty string');
+    if (!key || typeof key !== "string") {
+      throw new InvalidKeyProblem(key, "Key must be a non-empty string");
     }
 
-    if (key.startsWith('/') || key.endsWith('/')) {
-      throw new InvalidKeyProblem(key, 'Key must not start or end with /');
+    if (key.startsWith("/") || key.endsWith("/")) {
+      throw new InvalidKeyProblem(key, "Key must not start or end with /");
     }
 
-    if (key.includes('//')) {
-      throw new InvalidKeyProblem(key, 'Key must not contain //');
+    if (key.includes("//")) {
+      throw new InvalidKeyProblem(key, "Key must not contain //");
     }
   }
 

@@ -1,17 +1,17 @@
-import 'reflect-metadata';
-import { Container } from '../Container';
-import { ShutdownManager } from '../ShutdownManager';
-import type { Constructor, ShutdownHook } from '../types';
+import "reflect-metadata";
+import { Container } from "../Container";
+import { ShutdownManager } from "../ShutdownManager";
+import type { Constructor, ShutdownHook } from "../types";
 
-const ON_SHUTDOWN_METHOD_KEY = Symbol('onShutdown:method');
+const ON_SHUTDOWN_METHOD_KEY = Symbol("onShutdown:method");
 
 function applyMethodDecorator(
   target: Constructor,
   _propertyKey: string | symbol,
-  descriptor: PropertyDescriptor
+  descriptor: PropertyDescriptor,
 ): void {
   const originalMethod = descriptor.value;
-  if (typeof originalMethod !== 'function') {
+  if (typeof originalMethod !== "function") {
     return;
   }
 
@@ -26,7 +26,10 @@ function applyMethodDecorator(
 }
 
 function applyClassDecorator(target: Constructor): void {
-  const methodKey = Reflect.getMetadata(ON_SHUTDOWN_METHOD_KEY, target) as string | symbol | undefined;
+  const methodKey = Reflect.getMetadata(ON_SHUTDOWN_METHOD_KEY, target) as
+    | string
+    | symbol
+    | undefined;
 
   if (methodKey) {
     return;
@@ -35,7 +38,7 @@ function applyClassDecorator(target: Constructor): void {
   const hook: ShutdownHook = {
     onShutdown: async (signal?: AbortSignal): Promise<void> => {
       const instance = Container.get(target);
-      if (typeof (instance as ShutdownHook).onShutdown === 'function') {
+      if (typeof (instance as ShutdownHook).onShutdown === "function") {
         await (instance as ShutdownHook).onShutdown(signal);
       }
     },

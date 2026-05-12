@@ -1,9 +1,9 @@
-import type { ExecutionManager } from '@croco/execution-core';
-import type { ILogger } from '@croco/framework-context';
-import { Container } from '@croco/framework-context';
-import { recordError } from '@croco/telemetry-api';
-import { TaskNotFoundProblem, TaskRunnerDIFailureProblem } from './problems/TasksProblems';
-import { TaskRegistry } from './TaskRegistry';
+import type { ExecutionManager } from "@croco/execution-core";
+import type { ILogger } from "@croco/framework-context";
+import { Container } from "@croco/framework-context";
+import { recordError } from "@croco/telemetry-api";
+import { TaskNotFoundProblem, TaskRunnerDIFailureProblem } from "./problems/TasksProblems";
+import { TaskRegistry } from "./TaskRegistry";
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
 
@@ -19,7 +19,7 @@ export class TaskRunner {
   constructor(
     private executionManager: ExecutionManager,
     private registry: TaskRegistry = TaskRegistry.fromMetadata(),
-    private logger: ILogger = noopLogger
+    private logger: ILogger = noopLogger,
   ) {}
 
   async execute(taskId: string, payload: unknown): Promise<unknown> {
@@ -49,8 +49,9 @@ export class TaskRunner {
     } catch (error) {
       const executionError = {
         message: error instanceof Error ? error.message : String(error),
-        retryable: error instanceof Error && 'retryable' in error ? Boolean(error.retryable) : false,
-        code: error instanceof Error && 'code' in error ? String(error.code) : undefined,
+        retryable:
+          error instanceof Error && "retryable" in error ? Boolean(error.retryable) : false,
+        code: error instanceof Error && "code" in error ? String(error.code) : undefined,
         stack: error instanceof Error ? error.stack : undefined,
       };
 
@@ -60,17 +61,20 @@ export class TaskRunner {
   }
 
   private createInstance(target: object): object {
-    if (typeof target === 'function') {
+    if (typeof target === "function") {
       try {
         return Container.get(target as Constructor<object>);
       } catch (error) {
-        const targetName = target.name || 'Unknown';
-        this.logger.warn('DI resolution failed while creating task instance', {
+        const targetName = target.name || "Unknown";
+        this.logger.warn("DI resolution failed while creating task instance", {
           target: targetName,
           error: error instanceof Error ? error.message : String(error),
         });
         recordError(error);
-        throw new TaskRunnerDIFailureProblem(targetName, error instanceof Error ? error.message : String(error));
+        throw new TaskRunnerDIFailureProblem(
+          targetName,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
     return target;

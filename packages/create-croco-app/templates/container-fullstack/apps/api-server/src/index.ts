@@ -1,4 +1,4 @@
-import { createCrocoApp } from '@croco/transports-http';
+import { createCrocoApp } from "@croco/transports-http";
 
 const app = createCrocoApp();
 
@@ -8,6 +8,6 @@ const app = createCrocoApp();
 // Listen with static file serving for Vike SSR build output
 app.listen({
   port: 3000,
-  staticDir: '../console-web/dist/client',
+  staticDir: "../console-web/dist/client",
   spaFallback: true,
 });

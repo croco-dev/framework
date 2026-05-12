@@ -1,16 +1,20 @@
-import { CircuitBreakerStateStore, CircuitState, InMemoryCircuitBreakerStateStore } from '../CircuitBreakerState';
-import { CircuitBreakerLockProblem } from '../errors/RetryInfrastructureProblem';
+import {
+  CircuitBreakerStateStore,
+  CircuitState,
+  InMemoryCircuitBreakerStateStore,
+} from "../CircuitBreakerState";
+import { CircuitBreakerLockProblem } from "../errors/RetryInfrastructureProblem";
 
 type UpstashRedisLike = {
   get: (key: string) => Promise<string | null>;
-  set: (key: string, value: string, opts?: { ex?: number; nx?: boolean }) => Promise<'OK' | null>;
+  set: (key: string, value: string, opts?: { ex?: number; nx?: boolean }) => Promise<"OK" | null>;
   incr: (key: string) => Promise<number>;
   del: (...keys: string[]) => Promise<number>;
   expire: (key: string, seconds: number) => Promise<number>;
   scan: (cursor: number, opts?: { match?: string; count?: number }) => Promise<[string, string[]]>;
 };
 
-export type OnStoreError = 'throw' | 'open' | 'fallback-inmemory';
+export type OnStoreError = "throw" | "open" | "fallback-inmemory";
 
 export type RedisCircuitBreakerStoreOptions = {
   redis: UpstashRedisLike;
@@ -33,7 +37,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     super();
     this.redis = options.redis;
     this.ttlSeconds = options.ttlSeconds ?? 60;
-    this.onStoreError = options.onStoreError ?? 'throw';
+    this.onStoreError = options.onStoreError ?? "throw";
   }
 
   async getState(circuitId: string): Promise<CircuitState> {
@@ -45,24 +49,28 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        const value = await this.redis.get(this.key(circuitId, 'state'));
+        const value = await this.redis.get(this.key(circuitId, "state"));
         if (value === null) {
           return CircuitState.CLOSED;
         }
 
-        if (value !== CircuitState.CLOSED && value !== CircuitState.OPEN && value !== CircuitState.HALF_OPEN) {
+        if (
+          value !== CircuitState.CLOSED &&
+          value !== CircuitState.OPEN &&
+          value !== CircuitState.HALF_OPEN
+        ) {
           return CircuitState.CLOSED;
         }
 
         if (value === CircuitState.OPEN) {
-          const lastFailureTimeRaw = await this.redis.get(this.key(circuitId, 'lastFailureTime'));
+          const lastFailureTimeRaw = await this.redis.get(this.key(circuitId, "lastFailureTime"));
           return lastFailureTimeRaw === null ? CircuitState.CLOSED : value;
         }
 
         return value;
       },
       (store) => this.getStateFromStore(store, circuitId),
-      async () => CircuitState.OPEN
+      async () => CircuitState.OPEN,
     );
   }
 
@@ -70,12 +78,12 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, 'state'), state, { ex: this.ttlSeconds });
-        await this.redis.set(this.key(circuitId, 'halfOpenActive'), '0', { ex: this.ttlSeconds });
-        await this.redis.set(this.key(circuitId, 'halfOpenSuccess'), '0', { ex: this.ttlSeconds });
+        await this.redis.set(this.key(circuitId, "state"), state, { ex: this.ttlSeconds });
+        await this.redis.set(this.key(circuitId, "halfOpenActive"), "0", { ex: this.ttlSeconds });
+        await this.redis.set(this.key(circuitId, "halfOpenSuccess"), "0", { ex: this.ttlSeconds });
       },
       (store) => store.setState(circuitId, state),
-      async () => undefined
+      async () => undefined,
     );
   }
 
@@ -83,7 +91,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        const value = await this.redis.get(this.key(circuitId, 'failures'));
+        const value = await this.redis.get(this.key(circuitId, "failures"));
         if (value === null) {
           return 0;
         }
@@ -92,7 +100,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
         return Number.isFinite(parsed) ? parsed : 0;
       },
       (store) => store.getFailureCount(circuitId),
-      (store) => store.getFailureCount(circuitId)
+      (store) => store.getFailureCount(circuitId),
     );
   }
 
@@ -100,24 +108,24 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        const key = this.key(circuitId, 'failures');
+        const key = this.key(circuitId, "failures");
         const next = await this.redis.incr(key);
         await this.redis.expire(key, this.ttlSeconds);
         return next;
       },
       (store) => store.incrementFailureCount(circuitId),
-      (store) => store.incrementFailureCount(circuitId)
+      (store) => store.incrementFailureCount(circuitId),
     );
   }
 
   async incrementFailureAndCheck(
     circuitId: string,
-    failureThreshold: number
+    failureThreshold: number,
   ): Promise<{ failureCount: number; shouldOpen: boolean }> {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        const key = this.key(circuitId, 'failures');
+        const key = this.key(circuitId, "failures");
         const failureCount = await this.redis.incr(key);
         await this.redis.expire(key, this.ttlSeconds);
 
@@ -130,7 +138,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
       async () => ({
         failureCount: failureThreshold,
         shouldOpen: true,
-      })
+      }),
     );
   }
 
@@ -138,10 +146,10 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.del(this.key(circuitId, 'failures'));
+        await this.redis.del(this.key(circuitId, "failures"));
       },
       (store) => store.resetFailureCount(circuitId),
-      async () => undefined
+      async () => undefined,
     );
   }
 
@@ -149,7 +157,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        const value = await this.redis.get(this.key(circuitId, 'lastFailureTime'));
+        const value = await this.redis.get(this.key(circuitId, "lastFailureTime"));
         if (value === null) {
           return null;
         }
@@ -158,7 +166,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
         return Number.isFinite(parsed) ? parsed : null;
       },
       (store) => store.getLastFailureTime(circuitId),
-      (store) => store.getLastFailureTime(circuitId)
+      (store) => store.getLastFailureTime(circuitId),
     );
   }
 
@@ -166,10 +174,12 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, 'lastFailureTime'), String(time), { ex: this.ttlSeconds });
+        await this.redis.set(this.key(circuitId, "lastFailureTime"), String(time), {
+          ex: this.ttlSeconds,
+        });
       },
       (store) => store.setLastFailureTime(circuitId, time),
-      async () => undefined
+      async () => undefined,
     );
   }
 
@@ -177,7 +187,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        const value = await this.redis.get(this.key(circuitId, 'halfOpenActive'));
+        const value = await this.redis.get(this.key(circuitId, "halfOpenActive"));
         if (value === null) {
           return 0;
         }
@@ -186,7 +196,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
         return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
       },
       (store) => store.getHalfOpenActiveCount(circuitId),
-      (store) => store.getHalfOpenActiveCount(circuitId)
+      (store) => store.getHalfOpenActiveCount(circuitId),
     );
   }
 
@@ -194,12 +204,12 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, 'halfOpenActive'), String(Math.max(0, count)), {
+        await this.redis.set(this.key(circuitId, "halfOpenActive"), String(Math.max(0, count)), {
           ex: this.ttlSeconds,
         });
       },
       (store) => store.setHalfOpenActiveCount(circuitId, count),
-      async () => undefined
+      async () => undefined,
     );
   }
 
@@ -207,7 +217,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        const value = await this.redis.get(this.key(circuitId, 'halfOpenSuccess'));
+        const value = await this.redis.get(this.key(circuitId, "halfOpenSuccess"));
         if (value === null) {
           return 0;
         }
@@ -216,7 +226,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
         return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
       },
       (store) => store.getHalfOpenSuccessCount(circuitId),
-      (store) => store.getHalfOpenSuccessCount(circuitId)
+      (store) => store.getHalfOpenSuccessCount(circuitId),
     );
   }
 
@@ -224,17 +234,24 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, 'halfOpenSuccess'), String(Math.max(0, count)), {
+        await this.redis.set(this.key(circuitId, "halfOpenSuccess"), String(Math.max(0, count)), {
           ex: this.ttlSeconds,
         });
       },
       (store) => store.setHalfOpenSuccessCount(circuitId, count),
-      async () => undefined
+      async () => undefined,
     );
   }
 
   async reset(circuitId: string): Promise<void> {
-    const suffixes = ['state', 'failures', 'lastFailureTime', 'halfOpenActive', 'halfOpenSuccess', 'lock'];
+    const suffixes = [
+      "state",
+      "failures",
+      "lastFailureTime",
+      "halfOpenActive",
+      "halfOpenSuccess",
+      "lock",
+    ];
     await this.redis.del(...suffixes.map((suffix) => this.key(circuitId, suffix)));
 
     if (this.fallbackStore) {
@@ -246,7 +263,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     let cursor = 0;
 
     do {
-      const [nextCursor, keys] = await this.redis.scan(cursor, { match: 'croco:cb:*', count: 100 });
+      const [nextCursor, keys] = await this.redis.scan(cursor, { match: "croco:cb:*", count: 100 });
       if (keys.length > 0) {
         await this.redis.del(...keys);
       }
@@ -265,22 +282,24 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
       return fallbackStore.withCircuitLock(circuitId, operation);
     }
 
-    const lockKey = this.key(circuitId, 'lock');
+    const lockKey = this.key(circuitId, "lock");
 
-    let acquired: 'OK' | null;
+    let acquired: "OK" | null;
     try {
-      acquired = await this.redis.set(lockKey, '1', { nx: true, ex: 10 });
+      acquired = await this.redis.set(lockKey, "1", { nx: true, ex: 10 });
     } catch (error) {
       return this.handleStoreError(
         circuitId,
         error,
         (store) => store.withCircuitLock(circuitId, operation),
-        (store) => store.withCircuitLock(circuitId, operation)
+        (store) => store.withCircuitLock(circuitId, operation),
       );
     }
 
     if (!acquired) {
-      throw new CircuitBreakerLockProblem(`Failed to acquire circuit breaker lock for ${circuitId}`);
+      throw new CircuitBreakerLockProblem(
+        `Failed to acquire circuit breaker lock for ${circuitId}`,
+      );
     }
 
     try {
@@ -294,7 +313,10 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     }
   }
 
-  private async getStateFromStore(store: InMemoryCircuitBreakerStateStore, circuitId: string): Promise<CircuitState> {
+  private async getStateFromStore(
+    store: InMemoryCircuitBreakerStateStore,
+    circuitId: string,
+  ): Promise<CircuitState> {
     const state = await store.getState(circuitId);
     if (state === CircuitState.OPEN) {
       const lastFailureTime = await store.getLastFailureTime(circuitId);
@@ -305,7 +327,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
   }
 
   private getFallbackStoreIfEnabled(): InMemoryCircuitBreakerStateStore | null {
-    if (this.onStoreError !== 'fallback-inmemory') {
+    if (this.onStoreError !== "fallback-inmemory") {
       return null;
     }
 
@@ -326,12 +348,15 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return store;
   }
 
-  private async markCircuitOpen(store: InMemoryCircuitBreakerStateStore, circuitId: string): Promise<void> {
+  private async markCircuitOpen(
+    store: InMemoryCircuitBreakerStateStore,
+    circuitId: string,
+  ): Promise<void> {
     await store.setLastFailureTime(circuitId, Date.now());
     await store.setState(circuitId, CircuitState.OPEN);
   }
 
-  private logFallbackWarning(error: unknown): void {
+  private logFallbackWarning(_error: unknown): void {
     if (this.hasLoggedFallbackWarning) {
       return;
     }
@@ -347,7 +372,7 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     circuitId: string,
     operation: () => Promise<T>,
     fallbackOperation: (store: InMemoryCircuitBreakerStateStore) => Promise<T>,
-    openOperation: (store: InMemoryCircuitBreakerStateStore) => Promise<T>
+    openOperation: (store: InMemoryCircuitBreakerStateStore) => Promise<T>,
   ): Promise<T> {
     const fallbackStore = this.getFallbackStoreIfEnabled();
     if (fallbackStore) {
@@ -365,15 +390,15 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     circuitId: string,
     error: unknown,
     fallbackOperation: (store: InMemoryCircuitBreakerStateStore) => Promise<T>,
-    openOperation: (store: InMemoryCircuitBreakerStateStore) => Promise<T>
+    openOperation: (store: InMemoryCircuitBreakerStateStore) => Promise<T>,
   ): Promise<T> {
-    if (this.onStoreError === 'fallback-inmemory') {
+    if (this.onStoreError === "fallback-inmemory") {
       const store = this.getOrCreateFallbackStore();
       this.logFallbackWarning(error);
       return fallbackOperation(store);
     }
 
-    if (this.onStoreError === 'open') {
+    if (this.onStoreError === "open") {
       const store = this.getOrCreateFallbackStore();
       await this.markCircuitOpen(store, circuitId);
       return openOperation(store);
@@ -383,13 +408,13 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
   }
 
   private async handleStoreErrorWithoutResult(circuitId: string, error: unknown): Promise<void> {
-    if (this.onStoreError === 'fallback-inmemory') {
+    if (this.onStoreError === "fallback-inmemory") {
       this.getOrCreateFallbackStore();
       this.logFallbackWarning(error);
       return;
     }
 
-    if (this.onStoreError === 'open') {
+    if (this.onStoreError === "open") {
       const store = this.getOrCreateFallbackStore();
       await this.markCircuitOpen(store, circuitId);
       return;

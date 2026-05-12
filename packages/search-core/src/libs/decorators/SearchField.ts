@@ -1,6 +1,6 @@
-import { MetadataStorage } from '@croco/framework-context';
-import type { SearchDerivedFieldConfig, SearchFieldConfig } from '../types';
-import { SEARCH_FIELD_METADATA } from './constants';
+import { MetadataStorage } from "@croco/framework-context";
+import type { SearchDerivedFieldConfig, SearchFieldConfig } from "../types";
+import { SEARCH_FIELD_METADATA } from "./constants";
 
 export type SearchFieldOptions = SearchFieldConfig;
 
@@ -17,7 +17,8 @@ export { SEARCH_FIELD_METADATA };
 export function SearchField(options: SearchFieldOptions = {}): PropertyDecorator {
   return (target: object, propertyKey: string | symbol) => {
     const key = String(propertyKey);
-    const existing = MetadataStorage.get<SearchFieldMetadata[]>(SEARCH_FIELD_METADATA, target.constructor) ?? [];
+    const existing =
+      MetadataStorage.get<SearchFieldMetadata[]>(SEARCH_FIELD_METADATA, target.constructor) ?? [];
 
     const metadata: SearchFieldMetadata = {
       propertyKey: key,

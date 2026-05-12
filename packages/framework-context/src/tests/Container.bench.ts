@@ -1,5 +1,5 @@
-import { bench, describe } from 'vitest';
-import { Container } from '../libs/Container';
+import { bench, describe } from "vitest";
+import { Container } from "../libs/Container";
 
 class TestService1 {}
 class TestService2 {}
@@ -109,49 +109,49 @@ const serviceClasses = [
   TestService50,
 ];
 
-describe('Container.get singleton (cold)', () => {
+describe("Container.get singleton (cold)", () => {
   bench(
-    'Container.get singleton (cold)',
+    "Container.get singleton (cold)",
     () => {
       Container.reset();
-      Container.register(TestService1, 'singleton');
+      Container.register(TestService1, "singleton");
       Container.get(TestService1);
     },
-    { iterations: 100, warmupIterations: 5 }
+    { iterations: 100, warmupIterations: 5 },
   );
 });
 
-describe('Container.register × 50 components', () => {
+describe("Container.register × 50 components", () => {
   bench(
-    'register 50 singletons',
+    "register 50 singletons",
     () => {
       Container.reset();
       for (const ServiceClass of serviceClasses) {
-        Container.register(ServiceClass, 'singleton');
+        Container.register(ServiceClass, "singleton");
       }
     },
-    { iterations: 50, warmupIterations: 10 }
+    { iterations: 50, warmupIterations: 10 },
   );
 });
 
-describe('Container.validate (50 components)', () => {
+describe("Container.validate (50 components)", () => {
   bench(
-    'Container.validate (50 components)',
+    "Container.validate (50 components)",
     () => {
       Container.reset();
       for (const ServiceClass of serviceClasses) {
-        Container.register(ServiceClass, 'singleton');
+        Container.register(ServiceClass, "singleton");
       }
-      Container.register(DepServiceA, 'singleton');
+      Container.register(DepServiceA, "singleton");
       Container.validate();
     },
-    { iterations: 50, warmupIterations: 5 }
+    { iterations: 50, warmupIterations: 5 },
   );
 });
 
-describe('Container.get singleton (warm)', () => {
+describe("Container.get singleton (warm)", () => {
   bench(
-    'Container.get singleton (warm)',
+    "Container.get singleton (warm)",
     () => {
       Container.get(TestService1);
     },
@@ -160,9 +160,9 @@ describe('Container.get singleton (warm)', () => {
       warmupIterations: 20,
       setup: () => {
         Container.reset();
-        Container.register(TestService1, 'singleton');
+        Container.register(TestService1, "singleton");
         Container.set(TestService1, new TestService1());
       },
-    }
+    },
   );
 });

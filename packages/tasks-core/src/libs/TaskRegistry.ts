@@ -1,7 +1,7 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { TASK_METADATA_KEY } from './decorators/Task';
-import { DuplicateTaskRegistrationProblem } from './problems/TasksProblems';
-import type { TaskMetadata } from './types';
+import { MetadataStorage } from "@croco/framework-context";
+import { TASK_METADATA_KEY } from "./decorators/Task";
+import { DuplicateTaskRegistrationProblem } from "./problems/TasksProblems";
+import type { TaskMetadata } from "./types";
 
 export type RegisteredTask = {
   name: string;
@@ -75,7 +75,7 @@ export class TaskRegistry {
     existingTask: RegisteredTask,
     target: object,
     methodName: string,
-    metadata: TaskMetadata
+    metadata: TaskMetadata,
   ): boolean {
     return (
       existingTask.target === target &&
@@ -87,8 +87,8 @@ export class TaskRegistry {
   }
 
   private static isSameOptions(
-    existingOptions?: TaskMetadata['options'],
-    nextOptions?: TaskMetadata['options']
+    existingOptions?: TaskMetadata["options"],
+    nextOptions?: TaskMetadata["options"],
   ): boolean {
     return (
       existingOptions?.maxAttempts === nextOptions?.maxAttempts &&

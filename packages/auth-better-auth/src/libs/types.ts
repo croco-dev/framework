@@ -1,10 +1,10 @@
-import type { AuthUser } from '@croco/auth-core';
+import type { AuthUser } from "@croco/auth-core";
 
 /**
  * Better Auth 웹훅 이벤트 페이로드입니다.
  */
 export type BetterAuthWebhookEvent = {
-  type: 'user.created' | 'user.updated' | 'user.deleted' | 'session.created' | 'session.revoked';
+  type: "user.created" | "user.updated" | "user.deleted" | "session.created" | "session.revoked";
   data: Record<string, unknown>;
   timestamp: Date;
 };
@@ -13,11 +13,11 @@ export type BetterAuthWebhookEvent = {
  * Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
  */
 export type BetterAuthWebhookHandler = {
-  'user.created'?: (data: Record<string, unknown>) => Promise<void>;
-  'user.updated'?: (data: Record<string, unknown>) => Promise<void>;
-  'user.deleted'?: (data: Record<string, unknown>) => Promise<void>;
-  'session.created'?: (data: Record<string, unknown>) => Promise<void>;
-  'session.revoked'?: (data: Record<string, unknown>) => Promise<void>;
+  "user.created"?: (data: Record<string, unknown>) => Promise<void>;
+  "user.updated"?: (data: Record<string, unknown>) => Promise<void>;
+  "user.deleted"?: (data: Record<string, unknown>) => Promise<void>;
+  "session.created"?: (data: Record<string, unknown>) => Promise<void>;
+  "session.revoked"?: (data: Record<string, unknown>) => Promise<void>;
 };
 
 /**

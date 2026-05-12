@@ -1,28 +1,28 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DrizzleAccessProvider } from '../libs/DrizzleAccessProvider';
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DrizzleAccessProvider } from "../libs/DrizzleAccessProvider";
 
 type DrizzleAccessDb = ConstructorParameters<typeof DrizzleAccessProvider>[0];
 
-const testRelationTuples = sqliteTable('relation_tuples', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  tenantId: text('tenant_id').notNull(),
-  object: text('object').notNull(),
-  relation: text('relation').notNull(),
-  subject: text('subject').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+const testRelationTuples = sqliteTable("relation_tuples", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tenantId: text("tenant_id").notNull(),
+  object: text("object").notNull(),
+  relation: text("relation").notNull(),
+  subject: text("subject").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-describe('DrizzleAccessProvider', () => {
+describe("DrizzleAccessProvider", () => {
   let provider!: DrizzleAccessProvider;
   let db!: ReturnType<typeof drizzle>;
   let sqlite!: Database.Database;
   let executeFn!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    sqlite = new Database(':memory:');
+    sqlite = new Database(":memory:");
     db = drizzle(sqlite);
 
     sqlite.exec(`
@@ -49,79 +49,79 @@ describe('DrizzleAccessProvider', () => {
     provider = new DrizzleAccessProvider(mockDb as DrizzleAccessDb);
   });
 
-  describe('check - direct access', () => {
-    it('should normalize boolean allowed values', async () => {
+  describe("check - direct access", () => {
+    it("should normalize boolean allowed values", async () => {
       executeFn.mockResolvedValueOnce({ rows: [{ allowed: true }] });
 
       const allowedResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       executeFn.mockResolvedValueOnce({ rows: [{ allowed: false }] });
 
       const deniedResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       expect(allowedResult.allowed).toBe(true);
       expect(deniedResult.allowed).toBe(false);
     });
 
-    it('should normalize string allowed values', async () => {
+    it("should normalize string allowed values", async () => {
       executeFn
-        .mockResolvedValueOnce({ rows: [{ allowed: 'true' }] })
-        .mockResolvedValueOnce({ rows: [{ allowed: 'false' }] })
-        .mockResolvedValueOnce({ rows: [{ allowed: '1' }] })
-        .mockResolvedValueOnce({ rows: [{ allowed: '0' }] })
-        .mockResolvedValueOnce({ rows: [{ allowed: 't' }] })
-        .mockResolvedValueOnce({ rows: [{ allowed: 'f' }] });
+        .mockResolvedValueOnce({ rows: [{ allowed: "true" }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: "false" }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: "1" }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: "0" }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: "t" }] })
+        .mockResolvedValueOnce({ rows: [{ allowed: "f" }] });
 
       const trueResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       const falseResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       const oneResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       const zeroResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       const tResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       const fResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       expect(trueResult.allowed).toBe(true);
@@ -132,320 +132,322 @@ describe('DrizzleAccessProvider', () => {
       expect(fResult.allowed).toBe(false);
     });
 
-    it('should return deny when no tuple exists', async () => {
+    it("should return deny when no tuple exists", async () => {
       executeFn.mockResolvedValueOnce({ rows: [{ allowed: 0 }] });
 
       const result = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       expect(result.allowed).toBe(false);
     });
 
-    it('should return allow when direct tuple exists', async () => {
+    it("should return allow when direct tuple exists", async () => {
       await db.insert(testRelationTuples).values({
-        tenantId: 'tenant-1',
-        object: 'document:doc1',
-        relation: 'viewer',
-        subject: 'user:alice',
+        tenantId: "tenant-1",
+        object: "document:doc1",
+        relation: "viewer",
+        subject: "user:alice",
       });
 
       executeFn.mockImplementationOnce(async () => {
         const result = sqlite
           .prepare(
-            `SELECT EXISTS(SELECT 1 FROM relation_tuples WHERE tenant_id = 'tenant-1' AND subject = 'user:alice' AND relation = 'viewer' AND object = 'document:doc1') as allowed`
+            `SELECT EXISTS(SELECT 1 FROM relation_tuples WHERE tenant_id = 'tenant-1' AND subject = 'user:alice' AND relation = 'viewer' AND object = 'document:doc1') as allowed`,
           )
           .get() as { allowed: 0 | 1 };
         return { rows: [result] };
       });
 
       const checkResult = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       expect(checkResult.allowed).toBe(true);
     });
 
-    it('should return deny for different tenant', async () => {
+    it("should return deny for different tenant", async () => {
       executeFn.mockResolvedValueOnce({ rows: [{ allowed: 0 }] });
 
       const result = await provider.check({
-        tenantId: 'tenant-2',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-2",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       expect(result.allowed).toBe(false);
     });
 
-    it('should return deny for different relation', async () => {
+    it("should return deny for different relation", async () => {
       executeFn.mockResolvedValueOnce({ rows: [{ allowed: 0 }] });
 
       const result = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'editor',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "editor",
+        object: "document:doc1",
       });
 
       expect(result.allowed).toBe(false);
     });
   });
 
-  describe('check - recursive access (nested)', () => {
-    it('should handle simple recursive case', async () => {
+  describe("check - recursive access (nested)", () => {
+    it("should handle simple recursive case", async () => {
       await db.insert(testRelationTuples).values([
         {
-          tenantId: 'tenant-1',
-          object: 'document:doc1',
-          relation: 'viewer',
-          subject: 'user:alice',
+          tenantId: "tenant-1",
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "user:alice",
         },
       ]);
 
       executeFn.mockImplementationOnce(async () => {
         const result = sqlite
           .prepare(
-            `SELECT EXISTS(SELECT 1 FROM relation_tuples WHERE tenant_id = 'tenant-1' AND subject = 'user:alice' AND relation = 'viewer' AND object = 'document:doc1') as allowed`
+            `SELECT EXISTS(SELECT 1 FROM relation_tuples WHERE tenant_id = 'tenant-1' AND subject = 'user:alice' AND relation = 'viewer' AND object = 'document:doc1') as allowed`,
           )
           .get() as { allowed: 0 | 1 };
         return { rows: [result] };
       });
 
       const result = await provider.check({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
-        relation: 'viewer',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
       expect(result.allowed).toBe(true);
     });
   });
 
-  describe('grant', () => {
-    it('should insert new tuple', async () => {
+  describe("grant", () => {
+    it("should insert new tuple", async () => {
       executeFn.mockImplementationOnce(async () => {
         sqlite
           .prepare(
-            `INSERT INTO relation_tuples (tenant_id, object, relation, subject) VALUES ('tenant-1', 'document:doc1', 'viewer', 'user:alice')`
+            `INSERT INTO relation_tuples (tenant_id, object, relation, subject) VALUES ('tenant-1', 'document:doc1', 'viewer', 'user:alice')`,
           )
           .run();
         return { rows: [] };
       });
 
       await provider.grant({
-        tenantId: 'tenant-1',
+        tenantId: "tenant-1",
         tuple: {
-          object: 'document:doc1',
-          relation: 'viewer',
-          subject: 'user:alice',
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "user:alice",
         },
       });
 
       expect(executeFn).toHaveBeenCalled();
     });
 
-    it('should be idempotent (duplicate grant should not error)', async () => {
+    it("should be idempotent (duplicate grant should not error)", async () => {
       executeFn.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
 
       await provider.grant({
-        tenantId: 'tenant-1',
+        tenantId: "tenant-1",
         tuple: {
-          object: 'document:doc1',
-          relation: 'viewer',
-          subject: 'user:alice',
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "user:alice",
         },
       });
 
       await expect(
         provider.grant({
-          tenantId: 'tenant-1',
+          tenantId: "tenant-1",
           tuple: {
-            object: 'document:doc1',
-            relation: 'viewer',
-            subject: 'user:alice',
+            object: "document:doc1",
+            relation: "viewer",
+            subject: "user:alice",
           },
-        })
+        }),
       ).resolves.toBeUndefined();
     });
   });
 
-  describe('revoke', () => {
-    it('should remove existing tuple', async () => {
+  describe("revoke", () => {
+    it("should remove existing tuple", async () => {
       await db.insert(testRelationTuples).values({
-        tenantId: 'tenant-1',
-        object: 'document:doc1',
-        relation: 'viewer',
-        subject: 'user:alice',
+        tenantId: "tenant-1",
+        object: "document:doc1",
+        relation: "viewer",
+        subject: "user:alice",
       });
 
       executeFn.mockImplementationOnce(async () => {
         sqlite
           .prepare(
-            `DELETE FROM relation_tuples WHERE tenant_id = 'tenant-1' AND object = 'document:doc1' AND relation = 'viewer' AND subject = 'user:alice'`
+            `DELETE FROM relation_tuples WHERE tenant_id = 'tenant-1' AND object = 'document:doc1' AND relation = 'viewer' AND subject = 'user:alice'`,
           )
           .run();
         return { rows: [] };
       });
 
       await provider.revoke({
-        tenantId: 'tenant-1',
+        tenantId: "tenant-1",
         tuple: {
-          object: 'document:doc1',
-          relation: 'viewer',
-          subject: 'user:alice',
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "user:alice",
         },
       });
 
       expect(executeFn).toHaveBeenCalled();
     });
 
-    it('should not error when revoking non-existent tuple', async () => {
+    it("should not error when revoking non-existent tuple", async () => {
       executeFn.mockResolvedValueOnce({ rows: [] });
 
       await expect(
         provider.revoke({
-          tenantId: 'tenant-1',
+          tenantId: "tenant-1",
           tuple: {
-            object: 'document:doc1',
-            relation: 'viewer',
-            subject: 'user:alice',
+            object: "document:doc1",
+            relation: "viewer",
+            subject: "user:alice",
           },
-        })
+        }),
       ).resolves.toBeUndefined();
     });
   });
 
-  describe('list', () => {
+  describe("list", () => {
     beforeEach(async () => {
       await db.insert(testRelationTuples).values([
         {
-          tenantId: 'tenant-1',
-          object: 'document:doc1',
-          relation: 'viewer',
-          subject: 'user:alice',
+          tenantId: "tenant-1",
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "user:alice",
         },
         {
-          tenantId: 'tenant-1',
-          object: 'document:doc1',
-          relation: 'editor',
-          subject: 'user:bob',
+          tenantId: "tenant-1",
+          object: "document:doc1",
+          relation: "editor",
+          subject: "user:bob",
         },
         {
-          tenantId: 'tenant-1',
-          object: 'document:doc2',
-          relation: 'viewer',
-          subject: 'user:alice',
+          tenantId: "tenant-1",
+          object: "document:doc2",
+          relation: "viewer",
+          subject: "user:alice",
         },
         {
-          tenantId: 'tenant-2',
-          object: 'document:doc1',
-          relation: 'viewer',
-          subject: 'user:alice',
+          tenantId: "tenant-2",
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "user:alice",
         },
       ]);
     });
 
-    it('should list all tuples for tenant', async () => {
+    it("should list all tuples for tenant", async () => {
       executeFn.mockImplementationOnce(async () => {
         const rows = sqlite
-          .prepare(`SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1'`)
+          .prepare(
+            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1'`,
+          )
           .all() as unknown[];
         return { rows };
       });
 
-      const result = await provider.list({ tenantId: 'tenant-1' });
+      const result = await provider.list({ tenantId: "tenant-1" });
 
       expect(result).toHaveLength(3);
     });
 
-    it('should filter by object', async () => {
+    it("should filter by object", async () => {
       executeFn.mockImplementationOnce(async () => {
         const rows = sqlite
           .prepare(
-            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND object = 'document:doc1'`
+            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND object = 'document:doc1'`,
           )
           .all() as unknown[];
         return { rows };
       });
 
       const result = await provider.list({
-        tenantId: 'tenant-1',
-        object: 'document:doc1',
+        tenantId: "tenant-1",
+        object: "document:doc1",
       });
 
       expect(result).toHaveLength(2);
-      expect(result.every((r: { object: string }) => r.object === 'document:doc1')).toBe(true);
+      expect(result.every((r: { object: string }) => r.object === "document:doc1")).toBe(true);
     });
 
-    it('should filter by subject', async () => {
+    it("should filter by subject", async () => {
       executeFn.mockImplementationOnce(async () => {
         const rows = sqlite
           .prepare(
-            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND subject = 'user:alice'`
+            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND subject = 'user:alice'`,
           )
           .all() as unknown[];
         return { rows };
       });
 
       const result = await provider.list({
-        tenantId: 'tenant-1',
-        subject: 'user:alice',
+        tenantId: "tenant-1",
+        subject: "user:alice",
       });
 
       expect(result).toHaveLength(2);
-      expect(result.every((r: { subject: string }) => r.subject === 'user:alice')).toBe(true);
+      expect(result.every((r: { subject: string }) => r.subject === "user:alice")).toBe(true);
     });
 
-    it('should filter by relation', async () => {
+    it("should filter by relation", async () => {
       executeFn.mockImplementationOnce(async () => {
         const rows = sqlite
           .prepare(
-            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND relation = 'viewer'`
+            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND relation = 'viewer'`,
           )
           .all() as unknown[];
         return { rows };
       });
 
       const result = await provider.list({
-        tenantId: 'tenant-1',
-        relation: 'viewer',
+        tenantId: "tenant-1",
+        relation: "viewer",
       });
 
       expect(result).toHaveLength(2);
-      expect(result.every((r: { relation: string }) => r.relation === 'viewer')).toBe(true);
+      expect(result.every((r: { relation: string }) => r.relation === "viewer")).toBe(true);
     });
 
-    it('should filter by multiple criteria', async () => {
+    it("should filter by multiple criteria", async () => {
       executeFn.mockImplementationOnce(async () => {
         const rows = sqlite
           .prepare(
-            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND object = 'document:doc1' AND subject = 'user:alice' AND relation = 'viewer'`
+            `SELECT object, relation, subject FROM relation_tuples WHERE tenant_id = 'tenant-1' AND object = 'document:doc1' AND subject = 'user:alice' AND relation = 'viewer'`,
           )
           .all() as unknown[];
         return { rows };
       });
 
       const result = await provider.list({
-        tenantId: 'tenant-1',
-        object: 'document:doc1',
-        subject: 'user:alice',
-        relation: 'viewer',
+        tenantId: "tenant-1",
+        object: "document:doc1",
+        subject: "user:alice",
+        relation: "viewer",
       });
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
-        object: 'document:doc1',
-        subject: 'user:alice',
-        relation: 'viewer',
+        object: "document:doc1",
+        subject: "user:alice",
+        relation: "viewer",
       });
     });
   });

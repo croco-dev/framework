@@ -1,4 +1,4 @@
-export type { PubSub } from 'type-graphql';
+export type { PubSub } from "type-graphql";
 export {
   Arg,
   Args,
@@ -19,5 +19,5 @@ export {
   Resolver,
   Root,
   Subscription,
-} from 'type-graphql';
-export { GraphQLResolver, type GraphQLResolverOptions } from './decorators/GraphQLResolver';
+} from "type-graphql";
+export { GraphQLResolver, type GraphQLResolverOptions } from "./decorators/GraphQLResolver";

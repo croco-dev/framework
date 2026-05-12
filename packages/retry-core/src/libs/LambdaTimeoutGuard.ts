@@ -1,9 +1,9 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { AsyncLocalStorage } from "node:async_hooks";
 
 /**
  * AWS Lambda context interface (minimal).
  */
-import { LambdaTimeoutProblem } from './errors/RetryInfrastructureProblem';
+import { LambdaTimeoutProblem } from "./errors/RetryInfrastructureProblem";
 
 export interface LambdaContext {
   getRemainingTimeInMillis(): number;
@@ -18,7 +18,10 @@ function readLambdaContext(): LambdaContext | null {
 /**
  * 지정한 Lambda 컨텍스트를 현재 비동기 실행 범위에 연결합니다.
  */
-export async function runWithLambdaContext<T>(context: LambdaContext | null, fn: () => T | Promise<T>): Promise<T> {
+export async function runWithLambdaContext<T>(
+  context: LambdaContext | null,
+  fn: () => T | Promise<T>,
+): Promise<T> {
   return await lambdaContextStorage.run(context, fn);
 }
 
@@ -51,7 +54,7 @@ export function getLambdaContext(): LambdaContext | null {
 export function isLambdaEnvironment(): boolean {
   return (
     readLambdaContext() !== null ||
-    (typeof process !== 'undefined' && process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined)
+    (typeof process !== "undefined" && process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined)
   );
 }
 
@@ -122,7 +125,7 @@ export class LambdaTimeoutGuard {
     ) {
       const remaining = this.getRemainingTime();
       throw new LambdaTimeoutProblem(
-        `Lambda timeout guard: ${remaining}ms remaining, need ${nextDelayMs + this.reserveTimeMs}ms`
+        `Lambda timeout guard: ${remaining}ms remaining, need ${nextDelayMs + this.reserveTimeMs}ms`,
       );
     }
   }

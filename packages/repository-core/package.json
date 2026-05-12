@@ -1,28 +1,13 @@
 {
   "name": "@croco/repository-core",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "deploy": "pnpm run build && pnpm publish --no-git-checks",
-    "lint": "oxlint .",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.0.0",
-    "vitest": "4.0.16"
-  },
-  "dependencies": {
-    "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*"
-  },
   "publishConfig": {
-    "access": "public",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -31,9 +16,24 @@
         "require": "./dist/index.cjs",
         "types": "./dist/index.d.ts"
       }
-    }
+    },
+    "access": "public"
   },
-  "files": [
-    "dist"
-  ]
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "4.0.16"
+  }
 }

@@ -1,7 +1,7 @@
-import { RateLimitExceededProblem } from '../problems/RateLimitExceededProblem';
-import type { RateLimiter } from '../RateLimiter';
-import { type KeyContext, RateLimitKeyBuilder } from '../RateLimitKeyBuilder';
-import type { KeySegment, RateLimitPolicy, RateLimitResult } from '../types';
+import { RateLimitExceededProblem } from "../problems/RateLimitExceededProblem";
+import type { RateLimiter } from "../RateLimiter";
+import { type KeyContext, RateLimitKeyBuilder } from "../RateLimitKeyBuilder";
+import type { KeySegment, RateLimitPolicy, RateLimitResult } from "../types";
 
 export interface HttpContext {
   readonly req: {
@@ -13,7 +13,10 @@ export interface HttpContext {
   get<T>(key: string): T | undefined;
 }
 
-export type MiddlewareFunction = (ctx: HttpContext, next: () => Promise<void>) => Promise<void> | void;
+export type MiddlewareFunction = (
+  ctx: HttpContext,
+  next: () => Promise<void>,
+) => Promise<void> | void;
 
 export type CreateMiddlewareOptions = {
   rateLimiter: RateLimiter;
@@ -24,26 +27,32 @@ export type CreateMiddlewareOptions = {
 };
 
 export type RateLimitHeaders = {
-  'X-RateLimit-Limit': string;
-  'X-RateLimit-Remaining': string;
-  'X-RateLimit-Reset': string;
-  'Retry-After'?: string;
+  "X-RateLimit-Limit": string;
+  "X-RateLimit-Remaining": string;
+  "X-RateLimit-Reset": string;
+  "Retry-After"?: string;
 };
 
 export function createRateLimitMiddleware(options: CreateMiddlewareOptions): MiddlewareFunction {
-  const { rateLimiter, policy, keySegments = ['ip'], failOpen = false, addHeaders = true } = options;
+  const {
+    rateLimiter,
+    policy,
+    keySegments = ["ip"],
+    failOpen = false,
+    addHeaders = true,
+  } = options;
   const keyBuilder = new RateLimitKeyBuilder(keySegments);
 
   return async (ctx: HttpContext, next: () => Promise<void>): Promise<void> => {
     const keyContext = createKeyContextAdapter(ctx);
-    const key = keyBuilder.build(keyContext, policy.algorithm ?? 'sliding');
+    const key = keyBuilder.build(keyContext, policy.algorithm ?? "sliding");
 
     const result = await rateLimiter.checkWithKey(key, policy);
 
-    ctx.set('rateLimitResult', result);
+    ctx.set("rateLimitResult", result);
 
     if (addHeaders) {
-      ctx.set('rateLimitHeaders', buildHeaders(result));
+      ctx.set("rateLimitHeaders", buildHeaders(result));
     }
 
     if (!result.success && !failOpen) {
@@ -55,10 +64,10 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
 }
 
 function createKeyContextAdapter(ctx: HttpContext): KeyContext {
-  const forwardedFor = ctx.req.headers['x-forwarded-for']?.split(',')[0]?.trim();
-  const realIp = ctx.req.headers['x-real-ip']?.trim();
-  const cfIp = ctx.req.headers['cf-connecting-ip']?.trim();
-  const clientIp = forwardedFor || realIp || cfIp || 'unknown';
+  const forwardedFor = ctx.req.headers["x-forwarded-for"]?.split(",")[0]?.trim();
+  const realIp = ctx.req.headers["x-real-ip"]?.trim();
+  const cfIp = ctx.req.headers["cf-connecting-ip"]?.trim();
+  const clientIp = forwardedFor || realIp || cfIp || "unknown";
 
   return {
     get<T>(key: string): T | undefined {
@@ -66,12 +75,12 @@ function createKeyContextAdapter(ctx: HttpContext): KeyContext {
       if (stored !== undefined) return stored;
 
       switch (key) {
-        case 'ip':
-        case 'clientIp':
+        case "ip":
+        case "clientIp":
           return clientIp as T;
-        case 'method':
+        case "method":
           return ctx.req.method as T;
-        case 'path':
+        case "path":
           return ctx.req.path as T;
         default:
           return undefined;
@@ -82,14 +91,14 @@ function createKeyContextAdapter(ctx: HttpContext): KeyContext {
 
 function buildHeaders(result: RateLimitResult): RateLimitHeaders {
   const headers: RateLimitHeaders = {
-    'X-RateLimit-Limit': String(result.limit),
-    'X-RateLimit-Remaining': String(result.remaining),
-    'X-RateLimit-Reset': String(Math.ceil(result.resetAtMs / 1000)),
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(result.remaining),
+    "X-RateLimit-Reset": String(Math.ceil(result.resetAtMs / 1000)),
   };
 
   if (!result.success) {
     const retryAfter = Math.ceil((result.resetAtMs - Date.now()) / 1000);
-    headers['Retry-After'] = String(Math.max(0, retryAfter));
+    headers["Retry-After"] = String(Math.max(0, retryAfter));
   }
 
   return headers;

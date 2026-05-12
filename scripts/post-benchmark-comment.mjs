@@ -1,5 +1,5 @@
 // @ts-check
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 
 /**
  * @param {number} ms
@@ -14,9 +14,9 @@ function formatDuration(ms) {
  * @param {number | undefined} expected
  */
 function formatDiff(actual, expected) {
-  if (!expected) return '-';
+  if (!expected) return "-";
   const percent = (((actual - expected) / expected) * 100).toFixed(1);
-  const sign = actual >= expected ? '+' : '';
+  const sign = actual >= expected ? "+" : "";
   return `${sign}${percent}%`;
 }
 
@@ -24,9 +24,9 @@ function formatDiff(actual, expected) {
  * @param {{ thresholdStatus?: string; baselineStatus?: string }} report
  */
 function statusEmoji(report) {
-  if (report.thresholdStatus === 'fail' || report.baselineStatus === 'fail') return '❌';
-  if (report.thresholdStatus === 'skip' && report.baselineStatus === 'skip') return '⚠️';
-  return '✅';
+  if (report.thresholdStatus === "fail" || report.baselineStatus === "fail") return "❌";
+  if (report.thresholdStatus === "skip" && report.baselineStatus === "skip") return "⚠️";
+  return "✅";
 }
 
 /**
@@ -36,30 +36,30 @@ function statusEmoji(report) {
 function buildCommentBody(result, sha) {
   const rows = result.reports
     .map((r) => {
-      const threshold = r.threshold ? formatDuration(r.threshold) : '-';
-      const baseline = r.baseline ? formatDuration(r.baseline) : '-';
+      const threshold = r.threshold ? formatDuration(r.threshold) : "-";
+      const baseline = r.baseline ? formatDuration(r.baseline) : "-";
       const baselineDiff = formatDiff(r.p75, r.baseline);
       return `| ${r.name} | ${formatDuration(r.p75)} | ${threshold} | ${baseline} | ${baselineDiff} | ${statusEmoji(r)} |`;
     })
-    .join('\n');
+    .join("\n");
 
-  const summary = result.allPassed ? '✅ All benchmarks passed' : '❌ Some benchmarks failed';
+  const summary = result.allPassed ? "✅ All benchmarks passed" : "❌ Some benchmarks failed";
 
   return [
     COMMENT_MARKER,
-    '## 📊 Benchmark Results',
-    '',
+    "## 📊 Benchmark Results",
+    "",
     summary,
-    '',
-    '| Benchmark | p75 | Threshold | Baseline | vs Baseline | Status |',
-    '|-----------|-----|-----------|----------|-------------|--------|',
+    "",
+    "| Benchmark | p75 | Threshold | Baseline | vs Baseline | Status |",
+    "|-----------|-----|-----------|----------|-------------|--------|",
     rows,
-    '',
+    "",
     `<sub>Updated: ${new Date().toISOString()} · Commit: ${sha.slice(0, 7)}</sub>`,
-  ].join('\n');
+  ].join("\n");
 }
 
-const COMMENT_MARKER = '<!-- benchmark-results -->';
+const COMMENT_MARKER = "<!-- benchmark-results -->";
 
 /**
  * Called by actions/github-script.
@@ -67,13 +67,13 @@ const COMMENT_MARKER = '<!-- benchmark-results -->';
  */
 export async function run({ github, context }) {
   if (!context.issue?.number) {
-    console.log('Not a PR context, skipping comment');
+    console.log("Not a PR context, skipping comment");
     return;
   }
 
   let result;
   try {
-    result = JSON.parse(readFileSync('benchmark-result.json', 'utf-8'));
+    result = JSON.parse(readFileSync("benchmark-result.json", "utf-8"));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`Failed to read benchmark-result.json: ${message}`);

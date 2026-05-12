@@ -2,8 +2,8 @@
  * Middleware chain class for executing middleware in onion pattern
  */
 
-import { MiddlewareProblem } from './problems/MiddlewareProblems';
-import type { Middleware } from './types';
+import { MiddlewareProblem } from "./problems/MiddlewareProblems";
+import type { Middleware } from "./types";
 
 /**
  * 등록된 미들웨어를 onion 패턴으로 순차 실행하는 체인입니다.
@@ -23,13 +23,13 @@ export class MiddlewareChain<TContext = Record<string, unknown>> {
    * Execute middleware chain in onion pattern
    */
   async execute<T>(ctx: TContext, finalFn?: () => Promise<T>): Promise<T> {
-    const NO_RESULT = Symbol('NO_RESULT');
+    const NO_RESULT = Symbol("NO_RESULT");
     let result: T | typeof NO_RESULT = NO_RESULT;
     let index = -1;
 
     const dispatch = async (i: number): Promise<void> => {
       if (i <= index) {
-        throw new MiddlewareProblem('Middleware called next() multiple times');
+        throw new MiddlewareProblem("Middleware called next() multiple times");
       }
       index = i;
 
@@ -47,7 +47,7 @@ export class MiddlewareChain<TContext = Record<string, unknown>> {
     await dispatch(0);
 
     if (result === NO_RESULT && finalFn) {
-      throw new MiddlewareProblem('No result returned from function execution');
+      throw new MiddlewareProblem("No result returned from function execution");
     }
 
     if (result === NO_RESULT) {

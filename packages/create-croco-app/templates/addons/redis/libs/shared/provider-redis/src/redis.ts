@@ -1,5 +1,5 @@
-import Redis from 'ioredis';
-import { Service } from 'typedi';
+import Redis from "ioredis";
+import { Service } from "typedi";
 
 @Service()
 export class RedisProvider {
@@ -11,7 +11,7 @@ export class RedisProvider {
 
   getClient(): Redis {
     if (!this.client) {
-      throw new Error('Redis not connected. Call connect() first.');
+      throw new Error("Redis not connected. Call connect() first.");
     }
     return this.client;
   }

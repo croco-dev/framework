@@ -1,6 +1,6 @@
-import { Component } from '@croco/framework-context';
-import { HealthScoreStore } from './interfaces';
-import type { TenantHealthScore, TrendPeriod } from './types';
+import { Component } from "@croco/framework-context";
+import { HealthScoreStore } from "./interfaces";
+import type { TenantHealthScore, TrendPeriod } from "./types";
 
 @Component()
 export class InMemoryHealthScoreStore extends HealthScoreStore {
@@ -33,9 +33,11 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     tenantId: string,
     _period: TrendPeriod,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<TenantHealthScore[]> {
     const history = this.store.get(tenantId) ?? [];
-    return history.filter((score) => score.calculatedAt >= startDate && score.calculatedAt <= endDate);
+    return history.filter(
+      (score) => score.calculatedAt >= startDate && score.calculatedAt <= endDate,
+    );
   }
 }

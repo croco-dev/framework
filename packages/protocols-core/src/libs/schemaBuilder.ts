@@ -1,8 +1,8 @@
-import { z } from 'zod';
-import type { ParamIR } from './RouteIR';
+import { z } from "zod";
+import type { ParamIR } from "./RouteIR";
 
 export function buildPathSchema(params: ParamIR[]): z.ZodObject<Record<string, z.ZodType>> | null {
-  const pathParams = params.filter((param) => param.kind === 'path' && param.name.length > 0);
+  const pathParams = params.filter((param) => param.kind === "path" && param.name.length > 0);
 
   if (pathParams.length === 0) {
     return null;
@@ -18,7 +18,7 @@ export function buildPathSchema(params: ParamIR[]): z.ZodObject<Record<string, z
 }
 
 export function buildQuerySchema(params: ParamIR[]): z.ZodObject<Record<string, z.ZodType>> | null {
-  const queryParams = params.filter((param) => param.kind === 'query' && param.name.length > 0);
+  const queryParams = params.filter((param) => param.kind === "query" && param.name.length > 0);
 
   if (queryParams.length === 0) {
     return null;

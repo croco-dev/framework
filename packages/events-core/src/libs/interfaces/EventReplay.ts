@@ -1,9 +1,9 @@
-import type { DomainEvent } from '../DomainEvent';
+import type { DomainEvent } from "../DomainEvent";
 
 /**
  * 이벤트 리플레이(Replay) 모드입니다.
  */
-export type ReplayMode = 'fast' | 'accurate';
+export type ReplayMode = "fast" | "accurate";
 
 /**
  * 이벤트 리플레이 옵션입니다.

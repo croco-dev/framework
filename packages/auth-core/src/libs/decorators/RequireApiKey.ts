@@ -1,5 +1,5 @@
-import 'reflect-metadata';
-import { API_KEY_REQUIRED_KEY } from '../constants';
+import "reflect-metadata";
+import { API_KEY_REQUIRED_KEY } from "../constants";
 
 export function RequireApiKey(): MethodDecorator & ClassDecorator {
   return (target: object, _propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {

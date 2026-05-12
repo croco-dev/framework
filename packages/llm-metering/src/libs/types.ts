@@ -1,11 +1,11 @@
-import type { UsageAccuracy as LlmCoreUsageAccuracy } from '@croco/llm-core';
+import type { UsageAccuracy as LlmCoreUsageAccuracy } from "@croco/llm-core";
 
 export type UsageAccuracy = LlmCoreUsageAccuracy;
 
-export const PROMPT_TOKENS = 'llm.prompt_tokens';
-export const COMPLETION_TOKENS = 'llm.completion_tokens';
-export const EMBEDDING_TOKENS = 'llm.embedding_tokens';
-export const COST_USD = 'llm.cost_usd';
+export const PROMPT_TOKENS = "llm.prompt_tokens";
+export const COMPLETION_TOKENS = "llm.completion_tokens";
+export const EMBEDDING_TOKENS = "llm.embedding_tokens";
+export const COST_USD = "llm.cost_usd";
 
 export type LlmUsageRecord = {
   promptTokens: number;

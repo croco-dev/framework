@@ -1,11 +1,11 @@
-import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from '@croco/search-core';
-import type { SQL } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
+import type { SQL } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 /**
  * 검색 엔진에서 Drizzle 클라이언트를 주입할 때 사용하는 토큰입니다.
  */
-export const DRIZZLE_TOKEN = 'DRIZZLE_TOKEN';
+export const DRIZZLE_TOKEN = "DRIZZLE_TOKEN";
 
 /**
  * 검색 결과 행을 표현하는 공통 타입입니다.

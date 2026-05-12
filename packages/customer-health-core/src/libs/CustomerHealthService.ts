@@ -1,9 +1,9 @@
-import { EventPublisher } from '@croco/events-core';
-import { Component, Container, Inject } from '@croco/framework-context';
-import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from './events';
-import { HealthScoreCalculator } from './HealthScoreCalculator';
-import { HealthScoreStore, HealthSignalRegistry } from './interfaces';
-import type { HealthScoreProfile, HealthTrend, TenantHealthScore } from './types';
+import { EventPublisher } from "@croco/events-core";
+import { Component, Container, Inject } from "@croco/framework-context";
+import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "./events";
+import { HealthScoreCalculator } from "./HealthScoreCalculator";
+import { HealthScoreStore, HealthSignalRegistry } from "./interfaces";
+import type { HealthScoreProfile, HealthTrend, TenantHealthScore } from "./types";
 
 const SCORE_DROP_EVENT_THRESHOLD_PERCENT = 20;
 
@@ -12,10 +12,13 @@ export class CustomerHealthService {
   constructor(
     @Inject(HealthSignalRegistry.token) private readonly signalRegistry: HealthSignalRegistry,
     @Inject(HealthScoreStore.token) private readonly store: HealthScoreStore,
-    @Inject(() => HealthScoreCalculator) private readonly calculator: HealthScoreCalculator
+    @Inject(() => HealthScoreCalculator) private readonly calculator: HealthScoreCalculator,
   ) {}
 
-  async calculateAndStore(tenantId: string, profile: HealthScoreProfile): Promise<TenantHealthScore> {
+  async calculateAndStore(
+    tenantId: string,
+    profile: HealthScoreProfile,
+  ): Promise<TenantHealthScore> {
     const providers = this.signalRegistry.getProviders();
     const allSignals: {
       category: string;
@@ -51,7 +54,10 @@ export class CustomerHealthService {
     return this.store.findLatest(tenantId);
   }
 
-  async getTrend(tenantId: string, days: number): Promise<{ trend: HealthTrend; changePercentage: number } | null> {
+  async getTrend(
+    tenantId: string,
+    days: number,
+  ): Promise<{ trend: HealthTrend; changePercentage: number } | null> {
     const history = await this.store.findHistory(tenantId, days + 1);
     if (history.length < 2) {
       return null;
@@ -68,17 +74,20 @@ export class CustomerHealthService {
 
     let trend: HealthTrend;
     if (changePercentage >= 5) {
-      trend = 'improving';
+      trend = "improving";
     } else if (changePercentage <= -5) {
-      trend = 'declining';
+      trend = "declining";
     } else {
-      trend = 'stable';
+      trend = "stable";
     }
 
     return { trend, changePercentage };
   }
 
-  private async publishEvents(score: TenantHealthScore, previous: TenantHealthScore | null): Promise<void> {
+  private async publishEvents(
+    score: TenantHealthScore,
+    previous: TenantHealthScore | null,
+  ): Promise<void> {
     const eventPublisher = this.getEventPublisher();
     if (!previous || !eventPublisher) {
       return;
@@ -86,14 +95,24 @@ export class CustomerHealthService {
 
     if (previous.status !== score.status) {
       await eventPublisher.publish(
-        new HealthStatusChangedEvent(score.tenantId, previous.status, score.status, score.overallScore)
+        new HealthStatusChangedEvent(
+          score.tenantId,
+          previous.status,
+          score.status,
+          score.overallScore,
+        ),
       );
     }
 
     const dropPercentage = this.calculateDropPercentage(previous.overallScore, score.overallScore);
     if (dropPercentage >= SCORE_DROP_EVENT_THRESHOLD_PERCENT) {
       await eventPublisher.publish(
-        new HealthScoreDroppedEvent(score.tenantId, previous.overallScore, score.overallScore, dropPercentage)
+        new HealthScoreDroppedEvent(
+          score.tenantId,
+          previous.overallScore,
+          score.overallScore,
+          dropPercentage,
+        ),
       );
     }
   }

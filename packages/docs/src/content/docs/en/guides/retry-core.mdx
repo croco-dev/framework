@@ -24,21 +24,21 @@ pnpm add @croco/retry-core
 The `@Retryable` decorator is the easiest way to add retry logic to your methods.
 
 ```typescript
-import { Retryable, ExponentialBackoff } from '@croco/retry-core';
+import { Retryable, ExponentialBackoff } from "@croco/retry-core";
 
 class Service {
-  @Retryable({ 
-    maxAttempts: 3, 
+  @Retryable({
+    maxAttempts: 3,
     backoff: { delay: 1000, multiplier: 2 },
-    recover: 'fallback' // Optional recovery method name
+    recover: "fallback", // Optional recovery method name
   })
   async fetchData(): Promise<Data> {
-    return await this.api.get('/data');
+    return await this.api.get("/data");
   }
 
   // Optional recovery method
   async fallback(error: Error): Promise<Data> {
-    console.warn('All retries failed', error);
+    console.warn("All retries failed", error);
     return { cached: true };
   }
 }
@@ -49,11 +49,11 @@ class Service {
 For programmatic control, use `RetryTemplate`.
 
 ```typescript
-import { RetryTemplate } from '@croco/retry-core';
+import { RetryTemplate } from "@croco/retry-core";
 
-const template = new RetryTemplate({ 
+const template = new RetryTemplate({
   maxAttempts: 3,
-  backoff: { delay: 500 }
+  backoff: { delay: 500 },
 });
 
 const result = await template.execute(
@@ -63,8 +63,8 @@ const result = await template.execute(
   },
   async (ctx) => {
     // Recovery callback (optional)
-    return 'fallback-value';
-  }
+    return "fallback-value";
+  },
 );
 ```
 
@@ -73,15 +73,15 @@ const result = await template.execute(
 Combine circuit breaker pattern with retries to prevent system overload.
 
 ```typescript
-import { CircuitBreakerRetryTemplate } from '@croco/retry-core';
+import { CircuitBreakerRetryTemplate } from "@croco/retry-core";
 
 const template = new CircuitBreakerRetryTemplate(
-  new CircuitBreaker({ 
-    circuitId: 'api-service',
+  new CircuitBreaker({
+    circuitId: "api-service",
     failureThreshold: 5,
-    resetTimeout: 30000 
+    resetTimeout: 30000,
   }),
-  new RetryTemplate({ maxAttempts: 3 })
+  new RetryTemplate({ maxAttempts: 3 }),
 );
 
 try {
@@ -98,7 +98,7 @@ try {
 Automatically stop retrying before AWS Lambda times out.
 
 ```typescript
-import { LambdaTimeoutGuard, runWithLambdaContext } from '@croco/retry-core';
+import { LambdaTimeoutGuard, runWithLambdaContext } from "@croco/retry-core";
 
 export const handler = async (event, context) => {
   return await runWithLambdaContext(context, async () => {

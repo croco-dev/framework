@@ -1,15 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CarryingCapacityCalculator, SimulationConfig, UserCCConfig } from '../libs/CarryingCapacityCalculator';
-import type { GrowthCalculator } from '../libs/GrowthCalculator';
-import type { PlanProvider } from '../libs/interfaces/PlanProvider';
-import type { LtvCalculator, LtvConfig } from '../libs/LtvCalculator';
-import { MetricsEngine } from '../libs/MetricsEngine';
-import type { MrrCalculator } from '../libs/MrrCalculator';
-import type { RetentionCalculator } from '../libs/RetentionCalculator';
-import type { SnapshotInput, SnapshotScheduler } from '../libs/SnapshotScheduler';
-import type { Money, MRRMovement, SubscriptionSnapshot } from '../types';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+  CarryingCapacityCalculator,
+  SimulationConfig,
+  UserCCConfig,
+} from "../libs/CarryingCapacityCalculator";
+import type { GrowthCalculator } from "../libs/GrowthCalculator";
+import type { PlanProvider } from "../libs/interfaces/PlanProvider";
+import type { LtvCalculator, LtvConfig } from "../libs/LtvCalculator";
+import { MetricsEngine } from "../libs/MetricsEngine";
+import type { MrrCalculator } from "../libs/MrrCalculator";
+import type { RetentionCalculator } from "../libs/RetentionCalculator";
+import type { SnapshotInput, SnapshotScheduler } from "../libs/SnapshotScheduler";
+import type { Money, MRRMovement, SubscriptionSnapshot } from "../types";
 
-describe('MetricsEngine', () => {
+describe("MetricsEngine", () => {
   let engine!: MetricsEngine;
   let mockMrrCalculator!: MrrCalculator;
   let mockRetentionCalculator!: RetentionCalculator;
@@ -54,20 +58,20 @@ describe('MetricsEngine', () => {
       mockGrowthCalculator,
       mockCcCalculator,
       mockLtvCalculator,
-      mockSnapshotScheduler
+      mockSnapshotScheduler,
     );
   });
 
-  describe('MRR Methods', () => {
-    it('should delegate calculateMRR to MrrCalculator', async () => {
+  describe("MRR Methods", () => {
+    it("should delegate calculateMRR to MrrCalculator", async () => {
       const subscriptions: SubscriptionSnapshot[] = [
         {
-          id: 'sub_1',
-          planId: 'plan_monthly_10',
+          id: "sub_1",
+          planId: "plan_monthly_10",
         },
       ];
       const planProvider = {} as PlanProvider;
-      const expected: Money = { amount: 1000, currency: 'USD' };
+      const expected: Money = { amount: 1000, currency: "USD" };
       vi.mocked(mockMrrCalculator.calculateMRR).mockResolvedValue(expected);
 
       const result = await engine.calculateMRR(subscriptions, planProvider);
@@ -76,8 +80,8 @@ describe('MetricsEngine', () => {
       expect(mockMrrCalculator.calculateMRR).toHaveBeenCalledWith(subscriptions, planProvider);
     });
 
-    it('should delegate getMRRMovement to MrrCalculator', () => {
-      const expected = 'new' as const;
+    it("should delegate getMRRMovement to MrrCalculator", () => {
+      const expected = "new" as const;
       vi.mocked(mockMrrCalculator.classifyMRRMovement).mockReturnValue(expected);
 
       const result = engine.getMRRMovement(false, false, null, 1000);
@@ -87,18 +91,18 @@ describe('MetricsEngine', () => {
     });
   });
 
-  describe('Retention Methods', () => {
-    it('should delegate calculateChurn to RetentionCalculator', async () => {
+  describe("Retention Methods", () => {
+    it("should delegate calculateChurn to RetentionCalculator", async () => {
       const expected = 5.5;
       vi.mocked(mockRetentionCalculator.calculateChurn).mockResolvedValue(expected);
 
-      const result = await engine.calculateChurn(10000, {} as MRRMovement, 'revenue');
+      const result = await engine.calculateChurn(10000, {} as MRRMovement, "revenue");
 
       expect(result).toBe(expected);
-      expect(mockRetentionCalculator.calculateChurn).toHaveBeenCalledWith(10000, {}, 'revenue');
+      expect(mockRetentionCalculator.calculateChurn).toHaveBeenCalledWith(10000, {}, "revenue");
     });
 
-    it('should delegate calculateGRR to RetentionCalculator', async () => {
+    it("should delegate calculateGRR to RetentionCalculator", async () => {
       const expected = 95.0;
       vi.mocked(mockRetentionCalculator.calculateGRR).mockResolvedValue(expected);
 
@@ -108,7 +112,7 @@ describe('MetricsEngine', () => {
       expect(mockRetentionCalculator.calculateGRR).toHaveBeenCalledWith(10000, {});
     });
 
-    it('should delegate calculateNRR to RetentionCalculator', async () => {
+    it("should delegate calculateNRR to RetentionCalculator", async () => {
       const expected = 105.0;
       vi.mocked(mockRetentionCalculator.calculateNRR).mockResolvedValue(expected);
 
@@ -119,8 +123,8 @@ describe('MetricsEngine', () => {
     });
   });
 
-  describe('Growth Methods', () => {
-    it('should delegate calculateQuickRatio to GrowthCalculator', async () => {
+  describe("Growth Methods", () => {
+    it("should delegate calculateQuickRatio to GrowthCalculator", async () => {
       const expected = 3.5;
       vi.mocked(mockGrowthCalculator.calculateQuickRatio).mockResolvedValue(expected);
 
@@ -131,9 +135,9 @@ describe('MetricsEngine', () => {
     });
   });
 
-  describe('Carrying Capacity Methods', () => {
-    it('should delegate getCarryingCapacity to CarryingCapacityCalculator', async () => {
-      const config: UserCCConfig = { lookbackDays: 30, tenantId: 'tenant-123' };
+  describe("Carrying Capacity Methods", () => {
+    it("should delegate getCarryingCapacity to CarryingCapacityCalculator", async () => {
+      const config: UserCCConfig = { lookbackDays: 30, tenantId: "tenant-123" };
       const expected = {
         capacity: 50000,
         current: 10000,
@@ -150,8 +154,8 @@ describe('MetricsEngine', () => {
       expect(mockCcCalculator.calculateUserCC).toHaveBeenCalledWith(config);
     });
 
-    it('should delegate simulateCapacity to CarryingCapacityCalculator', async () => {
-      const changes: SimulationConfig = { tenantId: 'tenant-123', churnChange: -20 };
+    it("should delegate simulateCapacity to CarryingCapacityCalculator", async () => {
+      const changes: SimulationConfig = { tenantId: "tenant-123", churnChange: -20 };
       const expected = {
         baseline: {
           capacity: 50000,
@@ -182,10 +186,10 @@ describe('MetricsEngine', () => {
     });
   });
 
-  describe('Customer Value Methods', () => {
-    it('should delegate calculateLTV to LtvCalculator', async () => {
-      const config: LtvConfig = { arpa: { amount: 1000, currency: 'USD' }, monthlyChurnRate: 5 };
-      const expected: Money = { amount: 20000, currency: 'USD' };
+  describe("Customer Value Methods", () => {
+    it("should delegate calculateLTV to LtvCalculator", async () => {
+      const config: LtvConfig = { arpa: { amount: 1000, currency: "USD" }, monthlyChurnRate: 5 };
+      const expected: Money = { amount: 20000, currency: "USD" };
       vi.mocked(mockLtvCalculator.calculateLTV).mockResolvedValue(expected);
 
       const result = await engine.calculateLTV(config);
@@ -194,11 +198,11 @@ describe('MetricsEngine', () => {
       expect(mockLtvCalculator.calculateLTV).toHaveBeenCalledWith(config);
     });
 
-    it('should delegate calculateARPA to LtvCalculator', async () => {
-      const period = { from: new Date(), to: new Date(), granularity: 'month' as const };
-      const mrr: Money = { amount: 10000, currency: 'USD' };
+    it("should delegate calculateARPA to LtvCalculator", async () => {
+      const period = { from: new Date(), to: new Date(), granularity: "month" as const };
+      const mrr: Money = { amount: 10000, currency: "USD" };
       const activeCustomers = 100;
-      const expected: Money = { amount: 100, currency: 'USD' };
+      const expected: Money = { amount: 100, currency: "USD" };
       vi.mocked(mockLtvCalculator.calculateARPA).mockResolvedValue(expected);
 
       const result = await engine.calculateARPA(period, mrr, activeCustomers);
@@ -208,14 +212,14 @@ describe('MetricsEngine', () => {
     });
   });
 
-  describe('Snapshot Methods', () => {
-    it('should delegate captureSnapshot to SnapshotScheduler without tenantId', async () => {
+  describe("Snapshot Methods", () => {
+    it("should delegate captureSnapshot to SnapshotScheduler without tenantId", async () => {
       const input: SnapshotInput = {
         subscriptions: [],
         planProvider: {} as PlanProvider,
         activeCustomers: 100,
       };
-      const date = new Date('2026-02-01');
+      const date = new Date("2026-02-01");
       vi.mocked(mockSnapshotScheduler.captureSnapshot).mockResolvedValue(undefined);
 
       await engine.captureSnapshot(input, date);
@@ -223,14 +227,14 @@ describe('MetricsEngine', () => {
       expect(mockSnapshotScheduler.captureSnapshot).toHaveBeenCalledWith(input, date, undefined);
     });
 
-    it('should delegate captureSnapshot to SnapshotScheduler with tenantId', async () => {
+    it("should delegate captureSnapshot to SnapshotScheduler with tenantId", async () => {
       const input: SnapshotInput = {
         subscriptions: [],
         planProvider: {} as PlanProvider,
         activeCustomers: 100,
       };
-      const date = new Date('2026-02-01');
-      const tenantId = 'tenant-123';
+      const date = new Date("2026-02-01");
+      const tenantId = "tenant-123";
       vi.mocked(mockSnapshotScheduler.captureSnapshot).mockResolvedValue(undefined);
 
       await engine.captureSnapshot(input, date, tenantId);
@@ -238,7 +242,7 @@ describe('MetricsEngine', () => {
       expect(mockSnapshotScheduler.captureSnapshot).toHaveBeenCalledWith(input, date, { tenantId });
     });
 
-    it('should delegate captureSnapshot to SnapshotScheduler with default date', async () => {
+    it("should delegate captureSnapshot to SnapshotScheduler with default date", async () => {
       const input: SnapshotInput = {
         subscriptions: [],
         planProvider: {} as PlanProvider,
@@ -248,7 +252,11 @@ describe('MetricsEngine', () => {
 
       await engine.captureSnapshot(input);
 
-      expect(mockSnapshotScheduler.captureSnapshot).toHaveBeenCalledWith(input, undefined, undefined);
+      expect(mockSnapshotScheduler.captureSnapshot).toHaveBeenCalledWith(
+        input,
+        undefined,
+        undefined,
+      );
     });
   });
 });

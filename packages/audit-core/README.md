@@ -11,14 +11,14 @@ pnpm add @croco/audit-core
 ## 사용법
 
 ```ts
-import { Auditable } from '@croco/audit-core';
+import { Auditable } from "@croco/audit-core";
 
 class UserService {
   @Auditable({
-    action: 'user.update',
-    resourceType: 'User',
-    resourceIdParam: 'id',
-    payloadParam: 'dto',
+    action: "user.update",
+    resourceType: "User",
+    resourceIdParam: "id",
+    payloadParam: "dto",
   })
   async updateUser(id: string, dto: unknown): Promise<void> {
     void id;
@@ -28,7 +28,7 @@ class UserService {
 ```
 
 ```ts
-import { AuditInterceptor } from '@croco/audit-core';
+import { AuditInterceptor } from "@croco/audit-core";
 
 const interceptor = new AuditInterceptor(auditLogRepository);
 ```

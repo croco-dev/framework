@@ -11,29 +11,29 @@ pnpm add @croco/billing-core
 ## 사용법
 
 ```ts
-import type { BillingGateway } from '@croco/billing-core';
-import { BillingService, InMemoryBillingStore } from '@croco/billing-core';
+import type { BillingGateway } from "@croco/billing-core";
+import { BillingService, InMemoryBillingStore } from "@croco/billing-core";
 
 const store = new InMemoryBillingStore();
 const gateway = {} as BillingGateway;
 const billingService = new BillingService({ store, gateway });
 
 await billingService.createCheckout({
-  tenantId: 'tenant-123',
-  email: 'owner@example.com',
-  productId: 'product-pro',
-  successUrl: 'https://example.com/success',
-  cancelUrl: 'https://example.com/cancel',
+  tenantId: "tenant-123",
+  email: "owner@example.com",
+  productId: "product-pro",
+  successUrl: "https://example.com/success",
+  cancelUrl: "https://example.com/cancel",
 });
 ```
 
 ```ts
-import { Money } from '@croco/billing-core';
+import { Money } from "@croco/billing-core";
 
-const monthly = new Money(9900, 'USD');
-const annual = monthly.multiply(12).subtract(new Money(19800, 'USD'));
+const monthly = new Money(9900, "USD");
+const annual = monthly.multiply(12).subtract(new Money(19800, "USD"));
 
-monthly.toFormattedString('ko-KR');
+monthly.toFormattedString("ko-KR");
 annual.toString();
 ```
 

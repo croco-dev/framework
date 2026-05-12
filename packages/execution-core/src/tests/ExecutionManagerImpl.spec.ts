@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CreateExecutionParams, Execution, ExecutionError, ExecutionStore } from '../index';
-import { ExecutionManagerImpl } from '../index';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CreateExecutionParams, Execution, ExecutionError, ExecutionStore } from "../index";
+import { ExecutionManagerImpl } from "../index";
 
 class MockExecutionStore implements ExecutionStore {
   private executions: Map<string, Execution> = new Map();
@@ -13,7 +13,7 @@ class MockExecutionStore implements ExecutionStore {
     const execution: Execution = {
       id,
       type: params.type,
-      status: 'pending',
+      status: "pending",
       payload: params.payload,
       maxAttempts: params.maxAttempts ?? 1,
       timeout: params.timeout,
@@ -62,7 +62,7 @@ class MockExecutionStore implements ExecutionStore {
   }
 }
 
-describe('ExecutionManagerImpl', () => {
+describe("ExecutionManagerImpl", () => {
   let store!: MockExecutionStore;
   let manager!: ExecutionManagerImpl;
 
@@ -75,68 +75,68 @@ describe('ExecutionManagerImpl', () => {
     vi.useRealTimers();
   });
 
-  describe('create', () => {
-    it('creates execution with pending status', async () => {
-      const execution = await manager.create({ type: 'task' });
+  describe("create", () => {
+    it("creates execution with pending status", async () => {
+      const execution = await manager.create({ type: "task" });
 
-      expect(execution.status).toBe('pending');
-      expect(execution.type).toBe('task');
+      expect(execution.status).toBe("pending");
+      expect(execution.type).toBe("task");
       expect(execution.maxAttempts).toBe(1);
       expect(execution.attempts).toBe(0);
     });
 
-    it('respects maxAttempts parameter', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 5 });
+    it("respects maxAttempts parameter", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 5 });
 
       expect(execution.maxAttempts).toBe(5);
     });
 
-    it('returns existing execution for same idempotencyKey', async () => {
-      const first = await manager.create({ type: 'task', idempotencyKey: 'key-1' });
-      const second = await manager.create({ type: 'task', idempotencyKey: 'key-1' });
+    it("returns existing execution for same idempotencyKey", async () => {
+      const first = await manager.create({ type: "task", idempotencyKey: "key-1" });
+      const second = await manager.create({ type: "task", idempotencyKey: "key-1" });
 
       expect(first.id).toBe(second.id);
     });
 
-    it('creates new execution for different idempotencyKey', async () => {
-      const first = await manager.create({ type: 'task', idempotencyKey: 'key-1' });
-      const second = await manager.create({ type: 'task', idempotencyKey: 'key-2' });
+    it("creates new execution for different idempotencyKey", async () => {
+      const first = await manager.create({ type: "task", idempotencyKey: "key-1" });
+      const second = await manager.create({ type: "task", idempotencyKey: "key-2" });
 
       expect(first.id).not.toBe(second.id);
     });
   });
 
-  describe('start', () => {
-    it('transitions pending to running', async () => {
-      const execution = await manager.create({ type: 'task' });
+  describe("start", () => {
+    it("transitions pending to running", async () => {
+      const execution = await manager.create({ type: "task" });
       const started = await manager.start(execution.id);
 
-      expect(started.status).toBe('running');
+      expect(started.status).toBe("running");
       expect(started.attempts).toBe(1);
       expect(started.startedAt).not.toBeUndefined();
     });
 
-    it('transitions retrying to running and increments attempts for the new run', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+    it("transitions retrying to running and increments attempts for the new run", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: true });
+      await manager.fail(execution.id, { message: "error", retryable: true });
 
       const restarted = await manager.start(execution.id);
 
-      expect(restarted.status).toBe('running');
+      expect(restarted.status).toBe("running");
       expect(restarted.attempts).toBe(2);
     });
 
-    it('resets startedAt when restarting from retrying', async () => {
+    it("resets startedAt when restarting from retrying", async () => {
       vi.useFakeTimers();
-      const firstAttemptAt = new Date('2026-01-01T00:00:00.000Z');
+      const firstAttemptAt = new Date("2026-01-01T00:00:00.000Z");
       vi.setSystemTime(firstAttemptAt);
 
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       const started = await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: true });
+      await manager.fail(execution.id, { message: "error", retryable: true });
 
-      const retryAttemptAt = new Date('2026-01-01T00:00:05.000Z');
+      const retryAttemptAt = new Date("2026-01-01T00:00:05.000Z");
       vi.setSystemTime(retryAttemptAt);
 
       const restarted = await manager.start(execution.id);
@@ -145,142 +145,148 @@ describe('ExecutionManagerImpl', () => {
       expect(restarted.startedAt?.toISOString()).toBe(retryAttemptAt.toISOString());
     });
 
-    it('measures timeout per retry attempt instead of cumulative elapsed time', async () => {
+    it("measures timeout per retry attempt instead of cumulative elapsed time", async () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
-      const execution = await manager.create({ type: 'task', maxAttempts: 3, timeout: 1000 });
+      const execution = await manager.create({ type: "task", maxAttempts: 3, timeout: 1000 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'timeout retry', retryable: true });
+      await manager.fail(execution.id, { message: "timeout retry", retryable: true });
 
-      vi.setSystemTime(new Date('2026-01-01T00:00:03.000Z'));
+      vi.setSystemTime(new Date("2026-01-01T00:00:03.000Z"));
 
       const restarted = await manager.start(execution.id);
 
-      expect(restarted.status).toBe('running');
-      expect(restarted.startedAt?.toISOString()).toBe('2026-01-01T00:00:03.000Z');
+      expect(restarted.status).toBe("running");
+      expect(restarted.startedAt?.toISOString()).toBe("2026-01-01T00:00:03.000Z");
     });
 
-    it('throws for completed execution', async () => {
-      const execution = await manager.create({ type: 'task' });
+    it("throws for completed execution", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
       await manager.complete(execution.id);
 
-      await expect(manager.start(execution.id)).rejects.toThrow("Cannot transition from 'completed' to 'running'");
+      await expect(manager.start(execution.id)).rejects.toThrow(
+        "Cannot transition from 'completed' to 'running'",
+      );
     });
   });
 
-  describe('complete', () => {
-    it('transitions running to completed with result', async () => {
-      const execution = await manager.create({ type: 'task' });
+  describe("complete", () => {
+    it("transitions running to completed with result", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
 
-      const completed = await manager.complete(execution.id, { data: 'success' });
+      const completed = await manager.complete(execution.id, { data: "success" });
 
-      expect(completed.status).toBe('completed');
-      expect(completed.result).toEqual({ data: 'success' });
+      expect(completed.status).toBe("completed");
+      expect(completed.result).toEqual({ data: "success" });
       expect(completed.completedAt).not.toBeUndefined();
     });
 
-    it('throws for pending execution', async () => {
-      const execution = await manager.create({ type: 'task' });
+    it("throws for pending execution", async () => {
+      const execution = await manager.create({ type: "task" });
 
-      await expect(manager.complete(execution.id)).rejects.toThrow("Cannot transition from 'pending' to 'completed'");
+      await expect(manager.complete(execution.id)).rejects.toThrow(
+        "Cannot transition from 'pending' to 'completed'",
+      );
     });
   });
 
-  describe('fail', () => {
-    it('transitions running to failed when not retryable', async () => {
-      const execution = await manager.create({ type: 'task' });
+  describe("fail", () => {
+    it("transitions running to failed when not retryable", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
 
-      const error: ExecutionError = { message: 'fatal error', retryable: false };
+      const error: ExecutionError = { message: "fatal error", retryable: false };
       const failed = await manager.fail(execution.id, error);
 
-      expect(failed.status).toBe('failed');
+      expect(failed.status).toBe("failed");
       expect(failed.error).toEqual(error);
       expect(failed.completedAt).not.toBeUndefined();
     });
 
-    it('transitions running to retrying when retryable and attempts remain', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+    it("transitions running to retrying when retryable and attempts remain", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
 
-      const error: ExecutionError = { message: 'transient error', retryable: true };
+      const error: ExecutionError = { message: "transient error", retryable: true };
       const failed = await manager.fail(execution.id, error);
 
-      expect(failed.status).toBe('retrying');
+      expect(failed.status).toBe("retrying");
       expect(failed.error).toEqual(error);
     });
 
-    it('transitions running to failed when max attempts exhausted', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 1 });
+    it("transitions running to failed when max attempts exhausted", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 1 });
       await manager.start(execution.id);
 
-      const error: ExecutionError = { message: 'error', retryable: true };
+      const error: ExecutionError = { message: "error", retryable: true };
       const failed = await manager.fail(execution.id, error);
 
-      expect(failed.status).toBe('failed');
+      expect(failed.status).toBe("failed");
     });
   });
 
-  describe('cancel', () => {
-    it('transitions pending to cancelled', async () => {
-      const execution = await manager.create({ type: 'task' });
+  describe("cancel", () => {
+    it("transitions pending to cancelled", async () => {
+      const execution = await manager.create({ type: "task" });
 
-      const cancelled = await manager.cancel(execution.id, 'user request');
+      const cancelled = await manager.cancel(execution.id, "user request");
 
-      expect(cancelled.status).toBe('cancelled');
+      expect(cancelled.status).toBe("cancelled");
       expect(cancelled.completedAt).not.toBeUndefined();
-      expect(cancelled.metadata?.cancellationReason).toBe('user request');
+      expect(cancelled.metadata?.cancellationReason).toBe("user request");
     });
 
-    it('transitions running to cancelled', async () => {
-      const execution = await manager.create({ type: 'task' });
+    it("transitions running to cancelled", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
 
       const cancelled = await manager.cancel(execution.id);
 
-      expect(cancelled.status).toBe('cancelled');
+      expect(cancelled.status).toBe("cancelled");
     });
 
-    it('throws for completed execution', async () => {
-      const execution = await manager.create({ type: 'task' });
+    it("throws for completed execution", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
       await manager.complete(execution.id);
 
-      await expect(manager.cancel(execution.id)).rejects.toThrow("Cannot transition from 'completed' to 'cancelled'");
+      await expect(manager.cancel(execution.id)).rejects.toThrow(
+        "Cannot transition from 'completed' to 'cancelled'",
+      );
     });
   });
 
-  describe('retry', () => {
-    it('transitions failed to retrying without incrementing attempts', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+  describe("retry", () => {
+    it("transitions failed to retrying without incrementing attempts", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: false });
+      await manager.fail(execution.id, { message: "error", retryable: false });
 
       const retrying = await manager.retry(execution.id);
 
-      expect(retrying.status).toBe('retrying');
+      expect(retrying.status).toBe("retrying");
       expect(retrying.attempts).toBe(1);
       expect(retrying.error).toBeUndefined();
     });
 
-    it('transitions timed_out to retrying', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+    it("transitions timed_out to retrying", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
       await manager.timeout(execution.id);
 
       const retrying = await manager.retry(execution.id);
 
-      expect(retrying.status).toBe('retrying');
+      expect(retrying.status).toBe("retrying");
       expect(retrying.attempts).toBe(1);
     });
 
-    it('increments attempts only once across retry and restart', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+    it("increments attempts only once across retry and restart", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: false });
+      await manager.fail(execution.id, { message: "error", retryable: false });
 
       const retrying = await manager.retry(execution.id);
       const restarted = await manager.start(execution.id);
@@ -289,18 +295,18 @@ describe('ExecutionManagerImpl', () => {
       expect(restarted.attempts).toBe(2);
     });
 
-    it('throws when max attempts exceeded', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 1 });
+    it("throws when max attempts exceeded", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 1 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: false });
+      await manager.fail(execution.id, { message: "error", retryable: false });
 
-      await expect(manager.retry(execution.id)).rejects.toThrow('Maximum retry attempts exceeded');
+      await expect(manager.retry(execution.id)).rejects.toThrow("Maximum retry attempts exceeded");
     });
   });
 
-  describe('updateProgress', () => {
-    it('updates progress with auto-calculated percent', async () => {
-      const execution = await manager.create({ type: 'batch' });
+  describe("updateProgress", () => {
+    it("updates progress with auto-calculated percent", async () => {
+      const execution = await manager.create({ type: "batch" });
 
       const updated = await manager.updateProgress(execution.id, { current: 50, total: 100 });
 
@@ -309,8 +315,8 @@ describe('ExecutionManagerImpl', () => {
       expect(updated.progress?.percent).toBe(50);
     });
 
-    it('preserves provided percent', async () => {
-      const execution = await manager.create({ type: 'batch' });
+    it("preserves provided percent", async () => {
+      const execution = await manager.create({ type: "batch" });
 
       const updated = await manager.updateProgress(execution.id, {
         current: 50,
@@ -321,8 +327,8 @@ describe('ExecutionManagerImpl', () => {
       expect(updated.progress?.percent).toBe(75);
     });
 
-    it('handles zero total', async () => {
-      const execution = await manager.create({ type: 'batch' });
+    it("handles zero total", async () => {
+      const execution = await manager.create({ type: "batch" });
 
       const updated = await manager.updateProgress(execution.id, { current: 0, total: 0 });
 
@@ -330,158 +336,168 @@ describe('ExecutionManagerImpl', () => {
     });
   });
 
-  describe('checkpoint', () => {
-    it('sets checkpoint value', async () => {
-      const execution = await manager.create({ type: 'batch' });
+  describe("checkpoint", () => {
+    it("sets checkpoint value", async () => {
+      const execution = await manager.create({ type: "batch" });
 
-      const updated = await manager.checkpoint(execution.id, 'lastIndex', 42);
+      const updated = await manager.checkpoint(execution.id, "lastIndex", 42);
 
       expect(updated.checkpoints?.lastIndex).toBe(42);
     });
 
-    it('preserves existing checkpoints', async () => {
-      const execution = await manager.create({ type: 'batch' });
-      await manager.checkpoint(execution.id, 'first', 'value1');
+    it("preserves existing checkpoints", async () => {
+      const execution = await manager.create({ type: "batch" });
+      await manager.checkpoint(execution.id, "first", "value1");
 
-      const updated = await manager.checkpoint(execution.id, 'second', 'value2');
+      const updated = await manager.checkpoint(execution.id, "second", "value2");
 
-      expect(updated.checkpoints?.first).toBe('value1');
-      expect(updated.checkpoints?.second).toBe('value2');
+      expect(updated.checkpoints?.first).toBe("value1");
+      expect(updated.checkpoints?.second).toBe("value2");
     });
   });
 
-  describe('timeout', () => {
-    it('transitions running to timed_out', async () => {
-      const execution = await manager.create({ type: 'task' });
+  describe("timeout", () => {
+    it("transitions running to timed_out", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
 
       const timedOut = await manager.timeout(execution.id);
 
-      expect(timedOut.status).toBe('timed_out');
+      expect(timedOut.status).toBe("timed_out");
       expect(timedOut.completedAt).not.toBeUndefined();
-      expect(timedOut.error?.message).toBe('Execution timed out');
+      expect(timedOut.error?.message).toBe("Execution timed out");
       expect(timedOut.error?.retryable).toBe(true);
     });
 
-    it('throws for completed execution', async () => {
-      const execution = await manager.create({ type: 'task' });
+    it("throws for completed execution", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
       await manager.complete(execution.id);
 
-      await expect(manager.timeout(execution.id)).rejects.toThrow("Cannot transition from 'completed' to 'timed_out'");
+      await expect(manager.timeout(execution.id)).rejects.toThrow(
+        "Cannot transition from 'completed' to 'timed_out'",
+      );
     });
   });
 
-  describe('error handling', () => {
-    it('throws not found for non-existent execution', async () => {
-      await expect(manager.start('non-existent')).rejects.toThrow("Execution with id 'non-existent' not found");
+  describe("error handling", () => {
+    it("throws not found for non-existent execution", async () => {
+      await expect(manager.start("non-existent")).rejects.toThrow(
+        "Execution with id 'non-existent' not found",
+      );
     });
   });
 
-  describe('state transitions', () => {
-    it('prevents completed to running', async () => {
-      const execution = await manager.create({ type: 'task' });
+  describe("state transitions", () => {
+    it("prevents completed to running", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
       await manager.complete(execution.id);
 
-      await expect(manager.start(execution.id)).rejects.toThrow("Cannot transition from 'completed' to 'running'");
+      await expect(manager.start(execution.id)).rejects.toThrow(
+        "Cannot transition from 'completed' to 'running'",
+      );
     });
 
-    it('prevents cancelled to running', async () => {
-      const execution = await manager.create({ type: 'task' });
+    it("prevents cancelled to running", async () => {
+      const execution = await manager.create({ type: "task" });
       await manager.cancel(execution.id);
 
-      await expect(manager.start(execution.id)).rejects.toThrow("Cannot transition from 'cancelled' to 'running'");
+      await expect(manager.start(execution.id)).rejects.toThrow(
+        "Cannot transition from 'cancelled' to 'running'",
+      );
     });
 
-    it('prevents failed (terminal) to running directly', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 1 });
+    it("prevents failed (terminal) to running directly", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 1 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: false });
+      await manager.fail(execution.id, { message: "error", retryable: false });
 
-      await expect(manager.start(execution.id)).rejects.toThrow("Cannot transition from 'failed' to 'running'");
+      await expect(manager.start(execution.id)).rejects.toThrow(
+        "Cannot transition from 'failed' to 'running'",
+      );
     });
 
-    it('allows full lifecycle: pending → running → completed', async () => {
-      const execution = await manager.create({ type: 'task' });
+    it("allows full lifecycle: pending → running → completed", async () => {
+      const execution = await manager.create({ type: "task" });
 
       const started = await manager.start(execution.id);
-      expect(started.status).toBe('running');
+      expect(started.status).toBe("running");
 
       const completed = await manager.complete(execution.id);
-      expect(completed.status).toBe('completed');
+      expect(completed.status).toBe("completed");
     });
 
-    it('allows retry lifecycle: pending → running → failed → retrying → running', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+    it("allows retry lifecycle: pending → running → failed → retrying → running", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
 
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: false });
+      await manager.fail(execution.id, { message: "error", retryable: false });
       const retrying = await manager.retry(execution.id);
-      expect(retrying.status).toBe('retrying');
+      expect(retrying.status).toBe("retrying");
 
       const running = await manager.start(execution.id);
-      expect(running.status).toBe('running');
+      expect(running.status).toBe("running");
     });
 
-    it('allows timeout lifecycle: running → timed_out → retrying → running', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+    it("allows timeout lifecycle: running → timed_out → retrying → running", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
 
       await manager.start(execution.id);
       await manager.timeout(execution.id);
       const retrying = await manager.retry(execution.id);
-      expect(retrying.status).toBe('retrying');
+      expect(retrying.status).toBe("retrying");
 
       const running = await manager.start(execution.id);
-      expect(running.status).toBe('running');
+      expect(running.status).toBe("running");
     });
   });
 
-  describe('edge cases', () => {
-    it('allows retry when attempts less than maxAttempts', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+  describe("edge cases", () => {
+    it("allows retry when attempts less than maxAttempts", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: false });
+      await manager.fail(execution.id, { message: "error", retryable: false });
 
       const retrying = await manager.retry(execution.id);
-      expect(retrying.status).toBe('retrying');
+      expect(retrying.status).toBe("retrying");
     });
 
-    it('throws on retry when attempts equal maxAttempts', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 1 });
+    it("throws on retry when attempts equal maxAttempts", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 1 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: 'error', retryable: false });
+      await manager.fail(execution.id, { message: "error", retryable: false });
 
-      await expect(manager.retry(execution.id)).rejects.toThrow('Maximum retry attempts exceeded');
+      await expect(manager.retry(execution.id)).rejects.toThrow("Maximum retry attempts exceeded");
     });
 
-    it('preserves metadata when canceling without reason', async () => {
+    it("preserves metadata when canceling without reason", async () => {
       const execution = await manager.create({
-        type: 'task',
-        metadata: { key: 'value' },
+        type: "task",
+        metadata: { key: "value" },
       });
 
       const cancelled = await manager.cancel(execution.id);
 
-      expect(cancelled.metadata).toEqual({ key: 'value' });
+      expect(cancelled.metadata).toEqual({ key: "value" });
     });
 
-    it('preserves existing metadata when canceling with reason', async () => {
+    it("preserves existing metadata when canceling with reason", async () => {
       const execution = await manager.create({
-        type: 'task',
-        metadata: { existingKey: 'existingValue' },
+        type: "task",
+        metadata: { existingKey: "existingValue" },
       });
 
-      const cancelled = await manager.cancel(execution.id, 'cancel reason');
+      const cancelled = await manager.cancel(execution.id, "cancel reason");
 
       expect(cancelled.metadata).toEqual({
-        existingKey: 'existingValue',
-        cancellationReason: 'cancel reason',
+        existingKey: "existingValue",
+        cancellationReason: "cancel reason",
       });
     });
 
-    it('handles progress update for execution with existing progress', async () => {
-      const execution = await manager.create({ type: 'batch' });
+    it("handles progress update for execution with existing progress", async () => {
+      const execution = await manager.create({ type: "batch" });
       await manager.updateProgress(execution.id, { current: 10, total: 100 });
 
       const updated = await manager.updateProgress(execution.id, { current: 50, total: 100 });
@@ -490,31 +506,31 @@ describe('ExecutionManagerImpl', () => {
       expect(updated.progress?.percent).toBe(50);
     });
 
-    it('handles checkpoint merge with existing checkpoints', async () => {
-      const execution = await manager.create({ type: 'batch' });
-      await manager.checkpoint(execution.id, 'existing', 'checkpoint1');
+    it("handles checkpoint merge with existing checkpoints", async () => {
+      const execution = await manager.create({ type: "batch" });
+      await manager.checkpoint(execution.id, "existing", "checkpoint1");
 
-      const updated = await manager.checkpoint(execution.id, 'new', 'checkpoint2');
+      const updated = await manager.checkpoint(execution.id, "new", "checkpoint2");
 
       expect(updated.checkpoints).toEqual({
-        existing: 'checkpoint1',
-        new: 'checkpoint2',
+        existing: "checkpoint1",
+        new: "checkpoint2",
       });
     });
 
-    it('handles checkpoint for execution without existing checkpoints', async () => {
-      const execution = await manager.create({ type: 'batch' });
+    it("handles checkpoint for execution without existing checkpoints", async () => {
+      const execution = await manager.create({ type: "batch" });
 
-      const updated = await manager.checkpoint(execution.id, 'first', 'value');
+      const updated = await manager.checkpoint(execution.id, "first", "value");
 
-      expect(updated.checkpoints).toEqual({ first: 'value' });
+      expect(updated.checkpoints).toEqual({ first: "value" });
     });
 
-    it('clears error when retrying from failed state', async () => {
-      const execution = await manager.create({ type: 'task', maxAttempts: 3 });
+    it("clears error when retrying from failed state", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
 
-      const error: ExecutionError = { message: 'temp error', retryable: false, code: 'TEMP_ERROR' };
+      const error: ExecutionError = { message: "temp error", retryable: false, code: "TEMP_ERROR" };
       await manager.fail(execution.id, error);
 
       const retrying = await manager.retry(execution.id);

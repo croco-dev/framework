@@ -1,4 +1,4 @@
-import type { CreateExecutionParams, Execution, ListExecutionsOptions } from '../types';
+import type { CreateExecutionParams, Execution, ListExecutionsOptions } from "../types";
 
 /**
  * ExecutionStore defines the storage abstraction for execution records.

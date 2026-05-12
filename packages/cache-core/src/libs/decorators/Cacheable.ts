@@ -1,5 +1,5 @@
-import type { CacheStore } from '../CacheStore';
-import { CacheDecoratorConfigProblem } from '../problems/CacheDecoratorProblems';
+import type { CacheStore } from "../CacheStore";
+import { CacheDecoratorConfigProblem } from "../problems/CacheDecoratorProblems";
 
 export interface CacheableOptions<V = unknown> {
   store: CacheStore<string, V>;
@@ -15,7 +15,7 @@ function resolveCachePrefix(options: CacheableOptions<unknown>, methodName: stri
 
   if (options.namespace === undefined) {
     throw new CacheDecoratorConfigProblem(
-      `@Cacheable requires "namespace" when "keyPrefix" is not provided (method: ${methodName})`
+      `@Cacheable requires "namespace" when "keyPrefix" is not provided (method: ${methodName})`,
     );
   }
 
@@ -27,7 +27,11 @@ function generateCacheKey(prefix: string, args: unknown[]): string {
 }
 
 export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const originalMethod = descriptor.value as (...args: unknown[]) => Promise<V | undefined>;
     const methodName = String(propertyKey);
     const prefix = resolveCachePrefix(options, methodName);
@@ -41,7 +45,7 @@ export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDeco
           const result = await originalMethod.apply(this, args);
           return result;
         },
-        { ttlMs: options.ttl }
+        { ttlMs: options.ttl },
       );
     };
 

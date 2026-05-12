@@ -1,28 +1,39 @@
-import { randomUUID } from 'node:crypto';
-import type { EventPublisher } from '@croco/events-core';
-import { Component } from '@croco/framework-context';
+import { randomUUID } from "node:crypto";
+import type { EventPublisher } from "@croco/events-core";
+import { Component } from "@croco/framework-context";
 import {
   AlreadyMemberProblem,
   type Membership,
   type MembershipManager,
   type MembershipRole,
-} from '@croco/membership-core';
-import type { DomainPolicyStore } from './DomainPolicyStore';
-import { DomainAutoJoinedEvent, DomainPolicyAddedEvent, DomainPolicyRemovedEvent } from './events/DomainPolicyEvents';
-import { InvalidAutoJoinRoleProblem, PublicEmailDomainNotAllowedProblem } from './problems/DomainPolicyProblems';
-import { type DomainPolicy, PUBLIC_EMAIL_DOMAINS } from './types';
+} from "@croco/membership-core";
+import type { DomainPolicyStore } from "./DomainPolicyStore";
+import {
+  DomainAutoJoinedEvent,
+  DomainPolicyAddedEvent,
+  DomainPolicyRemovedEvent,
+} from "./events/DomainPolicyEvents";
+import {
+  InvalidAutoJoinRoleProblem,
+  PublicEmailDomainNotAllowedProblem,
+} from "./problems/DomainPolicyProblems";
+import { type DomainPolicy, PUBLIC_EMAIL_DOMAINS } from "./types";
 
-const AUTO_JOIN_ROLES: MembershipRole[] = ['member', 'viewer'];
+const AUTO_JOIN_ROLES: MembershipRole[] = ["member", "viewer"];
 
 @Component()
 export class DomainPolicyManager {
   constructor(
     private readonly store: DomainPolicyStore,
     private readonly membershipManager: MembershipManager,
-    private readonly eventPublisher: EventPublisher
+    private readonly eventPublisher: EventPublisher,
   ) {}
 
-  async addDomainPolicy(tenantId: string, domain: string, role: MembershipRole): Promise<DomainPolicy> {
+  async addDomainPolicy(
+    tenantId: string,
+    domain: string,
+    role: MembershipRole,
+  ): Promise<DomainPolicy> {
     this.ensureAutoJoinRole(role);
 
     const normalizedDomain = this.normalizeDomain(domain);
@@ -37,7 +48,9 @@ export class DomainPolicyManager {
       createdAt: new Date(),
     });
 
-    await this.publishSafely(new DomainPolicyAddedEvent({ tenantId, domain: normalizedDomain, role }));
+    await this.publishSafely(
+      new DomainPolicyAddedEvent({ tenantId, domain: normalizedDomain, role }),
+    );
     return policy;
   }
 
@@ -71,7 +84,7 @@ export class DomainPolicyManager {
           email: email.trim().toLowerCase(),
           domain,
           role: policy.role,
-        })
+        }),
       );
       return membership;
     } catch (error) {
@@ -84,12 +97,12 @@ export class DomainPolicyManager {
   }
 
   private normalizeDomain(domain: string): string {
-    return domain.trim().toLowerCase().replace(/^@+/, '');
+    return domain.trim().toLowerCase().replace(/^@+/, "");
   }
 
   private extractEmailDomain(email: string): string | null {
     const normalizedEmail = email.trim().toLowerCase();
-    const [, domain = ''] = normalizedEmail.split('@');
+    const [, domain = ""] = normalizedEmail.split("@");
     const normalizedDomain = this.normalizeDomain(domain);
     return normalizedDomain ? normalizedDomain : null;
   }
@@ -107,7 +120,7 @@ export class DomainPolicyManager {
   }
 
   private async publishSafely(
-    event: DomainPolicyAddedEvent | DomainPolicyRemovedEvent | DomainAutoJoinedEvent
+    event: DomainPolicyAddedEvent | DomainPolicyRemovedEvent | DomainAutoJoinedEvent,
   ): Promise<void> {
     await this.eventPublisher.publish(event);
   }

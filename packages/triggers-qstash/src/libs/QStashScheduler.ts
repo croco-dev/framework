@@ -1,8 +1,8 @@
-import type { ExecutionManager } from '@croco/execution-core';
-import { ProblemFactory } from '@croco/problems-core';
-import type { CronTriggerMetadata } from '@croco/triggers-core';
-import { triggerRegistry } from '@croco/triggers-core';
-import type { Client } from '@upstash/qstash';
+import type { ExecutionManager } from "@croco/execution-core";
+import { ProblemFactory } from "@croco/problems-core";
+import type { CronTriggerMetadata } from "@croco/triggers-core";
+import { triggerRegistry } from "@croco/triggers-core";
+import type { Client } from "@upstash/qstash";
 
 /**
  * Configuration options for QStashScheduler.
@@ -77,7 +77,7 @@ export type ScheduleSyncDetail = {
    */
   readonly name: string;
 
-  readonly action: 'created' | 'updated' | 'deleted' | 'skipped' | 'failed';
+  readonly action: "created" | "updated" | "deleted" | "skipped" | "failed";
 
   /**
    * Cron expression.
@@ -119,7 +119,7 @@ export class QStashScheduler {
   constructor(options: QStashSchedulerOptions) {
     this.client = options.client;
     this.webhookUrl = options.webhookUrl;
-    this.schedulePrefix = options.schedulePrefix ?? 'croco-trigger';
+    this.schedulePrefix = options.schedulePrefix ?? "croco-trigger";
     this.executionManager = options.executionManager;
   }
 
@@ -154,16 +154,16 @@ export class QStashScheduler {
       result.details.push(detail);
 
       switch (detail.action) {
-        case 'created':
+        case "created":
           result.created++;
           break;
-        case 'updated':
+        case "updated":
           result.updated++;
           break;
-        case 'skipped':
+        case "skipped":
           result.skipped++;
           break;
-        case 'failed':
+        case "failed":
           result.failed++;
           break;
       }
@@ -175,7 +175,7 @@ export class QStashScheduler {
         const detail = await this.deleteSchedule(scheduleId);
         result.details.push(detail);
 
-        if (detail.action === 'deleted') {
+        if (detail.action === "deleted") {
           result.deleted++;
           continue;
         }
@@ -196,7 +196,7 @@ export class QStashScheduler {
 
     for (const [, triggers] of allTriggers.entries()) {
       for (const [, metadata] of triggers.entries()) {
-        if (metadata.type === 'cron') {
+        if (metadata.type === "cron") {
           cronTriggers.push(metadata as CronTriggerMetadata);
         }
       }
@@ -218,8 +218,8 @@ export class QStashScheduler {
 
       if (map.has(scheduleId)) {
         throw ProblemFactory.internalServerError(
-          'triggers-qstash/duplicate-schedule-id',
-          `Duplicate QStash schedule ID detected: ${scheduleId}`
+          "triggers-qstash/duplicate-schedule-id",
+          `Duplicate QStash schedule ID detected: ${scheduleId}`,
         );
       }
 
@@ -255,7 +255,7 @@ export class QStashScheduler {
       const scheduleId = schedule.scheduleId;
       if (scheduleId?.startsWith(this.schedulePrefix)) {
         schedules.set(scheduleId, {
-          cron: schedule.cron ?? '',
+          cron: schedule.cron ?? "",
         });
       }
     }
@@ -269,13 +269,13 @@ export class QStashScheduler {
   private async syncSchedule(
     scheduleId: string,
     metadata: CronTriggerMetadata,
-    existing?: { cron: string }
+    existing?: { cron: string },
   ): Promise<ScheduleSyncDetail> {
     const methodName = String(metadata.methodName);
     const triggerName = this.getTriggerIdentifier(metadata);
     const baseDetail: ScheduleSyncDetail = {
       name: scheduleId,
-      action: 'skipped',
+      action: "skipped",
       expression: metadata.expression,
       target: triggerName,
       method: methodName,
@@ -290,15 +290,15 @@ export class QStashScheduler {
           scheduleId,
           cron: metadata.expression,
           destination: this.webhookUrl,
-          method: 'POST' as const,
+          method: "POST" as const,
           headers: {
-            'Content-Type': 'application/json',
-            'X-Schedule-Id': scheduleId,
+            "Content-Type": "application/json",
+            "X-Schedule-Id": scheduleId,
           },
           body: JSON.stringify(payload),
         });
 
-        return { ...baseDetail, action: 'created' };
+        return { ...baseDetail, action: "created" };
       }
 
       if (existing.cron !== metadata.expression) {
@@ -306,21 +306,21 @@ export class QStashScheduler {
           scheduleId,
           cron: metadata.expression,
           destination: this.webhookUrl,
-          method: 'POST' as const,
+          method: "POST" as const,
           headers: {
-            'Content-Type': 'application/json',
-            'X-Schedule-Id': scheduleId,
+            "Content-Type": "application/json",
+            "X-Schedule-Id": scheduleId,
           },
           body: JSON.stringify(payload),
         });
 
-        return { ...baseDetail, action: 'updated' };
+        return { ...baseDetail, action: "updated" };
       }
 
       return baseDetail;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      return { ...baseDetail, action: 'failed', error: errorMessage };
+      return { ...baseDetail, action: "failed", error: errorMessage };
     }
   }
 
@@ -330,10 +330,10 @@ export class QStashScheduler {
   private async deleteSchedule(scheduleId: string): Promise<ScheduleSyncDetail> {
     const baseDetail: ScheduleSyncDetail = {
       name: scheduleId,
-      action: 'deleted',
-      expression: '',
-      target: 'unknown',
-      method: 'unknown',
+      action: "deleted",
+      expression: "",
+      target: "unknown",
+      method: "unknown",
     };
 
     try {
@@ -341,7 +341,7 @@ export class QStashScheduler {
       return baseDetail;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      return { ...baseDetail, action: 'failed', error: errorMessage };
+      return { ...baseDetail, action: "failed", error: errorMessage };
     }
   }
 
@@ -376,10 +376,10 @@ export class QStashScheduler {
    * Useful for testing and debugging.
    */
   getCronTrigger(target: object, methodName: string): CronTriggerMetadata | undefined {
-    const triggers = triggerRegistry.getTriggersByType(target, 'cron');
+    const triggers = triggerRegistry.getTriggersByType(target, "cron");
     const metadata = triggers.get(methodName);
 
-    if (metadata && metadata.type === 'cron') {
+    if (metadata && metadata.type === "cron") {
       return metadata as CronTriggerMetadata;
     }
 

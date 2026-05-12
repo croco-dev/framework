@@ -1,10 +1,10 @@
-import 'reflect-metadata';
-import type { ILogger } from '@croco/framework-context';
-import { Container, Context, LOGGER_TOKEN } from '@croco/framework-context';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Auditable } from '../libs/Auditable';
-import type { AuditLogRepository } from '../libs/AuditLogRepository';
-import type { AuditLogEntry } from '../libs/types';
+import "reflect-metadata";
+import type { ILogger } from "@croco/framework-context";
+import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Auditable } from "../libs/Auditable";
+import type { AuditLogRepository } from "../libs/AuditLogRepository";
+import type { AuditLogEntry } from "../libs/types";
 
 type RequestContextStub = {
   requestId: string;
@@ -14,15 +14,15 @@ type RequestContextStub = {
   };
 };
 
-function createPersistedEntry(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): AuditLogEntry {
+function createPersistedEntry(entry: Omit<AuditLogEntry, "id" | "createdAt">): AuditLogEntry {
   return {
-    id: 'audit-log-1',
+    id: "audit-log-1",
     createdAt: new Date(),
     ...entry,
   };
 }
 
-describe('@Auditable', () => {
+describe("@Auditable", () => {
   beforeEach(() => {
     Container.reset();
   });
@@ -32,10 +32,10 @@ describe('@Auditable', () => {
     Container.reset();
   });
 
-  it('should wrap method and call AuditLogRepository.create after method execution', async () => {
+  it("should wrap method and call AuditLogRepository.create after method execution", async () => {
     const events: string[] = [];
-    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, 'id' | 'createdAt'>) => {
-      events.push('audit');
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) => {
+      events.push("audit");
       return createPersistedEntry(entry);
     });
 
@@ -44,56 +44,62 @@ describe('@Auditable', () => {
       find: vi.fn(),
     } as unknown as AuditLogRepository;
 
-    vi.spyOn(Container, 'get').mockReturnValue(repository);
-    vi.spyOn(Context, 'get').mockReturnValue({
-      requestId: 'req-1',
-      tenantId: 'tenant-1',
-      user: { id: 'actor-1' },
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-1",
+      tenantId: "tenant-1",
+      user: { id: "actor-1" },
     } as RequestContextStub);
 
     class TestService {
-      private readonly prefix = 'wrapped';
+      private readonly prefix = "wrapped";
 
       @Auditable({
-        action: 'project.update',
-        resourceType: 'Project',
-        resourceIdParam: 'resourceId',
-        payloadParam: 'payload',
+        action: "project.update",
+        resourceType: "Project",
+        resourceIdParam: "resourceId",
+        payloadParam: "payload",
       })
-      async update(resourceId: string, payload: { name: string; diff: Record<string, unknown> }): Promise<string> {
-        events.push('method');
+      async update(
+        resourceId: string,
+        payload: { name: string; diff: Record<string, unknown> },
+      ): Promise<string> {
+        events.push("method");
         return `${this.prefix}:${resourceId}:${payload.name}`;
       }
     }
 
     const service = new TestService();
-    const result = await service.update('project-1', {
-      name: 'croco',
-      diff: { name: { before: 'legacy', after: 'croco' } },
+    const result = await service.update("project-1", {
+      name: "croco",
+      diff: { name: { before: "legacy", after: "croco" } },
     });
 
     await Promise.resolve();
 
-    expect(result).toBe('wrapped:project-1:croco');
-    expect(events).toEqual(['method', 'audit']);
+    expect(result).toBe("wrapped:project-1:croco");
+    expect(events).toEqual(["method", "audit"]);
     expect(createSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        tenantId: 'tenant-1',
-        actorId: 'actor-1',
-        action: 'project.update',
-        resourceType: 'Project',
-        resourceId: 'project-1',
+        tenantId: "tenant-1",
+        actorId: "actor-1",
+        action: "project.update",
+        resourceType: "Project",
+        resourceId: "project-1",
         payload: expect.objectContaining({
-          arguments: ['project-1', { name: 'croco', diff: { name: { before: 'legacy', after: 'croco' } } }],
-          input: { name: 'croco', diff: { name: { before: 'legacy', after: 'croco' } } },
-          result: 'wrapped:project-1:croco',
+          arguments: [
+            "project-1",
+            { name: "croco", diff: { name: { before: "legacy", after: "croco" } } },
+          ],
+          input: { name: "croco", diff: { name: { before: "legacy", after: "croco" } } },
+          result: "wrapped:project-1:croco",
         }),
-        diff: { name: { before: 'legacy', after: 'croco' } },
-      })
+        diff: { name: { before: "legacy", after: "croco" } },
+      }),
     );
   });
 
-  it('should call audit repository in fire-and-forget mode without awaiting', async () => {
+  it("should call audit repository in fire-and-forget mode without awaiting", async () => {
     const createDeferred: { resolve: ((value: AuditLogEntry) => void) | null } = {
       resolve: null,
     };
@@ -101,7 +107,7 @@ describe('@Auditable', () => {
       () =>
         new Promise<AuditLogEntry>((resolve) => {
           createDeferred.resolve = resolve;
-        })
+        }),
     );
 
     const repository = {
@@ -109,78 +115,83 @@ describe('@Auditable', () => {
       find: vi.fn(),
     } as unknown as AuditLogRepository;
 
-    vi.spyOn(Container, 'get').mockReturnValue(repository);
-    vi.spyOn(Context, 'get').mockReturnValue({
-      requestId: 'req-2',
-      tenantId: 'tenant-2',
-      user: { id: 'actor-2' },
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-2",
+      tenantId: "tenant-2",
+      user: { id: "actor-2" },
     } as RequestContextStub);
 
     class TestService {
       @Auditable({
-        action: 'project.create',
-        resourceType: 'Project',
-        resourceIdParam: 'resourceId',
-        payloadParam: 'payload',
+        action: "project.create",
+        resourceType: "Project",
+        resourceIdParam: "resourceId",
+        payloadParam: "payload",
       })
       async create(
         resourceId: string,
-        payload: Record<string, unknown>
+        payload: Record<string, unknown>,
       ): Promise<{ ok: boolean; resourceId: string; payload: Record<string, unknown> }> {
         return { ok: true, resourceId, payload };
       }
     }
 
     const service = new TestService();
-    const result = await service.create('project-2', { name: 'new-project' });
+    const result = await service.create("project-2", { name: "new-project" });
 
     await Promise.resolve();
 
-    expect(result).toEqual({ ok: true, resourceId: 'project-2', payload: { name: 'new-project' } });
+    expect(result).toEqual({ ok: true, resourceId: "project-2", payload: { name: "new-project" } });
     expect(createSpy).toHaveBeenCalledTimes(1);
 
     if (createDeferred.resolve) {
       createDeferred.resolve(
         createPersistedEntry({
-          tenantId: 'tenant-2',
-          actorId: 'actor-2',
-          action: 'project.create',
-          resourceType: 'Project',
-          resourceId: 'project-2',
+          tenantId: "tenant-2",
+          actorId: "actor-2",
+          action: "project.create",
+          resourceType: "Project",
+          resourceId: "project-2",
           payload: {
-            arguments: ['project-2', { name: 'new-project' }],
-            input: { name: 'new-project' },
-            result: { ok: true, resourceId: 'project-2', payload: { name: 'new-project' } },
+            arguments: ["project-2", { name: "new-project" }],
+            input: { name: "new-project" },
+            result: { ok: true, resourceId: "project-2", payload: { name: "new-project" } },
           },
           diff: null,
           metadata: {},
-        })
+        }),
       );
     }
   });
 
-  it('should write failure audit log when decorated method throws', async () => {
-    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, 'id' | 'createdAt'>) => createPersistedEntry(entry));
+  it("should write failure audit log when decorated method throws", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
     const repository = {
       create: createSpy,
       find: vi.fn(),
     } as unknown as AuditLogRepository;
 
-    vi.spyOn(Container, 'get').mockReturnValue(repository);
-    vi.spyOn(Context, 'get').mockReturnValue({
-      requestId: 'req-3',
-      tenantId: 'tenant-3',
-      user: { id: 'actor-3' },
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-3",
+      tenantId: "tenant-3",
+      user: { id: "actor-3" },
     } as RequestContextStub);
 
     class TestService {
       @Auditable({
-        action: 'project.delete',
-        resourceType: 'Project',
-        resourceIdParam: 'resourceId',
-        payloadParam: 'payload',
+        action: "project.delete",
+        resourceType: "Project",
+        resourceIdParam: "resourceId",
+        payloadParam: "payload",
       })
-      async remove(resourceId: string, payload: { reason: string; diff: Record<string, unknown> }): Promise<void> {
+      async remove(
+        resourceId: string,
+        payload: { reason: string; diff: Record<string, unknown> },
+      ): Promise<void> {
         void payload;
         throw new Error(`delete failed: ${resourceId}`);
       }
@@ -189,53 +200,53 @@ describe('@Auditable', () => {
     const service = new TestService();
 
     await expect(
-      service.remove('project-3', {
-        reason: 'permission denied',
-        diff: { status: { before: 'ACTIVE', after: 'DELETED' } },
-      })
-    ).rejects.toThrow('delete failed: project-3');
+      service.remove("project-3", {
+        reason: "permission denied",
+        diff: { status: { before: "ACTIVE", after: "DELETED" } },
+      }),
+    ).rejects.toThrow("delete failed: project-3");
 
     await Promise.resolve();
 
     expect(createSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        tenantId: 'tenant-3',
-        actorId: 'actor-3',
-        action: 'project.delete',
-        resourceType: 'Project',
-        resourceId: 'project-3',
+        tenantId: "tenant-3",
+        actorId: "actor-3",
+        action: "project.delete",
+        resourceType: "Project",
+        resourceId: "project-3",
         payload: expect.objectContaining({
           arguments: [
-            'project-3',
+            "project-3",
             {
-              reason: 'permission denied',
-              diff: { status: { before: 'ACTIVE', after: 'DELETED' } },
+              reason: "permission denied",
+              diff: { status: { before: "ACTIVE", after: "DELETED" } },
             },
           ],
           input: {
-            reason: 'permission denied',
-            diff: { status: { before: 'ACTIVE', after: 'DELETED' } },
+            reason: "permission denied",
+            diff: { status: { before: "ACTIVE", after: "DELETED" } },
           },
-          error: 'delete failed: project-3',
+          error: "delete failed: project-3",
         }),
-        diff: { status: { before: 'ACTIVE', after: 'DELETED' } },
-      })
+        diff: { status: { before: "ACTIVE", after: "DELETED" } },
+      }),
     );
   });
 
-  it('should execute decorated method when audit dependencies are missing', async () => {
-    vi.spyOn(Context, 'get').mockReturnValue({
-      requestId: 'req-missing-audit',
-      tenantId: 'tenant-missing-audit',
-      user: { id: 'actor-missing-audit' },
+  it("should execute decorated method when audit dependencies are missing", async () => {
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-missing-audit",
+      tenantId: "tenant-missing-audit",
+      user: { id: "actor-missing-audit" },
     } as RequestContextStub);
 
     class TestService {
       @Auditable({
-        action: 'project.update',
-        resourceType: 'Project',
-        resourceIdParam: 'resourceId',
-        payloadParam: 'payload',
+        action: "project.update",
+        resourceType: "Project",
+        resourceIdParam: "resourceId",
+        payloadParam: "payload",
       })
       async update(resourceId: string, payload: { name: string }): Promise<string> {
         return `updated:${resourceId}:${payload.name}`;
@@ -244,14 +255,14 @@ describe('@Auditable', () => {
 
     const service = new TestService();
 
-    await expect(service.update('project-missing-audit', { name: 'still-runs' })).resolves.toBe(
-      'updated:project-missing-audit:still-runs'
+    await expect(service.update("project-missing-audit", { name: "still-runs" })).resolves.toBe(
+      "updated:project-missing-audit:still-runs",
     );
   });
 
-  describe('audit log write failure', () => {
-    it('should log warning when audit log write fails', async () => {
-      const auditError = new Error('database connection failed');
+  describe("audit log write failure", () => {
+    it("should log warning when audit log write fails", async () => {
+      const auditError = new Error("database connection failed");
       const createSpy = vi.fn(async () => {
         throw auditError;
       });
@@ -271,25 +282,25 @@ describe('@Auditable', () => {
         }),
       };
 
-      vi.spyOn(Container, 'get').mockImplementation((token) => {
+      vi.spyOn(Container, "get").mockImplementation((token) => {
         if (token === LOGGER_TOKEN) {
           return loggerMock;
         }
         return repository;
       });
 
-      vi.spyOn(Context, 'get').mockReturnValue({
-        requestId: 'req-4',
-        tenantId: 'tenant-4',
-        user: { id: 'actor-4' },
+      vi.spyOn(Context, "get").mockReturnValue({
+        requestId: "req-4",
+        tenantId: "tenant-4",
+        user: { id: "actor-4" },
       } as RequestContextStub);
 
       class TestService {
         @Auditable({
-          action: 'project.update',
-          resourceType: 'Project',
-          resourceIdParam: 'resourceId',
-          payloadParam: 'payload',
+          action: "project.update",
+          resourceType: "Project",
+          resourceIdParam: "resourceId",
+          payloadParam: "payload",
         })
         async update(resourceId: string, payload: { name: string }): Promise<string> {
           return `updated:${resourceId}:${payload.name}`;
@@ -297,24 +308,24 @@ describe('@Auditable', () => {
       }
 
       const service = new TestService();
-      const result = await service.update('project-4', { name: 'updated-project' });
+      const result = await service.update("project-4", { name: "updated-project" });
 
       await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(result).toBe('updated:project-4:updated-project');
+      expect(result).toBe("updated:project-4:updated-project");
       expect(createSpy).toHaveBeenCalled();
       expect(loggerMock.warn).toHaveBeenCalledWith(
-        '[Auditable] Failed to write audit log',
+        "[Auditable] Failed to write audit log",
         expect.objectContaining({
-          error: 'database connection failed',
-        })
+          error: "database connection failed",
+        }),
       );
     });
 
-    it('should maintain fire-and-forget pattern when audit log write fails', async () => {
-      const auditError = new Error('audit service unavailable');
+    it("should maintain fire-and-forget pattern when audit log write fails", async () => {
+      const auditError = new Error("audit service unavailable");
       let createCallCount = 0;
       const createSpy = vi.fn(async () => {
         createCallCount++;
@@ -337,25 +348,25 @@ describe('@Auditable', () => {
         }),
       };
 
-      vi.spyOn(Container, 'get').mockImplementation((token) => {
+      vi.spyOn(Container, "get").mockImplementation((token) => {
         if (token === LOGGER_TOKEN) {
           return loggerMock;
         }
         return repository;
       });
 
-      vi.spyOn(Context, 'get').mockReturnValue({
-        requestId: 'req-5',
-        tenantId: 'tenant-5',
-        user: { id: 'actor-5' },
+      vi.spyOn(Context, "get").mockReturnValue({
+        requestId: "req-5",
+        tenantId: "tenant-5",
+        user: { id: "actor-5" },
       } as RequestContextStub);
 
       class TestService {
         @Auditable({
-          action: 'project.create',
-          resourceType: 'Project',
-          resourceIdParam: 'resourceId',
-          payloadParam: 'payload',
+          action: "project.create",
+          resourceType: "Project",
+          resourceIdParam: "resourceId",
+          payloadParam: "payload",
         })
         async create(resourceId: string, payload: { name: string }): Promise<string> {
           return `created:${resourceId}:${payload.name}`;
@@ -364,16 +375,16 @@ describe('@Auditable', () => {
 
       const service = new TestService();
       const startTime = Date.now();
-      const result = await service.create('project-5', { name: 'fast-project' });
+      const result = await service.create("project-5", { name: "fast-project" });
       const endTime = Date.now();
 
-      expect(result).toBe('created:project-5:fast-project');
+      expect(result).toBe("created:project-5:fast-project");
       expect(endTime - startTime).toBeLessThan(50);
       expect(createCallCount).toBe(1);
     });
 
-    it('should propagate audit log write failure when throwOnFailure is enabled', async () => {
-      const auditError = new Error('audit persistence failed');
+    it("should propagate audit log write failure when throwOnFailure is enabled", async () => {
+      const auditError = new Error("audit persistence failed");
       const createSpy = vi.fn(async () => {
         throw auditError;
       });
@@ -393,25 +404,25 @@ describe('@Auditable', () => {
         }),
       };
 
-      vi.spyOn(Container, 'get').mockImplementation((token) => {
+      vi.spyOn(Container, "get").mockImplementation((token) => {
         if (token === LOGGER_TOKEN) {
           return loggerMock;
         }
         return repository;
       });
 
-      vi.spyOn(Context, 'get').mockReturnValue({
-        requestId: 'req-6',
-        tenantId: 'tenant-6',
-        user: { id: 'actor-6' },
+      vi.spyOn(Context, "get").mockReturnValue({
+        requestId: "req-6",
+        tenantId: "tenant-6",
+        user: { id: "actor-6" },
       } as RequestContextStub);
 
       class TestService {
         @Auditable({
-          action: 'project.create',
-          resourceType: 'Project',
-          resourceIdParam: 'resourceId',
-          payloadParam: 'payload',
+          action: "project.create",
+          resourceType: "Project",
+          resourceIdParam: "resourceId",
+          payloadParam: "payload",
           throwOnFailure: true,
         })
         async create(resourceId: string, payload: { name: string }): Promise<string> {
@@ -421,13 +432,15 @@ describe('@Auditable', () => {
 
       const service = new TestService();
 
-      await expect(service.create('project-6', { name: 'strict-project' })).rejects.toThrow(auditError);
+      await expect(service.create("project-6", { name: "strict-project" })).rejects.toThrow(
+        auditError,
+      );
       expect(createSpy).toHaveBeenCalledTimes(1);
       expect(loggerMock.warn).toHaveBeenCalledWith(
-        '[Auditable] Failed to write audit log',
+        "[Auditable] Failed to write audit log",
         expect.objectContaining({
-          error: 'audit persistence failed',
-        })
+          error: "audit persistence failed",
+        }),
       );
     });
   });

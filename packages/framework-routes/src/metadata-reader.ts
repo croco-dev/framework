@@ -1,4 +1,4 @@
-import 'reflect-metadata';
+import "reflect-metadata";
 
 export type CompiledRouteInfo = {
   readonly method: string;
@@ -22,19 +22,25 @@ type RouteMetadataShape = {
   readonly methodName: string | symbol;
 };
 
-const CONTROLLER_KEY = Symbol.for('croco:rest:controller');
-const ROUTES_KEY = Symbol.for('croco:rest:routes');
+const CONTROLLER_KEY = Symbol.for("croco:rest:controller");
+const ROUTES_KEY = Symbol.for("croco:rest:routes");
 
-export async function readControllerMetadata(controllerPath: string): Promise<CompiledControllerInfo | null> {
+export async function readControllerMetadata(
+  controllerPath: string,
+): Promise<CompiledControllerInfo | null> {
   const mod = await import(controllerPath);
 
   for (const [className, exported] of Object.entries(mod)) {
-    if (typeof exported !== 'function') {
+    if (typeof exported !== "function") {
       continue;
     }
 
-    const controllerMeta = Reflect.getMetadata(CONTROLLER_KEY, exported) as ControllerMetadataShape | undefined;
-    const routesMeta = Reflect.getMetadata(ROUTES_KEY, exported) as RouteMetadataShape[] | undefined;
+    const controllerMeta = Reflect.getMetadata(CONTROLLER_KEY, exported) as
+      | ControllerMetadataShape
+      | undefined;
+    const routesMeta = Reflect.getMetadata(ROUTES_KEY, exported) as
+      | RouteMetadataShape[]
+      | undefined;
 
     if (!controllerMeta || !routesMeta) {
       continue;

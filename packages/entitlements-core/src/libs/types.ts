@@ -1,6 +1,6 @@
-export type EntitlementType = 'boolean' | 'metered' | 'static';
+export type EntitlementType = "boolean" | "metered" | "static";
 
-export type OveragePolicy = 'BLOCK' | 'WARN' | 'ALLOW_WITH_OVERAGE';
+export type OveragePolicy = "BLOCK" | "WARN" | "ALLOW_WITH_OVERAGE";
 
 export type UsageHistoryPeriod = {
   startDate: Date;

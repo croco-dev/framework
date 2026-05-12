@@ -1,24 +1,29 @@
 {
   "name": "@croco/meta-vite",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external vite --external react --external react-dom --external 'react-dom/*' --external '@croco/cache-core'",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
-  },
-  "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "vite": "^6.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react-dom": {
-      "optional": true
-    }
   },
   "dependencies": {
     "@croco/cache-core": "workspace:*",
@@ -33,24 +38,19 @@
     "vitest": "4.0.16",
     "zod": "^3.23.8"
   },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vite": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    }
+  },
   "vitest": {
     "include": [
       "src/**/*.spec.ts"
     ]
-  },
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }

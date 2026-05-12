@@ -1,9 +1,9 @@
-import { Context } from '@croco/framework-context';
-import { describe, expect, it, vi } from 'vitest';
-import { createBatchLoader } from '../libs/createBatchLoader';
+import { Context } from "@croco/framework-context";
+import { describe, expect, it, vi } from "vitest";
+import { createBatchLoader } from "../libs/createBatchLoader";
 
-describe('createBatchLoader (Transaction Aware)', () => {
-  it('should isolate cache based on resolveScope return value', async () => {
+describe("createBatchLoader (Transaction Aware)", () => {
+  it("should isolate cache based on resolveScope return value", async () => {
     let currentTxId: string | null = null;
 
     const batchFn = vi.fn(async (keys: ReadonlyArray<number>) => {
@@ -11,12 +11,12 @@ describe('createBatchLoader (Transaction Aware)', () => {
     });
 
     const loaderFactory = createBatchLoader({
-      name: 'UserLoader',
+      name: "UserLoader",
       batchFn,
       resolveScope: () => currentTxId,
     });
 
-    await Context.run({ requestId: 'req-1' }, async () => {
+    await Context.run({ requestId: "req-1" }, async () => {
       // 1. No transaction (txId = null)
       currentTxId = null;
       const loader1 = loaderFactory;
@@ -28,7 +28,7 @@ describe('createBatchLoader (Transaction Aware)', () => {
       expect(batchFn).toHaveBeenCalledTimes(1);
 
       // 2. Start Transaction A
-      currentTxId = 'tx-a';
+      currentTxId = "tx-a";
       // resolveScope changed, so we should get a NEW loader instance (internally)
       // and thus a cold cache
       await loaderFactory.load(1);
@@ -39,7 +39,7 @@ describe('createBatchLoader (Transaction Aware)', () => {
       expect(batchFn).toHaveBeenCalledTimes(2);
 
       // 3. Start Transaction B (nested or separate)
-      currentTxId = 'tx-b';
+      currentTxId = "tx-b";
       await loaderFactory.load(1);
       expect(batchFn).toHaveBeenCalledTimes(3); // New batch call due to new scope
 
@@ -57,16 +57,16 @@ describe('createBatchLoader (Transaction Aware)', () => {
     });
   });
 
-  it('should share cache when resolveScope returns same value', async () => {
+  it("should share cache when resolveScope returns same value", async () => {
     const batchFn = vi.fn(async (keys: ReadonlyArray<number>) => keys.map((k) => k * 2));
 
     const loaderFactory = createBatchLoader({
-      name: 'DoubleLoader',
+      name: "DoubleLoader",
       batchFn,
-      resolveScope: () => 'static-scope',
+      resolveScope: () => "static-scope",
     });
 
-    await Context.run({ requestId: 'req-2' }, async () => {
+    await Context.run({ requestId: "req-2" }, async () => {
       await loaderFactory.load(10);
       await loaderFactory.load(10);
       expect(batchFn).toHaveBeenCalledTimes(1);

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { ApolloProvider } from '@apollo/client';
-import type { ReactNode } from 'react';
-import { createApolloClient } from './apollo-client.js';
+import { ApolloProvider } from "@apollo/client";
+import type { ReactNode } from "react";
+import { createApolloClient } from "./apollo-client.js";
 
 const client = createApolloClient();
 

@@ -1,7 +1,7 @@
-import type { TxManager } from '@croco/tx-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AbstractDrizzleRepository } from '../libs/AbstractDrizzleRepository';
-import type { DrizzleDb } from '../libs/types';
+import type { TxManager } from "@croco/tx-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AbstractDrizzleRepository } from "../libs/AbstractDrizzleRepository";
+import type { DrizzleDb } from "../libs/types";
 
 type TestEntity = { id: string; name: string };
 type TestId = string;
@@ -37,7 +37,7 @@ class TestRepository extends AbstractDrizzleRepository<TestEntity, TestId, MockD
   }
 }
 
-describe('AbstractDrizzleRepository', () => {
+describe("AbstractDrizzleRepository", () => {
   let repository!: TestRepository;
   let mockDb!: MockDb;
   let mockTxManager!: TxManager<MockDb>;
@@ -57,19 +57,19 @@ describe('AbstractDrizzleRepository', () => {
     repository = new TestRepository(mockDb, mockTxManager);
   });
 
-  it('should use default db when no transaction is active', () => {
+  it("should use default db when no transaction is active", () => {
     vi.mocked(mockTxManager.getClient).mockReturnValue(null);
 
     const db = repository.getDbPublic();
     expect(db).toBe(mockDb);
   });
 
-  it('should use tx client when transaction is active', () => {
-    const mockTxClient = { ...mockDb, txId: 'tx1' } as MockDb;
+  it("should use tx client when transaction is active", () => {
+    const mockTxClient = { ...mockDb, txId: "tx1" } as MockDb;
     vi.mocked(mockTxManager.getClient).mockReturnValue(mockTxClient);
 
     const db = repository.getDbPublic();
     expect(db).toBe(mockTxClient);
-    expect(db.txId).toBe('tx1');
+    expect(db.txId).toBe("tx1");
   });
 });

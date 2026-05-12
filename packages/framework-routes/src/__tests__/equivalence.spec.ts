@@ -1,9 +1,9 @@
-import 'reflect-metadata';
-import { extractRouteIR } from '@croco/protocols-core';
-import { Controller, Delete, Get, Post, Put } from '@croco/protocols-rest';
-import { beforeEach, describe, expect, it } from 'vitest';
-import type { CompiledController } from '../compiler';
-import { generateModule, generateRouteRegistrationCode } from '../compiler';
+import "reflect-metadata";
+import { extractRouteIR } from "@croco/protocols-core";
+import { Controller, Delete, Get, Post, Put } from "@croco/protocols-rest";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { CompiledController } from "../compiler";
+import { generateModule, generateRouteRegistrationCode } from "../compiler";
 
 type RuntimeRoutePair = {
   readonly method: string;
@@ -18,45 +18,45 @@ type RouteMetadataShape = {
   readonly methodName: string | symbol;
 };
 
-const routesKey = Symbol.for('croco:rest:routes');
+const routesKey = Symbol.for("croco:rest:routes");
 
-@Controller('/api')
+@Controller("/api")
 class UserController {
-  @Get('/users')
+  @Get("/users")
   listUsers(): void {}
 
-  @Post('/users')
+  @Post("/users")
   createUser(): void {}
 
-  @Get('/users/:id')
+  @Get("/users/:id")
   getUser(): void {}
 
-  @Put('/users/:id')
+  @Put("/users/:id")
   updateUser(): void {}
 
-  @Delete('/users/:id')
+  @Delete("/users/:id")
   deleteUser(): void {}
 }
 
-@Controller('/v2')
+@Controller("/v2")
 class V2Controller {
-  @Get('/items')
+  @Get("/items")
   listItems(): void {}
 
-  @Post('/items/:slug')
+  @Post("/items/:slug")
   createItem(): void {}
 }
 
-@Controller('')
+@Controller("")
 class HealthController {
-  @Get('/health')
+  @Get("/health")
   check(): void {}
 }
 
 const controllers: readonly ControllerFixture[] = [
-  [UserController, '/api'],
-  [V2Controller, '/v2'],
-  [HealthController, ''],
+  [UserController, "/api"],
+  [V2Controller, "/v2"],
+  [HealthController, ""],
 ];
 
 function readCompiledControllers(fixtures: readonly ControllerFixture[]): CompiledController[] {
@@ -77,11 +77,11 @@ function readCompiledControllers(fixtures: readonly ControllerFixture[]): Compil
 
 function toRuntimeRoutes(fixtures: readonly ControllerFixture[]): RuntimeRoutePair[] {
   return fixtures.flatMap(([ctor]) =>
-    extractRouteIR(ctor).map((route) => ({ method: route.httpMethod, path: route.path }))
+    extractRouteIR(ctor).map((route) => ({ method: route.httpMethod, path: route.path })),
   );
 }
 
-describe('build-time vs runtime route equivalence', () => {
+describe("build-time vs runtime route equivalence", () => {
   let runtimeRoutes: RuntimeRoutePair[];
   let buildTimeControllers: CompiledController[];
 
@@ -90,22 +90,25 @@ describe('build-time vs runtime route equivalence', () => {
     buildTimeControllers = readCompiledControllers(controllers);
   });
 
-  it('produces the same number of routes', () => {
-    const buildCount = buildTimeControllers.reduce((sum, controller) => sum + controller.routes.length, 0);
+  it("produces the same number of routes", () => {
+    const buildCount = buildTimeControllers.reduce(
+      (sum, controller) => sum + controller.routes.length,
+      0,
+    );
 
     expect(buildCount).toBe(runtimeRoutes.length);
   });
 
-  it('generates matching route method and path pairs for all controllers', () => {
+  it("generates matching route method and path pairs for all controllers", () => {
     const buildPairs = buildTimeControllers.flatMap((controller) =>
-      controller.routes.map((route) => `${route.method} ${controller.basePath}${route.path}`)
+      controller.routes.map((route) => `${route.method} ${controller.basePath}${route.path}`),
     );
     const runtimePairs = runtimeRoutes.map((route) => `${route.method} ${route.path}`);
 
     expect([...buildPairs].sort()).toEqual([...runtimePairs].sort());
   });
 
-  it('generates registration code with matching route method and path pairs', () => {
+  it("generates registration code with matching route method and path pairs", () => {
     const code = generateRouteRegistrationCode(buildTimeControllers);
 
     for (const routeCall of [
@@ -122,10 +125,10 @@ describe('build-time vs runtime route equivalence', () => {
     }
   });
 
-  it('handles empty controller lists gracefully', () => {
+  it("handles empty controller lists gracefully", () => {
     const code = generateModule([]);
 
-    expect(code).toContain('function registerRoutes');
-    expect(code).not.toContain('app.get');
+    expect(code).toContain("function registerRoutes");
+    expect(code).not.toContain("app.get");
   });
 });

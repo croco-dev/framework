@@ -15,7 +15,7 @@ Options for creating a Histogram instrument.
 
 Optional explicit bucket boundaries
 
-***
+---
 
 ### description?
 
@@ -23,7 +23,7 @@ Optional explicit bucket boundaries
 
 Optional description of the histogram
 
-***
+---
 
 ### name
 
@@ -31,7 +31,7 @@ Optional description of the histogram
 
 The name of the histogram
 
-***
+---
 
 ### unit?
 

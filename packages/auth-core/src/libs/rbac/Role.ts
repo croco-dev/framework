@@ -1,5 +1,5 @@
-import { AbstractRoleRegistry } from '../interfaces/AbstractRoleRegistry';
-import type { RoleDefinition } from './RoleDefinition';
+import { AbstractRoleRegistry } from "../interfaces/AbstractRoleRegistry";
+import type { RoleDefinition } from "./RoleDefinition";
 
 export class RoleRegistry extends AbstractRoleRegistry {
   private roles = new Map<string, RoleDefinition>();

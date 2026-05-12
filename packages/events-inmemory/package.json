@@ -1,27 +1,13 @@
 {
   "name": "@croco/events-inmemory",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "deploy": "pnpm run build && pnpm publish --no-git-checks",
-    "lint": "oxlint .",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
-  },
-  "devDependencies": {},
-  "dependencies": {
-    "@croco/events-core": "workspace:*",
-    "@croco/framework-context": "workspace:*",
-    "@croco/framework-logger": "workspace:*",
-    "@croco/problems-core": "workspace:*",
-    "@croco/telemetry-api": "workspace:*",
-    "@opentelemetry/api": "^1.9.0"
-  },
   "publishConfig": {
-    "access": "public",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -30,9 +16,23 @@
         "require": "./dist/index.cjs",
         "types": "./dist/index.d.ts"
       }
-    }
+    },
+    "access": "public"
   },
-  "files": [
-    "dist"
-  ]
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-logger": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
+    "@opentelemetry/api": "^1.9.0"
+  },
+  "devDependencies": {}
 }

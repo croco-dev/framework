@@ -1,8 +1,10 @@
-import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT, MIN_OFFSET } from './constants';
-import { ConflictingPaginationProblem } from './problems';
-import type { PaginationParams } from './types';
+import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT, MIN_OFFSET } from "./constants";
+import { ConflictingPaginationProblem } from "./problems";
+import type { PaginationParams } from "./types";
 
-export function parsePaginationParams(query: Record<string, string | string[] | undefined>): PaginationParams {
+export function parsePaginationParams(
+  query: Record<string, string | string[] | undefined>,
+): PaginationParams {
   const cursor = getStringValue(query.cursor);
   const offsetStr = getStringValue(query.offset);
   const limitStr = getStringValue(query.limit);
@@ -16,14 +18,14 @@ export function parsePaginationParams(query: Record<string, string | string[] | 
 
   if (offsetStr !== undefined) {
     return {
-      mode: 'offset',
+      mode: "offset",
       offset,
       limit,
     };
   }
 
   return {
-    mode: 'cursor',
+    mode: "cursor",
     cursor: cursor,
     limit,
   };

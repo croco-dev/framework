@@ -4,7 +4,7 @@ import type {
   RateLimitStats,
   SlidingWindowPolicy,
   TokenBucketPolicy,
-} from '@croco/ratelimit-core';
+} from "@croco/ratelimit-core";
 import {
   FixedWindowStore,
   isFixedWindowPolicy,
@@ -12,13 +12,13 @@ import {
   isTokenBucketPolicy,
   SlidingWindowStore,
   TokenBucketStore,
-} from '@croco/ratelimit-core';
-import type { Redis } from '@upstash/redis';
+} from "@croco/ratelimit-core";
+import type { Redis } from "@upstash/redis";
 
-import { fixedWindowLua } from './lua/fixed-window';
-import { slidingWindowLua } from './lua/sliding-window';
-import { tokenBucketLua } from './lua/token-bucket';
-import { InvalidRateLimitPolicyProblem } from './problems/RateLimitUpstashProblems';
+import { fixedWindowLua } from "./lua/fixed-window";
+import { slidingWindowLua } from "./lua/sliding-window";
+import { tokenBucketLua } from "./lua/token-bucket";
+import { InvalidRateLimitPolicyProblem } from "./problems/RateLimitUpstashProblems";
 
 /**
  * Upstash Redis 저장소에 사용할 공통 옵션입니다.
@@ -43,12 +43,12 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
   constructor(options: UpstashRateLimitStoreOptions) {
     super();
     this.redis = options.redis;
-    this.prefix = options.prefix ?? 'ratelimit:sliding';
+    this.prefix = options.prefix ?? "ratelimit:sliding";
   }
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     if (!isSlidingWindowPolicy(policy)) {
-      throw new InvalidRateLimitPolicyProblem('sliding window');
+      throw new InvalidRateLimitPolicyProblem("sliding window");
     }
 
     const result = await this.checkSlidingWindow(key, policy);
@@ -84,7 +84,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
     const result = (await this.redis.eval(
       slidingWindowLua,
       [redisKey],
-      [now, windowStart, policy.limit, String(now), ttlSeconds]
+      [now, windowStart, policy.limit, String(now), ttlSeconds],
     )) as [number, number, number];
 
     const success = result[0] === 1;
@@ -143,12 +143,12 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   constructor(options: UpstashRateLimitStoreOptions) {
     super();
     this.redis = options.redis;
-    this.prefix = options.prefix ?? 'ratelimit:bucket';
+    this.prefix = options.prefix ?? "ratelimit:bucket";
   }
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     if (!isTokenBucketPolicy(policy)) {
-      throw new InvalidRateLimitPolicyProblem('token bucket');
+      throw new InvalidRateLimitPolicyProblem("token bucket");
     }
 
     const result = await this.checkTokenBucket(key, policy);
@@ -174,19 +174,22 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
     const now = Date.now();
     const redisKey = `${this.prefix}:${key}`;
-    const ttlSeconds = Math.ceil((policy.capacity * policy.refillIntervalMs) / policy.refillRate / 1000) + 1;
+    const ttlSeconds =
+      Math.ceil((policy.capacity * policy.refillIntervalMs) / policy.refillRate / 1000) + 1;
 
     const result = (await this.redis.eval(
       tokenBucketLua,
       [redisKey],
-      [now, policy.capacity, policy.refillIntervalMs, policy.refillRate, ttlSeconds]
+      [now, policy.capacity, policy.refillIntervalMs, policy.refillRate, ttlSeconds],
     )) as [number, number, number];
 
     const success = result[0] === 1;
     const remaining = result[2];
 
     const timeUntilNextToken = policy.refillIntervalMs / policy.refillRate;
-    const resetAtMs = success ? now + timeUntilNextToken : now + (1 - remaining) * timeUntilNextToken;
+    const resetAtMs = success
+      ? now + timeUntilNextToken
+      : now + (1 - remaining) * timeUntilNextToken;
 
     return {
       success,
@@ -241,12 +244,12 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   constructor(options: UpstashRateLimitStoreOptions) {
     super();
     this.redis = options.redis;
-    this.prefix = options.prefix ?? 'ratelimit:fixed';
+    this.prefix = options.prefix ?? "ratelimit:fixed";
   }
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     if (!isFixedWindowPolicy(policy)) {
-      throw new InvalidRateLimitPolicyProblem('fixed window');
+      throw new InvalidRateLimitPolicyProblem("fixed window");
     }
 
     const now = Date.now();
@@ -254,11 +257,11 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
     const redisKey = `${this.prefix}:${key}`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000);
 
-    const result = (await this.redis.eval(fixedWindowLua, [redisKey], [policy.limit, ttlSeconds, windowStart])) as [
-      number,
-      number,
-      number,
-    ];
+    const result = (await this.redis.eval(
+      fixedWindowLua,
+      [redisKey],
+      [policy.limit, ttlSeconds, windowStart],
+    )) as [number, number, number];
 
     const success = result[0] === 1;
     const remaining = result[2];
@@ -278,7 +281,11 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
     };
   }
 
-  protected async getWindowEntry(): Promise<{ count: number; windowStart: number; windowMs: number } | null> {
+  protected async getWindowEntry(): Promise<{
+    count: number;
+    windowStart: number;
+    windowMs: number;
+  } | null> {
     return null;
   }
 

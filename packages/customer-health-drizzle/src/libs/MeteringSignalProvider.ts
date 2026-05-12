@@ -1,6 +1,6 @@
-import type { HealthSignal, SignalCategory } from '@croco/customer-health-core';
-import { SignalProvider } from '@croco/customer-health-core';
-import { Component, Inject, Token } from '@croco/framework-context';
+import type { HealthSignal, SignalCategory } from "@croco/customer-health-core";
+import { SignalProvider } from "@croco/customer-health-core";
+import { Component, Inject, Token } from "@croco/framework-context";
 
 /**
  * 건강 점수 계산에 필요한 사용량 데이터 구조입니다.
@@ -28,14 +28,14 @@ export interface UsageStorage {
 /**
  * 사용량 저장소 주입에 사용하는 토큰입니다.
  */
-export const USAGE_STORAGE_TOKEN = new Token<UsageStorage>('USAGE_STORAGE_TOKEN');
+export const USAGE_STORAGE_TOKEN = new Token<UsageStorage>("USAGE_STORAGE_TOKEN");
 
 /**
  * 사용량 데이터를 usage 카테고리 신호로 변환하는 구현체입니다.
  */
 @Component()
 export class MeteringSignalProvider extends SignalProvider {
-  readonly category: SignalCategory = 'usage';
+  readonly category: SignalCategory = "usage";
 
   /**
    * 사용량 저장소를 받아 신호 제공자를 초기화합니다.
@@ -58,8 +58,8 @@ export class MeteringSignalProvider extends SignalProvider {
 
     const overallUsageScore = this.normalizeScore(usageData.usage, usageData.limit);
     signals.push({
-      category: 'usage',
-      name: 'overall_usage',
+      category: "usage",
+      name: "overall_usage",
       value: overallUsageScore,
       weight: 0.5,
       rawValue: { usage: usageData.usage, limit: usageData.limit },
@@ -69,7 +69,7 @@ export class MeteringSignalProvider extends SignalProvider {
     for (const feature of usageData.features) {
       const featureScore = this.normalizeScore(feature.usage, feature.limit);
       signals.push({
-        category: 'usage',
+        category: "usage",
         name: `feature_${feature.key}`,
         value: featureScore,
         weight: 0.5 / usageData.features.length,

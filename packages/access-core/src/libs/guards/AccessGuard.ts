@@ -1,20 +1,20 @@
-import 'reflect-metadata';
-import { Context } from '@croco/framework-context';
-import { Problem, ProblemCategory } from '@croco/problems-core';
-import type { AccessEngine } from '../AccessEngine';
-import { ACCESS_METADATA_KEY } from '../constants';
-import type { AccessExecutionContext, Guard } from '../interfaces/Guard';
-import type { ResourceObject } from '../types';
+import "reflect-metadata";
+import { Context } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { AccessEngine } from "../AccessEngine";
+import { ACCESS_METADATA_KEY } from "../constants";
+import type { AccessExecutionContext, Guard } from "../interfaces/Guard";
+import type { ResourceObject } from "../types";
 
 export class BadRequestProblem extends Problem {
-  constructor(detail = 'Bad request') {
-    super('BAD_REQUEST', ProblemCategory.BadRequest, detail);
+  constructor(detail = "Bad request") {
+    super("BAD_REQUEST", ProblemCategory.BadRequest, detail);
   }
 }
 
 export class ForbiddenProblem extends Problem {
-  constructor(detail = 'Forbidden') {
-    super('FORBIDDEN', ProblemCategory.Forbidden, detail);
+  constructor(detail = "Forbidden") {
+    super("FORBIDDEN", ProblemCategory.Forbidden, detail);
   }
 }
 
@@ -56,18 +56,18 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
     const request = context.getRequest() as Request;
     const user = this.resolveUser(request);
     if (!user) {
-      throw new BadRequestProblem('Authenticated user missing');
+      throw new BadRequestProblem("Authenticated user missing");
     }
 
     const tenantId = this.resolveTenantId(context, request);
     if (!tenantId) {
-      throw new BadRequestProblem('Tenant ID missing');
+      throw new BadRequestProblem("Tenant ID missing");
     }
 
     const objectId = this.resolveObjectId(context, request, metadata.objectType);
 
     if (!objectId) {
-      throw new BadRequestProblem('Object ID missing');
+      throw new BadRequestProblem("Object ID missing");
     }
 
     const result = await this.accessEngine.check({
@@ -88,7 +88,7 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
     const accessRequest = request as unknown as RequestWithAccessData;
     const user = accessRequest.user;
 
-    if (!user || typeof user.id !== 'string') {
+    if (!user || typeof user.id !== "string") {
       return null;
     }
 
@@ -98,20 +98,20 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
   private resolveTenantId(context: AccessExecutionContext, request: Request): string | null {
     const accessRequest = request as unknown as RequestWithAccessData;
 
-    if (typeof accessRequest.tenantId === 'string' && accessRequest.tenantId.length > 0) {
+    if (typeof accessRequest.tenantId === "string" && accessRequest.tenantId.length > 0) {
       return accessRequest.tenantId;
     }
 
     const httpContext = this.getHttpContext(context);
     if (httpContext) {
-      const contextTenantId = httpContext.get<string>('tenantId');
-      if (typeof contextTenantId === 'string' && contextTenantId.length > 0) {
+      const contextTenantId = httpContext.get<string>("tenantId");
+      if (typeof contextTenantId === "string" && contextTenantId.length > 0) {
         return contextTenantId;
       }
     }
 
     const currentTenantId = Context.getTenantId();
-    if (typeof currentTenantId === 'string' && currentTenantId.length > 0) {
+    if (typeof currentTenantId === "string" && currentTenantId.length > 0) {
       return currentTenantId;
     }
 
@@ -121,14 +121,14 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
   private resolveObjectId(
     context: AccessExecutionContext,
     request: Request,
-    objectType: string
+    objectType: string,
   ): ResourceObject | undefined {
     const accessRequest = request as unknown as RequestWithAccessData;
     const params = accessRequest.params ?? this.getHttpContext(context)?.req.params;
 
     const objectTypeIdKey = `${objectType}Id`;
     const byParams = params?.id ?? params?.[objectTypeIdKey];
-    if (typeof byParams === 'string' && byParams.length > 0) {
+    if (typeof byParams === "string" && byParams.length > 0) {
       return `${objectType}:${byParams}`;
     }
 
@@ -137,8 +137,8 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
       return undefined;
     }
 
-    const paramValue = httpContext.param('id') ?? httpContext.param(objectTypeIdKey);
-    if (typeof paramValue === 'string' && paramValue.length > 0) {
+    const paramValue = httpContext.param("id") ?? httpContext.param(objectTypeIdKey);
+    if (typeof paramValue === "string" && paramValue.length > 0) {
       return `${objectType}:${paramValue}`;
     }
 
@@ -146,7 +146,7 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
   }
 
   private getHttpContext(context: AccessExecutionContext): CrocoHttpContextLike | null {
-    if (typeof context.getHttpContext !== 'function') {
+    if (typeof context.getHttpContext !== "function") {
       return null;
     }
 

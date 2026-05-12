@@ -13,30 +13,30 @@ pnpm add @croco/retry-core
 ### RetryTemplate
 
 ```typescript
-import { RetryTemplate } from '@croco/retry-core';
+import { RetryTemplate } from "@croco/retry-core";
 
 const template = new RetryTemplate({
   maxAttempts: 3,
   backoff: { delay: 100, multiplier: 2 },
 });
 
-await template.execute(async () => 'ok');
+await template.execute(async () => "ok");
 ```
 
 ### `@Retryable`와 `@Recover`
 
 ```typescript
-import { Recover, Retryable } from '@croco/retry-core';
+import { Recover, Retryable } from "@croco/retry-core";
 
 class PaymentService {
   @Retryable({ maxAttempts: 3, backoff: { delay: 100 } })
   async charge(): Promise<string> {
-    return 'ok';
+    return "ok";
   }
 
   @Recover
   async recoverCharge(): Promise<string> {
-    return 'fallback';
+    return "fallback";
   }
 }
 ```
@@ -44,10 +44,10 @@ class PaymentService {
 ### 서킷 브레이커
 
 ```typescript
-import { CircuitBreaker } from '@croco/retry-core';
+import { CircuitBreaker } from "@croco/retry-core";
 
 const breaker = new CircuitBreaker({
-  circuitId: 'payments',
+  circuitId: "payments",
   failureThreshold: 5,
   openDuration: 30000,
 });

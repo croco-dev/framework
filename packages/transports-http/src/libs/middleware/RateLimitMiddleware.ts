@@ -4,9 +4,9 @@ import type {
   RateLimiter,
   RateLimitHeaders,
   RateLimitPolicy,
-} from '@croco/ratelimit-core';
-import { createRateLimitMiddleware } from '@croco/ratelimit-core';
-import type { MiddlewareFunction } from '../types';
+} from "@croco/ratelimit-core";
+import { createRateLimitMiddleware } from "@croco/ratelimit-core";
+import type { MiddlewareFunction } from "../types";
 
 export type RateLimitHttpOptions = CreateMiddlewareOptions & {
   skipSuccessfulRequests?: boolean;
@@ -54,7 +54,7 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
         return;
       }
 
-      const headers = ctx.get<RateLimitHeaders>('rateLimitHeaders');
+      const headers = ctx.get<RateLimitHeaders>("rateLimitHeaders");
       if (headers) {
         for (const [key, value] of Object.entries(headers)) {
           if (value !== undefined) {
@@ -91,5 +91,5 @@ export function createRateLimitMiddlewareFactory(options: RateLimitMiddlewareFac
   };
 }
 
-export type { CreateMiddlewareOptions, HttpContext } from '@croco/ratelimit-core';
-export { createRateLimitMiddleware, type RateLimitHeaders } from '@croco/ratelimit-core';
+export type { CreateMiddlewareOptions, HttpContext } from "@croco/ratelimit-core";
+export { createRateLimitMiddleware, type RateLimitHeaders } from "@croco/ratelimit-core";

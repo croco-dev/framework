@@ -1,4 +1,4 @@
-import type { Attributes, Context } from '@opentelemetry/api';
+import type { Attributes, Context } from "@opentelemetry/api";
 
 /**
  * Severity level for log records.

@@ -1,4 +1,4 @@
-import type { MRRMovement, Percentage } from '../types';
+import type { MRRMovement, Percentage } from "../types";
 
 export type LogoChurnInput = {
   startingCustomers: number;
@@ -6,7 +6,11 @@ export type LogoChurnInput = {
 };
 
 export class RetentionCalculator {
-  async calculateChurn(startingMRR: number, movement: MRRMovement, _type: 'revenue'): Promise<Percentage | null> {
+  async calculateChurn(
+    startingMRR: number,
+    movement: MRRMovement,
+    _type: "revenue",
+  ): Promise<Percentage | null> {
     if (startingMRR === 0) {
       return null;
     }
@@ -48,7 +52,11 @@ export class RetentionCalculator {
       return null;
     }
 
-    const endingMRR = startingMRR + movement.expansion.amount - movement.churned.amount - movement.contraction.amount;
+    const endingMRR =
+      startingMRR +
+      movement.expansion.amount -
+      movement.churned.amount -
+      movement.contraction.amount;
     const nrr = (endingMRR / startingMRR) * 100;
 
     return nrr;
@@ -63,7 +71,10 @@ export class RetentionCalculator {
    * @param endingCustomers - Number of customers at end of period
    * @returns Logo Churn as percentage, or null if starting customers is zero
    */
-  async calculateLogoChurn(startingCustomers: number, endingCustomers: number): Promise<Percentage | null> {
+  async calculateLogoChurn(
+    startingCustomers: number,
+    endingCustomers: number,
+  ): Promise<Percentage | null> {
     if (startingCustomers === 0) {
       return null;
     }
@@ -85,7 +96,7 @@ export class RetentionCalculator {
     startingMRR: number,
     movement: MRRMovement,
     startingCustomers?: number,
-    endingCustomers?: number
+    endingCustomers?: number,
   ): Promise<{
     grr: Percentage | null;
     nrr: Percentage | null;
@@ -95,7 +106,7 @@ export class RetentionCalculator {
     const [grr, nrr, revenueChurn] = await Promise.all([
       this.calculateGRR(startingMRR, movement),
       this.calculateNRR(startingMRR, movement),
-      this.calculateChurn(startingMRR, movement, 'revenue'),
+      this.calculateChurn(startingMRR, movement, "revenue"),
     ]);
 
     let logoChurn: Percentage | null = null;

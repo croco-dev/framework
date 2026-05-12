@@ -15,8 +15,8 @@ Fine-grained Access Control (ACL) 엔진입니다. 리소스 기반 접근 제�
 ```typescript
 type ResourceObject = `${string}:${string}`;
 
-const document = 'document:123';
-const project = 'project:abc';
+const document = "document:123";
+const project = "project:abc";
 ```
 
 ### Subject
@@ -26,9 +26,9 @@ const project = 'project:abc';
 ```typescript
 type Subject = `user:${string}` | `role:${string}` | `group:${string}`;
 
-const user = 'user:123';
-const adminRole = 'role:admin';
-const team = 'group:engineering';
+const user = "user:123";
+const adminRole = "role:admin";
+const team = "group:engineering";
 ```
 
 ### Relation
@@ -36,7 +36,7 @@ const team = 'group:engineering';
 주체와 리소스 간의 관계입니다.
 
 ```typescript
-type Relation = 'owner' | 'editor' | 'viewer' | 'admin' | 'member' | string;
+type Relation = "owner" | "editor" | "viewer" | "admin" | "member" | string;
 ```
 
 ### RelationTuple
@@ -56,8 +56,8 @@ interface RelationTuple {
 ### 1. AccessEngine 초기화
 
 ```typescript
-import { AccessEngine } from '@croco/access-core';
-import { DrizzleAccessProvider } from '@croco/access-drizzle';
+import { AccessEngine } from "@croco/access-core";
+import { DrizzleAccessProvider } from "@croco/access-drizzle";
 
 const provider = new DrizzleAccessProvider(db);
 const accessEngine = new AccessEngine(provider);
@@ -66,10 +66,10 @@ const accessEngine = new AccessEngine(provider);
 ### 2. 데코레이터로 메서드 보호
 
 ```typescript
-import { Access } from '@croco/access-core';
+import { Access } from "@croco/access-core";
 
 class DocumentController {
-  @Access('document', 'editor')
+  @Access("document", "editor")
   async updateDocument(documentId: string) {
     // 자동으로 접근 제어 확인
   }
@@ -80,33 +80,33 @@ class DocumentController {
 
 ```typescript
 await accessEngine.check({
-  tenantId: 'tenant-123',
-  subject: 'user:456',
-  relation: 'editor',
-  object: 'document:123',
+  tenantId: "tenant-123",
+  subject: "user:456",
+  relation: "editor",
+  object: "document:123",
 });
 
 await accessEngine.grant({
-  tenantId: 'tenant-123',
+  tenantId: "tenant-123",
   tuple: {
-    object: 'document:123',
-    relation: 'editor',
-    subject: 'user:456',
+    object: "document:123",
+    relation: "editor",
+    subject: "user:456",
   },
 });
 
 await accessEngine.revoke({
-  tenantId: 'tenant-123',
+  tenantId: "tenant-123",
   tuple: {
-    object: 'document:123',
-    relation: 'editor',
-    subject: 'user:456',
+    object: "document:123",
+    relation: "editor",
+    subject: "user:456",
   },
 });
 
 const permissions = await accessEngine.list({
-  tenantId: 'tenant-123',
-  subject: 'user:456',
+  tenantId: "tenant-123",
+  subject: "user:456",
 });
 ```
 
@@ -150,17 +150,17 @@ Drizzle ORM 기반의 AccessProvider 구현체입니다. 재귀적인 관계 조
 
 ```typescript
 const request: CheckRequest = {
-  tenantId: 'tenant-123',
-  subject: 'user:456', // ✅ 올바른 형식
-  relation: 'editor',
-  object: 'document:123', // ✅ 올바른 형식
+  tenantId: "tenant-123",
+  subject: "user:456", // ✅ 올바른 형식
+  relation: "editor",
+  object: "document:123", // ✅ 올바른 형식
 };
 
 const invalid: CheckRequest = {
-  tenantId: 'tenant-123',
-  subject: 'invalid', // ❌ 컴파일 에러
-  relation: 'editor',
-  object: 'document:123',
+  tenantId: "tenant-123",
+  subject: "invalid", // ❌ 컴파일 에러
+  relation: "editor",
+  object: "document:123",
 };
 ```
 

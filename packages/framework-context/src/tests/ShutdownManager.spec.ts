@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Container } from '../libs/Container';
-import { OnShutdown } from '../libs/decorators/OnShutdown';
-import { ShutdownTimeoutProblem } from '../libs/problems/ShutdownProblems';
-import { ShutdownManager } from '../libs/ShutdownManager';
-import type { ShutdownHook } from '../libs/types';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Container } from "../libs/Container";
+import { OnShutdown } from "../libs/decorators/OnShutdown";
+import { ShutdownTimeoutProblem } from "../libs/problems/ShutdownProblems";
+import { ShutdownManager } from "../libs/ShutdownManager";
+import type { ShutdownHook } from "../libs/types";
 
-describe('ShutdownManager', () => {
+describe("ShutdownManager", () => {
   beforeEach(() => {
     Container.reset();
     ShutdownManager.reset();
@@ -17,15 +17,15 @@ describe('ShutdownManager', () => {
     Container.reset();
   });
 
-  describe('getInstance', () => {
-    it('should return singleton instance', () => {
+  describe("getInstance", () => {
+    it("should return singleton instance", () => {
       const instance1 = ShutdownManager.getInstance();
       const instance2 = ShutdownManager.getInstance();
 
       expect(instance1).toBe(instance2);
     });
 
-    it('should return new instance after reset', () => {
+    it("should return new instance after reset", () => {
       const instance1 = ShutdownManager.getInstance();
       ShutdownManager.reset();
       const instance2 = ShutdownManager.getInstance();
@@ -33,11 +33,11 @@ describe('ShutdownManager', () => {
       expect(instance1).not.toBe(instance2);
     });
 
-    it('should reconfigure singleton timeout on later calls', async () => {
+    it("should reconfigure singleton timeout on later calls", async () => {
       vi.useFakeTimers();
 
       const manager = ShutdownManager.getInstance(1000);
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       ShutdownManager.getInstance(50);
 
@@ -47,7 +47,9 @@ describe('ShutdownManager', () => {
         },
       });
 
-      const rejected = expect(manager.shutdown()).rejects.toThrow('Shutdown timeout exceeded after 50ms');
+      const rejected = expect(manager.shutdown()).rejects.toThrow(
+        "Shutdown timeout exceeded after 50ms",
+      );
 
       await vi.advanceTimersByTimeAsync(50);
 
@@ -58,18 +60,18 @@ describe('ShutdownManager', () => {
     });
   });
 
-  describe('configure', () => {
-    it('should remove registered listeners so listen can register with current configuration', () => {
+  describe("configure", () => {
+    it("should remove registered listeners so listen can register with current configuration", () => {
       const manager = ShutdownManager.getInstance();
-      const processOnSpy = vi.spyOn(process, 'on');
-      const processOffSpy = vi.spyOn(process, 'off');
+      const processOnSpy = vi.spyOn(process, "on");
+      const processOffSpy = vi.spyOn(process, "off");
 
       manager.listen();
       manager.configure(100);
       manager.listen();
 
-      expect(processOffSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-      expect(processOffSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+      expect(processOffSpy).toHaveBeenCalledWith("SIGTERM", expect.any(Function));
+      expect(processOffSpy).toHaveBeenCalledWith("SIGINT", expect.any(Function));
       expect(processOnSpy).toHaveBeenCalledTimes(4);
 
       processOnSpy.mockRestore();
@@ -77,8 +79,8 @@ describe('ShutdownManager', () => {
     });
   });
 
-  describe('register', () => {
-    it('should register shutdown hook', () => {
+  describe("register", () => {
+    it("should register shutdown hook", () => {
       const manager = ShutdownManager.getInstance();
       const hook: ShutdownHook = {
         onShutdown: vi.fn(),
@@ -89,7 +91,7 @@ describe('ShutdownManager', () => {
       expect((manager as unknown as { hooks: ShutdownHook[] }).hooks).toContain(hook);
     });
 
-    it('should not register hook during shutdown', async () => {
+    it("should not register hook during shutdown", async () => {
       const manager = ShutdownManager.getInstance();
       const hook1: ShutdownHook = {
         onShutdown: vi.fn().mockImplementation(async () => {
@@ -106,22 +108,22 @@ describe('ShutdownManager', () => {
     });
   });
 
-  describe('listen', () => {
-    it('should register signal listeners', () => {
+  describe("listen", () => {
+    it("should register signal listeners", () => {
       const manager = ShutdownManager.getInstance();
-      const processOnSpy = vi.spyOn(process, 'on');
+      const processOnSpy = vi.spyOn(process, "on");
 
       manager.listen();
 
-      expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-      expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+      expect(processOnSpy).toHaveBeenCalledWith("SIGTERM", expect.any(Function));
+      expect(processOnSpy).toHaveBeenCalledWith("SIGINT", expect.any(Function));
 
       processOnSpy.mockRestore();
     });
 
-    it('should not register listeners twice', () => {
+    it("should not register listeners twice", () => {
       const manager = ShutdownManager.getInstance();
-      const processOnSpy = vi.spyOn(process, 'on');
+      const processOnSpy = vi.spyOn(process, "on");
 
       manager.listen();
       manager.listen();
@@ -132,19 +134,19 @@ describe('ShutdownManager', () => {
     });
   });
 
-  describe('shutdown', () => {
-    it('should execute hooks in reverse order (LIFO)', async () => {
+  describe("shutdown", () => {
+    it("should execute hooks in reverse order (LIFO)", async () => {
       const manager = ShutdownManager.getInstance();
       const order: string[] = [];
 
       const hook1: ShutdownHook = {
         onShutdown: async () => {
-          order.push('hook1');
+          order.push("hook1");
         },
       };
       const hook2: ShutdownHook = {
         onShutdown: async () => {
-          order.push('hook2');
+          order.push("hook2");
         },
       };
 
@@ -153,27 +155,27 @@ describe('ShutdownManager', () => {
 
       await manager.shutdown();
 
-      expect(order).toEqual(['hook2', 'hook1']);
+      expect(order).toEqual(["hook2", "hook1"]);
     });
 
-    it('should continue executing hooks even if one fails', async () => {
+    it("should continue executing hooks even if one fails", async () => {
       const manager = ShutdownManager.getInstance();
       const order: string[] = [];
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const hook1: ShutdownHook = {
         onShutdown: async () => {
-          order.push('hook1');
+          order.push("hook1");
         },
       };
       const hook2: ShutdownHook = {
         onShutdown: async () => {
-          throw new Error('Hook failed');
+          throw new Error("Hook failed");
         },
       };
       const hook3: ShutdownHook = {
         onShutdown: async () => {
-          order.push('hook3');
+          order.push("hook3");
         },
       };
 
@@ -183,13 +185,16 @@ describe('ShutdownManager', () => {
 
       await manager.shutdown();
 
-      expect(order).toEqual(['hook3', 'hook1']);
-      expect(errorSpy).toHaveBeenCalledWith('[ShutdownManager] Hook execution failed:', expect.any(Error));
+      expect(order).toEqual(["hook3", "hook1"]);
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[ShutdownManager] Hook execution failed:",
+        expect.any(Error),
+      );
 
       errorSpy.mockRestore();
     });
 
-    it('should not execute shutdown twice', async () => {
+    it("should not execute shutdown twice", async () => {
       const manager = ShutdownManager.getInstance();
       const hook: ShutdownHook = {
         onShutdown: vi.fn(),
@@ -202,12 +207,12 @@ describe('ShutdownManager', () => {
       expect(hook.onShutdown).toHaveBeenCalledTimes(1);
     });
 
-    it('should reject with timeout problem after timeout', async () => {
+    it("should reject with timeout problem after timeout", async () => {
       vi.useFakeTimers();
 
       const manager = ShutdownManager.getInstance(100);
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const hook: ShutdownHook = {
         onShutdown: async () => {
@@ -223,7 +228,7 @@ describe('ShutdownManager', () => {
       await vi.advanceTimersByTimeAsync(100);
 
       await rejected;
-      expect(errorSpy).toHaveBeenCalledWith('[ShutdownManager] Shutdown timeout exceeded.');
+      expect(errorSpy).toHaveBeenCalledWith("[ShutdownManager] Shutdown timeout exceeded.");
       expect(exitSpy).not.toHaveBeenCalled();
 
       vi.useRealTimers();
@@ -231,7 +236,7 @@ describe('ShutdownManager', () => {
       exitSpy.mockRestore();
     });
 
-    it('should abort active hooks when timeout is exceeded', async () => {
+    it("should abort active hooks when timeout is exceeded", async () => {
       vi.useFakeTimers();
 
       const manager = ShutdownManager.getInstance(100);
@@ -239,7 +244,7 @@ describe('ShutdownManager', () => {
 
       const hook: ShutdownHook = {
         onShutdown: async (signal?: AbortSignal) => {
-          signal?.addEventListener('abort', () => {
+          signal?.addEventListener("abort", () => {
             abortStates.push(signal.aborted);
           });
 
@@ -261,7 +266,7 @@ describe('ShutdownManager', () => {
   });
 });
 
-describe('OnShutdown decorator', () => {
+describe("OnShutdown decorator", () => {
   beforeEach(() => {
     Container.reset();
     ShutdownManager.reset();
@@ -273,8 +278,8 @@ describe('OnShutdown decorator', () => {
     Container.reset();
   });
 
-  describe('as class decorator', () => {
-    it('should register class implementing ShutdownHook', async () => {
+  describe("as class decorator", () => {
+    it("should register class implementing ShutdownHook", async () => {
       @OnShutdown()
       class MyService implements ShutdownHook {
         shutdownCalled = false;
@@ -297,8 +302,8 @@ describe('OnShutdown decorator', () => {
     });
   });
 
-  describe('as method decorator', () => {
-    it('should register method as shutdown hook', async () => {
+  describe("as method decorator", () => {
+    it("should register method as shutdown hook", async () => {
       const manager = ShutdownManager.getInstance();
       const hooksBefore = (manager as unknown as { hooks: ShutdownHook[] }).hooks.length;
 

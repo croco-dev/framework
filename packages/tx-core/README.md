@@ -13,7 +13,7 @@ pnpm add @croco/tx-core @croco/framework-context
 ### TxManager로 수동 실행
 
 ```typescript
-import { TxManager, type TxAdapter } from '@croco/tx-core';
+import { TxManager, type TxAdapter } from "@croco/tx-core";
 
 const adapter: TxAdapter<unknown> = {
   async transaction(fn) {
@@ -27,17 +27,17 @@ const adapter: TxAdapter<unknown> = {
   },
 };
 
-const txManager = new TxManager(adapter, { defaultNesting: 'join', defaultTimeout: 5000 });
+const txManager = new TxManager(adapter, { defaultNesting: "join", defaultTimeout: 5000 });
 await txManager.run(async () => undefined);
 ```
 
 ### `@Transactional` 데코레이터 사용
 
 ```typescript
-import { Transactional } from '@croco/tx-core';
+import { Transactional } from "@croco/tx-core";
 
 class OrderService {
-  @Transactional({ propagation: 'REQUIRES_NEW', timeout: 10000 })
+  @Transactional({ propagation: "REQUIRES_NEW", timeout: 10000 })
   async placeOrder(): Promise<void> {}
 }
 ```

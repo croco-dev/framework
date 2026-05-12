@@ -1,5 +1,5 @@
-import type { RuntimeContext } from '../render/types';
-import type { HeadMetadata } from './head';
+import type { RuntimeContext } from "../render/types";
+import type { HeadMetadata } from "./head";
 
 /**
  * Render mode for each page route.
@@ -8,7 +8,7 @@ import type { HeadMetadata } from './head';
  * - isr: incremental static regeneration (TTL-based revalidation)
  * - rsc: React Server Components (streaming RSC payload)
  */
-export type RenderMode = 'ssr' | 'ssg' | 'isr' | 'rsc';
+export type RenderMode = "ssr" | "ssg" | "isr" | "rsc";
 
 /**
  * Page route definition accepted by defineRoute().
@@ -53,7 +53,7 @@ export type RenderRouteComponentProps = {
 /**
  * HTTP methods supported by API routes.
  */
-export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type ApiMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 /**
  * API route definition accepted by defineApiRoute().

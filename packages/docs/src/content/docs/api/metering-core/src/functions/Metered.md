@@ -30,13 +30,13 @@ title: "Metered"
 
 ```typescript
 class ApiService {
-  @Metered({ meterId: 'api_calls' })
+  @Metered({ meterId: "api_calls" })
   async handleRequest(req: Request): Promise<Response> {
     // ...
   }
 
   @Metered({
-    meterId: 'data_transfer',
+    meterId: "data_transfer",
     valueExtractor: (args, result) => (result as { size: number }).size,
   })
   async transferData(data: Buffer): Promise<{ size: number }> {

@@ -1,5 +1,11 @@
-import { Token } from '@croco/framework-context';
-import type { IndexConfig, SearchDocument, SearchEngineCapabilities, SearchQuery, SearchResult } from './types';
+import { Token } from "@croco/framework-context";
+import type {
+  IndexConfig,
+  SearchDocument,
+  SearchEngineCapabilities,
+  SearchQuery,
+  SearchResult,
+} from "./types";
 
 /**
  * 검색 엔진 추상 클래스
@@ -9,7 +15,7 @@ import type { IndexConfig, SearchDocument, SearchEngineCapabilities, SearchQuery
  * Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상속받아야 합니다.
  */
 export abstract class SearchEngine {
-  static readonly token = new Token<SearchEngine>('SearchEngine');
+  static readonly token = new Token<SearchEngine>("SearchEngine");
 
   /**
    * 검색 엔진 기능 플래그

@@ -1,32 +1,34 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class WebhookVerificationProblem extends Problem {
-  readonly code = 'auth-clerk/webhook-verification-failed';
+  readonly code = "auth-clerk/webhook-verification-failed";
   readonly category = ProblemCategory.Unauthorized;
   constructor() {
-    super(undefined, undefined, 'Webhook verification failed');
+    super(undefined, undefined, "Webhook verification failed");
   }
 }
 
 export class InvalidWebhookPayloadProblem extends Problem {
   constructor(eventType?: string) {
     const message =
-      typeof eventType === 'string' ? `Invalid webhook payload for event '${eventType}'` : 'Invalid webhook payload';
+      typeof eventType === "string"
+        ? `Invalid webhook payload for event '${eventType}'`
+        : "Invalid webhook payload";
 
-    super('auth-clerk/invalid-webhook-payload', ProblemCategory.ValidationError, message);
+    super("auth-clerk/invalid-webhook-payload", ProblemCategory.ValidationError, message);
   }
 }
 
 export class ClerkTokenVerificationProblem extends Problem {
-  readonly code = 'auth-clerk/token-verification-failed';
+  readonly code = "auth-clerk/token-verification-failed";
   readonly category = ProblemCategory.Unauthorized;
   constructor(detail?: string) {
-    super(undefined, undefined, detail ?? 'Clerk token verification failed');
+    super(undefined, undefined, detail ?? "Clerk token verification failed");
   }
 }
 
 export class ClerkMalformedClaimProblem extends Problem {
-  readonly code = 'auth-clerk/malformed-claim';
+  readonly code = "auth-clerk/malformed-claim";
   readonly category = ProblemCategory.Unauthorized;
   constructor(claimName: string) {
     super(undefined, undefined, `Clerk token contained a malformed '${claimName}' claim`);
@@ -34,13 +36,13 @@ export class ClerkMalformedClaimProblem extends Problem {
 }
 
 export class DuplicateTenantMappingProblem extends Problem {
-  readonly code = 'auth-clerk/duplicate-tenant-mapping';
+  readonly code = "auth-clerk/duplicate-tenant-mapping";
   readonly category = ProblemCategory.Conflict;
   constructor(externalOrgId: string, existingTenantId: string, nextTenantId: string) {
     super(
       undefined,
       undefined,
-      `Clerk org '${externalOrgId}' is already mapped to tenant '${existingTenantId}' and cannot be remapped to '${nextTenantId}'`
+      `Clerk org '${externalOrgId}' is already mapped to tenant '${existingTenantId}' and cannot be remapped to '${nextTenantId}'`,
     );
   }
 }

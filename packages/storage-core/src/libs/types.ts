@@ -1,4 +1,4 @@
-import type { Readable } from 'node:stream';
+import type { Readable } from "node:stream";
 
 /**
  * 파일 업로드 옵션
@@ -82,7 +82,7 @@ export type TransformOptions = {
   /**
    * 출력 형식
    */
-  format?: 'webp' | 'avif' | 'jpg' | 'png' | 'auto';
+  format?: "webp" | "avif" | "jpg" | "png" | "auto";
 
   /**
    * 리사이징 모드
@@ -92,7 +92,7 @@ export type TransformOptions = {
    * - inside: 비율 유지, 지정 크기 내에 맞춤
    * - outside: 비율 유지, 지정 크기覆盖
    */
-  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+  fit?: "cover" | "contain" | "fill" | "inside" | "outside";
 
   /**
    * 품질 (1-100)

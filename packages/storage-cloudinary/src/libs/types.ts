@@ -47,7 +47,7 @@ export type CloudinaryUploadOptions = {
   /**
    * 리소스 타입
    */
-  resourceType?: 'image' | 'video' | 'raw';
+  resourceType?: "image" | "video" | "raw";
 
   /**
    * 태그 목록
@@ -71,7 +71,7 @@ export type CloudinaryUploadOptions = {
 export type CloudinaryTransformOptions = {
   width?: number;
   height?: number;
-  crop?: 'scale' | 'fit' | 'fill' | 'limit' | 'pad' | 'crop' | 'thumb';
+  crop?: "scale" | "fit" | "fill" | "limit" | "pad" | "crop" | "thumb";
   quality?: number;
   format?: string;
   dpr?: number;

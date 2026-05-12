@@ -2,7 +2,7 @@ export type ResourceObject = `${string}:${string}`;
 
 export type Subject = `user:${string}` | `role:${string}` | `group:${string}`;
 
-export type Relation = 'owner' | 'editor' | 'viewer' | 'admin' | 'member' | string;
+export type Relation = "owner" | "editor" | "viewer" | "admin" | "member" | string;
 
 export interface RelationTuple {
   object: ResourceObject;

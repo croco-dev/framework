@@ -1,22 +1,22 @@
-import 'reflect-metadata';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import "reflect-metadata";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type GuardContext,
   RATE_LIMIT_METADATA_KEY,
   RateLimitGuard,
   type RateLimitMetadata,
-} from '../libs/guards/RateLimitGuard';
-import { RateLimitExceededProblem } from '../libs/problems/RateLimitExceededProblem';
-import type { RateLimiter } from '../libs/RateLimiter';
-import type { RateLimitPolicy, RateLimitResult } from '../libs/types';
+} from "../libs/guards/RateLimitGuard";
+import { RateLimitExceededProblem } from "../libs/problems/RateLimitExceededProblem";
+import type { RateLimiter } from "../libs/RateLimiter";
+import type { RateLimitPolicy, RateLimitResult } from "../libs/types";
 
-describe('RateLimitGuard', () => {
+describe("RateLimitGuard", () => {
   let guard!: RateLimitGuard;
   let mockRateLimiter!: RateLimiter;
 
   const policy: RateLimitPolicy = {
-    name: 'test-policy',
-    algorithm: 'sliding',
+    name: "test-policy",
+    algorithm: "sliding",
     limit: 10,
     windowMs: 60000,
   };
@@ -55,7 +55,7 @@ describe('RateLimitGuard', () => {
     guard = new RateLimitGuard(mockRateLimiter);
   });
 
-  it('should allow request when no metadata present', async () => {
+  it("should allow request when no metadata present", async () => {
     const handler = () => {};
     const context = createContext(handler);
 
@@ -65,7 +65,7 @@ describe('RateLimitGuard', () => {
     expect(mockRateLimiter.check).not.toHaveBeenCalled();
   });
 
-  it('should allow request within rate limit', async () => {
+  it("should allow request within rate limit", async () => {
     const handler = () => {};
     const metadata: RateLimitMetadata = { policy };
     Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, metadata, handler);
@@ -77,7 +77,7 @@ describe('RateLimitGuard', () => {
     expect(mockRateLimiter.check).toHaveBeenCalledWith(context, policy);
   });
 
-  it('should throw RateLimitExceededProblem when limit exceeded', async () => {
+  it("should throw RateLimitExceededProblem when limit exceeded", async () => {
     vi.mocked(mockRateLimiter.check).mockResolvedValue(failedResult);
     const handler = () => {};
     const metadata: RateLimitMetadata = { policy };
@@ -87,7 +87,7 @@ describe('RateLimitGuard', () => {
     await expect(guard.canActivate(context)).rejects.toThrow(RateLimitExceededProblem);
   });
 
-  it('should store rate limit result in context', async () => {
+  it("should store rate limit result in context", async () => {
     const handler = () => {};
     const metadata: RateLimitMetadata = { policy };
     Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, metadata, handler);
@@ -103,6 +103,6 @@ describe('RateLimitGuard', () => {
 
     await guard.canActivate(context);
 
-    expect(store.get('rateLimitResult')).toEqual(successResult);
+    expect(store.get("rateLimitResult")).toEqual(successResult);
   });
 });

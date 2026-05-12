@@ -1,8 +1,11 @@
-import type { ILogger } from '@croco/framework-context';
-import { recordError } from '@croco/telemetry-api';
-import { context, SpanStatusCode, trace } from '@opentelemetry/api';
-import { BatchResultLengthMismatchProblem, InvalidBatchLoaderConfigurationError } from './problems/BatchLoaderProblems';
-import type { BatchLoader, BatchLoaderOptions } from './types';
+import type { ILogger } from "@croco/framework-context";
+import { recordError } from "@croco/telemetry-api";
+import { context, SpanStatusCode, trace } from "@opentelemetry/api";
+import {
+  BatchResultLengthMismatchProblem,
+  InvalidBatchLoaderConfigurationError,
+} from "./problems/BatchLoaderProblems";
+import type { BatchLoader, BatchLoaderOptions } from "./types";
 
 const noopLogger: ILogger = {
   debug: () => {},
@@ -27,7 +30,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
     const maxBatchSize = options.maxBatchSize ?? 100;
     if (!Number.isFinite(maxBatchSize) || maxBatchSize <= 0) {
       throw new InvalidBatchLoaderConfigurationError(
-        `maxBatchSize must be a positive finite number, got ${maxBatchSize}`
+        `maxBatchSize must be a positive finite number, got ${maxBatchSize}`,
       );
     }
     this.options = {
@@ -35,7 +38,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
       maxBatchSize,
       ...options,
     };
-    this.logger = logger.child({ component: 'BatchLoader', loader: this.options.name });
+    this.logger = logger.child({ component: "BatchLoader", loader: this.options.name });
   }
 
   async load(key: K): Promise<V | null> {
@@ -78,7 +81,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
     if (value instanceof Error) {
       const rejected = Promise.reject<V | null>(value);
       void rejected.catch((error) => {
-        this.logger.warn('Prime rejected error cached', { key, error: error as Error });
+        this.logger.warn("Prime rejected error cached", { key, error: error as Error });
         recordError(error);
       });
       this.cache.set(key, rejected);
@@ -116,14 +119,14 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
 
   private async executeBatch(
     keys: K[],
-    callbacks: Array<{ resolve: (value: V | null) => void; reject: (error: Error) => void }>
+    callbacks: Array<{ resolve: (value: V | null) => void; reject: (error: Error) => void }>,
   ): Promise<void> {
-    const tracer = trace.getTracer('dataloader-core');
+    const tracer = trace.getTracer("dataloader-core");
 
     // Create a span for the batch execution
     await tracer.startActiveSpan(`dataloader:${this.options.name}:batch`, async (span) => {
       try {
-        span.setAttribute('batch.size', keys.length);
+        span.setAttribute("batch.size", keys.length);
 
         const results = await this.options.batchFn(keys);
 

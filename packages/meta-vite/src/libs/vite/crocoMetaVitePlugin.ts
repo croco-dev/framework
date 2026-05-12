@@ -1,12 +1,12 @@
-import type { EnvironmentOptions, Plugin, UserConfig } from 'vite';
+import type { EnvironmentOptions, Plugin, UserConfig } from "vite";
 
 export type CrocoMetaVitePluginOptions = {
   rsc?: boolean;
 };
 
-export type EnvironmentName = 'client' | 'ssr' | 'rsc';
+export type EnvironmentName = "client" | "ssr" | "rsc";
 
-type VirtualModuleKind = 'routes' | 'entry';
+type VirtualModuleKind = "routes" | "entry";
 type EnvironmentState = {
   readonly modules: Map<VirtualModuleKind, string>;
 };
@@ -15,19 +15,21 @@ type VirtualModuleReference = {
   readonly kind: VirtualModuleKind;
 };
 
-const ENVIRONMENT_NAMES = ['client', 'ssr', 'rsc'] as const;
-const VIRTUAL_MODULE_KINDS = ['routes', 'entry'] as const;
-const VIRTUAL_MODULE_PREFIX = 'virtual:croco/';
+const ENVIRONMENT_NAMES = ["client", "ssr", "rsc"] as const;
+const VIRTUAL_MODULE_KINDS = ["routes", "entry"] as const;
+const VIRTUAL_MODULE_PREFIX = "virtual:croco/";
 const ENVIRONMENT_CONFIGS: Record<EnvironmentName, EnvironmentOptions> = {
-  client: { consumer: 'client' },
-  ssr: { consumer: 'server' },
-  rsc: { consumer: 'server' },
+  client: { consumer: "client" },
+  ssr: { consumer: "server" },
+  rsc: { consumer: "server" },
 };
 
 export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): Plugin[] {
-  const environmentNames = ENVIRONMENT_NAMES.filter((name) => options.rsc !== false || name !== 'rsc');
+  const environmentNames = ENVIRONMENT_NAMES.filter(
+    (name) => options.rsc !== false || name !== "rsc",
+  );
   const environmentStates = new Map<EnvironmentName, EnvironmentState>(
-    environmentNames.map((name) => [name, { modules: createVirtualModules(name) }])
+    environmentNames.map((name) => [name, { modules: createVirtualModules(name) }]),
   );
 
   const isEnabledEnvironment = (name: EnvironmentName): boolean => environmentNames.includes(name);
@@ -47,8 +49,8 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
   };
 
   const corePlugin: Plugin = {
-    name: 'croco:meta-vite',
-    enforce: 'pre',
+    name: "croco:meta-vite",
+    enforce: "pre",
 
     config(): UserConfig {
       return { environments: createEnvironmentConfigs(environmentNames) };
@@ -71,7 +73,9 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
 
       const reference = parseVirtualModuleReference(id);
       if (reference) {
-        return reference.environmentName === environmentName ? resolveVirtualModule(reference) : null;
+        return reference.environmentName === environmentName
+          ? resolveVirtualModule(reference)
+          : null;
       }
 
       const kind = parseVirtualModuleKind(id);
@@ -85,7 +89,10 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
       }
 
       const environmentName = this.environment?.name;
-      if (environmentName && (!isEnvironmentName(environmentName) || environmentName !== reference.environmentName)) {
+      if (
+        environmentName &&
+        (!isEnvironmentName(environmentName) || environmentName !== reference.environmentName)
+      ) {
         return null;
       }
 
@@ -98,12 +105,14 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
   return [corePlugin];
 }
 
-function createEnvironmentConfigs(names: readonly EnvironmentName[]): UserConfig['environments'] {
+function createEnvironmentConfigs(names: readonly EnvironmentName[]): UserConfig["environments"] {
   return Object.fromEntries(names.map((name) => [name, { ...ENVIRONMENT_CONFIGS[name] }]));
 }
 
 function createVirtualModules(environmentName: EnvironmentName): Map<VirtualModuleKind, string> {
-  return new Map(VIRTUAL_MODULE_KINDS.map((kind) => [kind, getVirtualModuleId({ environmentName, kind })]));
+  return new Map(
+    VIRTUAL_MODULE_KINDS.map((kind) => [kind, getVirtualModuleId({ environmentName, kind })]),
+  );
 }
 
 function createVirtualModuleContent(reference: VirtualModuleReference): string {
@@ -111,8 +120,8 @@ function createVirtualModuleContent(reference: VirtualModuleReference): string {
     `export const environment = ${JSON.stringify(reference.environmentName)};`,
     `export const kind = ${JSON.stringify(reference.kind)};`,
     `export const moduleId = ${JSON.stringify(getVirtualModuleId(reference))};`,
-    'export default { environment, kind, moduleId };',
-  ].join('\n');
+    "export default { environment, kind, moduleId };",
+  ].join("\n");
 }
 
 function getVirtualModuleId(reference: VirtualModuleReference): string {
@@ -120,8 +129,10 @@ function getVirtualModuleId(reference: VirtualModuleReference): string {
 }
 
 function parseVirtualModuleReference(id: string): VirtualModuleReference | null {
-  const moduleName = id.startsWith(VIRTUAL_MODULE_PREFIX) ? id.slice(VIRTUAL_MODULE_PREFIX.length) : '';
-  const [environmentName, kind] = moduleName.split('-');
+  const moduleName = id.startsWith(VIRTUAL_MODULE_PREFIX)
+    ? id.slice(VIRTUAL_MODULE_PREFIX.length)
+    : "";
+  const [environmentName, kind] = moduleName.split("-");
   if (!isEnvironmentName(environmentName) || !isVirtualModuleKind(kind)) {
     return null;
   }
@@ -130,14 +141,14 @@ function parseVirtualModuleReference(id: string): VirtualModuleReference | null 
 }
 
 function parseVirtualModuleKind(id: string): VirtualModuleKind | null {
-  const kind = id.startsWith(VIRTUAL_MODULE_PREFIX) ? id.slice(VIRTUAL_MODULE_PREFIX.length) : '';
+  const kind = id.startsWith(VIRTUAL_MODULE_PREFIX) ? id.slice(VIRTUAL_MODULE_PREFIX.length) : "";
   return isVirtualModuleKind(kind) ? kind : null;
 }
 
 function isEnvironmentName(name: string | undefined): name is EnvironmentName {
-  return name === 'client' || name === 'ssr' || name === 'rsc';
+  return name === "client" || name === "ssr" || name === "rsc";
 }
 
 function isVirtualModuleKind(kind: string | undefined): kind is VirtualModuleKind {
-  return kind === 'routes' || kind === 'entry';
+  return kind === "routes" || kind === "entry";
 }

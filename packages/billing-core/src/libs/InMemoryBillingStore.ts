@@ -1,8 +1,8 @@
-import type { BillingAccount, Order, ProcessedWebhook, Subscription } from '../types';
-import { BillingStore } from './BillingStore';
-import { WebhookAlreadyProcessedProblem } from './problems/BillingProblems';
+import type { BillingAccount, Order, ProcessedWebhook, Subscription } from "../types";
+import { BillingStore } from "./BillingStore";
+import { WebhookAlreadyProcessedProblem } from "./problems/BillingProblems";
 
-type WebhookState = 'RESERVED' | 'COMPLETED';
+type WebhookState = "RESERVED" | "COMPLETED";
 
 /**
  * In-memory billing store for testing and development.
@@ -60,7 +60,10 @@ export class InMemoryBillingStore extends BillingStore {
   async saveSubscription(subscription: Subscription): Promise<void> {
     const existingSubscription = this.subscriptions.get(subscription.billingAccountId);
 
-    if (existingSubscription && existingSubscription.externalSubscriptionId !== subscription.externalSubscriptionId) {
+    if (
+      existingSubscription &&
+      existingSubscription.externalSubscriptionId !== subscription.externalSubscriptionId
+    ) {
       this.subscriptionsByExternalId.delete(existingSubscription.externalSubscriptionId);
     }
 
@@ -90,7 +93,7 @@ export class InMemoryBillingStore extends BillingStore {
   }
 
   async isWebhookProcessed(eventId: string): Promise<boolean> {
-    return this.processedWebhooks.get(eventId) === 'COMPLETED';
+    return this.processedWebhooks.get(eventId) === "COMPLETED";
   }
 
   async markWebhookProcessed(webhook: ProcessedWebhook): Promise<void> {
@@ -103,15 +106,15 @@ export class InMemoryBillingStore extends BillingStore {
       throw new WebhookAlreadyProcessedProblem(eventId);
     }
 
-    this.processedWebhooks.set(eventId, 'RESERVED');
+    this.processedWebhooks.set(eventId, "RESERVED");
   }
 
   async completeWebhook(eventId: string): Promise<void> {
-    if (this.processedWebhooks.get(eventId) !== 'RESERVED') {
+    if (this.processedWebhooks.get(eventId) !== "RESERVED") {
       throw new WebhookAlreadyProcessedProblem(eventId);
     }
 
-    this.processedWebhooks.set(eventId, 'COMPLETED');
+    this.processedWebhooks.set(eventId, "COMPLETED");
   }
 
   async failWebhook(eventId: string): Promise<void> {

@@ -1,7 +1,7 @@
-import type { CircuitBreakerOptions } from './CircuitBreaker';
-import { CircuitBreaker } from './CircuitBreaker';
-import type { RecoveryCallback, RetryCallback, RetryTemplateOptions } from './RetryTemplate';
-import { RetryTemplate } from './RetryTemplate';
+import type { CircuitBreakerOptions } from "./CircuitBreaker";
+import { CircuitBreaker } from "./CircuitBreaker";
+import type { RecoveryCallback, RetryCallback, RetryTemplateOptions } from "./RetryTemplate";
+import { RetryTemplate } from "./RetryTemplate";
 
 /**
  * Circuit Breaker와 Retry를 결합한 템플릿.
@@ -24,7 +24,7 @@ import { RetryTemplate } from './RetryTemplate';
 export class CircuitBreakerRetryTemplate {
   constructor(
     private readonly circuitBreaker: CircuitBreaker,
-    private readonly retryTemplate: RetryTemplate
+    private readonly retryTemplate: RetryTemplate,
   ) {}
 
   /**
@@ -61,11 +61,11 @@ export class CircuitBreakerRetryTemplate {
    */
   static withOptions(
     circuitBreakerOptions: CircuitBreakerOptions,
-    retryTemplateOptions: RetryTemplateOptions = {}
+    retryTemplateOptions: RetryTemplateOptions = {},
   ): CircuitBreakerRetryTemplate {
     return new CircuitBreakerRetryTemplate(
       new CircuitBreaker(circuitBreakerOptions),
-      new RetryTemplate(retryTemplateOptions)
+      new RetryTemplate(retryTemplateOptions),
     );
   }
 }

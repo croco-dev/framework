@@ -1,15 +1,15 @@
-import 'reflect-metadata';
-import { Controller, Get, Post } from '@croco/protocols-rest';
+import "reflect-metadata";
+import { Controller, Get, Post } from "@croco/protocols-rest";
 
-@Controller('/api')
+@Controller("/api")
 export class SampleController {
-  @Get('/hello')
+  @Get("/hello")
   hello(): Response {
-    return new Response('hello');
+    return new Response("hello");
   }
 
-  @Post('/users')
+  @Post("/users")
   createUser(): Response {
-    return new Response('created');
+    return new Response("created");
   }
 }

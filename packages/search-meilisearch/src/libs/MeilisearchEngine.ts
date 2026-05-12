@@ -1,15 +1,15 @@
-import { Component, Context } from '@croco/framework-context';
+import { Component, Context } from "@croco/framework-context";
 import type {
   IndexConfig,
   SearchDocument,
   SearchEngineCapabilities,
   SearchQuery,
   SearchResult,
-} from '@croco/search-core';
-import { MissingTenantProblem, SearchEngine } from '@croco/search-core';
-import { MeiliSearch } from 'meilisearch';
-import { TenantTokenNotConfiguredProblem } from './problems/MeilisearchProblems';
-import type { MeilisearchEngineOptions } from './types';
+} from "@croco/search-core";
+import { MissingTenantProblem, SearchEngine } from "@croco/search-core";
+import { MeiliSearch } from "meilisearch";
+import { TenantTokenNotConfiguredProblem } from "./problems/MeilisearchProblems";
+import type { MeilisearchEngineOptions } from "./types";
 
 @Component()
 /**
@@ -35,7 +35,7 @@ export class MeilisearchEngine extends SearchEngine {
   }
 
   async search<T>(indexName: string, query: SearchQuery): Promise<SearchResult<T>> {
-    const tenantId = this.getTenantId('search');
+    const tenantId = this.getTenantId("search");
 
     const filterArray = this.transformFilters(query.filters);
     filterArray.push(`_tenantId = "${this.escapeFilterValue(tenantId)}"`);
@@ -59,20 +59,20 @@ export class MeilisearchEngine extends SearchEngine {
   }
 
   async indexDocument(indexName: string, document: SearchDocument): Promise<void> {
-    const tenantId = this.getTenantId('indexDocument');
+    const tenantId = this.getTenantId("indexDocument");
     const index = this.client.index(indexName);
     await index.addDocuments([{ ...document, _tenantId: tenantId }]);
   }
 
   async bulkIndex(indexName: string, documents: SearchDocument[]): Promise<void> {
-    const tenantId = this.getTenantId('bulkIndex');
+    const tenantId = this.getTenantId("bulkIndex");
     const index = this.client.index(indexName);
     const docsWithTenant = documents.map((doc) => ({ ...doc, _tenantId: tenantId }));
     await index.addDocuments(docsWithTenant);
   }
 
   async deleteDocument(indexName: string, documentId: string): Promise<void> {
-    const tenantId = this.getTenantId('deleteDocument');
+    const tenantId = this.getTenantId("deleteDocument");
     const index = this.client.index(indexName);
 
     await index.deleteDocuments({
@@ -81,11 +81,11 @@ export class MeilisearchEngine extends SearchEngine {
   }
 
   async createIndex(config: IndexConfig): Promise<void> {
-    await this.client.createIndex(config.name, { primaryKey: config.primaryKey || 'id' });
+    await this.client.createIndex(config.name, { primaryKey: config.primaryKey || "id" });
 
     const index = this.client.index(config.name);
 
-    const filterable = ['_tenantId', ...(config.filterableFields || [])];
+    const filterable = ["_tenantId", ...(config.filterableFields || [])];
     const sortable = config.sortableFields || [];
 
     await index.updateSettings({
@@ -106,13 +106,15 @@ export class MeilisearchEngine extends SearchEngine {
     const { apiKeyUid, expiresIn } = this.options.tenantTokenOptions;
 
     const searchRules = {
-      '*': {
+      "*": {
         filter: `_tenantId = "${this.escapeFilterValue(tenantId)}"`,
       },
     };
 
     return await this.client.generateTenantToken(apiKeyUid, searchRules, {
-      expiresAt: expiresAt ?? (expiresIn !== undefined ? new Date(Date.now() + expiresIn * 1000) : undefined),
+      expiresAt:
+        expiresAt ??
+        (expiresIn !== undefined ? new Date(Date.now() + expiresIn * 1000) : undefined),
     });
   }
 
@@ -127,16 +129,16 @@ export class MeilisearchEngine extends SearchEngine {
   private transformFilters(filters?: Record<string, unknown>): string[] {
     if (!filters) return [];
     return Object.entries(filters).map(([key, value]) => {
-      if (typeof value === 'string') return `${key} = "${this.escapeFilterValue(value)}"`;
+      if (typeof value === "string") return `${key} = "${this.escapeFilterValue(value)}"`;
       return `${key} = ${value}`;
     });
   }
 
   private escapeFilterValue(value: string): string {
-    return value.replace(MeilisearchEngine.FILTER_ESCAPE_REGEXP, '\\$1');
+    return value.replace(MeilisearchEngine.FILTER_ESCAPE_REGEXP, "\\$1");
   }
 
-  private transformSort(sort?: { field: string; order: 'asc' | 'desc' }[]): string[] | undefined {
+  private transformSort(sort?: { field: string; order: "asc" | "desc" }[]): string[] | undefined {
     if (!sort) return undefined;
     return sort.map((s) => `${s.field}:${s.order}`);
   }

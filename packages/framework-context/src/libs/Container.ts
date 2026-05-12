@@ -3,18 +3,18 @@ import {
   Container as TypeDIContainer,
   ContainerInstance as TypeDIContainerInstance,
   Token as TypeDIToken,
-} from 'typedi';
-import type { Constructable as TypeDIConstructable } from 'typedi/types/types/constructable.type';
-import 'reflect-metadata';
-import { ProblemFactory } from '@croco/problems-core';
-import { Context } from './Context';
-import { MetadataStorage } from './MetadataStorage';
-import { CircularDependencyProblem } from './problems/CircularDependencyProblem';
-import type { ComponentMetadata, Constructor, Scope } from './types';
+} from "typedi";
+import type { Constructable as TypeDIConstructable } from "typedi/types/types/constructable.type";
+import "reflect-metadata";
+import { ProblemFactory } from "@croco/problems-core";
+import { Context } from "./Context";
+import { MetadataStorage } from "./MetadataStorage";
+import { CircularDependencyProblem } from "./problems/CircularDependencyProblem";
+import type { ComponentMetadata, Constructor, Scope } from "./types";
 
 export type TokenIdentifier<T> = Constructor<T> | TypeDIToken<T> | string | symbol;
 
-const COMPONENT_METADATA_KEY = Symbol('component:metadata');
+const COMPONENT_METADATA_KEY = Symbol("component:metadata");
 
 class HandlerContainerInstance extends TypeDIContainerInstance {
   override get<T>(id: Constructor<T> | TypeDIToken<T> | string): T {
@@ -48,13 +48,13 @@ export class Container {
     }
 
     switch (metadata.scope) {
-      case 'singleton':
+      case "singleton":
         return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
 
-      case 'transient':
+      case "transient":
         return Container.createTransientInstance(constructorToken);
 
-      case 'request':
+      case "request":
         return Container.getRequestScoped(constructorToken);
 
       default:
@@ -141,16 +141,16 @@ export class Container {
   private static isValidationEnabled(): boolean {
     const configured = process.env.CROCO_DI_VALIDATE;
     if (configured !== undefined) {
-      return configured !== '0' && configured.toLowerCase() !== 'false';
+      return configured !== "0" && configured.toLowerCase() !== "false";
     }
 
-    return process.env.NODE_ENV !== 'production';
+    return process.env.NODE_ENV !== "production";
   }
 
   private static getRegisteredComponents(): Constructor[] {
-    return MetadataStorage.getAll<{ scope: Scope; target: Constructor }>(COMPONENT_METADATA_KEY).map(
-      (entry) => entry.target as Constructor
-    );
+    return MetadataStorage.getAll<{ scope: Scope; target: Constructor }>(
+      COMPONENT_METADATA_KEY,
+    ).map((entry) => entry.target as Constructor);
   }
 
   private static buildDependencyGraph(nodes: Constructor[]): Map<Constructor, Constructor[]> {
@@ -158,9 +158,10 @@ export class Container {
     const graph = new Map<Constructor, Constructor[]>();
 
     for (const node of nodes) {
-      const paramTypes = (Reflect.getMetadata('design:paramtypes', node) as Constructor[] | undefined) ?? [];
+      const paramTypes =
+        (Reflect.getMetadata("design:paramtypes", node) as Constructor[] | undefined) ?? [];
       const dependencies = paramTypes.filter(
-        (dep): dep is Constructor => typeof dep === 'function' && nodeSet.has(dep)
+        (dep): dep is Constructor => typeof dep === "function" && nodeSet.has(dep),
       );
       graph.set(node, dependencies);
     }
@@ -168,7 +169,10 @@ export class Container {
     return graph;
   }
 
-  private static assertNoCircularDependency(nodes: Constructor[], graph: Map<Constructor, Constructor[]>): void {
+  private static assertNoCircularDependency(
+    nodes: Constructor[],
+    graph: Map<Constructor, Constructor[]>,
+  ): void {
     const visitState = new Map<Constructor, 0 | 1 | 2>();
     const stack: Constructor[] = [];
     const stackIndex = new Map<Constructor, number>();
@@ -224,8 +228,10 @@ export class Container {
     return instance;
   }
 
-  private static resolveIdentifier<T>(token: TokenIdentifier<T>): Constructor<T> | TypeDIToken<T> | string {
-    if (typeof token === 'symbol') {
+  private static resolveIdentifier<T>(
+    token: TokenIdentifier<T>,
+  ): Constructor<T> | TypeDIToken<T> | string {
+    if (typeof token === "symbol") {
       return Container.getOrCreateSymbolToken(token) as TypeDIToken<T>;
     }
 
@@ -244,15 +250,15 @@ export class Container {
   }
 
   private static isConstructorToken<T>(token: TokenIdentifier<T>): token is Constructor<T> {
-    return typeof token === 'function';
+    return typeof token === "function";
   }
 
   private static getRegisteredValue<T>(token: TokenIdentifier<T>): T {
-    if (typeof token === 'symbol') {
+    if (typeof token === "symbol") {
       return TypeDIContainer.get(Container.getOrCreateSymbolToken(token) as TypeDIToken<T>);
     }
 
-    if (typeof token === 'string') {
+    if (typeof token === "string") {
       return TypeDIContainer.get(token);
     }
 
@@ -264,11 +270,11 @@ export class Container {
   }
 
   private static hasRegisteredValue<T>(token: TokenIdentifier<T>): boolean {
-    if (typeof token === 'symbol') {
+    if (typeof token === "symbol") {
       return TypeDIContainer.has(Container.getOrCreateSymbolToken(token));
     }
 
-    if (typeof token === 'string') {
+    if (typeof token === "string") {
       return TypeDIContainer.has(token);
     }
 
@@ -280,12 +286,12 @@ export class Container {
   }
 
   private static removeRegisteredValue<T>(token: TokenIdentifier<T>): void {
-    if (typeof token === 'symbol') {
+    if (typeof token === "symbol") {
       TypeDIContainer.remove(Container.getOrCreateSymbolToken(token));
       return;
     }
 
-    if (typeof token === 'string') {
+    if (typeof token === "string") {
       TypeDIContainer.remove(token);
       return;
     }
@@ -304,7 +310,8 @@ export class Container {
 
   private static isOptionalResolutionError(error: unknown): error is Error {
     return (
-      error instanceof Error && (error.name === 'ServiceNotFoundError' || error.name === 'CannotInstantiateValueError')
+      error instanceof Error &&
+      (error.name === "ServiceNotFoundError" || error.name === "CannotInstantiateValueError")
     );
   }
 
@@ -314,13 +321,15 @@ export class Container {
   }
 
   private static resolveDependencies<T>(token: Constructor<T>): unknown[] {
-    const paramTypes = (Reflect.getMetadata('design:paramtypes', token) as Constructor[] | undefined) ?? [];
+    const paramTypes =
+      (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
     const handlerContainer = Container.createHandlerContainer();
 
     return paramTypes.map((paramType: Constructor, index: number) => {
       const handler = TypeDIContainer.handlers.find(
         (candidate) =>
-          (candidate.object === token || candidate.object === Object.getPrototypeOf(token)) && candidate.index === index
+          (candidate.object === token || candidate.object === Object.getPrototypeOf(token)) &&
+          candidate.index === index,
       );
 
       if (handler) {
@@ -332,7 +341,7 @@ export class Container {
   }
 
   private static createHandlerContainer(): TypeDIContainerInstance {
-    return new HandlerContainerInstance('__croco_handler__');
+    return new HandlerContainerInstance("__croco_handler__");
   }
 
   private static getRequestScoped<T>(token: Constructor<T>): T {
@@ -340,8 +349,8 @@ export class Container {
 
     if (!cache) {
       throw ProblemFactory.internalServerError(
-        'framework-context/request-scope-outside-context',
-        'Request-scoped dependencies must be resolved inside Context.run().'
+        "framework-context/request-scope-outside-context",
+        "Request-scoped dependencies must be resolved inside Context.run().",
       );
     }
 

@@ -1,47 +1,47 @@
-import type { BillingStore, Plan, PlanRegistry } from '@croco/billing-core';
-import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from '@croco/billing-core';
-import type { MetricsRepository, MRRMovement } from '@croco/metrics-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BillingEventHandler } from '../libs/BillingEventHandler';
+import type { BillingStore, Plan, PlanRegistry } from "@croco/billing-core";
+import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from "@croco/billing-core";
+import type { MetricsRepository, MRRMovement } from "@croco/metrics-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BillingEventHandler } from "../libs/BillingEventHandler";
 
-describe('BillingEventHandler', () => {
+describe("BillingEventHandler", () => {
   let handler!: BillingEventHandler;
   let planRegistry!: PlanRegistry;
   let billingStore!: BillingStore;
   let metricsRepository!: MetricsRepository;
 
   const mockPlan: Plan = {
-    id: 'plan-pro',
-    name: 'Pro Plan',
+    id: "plan-pro",
+    name: "Pro Plan",
     amount: 2900,
-    currency: 'USD',
-    interval: 'month',
+    currency: "USD",
+    interval: "month",
     intervalCount: 1,
   };
 
   const mockPlanYearly: Plan = {
-    id: 'plan-pro-yearly',
-    name: 'Pro Plan Yearly',
+    id: "plan-pro-yearly",
+    name: "Pro Plan Yearly",
     amount: 29000,
-    currency: 'USD',
-    interval: 'year',
+    currency: "USD",
+    interval: "year",
     intervalCount: 1,
   };
 
   const mockAccount = {
-    id: 'account-1',
-    tenantId: 'tenant-1',
-    externalCustomerId: 'cus-stripe',
-    email: 'test@example.com',
+    id: "account-1",
+    tenantId: "tenant-1",
+    externalCustomerId: "cus-stripe",
+    email: "test@example.com",
     createdAt: new Date(),
   };
 
   const mockSubscription = {
-    id: 'sub-1',
-    billingAccountId: 'account-1',
-    externalSubscriptionId: 'sub-stripe',
-    planId: 'plan-pro',
-    status: 'active' as const,
+    id: "sub-1",
+    billingAccountId: "account-1",
+    externalSubscriptionId: "sub-stripe",
+    planId: "plan-pro",
+    status: "active" as const,
     currentPeriodEnd: new Date(),
     cancelAtPeriodEnd: false,
     lastSyncedAt: new Date(),
@@ -60,7 +60,7 @@ describe('BillingEventHandler', () => {
 
             processedEventKeys.add(eventKey);
           }
-        }
+        },
       ),
       recordSnapshot: vi.fn(),
       getSnapshot: vi.fn(),
@@ -94,9 +94,9 @@ describe('BillingEventHandler', () => {
     handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
   });
 
-  describe('OrderPaidEvent', () => {
-    it('should record new MRR when order is paid', async () => {
-      const event = new OrderPaidEvent('tenant-1', 'order-1', 2900, 'USD');
+  describe("OrderPaidEvent", () => {
+    it("should record new MRR when order is paid", async () => {
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
@@ -105,29 +105,29 @@ describe('BillingEventHandler', () => {
       await handler.handle(event);
 
       const expectedMovement: MRRMovement = {
-        new: { amount: 2900, currency: 'USD' },
-        expansion: { amount: 0, currency: 'USD' },
-        contraction: { amount: 0, currency: 'USD' },
-        churned: { amount: 0, currency: 'USD' },
-        reactivation: { amount: 0, currency: 'USD' },
-        net: { amount: 2900, currency: 'USD' },
+        new: { amount: 2900, currency: "USD" },
+        expansion: { amount: 0, currency: "USD" },
+        contraction: { amount: 0, currency: "USD" },
+        churned: { amount: 0, currency: "USD" },
+        reactivation: { amount: 0, currency: "USD" },
+        net: { amount: 2900, currency: "USD" },
       };
 
       expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
-        'tenant-1',
+        "tenant-1",
         expectedMovement,
         event.timestamp,
-        `billing.order_paid_${event.timestamp.getTime()}`
+        `billing.order_paid_${event.timestamp.getTime()}`,
       );
     });
 
-    it('should normalize yearly plan to monthly MRR', async () => {
-      const event = new OrderPaidEvent('tenant-1', 'order-1', 29000, 'USD');
+    it("should normalize yearly plan to monthly MRR", async () => {
+      const event = new OrderPaidEvent("tenant-1", "order-1", 29000, "USD");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue({
         ...mockSubscription,
-        planId: 'plan-pro-yearly',
+        planId: "plan-pro-yearly",
       });
       vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlanYearly);
 
@@ -139,8 +139,8 @@ describe('BillingEventHandler', () => {
       expect(movement.new.amount).toBeCloseTo(2416.67, 2);
     });
 
-    it('should delegate duplicate prevention to repository across handler instances', async () => {
-      const event = new OrderPaidEvent('tenant-1', 'order-1', 2900, 'USD');
+    it("should delegate duplicate prevention to repository across handler instances", async () => {
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
@@ -158,8 +158,8 @@ describe('BillingEventHandler', () => {
       expect(calls[1]?.[3]).toBe(`billing.order_paid_${event.timestamp.getTime()}`);
     });
 
-    it('should skip if account not found', async () => {
-      const event = new OrderPaidEvent('tenant-1', 'order-1', 2900, 'USD');
+    it("should skip if account not found", async () => {
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(null);
 
@@ -169,24 +169,24 @@ describe('BillingEventHandler', () => {
     });
   });
 
-  describe('PlanChangedEvent', () => {
-    it('should record expansion MRR when upgrading plan', async () => {
-      const event = new PlanChangedEvent('tenant-1', 'plan-basic', 'plan-pro', 'sub-stripe');
+  describe("PlanChangedEvent", () => {
+    it("should record expansion MRR when upgrading plan", async () => {
+      const event = new PlanChangedEvent("tenant-1", "plan-basic", "plan-pro", "sub-stripe");
 
       const basicPlan: Plan = {
-        id: 'plan-basic',
-        name: 'Basic Plan',
+        id: "plan-basic",
+        name: "Basic Plan",
         amount: 900,
-        currency: 'USD',
-        interval: 'month',
+        currency: "USD",
+        interval: "month",
         intervalCount: 1,
       };
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === 'plan-basic') return Promise.resolve(basicPlan);
-        if (id === 'plan-pro') return Promise.resolve(mockPlan);
+        if (id === "plan-basic") return Promise.resolve(basicPlan);
+        if (id === "plan-pro") return Promise.resolve(mockPlan);
         return Promise.resolve(null);
       });
 
@@ -199,23 +199,23 @@ describe('BillingEventHandler', () => {
       expect(movement.net.amount).toBe(2000);
     });
 
-    it('should record contraction MRR when downgrading plan', async () => {
-      const event = new PlanChangedEvent('tenant-1', 'plan-pro', 'plan-basic', 'sub-stripe');
+    it("should record contraction MRR when downgrading plan", async () => {
+      const event = new PlanChangedEvent("tenant-1", "plan-pro", "plan-basic", "sub-stripe");
 
       const basicPlan: Plan = {
-        id: 'plan-basic',
-        name: 'Basic Plan',
+        id: "plan-basic",
+        name: "Basic Plan",
         amount: 900,
-        currency: 'USD',
-        interval: 'month',
+        currency: "USD",
+        interval: "month",
         intervalCount: 1,
       };
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === 'plan-basic') return Promise.resolve(basicPlan);
-        if (id === 'plan-pro') return Promise.resolve(mockPlan);
+        if (id === "plan-basic") return Promise.resolve(basicPlan);
+        if (id === "plan-pro") return Promise.resolve(mockPlan);
         return Promise.resolve(null);
       });
 
@@ -228,53 +228,53 @@ describe('BillingEventHandler', () => {
       expect(movement.net.amount).toBe(-2000);
     });
 
-    it('should pass event key to repository for plan changes', async () => {
-      const event = new PlanChangedEvent('tenant-1', 'plan-basic', 'plan-pro', 'sub-stripe');
+    it("should pass event key to repository for plan changes", async () => {
+      const event = new PlanChangedEvent("tenant-1", "plan-basic", "plan-pro", "sub-stripe");
 
       const basicPlan: Plan = {
-        id: 'plan-basic',
-        name: 'Basic Plan',
+        id: "plan-basic",
+        name: "Basic Plan",
         amount: 900,
-        currency: 'USD',
-        interval: 'month',
+        currency: "USD",
+        interval: "month",
         intervalCount: 1,
       };
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === 'plan-basic') return Promise.resolve(basicPlan);
-        if (id === 'plan-pro') return Promise.resolve(mockPlan);
+        if (id === "plan-basic") return Promise.resolve(basicPlan);
+        if (id === "plan-pro") return Promise.resolve(mockPlan);
         return Promise.resolve(null);
       });
 
       await handler.handle(event);
 
       expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
-        'tenant-1',
+        "tenant-1",
         expect.any(Object),
         event.timestamp,
-        `billing.plan_changed_${event.timestamp.getTime()}`
+        `billing.plan_changed_${event.timestamp.getTime()}`,
       );
     });
 
-    it('should record unchanged movement when the normalized MRR delta is zero', async () => {
-      const event = new PlanChangedEvent('tenant-1', 'plan-pro', 'plan-pro-yearly', 'sub-stripe');
+    it("should record unchanged movement when the normalized MRR delta is zero", async () => {
+      const event = new PlanChangedEvent("tenant-1", "plan-pro", "plan-pro-yearly", "sub-stripe");
 
       const equivalentMonthlyPlan: Plan = {
-        id: 'plan-pro-yearly',
-        name: 'Pro Plan Yearly Equivalent',
+        id: "plan-pro-yearly",
+        name: "Pro Plan Yearly Equivalent",
         amount: 34800,
-        currency: 'USD',
-        interval: 'year',
+        currency: "USD",
+        interval: "year",
         intervalCount: 1,
       };
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === 'plan-pro') return Promise.resolve(mockPlan);
-        if (id === 'plan-pro-yearly') return Promise.resolve(equivalentMonthlyPlan);
+        if (id === "plan-pro") return Promise.resolve(mockPlan);
+        if (id === "plan-pro-yearly") return Promise.resolve(equivalentMonthlyPlan);
         return Promise.resolve(null);
       });
 
@@ -284,19 +284,19 @@ describe('BillingEventHandler', () => {
       const movement = callArgs?.[1];
 
       expect(movement).toEqual({
-        new: { amount: 0, currency: 'USD' },
-        expansion: { amount: 0, currency: 'USD' },
-        contraction: { amount: 0, currency: 'USD' },
-        churned: { amount: 0, currency: 'USD' },
-        reactivation: { amount: 0, currency: 'USD' },
-        net: { amount: 0, currency: 'USD' },
+        new: { amount: 0, currency: "USD" },
+        expansion: { amount: 0, currency: "USD" },
+        contraction: { amount: 0, currency: "USD" },
+        churned: { amount: 0, currency: "USD" },
+        reactivation: { amount: 0, currency: "USD" },
+        net: { amount: 0, currency: "USD" },
       });
     });
   });
 
-  describe('SubscriptionCanceledEvent', () => {
-    it('should record churned MRR when subscription is canceled', async () => {
-      const event = new SubscriptionCanceledEvent('tenant-1', 'sub-stripe', false);
+  describe("SubscriptionCanceledEvent", () => {
+    it("should record churned MRR when subscription is canceled", async () => {
+      const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
@@ -304,24 +304,24 @@ describe('BillingEventHandler', () => {
       await handler.handle(event);
 
       const expectedMovement: MRRMovement = {
-        new: { amount: 0, currency: 'USD' },
-        expansion: { amount: 0, currency: 'USD' },
-        contraction: { amount: 0, currency: 'USD' },
-        churned: { amount: 2900, currency: 'USD' },
-        reactivation: { amount: 0, currency: 'USD' },
-        net: { amount: -2900, currency: 'USD' },
+        new: { amount: 0, currency: "USD" },
+        expansion: { amount: 0, currency: "USD" },
+        contraction: { amount: 0, currency: "USD" },
+        churned: { amount: 2900, currency: "USD" },
+        reactivation: { amount: 0, currency: "USD" },
+        net: { amount: -2900, currency: "USD" },
       };
 
       expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
-        'tenant-1',
+        "tenant-1",
         expectedMovement,
         event.timestamp,
-        `billing.subscription_canceled_${event.timestamp.getTime()}`
+        `billing.subscription_canceled_${event.timestamp.getTime()}`,
       );
     });
 
-    it('should pass event key to repository for cancellation events', async () => {
-      const event = new SubscriptionCanceledEvent('tenant-1', 'sub-stripe', false);
+    it("should pass event key to repository for cancellation events", async () => {
+      const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
       vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
@@ -329,15 +329,15 @@ describe('BillingEventHandler', () => {
       await handler.handle(event);
 
       expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
-        'tenant-1',
+        "tenant-1",
         expect.any(Object),
         event.timestamp,
-        `billing.subscription_canceled_${event.timestamp.getTime()}`
+        `billing.subscription_canceled_${event.timestamp.getTime()}`,
       );
     });
 
-    it('should skip if subscription not found', async () => {
-      const event = new SubscriptionCanceledEvent('tenant-1', 'sub-stripe', false);
+    it("should skip if subscription not found", async () => {
+      const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(null);
 

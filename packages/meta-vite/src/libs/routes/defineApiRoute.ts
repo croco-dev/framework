@@ -1,4 +1,4 @@
-import type { ApiRouteDefinition } from './types';
+import type { ApiRouteDefinition } from "./types";
 
 /**
  * Register a flat code-based API route.

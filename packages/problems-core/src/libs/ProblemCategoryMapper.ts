@@ -1,4 +1,4 @@
-import { ProblemCategory } from './ProblemCategory';
+import { ProblemCategory } from "./ProblemCategory";
 
 /**
  * ProblemCategory를 HTTP 상태 코드로 변환합니다.
@@ -46,27 +46,27 @@ export function toHttpStatus(category: ProblemCategory): number {
 export function toTitle(category: ProblemCategory): string {
   switch (category) {
     case ProblemCategory.BadRequest:
-      return 'Bad Request';
+      return "Bad Request";
     case ProblemCategory.Unauthorized:
-      return 'Unauthorized';
+      return "Unauthorized";
     case ProblemCategory.Forbidden:
-      return 'Forbidden';
+      return "Forbidden";
     case ProblemCategory.NotFound:
-      return 'Not Found';
+      return "Not Found";
     case ProblemCategory.Conflict:
-      return 'Conflict';
+      return "Conflict";
     case ProblemCategory.Gone:
-      return 'Gone';
+      return "Gone";
     case ProblemCategory.ValidationError:
-      return 'Validation Error';
+      return "Validation Error";
     case ProblemCategory.BusinessRuleViolation:
-      return 'Business Rule Violation';
+      return "Business Rule Violation";
     case ProblemCategory.TooManyRequests:
-      return 'Too Many Requests';
+      return "Too Many Requests";
     case ProblemCategory.InternalServerError:
-      return 'Internal Server Error';
+      return "Internal Server Error";
     case ProblemCategory.NotImplemented:
-      return 'Not Implemented';
+      return "Not Implemented";
     default: {
       const _exhaustiveCheck: never = category;
       throw new Error(`Unhandled ProblemCategory: ${String(_exhaustiveCheck)}`);

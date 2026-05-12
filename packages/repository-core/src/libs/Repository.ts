@@ -1,5 +1,5 @@
-import type { ReadRepository } from './ReadRepository';
-import type { WriteRepository } from './WriteRepository';
+import type { ReadRepository } from "./ReadRepository";
+import type { WriteRepository } from "./WriteRepository";
 
 /**
  * Unified repository contract that combines read and write capabilities.

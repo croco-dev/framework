@@ -1,7 +1,11 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import type * as esbuild from 'esbuild';
-import { ComponentScanner, ComponentScannerDiagnosticError, ComponentScannerError } from './ComponentScanner';
+import * as fs from "node:fs";
+import * as path from "node:path";
+import type * as esbuild from "esbuild";
+import {
+  ComponentScanner,
+  ComponentScannerDiagnosticError,
+  ComponentScannerError,
+} from "./ComponentScanner";
 
 const REFLECT_METADATA_IMPORT = "import 'reflect-metadata';\n";
 
@@ -47,9 +51,9 @@ function normalizeConfig(config: CrocoPluginConfig | undefined): NormalizedCroco
   return {
     reflectMetadata: config?.reflectMetadata ?? true,
     scan: {
-      dirs: config?.scan?.dirs ?? ['src'],
-      exclude: config?.scan?.exclude ?? ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**'],
-      decorators: config?.scan?.decorators ?? ['Component'],
+      dirs: config?.scan?.dirs ?? ["src"],
+      exclude: config?.scan?.exclude ?? ["**/*.test.ts", "**/*.spec.ts", "**/node_modules/**"],
+      decorators: config?.scan?.decorators ?? ["Component"],
       cache: config?.scan?.cache ?? true,
     },
     watch: {
@@ -58,8 +62,8 @@ function normalizeConfig(config: CrocoPluginConfig | undefined): NormalizedCroco
     },
     generateRegistry: {
       enabled: config?.generateRegistry?.enabled ?? false,
-      outDir: config?.generateRegistry?.outDir ?? '.croco',
-      outFile: config?.generateRegistry?.outFile ?? 'registry.gen.ts',
+      outDir: config?.generateRegistry?.outDir ?? ".croco",
+      outFile: config?.generateRegistry?.outFile ?? "registry.gen.ts",
     },
   };
 }
@@ -67,40 +71,43 @@ function normalizeConfig(config: CrocoPluginConfig | undefined): NormalizedCroco
 function generateRegistryContent(
   controllers: { filePath: string; decorators: string[] }[],
   components: { filePath: string; decorators: string[] }[],
-  baseDir: string
+  baseDir: string,
 ): string {
-  const lines = ['// AUTO-GENERATED - DO NOT EDIT', ''];
+  const lines = ["// AUTO-GENERATED - DO NOT EDIT", ""];
 
-  const controllerFiles = controllers.filter((c) => c.decorators.includes('Controller'));
-  const componentFiles = components.filter((c) => c.decorators.includes('Component'));
+  const controllerFiles = controllers.filter((c) => c.decorators.includes("Controller"));
+  const componentFiles = components.filter((c) => c.decorators.includes("Component"));
 
   const allFiles = [...controllerFiles, ...componentFiles];
   const uniqueFiles = Array.from(new Map(allFiles.map((f) => [f.filePath, f])).values());
 
   for (const file of uniqueFiles) {
-    const relativePath = path.relative(baseDir, file.filePath).replace(/\.ts$/, '').replace(/\\/g, '/');
-    const className = path.basename(file.filePath, '.ts');
+    const relativePath = path
+      .relative(baseDir, file.filePath)
+      .replace(/\.ts$/, "")
+      .replace(/\\/g, "/");
+    const className = path.basename(file.filePath, ".ts");
     lines.push(`import { ${className} } from '${relativePath}';`);
   }
 
-  lines.push('');
+  lines.push("");
 
-  const controllerNames = controllerFiles.map((c) => path.basename(c.filePath, '.ts'));
+  const controllerNames = controllerFiles.map((c) => path.basename(c.filePath, ".ts"));
   const componentNames = componentFiles
     .filter((c) => !controllerFiles.some((ctrl) => ctrl.filePath === c.filePath))
-    .map((c) => path.basename(c.filePath, '.ts'));
+    .map((c) => path.basename(c.filePath, ".ts"));
 
-  lines.push(`export const controllers = [${controllerNames.join(', ')}] as const;`);
-  lines.push(`export const components = [${componentNames.join(', ')}] as const;`);
-  lines.push('');
-  lines.push('export type Controllers = typeof controllers;');
-  lines.push('export type Components = typeof components;');
+  lines.push(`export const controllers = [${controllerNames.join(", ")}] as const;`);
+  lines.push(`export const components = [${componentNames.join(", ")}] as const;`);
+  lines.push("");
+  lines.push("export type Controllers = typeof controllers;");
+  lines.push("export type Components = typeof components;");
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function resolveEntryPointPath(ep: string | { in: string; out: string }): string {
-  return typeof ep === 'string' ? ep : ep.in;
+  return typeof ep === "string" ? ep : ep.in;
 }
 
 function resolveScanRoot(build: esbuild.PluginBuild): string {
@@ -108,12 +115,12 @@ function resolveScanRoot(build: esbuild.PluginBuild): string {
 }
 
 function resolveEntryPointPaths(
-  rawEntryPoints: esbuild.BuildOptions['entryPoints'] | undefined,
-  scanRoot: string
+  rawEntryPoints: esbuild.BuildOptions["entryPoints"] | undefined,
+  scanRoot: string,
 ): string[] {
   const entryPoints = Array.isArray(rawEntryPoints)
     ? rawEntryPoints
-    : rawEntryPoints && typeof rawEntryPoints === 'object'
+    : rawEntryPoints && typeof rawEntryPoints === "object"
       ? Object.values(rawEntryPoints)
       : [];
 
@@ -125,10 +132,10 @@ function resolveEntryPointPaths(
 
 function getDiagnosticLineText(error: ComponentScannerDiagnosticError): string {
   if (!error.diagnostic.file || error.line === undefined) {
-    return '';
+    return "";
   }
 
-  return error.diagnostic.file.text.split(/\r?\n/u)[error.line - 1] ?? '';
+  return error.diagnostic.file.text.split(/\r?\n/u)[error.line - 1] ?? "";
 }
 
 function toBuildError(error: unknown): esbuild.PartialMessage {
@@ -176,7 +183,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
   let isFirstBuild = true;
 
   return {
-    name: 'croco-plugin',
+    name: "croco-plugin",
     setup(build: esbuild.PluginBuild) {
       const isWatchMode = Boolean(build.initialOptions.metafile);
 
@@ -204,24 +211,26 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
               const entryBaseDir = path.dirname(entryPointPath);
               const importStatements = componentFiles.map((result) => {
                 const relativePath = path.relative(entryBaseDir, result.filePath);
-                const normalizedPath = relativePath.replace(/\.tsx?$/, '').replace(/\\/g, '/');
-                const importPath = normalizedPath.startsWith('.') ? normalizedPath : `./${normalizedPath}`;
+                const normalizedPath = relativePath.replace(/\.tsx?$/, "").replace(/\\/g, "/");
+                const importPath = normalizedPath.startsWith(".")
+                  ? normalizedPath
+                  : `./${normalizedPath}`;
                 return `import '${importPath}';`;
               });
 
               autoImportContentByEntryPath.set(
                 entryPointPath,
-                `// @croco/auto-import\n${importStatements.join('\n')}\n`
+                `// @croco/auto-import\n${importStatements.join("\n")}\n`,
               );
             }
 
             if (normalizedConfig.generateRegistry.enabled) {
-              const controllers = scanResults.filter((r) => r.decorators.includes('Controller'));
-              const components = scanResults.filter((r) => r.decorators.includes('Component'));
+              const controllers = scanResults.filter((r) => r.decorators.includes("Controller"));
+              const components = scanResults.filter((r) => r.decorators.includes("Component"));
 
               const outPath = path.join(
                 normalizedConfig.generateRegistry.outDir,
-                normalizedConfig.generateRegistry.outFile
+                normalizedConfig.generateRegistry.outFile,
               );
               const registryDir = path.dirname(path.resolve(outPath));
               const content = generateRegistryContent(controllers, components, registryDir);
@@ -262,12 +271,12 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
           return undefined;
         }
 
-        const originalContent = fs.readFileSync(args.path, 'utf-8');
-        const finalContents = `${prependContents.join('\n\n')}\n\n${originalContent}`;
+        const originalContent = fs.readFileSync(args.path, "utf-8");
+        const finalContents = `${prependContents.join("\n\n")}\n\n${originalContent}`;
 
         return {
           contents: finalContents,
-          loader: 'ts',
+          loader: "ts",
         };
       });
 

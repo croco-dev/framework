@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 /**
  * Determines whether an error should trigger a retry.

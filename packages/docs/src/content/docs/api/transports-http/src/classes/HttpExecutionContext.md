@@ -51,7 +51,7 @@ Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니
 
 `ExecutionContext.getClass`
 
-***
+---
 
 ### getHandler()
 
@@ -67,7 +67,7 @@ Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니
 
 `ExecutionContext.getHandler`
 
-***
+---
 
 ### getHttpContext()
 
@@ -77,7 +77,7 @@ Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니
 
 [`CrocoHttpContext`](/api/transports-http/src/interfaces/crocohttpcontext/)
 
-***
+---
 
 ### getMethod()
 
@@ -93,7 +93,7 @@ HTTP 메서드 (GET, POST 등)
 
 `ExecutionContext.getMethod`
 
-***
+---
 
 ### getPath()
 
@@ -109,7 +109,7 @@ HTTP 메서드 (GET, POST 등)
 
 `ExecutionContext.getPath`
 
-***
+---
 
 ### getRequest()
 

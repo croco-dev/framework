@@ -1,20 +1,20 @@
-import type { Checkpointable, Step } from '@croco/batch-core';
-import type { ExecutionManager } from '@croco/execution-core';
-import type { Client } from '@upstash/qstash';
+import type { Checkpointable, Step } from "@croco/batch-core";
+import type { ExecutionManager } from "@croco/execution-core";
+import type { Client } from "@upstash/qstash";
 
 function isCheckpointable(obj: unknown): obj is Checkpointable {
   return (
-    typeof obj === 'object' &&
+    typeof obj === "object" &&
     obj !== null &&
-    'getCheckpoint' in obj &&
-    typeof (obj as Checkpointable).getCheckpoint === 'function' &&
-    'restoreCheckpoint' in obj &&
-    typeof (obj as Checkpointable).restoreCheckpoint === 'function'
+    "getCheckpoint" in obj &&
+    typeof (obj as Checkpointable).getCheckpoint === "function" &&
+    "restoreCheckpoint" in obj &&
+    typeof (obj as Checkpointable).restoreCheckpoint === "function"
   );
 }
 
 function isPeekable<I>(obj: unknown): obj is { peek(): Promise<I | null> } {
-  return typeof obj === 'object' && obj !== null && 'peek' in obj && typeof obj.peek === 'function';
+  return typeof obj === "object" && obj !== null && "peek" in obj && typeof obj.peek === "function";
 }
 
 /**
@@ -31,12 +31,12 @@ export interface QStashExecutorOptions {
 export class QStashChunkExecutor {
   constructor(
     private executionManager: ExecutionManager,
-    private options: QStashExecutorOptions
+    private options: QStashExecutorOptions,
   ) {}
 
   async executeChunk<I, O>(
     executionId: string,
-    step: Step<I, O>
+    step: Step<I, O>,
   ): Promise<{ hasMore: boolean; processedCount: number }> {
     const execution = await this.executionManager.start(executionId);
 
@@ -48,7 +48,9 @@ export class QStashChunkExecutor {
       }
     }
 
-    const previousProcessedCount = this.getProcessedCount(execution.checkpoints?.[processedCountKey]);
+    const previousProcessedCount = this.getProcessedCount(
+      execution.checkpoints?.[processedCountKey],
+    );
 
     const items: O[] = [];
     let hasMore = false;
@@ -90,8 +92,17 @@ export class QStashChunkExecutor {
       const cumulativeProcessedCount = previousProcessedCount + items.length;
 
       if (hasMore) {
-        await this.executionManager.checkpoint(executionId, processedCountKey, cumulativeProcessedCount);
-        await this.triggerNextChunk(executionId, step.name, checkpointAfterChunk, cumulativeProcessedCount);
+        await this.executionManager.checkpoint(
+          executionId,
+          processedCountKey,
+          cumulativeProcessedCount,
+        );
+        await this.triggerNextChunk(
+          executionId,
+          step.name,
+          checkpointAfterChunk,
+          cumulativeProcessedCount,
+        );
       } else {
         await this.executionManager.complete(executionId, {
           processedCount: cumulativeProcessedCount,
@@ -111,7 +122,7 @@ export class QStashChunkExecutor {
   }
 
   private getProcessedCount(value: unknown): number {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
       return 0;
     }
 
@@ -121,7 +132,7 @@ export class QStashChunkExecutor {
   private async hasMoreItems<I, O>(
     step: Step<I, O>,
     readCount: number,
-    checkpointAfterChunk: unknown
+    checkpointAfterChunk: unknown,
   ): Promise<boolean> {
     if (readCount < step.chunkSize) {
       return false;
@@ -147,16 +158,19 @@ export class QStashChunkExecutor {
 
   private extractCursorValue(checkpoint: unknown): string {
     if (checkpoint === null || checkpoint === undefined) {
-      return 'no-checkpoint';
+      return "no-checkpoint";
     }
 
-    if (typeof checkpoint !== 'object') {
+    if (typeof checkpoint !== "object") {
       return String(checkpoint);
     }
 
     const checkpointRecord = checkpoint as Record<string, unknown>;
     const cursorValue =
-      checkpointRecord.cursor ?? checkpointRecord.offset ?? checkpointRecord.index ?? checkpointRecord.position;
+      checkpointRecord.cursor ??
+      checkpointRecord.offset ??
+      checkpointRecord.index ??
+      checkpointRecord.position;
 
     if (cursorValue !== undefined) {
       return String(cursorValue);
@@ -169,11 +183,11 @@ export class QStashChunkExecutor {
     executionId: string,
     stepName: string,
     checkpoint: unknown,
-    processedCount: number
+    processedCount: number,
   ): string {
     const cursorValue = this.extractCursorValue(checkpoint);
 
-    if (cursorValue === 'no-checkpoint') {
+    if (cursorValue === "no-checkpoint") {
       return `chunk:${executionId}:${stepName}:${cursorValue}:${processedCount}`;
     }
 
@@ -184,9 +198,14 @@ export class QStashChunkExecutor {
     executionId: string,
     stepName: string,
     checkpoint: unknown,
-    processedCount: number
+    processedCount: number,
   ): Promise<void> {
-    const idempotencyKey = this.buildIdempotencyKey(executionId, stepName, checkpoint, processedCount);
+    const idempotencyKey = this.buildIdempotencyKey(
+      executionId,
+      stepName,
+      checkpoint,
+      processedCount,
+    );
 
     await this.options.qstashClient.publishJSON({
       url: this.options.webhookUrl,
@@ -195,7 +214,7 @@ export class QStashChunkExecutor {
         stepName,
       },
       headers: {
-        'Idempotency-Key': idempotencyKey,
+        "Idempotency-Key": idempotencyKey,
       },
     });
   }

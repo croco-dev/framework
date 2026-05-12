@@ -10,7 +10,7 @@
 export type SearchQuery = {
   query: string;
   filters?: Record<string, unknown>;
-  sort?: { field: string; order: 'asc' | 'desc' }[];
+  sort?: { field: string; order: "asc" | "desc" }[];
   limit?: number;
   offset?: number;
 };

@@ -1,24 +1,24 @@
-import { RateLimitWindowProblem } from './problems/RateLimitConfigProblems';
+import { RateLimitWindowProblem } from "./problems/RateLimitConfigProblems";
 
-export type RateLimitAlgorithm = 'fixed' | 'sliding' | 'token-bucket';
+export type RateLimitAlgorithm = "fixed" | "sliding" | "token-bucket";
 
 export type FixedWindowPolicy = {
   name: string;
-  algorithm: 'fixed';
+  algorithm: "fixed";
   limit: number;
   windowMs: number;
 };
 
 export type SlidingWindowPolicy = {
   name: string;
-  algorithm: 'sliding';
+  algorithm: "sliding";
   limit: number;
   windowMs: number;
 };
 
 export type TokenBucketPolicy = {
   name: string;
-  algorithm: 'token-bucket';
+  algorithm: "token-bucket";
   capacity: number;
   refillRate: number;
   refillIntervalMs: number;
@@ -50,7 +50,7 @@ export type RateLimitStats = {
   total: number;
 };
 
-export type KeySegment = 'tenant' | 'user' | 'ip' | 'apiKey' | 'route' | 'custom';
+export type KeySegment = "tenant" | "user" | "ip" | "apiKey" | "route" | "custom";
 
 export type RateLimiterOptions = {
   keySegments: KeySegment[];
@@ -82,12 +82,16 @@ export type PolicyResult<T extends RateLimitPolicy> = {
 export function parseWindowMs(window: string): number {
   const match = window.match(/^(\d+)(s|m|h|d)$/);
   if (!match) {
-    throw new RateLimitWindowProblem(`Invalid window format: ${window}. Use format like '1m', '1h', '1d'`);
+    throw new RateLimitWindowProblem(
+      `Invalid window format: ${window}. Use format like '1m', '1h', '1d'`,
+    );
   }
 
   const value = parseInt(match[1], 10);
   if (value <= 0) {
-    throw new RateLimitWindowProblem(`Invalid window value: ${window}. Window must be greater than 0`);
+    throw new RateLimitWindowProblem(
+      `Invalid window value: ${window}. Window must be greater than 0`,
+    );
   }
 
   const unit = match[2];
@@ -101,13 +105,13 @@ export function parseWindowMs(window: string): number {
 }
 
 export function isFixedWindowPolicy(policy: RateLimitPolicy): policy is FixedWindowPolicy {
-  return policy.algorithm === 'fixed';
+  return policy.algorithm === "fixed";
 }
 
 export function isSlidingWindowPolicy(policy: RateLimitPolicy): policy is SlidingWindowPolicy {
-  return policy.algorithm === 'sliding';
+  return policy.algorithm === "sliding";
 }
 
 export function isTokenBucketPolicy(policy: RateLimitPolicy): policy is TokenBucketPolicy {
-  return policy.algorithm === 'token-bucket';
+  return policy.algorithm === "token-bucket";
 }

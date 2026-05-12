@@ -1,5 +1,5 @@
-import { DomainEvent } from '@croco/events-core';
-import type { LlmUsage } from '../types';
+import { DomainEvent } from "@croco/events-core";
+import type { LlmUsage } from "../types";
 
 export type ToolCall = {
   name: string;
@@ -7,13 +7,13 @@ export type ToolCall = {
 };
 
 export class LlmToolCalledEvent extends DomainEvent {
-  readonly type = 'llm.tool_called';
-  static eventName = 'llm.tool_called';
+  readonly type = "llm.tool_called";
+  static eventName = "llm.tool_called";
 
   constructor(
     public readonly modelId: string,
     public readonly toolCall: ToolCall,
-    public readonly usage: LlmUsage
+    public readonly usage: LlmUsage,
   ) {
     super();
   }

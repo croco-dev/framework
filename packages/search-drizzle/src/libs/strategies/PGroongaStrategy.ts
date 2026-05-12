@@ -1,7 +1,7 @@
-import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from '@croco/search-core';
-import { type SQL, sql } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { SearchStrategy } from '../types';
+import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
+import { type SQL, sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { SearchStrategy } from "../types";
 
 /**
  * `pgroonga` 확장을 이용한 고성능 검색 전략입니다.
@@ -14,7 +14,7 @@ export class PGroongaStrategy implements SearchStrategy {
     const tableIdentifier = sql.identifier(table);
     const tenantIdParam = sql.param(tenantId);
     const queryParam = sql.param(query.query);
-    const searchVectorIdentifier = sql.identifier('search_vector');
+    const searchVectorIdentifier = sql.identifier("search_vector");
 
     return sql`
       SELECT *, pgroonga_score(tableoid, ctid) AS score
@@ -31,16 +31,16 @@ export class PGroongaStrategy implements SearchStrategy {
   buildIndexQuery(table: string, document: SearchDocument, tenantId: string): SQL {
     const tableIdentifier = sql.identifier(table);
 
-    const columns = Object.keys(document).concat('tenant_id');
+    const columns = Object.keys(document).concat("tenant_id");
     const values = Object.values(document).concat(tenantId);
 
     const columnChunks = sql.join(
       columns.map((c) => sql.identifier(c)),
-      sql`, `
+      sql`, `,
     );
     const valueChunks = sql.join(
       values.map((v) => sql.param(v)),
-      sql`, `
+      sql`, `,
     );
 
     return sql`INSERT INTO ${tableIdentifier} (${columnChunks}) VALUES (${valueChunks})`;
@@ -61,7 +61,7 @@ export class PGroongaStrategy implements SearchStrategy {
    * 전략에 필요한 PostgreSQL 확장 목록을 반환합니다.
    */
   getRequiredExtensions(): string[] {
-    return ['pgroonga'];
+    return ["pgroonga"];
   }
 
   /**

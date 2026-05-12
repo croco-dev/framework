@@ -1,15 +1,19 @@
-import 'reflect-metadata';
-import { describe, expect, it, vi } from 'vitest';
-import { NoBackoff } from '../libs/BackoffPolicy';
-import { InMemoryCircuitBreakerStateStore } from '../libs/CircuitBreakerState';
-import { CircuitBreakerOpenProblem, DuplicateRecoverHandlerProblem, RetryExhaustedProblem } from '../libs/errors';
-import { runWithLambdaContext } from '../libs/LambdaTimeoutGuard';
-import { Recover } from '../libs/Recover';
-import { Retryable } from '../libs/Retryable';
-import type { RetryPolicy } from '../libs/RetryPolicy';
+import "reflect-metadata";
+import { describe, expect, it, vi } from "vitest";
+import { NoBackoff } from "../libs/BackoffPolicy";
+import { InMemoryCircuitBreakerStateStore } from "../libs/CircuitBreakerState";
+import {
+  CircuitBreakerOpenProblem,
+  DuplicateRecoverHandlerProblem,
+  RetryExhaustedProblem,
+} from "../libs/errors";
+import { runWithLambdaContext } from "../libs/LambdaTimeoutGuard";
+import { Recover } from "../libs/Recover";
+import { Retryable } from "../libs/Retryable";
+import type { RetryPolicy } from "../libs/RetryPolicy";
 
-describe('@Retryable', () => {
-  it('retries method and succeeds', async () => {
+describe("@Retryable", () => {
+  it("retries method and succeeds", async () => {
     let attempts = 0;
 
     class TestService {
@@ -19,21 +23,21 @@ describe('@Retryable', () => {
       })
       async doWork(): Promise<string> {
         attempts++;
-        if (attempts < 3) throw new Error('fail');
-        return 'success';
+        if (attempts < 3) throw new Error("fail");
+        return "success";
       }
     }
 
     const service = new TestService();
     const result = await service.doWork();
 
-    expect(result).toBe('success');
+    expect(result).toBe("success");
     expect(attempts).toBe(3);
   });
 
-  it('preserves this context', async () => {
+  it("preserves this context", async () => {
     class TestService {
-      private value = 'hello';
+      private value = "hello";
 
       @Retryable({
         maxAttempts: 2,
@@ -47,18 +51,18 @@ describe('@Retryable', () => {
     const service = new TestService();
     const result = await service.getValue();
 
-    expect(result).toBe('hello');
+    expect(result).toBe("hello");
   });
 
-  it('calls recover method on exhaustion', async () => {
+  it("calls recover method on exhaustion", async () => {
     class TestService {
       @Retryable({
         maxAttempts: 2,
         backoffPolicy: new NoBackoff(),
-        recover: 'handleError',
+        recover: "handleError",
       })
       async doWork(): Promise<string> {
-        throw new Error('always fails');
+        throw new Error("always fails");
       }
 
       async handleError(error: Error, ..._args: unknown[]): Promise<string> {
@@ -69,10 +73,10 @@ describe('@Retryable', () => {
     const service = new TestService();
     const result = await service.doWork();
 
-    expect(result).toBe('recovered: always fails');
+    expect(result).toBe("recovered: always fails");
   });
 
-  it('passes arguments to original method', async () => {
+  it("passes arguments to original method", async () => {
     class TestService {
       @Retryable({
         maxAttempts: 2,
@@ -89,11 +93,11 @@ describe('@Retryable', () => {
     expect(result).toBe(5);
   });
 
-  it('throws original non-retryable error when it occurs on last attempt', async () => {
+  it("throws original non-retryable error when it occurs on last attempt", async () => {
     class RetryableError extends Error {}
     class NonRetryableError extends Error {}
 
-    const nonRetryableError = new NonRetryableError('non-retryable on last attempt');
+    const nonRetryableError = new NonRetryableError("non-retryable on last attempt");
     const retryPolicy: RetryPolicy = {
       shouldRetry(error: unknown): boolean {
         return error instanceof RetryableError;
@@ -113,7 +117,7 @@ describe('@Retryable', () => {
         attempts++;
 
         if (attempts < 3) {
-          throw new RetryableError('retryable');
+          throw new RetryableError("retryable");
         }
 
         throw nonRetryableError;
@@ -126,8 +130,8 @@ describe('@Retryable', () => {
     expect(attempts).toBe(3);
   });
 
-  it('wraps exhausted error in RetryExhaustedProblem when wrapExhausted is true', async () => {
-    const originalError = new Error('fail');
+  it("wraps exhausted error in RetryExhaustedProblem when wrapExhausted is true", async () => {
+    const originalError = new Error("fail");
 
     class TestService {
       @Retryable({ maxAttempts: 2, backoffPolicy: new NoBackoff(), wrapExhausted: true })
@@ -140,8 +144,8 @@ describe('@Retryable', () => {
     await expect(service.doWork()).rejects.toBeInstanceOf(RetryExhaustedProblem);
   });
 
-  it('throws original error when wrapExhausted is false (default)', async () => {
-    const originalError = new Error('original');
+  it("throws original error when wrapExhausted is false (default)", async () => {
+    const originalError = new Error("original");
 
     class TestService {
       @Retryable({ maxAttempts: 2, backoffPolicy: new NoBackoff() })
@@ -154,7 +158,7 @@ describe('@Retryable', () => {
     await expect(service.doWork()).rejects.toBe(originalError);
   });
 
-  it('calls listener onError and onSuccess correctly', async () => {
+  it("calls listener onError and onSuccess correctly", async () => {
     const onError = vi.fn();
     const onSuccess = vi.fn();
     const errorAttempts: number[] = [];
@@ -184,21 +188,21 @@ describe('@Retryable', () => {
           throw new Error(`fail-${attempts}`);
         }
 
-        return 'success';
+        return "success";
       }
     }
 
     const service = new TestService();
     const result = await service.doWork();
 
-    expect(result).toBe('success');
+    expect(result).toBe("success");
     expect(onError).toHaveBeenCalledTimes(2);
     expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(errorAttempts).toEqual([1, 2]);
     expect(successAttempts).toEqual([3]);
   });
 
-  it('calls listener onExhausted when retries are exhausted', async () => {
+  it("calls listener onExhausted when retries are exhausted", async () => {
     const onExhausted = vi.fn();
 
     class TestService {
@@ -212,18 +216,18 @@ describe('@Retryable', () => {
         ],
       })
       async doWork(): Promise<void> {
-        throw new Error('always fail');
+        throw new Error("always fail");
       }
     }
 
     const service = new TestService();
 
-    await expect(service.doWork()).rejects.toThrow('always fail');
+    await expect(service.doWork()).rejects.toThrow("always fail");
     expect(onExhausted).toHaveBeenCalledTimes(1);
   });
 
-  it('creates circuit breaker and throws CircuitBreakerOpenProblem when threshold exceeded', async () => {
-    const getStateSpy = vi.spyOn(InMemoryCircuitBreakerStateStore.prototype, 'getState');
+  it("creates circuit breaker and throws CircuitBreakerOpenProblem when threshold exceeded", async () => {
+    const getStateSpy = vi.spyOn(InMemoryCircuitBreakerStateStore.prototype, "getState");
     let attempts = 0;
 
     class TestService {
@@ -238,7 +242,7 @@ describe('@Retryable', () => {
       })
       async doWork(): Promise<void> {
         attempts++;
-        throw new Error('fail');
+        throw new Error("fail");
       }
     }
 
@@ -253,7 +257,7 @@ describe('@Retryable', () => {
     }
   });
 
-  it('keeps the default circuit id shared across different arguments', async () => {
+  it("keeps the default circuit id shared across different arguments", async () => {
     const attempts: string[] = [];
 
     class TestService {
@@ -274,13 +278,13 @@ describe('@Retryable', () => {
 
     const service = new TestService();
 
-    await expect(service.doWork('tenant-a')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
-    await expect(service.doWork('tenant-b')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    await expect(service.doWork("tenant-a")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    await expect(service.doWork("tenant-b")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
 
-    expect(attempts).toEqual(['tenant-a', 'tenant-b']);
+    expect(attempts).toEqual(["tenant-a", "tenant-b"]);
   });
 
-  it('allows custom circuit ids to isolate circuit breaker state', async () => {
+  it("allows custom circuit ids to isolate circuit breaker state", async () => {
     const attempts: string[] = [];
 
     class TestService {
@@ -302,47 +306,47 @@ describe('@Retryable', () => {
 
     const service = new TestService();
 
-    await expect(service.doWork('tenant-a')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
-    await expect(service.doWork('tenant-b')).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    await expect(service.doWork("tenant-a")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    await expect(service.doWork("tenant-b")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
 
-    expect(attempts).toEqual(['tenant-a', 'tenant-b']);
+    expect(attempts).toEqual(["tenant-a", "tenant-b"]);
   });
 
-  it('calls recover only when error matches recover type', async () => {
+  it("calls recover only when error matches recover type", async () => {
     class SpecificError extends Error {
       constructor(..._args: unknown[]) {
-        super('specific');
+        super("specific");
       }
     }
 
     class OtherError extends Error {
       constructor(..._args: unknown[]) {
-        super('other');
+        super("other");
       }
     }
 
     class TestService {
       @Retryable({ maxAttempts: 1, backoffPolicy: new NoBackoff() })
       async doWork(useSpecific: boolean): Promise<string> {
-        throw useSpecific ? new SpecificError('specific') : new OtherError('other');
+        throw useSpecific ? new SpecificError("specific") : new OtherError("other");
       }
 
       @Recover(SpecificError)
       async handleSpecific(_error: SpecificError): Promise<string> {
-        return 'recovered';
+        return "recovered";
       }
     }
 
     const service = new TestService();
 
-    await expect(service.doWork(true)).resolves.toBe('recovered');
+    await expect(service.doWork(true)).resolves.toBe("recovered");
     await expect(service.doWork(false)).rejects.toBeInstanceOf(OtherError);
   });
 
-  it('fails fast when duplicate typed recover handlers are registered', () => {
+  it("fails fast when duplicate typed recover handlers are registered", () => {
     class SpecificError extends Error {
       constructor(..._args: unknown[]) {
-        super('specific');
+        super("specific");
       }
     }
 
@@ -350,12 +354,12 @@ describe('@Retryable', () => {
       class TestService {
         @Recover(SpecificError)
         async handleFirst(_error: SpecificError): Promise<string> {
-          return 'first';
+          return "first";
         }
 
         @Recover(SpecificError)
         async handleSecond(_error: SpecificError): Promise<string> {
-          return 'second';
+          return "second";
         }
       }
 
@@ -363,17 +367,17 @@ describe('@Retryable', () => {
     }).toThrow(DuplicateRecoverHandlerProblem);
   });
 
-  it('fails fast when duplicate catch-all recover handlers are registered', () => {
+  it("fails fast when duplicate catch-all recover handlers are registered", () => {
     expect(() => {
       class TestService {
         @Recover()
         async handleFirst(_error: Error): Promise<string> {
-          return 'first';
+          return "first";
         }
 
         @Recover()
         async handleSecond(_error: Error): Promise<string> {
-          return 'second';
+          return "second";
         }
       }
 
@@ -381,7 +385,7 @@ describe('@Retryable', () => {
     }).toThrow(DuplicateRecoverHandlerProblem);
   });
 
-  it('uses lambdaTimeoutReserveMs when lambda context provided', async () => {
+  it("uses lambdaTimeoutReserveMs when lambda context provided", async () => {
     class TestService {
       @Retryable({
         maxAttempts: 2,
@@ -389,7 +393,7 @@ describe('@Retryable', () => {
         lambdaTimeoutReserveMs: 50,
       })
       async doWork(): Promise<void> {
-        throw new Error('fail');
+        throw new Error("fail");
       }
     }
 
@@ -399,8 +403,8 @@ describe('@Retryable', () => {
         getRemainingTimeInMillis: () => 60,
       },
       async () => {
-        await expect(service.doWork()).rejects.toThrow('Lambda timeout guard');
-      }
+        await expect(service.doWork()).rejects.toThrow("Lambda timeout guard");
+      },
     );
   });
 });

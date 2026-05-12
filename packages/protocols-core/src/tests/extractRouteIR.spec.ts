@@ -1,10 +1,10 @@
-import 'reflect-metadata';
-import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
-import { extractRouteIR } from '../libs/extractRouteIR';
-import { Body, Controller, Get, Param, Post, Query } from './helpers/test-decorators';
+import "reflect-metadata";
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
+import { extractRouteIR } from "../libs/extractRouteIR";
+import { Body, Controller, Get, Param, Post, Query } from "./helpers/test-decorators";
 
-const RESPONSE_SCHEMA_KEY = Symbol.for('croco:rest:responseSchema');
+const RESPONSE_SCHEMA_KEY = Symbol.for("croco:rest:responseSchema");
 
 function ResponseSchema(schema: z.ZodType): MethodDecorator {
   return (target, propertyKey) => {
@@ -14,35 +14,35 @@ function ResponseSchema(schema: z.ZodType): MethodDecorator {
   };
 }
 
-describe('extractRouteIR', () => {
-  it('should extract a GET route with a path param', () => {
-    @Controller('/users')
+describe("extractRouteIR", () => {
+  it("should extract a GET route with a path param", () => {
+    @Controller("/users")
     class UsersController {
-      @Get('/:id')
-      getUser(@Param('id') _id: string): void {}
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
     }
 
     const routes = extractRouteIR(UsersController);
 
     expect(routes).toHaveLength(1);
     expect(routes[0]).toMatchObject({
-      controllerName: 'UsersController',
-      methodName: 'getUser',
-      httpMethod: 'GET',
-      path: '/users/:id',
+      controllerName: "UsersController",
+      methodName: "getUser",
+      httpMethod: "GET",
+      path: "/users/:id",
       domain: null,
       inputSchema: null,
       outputSchema: null,
     });
-    expect(routes[0]?.params).toEqual([{ kind: 'path', name: 'id', schema: null }]);
+    expect(routes[0]?.params).toEqual([{ kind: "path", name: "id", schema: null }]);
   });
 
-  it('should extract a POST route with body schema as input schema', () => {
+  it("should extract a POST route with body schema as input schema", () => {
     const createOrderSchema = z.object({ productId: z.string() });
 
-    @Controller('/orders')
+    @Controller("/orders")
     class OrdersController {
-      @Post('/')
+      @Post("/")
       createOrder(@Body(createOrderSchema) _body: z.infer<typeof createOrderSchema>): void {}
     }
 
@@ -50,23 +50,23 @@ describe('extractRouteIR', () => {
 
     expect(routes).toHaveLength(1);
     expect(routes[0]).toMatchObject({
-      controllerName: 'OrdersController',
-      methodName: 'createOrder',
-      httpMethod: 'POST',
-      path: '/orders',
+      controllerName: "OrdersController",
+      methodName: "createOrder",
+      httpMethod: "POST",
+      path: "/orders",
       domain: null,
       outputSchema: null,
     });
     expect(routes[0]?.inputSchema).toBe(createOrderSchema);
-    expect(routes[0]?.params).toEqual([{ kind: 'body', name: '', schema: createOrderSchema }]);
+    expect(routes[0]?.params).toEqual([{ kind: "body", name: "", schema: createOrderSchema }]);
   });
 
-  it('should set inputSchemas.body for a POST route with a body schema', () => {
+  it("should set inputSchemas.body for a POST route with a body schema", () => {
     const createUserSchema = z.object({ name: z.string() });
 
-    @Controller('/users')
+    @Controller("/users")
     class UsersController {
-      @Post('/')
+      @Post("/")
       createUser(@Body(createUserSchema) _body: z.infer<typeof createUserSchema>): void {}
     }
 
@@ -79,11 +79,11 @@ describe('extractRouteIR', () => {
     expect(routes[0]?.inputSchema).toBe(createUserSchema);
   });
 
-  it('should set inputSchemas.path with default string schema for a path param without explicit schema', () => {
-    @Controller('/users')
+  it("should set inputSchemas.path with default string schema for a path param without explicit schema", () => {
+    @Controller("/users")
     class UsersController {
-      @Get('/:id')
-      getUser(@Param('id') _id: string): void {}
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
     }
 
     const routes = extractRouteIR(UsersController);
@@ -91,17 +91,17 @@ describe('extractRouteIR', () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.inputSchemas.body).toBeNull();
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
-    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape).toHaveProperty('id');
+    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape).toHaveProperty("id");
     expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeNull();
-    expect(routes[0]?.params).toEqual([{ kind: 'path', name: 'id', schema: null }]);
+    expect(routes[0]?.params).toEqual([{ kind: "path", name: "id", schema: null }]);
   });
 
-  it('should extract path and query params for a route', () => {
-    @Controller('/items')
+  it("should extract path and query params for a route", () => {
+    @Controller("/items")
     class ItemsController {
-      @Get('/:id')
-      getItem(@Param('id') _id: string, @Query('filter') _filter: string): void {}
+      @Get("/:id")
+      getItem(@Param("id") _id: string, @Query("filter") _filter: string): void {}
     }
 
     const routes = extractRouteIR(ItemsController);
@@ -109,21 +109,21 @@ describe('extractRouteIR', () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.params).toHaveLength(2);
     expect(routes[0]?.params).toEqual([
-      { kind: 'path', name: 'id', schema: null },
-      { kind: 'query', name: 'filter', schema: null },
+      { kind: "path", name: "id", schema: null },
+      { kind: "query", name: "filter", schema: null },
     ]);
   });
 
-  it('should set inputSchemas for body, path, and query params', () => {
+  it("should set inputSchemas for body, path, and query params", () => {
     const updateItemSchema = z.object({ name: z.string() });
 
-    @Controller('/items')
+    @Controller("/items")
     class ItemsController {
-      @Post('/:id')
+      @Post("/:id")
       updateItem(
         @Body(updateItemSchema) _body: z.infer<typeof updateItemSchema>,
-        @Param('id', z.string()) _id: string,
-        @Query('filter', z.string()) _filter: string
+        @Param("id", z.string()) _id: string,
+        @Query("filter", z.string()) _filter: string,
       ): void {}
     }
 
@@ -134,18 +134,20 @@ describe('extractRouteIR', () => {
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
     expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeTruthy();
-    expect((routes[0]?.inputSchemas.query as z.ZodObject<any>).shape.filter).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.query as z.ZodObject<any>).shape.filter).toBeInstanceOf(
+      z.ZodString,
+    );
     expect(routes[0]?.inputSchema).toBe(updateItemSchema);
   });
 
-  it('should extract outputSchema from response schema metadata', () => {
+  it("should extract outputSchema from response schema metadata", () => {
     const userSchema = z.object({ id: z.string() });
 
-    @Controller('/users')
+    @Controller("/users")
     class UsersController {
-      @Get('/:id')
+      @Get("/:id")
       @ResponseSchema(userSchema)
-      getUser(@Param('id') _id: string): void {}
+      getUser(@Param("id") _id: string): void {}
     }
 
     const routes = extractRouteIR(UsersController);
@@ -154,11 +156,11 @@ describe('extractRouteIR', () => {
     expect(routes[0]?.outputSchema).toBe(userSchema);
   });
 
-  it('should set outputSchema to null when response schema metadata is missing', () => {
-    @Controller('/users')
+  it("should set outputSchema to null when response schema metadata is missing", () => {
+    @Controller("/users")
     class UsersController {
-      @Get('/:id')
-      getUser(@Param('id') _id: string): void {}
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
     }
 
     const routes = extractRouteIR(UsersController);
@@ -167,7 +169,7 @@ describe('extractRouteIR', () => {
     expect(routes[0]?.outputSchema).toBeNull();
   });
 
-  it('should return an empty array for a class without route metadata', () => {
+  it("should return an empty array for a class without route metadata", () => {
     class PlainClass {}
 
     expect(extractRouteIR(PlainClass)).toEqual([]);

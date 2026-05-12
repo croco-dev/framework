@@ -15,26 +15,26 @@ import {
   EntitlementManager,
   InMemoryPlanEntitlementRegistry,
   StaticSubscriptionProvider,
-} from '@croco/entitlements-core';
+} from "@croco/entitlements-core";
 
 const registry = new InMemoryPlanEntitlementRegistry();
-registry.register('pro', [
+registry.register("pro", [
   {
-    featureKey: 'api_calls',
-    type: 'metered',
+    featureKey: "api_calls",
+    type: "metered",
     quota: 100,
-    overagePolicy: 'BLOCK',
+    overagePolicy: "BLOCK",
   },
 ]);
 
 const manager = new EntitlementManager(
   registry,
-  new StaticSubscriptionProvider('pro'),
+  new StaticSubscriptionProvider("pro"),
   quotaChecker,
-  meterLookup
+  meterLookup,
 );
 
-const result = await manager.check('tenant-1', 'api_calls');
+const result = await manager.check("tenant-1", "api_calls");
 ```
 
 ## API 레퍼런스

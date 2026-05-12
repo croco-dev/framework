@@ -1,7 +1,7 @@
-import { Component } from '@croco/framework-context';
-import type { Logger } from '@croco/framework-logger';
-import { Problem, ProblemCategoryMapper, type ProblemDetails } from '@croco/problems-core';
-import type { CrocoHttpContext } from './types';
+import { Component } from "@croco/framework-context";
+import type { Logger } from "@croco/framework-logger";
+import { Problem, ProblemCategoryMapper, type ProblemDetails } from "@croco/problems-core";
+import type { CrocoHttpContext } from "./types";
 
 @Component()
 /**
@@ -21,18 +21,18 @@ export class ErrorHandler {
 
     return ctx.jsonResponse(
       {
-        type: 'about:blank',
-        title: 'Internal Server Error',
+        type: "about:blank",
+        title: "Internal Server Error",
         status: 500,
-        detail: 'An unexpected error occurred',
+        detail: "An unexpected error occurred",
       },
-      500
+      500,
     );
   }
 
   private handleProblem(problem: Problem, ctx: CrocoHttpContext): Response {
     const status = ProblemCategoryMapper.toHttpStatus(problem.category);
-    const reservedFields = new Set(['type', 'title', 'status', 'code', 'detail', 'instance']);
+    const reservedFields = new Set(["type", "title", "status", "code", "detail", "instance"]);
 
     const safeExtensions = Object.entries(problem.extensions ?? {}).reduce(
       (acc, [key, value]) => {
@@ -41,7 +41,7 @@ export class ErrorHandler {
         }
         return acc;
       },
-      {} as Record<string, unknown>
+      {} as Record<string, unknown>,
     );
 
     const body: ProblemDetails = {
@@ -58,16 +58,17 @@ export class ErrorHandler {
   }
 
   private handleGenericError(error: Error, ctx: CrocoHttpContext): Response {
-    this.logger.error('Unhandled error:', error);
+    this.logger.error("Unhandled error:", error);
 
     return ctx.jsonResponse(
       {
-        type: 'about:blank',
-        title: 'Internal Server Error',
+        type: "about:blank",
+        title: "Internal Server Error",
         status: 500,
-        detail: process.env.NODE_ENV === 'production' ? 'An internal error occurred' : error.message,
+        detail:
+          process.env.NODE_ENV === "production" ? "An internal error occurred" : error.message,
       },
-      500
+      500,
     );
   }
 }

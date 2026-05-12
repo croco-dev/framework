@@ -1,7 +1,7 @@
-import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from '@croco/search-core';
-import { type SQL, sql } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { SearchStrategy } from '../types';
+import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
+import { type SQL, sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { SearchStrategy } from "../types";
 
 /**
  * `pg_trgm` 확장을 이용한 유사도 검색 전략입니다.
@@ -39,16 +39,16 @@ export class PgTrgmStrategy implements SearchStrategy {
   buildIndexQuery(table: string, document: SearchDocument, tenantId: string): SQL {
     const tableIdentifier = sql.identifier(table);
 
-    const columns = Object.keys(document).concat('tenant_id');
+    const columns = Object.keys(document).concat("tenant_id");
     const values = Object.values(document).concat(tenantId);
 
     const columnChunks = sql.join(
       columns.map((c) => sql.identifier(c)),
-      sql`, `
+      sql`, `,
     );
     const valueChunks = sql.join(
       values.map((v) => sql.param(v)),
-      sql`, `
+      sql`, `,
     );
 
     return sql`INSERT INTO ${tableIdentifier} (${columnChunks}) VALUES (${valueChunks})`;
@@ -69,7 +69,7 @@ export class PgTrgmStrategy implements SearchStrategy {
    * 전략에 필요한 PostgreSQL 확장 목록을 반환합니다.
    */
   getRequiredExtensions(): string[] {
-    return ['pg_trgm'];
+    return ["pg_trgm"];
   }
 
   /**

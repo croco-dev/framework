@@ -100,9 +100,9 @@ cd packages/retry-core && pnpm vitest run          # Direct vitest
 Always reset the DI container in `beforeEach`:
 
 ```typescript
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from "vitest";
 
-describe('MyService', () => {
+describe("MyService", () => {
   let service!: MyService;
 
   beforeEach(() => {
@@ -178,11 +178,11 @@ docs: update telemetry usage examples
 
 Hooks run automatically after `pnpm install`:
 
-| Hook | Trigger | What it does |
-|------|---------|--------------|
-| `pre-commit` | `git commit` | Runs `biome check --write` on staged files |
-| `pre-push` | `git push` | Runs `pnpm test` and `pnpm typecheck` |
-| `post-merge` | `git merge` / `git pull` | Runs `pnpm install` |
+| Hook         | Trigger                  | What it does                               |
+| ------------ | ------------------------ | ------------------------------------------ |
+| `pre-commit` | `git commit`             | Runs `biome check --write` on staged files |
+| `pre-push`   | `git push`               | Runs `pnpm test` and `pnpm typecheck`      |
+| `post-merge` | `git merge` / `git pull` | Runs `pnpm install`                        |
 
 The pre-commit hook auto-fixes formatting, so your commit will include the fixed files automatically.
 
@@ -217,19 +217,19 @@ packages/[name]/
 
 ## Documentation Architecture
 
-| Document | Purpose | Update Trigger |
-|----------|---------|---------------|
-| `README.md` | Entry point, architecture overview, package catalog | Per release/milestone |
-| `CONTRIBUTING.md` | Development workflow, code style, testing guide | Per policy change |
-| `packages/*/README.md` | Package-specific API docs, usage examples | Per package release |
-| `AGENTS.md` | AI coding agent conventions | Per convention change |
+| Document               | Purpose                                             | Update Trigger        |
+| ---------------------- | --------------------------------------------------- | --------------------- |
+| `README.md`            | Entry point, architecture overview, package catalog | Per release/milestone |
+| `CONTRIBUTING.md`      | Development workflow, code style, testing guide     | Per policy change     |
+| `packages/*/README.md` | Package-specific API docs, usage examples           | Per package release   |
+| `AGENTS.md`            | AI coding agent conventions                         | Per convention change |
 
 ### Release Documentation Checklist
 
 Before each release, verify documentation consistency:
 
 - [ ] README.md package catalog tables match `ls packages/` output
-- [ ] Roadmap sections updated (no stale Q*/YYYY dates)
+- [ ] Roadmap sections updated (no stale Q\*/YYYY dates)
 - [ ] New packages have READMEs with: overview, API surface, dependencies
 - [ ] Deprecated/removed packages removed from catalog
 - [ ] Development workflow commands still accurate

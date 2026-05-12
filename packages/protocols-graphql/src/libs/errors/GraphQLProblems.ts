@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class GraphQLValidationProblem extends Problem {
   constructor(code: string, detail: string, extensions?: Record<string, unknown>) {
@@ -21,9 +21,9 @@ export class GraphQLAuthenticationProblem extends Problem {
 export class GraphQLNotFoundProblem extends Problem {
   constructor(resource: string, id?: string) {
     super(
-      'GRAPHQL_NOT_FOUND',
+      "GRAPHQL_NOT_FOUND",
       ProblemCategory.NotFound,
-      id ? `${resource} with id '${id}' not found` : `${resource} not found`
+      id ? `${resource} with id '${id}' not found` : `${resource} not found`,
     );
   }
 }

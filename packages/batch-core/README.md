@@ -28,7 +28,7 @@ pnpm add @croco/batch-core
 ### 1. Reader, Processor, Writer 구현
 
 ```typescript
-import type { ItemReader, ItemProcessor, ItemWriter } from '@croco/batch-core';
+import type { ItemReader, ItemProcessor, ItemWriter } from "@croco/batch-core";
 
 // Reader
 class UserReader implements ItemReader<User> {
@@ -61,17 +61,15 @@ class EventWriter implements ItemWriter<UserActiveEvent> {
 `JobBuilder`를 사용하여 Step과 Job을 구성합니다.
 
 ```typescript
-import { JobBuilder, Step } from '@croco/batch-core';
+import { JobBuilder, Step } from "@croco/batch-core";
 
 const userStep = new Step({
-  name: 'process-active-users',
+  name: "process-active-users",
   reader: new UserReader(),
   processor: new UserActiveProcessor(),
   writer: new EventWriter(),
-  chunkSize: 100
+  chunkSize: 100,
 });
 
-const job = new JobBuilder('daily-user-batch')
-  .start(userStep)
-  .build();
+const job = new JobBuilder("daily-user-batch").start(userStep).build();
 ```

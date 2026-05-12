@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type { z } from "zod";
 
 export interface RouteIR {
   controllerName: string;
@@ -19,7 +19,7 @@ export type RouteInputSchemas = {
 };
 
 export interface ParamIR {
-  kind: 'path' | 'query' | 'body' | 'header' | 'ctx';
+  kind: "path" | "query" | "body" | "header" | "ctx";
   name: string;
   schema: z.ZodType | null;
 }

@@ -1,12 +1,12 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 
 export class ApiKeyGenerator {
   constructor(
     private readonly shortLength: number = 12,
-    private readonly longLength: number = 32
+    private readonly longLength: number = 32,
   ) {}
 
-  generate(prefix: string = 'sk'): {
+  generate(prefix: string = "sk"): {
     prefix: string;
     shortToken: string;
     longToken: string;
@@ -19,7 +19,7 @@ export class ApiKeyGenerator {
   }
 
   parse(rawKey: string): { prefix: string; shortToken: string; longToken: string } | null {
-    const parts = rawKey.split('_');
+    const parts = rawKey.split("_");
     if (parts.length !== 3) return null;
     const [prefix, shortToken, longToken] = parts;
     if (!prefix || !shortToken || !longToken) return null;
@@ -27,6 +27,6 @@ export class ApiKeyGenerator {
   }
 
   private randomString(length: number): string {
-    return randomBytes(length).toString('base64url').replace(/_/g, '~').slice(0, length);
+    return randomBytes(length).toString("base64url").replace(/_/g, "~").slice(0, length);
   }
 }

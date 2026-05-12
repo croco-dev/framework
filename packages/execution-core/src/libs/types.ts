@@ -11,7 +11,14 @@
  * Terminal states (no outgoing transitions):
  * - completed, cancelled, failed (when max retries exhausted)
  */
-export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'retrying' | 'timed_out';
+export type ExecutionStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "retrying"
+  | "timed_out";
 
 /**
  * Error details for failed executions.

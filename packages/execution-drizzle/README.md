@@ -11,24 +11,24 @@ pnpm add @croco/execution-drizzle @croco/execution-core drizzle-orm ulid
 ## 사용법
 
 ```typescript
-import { DrizzleExecutionStore } from '@croco/execution-drizzle';
+import { DrizzleExecutionStore } from "@croco/execution-drizzle";
 
 const store = new DrizzleExecutionStore(db);
 
 const execution = await store.create({
-  type: 'task',
-  payload: { job: 'email-send' },
+  type: "task",
+  payload: { job: "email-send" },
   maxAttempts: 3,
-  idempotencyKey: 'email:tenant-1:user-1',
+  idempotencyKey: "email:tenant-1:user-1",
 });
 
 await store.update(execution.id, {
-  status: 'running',
+  status: "running",
   attempts: 1,
   startedAt: new Date(),
 });
 
-const pending = await store.list({ status: 'pending', limit: 20 });
+const pending = await store.list({ status: "pending", limit: 20 });
 ```
 
 ## API 레퍼런스

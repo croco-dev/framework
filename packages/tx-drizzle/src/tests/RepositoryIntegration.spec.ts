@@ -1,10 +1,10 @@
-import { registerBatchLoaderFactory } from '@croco/dataloader-core';
-import { Container, Context } from '@croco/framework-context';
-import { BatchLoad } from '@croco/repository-core';
-import { Transactional, type TxAdapter, TxManager, TxManagerRegistry } from '@croco/tx-core';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AbstractDrizzleRepository } from '../libs/AbstractDrizzleRepository';
-import type { DrizzleDb } from '../libs/types';
+import { registerBatchLoaderFactory } from "@croco/dataloader-core";
+import { Container, Context } from "@croco/framework-context";
+import { BatchLoad } from "@croco/repository-core";
+import { Transactional, type TxAdapter, TxManager, TxManagerRegistry } from "@croco/tx-core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AbstractDrizzleRepository } from "../libs/AbstractDrizzleRepository";
+import type { DrizzleDb } from "../libs/types";
 
 type UserEntity = {
   id: string;
@@ -22,7 +22,7 @@ type MockDb = DrizzleDb<TxClient> & {
 class IntegrationRepository extends AbstractDrizzleRepository<UserEntity, string, MockDb> {
   readonly batchCalls: Array<{ ids: string[]; txId: string }> = [];
 
-  @BatchLoad({ by: 'id' })
+  @BatchLoad({ by: "id" })
   async findById(id: string): Promise<UserEntity | null> {
     return { id, txId: this.getClientId() };
   }
@@ -48,11 +48,11 @@ class IntegrationRepository extends AbstractDrizzleRepository<UserEntity, string
 
   private getClientId(): string {
     const dbOrTx = this.getDb();
-    if ('txId' in dbOrTx && typeof dbOrTx.txId === 'string') {
+    if ("txId" in dbOrTx && typeof dbOrTx.txId === "string") {
       return dbOrTx.txId;
     }
 
-    return 'root';
+    return "root";
   }
 }
 
@@ -65,7 +65,7 @@ class IntegrationService {
   }
 }
 
-describe('Repository + BatchLoad + Transaction integration', () => {
+describe("Repository + BatchLoad + Transaction integration", () => {
   let adapter!: TxAdapter<TxClient>;
   let repository!: IntegrationRepository;
   let service!: IntegrationService;
@@ -80,7 +80,10 @@ describe('Repository + BatchLoad + Transaction integration', () => {
       txCounter += 1;
       return fn({ txId: `tx-${txCounter}` });
     };
-    const savepoint = async <T>(client: TxClient, fn: (nested: TxClient) => Promise<T>): Promise<T> => fn(client);
+    const savepoint = async <T>(
+      client: TxClient,
+      fn: (nested: TxClient) => Promise<T>,
+    ): Promise<T> => fn(client);
 
     adapter = {
       transaction: vi.fn(transaction) as typeof transaction,
@@ -91,10 +94,11 @@ describe('Repository + BatchLoad + Transaction integration', () => {
     const txManager = new TxManager(adapter);
     TxManagerRegistry.register(txManager);
 
-    const dbTransaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> => fn({ txId: 'db-client' });
+    const dbTransaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> =>
+      fn({ txId: "db-client" });
 
     const db: MockDb = {
-      name: 'db',
+      name: "db",
       transaction: vi.fn(dbTransaction) as typeof dbTransaction,
     };
 
@@ -106,36 +110,36 @@ describe('Repository + BatchLoad + Transaction integration', () => {
     Container.reset();
   });
 
-  it('should batch concurrent calls through transactional chain', async () => {
-    await Context.run({ requestId: 'integration-1' }, async () => {
-      const [first, second, third] = await service.loadUsers(['1', '2', '1']);
+  it("should batch concurrent calls through transactional chain", async () => {
+    await Context.run({ requestId: "integration-1" }, async () => {
+      const [first, second, third] = await service.loadUsers(["1", "2", "1"]);
 
-      expect(first).toEqual({ id: '1', txId: 'tx-1' });
-      expect(second).toEqual({ id: '2', txId: 'tx-1' });
-      expect(third).toEqual({ id: '1', txId: 'tx-1' });
+      expect(first).toEqual({ id: "1", txId: "tx-1" });
+      expect(second).toEqual({ id: "2", txId: "tx-1" });
+      expect(third).toEqual({ id: "1", txId: "tx-1" });
     });
 
     expect(repository.batchCalls).toHaveLength(1);
     expect(repository.batchCalls[0]).toEqual({
-      ids: ['1', '2'],
-      txId: 'tx-1',
+      ids: ["1", "2"],
+      txId: "tx-1",
     });
 
     expect(adapter.transaction).toHaveBeenCalledTimes(1);
   });
 
-  it('should isolate cache across transaction contexts', async () => {
-    await Context.run({ requestId: 'integration-2-a' }, async () => {
-      const [user] = await service.loadUsers(['same-key']);
-      expect(user).toEqual({ id: 'same-key', txId: 'tx-1' });
+  it("should isolate cache across transaction contexts", async () => {
+    await Context.run({ requestId: "integration-2-a" }, async () => {
+      const [user] = await service.loadUsers(["same-key"]);
+      expect(user).toEqual({ id: "same-key", txId: "tx-1" });
     });
 
-    await Context.run({ requestId: 'integration-2-b' }, async () => {
-      const [user] = await service.loadUsers(['same-key']);
-      expect(user).toEqual({ id: 'same-key', txId: 'tx-2' });
+    await Context.run({ requestId: "integration-2-b" }, async () => {
+      const [user] = await service.loadUsers(["same-key"]);
+      expect(user).toEqual({ id: "same-key", txId: "tx-2" });
     });
 
     expect(repository.batchCalls).toHaveLength(2);
-    expect(repository.batchCalls.map((call) => call.txId)).toEqual(['tx-1', 'tx-2']);
+    expect(repository.batchCalls.map((call) => call.txId)).toEqual(["tx-1", "tx-2"]);
   });
 });

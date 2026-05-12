@@ -1,15 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import 'reflect-metadata';
-import { Container, MetadataStorage } from '../index';
-import { CircularDependencyProblem } from '../libs/problems/CircularDependencyProblem';
+import { beforeEach, describe, expect, it } from "vitest";
+import "reflect-metadata";
+import { Container, MetadataStorage } from "../index";
+import { CircularDependencyProblem } from "../libs/problems/CircularDependencyProblem";
 
-describe('Container.validate', () => {
+describe("Container.validate", () => {
   beforeEach(() => {
     Container.reset();
     MetadataStorage.clear();
   });
 
-  it('should throw with full cycle path when circular dependency exists', () => {
+  it("should throw with full cycle path when circular dependency exists", () => {
     class ServiceA {
       constructor(_b: ServiceB) {}
     }
@@ -22,13 +22,13 @@ describe('Container.validate', () => {
       constructor(_a: ServiceA) {}
     }
 
-    Reflect.defineMetadata('design:paramtypes', [ServiceB], ServiceA);
-    Reflect.defineMetadata('design:paramtypes', [ServiceC], ServiceB);
-    Reflect.defineMetadata('design:paramtypes', [ServiceA], ServiceC);
+    Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceA);
+    Reflect.defineMetadata("design:paramtypes", [ServiceC], ServiceB);
+    Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceC);
 
-    Container.register(ServiceA, 'transient');
-    Container.register(ServiceB, 'transient');
-    Container.register(ServiceC, 'transient');
+    Container.register(ServiceA, "transient");
+    Container.register(ServiceB, "transient");
+    Container.register(ServiceC, "transient");
 
     expect(() => {
       Container.validate();
@@ -39,7 +39,7 @@ describe('Container.validate', () => {
     }).toThrowError(/Circular dependency detected: ServiceA → ServiceB → ServiceC → ServiceA/);
   });
 
-  it('should not throw when no circular dependency exists', () => {
+  it("should not throw when no circular dependency exists", () => {
     class ServiceA {}
 
     class ServiceB {
@@ -50,26 +50,26 @@ describe('Container.validate', () => {
       constructor(_b: ServiceB) {}
     }
 
-    Reflect.defineMetadata('design:paramtypes', [], ServiceA);
-    Reflect.defineMetadata('design:paramtypes', [ServiceA], ServiceB);
-    Reflect.defineMetadata('design:paramtypes', [ServiceB], ServiceC);
+    Reflect.defineMetadata("design:paramtypes", [], ServiceA);
+    Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceB);
+    Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceC);
 
-    Container.register(ServiceA, 'singleton');
-    Container.register(ServiceB, 'singleton');
-    Container.register(ServiceC, 'singleton');
+    Container.register(ServiceA, "singleton");
+    Container.register(ServiceB, "singleton");
+    Container.register(ServiceC, "singleton");
 
     expect(() => {
       Container.validate();
     }).not.toThrow();
   });
 
-  it('should detect self-referencing dependency', () => {
+  it("should detect self-referencing dependency", () => {
     class SelfReferencing {
       constructor(_self: SelfReferencing) {}
     }
 
-    Reflect.defineMetadata('design:paramtypes', [SelfReferencing], SelfReferencing);
-    Container.register(SelfReferencing, 'transient');
+    Reflect.defineMetadata("design:paramtypes", [SelfReferencing], SelfReferencing);
+    Container.register(SelfReferencing, "transient");
 
     expect(() => {
       Container.validate();
@@ -80,7 +80,7 @@ describe('Container.validate', () => {
     }).toThrowError(/Circular dependency detected: SelfReferencing → SelfReferencing/);
   });
 
-  it('should detect a cycle in a branched dependency graph', () => {
+  it("should detect a cycle in a branched dependency graph", () => {
     class SharedDependency {}
 
     class ServiceA {
@@ -99,35 +99,35 @@ describe('Container.validate', () => {
       constructor(_serviceB: ServiceB) {}
     }
 
-    Reflect.defineMetadata('design:paramtypes', [], SharedDependency);
-    Reflect.defineMetadata('design:paramtypes', [SharedDependency], ServiceA);
-    Reflect.defineMetadata('design:paramtypes', [ServiceC], ServiceB);
-    Reflect.defineMetadata('design:paramtypes', [ServiceD], ServiceC);
-    Reflect.defineMetadata('design:paramtypes', [ServiceB], ServiceD);
+    Reflect.defineMetadata("design:paramtypes", [], SharedDependency);
+    Reflect.defineMetadata("design:paramtypes", [SharedDependency], ServiceA);
+    Reflect.defineMetadata("design:paramtypes", [ServiceC], ServiceB);
+    Reflect.defineMetadata("design:paramtypes", [ServiceD], ServiceC);
+    Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceD);
 
-    Container.register(SharedDependency, 'singleton');
-    Container.register(ServiceA, 'singleton');
-    Container.register(ServiceB, 'singleton');
-    Container.register(ServiceC, 'singleton');
-    Container.register(ServiceD, 'singleton');
+    Container.register(SharedDependency, "singleton");
+    Container.register(ServiceA, "singleton");
+    Container.register(ServiceB, "singleton");
+    Container.register(ServiceC, "singleton");
+    Container.register(ServiceD, "singleton");
 
     expect(() => {
       Container.validate();
     }).toThrowError(/Circular dependency detected: ServiceB → ServiceC → ServiceD → ServiceB/);
   });
 
-  it('should re-run validation after removing a dependency registration', () => {
+  it("should re-run validation after removing a dependency registration", () => {
     class Dependency {}
 
     class Consumer {
       constructor(_dependency: Dependency) {}
     }
 
-    Reflect.defineMetadata('design:paramtypes', [], Dependency);
-    Reflect.defineMetadata('design:paramtypes', [Dependency], Consumer);
+    Reflect.defineMetadata("design:paramtypes", [], Dependency);
+    Reflect.defineMetadata("design:paramtypes", [Dependency], Consumer);
 
-    Container.register(Dependency, 'singleton');
-    Container.register(Consumer, 'singleton');
+    Container.register(Dependency, "singleton");
+    Container.register(Consumer, "singleton");
 
     expect(() => {
       Container.validate();
@@ -141,18 +141,18 @@ describe('Container.validate', () => {
     }).toThrow();
   });
 
-  it('should re-run validation after setting a dependency registration', () => {
+  it("should re-run validation after setting a dependency registration", () => {
     class Dependency {}
 
     class Consumer {
       constructor(_dependency: Dependency) {}
     }
 
-    Reflect.defineMetadata('design:paramtypes', [], Dependency);
-    Reflect.defineMetadata('design:paramtypes', [Dependency], Consumer);
+    Reflect.defineMetadata("design:paramtypes", [], Dependency);
+    Reflect.defineMetadata("design:paramtypes", [Dependency], Consumer);
 
-    Container.register(Dependency, 'singleton');
-    Container.register(Consumer, 'singleton');
+    Container.register(Dependency, "singleton");
+    Container.register(Consumer, "singleton");
 
     expect(() => {
       Container.validate();

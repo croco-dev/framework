@@ -1,4 +1,4 @@
-import type { CacheStore } from '@croco/cache-core';
+import type { CacheStore } from "@croco/cache-core";
 
 /**
  * ISR cache adapter contract.
@@ -10,7 +10,7 @@ export type IsrCacheAdapter = {
   invalidate: (key: string) => Promise<void>;
 };
 
-export type IsrCacheStore = Pick<CacheStore<string, Response>, 'getOrSet'>;
+export type IsrCacheStore = Pick<CacheStore<string, Response>, "getOrSet">;
 
 /**
  * InMemoryCacheStore-based ISR is non-durable and intended for local, development,

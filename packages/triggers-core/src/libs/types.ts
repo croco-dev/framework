@@ -1,7 +1,7 @@
 /**
  * Trigger types supported by the triggers-core package.
  */
-export type TriggerType = 'cron' | 'event' | 'webhook';
+export type TriggerType = "cron" | "event" | "webhook";
 
 /**
  * Base trigger metadata interface.
@@ -16,7 +16,7 @@ export type TriggerMetadata = {
  * Cron trigger metadata.
  */
 export type CronTriggerMetadata = TriggerMetadata & {
-  readonly type: 'cron';
+  readonly type: "cron";
   readonly expression: string;
   readonly options?: CronOptions;
 };
@@ -25,7 +25,7 @@ export type CronTriggerMetadata = TriggerMetadata & {
  * Event trigger metadata.
  */
 export type EventTriggerMetadata = TriggerMetadata & {
-  readonly type: 'event';
+  readonly type: "event";
   readonly event: string;
   readonly options?: EventOptions;
 };
@@ -34,7 +34,7 @@ export type EventTriggerMetadata = TriggerMetadata & {
  * Webhook trigger metadata.
  */
 export type WebhookTriggerMetadata = TriggerMetadata & {
-  readonly type: 'webhook';
+  readonly type: "webhook";
   readonly path: string;
   readonly method: string;
   readonly options?: WebhookOptions;
@@ -43,7 +43,10 @@ export type WebhookTriggerMetadata = TriggerMetadata & {
 /**
  * Union type for all trigger metadata types.
  */
-export type AnyTriggerMetadata = CronTriggerMetadata | EventTriggerMetadata | WebhookTriggerMetadata;
+export type AnyTriggerMetadata =
+  | CronTriggerMetadata
+  | EventTriggerMetadata
+  | WebhookTriggerMetadata;
 
 /**
  * Options for cron triggers.

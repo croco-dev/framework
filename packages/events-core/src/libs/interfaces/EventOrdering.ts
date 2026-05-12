@@ -1,9 +1,11 @@
-import type { DomainEvent } from '../DomainEvent';
+import type { DomainEvent } from "../DomainEvent";
 
 /**
  * 파티션 키 추출 함수 타입입니다.
  */
-export type PartitionKeyExtractor<TEvent extends DomainEvent = DomainEvent> = (event: TEvent) => string;
+export type PartitionKeyExtractor<TEvent extends DomainEvent = DomainEvent> = (
+  event: TEvent,
+) => string;
 
 /**
  * 순서 보장 정책입니다.
@@ -91,7 +93,9 @@ export interface EventOrdering {
    * 여러 이벤트를 순서대로 발행합니다.
    * @param events 이벤트와 파티션 키의 목록
    */
-  publishOrderedMany<TEvent extends DomainEvent>(events: Array<{ event: TEvent; partitionKey: string }>): Promise<void>;
+  publishOrderedMany<TEvent extends DomainEvent>(
+    events: Array<{ event: TEvent; partitionKey: string }>,
+  ): Promise<void>;
 
   /**
    * 특정 파티션의 처리 상태를 조회합니다.
@@ -161,7 +165,7 @@ export type OrderedEventContext = {
 /**
  * 이벤트 순서 전략입니다.
  */
-export type EventOrderingStrategy = 'sequential' | 'parallel' | 'buffered';
+export type EventOrderingStrategy = "sequential" | "parallel" | "buffered";
 
 /**
  * 순서 보장 설정입니다.

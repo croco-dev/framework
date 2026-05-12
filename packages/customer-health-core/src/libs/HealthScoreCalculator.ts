@@ -5,27 +5,34 @@ import type {
   HealthTrend,
   SignalCategory,
   TenantHealthScore,
-} from './types';
+} from "./types";
 
 export class HealthScoreCalculator {
   calculate(
-    signals: { category: string; name: string; value: number; weight: number; rawValue: unknown; collectedAt: Date }[],
-    profile: HealthScoreProfile
+    signals: {
+      category: string;
+      name: string;
+      value: number;
+      weight: number;
+      rawValue: unknown;
+      collectedAt: Date;
+    }[],
+    profile: HealthScoreProfile,
   ): TenantHealthScore {
     const now = new Date();
 
     if (signals.length === 0) {
       return {
-        tenantId: '',
+        tenantId: "",
         overallScore: 0,
-        status: 'critical',
+        status: "critical",
         categoryScores: {
           usage: 0,
           business: 0,
           engagement: 0,
         },
         signals: [],
-        trend: 'stable',
+        trend: "stable",
         calculatedAt: now,
       };
     }
@@ -61,39 +68,39 @@ export class HealthScoreCalculator {
 
     let status: HealthStatus;
     if (overallScore >= profile.thresholds.healthy) {
-      status = 'healthy';
+      status = "healthy";
     } else if (overallScore >= profile.thresholds.atRisk) {
-      status = 'at_risk';
+      status = "at_risk";
     } else {
-      status = 'critical';
+      status = "critical";
     }
 
     return {
-      tenantId: '',
+      tenantId: "",
       overallScore,
       status,
       categoryScores,
       signals: signals as HealthSignal[],
-      trend: 'stable',
+      trend: "stable",
       calculatedAt: now,
     };
   }
 
   determineTrend(currentScore: number, previousScore?: number): HealthTrend {
     if (previousScore === undefined) {
-      return 'stable';
+      return "stable";
     }
 
     const diff = currentScore - previousScore;
 
     if (diff >= 5) {
-      return 'improving';
+      return "improving";
     }
 
     if (diff <= -5) {
-      return 'declining';
+      return "declining";
     }
 
-    return 'stable';
+    return "stable";
   }
 }

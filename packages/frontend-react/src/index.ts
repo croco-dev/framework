@@ -7,7 +7,12 @@
  * createCrocoPageConfig 함수을 제공한다.
  */
 
-export type { CrocoPageConfig, CrocoPageOptions } from './libs/createCrocoPages';
-export { createCrocoPageConfig } from './libs/createCrocoPages';
-export { PageDataContext, PageDataProvider, usePageData, usePageMeta } from './libs/hooks/usePageData';
-export type { CrocoPageContext } from './libs/types';
+export type { CrocoPageConfig, CrocoPageOptions } from "./libs/createCrocoPages";
+export { createCrocoPageConfig } from "./libs/createCrocoPages";
+export {
+  PageDataContext,
+  PageDataProvider,
+  usePageData,
+  usePageMeta,
+} from "./libs/hooks/usePageData";
+export type { CrocoPageContext } from "./libs/types";

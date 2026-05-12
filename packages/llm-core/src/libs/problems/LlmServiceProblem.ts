@@ -1,7 +1,7 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class LlmServiceProblem extends Problem {
-  static readonly CODE = 'LLM_SERVICE_ERROR';
+  static readonly CODE = "LLM_SERVICE_ERROR";
 
   constructor(message: string, cause?: Error) {
     const detail = cause ? `${message}: ${cause.message}` : message;
@@ -19,7 +19,7 @@ export class LlmServiceProblem extends Problem {
 }
 
 export class ModelNotFoundError extends Problem {
-  static readonly CODE = 'MODEL_NOT_FOUND';
+  static readonly CODE = "MODEL_NOT_FOUND";
 
   constructor(modelId: string) {
     super(ModelNotFoundError.CODE, ProblemCategory.NotFound, `Model not found: ${modelId}`);
@@ -27,7 +27,7 @@ export class ModelNotFoundError extends Problem {
 }
 
 export class GenerationError extends Problem {
-  static readonly CODE = 'GENERATION_ERROR';
+  static readonly CODE = "GENERATION_ERROR";
 
   constructor(message: string, cause?: Error) {
     const detail = cause ? `${message}: ${cause.message}` : message;
@@ -36,7 +36,7 @@ export class GenerationError extends Problem {
 }
 
 export class EmbeddingError extends Problem {
-  static readonly CODE = 'EMBEDDING_ERROR';
+  static readonly CODE = "EMBEDDING_ERROR";
 
   constructor(message: string, cause?: Error) {
     const detail = cause ? `${message}: ${cause.message}` : message;
@@ -45,7 +45,7 @@ export class EmbeddingError extends Problem {
 }
 
 export class LlmStructuredOutputProblem extends Problem {
-  static readonly CODE = 'STRUCTURED_OUTPUT_ERROR';
+  static readonly CODE = "STRUCTURED_OUTPUT_ERROR";
 
   constructor(message: string, cause?: Error) {
     const detail = cause ? `${message}: ${cause.message}` : message;
@@ -54,7 +54,7 @@ export class LlmStructuredOutputProblem extends Problem {
 }
 
 export class LlmToolExecutionProblem extends Problem {
-  static readonly CODE = 'TOOL_EXECUTION_ERROR';
+  static readonly CODE = "TOOL_EXECUTION_ERROR";
 
   constructor(message: string, cause?: Error) {
     const detail = cause ? `${message}: ${cause.message}` : message;

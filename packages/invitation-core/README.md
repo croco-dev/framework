@@ -11,28 +11,33 @@ pnpm add @croco/invitation-core
 ## 사용법
 
 ```ts
-import { InMemoryInvitationStore, InvitationManager } from '@croco/invitation-core';
+import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
 
 const store = new InMemoryInvitationStore();
-const manager = new InvitationManager(store, membershipManager, notificationService, eventPublisher);
+const manager = new InvitationManager(
+  store,
+  membershipManager,
+  notificationService,
+  eventPublisher,
+);
 
 const token = await manager.createEmailInvitation({
-  tenantId: 'tenant-123',
-  inviterId: 'user-1',
-  email: 'new-user@example.com',
-  role: 'member',
+  tenantId: "tenant-123",
+  inviterId: "user-1",
+  email: "new-user@example.com",
+  role: "member",
 });
 
-await manager.acceptInvitation({ token, userId: 'user-2', email: 'new-user@example.com' });
+await manager.acceptInvitation({ token, userId: "user-2", email: "new-user@example.com" });
 ```
 
 ```ts
-import { DomainPolicyManager, InMemoryDomainPolicyStore } from '@croco/invitation-core';
+import { DomainPolicyManager, InMemoryDomainPolicyStore } from "@croco/invitation-core";
 
 const domainPolicyManager = new DomainPolicyManager(domainStore, membershipManager, eventPublisher);
 
-await domainPolicyManager.addDomainPolicy('tenant-123', 'acme.com', 'member');
-await domainPolicyManager.tryAutoJoin('tenant-123', 'user-3', 'user@acme.com');
+await domainPolicyManager.addDomainPolicy("tenant-123", "acme.com", "member");
+await domainPolicyManager.tryAutoJoin("tenant-123", "user-3", "user@acme.com");
 ```
 
 ## API 레퍼런스

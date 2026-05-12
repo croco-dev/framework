@@ -1,7 +1,7 @@
-import type { ProblemDetails } from './Problem';
-import type { ProblemExtensions } from './ProblemExtensions';
-import { ProblemDetailsParseProblem } from './problems/ProblemDetailsParseProblem';
-import { validateExtensions } from './validators/validateExtensions';
+import type { ProblemDetails } from "./Problem";
+import type { ProblemExtensions } from "./ProblemExtensions";
+import { ProblemDetailsParseProblem } from "./problems/ProblemDetailsParseProblem";
+import { validateExtensions } from "./validators/validateExtensions";
 
 export type SerializedProblem = {
   type: string;
@@ -79,22 +79,22 @@ export const ProblemSerializer = {
    * @throws {Error} 필수 필드가 없거나 타입이 잘못된 경우
    */
   fromJson(json: unknown): ProblemDetails {
-    if (typeof json !== 'object' || json === null) {
-      throw new ProblemDetailsParseProblem('Expected object for ProblemDetails');
+    if (typeof json !== "object" || json === null) {
+      throw new ProblemDetailsParseProblem("Expected object for ProblemDetails");
     }
 
     const obj = json as Record<string, unknown>;
 
-    if (typeof obj.type !== 'string') {
+    if (typeof obj.type !== "string") {
       throw new ProblemDetailsParseProblem('Missing or invalid "type" field');
     }
-    if (typeof obj.title !== 'string') {
+    if (typeof obj.title !== "string") {
       throw new ProblemDetailsParseProblem('Missing or invalid "title" field');
     }
-    if (typeof obj.status !== 'number') {
+    if (typeof obj.status !== "number") {
       throw new ProblemDetailsParseProblem('Missing or invalid "status" field');
     }
-    if (typeof obj.code !== 'string') {
+    if (typeof obj.code !== "string") {
       throw new ProblemDetailsParseProblem('Missing or invalid "code" field');
     }
 
@@ -106,20 +106,20 @@ export const ProblemSerializer = {
     };
 
     if (obj.detail !== undefined) {
-      if (typeof obj.detail !== 'string') {
+      if (typeof obj.detail !== "string") {
         throw new ProblemDetailsParseProblem('Invalid "detail" field');
       }
       result.detail = obj.detail;
     }
 
     if (obj.instance !== undefined) {
-      if (typeof obj.instance !== 'string') {
+      if (typeof obj.instance !== "string") {
         throw new ProblemDetailsParseProblem('Invalid "instance" field');
       }
       result.instance = obj.instance;
     }
 
-    const knownFields = new Set(['type', 'title', 'status', 'code', 'detail', 'instance']);
+    const knownFields = new Set(["type", "title", "status", "code", "detail", "instance"]);
     const extensions: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(obj)) {

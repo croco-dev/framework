@@ -1,5 +1,5 @@
-import type { SearchDerivedFieldConfig } from '../types';
-import type { SearchTransformRef } from './types';
+import type { SearchDerivedFieldConfig } from "../types";
+import type { SearchTransformRef } from "./types";
 
 export type DeriveOptions<TOptions> = {
   as?: string;
@@ -10,7 +10,7 @@ export type DeriveOptions<TOptions> = {
 
 export function derive<TOptions>(
   ref: SearchTransformRef<TOptions>,
-  opts: DeriveOptions<TOptions> = {}
+  opts: DeriveOptions<TOptions> = {},
 ): SearchDerivedFieldConfig {
   return {
     transformId: ref.id,

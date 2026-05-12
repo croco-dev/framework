@@ -1,4 +1,4 @@
-export type PrincipalType = 'user' | 'apikey' | 'service';
+export type PrincipalType = "user" | "apikey" | "service";
 
 export type Principal = {
   type: PrincipalType;
@@ -9,13 +9,13 @@ export type Principal = {
 };
 
 export type UserPrincipal = Principal & {
-  type: 'user';
+  type: "user";
   email?: string;
   roles: string[];
 };
 
 export type ApiKeyPrincipal = Principal & {
-  type: 'apikey';
+  type: "apikey";
   keyId: string;
   name: string;
   keyStart: string;

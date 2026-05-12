@@ -1,12 +1,12 @@
-import { randomUUID } from 'node:crypto';
-import type { EventPublisher } from '@croco/events-core';
-import { Component } from '@croco/framework-context';
-import { MembershipCreatedEvent } from './events/MembershipCreatedEvent';
-import { MembershipRemovedEvent } from './events/MembershipRemovedEvent';
-import { MembershipUpdatedEvent } from './events/MembershipUpdatedEvent';
-import type { MembershipManager } from './interfaces/AbstractMembershipManager';
-import { MembershipOwnerGuard } from './MembershipOwnerGuard';
-import type { MembershipStore } from './MembershipStore';
+import { randomUUID } from "node:crypto";
+import type { EventPublisher } from "@croco/events-core";
+import { Component } from "@croco/framework-context";
+import { MembershipCreatedEvent } from "./events/MembershipCreatedEvent";
+import { MembershipRemovedEvent } from "./events/MembershipRemovedEvent";
+import { MembershipUpdatedEvent } from "./events/MembershipUpdatedEvent";
+import type { MembershipManager } from "./interfaces/AbstractMembershipManager";
+import { MembershipOwnerGuard } from "./MembershipOwnerGuard";
+import type { MembershipStore } from "./MembershipStore";
 import {
   AlreadyMemberProblem,
   InvalidRoleProblem,
@@ -14,9 +14,16 @@ import {
   OwnershipTransferRequiredProblem,
   RoleHierarchyViolationProblem,
   SeatLimitExceededProblem,
-} from './problems/MembershipProblems';
-import type { SeatLimitChecker } from './SeatLimitChecker';
-import { canDemote, canPromote, isHigherRole, isMembershipRole, type Membership, type MembershipRole } from './types';
+} from "./problems/MembershipProblems";
+import type { SeatLimitChecker } from "./SeatLimitChecker";
+import {
+  canDemote,
+  canPromote,
+  isHigherRole,
+  isMembershipRole,
+  type Membership,
+  type MembershipRole,
+} from "./types";
 
 @Component()
 export class MembershipService implements MembershipManager {
@@ -25,7 +32,7 @@ export class MembershipService implements MembershipManager {
   constructor(
     private readonly store: MembershipStore,
     private readonly eventPublisher: EventPublisher,
-    private readonly seatLimitChecker?: SeatLimitChecker
+    private readonly seatLimitChecker?: SeatLimitChecker,
   ) {
     this.ownerGuard = new MembershipOwnerGuard(this.store);
   }
@@ -58,11 +65,13 @@ export class MembershipService implements MembershipManager {
       tenantId,
       userId,
       currentRole: membership.role,
-      operation: 'remove',
+      operation: "remove",
     });
 
     await this.store.delete(tenantId, userId);
-    await this.publishSafely(new MembershipRemovedEvent({ tenantId, userId, role: membership.role }));
+    await this.publishSafely(
+      new MembershipRemovedEvent({ tenantId, userId, role: membership.role }),
+    );
   }
 
   async updateRole(tenantId: string, userId: string, newRole: MembershipRole): Promise<Membership> {
@@ -73,7 +82,7 @@ export class MembershipService implements MembershipManager {
       return membership;
     }
 
-    if (membership.role === 'owner' && newRole !== 'owner') {
+    if (membership.role === "owner" && newRole !== "owner") {
       throw new OwnershipTransferRequiredProblem(tenantId, userId);
     }
 
@@ -81,16 +90,16 @@ export class MembershipService implements MembershipManager {
       tenantId,
       userId,
       currentRole: membership.role,
-      operation: 'demote',
+      operation: "demote",
       nextRole: newRole,
     });
 
     if (isHigherRole(newRole, membership.role) && !canPromote(membership.role, newRole)) {
-      throw new RoleHierarchyViolationProblem(membership.role, newRole, 'promote');
+      throw new RoleHierarchyViolationProblem(membership.role, newRole, "promote");
     }
 
     if (isHigherRole(membership.role, newRole) && !canDemote(membership.role, newRole)) {
-      throw new RoleHierarchyViolationProblem(membership.role, newRole, 'demote');
+      throw new RoleHierarchyViolationProblem(membership.role, newRole, "demote");
     }
 
     const updated = await this.store.save({
@@ -106,7 +115,7 @@ export class MembershipService implements MembershipManager {
         userId,
         oldRole: membership.role,
         newRole,
-      })
+      }),
     );
 
     return updated;
@@ -114,7 +123,7 @@ export class MembershipService implements MembershipManager {
 
   async transferOwnership(tenantId: string, fromUserId: string, toUserId: string): Promise<void> {
     const fromMembership = await this.getMembershipOrThrow(tenantId, fromUserId);
-    if (fromMembership.role !== 'owner') {
+    if (fromMembership.role !== "owner") {
       throw new OwnershipTransferRequiredProblem(tenantId, fromUserId);
     }
 
@@ -127,23 +136,23 @@ export class MembershipService implements MembershipManager {
       id: fromMembership.id,
       tenantId,
       userId: fromUserId,
-      role: 'admin',
+      role: "admin",
     });
 
     await this.store.save({
       id: toMembership.id,
       tenantId,
       userId: toUserId,
-      role: 'owner',
+      role: "owner",
     });
 
     await this.publishSafely(
       new MembershipUpdatedEvent({
         tenantId,
         userId: fromUserId,
-        oldRole: 'owner',
-        newRole: 'admin',
-      })
+        oldRole: "owner",
+        newRole: "admin",
+      }),
     );
 
     await this.publishSafely(
@@ -151,8 +160,8 @@ export class MembershipService implements MembershipManager {
         tenantId,
         userId: toUserId,
         oldRole: toMembership.role,
-        newRole: 'owner',
-      })
+        newRole: "owner",
+      }),
     );
   }
 
@@ -193,7 +202,7 @@ export class MembershipService implements MembershipManager {
   }
 
   private async publishSafely(
-    event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent
+    event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent,
   ): Promise<void> {
     await this.eventPublisher.publish(event);
   }

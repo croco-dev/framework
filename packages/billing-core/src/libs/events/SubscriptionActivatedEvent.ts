@@ -1,11 +1,11 @@
-import { DomainEvent } from '@croco/events-core';
+import { DomainEvent } from "@croco/events-core";
 
 export class SubscriptionActivatedEvent extends DomainEvent {
-  static readonly eventName = 'billing.subscription_activated';
+  static readonly eventName = "billing.subscription_activated";
   constructor(
     public readonly tenantId: string,
     public readonly planId: string,
-    public readonly externalSubscriptionId: string
+    public readonly externalSubscriptionId: string,
   ) {
     super();
   }

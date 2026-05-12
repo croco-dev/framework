@@ -1,8 +1,8 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { CRON_METADATA_KEY } from '../metadataKeys';
-import type { CronOptions, CronTriggerMetadata } from '../types';
+import { MetadataStorage } from "@croco/framework-context";
+import { CRON_METADATA_KEY } from "../metadataKeys";
+import type { CronOptions, CronTriggerMetadata } from "../types";
 
-export { CRON_METADATA_KEY } from '../metadataKeys';
+export { CRON_METADATA_KEY } from "../metadataKeys";
 
 /**
  * Cron decorator for scheduling periodic execution.
@@ -21,9 +21,13 @@ export { CRON_METADATA_KEY } from '../metadataKeys';
  * }
  */
 export function Cron(expression: string, options: CronOptions = {}): MethodDecorator {
-  return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const metadata: CronTriggerMetadata = {
-      type: 'cron',
+      type: "cron",
       expression,
       methodName: propertyKey,
       options,

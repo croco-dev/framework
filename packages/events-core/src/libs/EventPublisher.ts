@@ -1,10 +1,14 @@
-import { Container, TRANSACTION_CONTEXT_TOKEN, type TransactionContext } from '@croco/framework-context';
-import type { DomainEvent } from './DomainEvent';
-import type { EventBusConfig } from './EventBusConfig';
+import {
+  Container,
+  TRANSACTION_CONTEXT_TOKEN,
+  type TransactionContext,
+} from "@croco/framework-context";
+import type { DomainEvent } from "./DomainEvent";
+import type { EventBusConfig } from "./EventBusConfig";
 import {
   EventAfterCommitRequiresActiveTransactionProblem,
   EventTransactionContextUnavailableProblem,
-} from './problems/EventsProblems';
+} from "./problems/EventsProblems";
 
 export type PublishResult<T extends DomainEvent> = {
   event: T;
@@ -86,7 +90,7 @@ export class EventPublisher {
         } catch (error) {
           return { event, success: false, error: toError(error) };
         }
-      })
+      }),
     );
     return results;
   }

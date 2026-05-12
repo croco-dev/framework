@@ -11,19 +11,19 @@ pnpm add @croco/search-drizzle @croco/search-core drizzle-orm
 ## 사용법
 
 ```typescript
-import { DrizzleSearchEngine, PgTrgmStrategy } from '@croco/search-drizzle';
+import { DrizzleSearchEngine, PgTrgmStrategy } from "@croco/search-drizzle";
 
 const engine = new DrizzleSearchEngine(db, new PgTrgmStrategy({ threshold: 0.25 }));
 
-const result = await engine.search('documents', {
-  query: 'croco framework',
+const result = await engine.search("documents", {
+  query: "croco framework",
   limit: 20,
 });
 
-await engine.indexDocument('documents', {
-  id: 'doc-1',
-  title: 'Croco 소개',
-  search_vector: 'croco framework',
+await engine.indexDocument("documents", {
+  id: "doc-1",
+  title: "Croco 소개",
+  search_vector: "croco framework",
 });
 ```
 

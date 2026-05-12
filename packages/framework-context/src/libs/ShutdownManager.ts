@@ -1,7 +1,7 @@
-import { Container } from 'typedi';
-import { type ILogger, LOGGER_TOKEN } from './ILogger';
-import { ShutdownTimeoutProblem } from './problems/ShutdownProblems';
-import type { ShutdownHook } from './types';
+import { Container } from "typedi";
+import { type ILogger, LOGGER_TOKEN } from "./ILogger";
+import { ShutdownTimeoutProblem } from "./problems/ShutdownProblems";
+import type { ShutdownHook } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -52,8 +52,8 @@ export class ShutdownManager {
       return;
     }
     this.listenersRegistered = true;
-    process.on('SIGTERM', this.handleSignal);
-    process.on('SIGINT', this.handleSignal);
+    process.on("SIGTERM", this.handleSignal);
+    process.on("SIGINT", this.handleSignal);
   }
 
   private handleSignal = async (): Promise<void> => {
@@ -76,10 +76,10 @@ export class ShutdownManager {
           const normalizedError = error instanceof Error ? error : new Error(String(error));
           try {
             const logger = Container.get(LOGGER_TOKEN) as ILogger;
-            logger.error('[ShutdownManager] Hook execution failed:', normalizedError);
+            logger.error("[ShutdownManager] Hook execution failed:", normalizedError);
           } catch {
             // eslint-disable-next-line no-console
-            console.error('[ShutdownManager] Hook execution failed:', normalizedError);
+            console.error("[ShutdownManager] Hook execution failed:", normalizedError);
           }
         }
       }
@@ -91,10 +91,10 @@ export class ShutdownManager {
         controller.abort();
         try {
           const logger = Container.get(LOGGER_TOKEN) as ILogger;
-          logger.error('[ShutdownManager] Shutdown timeout exceeded.');
+          logger.error("[ShutdownManager] Shutdown timeout exceeded.");
         } catch {
           // eslint-disable-next-line no-console
-          console.error('[ShutdownManager] Shutdown timeout exceeded.');
+          console.error("[ShutdownManager] Shutdown timeout exceeded.");
         }
         reject(new ShutdownTimeoutProblem(this.timeoutMs));
       }, this.timeoutMs);
@@ -111,8 +111,8 @@ export class ShutdownManager {
 
   private removeAllListeners(): void {
     if (this.listenersRegistered) {
-      process.off('SIGTERM', this.handleSignal);
-      process.off('SIGINT', this.handleSignal);
+      process.off("SIGTERM", this.handleSignal);
+      process.off("SIGINT", this.handleSignal);
       this.listenersRegistered = false;
     }
   }

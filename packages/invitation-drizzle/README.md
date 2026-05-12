@@ -11,42 +11,39 @@ pnpm add @croco/invitation-drizzle @croco/invitation-core drizzle-orm
 ## 사용법
 
 ```typescript
-import {
-  DrizzleDomainPolicyStore,
-  DrizzleInvitationStore,
-} from '@croco/invitation-drizzle';
-import { TxManager } from '@croco/tx-core';
+import { DrizzleDomainPolicyStore, DrizzleInvitationStore } from "@croco/invitation-drizzle";
+import { TxManager } from "@croco/tx-core";
 
-const txManager = new TxManager(adapter, { defaultNesting: 'join' });
+const txManager = new TxManager(adapter, { defaultNesting: "join" });
 const invitationStore = new DrizzleInvitationStore(db, txManager);
 const policyStore = new DrizzleDomainPolicyStore(db, txManager);
 
 await invitationStore.save({
-  id: 'inv-1',
-  tenantId: 'tenant-1',
-  inviterId: 'user-1',
-  email: 'new@example.com',
-  tokenHash: 'hash-123',
-  type: 'email',
-  role: 'member',
-  status: 'pending',
-  expiresAt: new Date('2026-12-31'),
+  id: "inv-1",
+  tenantId: "tenant-1",
+  inviterId: "user-1",
+  email: "new@example.com",
+  tokenHash: "hash-123",
+  type: "email",
+  role: "member",
+  status: "pending",
+  expiresAt: new Date("2026-12-31"),
   acceptedAt: null,
   revokedAt: null,
   createdAt: new Date(),
 });
 
 await policyStore.save({
-  id: 'policy-1',
-  tenantId: 'tenant-1',
-  domain: 'example.com',
-  role: 'member',
+  id: "policy-1",
+  tenantId: "tenant-1",
+  domain: "example.com",
+  role: "member",
   enabled: true,
   createdAt: new Date(),
 });
 
-const invitation = await invitationStore.findByTokenHash('hash-123');
-const policy = await policyStore.findByTenantAndDomain('tenant-1', 'example.com');
+const invitation = await invitationStore.findByTokenHash("hash-123");
+const policy = await policyStore.findByTenantAndDomain("tenant-1", "example.com");
 ```
 
 ## API 레퍼런스

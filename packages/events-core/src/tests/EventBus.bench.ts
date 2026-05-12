@@ -1,14 +1,14 @@
-import { Container } from '@croco/framework-context';
-import { bench, describe } from 'vitest';
+import { Container } from "@croco/framework-context";
+import { bench, describe } from "vitest";
 
-import { DomainEvent } from '../libs/DomainEvent';
-import type { EventBus } from '../libs/EventBus';
-import { EventBusConfig } from '../libs/EventBusConfig';
-import type { EventHandler } from '../libs/EventHandler';
-import { RegisterEventHandler } from '../libs/EventHandler';
-import { EventPublisher } from '../libs/EventPublisher';
-import { DefaultHandlerResolver } from '../libs/HandlerResolver';
-import type { EventSubscription } from '../libs/types/EventSubscription';
+import { DomainEvent } from "../libs/DomainEvent";
+import type { EventBus } from "../libs/EventBus";
+import { EventBusConfig } from "../libs/EventBusConfig";
+import type { EventHandler } from "../libs/EventHandler";
+import { RegisterEventHandler } from "../libs/EventHandler";
+import { EventPublisher } from "../libs/EventPublisher";
+import { DefaultHandlerResolver } from "../libs/HandlerResolver";
+import type { EventSubscription } from "../libs/types/EventSubscription";
 
 class MockEventBus implements EventBus {
   subscribedEvents: EventSubscription[] = [];
@@ -20,7 +20,9 @@ class MockEventBus implements EventBus {
 
   unsubscribe(subscription: EventSubscription): void {
     this.subscribedEvents = this.subscribedEvents.filter(
-      (entry) => entry.eventName !== subscription.eventName || entry.handlerClass !== subscription.handlerClass
+      (entry) =>
+        entry.eventName !== subscription.eventName ||
+        entry.handlerClass !== subscription.handlerClass,
     );
   }
 
@@ -35,7 +37,7 @@ class MockEventBus implements EventBus {
 }
 
 class BenchEvent extends DomainEvent {
-  static eventName = 'BenchEvent';
+  static eventName = "BenchEvent";
   constructor(public readonly data: string) {
     super();
   }
@@ -100,10 +102,10 @@ const predefinedHandlers = [
   BenchHandler10,
 ];
 
-describe('EventBus benchmarks', () => {
-  describe('EventBusConfig.start (10 handlers)', () => {
+describe("EventBus benchmarks", () => {
+  describe("EventBusConfig.start (10 handlers)", () => {
     bench(
-      'should register 10 handlers',
+      "should register 10 handlers",
       async () => {
         EventBusConfig.setInstance(new EventBusConfig());
         Container.reset();
@@ -115,13 +117,13 @@ describe('EventBus benchmarks', () => {
 
         await config.start({ handlers: predefinedHandlers });
       },
-      { iterations: 50, warmupIterations: 5 }
+      { iterations: 50, warmupIterations: 5 },
     );
   });
 
-  describe('EventPublisher.publish single event', () => {
+  describe("EventPublisher.publish single event", () => {
     bench(
-      'should publish single event',
+      "should publish single event",
       async () => {
         EventBusConfig.setInstance(new EventBusConfig());
         Container.reset();
@@ -133,22 +135,22 @@ describe('EventBus benchmarks', () => {
         await config.start({ handlers: [BenchHandler] });
 
         const publisher = new EventPublisher(config);
-        await publisher.publishNow(new BenchEvent('test-data'));
+        await publisher.publishNow(new BenchEvent("test-data"));
       },
-      { iterations: 200, warmupIterations: 20 }
+      { iterations: 200, warmupIterations: 20 },
     );
   });
 
-  describe('DefaultHandlerResolver.resolve × 10', () => {
+  describe("DefaultHandlerResolver.resolve × 10", () => {
     bench(
-      'should resolve 10 handlers',
+      "should resolve 10 handlers",
       () => {
         const resolver = new DefaultHandlerResolver();
         for (let i = 0; i < 10; i++) {
           resolver.resolve(BenchHandler);
         }
       },
-      { iterations: 200, warmupIterations: 20 }
+      { iterations: 200, warmupIterations: 20 },
     );
   });
 });

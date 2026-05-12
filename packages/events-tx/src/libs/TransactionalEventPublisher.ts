@@ -1,7 +1,7 @@
-import type { DomainEvent, EventBus } from '@croco/events-core';
-import { TransactionStateProblem } from './problems/EventsTxProblems';
+import type { DomainEvent, EventBus } from "@croco/events-core";
+import { TransactionStateProblem } from "./problems/EventsTxProblems";
 
-type TxPhase = 'active' | 'committed' | 'rolled-back';
+type TxPhase = "active" | "committed" | "rolled-back";
 
 type TxSession = {
   events: DomainEvent[];
@@ -22,7 +22,7 @@ export class TransactionalEventPublisher {
     if (this.sessions.has(txId)) {
       throw new TransactionStateProblem(`Transaction '${txId}' already started`);
     }
-    this.sessions.set(txId, { events: [], phase: 'active' });
+    this.sessions.set(txId, { events: [], phase: "active" });
   }
 
   stage(txId: string, event: DomainEvent): void {
@@ -32,7 +32,7 @@ export class TransactionalEventPublisher {
 
   async commit(txId: string): Promise<void> {
     const session = this.requireActive(txId);
-    session.phase = 'committed';
+    session.phase = "committed";
 
     try {
       while (session.events.length > 0) {
@@ -43,7 +43,7 @@ export class TransactionalEventPublisher {
 
       this.sessions.delete(txId);
     } catch (error) {
-      session.phase = 'active';
+      session.phase = "active";
       throw error;
     }
   }
@@ -51,7 +51,7 @@ export class TransactionalEventPublisher {
   rollback(txId: string): void {
     const session = this.sessions.get(txId);
     if (!session) return;
-    session.phase = 'rolled-back';
+    session.phase = "rolled-back";
     this.sessions.delete(txId);
   }
 
@@ -60,7 +60,7 @@ export class TransactionalEventPublisher {
     if (!session) {
       throw new TransactionStateProblem(`Transaction '${txId}' not found`);
     }
-    if (session.phase !== 'active') {
+    if (session.phase !== "active") {
       throw new TransactionStateProblem(`Transaction '${txId}' is already ${session.phase}`);
     }
     return session;

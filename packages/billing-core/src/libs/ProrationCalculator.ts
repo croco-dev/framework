@@ -1,5 +1,5 @@
-import type { Plan } from '../types';
-import type { Money } from './Money';
+import type { Plan } from "../types";
+import type { Money } from "./Money";
 
 export type ProrationCalculationParams = {
   currentPlan: Plan;

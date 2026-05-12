@@ -1,16 +1,18 @@
-import { recordEvent, withSpan } from '@croco/telemetry-api';
-import { TxPropagationError } from './errors';
-import { TransactionDecoratorProblem } from './problems/TransactionProblems';
-import { TxManagerRegistry } from './TxManagerRegistry';
-import type { Propagation, TransactionalOptions } from './types';
+import { recordEvent, withSpan } from "@croco/telemetry-api";
+import { TxPropagationError } from "./errors";
+import { TransactionDecoratorProblem } from "./problems/TransactionProblems";
+import { TxManagerRegistry } from "./TxManagerRegistry";
+import type { Propagation, TransactionalOptions } from "./types";
 
 type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
 
 /**
  * 메서드 실행에 트랜잭션 전파 규칙과 타임아웃을 적용하는 데코레이터입니다.
  */
-export function Transactional<TOptions = unknown>(options?: TransactionalOptions<TOptions>): MethodDecorator {
-  const propagation: Propagation = options?.propagation ?? 'REQUIRED';
+export function Transactional<TOptions = unknown>(
+  options?: TransactionalOptions<TOptions>,
+): MethodDecorator {
+  const propagation: Propagation = options?.propagation ?? "REQUIRED";
   const managerKey = options?.managerKey;
   const nesting = options?.nesting;
   const txOptions = options?.options;
@@ -19,11 +21,11 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
   return (
     _target: object,
     propertyKey: string | symbol,
-    descriptor: PropertyDescriptor
+    descriptor: PropertyDescriptor,
   ): PropertyDescriptor | undefined => {
     const originalMethod = descriptor.value as AsyncMethod;
 
-    if (typeof originalMethod !== 'function') {
+    if (typeof originalMethod !== "function") {
       throw new TransactionDecoratorProblem();
     }
 
@@ -34,27 +36,33 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
 
       const executeInTransaction = async (): Promise<unknown> => {
         switch (propagation) {
-          case 'REQUIRED':
+          case "REQUIRED":
             return txManager.run(() => originalMethod.apply(this, args), {
-              nesting: nesting ?? 'join',
+              nesting: nesting ?? "join",
               options: txOptions,
               timeout,
             });
 
-          case 'REQUIRES_NEW':
+          case "REQUIRES_NEW":
             return txManager.suspend(() =>
-              txManager.run(() => originalMethod.apply(this, args), { nesting: 'join', options: txOptions, timeout })
+              txManager.run(() => originalMethod.apply(this, args), {
+                nesting: "join",
+                options: txOptions,
+                timeout,
+              }),
             );
 
-          case 'MANDATORY':
+          case "MANDATORY":
             if (!isInTx) {
-              throw new TxPropagationError('MANDATORY propagation requires an existing transaction');
+              throw new TxPropagationError(
+                "MANDATORY propagation requires an existing transaction",
+              );
             }
             return originalMethod.apply(this, args);
 
-          case 'NEVER':
+          case "NEVER":
             if (isInTx) {
-              throw new TxPropagationError('NEVER propagation does not allow existing transaction');
+              throw new TxPropagationError("NEVER propagation does not allow existing transaction");
             }
             return originalMethod.apply(this, args);
 
@@ -64,31 +72,31 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
       };
 
       // MANDATORY and NEVER don't create transactions, so skip telemetry
-      if (propagation === 'MANDATORY' || propagation === 'NEVER') {
+      if (propagation === "MANDATORY" || propagation === "NEVER") {
         return executeInTransaction();
       }
 
       return withSpan(
         async () => {
-          recordEvent('tx.begin', {
-            'tx.propagation': propagation,
-            'tx.method': methodName,
+          recordEvent("tx.begin", {
+            "tx.propagation": propagation,
+            "tx.method": methodName,
           });
 
           try {
             const result = await executeInTransaction();
 
-            recordEvent('tx.commit', {
-              'tx.propagation': propagation,
-              'tx.method': methodName,
+            recordEvent("tx.commit", {
+              "tx.propagation": propagation,
+              "tx.method": methodName,
             });
 
             return result;
           } catch (error) {
-            recordEvent('tx.rollback', {
-              'tx.propagation': propagation,
-              'tx.method': methodName,
-              'tx.error': error instanceof Error ? error.message : String(error),
+            recordEvent("tx.rollback", {
+              "tx.propagation": propagation,
+              "tx.method": methodName,
+              "tx.error": error instanceof Error ? error.message : String(error),
             });
 
             throw error;
@@ -97,10 +105,10 @@ export function Transactional<TOptions = unknown>(options?: TransactionalOptions
         {
           name: `tx:${methodName}`,
           attributes: {
-            'tx.propagation': propagation,
-            'tx.method': methodName,
+            "tx.propagation": propagation,
+            "tx.method": methodName,
           },
-        }
+        },
       );
     };
 

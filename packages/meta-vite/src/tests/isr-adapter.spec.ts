@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { AbstractCacheStoreAdapter } from '../libs/isr/adapters/abstractAdapter';
+import { beforeEach, describe, expect, it } from "vitest";
+import { AbstractCacheStoreAdapter } from "../libs/isr/adapters/abstractAdapter";
 
-describe('AbstractCacheStoreAdapter', () => {
+describe("AbstractCacheStoreAdapter", () => {
   const store = new Map<string, { value: Response; expiresAt?: number }>();
 
   class TestAdapter extends AbstractCacheStoreAdapter {
@@ -33,18 +33,18 @@ describe('AbstractCacheStoreAdapter', () => {
     store.clear();
   });
 
-  it('returns cached response on hit', async () => {
+  it("returns cached response on hit", async () => {
     const adapter = new TestAdapter();
-    const cached = new Response('cached');
-    await adapter._set('/test', cached);
+    const cached = new Response("cached");
+    await adapter._set("/test", cached);
 
-    const fetcher = async () => new Response('fresh');
-    const result = await adapter.getOrSet('/test', fetcher);
+    const fetcher = async () => new Response("fresh");
+    const result = await adapter.getOrSet("/test", fetcher);
 
-    expect(await result.text()).toBe('cached');
+    expect(await result.text()).toBe("cached");
   });
 
-  it('calls fetcher and caches on miss', async () => {
+  it("calls fetcher and caches on miss", async () => {
     const adapter = new TestAdapter();
     let fetchCount = 0;
     const fetcher = async () => {
@@ -52,13 +52,13 @@ describe('AbstractCacheStoreAdapter', () => {
       return new Response(`fetched-${fetchCount}`);
     };
 
-    const result = await adapter.getOrSet('/test', fetcher);
+    const result = await adapter.getOrSet("/test", fetcher);
 
-    expect(await result.text()).toBe('fetched-1');
+    expect(await result.text()).toBe("fetched-1");
     expect(fetchCount).toBe(1);
   });
 
-  it('caches the fetched value', async () => {
+  it("caches the fetched value", async () => {
     const adapter = new TestAdapter();
     let fetchCount = 0;
     const fetcher = async () => {
@@ -66,18 +66,18 @@ describe('AbstractCacheStoreAdapter', () => {
       return new Response(`fetched-${fetchCount}`);
     };
 
-    await adapter.getOrSet('/test', fetcher);
-    const second = await adapter.getOrSet('/test', fetcher);
+    await adapter.getOrSet("/test", fetcher);
+    const second = await adapter.getOrSet("/test", fetcher);
 
-    expect(await second.text()).toBe('fetched-1');
+    expect(await second.text()).toBe("fetched-1");
     expect(fetchCount).toBe(1);
   });
 
-  it('supports ttlMs via options', async () => {
+  it("supports ttlMs via options", async () => {
     const adapter = new TestAdapter();
-    await adapter._set('/test', new Response('cached'), 50);
+    await adapter._set("/test", new Response("cached"), 50);
 
-    const result = await adapter._get('/test');
+    const result = await adapter._get("/test");
     expect(result).toBeDefined();
   });
 });

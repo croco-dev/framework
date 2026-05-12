@@ -1,5 +1,5 @@
-import type { CacheStore } from '../CacheStore';
-import { CacheDecoratorConfigProblem } from '../problems/CacheDecoratorProblems';
+import type { CacheStore } from "../CacheStore";
+import { CacheDecoratorConfigProblem } from "../problems/CacheDecoratorProblems";
 
 export interface CacheEvictOptions<V = unknown> {
   store: CacheStore<string, V>;
@@ -11,7 +11,7 @@ export interface CacheEvictOptions<V = unknown> {
 function resolveEvictionPattern(options: CacheEvictOptions<unknown>, methodName: string): string {
   if (options.namespace === undefined) {
     throw new CacheDecoratorConfigProblem(
-      `@CacheEvict requires "namespace" when "key" is not provided (method: ${methodName})`
+      `@CacheEvict requires "namespace" when "key" is not provided (method: ${methodName})`,
     );
   }
 
@@ -19,7 +19,11 @@ function resolveEvictionPattern(options: CacheEvictOptions<unknown>, methodName:
 }
 
 export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const methodName = String(propertyKey);
     const pattern =
@@ -36,7 +40,7 @@ export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDe
       }
 
       if (options.key !== undefined) {
-        if (options.key.includes('*')) {
+        if (options.key.includes("*")) {
           await options.store.invalidatePattern(options.key);
         } else {
           await options.store.delete(options.key);

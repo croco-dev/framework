@@ -1,6 +1,6 @@
-import { ProblemCategory } from './ProblemCategory';
-import { ProblemCategoryMapper } from './ProblemCategoryMapper';
-import type { ProblemExtensions } from './ProblemExtensions';
+import { ProblemCategory } from "./ProblemCategory";
+import { ProblemCategoryMapper } from "./ProblemCategoryMapper";
+import type { ProblemExtensions } from "./ProblemExtensions";
 
 export type ProblemOptions = {
   type?: string;
@@ -27,20 +27,25 @@ export abstract class Problem extends Error {
   public readonly extensions?: ProblemExtensions;
   public readonly cause?: Error;
 
-  protected constructor(code?: string, category?: ProblemCategory, detail?: string, options?: ProblemOptions) {
-    super(detail ?? code ?? 'Unknown error');
+  protected constructor(
+    code?: string,
+    category?: ProblemCategory,
+    detail?: string,
+    options?: ProblemOptions,
+  ) {
+    super(detail ?? code ?? "Unknown error");
 
-    this.code = code ?? 'UNKNOWN_ERROR';
+    this.code = code ?? "UNKNOWN_ERROR";
     this.category = category ?? ProblemCategory.InternalServerError;
 
     this.detail = detail;
-    this.type = options?.type ?? 'about:blank';
+    this.type = options?.type ?? "about:blank";
     this.instance = options?.instance;
     this.extensions = options?.extensions;
     this.name = new.target.name;
 
     if (options?.cause && this.cause === undefined) {
-      Object.defineProperty(this, 'cause', {
+      Object.defineProperty(this, "cause", {
         configurable: true,
         enumerable: false,
         value: options.cause,

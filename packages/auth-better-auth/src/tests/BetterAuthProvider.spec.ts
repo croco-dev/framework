@@ -1,9 +1,9 @@
-import 'reflect-metadata';
-import type { AuthProvider } from '@croco/auth-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BetterAuthFactory } from '../libs/BetterAuthFactory';
-import { BetterAuthProvider } from '../libs/BetterAuthProvider';
-import { BetterAuthInvalidSessionProblem } from '../libs/problems/BetterAuthInvalidSessionProblem';
+import "reflect-metadata";
+import type { AuthProvider } from "@croco/auth-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { BetterAuthFactory } from "../libs/BetterAuthFactory";
+import { BetterAuthProvider } from "../libs/BetterAuthProvider";
+import { BetterAuthInvalidSessionProblem } from "../libs/problems/BetterAuthInvalidSessionProblem";
 
 function createMockBetterAuthFactory(session: any): BetterAuthFactory {
   return {
@@ -21,7 +21,7 @@ function createMockRequest(headers: Record<string, string> = {}): Request {
   } as unknown as Request;
 }
 
-describe('BetterAuthProvider', () => {
+describe("BetterAuthProvider", () => {
   let provider!: BetterAuthProvider;
   let mockFactory!: BetterAuthFactory;
 
@@ -29,20 +29,20 @@ describe('BetterAuthProvider', () => {
     vi.clearAllMocks();
   });
 
-  describe('authenticate', () => {
-    it('should return AuthUser when session exists', async () => {
+  describe("authenticate", () => {
+    it("should return AuthUser when session exists", async () => {
       const mockSession = {
         user: {
-          id: 'user-123',
-          email: 'user@example.com',
-          name: 'John Doe',
-          image: 'https://example.com/avatar.jpg',
+          id: "user-123",
+          email: "user@example.com",
+          name: "John Doe",
+          image: "https://example.com/avatar.jpg",
           emailVerified: true,
         },
         session: {
-          id: 'session-456',
+          id: "session-456",
           expiresAt: new Date(Date.now() + 3600000),
-          token: 'session-token-abc',
+          token: "session-token-abc",
         },
       };
 
@@ -50,25 +50,25 @@ describe('BetterAuthProvider', () => {
       provider = new BetterAuthProvider(mockFactory);
 
       const request = createMockRequest({
-        authorization: 'Bearer session-token-abc',
+        authorization: "Bearer session-token-abc",
       });
 
       const result = await provider.authenticate(request);
 
       expect(result).not.toBeNull();
       expect(result).toEqual({
-        id: 'user-123',
-        email: 'user@example.com',
+        id: "user-123",
+        email: "user@example.com",
         roles: [],
         permissions: [],
         metadata: {
-          image: 'https://example.com/avatar.jpg',
+          image: "https://example.com/avatar.jpg",
           emailVerified: true,
         },
       });
     });
 
-    it('should return null when session does not exist', async () => {
+    it("should return null when session does not exist", async () => {
       mockFactory = createMockBetterAuthFactory(null);
       provider = new BetterAuthProvider(mockFactory);
 
@@ -79,11 +79,11 @@ describe('BetterAuthProvider', () => {
       expect(result).toBeNull();
     });
 
-    it('should handle session with minimal user data', async () => {
+    it("should handle session with minimal user data", async () => {
       const mockSession = {
         user: {
-          id: 'user-minimal',
-          email: 'minimal@example.com',
+          id: "user-minimal",
+          email: "minimal@example.com",
           emailVerified: false,
         },
       };
@@ -96,8 +96,8 @@ describe('BetterAuthProvider', () => {
       const result = await provider.authenticate(request);
 
       expect(result).toEqual({
-        id: 'user-minimal',
-        email: 'minimal@example.com',
+        id: "user-minimal",
+        email: "minimal@example.com",
         roles: [],
         permissions: [],
         metadata: {
@@ -107,11 +107,11 @@ describe('BetterAuthProvider', () => {
       });
     });
 
-    it('should pass request headers to getSession API', async () => {
+    it("should pass request headers to getSession API", async () => {
       const mockSession = {
         user: {
-          id: 'user-456',
-          email: 'test@example.com',
+          id: "user-456",
+          email: "test@example.com",
           emailVerified: true,
         },
       };
@@ -130,9 +130,9 @@ describe('BetterAuthProvider', () => {
       provider = new BetterAuthProvider(factoryWithSpy);
 
       const customHeaders = {
-        authorization: 'Bearer custom-token',
-        'user-agent': 'TestAgent/1.0',
-        'x-forwarded-for': '192.168.1.1',
+        authorization: "Bearer custom-token",
+        "user-agent": "TestAgent/1.0",
+        "x-forwarded-for": "192.168.1.1",
       };
       const request = createMockRequest(customHeaders);
 
@@ -143,17 +143,17 @@ describe('BetterAuthProvider', () => {
       });
 
       const capturedHeaders = getSessionSpy.mock.calls[0][0].headers;
-      expect(capturedHeaders.get('authorization')).toBe('Bearer custom-token');
-      expect(capturedHeaders.get('user-agent')).toBe('TestAgent/1.0');
-      expect(capturedHeaders.get('x-forwarded-for')).toBe('192.168.1.1');
+      expect(capturedHeaders.get("authorization")).toBe("Bearer custom-token");
+      expect(capturedHeaders.get("user-agent")).toBe("TestAgent/1.0");
+      expect(capturedHeaders.get("x-forwarded-for")).toBe("192.168.1.1");
     });
 
-    it('should handle user with image but no emailVerified flag', async () => {
+    it("should handle user with image but no emailVerified flag", async () => {
       const mockSession = {
         user: {
-          id: 'user-789',
-          email: 'image@example.com',
-          image: 'https://example.com/no-verified.jpg',
+          id: "user-789",
+          email: "image@example.com",
+          image: "https://example.com/no-verified.jpg",
         },
       };
 
@@ -165,22 +165,22 @@ describe('BetterAuthProvider', () => {
       const result = await provider.authenticate(request);
 
       expect(result).toEqual({
-        id: 'user-789',
-        email: 'image@example.com',
+        id: "user-789",
+        email: "image@example.com",
         roles: [],
         permissions: [],
         metadata: {
-          image: 'https://example.com/no-verified.jpg',
+          image: "https://example.com/no-verified.jpg",
           emailVerified: undefined,
         },
       });
     });
 
-    it('should initialize with empty roles and permissions arrays', async () => {
+    it("should initialize with empty roles and permissions arrays", async () => {
       const mockSession = {
         user: {
-          id: 'user-roles',
-          email: 'roles@example.com',
+          id: "user-roles",
+          email: "roles@example.com",
           emailVerified: true,
         },
       };
@@ -197,13 +197,13 @@ describe('BetterAuthProvider', () => {
       expect(Array.isArray(result?.permissions)).toBe(true);
     });
 
-    it('should preserve roles and permissions from user fields', async () => {
+    it("should preserve roles and permissions from user fields", async () => {
       const mockSession = {
         user: {
-          id: 'user-rbac',
-          email: 'rbac@example.com',
-          roles: ['admin', 'member'],
-          permissions: ['project:read', 'project:write'],
+          id: "user-rbac",
+          email: "rbac@example.com",
+          roles: ["admin", "member"],
+          permissions: ["project:read", "project:write"],
         },
       };
 
@@ -212,21 +212,21 @@ describe('BetterAuthProvider', () => {
 
       const result = await provider.authenticate(createMockRequest());
 
-      expect(result?.roles).toEqual(['admin', 'member']);
-      expect(result?.permissions).toEqual(['project:read', 'project:write']);
+      expect(result?.roles).toEqual(["admin", "member"]);
+      expect(result?.permissions).toEqual(["project:read", "project:write"]);
     });
 
-    it('should preserve role and permissions from nested metadata fields', async () => {
+    it("should preserve role and permissions from nested metadata fields", async () => {
       const mockSession = {
         user: {
-          id: 'user-metadata-rbac',
-          email: 'metadata-rbac@example.com',
+          id: "user-metadata-rbac",
+          email: "metadata-rbac@example.com",
           metadata: {
-            role: 'owner',
-            permissions: ['tenant:manage'],
+            role: "owner",
+            permissions: ["tenant:manage"],
           },
           publicMetadata: {
-            roles: ['owner', 'billing-admin'],
+            roles: ["owner", "billing-admin"],
           },
         },
       };
@@ -236,23 +236,23 @@ describe('BetterAuthProvider', () => {
 
       const result = await provider.authenticate(createMockRequest());
 
-      expect(result?.roles).toEqual(['owner', 'billing-admin']);
-      expect(result?.permissions).toEqual(['tenant:manage']);
+      expect(result?.roles).toEqual(["owner", "billing-admin"]);
+      expect(result?.permissions).toEqual(["tenant:manage"]);
     });
 
-    it('should implement AuthProvider interface', () => {
+    it("should implement AuthProvider interface", () => {
       mockFactory = createMockBetterAuthFactory(null);
       provider = new BetterAuthProvider(mockFactory);
 
-      expect(provider).toHaveProperty('authenticate');
-      expect(typeof provider.authenticate).toBe('function');
+      expect(provider).toHaveProperty("authenticate");
+      expect(typeof provider.authenticate).toBe("function");
 
       const providerAsInterface: AuthProvider<Request> = provider;
       expect(providerAsInterface.authenticate).not.toBeUndefined();
     });
 
-    it('should handle API errors gracefully', async () => {
-      const mockError = new Error('Network error');
+    it("should handle API errors gracefully", async () => {
+      const mockError = new Error("Network error");
       const errorFactory = {
         getAuth: () => ({
           api: {
@@ -265,10 +265,10 @@ describe('BetterAuthProvider', () => {
 
       const request = createMockRequest();
 
-      await expect(provider.authenticate(request)).rejects.toThrow('Network error');
+      await expect(provider.authenticate(request)).rejects.toThrow("Network error");
     });
 
-    it('should handle malformed session response', async () => {
+    it("should handle malformed session response", async () => {
       const malformedSession = {
         user: null,
       };
@@ -278,21 +278,23 @@ describe('BetterAuthProvider', () => {
 
       const request = createMockRequest();
 
-      await expect(provider.authenticate(request)).rejects.toBeInstanceOf(BetterAuthInvalidSessionProblem);
+      await expect(provider.authenticate(request)).rejects.toBeInstanceOf(
+        BetterAuthInvalidSessionProblem,
+      );
       await expect(provider.authenticate(request)).rejects.toThrow(
-        'Better Auth session did not include a valid user payload'
+        "Better Auth session did not include a valid user payload",
       );
     });
   });
 
-  describe('constructor', () => {
-    it('should accept BetterAuthFactory dependency', () => {
+  describe("constructor", () => {
+    it("should accept BetterAuthFactory dependency", () => {
       mockFactory = createMockBetterAuthFactory(null);
 
       expect(() => new BetterAuthProvider(mockFactory)).not.toThrow();
     });
 
-    it('should store factory reference', () => {
+    it("should store factory reference", () => {
       mockFactory = createMockBetterAuthFactory(null);
       provider = new BetterAuthProvider(mockFactory);
 
@@ -301,13 +303,13 @@ describe('BetterAuthProvider', () => {
     });
   });
 
-  describe('integration scenarios', () => {
-    it('should handle typical login flow', async () => {
+  describe("integration scenarios", () => {
+    it("should handle typical login flow", async () => {
       const mockSession = {
         user: {
-          id: 'user-login',
-          email: 'newuser@example.com',
-          name: 'New User',
+          id: "user-login",
+          email: "newuser@example.com",
+          name: "New User",
           emailVerified: true,
         },
       };
@@ -316,16 +318,16 @@ describe('BetterAuthProvider', () => {
       provider = new BetterAuthProvider(mockFactory);
 
       const loginRequest = createMockRequest({
-        authorization: 'Bearer login-session-token',
+        authorization: "Bearer login-session-token",
       });
 
       const authUser = await provider.authenticate(loginRequest);
 
-      expect(authUser?.id).toBe('user-login');
-      expect(authUser?.email).toBe('newuser@example.com');
+      expect(authUser?.id).toBe("user-login");
+      expect(authUser?.email).toBe("newuser@example.com");
     });
 
-    it('should handle logout scenario (no session)', async () => {
+    it("should handle logout scenario (no session)", async () => {
       mockFactory = createMockBetterAuthFactory(null);
       provider = new BetterAuthProvider(mockFactory);
 
@@ -337,14 +339,14 @@ describe('BetterAuthProvider', () => {
     });
   });
 
-  describe('metadata mapping', () => {
-    it('should map emailVerified to metadata', async () => {
+  describe("metadata mapping", () => {
+    it("should map emailVerified to metadata", async () => {
       const mockSession = {
         user: {
-          id: 'user-meta',
-          email: 'meta@example.com',
+          id: "user-meta",
+          email: "meta@example.com",
           emailVerified: true,
-          image: 'https://example.com/avatar.png',
+          image: "https://example.com/avatar.png",
         },
       };
 
@@ -356,14 +358,14 @@ describe('BetterAuthProvider', () => {
 
       expect(result?.metadata).not.toBeUndefined();
       expect(result?.metadata?.emailVerified).toBe(true);
-      expect(result?.metadata?.image).toBe('https://example.com/avatar.png');
+      expect(result?.metadata?.image).toBe("https://example.com/avatar.png");
     });
 
-    it('should handle missing optional fields', async () => {
+    it("should handle missing optional fields", async () => {
       const mockSession = {
         user: {
-          id: 'user-partial',
-          email: 'partial@example.com',
+          id: "user-partial",
+          email: "partial@example.com",
         },
       };
 

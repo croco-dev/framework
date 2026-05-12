@@ -1,7 +1,7 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class AuditableDecoratorProblem extends Problem {
-  readonly code = 'audit-core/auditable-decorator-misuse';
+  readonly code = "audit-core/auditable-decorator-misuse";
   readonly category = ProblemCategory.InternalServerError;
 
   constructor(detail: string) {

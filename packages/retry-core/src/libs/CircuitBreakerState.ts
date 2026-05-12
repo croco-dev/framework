@@ -6,9 +6,9 @@
  * - HALF_OPEN: 테스트 상태, 제한된 요청 허용하여 시스템 복구 확인
  */
 export enum CircuitState {
-  CLOSED = 'CLOSED',
-  OPEN = 'OPEN',
-  HALF_OPEN = 'HALF_OPEN',
+  CLOSED = "CLOSED",
+  OPEN = "OPEN",
+  HALF_OPEN = "HALF_OPEN",
 }
 
 /**
@@ -20,10 +20,10 @@ export enum CircuitState {
  * - HALF_OPEN → OPEN: 실패 발생
  */
 export type CircuitStateTransition =
-  | { from: CircuitState.CLOSED; to: CircuitState.OPEN; reason: 'failure_threshold_reached' }
-  | { from: CircuitState.OPEN; to: CircuitState.HALF_OPEN; reason: 'timeout_elapsed' }
-  | { from: CircuitState.HALF_OPEN; to: CircuitState.CLOSED; reason: 'success_threshold_reached' }
-  | { from: CircuitState.HALF_OPEN; to: CircuitState.OPEN; reason: 'failure_occurred' };
+  | { from: CircuitState.CLOSED; to: CircuitState.OPEN; reason: "failure_threshold_reached" }
+  | { from: CircuitState.OPEN; to: CircuitState.HALF_OPEN; reason: "timeout_elapsed" }
+  | { from: CircuitState.HALF_OPEN; to: CircuitState.CLOSED; reason: "success_threshold_reached" }
+  | { from: CircuitState.HALF_OPEN; to: CircuitState.OPEN; reason: "failure_occurred" };
 
 export type InMemoryCircuitBreakerStateStoreOptions = {
   maxEntries?: number;
@@ -113,7 +113,7 @@ export abstract class CircuitBreakerStateStore {
    */
   abstract incrementFailureAndCheck(
     circuitId: string,
-    failureThreshold: number
+    failureThreshold: number,
   ): Promise<{ failureCount: number; shouldOpen: boolean }>;
 
   /**
@@ -175,7 +175,9 @@ export type DistributedCircuitBreakerStateStore = CircuitBreakerStateStore;
  * @deprecated 모든 CircuitBreakerStateStore는 기본적으로 분산 환경을 지원합니다.
  * 이 함수는 항상 true를 반환하며, 향후 버전에서 제거될 예정입니다.
  */
-export function isDistributedStore(_store: CircuitBreakerStateStore): _store is DistributedCircuitBreakerStateStore {
+export function isDistributedStore(
+  _store: CircuitBreakerStateStore,
+): _store is DistributedCircuitBreakerStateStore {
   return true;
 }
 
@@ -237,7 +239,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
 
   async incrementFailureAndCheck(
     circuitId: string,
-    failureThreshold: number
+    failureThreshold: number,
   ): Promise<{ failureCount: number; shouldOpen: boolean }> {
     const failureCount = await this.incrementFailureCount(circuitId);
     return {

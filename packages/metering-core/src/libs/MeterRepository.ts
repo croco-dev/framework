@@ -1,4 +1,4 @@
-import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from './types';
+import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "./types";
 
 /**
  * Meter 정의 및 Usage 데이터를 DB에 저장하는 추상 클래스
@@ -11,7 +11,10 @@ export abstract class MeterRepository {
   /**
    * Meter 정의 조회 (tenantId + meterId로 검색)
    */
-  abstract findByMeterIdAndTenant(meterId: string, tenantId: string): Promise<MeterDefinition | null>;
+  abstract findByMeterIdAndTenant(
+    meterId: string,
+    tenantId: string,
+  ): Promise<MeterDefinition | null>;
 
   /**
    * Meter 정의 등록 (정적 + 동적 모두 사용)

@@ -1,5 +1,12 @@
-import { type Attributes, context, type Exception, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
-import { getTracer } from './tracer.js';
+import {
+  type Attributes,
+  context,
+  type Exception,
+  type Span,
+  SpanStatusCode,
+  trace,
+} from "@opentelemetry/api";
+import { getTracer } from "./tracer.js";
 
 export type SpanOptions = {
   name?: string;
@@ -19,14 +26,17 @@ export type TraceInfo = {
  * @param options Span 옵션
  * @returns 함수 실행 결과
  */
-export async function withSpan<T>(fn: (span: Span) => Promise<T> | T, options: SpanOptions = {}): Promise<T> {
+export async function withSpan<T>(
+  fn: (span: Span) => Promise<T> | T,
+  options: SpanOptions = {},
+): Promise<T> {
   const tracer = getTracer();
-  const { name = 'anonymous-operation', attributes = {} } = options;
+  const { name = "anonymous-operation", attributes = {} } = options;
 
   return await tracer.startActiveSpan(name, async (span: Span) => {
     try {
       for (const [key, value] of Object.entries(attributes)) {
-        span.setAttribute(key, value as Parameters<Span['setAttribute']>[1]);
+        span.setAttribute(key, value as Parameters<Span["setAttribute"]>[1]);
       }
 
       return await fn(span);

@@ -1,9 +1,9 @@
-import 'reflect-metadata';
-import { Context } from '@croco/framework-context';
-import type { AuditLogRepository } from './AuditLogRepository';
-import { AUDIT_METADATA_KEY } from './constants';
-import type { AuditExecutionContext, CallHandler, Interceptor } from './interfaces/Interceptor';
-import type { AuditLogEntry } from './types';
+import "reflect-metadata";
+import { Context } from "@croco/framework-context";
+import type { AuditLogRepository } from "./AuditLogRepository";
+import { AUDIT_METADATA_KEY } from "./constants";
+import type { AuditExecutionContext, CallHandler, Interceptor } from "./interfaces/Interceptor";
+import type { AuditLogEntry } from "./types";
 
 type RequestHeaders = Headers | Record<string, string | undefined>;
 
@@ -32,7 +32,7 @@ function isHeadersInstance(headers: unknown): headers is Headers {
 }
 
 function hasGetMethod(headers: unknown): boolean {
-  return typeof (headers as { get?: unknown }).get === 'function';
+  return typeof (headers as { get?: unknown }).get === "function";
 }
 
 function readHeaderValue(headers: RequestHeaders | undefined, headerName: string): HeaderValue {
@@ -47,7 +47,7 @@ function readHeaderValue(headers: RequestHeaders | undefined, headerName: string
   if (hasGetMethod(headers)) {
     const getter = (headers as unknown as { get(name: string): string | null }).get;
     const result = getter(headerName);
-    if (typeof result === 'string') {
+    if (typeof result === "string") {
       return result;
     }
   }
@@ -58,32 +58,34 @@ function readHeaderValue(headers: RequestHeaders | undefined, headerName: string
     return direct;
   }
 
-  const match = Object.entries(headerRecord).find(([key]) => key.toLowerCase() === headerName.toLowerCase());
+  const match = Object.entries(headerRecord).find(
+    ([key]) => key.toLowerCase() === headerName.toLowerCase(),
+  );
   return match?.[1];
 }
 
 function extractIp(request: Request): string {
   const requestLike = request as RequestLike;
 
-  const forwardedFor = readHeaderValue(requestLike.headers, 'x-forwarded-for');
+  const forwardedFor = readHeaderValue(requestLike.headers, "x-forwarded-for");
   if (forwardedFor) {
-    return forwardedFor.split(',')[0]?.trim() ?? 'unknown';
+    return forwardedFor.split(",")[0]?.trim() ?? "unknown";
   }
 
-  if (typeof requestLike.header === 'function') {
-    return requestLike.header('x-real-ip') ?? 'unknown';
+  if (typeof requestLike.header === "function") {
+    return requestLike.header("x-real-ip") ?? "unknown";
   }
 
-  if (requestLike.header && typeof requestLike.header === 'object') {
-    return requestLike.header['x-real-ip'] ?? 'unknown';
+  if (requestLike.header && typeof requestLike.header === "object") {
+    return requestLike.header["x-real-ip"] ?? "unknown";
   }
 
-  const realIp = readHeaderValue(requestLike.headers, 'x-real-ip');
+  const realIp = readHeaderValue(requestLike.headers, "x-real-ip");
   if (realIp) {
     return realIp;
   }
 
-  return 'unknown';
+  return "unknown";
 }
 
 function extractRequestBody(request: Request): unknown {
@@ -111,8 +113,11 @@ function toHttpMetadata(context: AuditExecutionContext): HttpMetadata {
   return metadata;
 }
 
-function mergeMetadata(existing: AuditableMetadata | undefined, http: HttpMetadata): AuditableMetadata {
-  const safeExisting = existing && typeof existing === 'object' ? existing : {};
+function mergeMetadata(
+  existing: AuditableMetadata | undefined,
+  http: HttpMetadata,
+): AuditableMetadata {
+  const safeExisting = existing && typeof existing === "object" ? existing : {};
 
   return {
     ...safeExisting,
@@ -135,7 +140,7 @@ function resolveResourceId(path: string): string {
 export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
   constructor(private readonly repository: AuditLogRepository) {}
 
-  private async writeAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): Promise<void> {
+  private async writeAuditLog(entry: Omit<AuditLogEntry, "id" | "createdAt">): Promise<void> {
     await this.repository.create(entry);
   }
 
@@ -143,21 +148,23 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
     const target = context.getClass();
     const handler = context.getHandler();
     const http = toHttpMetadata(context);
-    const existingMetadata = Reflect.getMetadata(AUDIT_METADATA_KEY, target, handler) as AuditableMetadata | undefined;
+    const existingMetadata = Reflect.getMetadata(AUDIT_METADATA_KEY, target, handler) as
+      | AuditableMetadata
+      | undefined;
 
     if (existingMetadata) {
       return next.handle();
     }
 
     const contextData = Context.get();
-    const controllerName = target.name || 'UnknownController';
+    const controllerName = target.name || "UnknownController";
 
     try {
       const result = await next.handle();
 
       await this.writeAuditLog({
-        tenantId: contextData?.tenantId ?? 'unknown',
-        actorId: contextData?.user?.id ?? 'unknown',
+        tenantId: contextData?.tenantId ?? "unknown",
+        actorId: contextData?.user?.id ?? "unknown",
         action: resolveAction(controllerName, handler),
         resourceType: resolveResourceType(controllerName),
         resourceId: resolveResourceId(http.path),
@@ -171,8 +178,8 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
       return result;
     } catch (error) {
       await this.writeAuditLog({
-        tenantId: contextData?.tenantId ?? 'unknown',
-        actorId: contextData?.user?.id ?? 'unknown',
+        tenantId: contextData?.tenantId ?? "unknown",
+        actorId: contextData?.user?.id ?? "unknown",
         action: resolveAction(controllerName, handler),
         resourceType: resolveResourceType(controllerName),
         resourceId: resolveResourceId(http.path),

@@ -1,7 +1,7 @@
 {
   "name": "@croco/docs",
-  "type": "module",
   "version": "0.0.1",
+  "type": "module",
   "scripts": {
     "lint": "oxlint .",
     "dev": "astro dev --host",

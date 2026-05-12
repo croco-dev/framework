@@ -45,11 +45,16 @@ class MetadataStorageImpl {
   private makeKey(key: MetadataKey, target: MetadataTarget, propertyKey?: string | symbol): string {
     const keyId = String(this.getKeyId(key));
     const targetId = String(this.getTargetId(target as object));
-    const propStr = propertyKey ? String(propertyKey) : '';
+    const propStr = propertyKey ? String(propertyKey) : "";
     return `${keyId}::${targetId}::${propStr}`;
   }
 
-  define<T>(key: MetadataKey, target: MetadataTarget, value: T, propertyKey?: string | symbol): void {
+  define<T>(
+    key: MetadataKey,
+    target: MetadataTarget,
+    value: T,
+    propertyKey?: string | symbol,
+  ): void {
     const compositeKey = this.makeKey(key, target, propertyKey);
     this.storage.set(compositeKey, { key, target, propertyKey, value });
   }
@@ -59,15 +64,24 @@ class MetadataStorageImpl {
     return this.storage.get(compositeKey)?.value as T | undefined;
   }
 
-  getAll<T>(key: MetadataKey): Array<{ target: MetadataTarget; propertyKey?: string | symbol; value: T }> {
+  getAll<T>(
+    key: MetadataKey,
+  ): Array<{ target: MetadataTarget; propertyKey?: string | symbol; value: T }> {
     const entries: MetadataEntry[] = [];
     for (const entry of this.storage.values()) {
       if (entry.key === key) entries.push(entry);
     }
-    return entries.map(({ target, propertyKey, value }) => ({ target, propertyKey, value: value as T }));
+    return entries.map(({ target, propertyKey, value }) => ({
+      target,
+      propertyKey,
+      value: value as T,
+    }));
   }
 
-  getAllForTarget<T>(key: MetadataKey, target: MetadataTarget): Array<{ propertyKey?: string | symbol; value: T }> {
+  getAllForTarget<T>(
+    key: MetadataKey,
+    target: MetadataTarget,
+  ): Array<{ propertyKey?: string | symbol; value: T }> {
     const entries: MetadataEntry[] = [];
     for (const entry of this.storage.values()) {
       if (entry.key === key && entry.target === target) entries.push(entry);

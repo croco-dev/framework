@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DrizzleSessionProvider } from '../libs/DrizzleSessionProvider';
-import type { sessions as sessionsSchema } from '../schema';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DrizzleSessionProvider } from "../libs/DrizzleSessionProvider";
+import type { sessions as sessionsSchema } from "../schema";
 
-describe('DrizzleSessionProvider', () => {
+describe("DrizzleSessionProvider", () => {
   let provider!: DrizzleSessionProvider;
   let mockDb!: {
     update: ReturnType<typeof vi.fn>;
@@ -29,17 +29,17 @@ describe('DrizzleSessionProvider', () => {
       mockDb as unknown as ConstructorParameters<typeof DrizzleSessionProvider>[0],
       {
         sessions: {} as typeof sessionsSchema,
-      }
+      },
     );
   });
 
-  describe('getSession', () => {
-    it('should return session when found', async () => {
+  describe("getSession", () => {
+    it("should return session when found", async () => {
       const mockSession = {
-        id: 'session-1',
-        userId: 'user-1',
-        clientId: 'client-1',
-        status: 'active',
+        id: "session-1",
+        userId: "user-1",
+        clientId: "client-1",
+        status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
         expireAt: null,
@@ -49,35 +49,35 @@ describe('DrizzleSessionProvider', () => {
 
       mockDb.query.sessions.findFirst.mockResolvedValue(mockSession);
 
-      const result = await provider.getSession('session-1');
+      const result = await provider.getSession("session-1");
 
       expect(result).not.toBeNull();
-      expect(result?.id).toBe('session-1');
-      expect(result?.userId).toBe('user-1');
+      expect(result?.id).toBe("session-1");
+      expect(result?.userId).toBe("user-1");
     });
 
-    it('should return null when session not found', async () => {
+    it("should return null when session not found", async () => {
       mockDb.query.sessions.findFirst.mockResolvedValue(null);
 
-      const result = await provider.getSession('non-existent');
+      const result = await provider.getSession("non-existent");
 
       expect(result).toBeNull();
     });
 
-    it('should return null when row validation fails', async () => {
-      mockDb.query.sessions.findFirst.mockResolvedValue({ invalid: 'data' });
+    it("should return null when row validation fails", async () => {
+      mockDb.query.sessions.findFirst.mockResolvedValue({ invalid: "data" });
 
-      const result = await provider.getSession('session-1');
+      const result = await provider.getSession("session-1");
 
       expect(result).toBeNull();
     });
 
-    it('should handle session with all optional fields', async () => {
+    it("should handle session with all optional fields", async () => {
       const mockSession = {
-        id: 'session-1',
-        userId: 'user-1',
-        clientId: 'client-1',
-        status: 'active',
+        id: "session-1",
+        userId: "user-1",
+        clientId: "client-1",
+        status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
         expireAt: new Date(),
@@ -87,7 +87,7 @@ describe('DrizzleSessionProvider', () => {
 
       mockDb.query.sessions.findFirst.mockResolvedValue(mockSession);
 
-      const result = await provider.getSession('session-1');
+      const result = await provider.getSession("session-1");
 
       expect(result?.expireAt).toBeInstanceOf(Date);
       expect(result?.abandonedAt).toBeInstanceOf(Date);
@@ -95,14 +95,14 @@ describe('DrizzleSessionProvider', () => {
     });
   });
 
-  describe('listSessions', () => {
-    it('should return sessions with filters', async () => {
+  describe("listSessions", () => {
+    it("should return sessions with filters", async () => {
       const mockSessions = [
         {
-          id: 'session-1',
-          userId: 'user-1',
-          clientId: 'client-1',
-          status: 'active',
+          id: "session-1",
+          userId: "user-1",
+          clientId: "client-1",
+          status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
           expireAt: null,
@@ -113,28 +113,28 @@ describe('DrizzleSessionProvider', () => {
 
       mockDb.query.sessions.findMany.mockResolvedValue(mockSessions);
 
-      const result = await provider.listSessions({ userId: 'user-1', status: 'active' });
+      const result = await provider.listSessions({ userId: "user-1", status: "active" });
 
       expect(result.sessions).toHaveLength(1);
       expect(result.totalCount).toBe(1);
     });
 
-    it('should return empty array when no sessions match', async () => {
+    it("should return empty array when no sessions match", async () => {
       mockDb.query.sessions.findMany.mockResolvedValue([]);
 
-      const result = await provider.listSessions({ userId: 'user-1' });
+      const result = await provider.listSessions({ userId: "user-1" });
 
       expect(result.sessions).toEqual([]);
       expect(result.totalCount).toBe(0);
     });
 
-    it('should filter by userId', async () => {
+    it("should filter by userId", async () => {
       const mockSessions = [
         {
-          id: 'session-1',
-          userId: 'user-1',
-          clientId: 'client-1',
-          status: 'active',
+          id: "session-1",
+          userId: "user-1",
+          clientId: "client-1",
+          status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
           expireAt: null,
@@ -145,19 +145,19 @@ describe('DrizzleSessionProvider', () => {
 
       mockDb.query.sessions.findMany.mockResolvedValue(mockSessions);
 
-      const result = await provider.listSessions({ userId: 'user-1' });
+      const result = await provider.listSessions({ userId: "user-1" });
 
       expect(result.sessions).toHaveLength(1);
       expect(mockDb.query.sessions.findMany).toHaveBeenCalled();
     });
 
-    it('should filter by clientId', async () => {
+    it("should filter by clientId", async () => {
       const mockSessions = [
         {
-          id: 'session-1',
-          userId: 'user-1',
-          clientId: 'client-1',
-          status: 'active',
+          id: "session-1",
+          userId: "user-1",
+          clientId: "client-1",
+          status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
           expireAt: null,
@@ -168,18 +168,18 @@ describe('DrizzleSessionProvider', () => {
 
       mockDb.query.sessions.findMany.mockResolvedValue(mockSessions);
 
-      const result = await provider.listSessions({ clientId: 'client-1' });
+      const result = await provider.listSessions({ clientId: "client-1" });
 
       expect(result.sessions).toHaveLength(1);
     });
 
-    it('should filter by status', async () => {
+    it("should filter by status", async () => {
       const mockSessions = [
         {
-          id: 'session-1',
-          userId: 'user-1',
-          clientId: 'client-1',
-          status: 'active',
+          id: "session-1",
+          userId: "user-1",
+          clientId: "client-1",
+          status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
           expireAt: null,
@@ -190,12 +190,12 @@ describe('DrizzleSessionProvider', () => {
 
       mockDb.query.sessions.findMany.mockResolvedValue(mockSessions);
 
-      const result = await provider.listSessions({ status: 'active' });
+      const result = await provider.listSessions({ status: "active" });
 
       expect(result.sessions).toHaveLength(1);
     });
 
-    it('should support pagination', async () => {
+    it("should support pagination", async () => {
       mockDb.query.sessions.findMany.mockResolvedValue([]);
 
       await provider.listSessions({ limit: 10, offset: 20 });
@@ -207,17 +207,17 @@ describe('DrizzleSessionProvider', () => {
       });
     });
 
-    it('should filter out invalid rows', async () => {
+    it("should filter out invalid rows", async () => {
       const mockSessions = [
         {
-          id: 'session-1',
-          userId: 'user-1',
-          clientId: 'client-1',
-          status: 'active',
+          id: "session-1",
+          userId: "user-1",
+          clientId: "client-1",
+          status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-        { invalid: 'data' },
+        { invalid: "data" },
       ];
 
       mockDb.query.sessions.findMany.mockResolvedValue(mockSessions);
@@ -228,40 +228,40 @@ describe('DrizzleSessionProvider', () => {
     });
   });
 
-  describe('revokeSession', () => {
-    it('should revoke session', async () => {
+  describe("revokeSession", () => {
+    it("should revoke session", async () => {
       const setMock = vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       });
       mockDb.update.mockReturnValue({ set: setMock });
 
-      await provider.revokeSession('session-1');
+      await provider.revokeSession("session-1");
 
       expect(mockDb.update).toHaveBeenCalled();
-      expect(setMock).toHaveBeenCalledWith({ status: 'revoked', updatedAt: expect.any(Date) });
+      expect(setMock).toHaveBeenCalledWith({ status: "revoked", updatedAt: expect.any(Date) });
     });
   });
 
-  describe('revokeAllSessions', () => {
-    it('should revoke all active sessions for user', async () => {
+  describe("revokeAllSessions", () => {
+    it("should revoke all active sessions for user", async () => {
       const setMock = vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       });
       mockDb.update.mockReturnValue({ set: setMock });
 
-      await provider.revokeAllSessions('user-1');
+      await provider.revokeAllSessions("user-1");
 
       expect(mockDb.update).toHaveBeenCalled();
     });
 
-    it('should handle condition when and() returns undefined', async () => {
+    it("should handle condition when and() returns undefined", async () => {
       mockDb.update.mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      await provider.revokeAllSessions('user-1');
+      await provider.revokeAllSessions("user-1");
 
       expect(mockDb.update).toHaveBeenCalled();
     });

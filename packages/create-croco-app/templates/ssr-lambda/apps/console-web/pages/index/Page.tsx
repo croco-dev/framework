@@ -1,4 +1,4 @@
-import { usePageData } from '@croco/frontend-react';
+import { usePageData } from "@croco/frontend-react";
 
 type HomePageData = {
   readonly message: string;

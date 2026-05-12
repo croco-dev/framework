@@ -1,9 +1,9 @@
-import { Component, Inject } from '@croco/framework-context';
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import * as schema from './schema';
+import { Component, Inject } from "@croco/framework-context";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import * as schema from "./schema";
 
-export const DRIZZLE_TOKEN = 'DRIZZLE_TOKEN';
+export const DRIZZLE_TOKEN = "DRIZZLE_TOKEN";
 
 type BetterAuthDatabase = Parameters<typeof drizzleAdapter>[0];
 
@@ -24,7 +24,7 @@ export class BetterAuthFactory {
 
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: BetterAuthDatabase,
-    private readonly config: BetterAuthConfig
+    private readonly config: BetterAuthConfig,
   ) {}
 
   getAuth() {
@@ -34,7 +34,7 @@ export class BetterAuthFactory {
 
     this.auth = betterAuth({
       database: drizzleAdapter(this.db, {
-        provider: 'pg',
+        provider: "pg",
         schema: schema,
       }),
       baseURL: this.config.baseURL,

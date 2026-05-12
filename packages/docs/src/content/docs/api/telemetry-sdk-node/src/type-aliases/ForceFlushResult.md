@@ -13,13 +13,13 @@ title: "ForceFlushResult"
 
 > `optional` **error**: `TelemetryRuntimeProblem`
 
-***
+---
 
 ### flushedSpans?
 
 > `optional` **flushedSpans**: `number`
 
-***
+---
 
 ### success
 

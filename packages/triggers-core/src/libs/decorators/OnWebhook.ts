@@ -1,8 +1,8 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { WEBHOOK_METADATA_KEY } from '../metadataKeys';
-import type { WebhookOptions, WebhookTriggerMetadata } from '../types';
+import { MetadataStorage } from "@croco/framework-context";
+import { WEBHOOK_METADATA_KEY } from "../metadataKeys";
+import type { WebhookOptions, WebhookTriggerMetadata } from "../types";
 
-export { WEBHOOK_METADATA_KEY } from '../metadataKeys';
+export { WEBHOOK_METADATA_KEY } from "../metadataKeys";
 
 /**
  * OnWebhook decorator for handling HTTP webhook requests.
@@ -24,10 +24,18 @@ export { WEBHOOK_METADATA_KEY } from '../metadataKeys';
  *   }
  * }
  */
-export function OnWebhook(path: string, method: string, options: WebhookOptions = {}): MethodDecorator {
-  return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+export function OnWebhook(
+  path: string,
+  method: string,
+  options: WebhookOptions = {},
+): MethodDecorator {
+  return (
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const metadata: WebhookTriggerMetadata = {
-      type: 'webhook',
+      type: "webhook",
       path,
       method: method.toUpperCase(),
       methodName: propertyKey,

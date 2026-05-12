@@ -1,17 +1,17 @@
-import { EventBusConfig, EventPublisher } from '@croco/events-core';
-import type { RequestContext } from '@croco/framework-context';
-import { Component, Inject } from '@croco/framework-context';
-import { IdPrefix } from '@croco/gid-core';
-import { ImpersonationEndedEvent, ImpersonationStartedEvent } from './events';
-import { AuthProvider, ImpersonationStore } from './interfaces';
+import { EventBusConfig, EventPublisher } from "@croco/events-core";
+import type { RequestContext } from "@croco/framework-context";
+import { Component, Inject } from "@croco/framework-context";
+import { IdPrefix } from "@croco/gid-core";
+import { ImpersonationEndedEvent, ImpersonationStartedEvent } from "./events";
+import { AuthProvider, ImpersonationStore } from "./interfaces";
 import {
   ImpersonationReasonRequiredProblem,
   ImpersonationSessionNotFoundProblem,
   NestedImpersonationProblem,
   SelfImpersonationProblem,
-} from './problems/ImpersonationProblems';
-import type { ImpersonationConfig, ImpersonationState } from './types';
-import { IMPERSONATION_CONFIG_TOKEN } from './types';
+} from "./problems/ImpersonationProblems";
+import type { ImpersonationConfig, ImpersonationState } from "./types";
+import { IMPERSONATION_CONFIG_TOKEN } from "./types";
 
 export type ImpersonationContext = RequestContext & {
   impersonation: ImpersonationState;
@@ -19,16 +19,20 @@ export type ImpersonationContext = RequestContext & {
 
 @Component()
 export class ImpersonationService {
-  private readonly idPrefix = new IdPrefix('imp');
+  private readonly idPrefix = new IdPrefix("imp");
   private readonly eventPublisher = new EventPublisher(EventBusConfig.getInstance());
 
   constructor(
     @Inject(ImpersonationStore.token) private readonly store: ImpersonationStore,
     @Inject(AuthProvider.token) readonly _authProvider: AuthProvider,
-    @Inject(IMPERSONATION_CONFIG_TOKEN) private readonly config: ImpersonationConfig
+    @Inject(IMPERSONATION_CONFIG_TOKEN) private readonly config: ImpersonationConfig,
   ) {}
 
-  async start(impersonatorId: string, targetUserId: string, reason?: string): Promise<ImpersonationState> {
+  async start(
+    impersonatorId: string,
+    targetUserId: string,
+    reason?: string,
+  ): Promise<ImpersonationState> {
     if (impersonatorId === targetUserId) {
       throw new SelfImpersonationProblem();
     }
@@ -74,7 +78,7 @@ export class ImpersonationService {
   }
 
   isImpersonating(context: RequestContext): context is ImpersonationContext {
-    return 'impersonation' in context;
+    return "impersonation" in context;
   }
 
   getImpersonator(context: RequestContext): string | null {

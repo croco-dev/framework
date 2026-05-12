@@ -1,6 +1,6 @@
-import type { HttpContext as ProtocolHttpContext } from '@croco/protocols-rest';
-import type { Context as HonoContext } from 'hono';
-import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from './types';
+import type { HttpContext as ProtocolHttpContext } from "@croco/protocols-rest";
+import type { Context as HonoContext } from "hono";
+import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from "./types";
 
 /**
  * Hono 컨텍스트를 Croco 전용 HTTP 컨텍스트 인터페이스로 감싸는 어댑터입니다.
@@ -10,8 +10,8 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
 
   readonly req: CrocoRequest;
   readonly res: CrocoResponse;
-  readonly request: ProtocolHttpContext['request'];
-  readonly response: ProtocolHttpContext['response'];
+  readonly request: ProtocolHttpContext["request"];
+  readonly response: ProtocolHttpContext["response"];
 
   constructor(readonly raw: HonoContext) {
     const url = new URL(raw.req.url);
@@ -73,30 +73,30 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
 
   text(body: string, status: number = 200): Response {
     this.res.status = status;
-    return this.raw.text(body, status as Parameters<HonoContext['text']>[1]);
+    return this.raw.text(body, status as Parameters<HonoContext["text"]>[1]);
   }
 
   jsonResponse<T>(body: T, status: number = 200): Response {
     this.res.status = status;
-    return this.raw.json(body, status as Parameters<HonoContext['json']>[1]);
+    return this.raw.json(body, status as Parameters<HonoContext["json"]>[1]);
   }
 
   redirect(url: string, status: number = 302): Response {
     this.res.status = status;
-    return this.raw.redirect(url, status as Parameters<HonoContext['redirect']>[1]);
+    return this.raw.redirect(url, status as Parameters<HonoContext["redirect"]>[1]);
   }
 
   private extractParams(): Record<string, string> {
     const paramValues = this.raw.req.param();
 
-    if (!paramValues || typeof paramValues !== 'object') {
+    if (!paramValues || typeof paramValues !== "object") {
       return {};
     }
 
     const params: Record<string, string> = {};
 
     for (const [key, value] of Object.entries(paramValues)) {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         params[key] = value;
       }
     }

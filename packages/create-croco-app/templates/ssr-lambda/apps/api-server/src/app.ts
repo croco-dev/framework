@@ -1,13 +1,13 @@
-import 'reflect-metadata';
-import { Controller, Get } from '@croco/protocols-rest';
-import { createApp } from '@croco/transports-http';
+import "reflect-metadata";
+import { Controller, Get } from "@croco/protocols-rest";
+import { createApp } from "@croco/transports-http";
 
-@Controller('/api')
+@Controller("/api")
 class ApiController {
-  @Get('/hello')
+  @Get("/hello")
   hello() {
     return {
-      message: 'Hello from Croco API',
+      message: "Hello from Croco API",
     };
   }
 }
@@ -15,6 +15,6 @@ class ApiController {
 export function createCrocoApp() {
   return createApp({
     controllers: [ApiController],
-    securityValidation: 'off',
+    securityValidation: "off",
   });
 }

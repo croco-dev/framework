@@ -20,21 +20,18 @@ pnpm add @croco/dataloader-core
 ## Quick Start
 
 ```typescript
-import { createBatchLoader } from '@croco/dataloader-core';
+import { createBatchLoader } from "@croco/dataloader-core";
 
 const userLoader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => {
     const users = await db.users.findMany({ where: { id: { in: ids } } });
-    return ids.map(id => users.find(u => u.id === id) || null);
+    return ids.map((id) => users.find((u) => u.id === id) || null);
   },
 });
 
 // Automatically batches multiple loads in the same tick
-const [user1, user2] = await Promise.all([
-  userLoader.load(1),
-  userLoader.load(2),
-]);
+const [user1, user2] = await Promise.all([userLoader.load(1), userLoader.load(2)]);
 ```
 
 ## Usage
@@ -42,13 +39,13 @@ const [user1, user2] = await Promise.all([
 ### Basic Usage
 
 ```typescript
-import { createBatchLoader } from '@croco/dataloader-core';
+import { createBatchLoader } from "@croco/dataloader-core";
 
 const loader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => {
     const users = await db.users.findByIds(ids);
-    return ids.map(id => users.get(id) ?? null);
+    return ids.map((id) => users.get(id) ?? null);
   },
 });
 
@@ -58,12 +55,12 @@ const user = await loader.load(123);
 ### With Context
 
 ```typescript
-import { createBatchLoader } from '@croco/dataloader-core';
-import { Context } from '@croco/framework-context';
+import { createBatchLoader } from "@croco/dataloader-core";
+import { Context } from "@croco/framework-context";
 
-await Context.run({ requestId: 'req-123' }, async () => {
+await Context.run({ requestId: "req-123" }, async () => {
   const loader = createBatchLoader<number, User>({
-    name: 'users',
+    name: "users",
     batchFn: async (ids) => await fetchUsers(ids),
   });
 
@@ -77,17 +74,17 @@ await Context.run({ requestId: 'req-123' }, async () => {
 
 ```typescript
 const orderLoader = createBatchLoader<number, Order>({
-  name: 'orders',
+  name: "orders",
   batchFn: async (ids) => await fetchOrders(ids),
   resolveScope: () => TransactionContext.get()?.id,
 });
 
 // Different transactions get separate caches
-await TransactionContext.run({ id: 'tx-1' }, async () => {
+await TransactionContext.run({ id: "tx-1" }, async () => {
   await orderLoader.load(1); // First transaction
 });
 
-await TransactionContext.run({ id: 'tx-2' }, async () => {
+await TransactionContext.run({ id: "tx-2" }, async () => {
   await orderLoader.load(1); // Second transaction, separate cache
 });
 ```
@@ -96,22 +93,20 @@ await TransactionContext.run({ id: 'tx-2' }, async () => {
 
 ```typescript
 const loader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => await fetchUsers(ids),
   maxBatchSize: 100, // Max 100 items per batch
 });
 
 // Loading 150 items results in 2 batch calls
-const users = await Promise.all(
-  Array.from({ length: 150 }, (_, i) => loader.load(i))
-);
+const users = await Promise.all(Array.from({ length: 150 }, (_, i) => loader.load(i)));
 ```
 
 ### Disable Caching
 
 ```typescript
 const loader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => await fetchUsers(ids),
   cache: false, // Disable caching
 });
@@ -124,12 +119,12 @@ await loader.load(1); // Both calls trigger batch function
 
 ```typescript
 const loader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => await fetchUsers(ids),
 });
 
 // Prime cache with known value
-loader.prime(1, { id: 1, name: 'John' });
+loader.prime(1, { id: 1, name: "John" });
 
 // Clear specific entry
 loader.clear(1);
@@ -170,10 +165,10 @@ The loader handles errors in two ways:
 
 ```typescript
 const loader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => {
-    return ids.map(id => {
-      if (id === -1) return new Error('Invalid ID');
+    return ids.map((id) => {
+      if (id === -1) return new Error("Invalid ID");
       return fetchUser(id);
     });
   },
@@ -186,9 +181,9 @@ Batch-level errors clear the cache for all affected keys, allowing retries:
 
 ```typescript
 const loader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => {
-    if (Math.random() > 0.5) throw new Error('Network error');
+    if (Math.random() > 0.5) throw new Error("Network error");
     return fetchUsers(ids);
   },
 });
@@ -206,10 +201,10 @@ try {
 Batch operations automatically create OpenTelemetry spans:
 
 ```typescript
-import { createBatchLoader } from '@croco/dataloader-core';
+import { createBatchLoader } from "@croco/dataloader-core";
 
 const loader = createBatchLoader<number, User>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => await fetchUsers(ids),
 });
 

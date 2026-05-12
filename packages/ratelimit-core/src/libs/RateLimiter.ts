@@ -1,5 +1,5 @@
-import type { KeyContext, RateLimitKeyBuilder } from './RateLimitKeyBuilder';
-import type { RateLimitStore } from './RateLimitStore';
+import type { KeyContext, RateLimitKeyBuilder } from "./RateLimitKeyBuilder";
+import type { RateLimitStore } from "./RateLimitStore";
 import type {
   FixedWindowPolicy,
   RateLimitPolicy,
@@ -7,7 +7,7 @@ import type {
   RateLimitStats,
   SlidingWindowPolicy,
   TokenBucketPolicy,
-} from './types';
+} from "./types";
 
 export type RateLimiterKeyBuilder<TContext> = (context: TContext, policyName?: string) => string;
 
@@ -20,14 +20,14 @@ export class RateLimiter<TContext = KeyContext> {
   constructor(
     store: RateLimitStore,
     keyBuilder: RateLimiterKeyBuilder<TContext> | RateLimitKeyBuilder,
-    options?: { failOpen?: boolean; onStoreError?: (error: Error) => void }
+    options?: { failOpen?: boolean; onStoreError?: (error: Error) => void },
   ) {
     this.store = store;
     this.keyBuilder = (ctx: TContext, policyName?: string) => {
-      if (typeof keyBuilder === 'function') {
+      if (typeof keyBuilder === "function") {
         return keyBuilder(ctx, policyName);
       }
-      return keyBuilder.build(ctx as KeyContext, policyName ?? 'default');
+      return keyBuilder.build(ctx as KeyContext, policyName ?? "default");
     };
     this.failOpen = options?.failOpen ?? true;
     this.onStoreError = options?.onStoreError;
@@ -64,7 +64,8 @@ export class RateLimiter<TContext = KeyContext> {
   private handleStoreError(error: Error, policy: RateLimitPolicy): RateLimitResult {
     this.onStoreError?.(error);
 
-    const limit = policy.algorithm === 'token-bucket' ? (policy as TokenBucketPolicy).capacity : policy.limit;
+    const limit =
+      policy.algorithm === "token-bucket" ? (policy as TokenBucketPolicy).capacity : policy.limit;
 
     if (this.failOpen) {
       return {
@@ -90,19 +91,27 @@ export class RateLimiter<TContext = KeyContext> {
 
 export type RateLimiterContext<T> = T extends RateLimiter<infer C> ? C : never;
 
-export function createFixedWindowPolicy(name: string, limit: number, windowMs: number): FixedWindowPolicy {
+export function createFixedWindowPolicy(
+  name: string,
+  limit: number,
+  windowMs: number,
+): FixedWindowPolicy {
   return {
     name,
-    algorithm: 'fixed',
+    algorithm: "fixed",
     limit,
     windowMs,
   };
 }
 
-export function createSlidingWindowPolicy(name: string, limit: number, windowMs: number): SlidingWindowPolicy {
+export function createSlidingWindowPolicy(
+  name: string,
+  limit: number,
+  windowMs: number,
+): SlidingWindowPolicy {
   return {
     name,
-    algorithm: 'sliding',
+    algorithm: "sliding",
     limit,
     windowMs,
   };
@@ -112,11 +121,11 @@ export function createTokenBucketPolicy(
   name: string,
   capacity: number,
   refillRate: number,
-  refillIntervalMs = 1000
+  refillIntervalMs = 1000,
 ): TokenBucketPolicy {
   return {
     name,
-    algorithm: 'token-bucket',
+    algorithm: "token-bucket",
     capacity,
     refillRate,
     refillIntervalMs,

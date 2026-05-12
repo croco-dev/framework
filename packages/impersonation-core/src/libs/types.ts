@@ -1,4 +1,4 @@
-import { Token } from '@croco/framework-context';
+import { Token } from "@croco/framework-context";
 
 export type ImpersonationState = {
   sessionId: string;
@@ -15,4 +15,4 @@ export type ImpersonationConfig = {
   blockedActions: string[];
 };
 
-export const IMPERSONATION_CONFIG_TOKEN = new Token<ImpersonationConfig>('ImpersonationConfig');
+export const IMPERSONATION_CONFIG_TOKEN = new Token<ImpersonationConfig>("ImpersonationConfig");

@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server.js';
+import type { NextRequest } from "next/server.js";
 
 export type Context = {
   req: NextRequest;

@@ -1,12 +1,27 @@
 {
   "name": "@croco/llm-core",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
@@ -21,11 +36,6 @@
     "@croco/telemetry-api": "workspace:*",
     "ai": "^4.0.0"
   },
-  "peerDependencies": {
-    "@croco/events-core": "workspace:*",
-    "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*"
-  },
   "devDependencies": {
     "@ai-sdk/anthropic": "3.0.38",
     "@ai-sdk/openai": "3.0.26",
@@ -33,19 +43,9 @@
     "typescript": "5.9.3",
     "vitest": "4.0.16"
   },
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  "peerDependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*"
+  }
 }

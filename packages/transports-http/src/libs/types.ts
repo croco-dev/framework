@@ -1,11 +1,11 @@
-import type { Constructor } from '@croco/protocols-rest';
+import type { Constructor } from "@croco/protocols-rest";
 import type {
   APIGatewayEventRequestContextV2,
   APIGatewayEventRequestContextV2WithAuthorizer,
   APIGatewayProxyEventV2WithRequestContext,
   Context as AwsLambdaContext,
-} from 'aws-lambda';
-import type { Context as HonoContext } from 'hono';
+} from "aws-lambda";
+import type { Context as HonoContext } from "hono";
 
 export type GuardProvider<T = unknown> = Constructor<T> | T;
 export type InterceptorProvider<T = unknown> = Constructor<T> | T;
@@ -15,7 +15,7 @@ export type PipeProvider<T = unknown> = Constructor<T> | T;
 export interface AppConfig {
   controllers: Constructor[];
   middlewares?: MiddlewareFunction[];
-  securityValidation?: 'enforce' | 'warn' | 'off';
+  securityValidation?: "enforce" | "warn" | "off";
   unsafeSkipSecurityValidation?: true;
   globalFilters?: FilterProvider[];
   globalGuards?: GuardProvider[];
@@ -28,7 +28,10 @@ export interface ListenOptions {
   spaFallback?: boolean;
 }
 
-export type MiddlewareFunction = (ctx: CrocoHttpContext, next: () => Promise<void>) => Promise<void> | void;
+export type MiddlewareFunction = (
+  ctx: CrocoHttpContext,
+  next: () => Promise<void>,
+) => Promise<void> | void;
 
 export interface CrocoHttpContext {
   readonly req: CrocoRequest;
@@ -74,8 +77,9 @@ export type LambdaRequestContext = APIGatewayEventRequestContextV2 & {
 export type LambdaRequestContextWithAuthorizer<TAuthorizer = Record<string, unknown>> =
   APIGatewayEventRequestContextV2WithAuthorizer<TAuthorizer>;
 
-export type LambdaEvent<TRequestContext extends APIGatewayEventRequestContextV2 = LambdaRequestContext> =
-  APIGatewayProxyEventV2WithRequestContext<TRequestContext>;
+export type LambdaEvent<
+  TRequestContext extends APIGatewayEventRequestContextV2 = LambdaRequestContext,
+> = APIGatewayProxyEventV2WithRequestContext<TRequestContext>;
 
 export type LambdaEventWithAuthorizer<TAuthorizer = Record<string, unknown>> = LambdaEvent<
   LambdaRequestContextWithAuthorizer<TAuthorizer>

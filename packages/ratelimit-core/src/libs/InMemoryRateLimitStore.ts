@@ -1,5 +1,5 @@
-import { FixedWindowStore, SlidingWindowStore, TokenBucketStore } from './RateLimitStore';
-import type { FixedWindowPolicy, SlidingWindowPolicy, TokenBucketPolicy } from './types';
+import { FixedWindowStore, SlidingWindowStore, TokenBucketStore } from "./RateLimitStore";
+import type { FixedWindowPolicy, SlidingWindowPolicy, TokenBucketPolicy } from "./types";
 
 export type InMemoryRateLimitStoreOptions = {
   pruneIntervalMs?: number;
@@ -8,7 +8,10 @@ export type InMemoryRateLimitStoreOptions = {
 const DEFAULT_PRUNE_INTERVAL_MS = 60000;
 
 export class FixedWindowInMemoryStore extends FixedWindowStore {
-  private readonly windows = new Map<string, { count: number; windowStart: number; windowMs: number }>();
+  private readonly windows = new Map<
+    string,
+    { count: number; windowStart: number; windowMs: number }
+  >();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly pruneTimer?: ReturnType<typeof setInterval>;
 
@@ -36,7 +39,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
 
   async check(
     key: string,
-    policy: FixedWindowPolicy
+    policy: FixedWindowPolicy,
   ): Promise<{
     success: boolean;
     limit: number;
@@ -57,7 +60,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
 
   protected async getWindowEntry(
     key: string,
-    policy: FixedWindowPolicy
+    policy: FixedWindowPolicy,
   ): Promise<{ count: number; windowStart: number; windowMs: number } | null> {
     const entry = this.windows.get(key);
     if (!entry) return null;
@@ -72,7 +75,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
 
   protected async setWindowEntry(
     key: string,
-    entry: { count: number; windowStart: number; windowMs: number }
+    entry: { count: number; windowStart: number; windowMs: number },
   ): Promise<void> {
     this.windows.set(key, entry);
   }
@@ -147,7 +150,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
 
   async check(
     key: string,
-    policy: SlidingWindowPolicy
+    policy: SlidingWindowPolicy,
   ): Promise<{
     success: boolean;
     limit: number;
@@ -240,7 +243,10 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
 }
 
 export class TokenBucketInMemoryStore extends TokenBucketStore {
-  private readonly buckets = new Map<string, { tokens: number; lastRefill: number; ttlMs: number }>();
+  private readonly buckets = new Map<
+    string,
+    { tokens: number; lastRefill: number; ttlMs: number }
+  >();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly pruneTimer?: ReturnType<typeof setInterval>;
 
@@ -268,7 +274,7 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
 
   async check(
     key: string,
-    policy: TokenBucketPolicy
+    policy: TokenBucketPolicy,
   ): Promise<{
     success: boolean;
     limit: number;
@@ -291,7 +297,11 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     return this.buckets.get(key) ?? null;
   }
 
-  protected async setBucket(key: string, entry: { tokens: number; lastRefill: number }, ttlMs: number): Promise<void> {
+  protected async setBucket(
+    key: string,
+    entry: { tokens: number; lastRefill: number },
+    ttlMs: number,
+  ): Promise<void> {
     this.buckets.set(key, { ...entry, ttlMs });
   }
 

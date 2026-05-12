@@ -1,7 +1,7 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class MissingDownFunctionProblem extends Problem {
-  readonly code = 'migration-runner/missing-down-function';
+  readonly code = "migration-runner/missing-down-function";
   readonly category = ProblemCategory.ValidationError;
 
   constructor(fileId: string, fileName: string) {

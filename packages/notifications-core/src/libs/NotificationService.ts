@@ -1,12 +1,17 @@
-import { Component } from '@croco/framework-context';
-import type { TaskRunner } from '@croco/tasks-core';
-import type { NotificationProviderRegistry } from './NotificationProviderRegistry';
+import { Component } from "@croco/framework-context";
+import type { TaskRunner } from "@croco/tasks-core";
+import type { NotificationProviderRegistry } from "./NotificationProviderRegistry";
 import {
   NotificationProviderChannelMismatchProblem,
   NotificationProviderNotConfiguredProblem,
   NotificationProviderNotRegisteredProblem,
-} from './problems/NotificationProblems';
-import type { NotificationChannel, NotificationJobPayload, NotificationPayload, NotificationProvider } from './types';
+} from "./problems/NotificationProblems";
+import type {
+  NotificationChannel,
+  NotificationJobPayload,
+  NotificationPayload,
+  NotificationProvider,
+} from "./types";
 
 type NotificationSendServiceOptions = {
   providerName?: string;
@@ -17,7 +22,7 @@ type NotificationSendServiceOptions = {
 export class NotificationService {
   constructor(
     private taskRunner: TaskRunner,
-    private registry: NotificationProviderRegistry
+    private registry: NotificationProviderRegistry,
   ) {}
 
   registerProvider(provider: NotificationProvider, isDefault = false) {
@@ -34,10 +39,10 @@ export class NotificationService {
   async send(
     channel: NotificationChannel,
     payload: NotificationPayload,
-    options?: string | NotificationSendServiceOptions
+    options?: string | NotificationSendServiceOptions,
   ): Promise<void> {
-    const providerName = typeof options === 'string' ? options : options?.providerName;
-    const idempotencyKey = typeof options === 'string' ? undefined : options?.idempotencyKey;
+    const providerName = typeof options === "string" ? options : options?.providerName;
+    const idempotencyKey = typeof options === "string" ? undefined : options?.idempotencyKey;
     const targetProviderName = providerName ?? this.registry.getDefaultProviderName(channel);
 
     if (targetProviderName === undefined) {
@@ -53,7 +58,11 @@ export class NotificationService {
     const providerChannel = provider.getChannel();
 
     if (providerChannel !== channel) {
-      throw new NotificationProviderChannelMismatchProblem(targetProviderName, channel, providerChannel);
+      throw new NotificationProviderChannelMismatchProblem(
+        targetProviderName,
+        channel,
+        providerChannel,
+      );
     }
 
     const jobPayload: NotificationJobPayload = {
@@ -62,6 +71,6 @@ export class NotificationService {
       ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
     };
 
-    await this.taskRunner.execute('send-notification', jobPayload);
+    await this.taskRunner.execute("send-notification", jobPayload);
   }
 }

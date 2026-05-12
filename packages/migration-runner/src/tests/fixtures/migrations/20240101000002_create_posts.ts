@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql } from "drizzle-orm";
 
 export async function up(db: { execute: (query: unknown) => Promise<unknown> }) {
   await db.execute(sql`

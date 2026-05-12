@@ -15,13 +15,13 @@ title: "RateLimitStats"
 
 > **allowed**: `number`
 
-***
+---
 
 ### denied
 
 > **denied**: `number`
 
-***
+---
 
 ### total
 

@@ -1,8 +1,8 @@
-import 'reflect-metadata';
+import "reflect-metadata";
 
-import { DuplicateRecoverHandlerProblem } from './errors';
+import { DuplicateRecoverHandlerProblem } from "./errors";
 
-const RECOVER_METADATA_KEY = Symbol('retry:recover');
+const RECOVER_METADATA_KEY = Symbol("retry:recover");
 
 /**
  * Metadata stored for @Recover decorated methods.
@@ -38,12 +38,15 @@ export function Recover(exceptionType?: new (...args: unknown[]) => Error): Meth
     const methodName = String(propertyKey);
 
     // Get existing recover methods or create new array
-    const recoverMethods: RecoverMetadata[] = Reflect.getMetadata(RECOVER_METADATA_KEY, target) || [];
+    const recoverMethods: RecoverMetadata[] =
+      Reflect.getMetadata(RECOVER_METADATA_KEY, target) || [];
 
-    const duplicateRecover = recoverMethods.find((recoverMethod) => recoverMethod.exceptionType === exceptionType);
+    const duplicateRecover = recoverMethods.find(
+      (recoverMethod) => recoverMethod.exceptionType === exceptionType,
+    );
 
     if (duplicateRecover) {
-      throw new DuplicateRecoverHandlerProblem(methodName, exceptionType?.name ?? 'catch-all');
+      throw new DuplicateRecoverHandlerProblem(methodName, exceptionType?.name ?? "catch-all");
     }
 
     // Add this method
@@ -103,7 +106,10 @@ export function findRecoverMethod(target: object, error: Error): RecoverMetadata
  * Get inheritance depth from error to exception type.
  * Lower = more specific (direct match = 0).
  */
-function getInheritanceDepth(error: Error, exceptionType: new (...args: unknown[]) => Error): number {
+function getInheritanceDepth(
+  error: Error,
+  exceptionType: new (...args: unknown[]) => Error,
+): number {
   let depth = 0;
   let proto = Object.getPrototypeOf(error);
 

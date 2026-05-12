@@ -1,10 +1,13 @@
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
-import type { TxAdapter } from '@croco/tx-core';
-import { sql } from 'drizzle-orm';
-import { createDrizzleTxAdapter } from './DrizzleTxAdapter';
-import { RlsExecuteUnsupportedProblem, TenantContextRequiredProblem } from './problems/TxDrizzleProblems';
-import type { DrizzleDb, InferTxClient, InferTxOptions } from './types';
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
+import type { TxAdapter } from "@croco/tx-core";
+import { sql } from "drizzle-orm";
+import { createDrizzleTxAdapter } from "./DrizzleTxAdapter";
+import {
+  RlsExecuteUnsupportedProblem,
+  TenantContextRequiredProblem,
+} from "./problems/TxDrizzleProblems";
+import type { DrizzleDb, InferTxClient, InferTxOptions } from "./types";
 
 export interface RlsTenantProvider {
   getTenantId(): string | null;
@@ -28,12 +31,12 @@ type ExecutableTransactionClient = {
 };
 
 function supportsExecute(client: unknown): client is ExecutableTransactionClient {
-  if (typeof client !== 'object' || client === null || !('execute' in client)) {
+  if (typeof client !== "object" || client === null || !("execute" in client)) {
     return false;
   }
 
   const executableClient = client as { execute?: unknown };
-  return typeof executableClient.execute === 'function';
+  return typeof executableClient.execute === "function";
 }
 
 function getTenantIdOrThrow(tenantProvider: RlsTenantProvider): string {
@@ -49,10 +52,10 @@ function getTenantIdOrThrow(tenantProvider: RlsTenantProvider): string {
 export function createRlsTxAdapter<TDb extends DrizzleDb>(
   db: TDb,
   tenantProvider: RlsTenantProvider,
-  options: RlsOptions = {}
+  options: RlsOptions = {},
 ): TxAdapter<InferTxClient<TDb>, InferTxOptions<TDb>> {
   const baseAdapter = createDrizzleTxAdapter(db);
-  const configKey = options.configKey ?? 'app.current_tenant';
+  const configKey = options.configKey ?? "app.current_tenant";
 
   // Try to resolve logger, fallback to null if not available
   let logger: Logger | null = null;
@@ -63,7 +66,10 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
   }
 
   return {
-    async transaction<T>(fn: (client: InferTxClient<TDb>) => Promise<T>, txOptions?: InferTxOptions<TDb>): Promise<T> {
+    async transaction<T>(
+      fn: (client: InferTxClient<TDb>) => Promise<T>,
+      txOptions?: InferTxOptions<TDb>,
+    ): Promise<T> {
       const tenantId = getTenantIdOrThrow(tenantProvider);
 
       return baseAdapter.transaction(async (tx) => {
@@ -87,7 +93,7 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
     async savepoint<T>(
       client: InferTxClient<TDb>,
       fn: (client: InferTxClient<TDb>) => Promise<T>,
-      txOptions?: InferTxOptions<TDb>
+      txOptions?: InferTxOptions<TDb>,
     ): Promise<T> {
       // Nested transactions inherit RLS settings from the parent.
       return baseAdapter.savepoint(client, fn, txOptions);

@@ -1,20 +1,25 @@
-import type { EventBus } from '@croco/events-core';
-import type { Logger } from '@croco/framework-logger';
-import { recordError } from '@croco/telemetry-api';
-import { ApiKeyCreatedEvent, ApiKeyRevokedEvent, ApiKeyRotatedEvent, ApiKeyUsedEvent } from '../events/ApiKeyEvents';
+import type { EventBus } from "@croco/events-core";
+import type { Logger } from "@croco/framework-logger";
+import { recordError } from "@croco/telemetry-api";
+import {
+  ApiKeyCreatedEvent,
+  ApiKeyRevokedEvent,
+  ApiKeyRotatedEvent,
+  ApiKeyUsedEvent,
+} from "../events/ApiKeyEvents";
 import type {
   ApiKey,
   CreateApiKeyOptions,
   CreateApiKeyResult,
   RevokeApiKeyResult,
   RotateApiKeyResult,
-} from '../interfaces/ApiKey';
-import type { ApiKeyPrincipal } from '../interfaces/Principal';
-import { ForbiddenProblem } from '../problems/AuthProblems';
-import { ApiKeyGenerator } from './ApiKeyGenerator';
-import { ApiKeyHasher } from './ApiKeyHasher';
-import type { ApiKeyStore } from './ApiKeyStore';
-import { ApiKeyNotFoundProblem } from './problems/ApiKeyNotFoundProblem';
+} from "../interfaces/ApiKey";
+import type { ApiKeyPrincipal } from "../interfaces/Principal";
+import { ForbiddenProblem } from "../problems/AuthProblems";
+import { ApiKeyGenerator } from "./ApiKeyGenerator";
+import { ApiKeyHasher } from "./ApiKeyHasher";
+import type { ApiKeyStore } from "./ApiKeyStore";
+import { ApiKeyNotFoundProblem } from "./problems/ApiKeyNotFoundProblem";
 
 export class ApiKeyManager {
   constructor(
@@ -22,7 +27,7 @@ export class ApiKeyManager {
     private readonly generator: ApiKeyGenerator = new ApiKeyGenerator(),
     private readonly hasher: ApiKeyHasher = new ApiKeyHasher(),
     private readonly eventBus?: EventBus,
-    private readonly logger?: Logger
+    private readonly logger?: Logger,
   ) {}
 
   private async runSideEffect(effectName: string, effect: Promise<void>): Promise<boolean> {
@@ -39,7 +44,12 @@ export class ApiKeyManager {
   }
 
   async create(options: CreateApiKeyOptions): Promise<CreateApiKeyResult> {
-    const { prefix = 'sk', shortToken, longToken, fullKey } = this.generator.generate(options.prefix);
+    const {
+      prefix = "sk",
+      shortToken,
+      longToken,
+      fullKey,
+    } = this.generator.generate(options.prefix);
     const hash = this.hasher.hash(longToken);
 
     const key = await this.store.save({
@@ -49,7 +59,7 @@ export class ApiKeyManager {
       name: options.name,
       tenantId: options.tenantId,
       permissions: options.permissions,
-      createdBy: 'system',
+      createdBy: "system",
       expiresAt: options.expiresAt ?? null,
       revokedAt: null,
       lastUsedAt: null,
@@ -59,8 +69,10 @@ export class ApiKeyManager {
 
     const degraded = this.eventBus
       ? await this.runSideEffect(
-          'ApiKeyCreatedEvent publish failed',
-          this.eventBus.publish(new ApiKeyCreatedEvent({ keyId: key.id, tenantId: key.tenantId, name: key.name }))
+          "ApiKeyCreatedEvent publish failed",
+          this.eventBus.publish(
+            new ApiKeyCreatedEvent({ keyId: key.id, tenantId: key.tenantId, name: key.name }),
+          ),
         )
       : false;
 
@@ -85,17 +97,21 @@ export class ApiKeyManager {
     if (keyData.revokedAt) return null;
     if (keyData.expiresAt && keyData.expiresAt < new Date()) return null;
     if (ip && keyData.allowedIps && !keyData.allowedIps.includes(ip)) {
-      throw new ForbiddenProblem('API key is not allowed from this IP address');
+      throw new ForbiddenProblem("API key is not allowed from this IP address");
     }
 
     const degradedStates = await Promise.all([
-      this.runSideEffect('ApiKey updateLastUsed failed', this.store.updateLastUsed(keyData.id)),
+      this.runSideEffect("ApiKey updateLastUsed failed", this.store.updateLastUsed(keyData.id)),
       this.eventBus
         ? this.runSideEffect(
-            'ApiKeyUsedEvent publish failed',
+            "ApiKeyUsedEvent publish failed",
             this.eventBus.publish(
-              new ApiKeyUsedEvent({ keyId: keyData.id, tenantId: keyData.tenantId, timestamp: new Date() })
-            )
+              new ApiKeyUsedEvent({
+                keyId: keyData.id,
+                tenantId: keyData.tenantId,
+                timestamp: new Date(),
+              }),
+            ),
           )
         : Promise.resolve(false),
     ]);
@@ -103,14 +119,16 @@ export class ApiKeyManager {
     const degraded = degradedStates.some(Boolean);
 
     return {
-      type: 'apikey',
+      type: "apikey",
       id: keyData.id,
       keyId: keyData.id,
       name: keyData.name,
       keyStart: `${keyData.prefix}_${keyData.shortToken.slice(0, 8)}...`,
       tenantId: keyData.tenantId,
       permissions: keyData.permissions,
-      metadata: degraded ? { rateLimit: keyData.rateLimit, degraded: true } : { rateLimit: keyData.rateLimit },
+      metadata: degraded
+        ? { rateLimit: keyData.rateLimit, degraded: true }
+        : { rateLimit: keyData.rateLimit },
     };
   }
 
@@ -123,10 +141,14 @@ export class ApiKeyManager {
     if (keyData) {
       degraded = this.eventBus
         ? await this.runSideEffect(
-            'ApiKeyRevokedEvent publish failed',
+            "ApiKeyRevokedEvent publish failed",
             this.eventBus.publish(
-              new ApiKeyRevokedEvent({ keyId: id, tenantId: keyData.tenantId, revokedAt: new Date() })
-            )
+              new ApiKeyRevokedEvent({
+                keyId: id,
+                tenantId: keyData.tenantId,
+                revokedAt: new Date(),
+              }),
+            ),
           )
         : false;
     }
@@ -140,7 +162,12 @@ export class ApiKeyManager {
       throw new ApiKeyNotFoundProblem(id);
     }
 
-    const { prefix = 'sk', shortToken, longToken, fullKey } = this.generator.generate(existingKey.prefix);
+    const {
+      prefix = "sk",
+      shortToken,
+      longToken,
+      fullKey,
+    } = this.generator.generate(existingKey.prefix);
     const hash = this.hasher.hash(longToken);
 
     const newKey = await this.store.save({
@@ -162,10 +189,14 @@ export class ApiKeyManager {
 
     const degraded = this.eventBus
       ? await this.runSideEffect(
-          'ApiKeyRotatedEvent publish failed',
+          "ApiKeyRotatedEvent publish failed",
           this.eventBus.publish(
-            new ApiKeyRotatedEvent({ oldKeyId: id, newKeyId: newKey.id, tenantId: existingKey.tenantId })
-          )
+            new ApiKeyRotatedEvent({
+              oldKeyId: id,
+              newKeyId: newKey.id,
+              tenantId: existingKey.tenantId,
+            }),
+          ),
         )
       : false;
 
@@ -177,8 +208,8 @@ export class ApiKeyManager {
     };
   }
 
-  async list(tenantId: string): Promise<Omit<ApiKey, 'hash'>[]> {
+  async list(tenantId: string): Promise<Omit<ApiKey, "hash">[]> {
     const keys = await this.store.listByTenant(tenantId);
-    return keys.map(({ hash, ...rest }) => rest);
+    return keys.map(({ hash: _hash, ...rest }) => rest);
   }
 }

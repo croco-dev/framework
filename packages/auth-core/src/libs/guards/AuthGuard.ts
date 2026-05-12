@@ -1,23 +1,25 @@
-import 'reflect-metadata';
-import { AUTH_PUBLIC_KEY } from '../constants';
-import type { AuthProvider } from '../interfaces/AuthProvider';
-import type { AuthRequest } from '../interfaces/AuthRequest';
-import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
-import { UnauthorizedProblem } from '../problems/AuthProblems';
+import "reflect-metadata";
+import { AUTH_PUBLIC_KEY } from "../constants";
+import type { AuthProvider } from "../interfaces/AuthProvider";
+import type { AuthRequest } from "../interfaces/AuthRequest";
+import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
+import { UnauthorizedProblem } from "../problems/AuthProblems";
 
 function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
-  const classTarget = typeof controllerTarget === 'function' ? controllerTarget : controllerTarget.constructor;
-  const prototypeTarget = typeof controllerTarget === 'function' ? controllerTarget.prototype : controllerTarget;
+  const classTarget =
+    typeof controllerTarget === "function" ? controllerTarget : controllerTarget.constructor;
+  const prototypeTarget =
+    typeof controllerTarget === "function" ? controllerTarget.prototype : controllerTarget;
 
   return Boolean(
     Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget, handler) ??
-      Reflect.getMetadata(AUTH_PUBLIC_KEY, prototypeTarget, handler) ??
-      Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget)
+    Reflect.getMetadata(AUTH_PUBLIC_KEY, prototypeTarget, handler) ??
+    Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget),
   );
 }
 
 function isMetadataTarget(value: unknown): value is object {
-  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+  return (typeof value === "object" && value !== null) || typeof value === "function";
 }
 
 export class AuthGuard implements Guard<RouteExecutionContext> {

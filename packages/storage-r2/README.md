@@ -11,16 +11,16 @@ pnpm add @croco/storage-r2 @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
 ## 사용법
 
 ```typescript
-import { R2StorageProvider } from '@croco/storage-r2';
+import { R2StorageProvider } from "@croco/storage-r2";
 
 const storage = new R2StorageProvider(configService, logger);
 
-await storage.put('images/logo.png', Buffer.from('content'), {
-  contentType: 'image/png',
+await storage.put("images/logo.png", Buffer.from("content"), {
+  contentType: "image/png",
 });
 
-const file = await storage.get('images/logo.png');
-const signedUrl = await storage.getSignedUrl('images/logo.png', { expiresIn: 3600 });
+const file = await storage.get("images/logo.png");
+const signedUrl = await storage.getSignedUrl("images/logo.png", { expiresIn: 3600 });
 ```
 
 ## 설정
@@ -38,14 +38,14 @@ const signedUrl = await storage.getSignedUrl('images/logo.png', { expiresIn: 360
 
 ## API 레퍼런스
 
-| API | 설명 |
-|---|---|
-| `R2StorageProvider` | 업로드, 다운로드, 스트림 조회, 삭제, 메타데이터 조회를 제공합니다. |
-| `R2_OPTIONS` | DI 등록용 토큰입니다. |
-| `R2Options` | 계정, 버킷, 공개 URL 설정 타입입니다. |
-| `MissingR2ConfigProblem` | 필수 설정이 없을 때 발생합니다. |
-| `EmptyR2BodyProblem` | 다운로드 응답 본문이 비었을 때 발생합니다. |
-| `R2ObjectTooLargeProblem` | `get()`으로 10MB 초과 객체를 읽으려 할 때 발생합니다. |
+| API                       | 설명                                                               |
+| ------------------------- | ------------------------------------------------------------------ |
+| `R2StorageProvider`       | 업로드, 다운로드, 스트림 조회, 삭제, 메타데이터 조회를 제공합니다. |
+| `R2_OPTIONS`              | DI 등록용 토큰입니다.                                              |
+| `R2Options`               | 계정, 버킷, 공개 URL 설정 타입입니다.                              |
+| `MissingR2ConfigProblem`  | 필수 설정이 없을 때 발생합니다.                                    |
+| `EmptyR2BodyProblem`      | 다운로드 응답 본문이 비었을 때 발생합니다.                         |
+| `R2ObjectTooLargeProblem` | `get()`으로 10MB 초과 객체를 읽으려 할 때 발생합니다.              |
 
 ## 동작 메모
 

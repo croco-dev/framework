@@ -1,16 +1,16 @@
-import { randomUUID } from 'node:crypto';
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { Container, Context as FrameworkContext } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
-import { Problem } from '@croco/problems-core';
-import { createYoga } from 'graphql-yoga';
+import { randomUUID } from "node:crypto";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { Container, Context as FrameworkContext } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
+import { Problem } from "@croco/problems-core";
+import { createYoga } from "graphql-yoga";
 import {
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,
-} from './problems/GraphQLTransportProblems';
-import type { GraphQLServerOptions } from './types';
+} from "./problems/GraphQLTransportProblems";
+import type { GraphQLServerOptions } from "./types";
 
 type YogaHandler = (request: Request) => Promise<Response>;
 
@@ -26,12 +26,19 @@ export class GraphQLServer {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    const { schema, schemaOptions, context, graphqlEndpoint = '/graphql', cors, plugins } = this.options;
+    const {
+      schema,
+      schemaOptions,
+      context,
+      graphqlEndpoint = "/graphql",
+      cors,
+      plugins,
+    } = this.options;
 
     let graphqlSchema = schema;
 
     if (!graphqlSchema && schemaOptions) {
-      const { SchemaCompiler } = await import('./SchemaCompiler');
+      const { SchemaCompiler } = await import("./SchemaCompiler");
       graphqlSchema = await SchemaCompiler.compileSchema(schemaOptions);
     }
 
@@ -45,7 +52,7 @@ export class GraphQLServer {
       cors,
       plugins,
       context: async ({ request }) => {
-        if (typeof context === 'function') {
+        if (typeof context === "function") {
           return await context(request);
         }
         return context || {};
@@ -72,22 +79,24 @@ export class GraphQLServer {
     await this.initialize();
 
     if (!this.yogaHandler) {
-      throw new GraphQLServerNotInitializedProblem('Server not initialized.');
+      throw new GraphQLServerNotInitializedProblem("Server not initialized.");
     }
 
     const handler = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-      const url = req.url ? new URL(req.url, `http://${req.headers.host}`) : new URL('http://localhost');
-      const method = req.method || 'GET';
+      const url = req.url
+        ? new URL(req.url, `http://${req.headers.host}`)
+        : new URL("http://localhost");
+      const method = req.method || "GET";
 
       let body: string | undefined;
 
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
+      if (req.method !== "GET" && req.method !== "HEAD") {
         try {
           body = await this.getBody(req);
         } catch (error) {
           if (error instanceof Problem) {
             res.statusCode = error.status;
-            res.setHeader('content-type', 'application/problem+json');
+            res.setHeader("content-type", "application/problem+json");
             res.end(JSON.stringify(error.toJSON()));
             return;
           }
@@ -103,9 +112,9 @@ export class GraphQLServer {
       });
 
       if (!this.yogaHandler) {
-        const problem = new GraphQLServerNotInitializedProblem('Server not initialized.');
+        const problem = new GraphQLServerNotInitializedProblem("Server not initialized.");
         res.statusCode = problem.status;
-        res.setHeader('content-type', 'application/problem+json');
+        res.setHeader("content-type", "application/problem+json");
         res.end(JSON.stringify(problem.toJSON()));
         return;
       }
@@ -132,7 +141,7 @@ export class GraphQLServer {
           try {
             const logger = Container.get(Logger);
             logger.info(
-              `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || '/graphql'}`
+              `GraphQL Server running on http://localhost:${port}${this.options.graphqlEndpoint || "/graphql"}`,
             );
           } catch {
             // Intentionally ignored: Logger is optional for startup logging
@@ -146,9 +155,9 @@ export class GraphQLServer {
   private getBody(req: IncomingMessage): Promise<string> {
     return new Promise((resolve, reject) => {
       const maxBodySizeBytes = this.options.maxBodySizeBytes ?? DEFAULT_MAX_BODY_SIZE_BYTES;
-      const contentLength = req.headers['content-length'];
+      const contentLength = req.headers["content-length"];
 
-      if (typeof contentLength === 'string') {
+      if (typeof contentLength === "string") {
         const parsedContentLength = Number(contentLength);
 
         if (Number.isFinite(parsedContentLength) && parsedContentLength > maxBodySizeBytes) {
@@ -161,10 +170,10 @@ export class GraphQLServer {
       let totalBytes = 0;
 
       const cleanup = () => {
-        req.off('data', onData);
-        req.off('end', onEnd);
-        req.off('error', onError);
-        req.off('aborted', onAborted);
+        req.off("data", onData);
+        req.off("end", onEnd);
+        req.off("error", onError);
+        req.off("aborted", onAborted);
       };
 
       const onData = (chunk: Buffer) => {
@@ -195,10 +204,10 @@ export class GraphQLServer {
         reject(new GraphQLRequestBodyAbortedProblem());
       };
 
-      req.on('data', onData);
-      req.on('end', onEnd);
-      req.on('error', onError);
-      req.on('aborted', onAborted);
+      req.on("data", onData);
+      req.on("end", onEnd);
+      req.on("error", onError);
+      req.on("aborted", onAborted);
     });
   }
 

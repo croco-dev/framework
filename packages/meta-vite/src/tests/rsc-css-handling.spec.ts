@@ -1,10 +1,10 @@
-import { readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { describe, expect, it } from "vitest";
 
-const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/rsc-basic');
-const cssFixturePath = join(fixtureDir, 'rsc-style.css');
+const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures/rsc-basic");
+const cssFixturePath = join(fixtureDir, "rsc-style.css");
 
 async function importCssFixture(specifier: string) {
   try {
@@ -16,12 +16,12 @@ async function importCssFixture(specifier: string) {
   }
 }
 
-describe('rsc css handling', () => {
-  it('documents raw CSS import behavior in the test runtime', async () => {
-    const source = await readFile(cssFixturePath, 'utf8');
+describe("rsc css handling", () => {
+  it("documents raw CSS import behavior in the test runtime", async () => {
+    const source = await readFile(cssFixturePath, "utf8");
     const result = await importCssFixture(pathToFileURL(cssFixturePath).href);
 
-    expect(source).toContain('.rsc-basic');
+    expect(source).toContain(".rsc-basic");
     if (result.loaded) {
       expect(result.value).toBeDefined();
       return;
@@ -30,11 +30,11 @@ describe('rsc css handling', () => {
     expect(result.message).toMatch(/Unknown file extension|Cannot find module|failed to load/i);
   });
 
-  it('documents virtual CSS ?direct import behavior in the test runtime', async () => {
-    const source = await readFile(cssFixturePath, 'utf8');
+  it("documents virtual CSS ?direct import behavior in the test runtime", async () => {
+    const source = await readFile(cssFixturePath, "utf8");
     const result = await importCssFixture(`${pathToFileURL(cssFixturePath).href}?direct`);
 
-    expect(source).toContain('color:');
+    expect(source).toContain("color:");
     if (result.loaded) {
       expect(result.value).toBeDefined();
       return;

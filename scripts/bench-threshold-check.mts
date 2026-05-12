@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-import { createVitest } from 'vitest/node';
+import { createVitest } from "vitest/node";
 
 interface Thresholds {
   [benchmarkName: string]: {
@@ -20,8 +20,8 @@ interface BenchmarkReport {
   p75: number;
   threshold?: number;
   baseline?: number;
-  thresholdStatus?: 'pass' | 'fail' | 'skip';
-  baselineStatus?: 'pass' | 'fail' | 'skip';
+  thresholdStatus?: "pass" | "fail" | "skip";
+  baselineStatus?: "pass" | "fail" | "skip";
   thresholdDiff?: number;
   baselineDiff?: number;
   thresholdSkipReason?: string;
@@ -29,13 +29,13 @@ interface BenchmarkReport {
 }
 
 const projectRoot = process.cwd();
-const thresholdsPath = join(projectRoot, 'benchmarks', 'thresholds.json');
-const baselinePath = join(projectRoot, 'benchmarks', 'baseline.json');
+const thresholdsPath = join(projectRoot, "benchmarks", "thresholds.json");
+const baselinePath = join(projectRoot, "benchmarks", "baseline.json");
 
 const args = process.argv.slice(2);
-const isUpdateBaseline = args.includes('--update-baseline');
-const outputJsonArg = args.find((a) => a.startsWith('--output-json='));
-const outputJsonPath = outputJsonArg ? outputJsonArg.split('=')[1] : null;
+const isUpdateBaseline = args.includes("--update-baseline");
+const outputJsonArg = args.find((a) => a.startsWith("--output-json="));
+const outputJsonPath = outputJsonArg ? outputJsonArg.split("=")[1] : null;
 
 const BASELINE_TOLERANCE = 0.2;
 const CI_THRESHOLD_MULTIPLIER = 2;
@@ -45,10 +45,10 @@ const BOX_WIDTH = 62;
 const EXPLICIT_THRESHOLD_SKIPS: Record<string, string> = {};
 
 const EXPLICIT_BASELINE_SKIPS: Record<string, string> = {
-  'TelemetryRuntime.init (lambda preset)':
-    'OpenTelemetry SDK init cost is environment-sensitive. Hold baseline until recent green CI runs establish stable variance.',
-  'lambdaPreset config creation':
-    'Micro-benchmark stays in sub-millisecond range. Hold baseline until recent green CI runs establish stable variance.',
+  "TelemetryRuntime.init (lambda preset)":
+    "OpenTelemetry SDK init cost is environment-sensitive. Hold baseline until recent green CI runs establish stable variance.",
+  "lambdaPreset config creation":
+    "Micro-benchmark stays in sub-millisecond range. Hold baseline until recent green CI runs establish stable variance.",
 };
 
 function getThresholdSkipReason(name: string): string {
@@ -58,7 +58,7 @@ function getThresholdSkipReason(name: string): string {
     return explicitReason;
   }
 
-  return 'No threshold defined in benchmarks/thresholds.json.';
+  return "No threshold defined in benchmarks/thresholds.json.";
 }
 
 function getBaselineSkipReason(name: string): string {
@@ -68,7 +68,7 @@ function getBaselineSkipReason(name: string): string {
     return explicitReason;
   }
 
-  return 'No baseline defined in benchmarks/baseline.json.';
+  return "No baseline defined in benchmarks/baseline.json.";
 }
 
 function loadThresholds(): Thresholds {
@@ -77,7 +77,7 @@ function loadThresholds(): Thresholds {
     process.exit(1);
   }
   try {
-    return JSON.parse(readFileSync(thresholdsPath, 'utf-8'));
+    return JSON.parse(readFileSync(thresholdsPath, "utf-8"));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`Failed to parse thresholds.json at ${thresholdsPath}: ${message}`);
@@ -90,7 +90,7 @@ function loadBaseline(): Baseline | null {
     return null;
   }
   try {
-    return JSON.parse(readFileSync(baselinePath, 'utf-8'));
+    return JSON.parse(readFileSync(baselinePath, "utf-8"));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`Failed to parse baseline.json at ${baselinePath}: ${message}`);
@@ -117,11 +117,11 @@ function formatDuration(ms: number): string {
 function formatDiff(actual: number, expected: number): string {
   const diff = actual - expected;
   if (expected === 0) {
-    if (diff === 0) return '+0.0%';
-    return diff > 0 ? '+∞' : '-∞';
+    if (diff === 0) return "+0.0%";
+    return diff > 0 ? "+∞" : "-∞";
   }
   const percent = ((diff / expected) * 100).toFixed(1);
-  const sign = diff >= 0 ? '+' : '';
+  const sign = diff >= 0 ? "+" : "";
   return `${sign}${percent}%`;
 }
 
@@ -129,8 +129,8 @@ async function main() {
   const thresholds = loadThresholds();
   const baseline = loadBaseline();
 
-  const vitest = await createVitest('benchmark', {
-    config: './vitest.config.bench.ts',
+  const vitest = await createVitest("benchmark", {
+    config: "./vitest.config.bench.ts",
     reporters: [],
   });
 
@@ -150,15 +150,15 @@ async function main() {
     // In Vitest 4.x, raw samples are not stored in state; use pre-computed p75 on leaf tasks (type=test).
     // Suite heuristic: if a describe block contains exactly one bench, attribute the result to the
     // suite name (the threshold key). Multiple children → use each child's own name.
-    const collectEntries = (tasks: (typeof files)[number]['tasks']): BenchEntry[] => {
+    const collectEntries = (tasks: (typeof files)[number]["tasks"]): BenchEntry[] => {
       const entries: BenchEntry[] = [];
       for (const task of tasks) {
-        const p75: number | undefined = (task.result?.benchmark as Record<string, unknown> | undefined)?.p75 as
-          | number
-          | undefined;
+        const p75: number | undefined = (
+          task.result?.benchmark as Record<string, unknown> | undefined
+        )?.p75 as number | undefined;
         if (p75 !== undefined) {
           entries.push({ name: task.name, p75 });
-        } else if ('tasks' in task && Array.isArray(task.tasks) && task.tasks.length > 0) {
+        } else if ("tasks" in task && Array.isArray(task.tasks) && task.tasks.length > 0) {
           const childEntries = collectEntries(task.tasks);
           if (childEntries.length === 1) {
             // Single-bench suite: attribute result to the suite name (the threshold key)
@@ -186,13 +186,13 @@ async function main() {
           report.thresholdDiff = p75 - threshold;
 
           if (p75 > effectiveThreshold) {
-            report.thresholdStatus = 'fail';
+            report.thresholdStatus = "fail";
             allPassed = false;
           } else {
-            report.thresholdStatus = 'pass';
+            report.thresholdStatus = "pass";
           }
         } else {
-          report.thresholdStatus = 'skip';
+          report.thresholdStatus = "skip";
           report.thresholdSkipReason = getThresholdSkipReason(name);
           console.warn(`⚠️  Threshold skipped for "${name}": ${report.thresholdSkipReason}`);
         }
@@ -203,13 +203,13 @@ async function main() {
           report.baselineDiff = p75 - baselineP75;
 
           if (p75 - baselineP75 > baselineP75 * BASELINE_TOLERANCE) {
-            report.baselineStatus = 'fail';
+            report.baselineStatus = "fail";
             allPassed = false;
           } else {
-            report.baselineStatus = 'pass';
+            report.baselineStatus = "pass";
           }
         } else {
-          report.baselineStatus = 'skip';
+          report.baselineStatus = "skip";
           report.baselineSkipReason = getBaselineSkipReason(name);
           console.warn(`⚠️  Baseline skipped for "${name}": ${report.baselineSkipReason}`);
         }
@@ -227,21 +227,25 @@ async function main() {
       writeFileSync(outputJsonPath, JSON.stringify({ allPassed, reports }, null, 2));
     }
 
-    console.log('\n╔══════════════════════════════════════════════════════════╗');
-    console.log('║ Cold-Start Benchmark Report                            ║');
-    console.log('╠══════════════════════════════════════════════════════════╣');
+    console.log("\n╔══════════════════════════════════════════════════════════╗");
+    console.log("║ Cold-Start Benchmark Report                            ║");
+    console.log("╠══════════════════════════════════════════════════════════╣");
 
     for (const report of reports) {
-      const thresholdPart = report.threshold ? `threshold: ${formatDuration(report.threshold)}` : 'no threshold';
-      const baselinePart = report.baseline ? `baseline: ${formatDuration(report.baseline)}` : '';
-      const skipParts = [report.thresholdSkipReason, report.baselineSkipReason].filter(Boolean).join(' | ');
+      const thresholdPart = report.threshold
+        ? `threshold: ${formatDuration(report.threshold)}`
+        : "no threshold";
+      const baselinePart = report.baseline ? `baseline: ${formatDuration(report.baseline)}` : "";
+      const skipParts = [report.thresholdSkipReason, report.baselineSkipReason]
+        .filter(Boolean)
+        .join(" | ");
 
       const statusIcon =
-        report.thresholdStatus === 'fail' || report.baselineStatus === 'fail'
-          ? '❌'
-          : report.thresholdStatus === 'skip' && report.baselineStatus === 'skip'
-            ? '⚠️ '
-            : '✅';
+        report.thresholdStatus === "fail" || report.baselineStatus === "fail"
+          ? "❌"
+          : report.thresholdStatus === "skip" && report.baselineStatus === "skip"
+            ? "⚠️ "
+            : "✅";
 
       let line = `║ ${report.name.padEnd(30)} p75: ${formatDuration(report.p75).padEnd(10)}`;
 
@@ -249,7 +253,8 @@ async function main() {
         line += ` ${thresholdPart.padEnd(20)}`;
       }
       if (report.baseline) {
-        const diff = report.baselineDiff !== undefined ? formatDiff(report.p75, report.baseline) : '';
+        const diff =
+          report.baselineDiff !== undefined ? formatDiff(report.p75, report.baseline) : "";
         line += ` ${baselinePart.padEnd(20)} (${diff})`;
       } else if (skipParts) {
         line += ` ${skipParts}`;
@@ -259,9 +264,9 @@ async function main() {
       console.log(line.substring(0, BOX_WIDTH));
     }
 
-    console.log('╠══════════════════════════════════════════════════════════╣');
-    console.log(`║ Result: ${allPassed ? 'ALL PASSED' : 'FAILED'}${' '.repeat(40)} ║`);
-    console.log('╚══════════════════════════════════════════════════════════╝\n');
+    console.log("╠══════════════════════════════════════════════════════════╣");
+    console.log(`║ Result: ${allPassed ? "ALL PASSED" : "FAILED"}${" ".repeat(40)} ║`);
+    console.log("╚══════════════════════════════════════════════════════════╝\n");
 
     process.exit(allPassed ? 0 : 1);
   } finally {
@@ -270,6 +275,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Error running benchmark checks:', err);
+  console.error("Error running benchmark checks:", err);
   process.exit(1);
 });

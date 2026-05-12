@@ -13,7 +13,7 @@ Programmatic retry template.
 const template = new RetryTemplate({ maxAttempts: 3 });
 const result = await template.execute(
   async (ctx) => await riskyOperation(),
-  async (ctx) => fallbackValue
+  async (ctx) => fallbackValue,
 );
 ```
 

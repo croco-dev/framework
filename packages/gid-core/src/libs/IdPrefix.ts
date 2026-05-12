@@ -1,5 +1,5 @@
-import { ulid } from 'ulid';
-import { InvalidIdPrefixProblem } from './problems/GidProblems';
+import { ulid } from "ulid";
+import { InvalidIdPrefixProblem } from "./problems/GidProblems";
 
 const MINIMUM_PREFIX_LENGTH = 3;
 const ULID_LENGTH = 26;
@@ -27,7 +27,7 @@ export class IdPrefix<TPrefix extends string = string> {
   }
 
   validate(id: unknown): id is PrefixedId<TPrefix> {
-    if (typeof id !== 'string') {
+    if (typeof id !== "string") {
       return false;
     }
 

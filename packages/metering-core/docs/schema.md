@@ -19,7 +19,7 @@ CREATE TABLE meters (
   metadata JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  
+
   UNIQUE(tenant_id, meter_id)
 );
 
@@ -42,14 +42,14 @@ CREATE TABLE usage_records (
   idempotency_key VARCHAR(255) NOT NULL,
   metadata JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  
+
   UNIQUE(tenant_id, meter_id, idempotency_key)
 );
 
 -- 인덱스 (조회 성능 최적화)
-CREATE INDEX idx_usage_records_tenant_meter_timestamp 
+CREATE INDEX idx_usage_records_tenant_meter_timestamp
   ON usage_records(tenant_id, meter_id, timestamp);
-CREATE INDEX idx_usage_records_idempotency 
+CREATE INDEX idx_usage_records_idempotency
   ON usage_records(tenant_id, meter_id, idempotency_key);
 ```
 
@@ -60,22 +60,26 @@ CREATE INDEX idx_usage_records_idempotency
 실시간 Usage 데이터는 Redis Sorted Set에 저장됩니다.
 
 **키 패턴:**
+
 ```
 usage:{tenantId}:{meterId}:{period}
 ```
 
 **예시:**
+
 ```
 usage:tenant-123:api_calls:2024-01
 usage:tenant-123:storage:2024-01-15
 ```
 
 **자료구조:**
+
 - Type: Sorted Set (ZSET)
 - Score: timestamp (밀리초)
 - Member: `{usageId}:{value}`
 
 **명령어 예시:**
+
 ```redis
 # 저장
 ZADD usage:tenant-123:api_calls:2024-01 1706745600000 "uuid-abc:5"
@@ -92,21 +96,25 @@ ZREMRANGEBYSCORE usage:tenant-123:api_calls:2024-01 0 1706832000000
 중복 요청 방지를 위한 키입니다.
 
 **키 패턴:**
+
 ```
 idem:{tenantId}:{meterId}:{idempotencyKey}
 ```
 
 **예시:**
+
 ```
 idem:tenant-123:api_calls:req-abc-123
 ```
 
 **자료구조:**
+
 - Type: String
 - Value: "1"
 - TTL: 24시간 (86400초)
 
 **명령어 예시:**
+
 ```redis
 # 설정 (NX = 존재하지 않을 때만, EX = TTL)
 SET idem:tenant-123:api_calls:req-abc-123 1 NX EX 86400
@@ -120,27 +128,27 @@ SET idem:tenant-123:api_calls:req-abc-123 1 NX EX 86400
 
 ### AggregationPeriod별 키 생성
 
-| Period | Format | Example |
-|--------|--------|---------|
-| `hour` | `YYYY-MM-DD-HH` | `2024-01-15-14` |
-| `day` | `YYYY-MM-DD` | `2024-01-15` |
-| `billing_cycle` | `YYYY-MM` | `2024-01` |
+| Period          | Format          | Example         |
+| --------------- | --------------- | --------------- |
+| `hour`          | `YYYY-MM-DD-HH` | `2024-01-15-14` |
+| `day`           | `YYYY-MM-DD`    | `2024-01-15`    |
+| `billing_cycle` | `YYYY-MM`       | `2024-01`       |
 
 ### TypeScript 헬퍼 예시
 
 ```typescript
 function getPeriodKey(date: Date, period: AggregationPeriod): string {
   const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hour = String(date.getUTCHours()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hour = String(date.getUTCHours()).padStart(2, "0");
 
   switch (period) {
-    case 'hour':
+    case "hour":
       return `${year}-${month}-${day}-${hour}`;
-    case 'day':
+    case "day":
       return `${year}-${month}-${day}`;
-    case 'billing_cycle':
+    case "billing_cycle":
       return `${year}-${month}`;
   }
 }
@@ -151,6 +159,7 @@ function getPeriodKey(date: Date, period: AggregationPeriod): string {
 모든 쿼리는 반드시 `tenant_id`를 포함해야 합니다.
 
 ### DB 쿼리 예시
+
 ```sql
 -- 올바른 쿼리 (tenant_id 포함)
 SELECT * FROM meters WHERE tenant_id = $1 AND meter_id = $2;
@@ -160,6 +169,7 @@ SELECT * FROM meters WHERE meter_id = $1;
 ```
 
 ### Redis 키 예시
+
 ```redis
 # 올바른 키 (tenant_id 포함)
 GET usage:tenant-123:api_calls:2024-01

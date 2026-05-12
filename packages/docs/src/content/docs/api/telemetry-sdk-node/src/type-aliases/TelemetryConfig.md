@@ -16,13 +16,13 @@ It combines service metadata with trace, metrics, and logs configurations.
 
 ```typescript
 const config: TelemetryConfig = {
-  serviceName: 'my-service',
-  serviceVersion: '1.0.0',
-  environment: 'production',
+  serviceName: "my-service",
+  serviceVersion: "1.0.0",
+  environment: "production",
   enabled: true,
   trace: {
     enabled: true,
-    exporterUrl: 'http://localhost:4318/v1/traces',
+    exporterUrl: "http://localhost:4318/v1/traces",
   },
   metrics: { enabled: false },
   logs: { enabled: false },
@@ -37,7 +37,7 @@ const config: TelemetryConfig = {
 
 Whether telemetry is globally enabled. Default: true
 
-***
+---
 
 ### environment?
 
@@ -45,7 +45,7 @@ Whether telemetry is globally enabled. Default: true
 
 Deployment environment. Default: 'development'
 
-***
+---
 
 ### logs?
 
@@ -53,7 +53,7 @@ Deployment environment. Default: 'development'
 
 Logs configuration
 
-***
+---
 
 ### metrics?
 
@@ -61,7 +61,7 @@ Logs configuration
 
 Metrics configuration
 
-***
+---
 
 ### resourceAttributes?
 
@@ -69,7 +69,7 @@ Metrics configuration
 
 Additional resource attributes
 
-***
+---
 
 ### serviceName
 
@@ -77,7 +77,7 @@ Additional resource attributes
 
 Service name (required)
 
-***
+---
 
 ### serviceVersion?
 
@@ -85,7 +85,7 @@ Service name (required)
 
 Service version. Default: '0.0.0'
 
-***
+---
 
 ### trace?
 

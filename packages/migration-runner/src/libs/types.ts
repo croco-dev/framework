@@ -1,6 +1,6 @@
-import type { DatabaseClient } from './db-types';
+import type { DatabaseClient } from "./db-types";
 
-export type MigrationDirection = 'up' | 'down';
+export type MigrationDirection = "up" | "down";
 
 export interface MigrationRecord {
   id: string;

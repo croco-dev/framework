@@ -1,11 +1,11 @@
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { extractRouteIR, type RouteIR } from '@croco/protocols-core';
-import { Project, type SourceFile, ts } from 'ts-morph';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { generateClientFiles } from '../libs/generate';
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
+import { extractRouteIR, type RouteIR } from "@croco/protocols-core";
+import { Project, type SourceFile, ts } from "ts-morph";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { generateClientFiles } from "../libs/generate";
 
 type Constructor = new (...args: unknown[]) => unknown;
 
@@ -17,12 +17,12 @@ let sourceDir: string;
 let emitDir: string;
 let outDir: string;
 
-describe('rpc-codegen e2e', () => {
+describe("rpc-codegen e2e", () => {
   beforeEach(() => {
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-e2e-rpc-codegen-'));
-    sourceDir = path.join(tempRoot, 'src');
-    emitDir = path.join(tempRoot, 'emit');
-    outDir = path.join(tempRoot, 'client');
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "opencode-e2e-rpc-codegen-"));
+    sourceDir = path.join(tempRoot, "src");
+    emitDir = path.join(tempRoot, "emit");
+    outDir = path.join(tempRoot, "client");
 
     fs.mkdirSync(sourceDir, { recursive: true });
     fs.mkdirSync(emitDir, { recursive: true });
@@ -34,50 +34,54 @@ describe('rpc-codegen e2e', () => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   });
 
-  it('generates client types from a decorated controller', async () => {
-    const sourcePath = path.join(sourceDir, 'TestController.ts');
+  it("generates client types from a decorated controller", async () => {
+    const sourcePath = path.join(sourceDir, "TestController.ts");
     fs.writeFileSync(sourcePath, getControllerSource());
 
     const sourceFile = emitController(sourcePath);
     const emittedPath = getEmittedFilePath(sourceDir, emitDir, sourceFile);
-    const controllerCtor = await importController(emittedPath, 'TestController');
+    const controllerCtor = await importController(emittedPath, "TestController");
 
     const routes = extractRouteIR(controllerCtor);
     const files = generateClientFiles(routes, outDir);
 
     expect(routes).toHaveLength(3);
-    expect(files).toEqual([path.join(outDir, 'test.ts')]);
+    expect(files).toEqual([path.join(outDir, "test.ts")]);
 
-    const getUser = findRoute(routes, 'getUser');
+    const getUser = findRoute(routes, "getUser");
     expect(getUser.inputSchemas.body).toBeNull();
     expect(getUser.inputSchemas.path).toBeTruthy();
     expect(getUser.inputSchemas.query).toBeTruthy();
     expect(getUser.outputSchema).toBeNull();
 
-    const createUser = findRoute(routes, 'createUser');
+    const createUser = findRoute(routes, "createUser");
     expect(createUser.inputSchemas.body).toBeTruthy();
     expect(createUser.inputSchemas.path).toBeNull();
     expect(createUser.inputSchemas.query).toBeNull();
     expect(createUser.outputSchema).toBeTruthy();
 
-    const health = findRoute(routes, 'health');
+    const health = findRoute(routes, "health");
     expect(health.inputSchemas).toEqual({ body: null, path: null, query: null });
     expect(health.outputSchema).toBeNull();
 
-    const content = fs.readFileSync(files[0], 'utf-8');
+    const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      'export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; };'
+      "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; };",
     );
-    expect(content).toContain('export type CreateUserInput = { name: string; };');
-    expect(content).toContain('export type CreateUserOutput = { id: string; name: string; };');
-    expect(content).toContain('const path = `/users/${input.path.id}`;');
-    expect(content).toContain('const query = new URLSearchParams(input.query).toString();');
-    expect(content).toContain("return fetch(url, { method: 'GET' }).then((response) => response.json());");
+    expect(content).toContain("export type CreateUserInput = { name: string; };");
+    expect(content).toContain("export type CreateUserOutput = { id: string; name: string; };");
+    expect(content).toContain("const path = `/users/${input.path.id}`;");
+    expect(content).toContain("const query = new URLSearchParams(input.query).toString();");
     expect(content).toContain(
-      "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })"
+      "return fetch(url, { method: 'GET' }).then((response) => response.json());",
     );
-    expect(content).toContain("health: () => fetch('/health', { method: 'GET' }).then((response) => response.json()),");
-    expect(content).not.toContain('zod');
+    expect(content).toContain(
+      "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
+    );
+    expect(content).toContain(
+      "health: () => fetch('/health', { method: 'GET' }).then((response) => response.json()),",
+    );
+    expect(content).not.toContain("zod");
   });
 });
 
@@ -105,10 +109,13 @@ async function importController(filePath: string, exportName: string): Promise<C
 
   for (let attempt = 0; attempt < importAttempts; attempt += 1) {
     try {
-      const module = (await import(`${pathToFileURL(filePath).href}?attempt=${attempt}`)) as Record<string, unknown>;
+      const module = (await import(`${pathToFileURL(filePath).href}?attempt=${attempt}`)) as Record<
+        string,
+        unknown
+      >;
       const exported = module[exportName];
 
-      if (typeof exported !== 'function') {
+      if (typeof exported !== "function") {
         throw new Error(`Controller class '${exportName}' is not exported from ${filePath}`);
       }
 
@@ -123,7 +130,9 @@ async function importController(filePath: string, exportName: string): Promise<C
 }
 
 function getEmittedFilePath(rootDir: string, targetDir: string, sourceFile: SourceFile): string {
-  const relativePath = path.relative(rootDir, sourceFile.getFilePath()).replace(/\.[cm]?tsx?$/, '.js');
+  const relativePath = path
+    .relative(rootDir, sourceFile.getFilePath())
+    .replace(/\.[cm]?tsx?$/, ".js");
 
   return path.join(targetDir, relativePath);
 }
@@ -145,16 +154,16 @@ function linkNodeModules(targetDir: string): void {
     return;
   }
 
-  fs.symlinkSync(nodeModules, path.join(targetDir, 'node_modules'), 'dir');
+  fs.symlinkSync(nodeModules, path.join(targetDir, "node_modules"), "dir");
 }
 
 function findNodeModules(startDir: string): string {
   let currentDir = startDir;
 
   while (true) {
-    const nodeModules = path.join(currentDir, 'node_modules');
+    const nodeModules = path.join(currentDir, "node_modules");
 
-    if (fs.existsSync(path.join(nodeModules, 'zod'))) {
+    if (fs.existsSync(path.join(nodeModules, "zod"))) {
       return nodeModules;
     }
 

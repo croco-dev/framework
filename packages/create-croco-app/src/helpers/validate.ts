@@ -1,13 +1,13 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
 
 export function validateProjectName(name: string): string | null {
-  if (!name) return 'Project name is required';
+  if (!name) return "Project name is required";
   if (!/^[a-z0-9-_]+$/.test(name)) {
-    return 'Project name must contain only lowercase letters, numbers, hyphens, and underscores';
+    return "Project name must contain only lowercase letters, numbers, hyphens, and underscores";
   }
-  if (name.startsWith('-') || name.endsWith('-')) {
-    return 'Project name cannot start or end with a hyphen';
+  if (name.startsWith("-") || name.endsWith("-")) {
+    return "Project name cannot start or end with a hyphen";
   }
   return null;
 }

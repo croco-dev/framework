@@ -49,7 +49,7 @@ title: "LlmStreamCompletedEvent"
 
 > `readonly` `optional` **chunkCount**: `number`
 
-***
+---
 
 ### eventId
 
@@ -59,7 +59,7 @@ title: "LlmStreamCompletedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -69,7 +69,7 @@ title: "LlmStreamCompletedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -79,19 +79,19 @@ title: "LlmStreamCompletedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### modelId
 
 > `readonly` **modelId**: `string`
 
-***
+---
 
 ### text
 
 > `readonly` **text**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -101,19 +101,19 @@ title: "LlmStreamCompletedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### type
 
 > `readonly` **type**: `"llm.stream_completed"` = `'llm.stream_completed'`
 
-***
+---
 
 ### usage
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-***
+---
 
 ### eventName
 

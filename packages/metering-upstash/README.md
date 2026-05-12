@@ -11,9 +11,9 @@ pnpm add @croco/metering-upstash @upstash/redis
 ## 사용법
 
 ```typescript
-import { Redis } from '@upstash/redis';
-import { createUpstashRedisClient } from '@croco/metering-upstash';
-import { IdempotencyManager, RedisUsageStorage } from '@croco/metering-core';
+import { Redis } from "@upstash/redis";
+import { createUpstashRedisClient } from "@croco/metering-upstash";
+import { IdempotencyManager, RedisUsageStorage } from "@croco/metering-core";
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
@@ -27,10 +27,10 @@ const idempotency = new IdempotencyManager(client);
 
 ## API 레퍼런스
 
-| API | 설명 |
-|---|---|
-| `UpstashRedisClient` | `zadd`, `zrangebyscore`, `set`, `eval`을 metering-core 시그니처로 제공합니다. |
-| `createUpstashRedisClient()` | Upstash Redis 인스턴스를 빠르게 어댑터로 감쌉니다. |
+| API                          | 설명                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `UpstashRedisClient`         | `zadd`, `zrangebyscore`, `set`, `eval`을 metering-core 시그니처로 제공합니다. |
+| `createUpstashRedisClient()` | Upstash Redis 인스턴스를 빠르게 어댑터로 감쌉니다.                            |
 
 ## 동작 메모
 

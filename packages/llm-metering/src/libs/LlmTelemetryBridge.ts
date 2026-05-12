@@ -1,4 +1,4 @@
-import type { LlmUsageRecord } from './types';
+import type { LlmUsageRecord } from "./types";
 
 export interface LlmTelemetrySpanAdapter {
   setAttribute(key: string, value: string | number): void;
@@ -12,13 +12,13 @@ export interface LlmTelemetrySpanAdapter {
  * - OTel semconv 변경 시 이 계층만 수정하면 됨
  * - https://opentelemetry.io/docs/specs/semconv/gen-ai/
  */
-const GEN_AI_SYSTEM = 'gen_ai.system';
-const GEN_AI_REQUEST_MODEL = 'gen_ai.request.model';
-const GEN_AI_USAGE_PROMPT_TOKENS = 'gen_ai.usage.prompt_tokens';
-const GEN_AI_USAGE_COMPLETION_TOKENS = 'gen_ai.usage.completion_tokens';
-const GEN_AI_USAGE_COST_USD = 'gen_ai.usage.cost_usd';
-const GEN_AI_CLIENT_USER = 'gen_ai.client.user';
-const GEN_AI_USAGE_ACCURACY = 'gen_ai.usage.accuracy';
+const GEN_AI_SYSTEM = "gen_ai.system";
+const GEN_AI_REQUEST_MODEL = "gen_ai.request.model";
+const GEN_AI_USAGE_PROMPT_TOKENS = "gen_ai.usage.prompt_tokens";
+const GEN_AI_USAGE_COMPLETION_TOKENS = "gen_ai.usage.completion_tokens";
+const GEN_AI_USAGE_COST_USD = "gen_ai.usage.cost_usd";
+const GEN_AI_CLIENT_USER = "gen_ai.client.user";
+const GEN_AI_USAGE_ACCURACY = "gen_ai.usage.accuracy";
 
 export class LlmTelemetryBridge {
   /**
@@ -36,7 +36,7 @@ export class LlmTelemetryBridge {
       span.setAttribute(key, value);
     });
 
-    span.addEvent('llm.usage', {
+    span.addEvent("llm.usage", {
       provider: usageRecord.provider,
       model: usageRecord.modelId,
       tenantId: usageRecord.tenantId,

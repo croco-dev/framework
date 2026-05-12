@@ -1,11 +1,11 @@
-import type { ILogger } from '@croco/framework-context';
+import type { ILogger } from "@croco/framework-context";
 import {
   type CacheGetOrSetOptions,
   type CachePattern,
   type CacheStats,
   CacheStore,
   type CacheWarmupEntry,
-} from './CacheStore';
+} from "./CacheStore";
 
 type CacheEntry<V> = {
   value: V;
@@ -21,11 +21,11 @@ const DEFAULT_MAX_ENTRIES = 1000;
 const WILDCARD_REGEX = /[.*+?^${}()|[\]\\]/g;
 
 function escapePattern(pattern: string): string {
-  return pattern.replace(WILDCARD_REGEX, '\\$&');
+  return pattern.replace(WILDCARD_REGEX, "\\$&");
 }
 
 function createPatternRegex(pattern: CachePattern): RegExp {
-  const escapedPattern = escapePattern(pattern).replace(/\\\*/g, '.*');
+  const escapedPattern = escapePattern(pattern).replace(/\\\*/g, ".*");
   return new RegExp(`^${escapedPattern}$`);
 }
 
@@ -33,14 +33,17 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   private readonly store = new Map<string, CacheEntry<V>>();
   private readonly inFlightLoads = new Map<string, Promise<V | undefined>>();
   private readonly maxEntries: number;
-  private readonly stats: Omit<CacheStats, 'size'> = {
+  private readonly stats: Omit<CacheStats, "size"> = {
     hits: 0,
     misses: 0,
     evictions: 0,
   };
   private readonly cleanupTimer?: ReturnType<typeof setInterval>;
 
-  constructor(options: InMemoryCacheStoreOptions = { maxEntries: DEFAULT_MAX_ENTRIES }, logger?: ILogger) {
+  constructor(
+    options: InMemoryCacheStoreOptions = { maxEntries: DEFAULT_MAX_ENTRIES },
+    logger?: ILogger,
+  ) {
     super();
 
     void logger;
@@ -137,7 +140,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   async getOrSet(
     key: string,
     loader: () => Promise<V | undefined>,
-    options: CacheGetOrSetOptions = {}
+    options: CacheGetOrSetOptions = {},
   ): Promise<V | undefined> {
     const cachedValue = await this.get(key);
     if (cachedValue !== undefined) {

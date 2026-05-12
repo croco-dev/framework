@@ -1,7 +1,7 @@
-import { RedisProblem } from './problems/RedisProblem';
-import type { RedisClient } from './RedisClient';
-import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from './types';
-import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from './UsageStorage';
+import { RedisProblem } from "./problems/RedisProblem";
+import type { RedisClient } from "./RedisClient";
+import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from "./types";
+import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
 
 /**
  * Redis 기반 UsageStorage 구현체
@@ -11,8 +11,8 @@ import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } fr
  * - Idempotency 체크를 Redis SET NX로 처리
  */
 export class RedisUsageStorage implements UsageStorage {
-  private static readonly USAGE_KEY_PREFIX = 'usage';
-  private static readonly IDEM_KEY_PREFIX = 'idem';
+  private static readonly USAGE_KEY_PREFIX = "usage";
+  private static readonly IDEM_KEY_PREFIX = "idem";
   private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
 local usageKey = KEYS[1]
 local quota = tonumber(ARGV[1])
@@ -50,7 +50,7 @@ return { exceeded and 1 or 0, newUsage }
 
       await this.redis.zadd(key, score, member);
     } catch (error) {
-      throw new RedisProblem('ZADD', error instanceof Error ? error : undefined);
+      throw new RedisProblem("ZADD", error instanceof Error ? error : undefined);
     }
   }
 
@@ -68,29 +68,40 @@ return { exceeded and 1 or 0, newUsage }
         return total + value;
       }, 0);
     } catch (error) {
-      throw new RedisProblem('ZRANGEBYSCORE', error instanceof Error ? error : undefined);
+      throw new RedisProblem("ZRANGEBYSCORE", error instanceof Error ? error : undefined);
     }
   }
 
-  async isIdempotent(tenantId: string, meterId: string, idempotencyKey: string, ttlSeconds: number): Promise<boolean> {
+  async isIdempotent(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
     try {
       const key = `${RedisUsageStorage.IDEM_KEY_PREFIX}:${tenantId}:${meterId}:${idempotencyKey}`;
-      const result = await this.redis.set(key, '1', 'NX', 'EX', ttlSeconds);
-      return result === 'OK';
+      const result = await this.redis.set(key, "1", "NX", "EX", ttlSeconds);
+      return result === "OK";
     } catch (error) {
-      throw new RedisProblem('SET', error instanceof Error ? error : undefined);
+      throw new RedisProblem("SET", error instanceof Error ? error : undefined);
     }
   }
 
-  async checkAndRecordWithinQuota(options: AtomicQuotaCheckOptions): Promise<AtomicQuotaCheckResult> {
+  async checkAndRecordWithinQuota(
+    options: AtomicQuotaCheckOptions,
+  ): Promise<AtomicQuotaCheckResult> {
     try {
-      const key = this.buildUsageKey(options.tenantId, options.meterId, options.usageRecord.timestamp);
+      const key = this.buildUsageKey(
+        options.tenantId,
+        options.meterId,
+        options.usageRecord.timestamp,
+      );
       const score = options.usageRecord.timestamp.getTime();
       const member = `${options.usageRecord.id}:${options.usageRecord.value}`;
       const [exceeded, newUsage] = await this.redis.eval<[number, number]>(
         RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
         [key],
-        [options.quota, options.value, score, member, options.allowOverQuota ? 1 : 0]
+        [options.quota, options.value, score, member, options.allowOverQuota ? 1 : 0],
       );
 
       return {
@@ -98,7 +109,7 @@ return { exceeded and 1 or 0, newUsage }
         newUsage,
       };
     } catch (error) {
-      throw new RedisProblem('EVAL', error instanceof Error ? error : undefined);
+      throw new RedisProblem("EVAL", error instanceof Error ? error : undefined);
     }
   }
 
@@ -111,7 +122,7 @@ return { exceeded and 1 or 0, newUsage }
       const members = await this.redis.zrangebyscore(key, min, max);
 
       return members.map((member) => {
-        const [id, valueStr] = member.split(':');
+        const [id, valueStr] = member.split(":");
         return {
           id,
           tenantId,
@@ -122,7 +133,7 @@ return { exceeded and 1 or 0, newUsage }
         };
       });
     } catch (error) {
-      throw new RedisProblem('ZRANGEBYSCORE', error instanceof Error ? error : undefined);
+      throw new RedisProblem("ZRANGEBYSCORE", error instanceof Error ? error : undefined);
     }
   }
 
@@ -131,7 +142,7 @@ return { exceeded and 1 or 0, newUsage }
    * 패턴: usage:{tenantId}:{meterId}:{period}
    */
   private buildUsageKey(tenantId: string, meterId: string, date: Date): string {
-    const periodKey = this.getPeriodKey(date, 'billing_cycle');
+    const periodKey = this.getPeriodKey(date, "billing_cycle");
     return `${RedisUsageStorage.USAGE_KEY_PREFIX}:${tenantId}:${meterId}:${periodKey}`;
   }
 
@@ -140,16 +151,16 @@ return { exceeded and 1 or 0, newUsage }
    */
   private getPeriodKey(date: Date, period: AggregationPeriod): string {
     const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const hour = String(date.getUTCHours()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const hour = String(date.getUTCHours()).padStart(2, "0");
 
     switch (period) {
-      case 'hour':
+      case "hour":
         return `${year}-${month}-${day}-${hour}`;
-      case 'day':
+      case "day":
         return `${year}-${month}-${day}`;
-      case 'billing_cycle':
+      case "billing_cycle":
         return `${year}-${month}`;
     }
   }
@@ -157,7 +168,11 @@ return { exceeded and 1 or 0, newUsage }
   /**
    * 시간 범위 계산
    */
-  private getTimeRange(period: AggregationPeriod, startDate?: Date, endDate?: Date): { min: number; max: number } {
+  private getTimeRange(
+    period: AggregationPeriod,
+    startDate?: Date,
+    endDate?: Date,
+  ): { min: number; max: number } {
     const now = new Date();
 
     if (startDate && endDate) {
@@ -169,21 +184,21 @@ return { exceeded and 1 or 0, newUsage }
 
     // 기본: 현재 period의 시작~끝
     switch (period) {
-      case 'hour': {
+      case "hour": {
         const start = new Date(now);
         start.setUTCMinutes(0, 0, 0);
         const end = new Date(start);
         end.setUTCHours(end.getUTCHours() + 1);
         return { min: start.getTime(), max: end.getTime() };
       }
-      case 'day': {
+      case "day": {
         const start = new Date(now);
         start.setUTCHours(0, 0, 0, 0);
         const end = new Date(start);
         end.setUTCDate(end.getUTCDate() + 1);
         return { min: start.getTime(), max: end.getTime() };
       }
-      case 'billing_cycle': {
+      case "billing_cycle": {
         const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
         const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
         return { min: start.getTime(), max: end.getTime() };
@@ -196,7 +211,7 @@ return { exceeded and 1 or 0, newUsage }
    * 형식: "usageId:value"
    */
   private parseValue(member: string): number {
-    const parts = member.split(':');
+    const parts = member.split(":");
     const value = Number.parseInt(parts[parts.length - 1], 10);
     return Number.isNaN(value) ? 0 : value;
   }
@@ -212,7 +227,7 @@ return { exceeded and 1 or 0, newUsage }
         await this.redis.eval<[number]>('return redis.call("DEL", KEYS[1])', [key], []);
       } else {
         const now = new Date();
-        const periodKey = this.getPeriodKey(now, 'billing_cycle');
+        const periodKey = this.getPeriodKey(now, "billing_cycle");
         const keyPattern = `${RedisUsageStorage.USAGE_KEY_PREFIX}:${tenantId}:*:${periodKey}`;
 
         await this.redis.eval<[number]>(
@@ -224,11 +239,11 @@ return { exceeded and 1 or 0, newUsage }
           return #keys
           `,
           [],
-          [keyPattern]
+          [keyPattern],
         );
       }
     } catch (error) {
-      throw new RedisProblem('DEL', error instanceof Error ? error : undefined);
+      throw new RedisProblem("DEL", error instanceof Error ? error : undefined);
     }
   }
 }

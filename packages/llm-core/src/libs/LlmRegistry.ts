@@ -1,5 +1,5 @@
-import { Token } from '@croco/framework-context';
-import type { LlmModel } from './LlmModel';
+import { Token } from "@croco/framework-context";
+import type { LlmModel } from "./LlmModel";
 
 /**
  * LLM 레지스트리 추상 클래스
@@ -9,7 +9,7 @@ import type { LlmModel } from './LlmModel';
  * Token 기반 DI를 지원하며, 다중 제공자 관리를 지원합니다.
  */
 export abstract class LlmRegistry {
-  static readonly token = new Token<LlmRegistry>('LlmRegistry');
+  static readonly token = new Token<LlmRegistry>("LlmRegistry");
 
   /**
    * 모델 조회

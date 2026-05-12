@@ -1,5 +1,5 @@
-import type { ExceptionFilter } from '../interfaces/ExceptionFilter';
-import type { ExecutionContext } from '../interfaces/ExecutionContext';
+import type { ExceptionFilter } from "../interfaces/ExceptionFilter";
+import type { ExecutionContext } from "../interfaces/ExecutionContext";
 
 export type ProblemLike = {
   status: number;
@@ -14,12 +14,12 @@ export type HttpExceptionFilterResponse = {
 
 function isProblem(error: unknown): error is ProblemLike {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'status' in error &&
-    typeof (error as ProblemLike).status === 'number' &&
-    'toJSON' in error &&
-    typeof (error as ProblemLike).toJSON === 'function'
+    "status" in error &&
+    typeof (error as ProblemLike).status === "number" &&
+    "toJSON" in error &&
+    typeof (error as ProblemLike).toJSON === "function"
   );
 }
 
@@ -31,21 +31,21 @@ export class HttpExceptionFilter implements ExceptionFilter<unknown, ExecutionCo
     if (isProblem(exception)) {
       return {
         status: exception.status,
-        headers: { 'Content-Type': 'application/problem+json' },
+        headers: { "Content-Type": "application/problem+json" },
         body: exception.toJSON(),
       };
     }
 
-    const message = exception instanceof Error ? exception.message : 'Internal Server Error';
+    const message = exception instanceof Error ? exception.message : "Internal Server Error";
 
     return {
       status: 500,
-      headers: { 'Content-Type': 'application/problem+json' },
+      headers: { "Content-Type": "application/problem+json" },
       body: {
-        type: 'about:blank',
-        title: 'Internal Server Error',
+        type: "about:blank",
+        title: "Internal Server Error",
         status: 500,
-        code: 'INTERNAL_SERVER_ERROR',
+        code: "INTERNAL_SERVER_ERROR",
         detail: message,
       },
     };

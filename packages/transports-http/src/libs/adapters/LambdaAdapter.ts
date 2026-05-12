@@ -1,5 +1,5 @@
-import type { CrocoApp } from '../CrocoApp';
-import type { LambdaHandler } from '../types';
+import type { CrocoApp } from "../CrocoApp";
+import type { LambdaHandler } from "../types";
 
 /**
  * CrocoApp 인스턴스를 AWS Lambda 핸들러 함수로 변환합니다.

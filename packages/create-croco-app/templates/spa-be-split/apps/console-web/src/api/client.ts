@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_PATH = 'http://localhost:3000';
+const DEFAULT_API_BASE_PATH = "http://localhost:3000";
 
 type ViteImportMeta = ImportMeta & {
   env?: {
@@ -7,7 +7,7 @@ type ViteImportMeta = ImportMeta & {
 };
 
 function ensureTrailingSlash(value: string): string {
-  return value.endsWith('/') ? value : `${value}/`;
+  return value.endsWith("/") ? value : `${value}/`;
 }
 
 function resolveApiBaseUrl(): string {
@@ -17,7 +17,7 @@ function resolveApiBaseUrl(): string {
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(new URL(path.replace(/^\//, ''), resolveApiBaseUrl()), init);
+  const response = await fetch(new URL(path.replace(/^\//, ""), resolveApiBaseUrl()), init);
 
   if (!response.ok) {
     throw new Error(`API request failed with status ${response.status}`);

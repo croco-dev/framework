@@ -1,19 +1,19 @@
-import 'reflect-metadata';
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BetterAuthFactory, DRIZZLE_TOKEN } from '../libs/BetterAuthFactory';
-import * as schema from '../libs/schema';
+import "reflect-metadata";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BetterAuthFactory, DRIZZLE_TOKEN } from "../libs/BetterAuthFactory";
+import * as schema from "../libs/schema";
 
-vi.mock('better-auth', () => ({
+vi.mock("better-auth", () => ({
   betterAuth: vi.fn(),
 }));
 
-vi.mock('better-auth/adapters/drizzle', () => ({
+vi.mock("better-auth/adapters/drizzle", () => ({
   drizzleAdapter: vi.fn(),
 }));
 
-describe('BetterAuthFactory', () => {
+describe("BetterAuthFactory", () => {
   let mockDb!: any;
   let config!: { baseURL: string; secret: string };
 
@@ -28,15 +28,17 @@ describe('BetterAuthFactory', () => {
     };
 
     config = {
-      baseURL: 'http://localhost:3000',
-      secret: 'test-secret-key',
+      baseURL: "http://localhost:3000",
+      secret: "test-secret-key",
     };
   });
 
-  describe('constructor', () => {
-    it('should defer betterAuth creation until getAuth is called', () => {
+  describe("constructor", () => {
+    it("should defer betterAuth creation until getAuth is called", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const factory = new BetterAuthFactory(mockDb, config);
@@ -48,24 +50,26 @@ describe('BetterAuthFactory', () => {
 
       expect(betterAuth).toHaveBeenCalledWith({
         database: expect.any(Object),
-        baseURL: 'http://localhost:3000',
-        secret: 'test-secret-key',
+        baseURL: "http://localhost:3000",
+        secret: "test-secret-key",
       });
 
       expect(drizzleAdapter).toHaveBeenCalledWith(mockDb, {
-        provider: 'pg',
+        provider: "pg",
         schema: schema,
       });
     });
 
-    it('should accept custom baseURL and secret', () => {
+    it("should accept custom baseURL and secret", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const customConfig = {
-        baseURL: 'https://api.example.com',
-        secret: 'production-secret',
+        baseURL: "https://api.example.com",
+        secret: "production-secret",
       };
 
       const factory = new BetterAuthFactory(mockDb, customConfig);
@@ -74,14 +78,16 @@ describe('BetterAuthFactory', () => {
 
       expect(betterAuth).toHaveBeenCalledWith({
         database: expect.any(Object),
-        baseURL: 'https://api.example.com',
-        secret: 'production-secret',
+        baseURL: "https://api.example.com",
+        secret: "production-secret",
       });
     });
 
-    it('should store auth instance', () => {
+    it("should store auth instance", () => {
       const mockAuthInstance = { api: { getSession: vi.fn() } };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const factory = new BetterAuthFactory(mockDb, config);
@@ -90,8 +96,8 @@ describe('BetterAuthFactory', () => {
     });
   });
 
-  describe('getAuth', () => {
-    it('should return the auth instance', () => {
+  describe("getAuth", () => {
+    it("should return the auth instance", () => {
       const mockAuthInstance = {
         api: {
           getSession: vi.fn(),
@@ -99,7 +105,9 @@ describe('BetterAuthFactory', () => {
           signOut: vi.fn(),
         },
       };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const factory = new BetterAuthFactory(mockDb, config);
@@ -111,9 +119,11 @@ describe('BetterAuthFactory', () => {
       expect(auth.api).not.toBeUndefined();
     });
 
-    it('should return same auth instance on multiple calls', () => {
+    it("should return same auth instance on multiple calls", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const factory = new BetterAuthFactory(mockDb, config);
@@ -125,20 +135,22 @@ describe('BetterAuthFactory', () => {
     });
   });
 
-  describe('DRIZZLE_TOKEN', () => {
-    it('should export DRIZZLE_TOKEN constant', () => {
-      expect(DRIZZLE_TOKEN).toBe('DRIZZLE_TOKEN');
+  describe("DRIZZLE_TOKEN", () => {
+    it("should export DRIZZLE_TOKEN constant", () => {
+      expect(DRIZZLE_TOKEN).toBe("DRIZZLE_TOKEN");
     });
 
-    it('should be usable for DI injection', () => {
-      expect(typeof DRIZZLE_TOKEN).toBe('string');
+    it("should be usable for DI injection", () => {
+      expect(typeof DRIZZLE_TOKEN).toBe("string");
     });
   });
 
-  describe('schema integration', () => {
-    it('should pass schema to drizzle adapter', () => {
+  describe("schema integration", () => {
+    it("should pass schema to drizzle adapter", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const factory = new BetterAuthFactory(mockDb, config);
@@ -146,12 +158,12 @@ describe('BetterAuthFactory', () => {
       factory.getAuth();
 
       expect(drizzleAdapter).toHaveBeenCalledWith(mockDb, {
-        provider: 'pg',
+        provider: "pg",
         schema: schema,
       });
     });
 
-    it('should export required schema tables', () => {
+    it("should export required schema tables", () => {
       expect(schema.user).not.toBeUndefined();
       expect(schema.session).not.toBeUndefined();
       expect(schema.account).not.toBeUndefined();
@@ -159,15 +171,17 @@ describe('BetterAuthFactory', () => {
     });
   });
 
-  describe('configuration validation', () => {
-    it('should handle empty baseURL', () => {
+  describe("configuration validation", () => {
+    it("should handle empty baseURL", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const emptyConfig = {
-        baseURL: '',
-        secret: 'test-secret',
+        baseURL: "",
+        secret: "test-secret",
       };
 
       const factory = new BetterAuthFactory(mockDb, emptyConfig);
@@ -175,14 +189,16 @@ describe('BetterAuthFactory', () => {
       expect(() => factory.getAuth()).not.toThrow();
     });
 
-    it('should handle empty secret', () => {
+    it("should handle empty secret", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const emptySecretConfig = {
-        baseURL: 'http://localhost:3000',
-        secret: '',
+        baseURL: "http://localhost:3000",
+        secret: "",
       };
 
       const factory = new BetterAuthFactory(mockDb, emptySecretConfig);
@@ -190,14 +206,16 @@ describe('BetterAuthFactory', () => {
       expect(() => factory.getAuth()).not.toThrow();
     });
 
-    it('should handle special characters in secret', () => {
+    it("should handle special characters in secret", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const specialCharConfig = {
-        baseURL: 'http://localhost:3000',
-        secret: 'secret-with-!@#$%^&*()_+-=[]{}|;:,.<>?/',
+        baseURL: "http://localhost:3000",
+        secret: "secret-with-!@#$%^&*()_+-=[]{}|;:,.<>?/",
       };
 
       const factory = new BetterAuthFactory(mockDb, specialCharConfig);
@@ -206,8 +224,8 @@ describe('BetterAuthFactory', () => {
     });
   });
 
-  describe('factory pattern', () => {
-    it('should create independent auth instances', () => {
+  describe("factory pattern", () => {
+    it("should create independent auth instances", () => {
       const mockAuthInstance1 = { api: {}, id: 1 };
       const mockAuthInstance2 = { api: {}, id: 2 };
 
@@ -222,9 +240,11 @@ describe('BetterAuthFactory', () => {
       expect(factory1.getAuth()).not.toBe(factory2.getAuth());
     });
 
-    it('should handle factory reuse pattern', () => {
+    it("should handle factory reuse pattern", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
       const factory = new BetterAuthFactory(mockDb, config);
@@ -237,14 +257,16 @@ describe('BetterAuthFactory', () => {
     });
   });
 
-  describe('integration scenarios', () => {
-    it('should support multiple database instances', () => {
+  describe("integration scenarios", () => {
+    it("should support multiple database instances", () => {
       const mockAuthInstance = { api: {} };
-      vi.mocked(betterAuth).mockReturnValue(mockAuthInstance as unknown as ReturnType<typeof betterAuth>);
+      vi.mocked(betterAuth).mockReturnValue(
+        mockAuthInstance as unknown as ReturnType<typeof betterAuth>,
+      );
       vi.mocked(drizzleAdapter).mockReturnValue({} as unknown as ReturnType<typeof drizzleAdapter>);
 
-      const db1 = { ...mockDb, name: 'db1' };
-      const db2 = { ...mockDb, name: 'db2' };
+      const db1 = { ...mockDb, name: "db1" };
+      const db2 = { ...mockDb, name: "db2" };
 
       const factory1 = new BetterAuthFactory(db1, config);
       const factory2 = new BetterAuthFactory(db2, config);
@@ -258,26 +280,28 @@ describe('BetterAuthFactory', () => {
     });
   });
 
-  describe('error handling', () => {
-    it('should propagate errors from betterAuth', () => {
+  describe("error handling", () => {
+    it("should propagate errors from betterAuth", () => {
       vi.mocked(betterAuth).mockImplementation(() => {
-        throw new Error('Invalid configuration');
+        throw new Error("Invalid configuration");
       });
 
       const factory = new BetterAuthFactory(mockDb, config);
 
-      expect(() => factory.getAuth()).toThrow('Invalid configuration');
+      expect(() => factory.getAuth()).toThrow("Invalid configuration");
     });
 
-    it('should propagate errors from drizzleAdapter', () => {
-      vi.mocked(betterAuth).mockReturnValue({ api: {} } as unknown as ReturnType<typeof betterAuth>);
+    it("should propagate errors from drizzleAdapter", () => {
+      vi.mocked(betterAuth).mockReturnValue({ api: {} } as unknown as ReturnType<
+        typeof betterAuth
+      >);
       vi.mocked(drizzleAdapter).mockImplementation(() => {
-        throw new Error('Invalid database schema');
+        throw new Error("Invalid database schema");
       });
 
       const factory = new BetterAuthFactory(mockDb, config);
 
-      expect(() => factory.getAuth()).toThrow('Invalid database schema');
+      expect(() => factory.getAuth()).toThrow("Invalid database schema");
     });
   });
 });

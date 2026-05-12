@@ -1,5 +1,5 @@
-import { context, propagation, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
-import type { MiddlewareFunction } from '../types';
+import { context, propagation, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
+import type { MiddlewareFunction } from "../types";
 
 export interface TraceParent {
   traceId: string;
@@ -15,14 +15,14 @@ export function parseTraceParent(header: string | null): TraceParent | null {
     return null;
   }
 
-  const parts = header.split('-');
+  const parts = header.split("-");
   if (parts.length !== 4) {
     return null;
   }
 
   const [version, traceId, parentId, flags] = parts;
 
-  if (version !== '00' && version !== '01') {
+  if (version !== "00" && version !== "01") {
     return null;
   }
 
@@ -63,28 +63,28 @@ export const telemetryMiddleware =
     let nextCalled = false;
 
     try {
-      const tracer = trace.getTracer('croco-http', '0.0.1');
+      const tracer = trace.getTracer("croco-http", "0.0.1");
 
-      const traceParentHeader = ctx.header('traceparent');
+      const traceParentHeader = ctx.header("traceparent");
       const parentContext = propagation.extract(context.active(), ctx.req.headers, headerGetter);
 
       const attributes = {
-        'http.method': ctx.req.method,
-        'http.route': route,
-        'http.target': ctx.req.path,
-        'http.scheme': new URL(ctx.req.url).protocol.replace(':', ''),
-        'http.host': new URL(ctx.req.url).host,
-        'http.user_agent': ctx.req.headers['user-agent'] ?? '',
-        'http.request.header.traceparent': traceParentHeader ?? '',
+        "http.method": ctx.req.method,
+        "http.route": route,
+        "http.target": ctx.req.path,
+        "http.scheme": new URL(ctx.req.url).protocol.replace(":", ""),
+        "http.host": new URL(ctx.req.url).host,
+        "http.user_agent": ctx.req.headers["user-agent"] ?? "",
+        "http.request.header.traceparent": traceParentHeader ?? "",
       };
 
       const span = tracer.startSpan(
         `HTTP ${ctx.req.method} ${route}`,
         { kind: SpanKind.SERVER, attributes },
-        parentContext
+        parentContext,
       );
 
-      ctx.set('traceId', span.spanContext().traceId);
+      ctx.set("traceId", span.spanContext().traceId);
 
       return await context.with(trace.setSpan(context.active(), span), async () => {
         try {
@@ -95,7 +95,7 @@ export const telemetryMiddleware =
           span.setStatus({
             code: status >= 400 ? SpanStatusCode.ERROR : SpanStatusCode.UNSET,
           });
-          span.setAttribute('http.status_code', status);
+          span.setAttribute("http.status_code", status);
         } catch (error) {
           ctx.res.status = 500;
           const spanError = error instanceof Error ? error : new Error(String(error));
@@ -117,8 +117,8 @@ export const telemetryMiddleware =
 
       const fallbackTraceId = `telemetry-degraded-${Date.now().toString(36)}`;
 
-      ctx.set('traceId', fallbackTraceId);
-      ctx.set('telemetryDegraded', true);
+      ctx.set("traceId", fallbackTraceId);
+      ctx.set("telemetryDegraded", true);
 
       await next();
     }

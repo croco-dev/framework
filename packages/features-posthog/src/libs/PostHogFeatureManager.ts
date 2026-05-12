@@ -1,6 +1,6 @@
-import { FeatureManager } from '@croco/features-core';
-import { Component, Context } from '@croco/framework-context';
-import type { PostHogClient } from '@croco/integrations-posthog';
+import { FeatureManager } from "@croco/features-core";
+import { Component, Context } from "@croco/framework-context";
+import type { PostHogClient } from "@croco/integrations-posthog";
 
 type PostHogProperties = Record<string, string>;
 
@@ -26,7 +26,10 @@ export class PostHogFeatureManager extends FeatureManager {
     return isEnabled === true;
   }
 
-  async getVariant(flag: string, context?: Record<string, unknown>): Promise<string | boolean | object> {
+  async getVariant(
+    flag: string,
+    context?: Record<string, unknown>,
+  ): Promise<string | boolean | object> {
     const distinctId = this.getDistinctId(context);
     const groups = this.getGroups(context);
     const personProperties = this.toPostHogProperties(context);
@@ -55,7 +58,7 @@ export class PostHogFeatureManager extends FeatureManager {
     const tenantId = Context.getTenantId();
     if (tenantId) return `tenant:${tenantId}`;
 
-    return 'anonymous';
+    return "anonymous";
   }
 
   private getGroups(context?: Record<string, unknown>): Record<string, string> | undefined {
@@ -75,16 +78,20 @@ export class PostHogFeatureManager extends FeatureManager {
   }
 
   private toStringRecord(value: unknown): PostHogProperties | undefined {
-    if (!value || typeof value !== 'object') {
+    if (!value || typeof value !== "object") {
       return undefined;
     }
 
     const result: PostHogProperties = {};
 
     for (const [key, entryValue] of Object.keys(value).map(
-      (key) => [key, (value as Record<string, unknown>)[key]] as const
+      (key) => [key, (value as Record<string, unknown>)[key]] as const,
     )) {
-      if (entryValue === undefined || typeof entryValue === 'object' || typeof entryValue === 'function') {
+      if (
+        entryValue === undefined ||
+        typeof entryValue === "object" ||
+        typeof entryValue === "function"
+      ) {
         continue;
       }
 

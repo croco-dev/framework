@@ -1,13 +1,19 @@
-import { Token } from '@croco/framework-context';
-import { TransformNotFoundProblem } from '../problems/SearchProblems';
-import type { SearchTransformAdapter, SearchTransformRef } from './types';
+import { Token } from "@croco/framework-context";
+import { TransformNotFoundProblem } from "../problems/SearchProblems";
+import type { SearchTransformAdapter, SearchTransformRef } from "./types";
 
 export abstract class SearchTransformRegistry {
-  static readonly token = new Token<SearchTransformRegistry>('SearchTransformRegistry');
+  static readonly token = new Token<SearchTransformRegistry>("SearchTransformRegistry");
 
   abstract register<TOptions>(adapter: SearchTransformAdapter<TOptions>): void;
-  abstract get<TOptions>(ref: SearchTransformRef<TOptions>): SearchTransformAdapter<TOptions> | undefined;
-  abstract apply<TOptions>(ref: SearchTransformRef<TOptions>, input: string, options?: TOptions): string;
+  abstract get<TOptions>(
+    ref: SearchTransformRef<TOptions>,
+  ): SearchTransformAdapter<TOptions> | undefined;
+  abstract apply<TOptions>(
+    ref: SearchTransformRef<TOptions>,
+    input: string,
+    options?: TOptions,
+  ): string;
 }
 
 export class InMemorySearchTransformRegistry extends SearchTransformRegistry {

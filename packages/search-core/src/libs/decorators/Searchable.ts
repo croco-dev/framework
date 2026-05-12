@@ -1,5 +1,5 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { SEARCHABLE_METADATA } from './constants';
+import { MetadataStorage } from "@croco/framework-context";
+import { SEARCHABLE_METADATA } from "./constants";
 
 export type SearchableOptions = {
   index?: string;

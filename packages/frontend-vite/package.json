@@ -1,31 +1,13 @@
 {
   "name": "@croco/frontend-vite",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external vite --external '@cloudflare/vite-plugin'",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint ."
-  },
-  "peerDependencies": {
-    "vite": "^6.0.0"
-  },
-  "dependencies": {},
-  "devDependencies": {
-    "vite": "^6.0.0",
-    "@cloudflare/vite-plugin": "^1.0.0",
-    "vitest": "4.0.16"
-  },
-  "vitest": {
-    "include": [
-      "src/**/*.spec.ts"
-    ]
-  },
   "publishConfig": {
-    "access": "public",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -34,9 +16,27 @@
         "require": "./dist/index.cjs",
         "types": "./dist/index.d.ts"
       }
-    }
+    },
+    "access": "public"
   },
-  "files": [
-    "dist"
-  ]
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external vite --external '@cloudflare/vite-plugin'",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.0.0",
+    "vite": "^6.0.0",
+    "vitest": "4.0.16"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0"
+  },
+  "vitest": {
+    "include": [
+      "src/**/*.spec.ts"
+    ]
+  }
 }

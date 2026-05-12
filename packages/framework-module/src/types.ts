@@ -1,4 +1,4 @@
-import type { ModuleContext } from './ModuleContext';
+import type { ModuleContext } from "./ModuleContext";
 
 export type ModuleOptions = {
   readonly name: string;

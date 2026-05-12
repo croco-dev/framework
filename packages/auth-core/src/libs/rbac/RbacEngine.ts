@@ -1,6 +1,6 @@
-import type { AbstractRoleRegistry } from '../interfaces/AbstractRoleRegistry';
-import type { AuthUser } from '../interfaces/AuthUser';
-import { hasPermission } from './Permission';
+import type { AbstractRoleRegistry } from "../interfaces/AbstractRoleRegistry";
+import type { AuthUser } from "../interfaces/AuthUser";
+import { hasPermission } from "./Permission";
 
 export class RbacEngine {
   constructor(private roleRegistry: AbstractRoleRegistry) {}

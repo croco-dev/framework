@@ -8,21 +8,21 @@ export function getHeaderValue(request: Request, headerName: string): string | n
     return headers.get(headerName);
   }
 
-  if (typeof headers !== 'object' || headers === null) {
+  if (typeof headers !== "object" || headers === null) {
     return null;
   }
 
   const headerBag = headers as HeaderBag;
   const direct = headerBag[headerName];
 
-  if (typeof direct === 'string') {
+  if (typeof direct === "string") {
     return direct;
   }
 
   const normalizedHeaderName = headerName.toLowerCase();
 
   for (const [key, value] of Object.entries(headerBag)) {
-    if (key.toLowerCase() === normalizedHeaderName && typeof value === 'string') {
+    if (key.toLowerCase() === normalizedHeaderName && typeof value === "string") {
       return value;
     }
   }

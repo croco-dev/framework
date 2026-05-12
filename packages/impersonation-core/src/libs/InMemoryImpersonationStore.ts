@@ -1,6 +1,6 @@
-import { Component } from '@croco/framework-context';
-import { ImpersonationStore } from './interfaces';
-import type { ImpersonationState } from './types';
+import { Component } from "@croco/framework-context";
+import { ImpersonationStore } from "./interfaces";
+import type { ImpersonationState } from "./types";
 
 @Component()
 export class InMemoryImpersonationStore extends ImpersonationStore {

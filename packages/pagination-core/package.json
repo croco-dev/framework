@@ -2,9 +2,24 @@
   "name": "@croco/pagination-core",
   "version": "0.1.0",
   "description": "DB-agnostic pagination utilities with cursor and offset support",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
@@ -16,20 +31,5 @@
   "dependencies": {
     "@croco/problems-core": "workspace:*"
   },
-  "devDependencies": {},
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  "devDependencies": {}
 }

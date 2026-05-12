@@ -47,7 +47,7 @@ export abstract class Cache<K extends string = string, V = unknown> {
   abstract getOrSet(
     key: K,
     loader: () => Promise<V | undefined>,
-    options?: CacheGetOrSetOptions
+    options?: CacheGetOrSetOptions,
   ): Promise<V | undefined>;
 
   abstract warmup(entries: ReadonlyArray<CacheWarmupEntry<K, V>>): Promise<void>;

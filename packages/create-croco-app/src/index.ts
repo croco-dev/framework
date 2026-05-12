@@ -1,4 +1,4 @@
-import { createProgram } from './cli.js';
+import { createProgram } from "./cli.js";
 
 const program = createProgram();
 program.parseAsync(process.argv).catch((err: unknown) => {

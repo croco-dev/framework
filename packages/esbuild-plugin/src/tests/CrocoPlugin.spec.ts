@@ -1,14 +1,14 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import type * as esbuild from 'esbuild';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ComponentScannerDiagnosticError } from '../libs/ComponentScanner';
-import { crocoPlugin } from '../libs/plugin';
+import * as fs from "node:fs";
+import * as path from "node:path";
+import type * as esbuild from "esbuild";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ComponentScannerDiagnosticError } from "../libs/ComponentScanner";
+import { crocoPlugin } from "../libs/plugin";
 
-const TEMP_DIR = path.join(__dirname, 'plugin-temp');
-const FIXTURES_DIR = path.join(__dirname, 'fixtures');
+const TEMP_DIR = path.join(__dirname, "plugin-temp");
+const FIXTURES_DIR = path.join(__dirname, "fixtures");
 
-describe('crocoPlugin', () => {
+describe("crocoPlugin", () => {
   let mockBuildContext!: esbuild.PluginBuild;
 
   beforeEach(() => {
@@ -32,31 +32,31 @@ describe('crocoPlugin', () => {
     }
   });
 
-  describe('configuration', () => {
-    it('should use default config when none provided', () => {
+  describe("configuration", () => {
+    it("should use default config when none provided", () => {
       const plugin = crocoPlugin();
 
       expect(plugin).not.toBeUndefined();
-      expect(plugin.name).toBe('croco-plugin');
-      expect(typeof plugin.setup).toBe('function');
+      expect(plugin.name).toBe("croco-plugin");
+      expect(typeof plugin.setup).toBe("function");
     });
 
-    it('should merge custom config with defaults', () => {
+    it("should merge custom config with defaults", () => {
       const customConfig = {
         reflectMetadata: false,
         scan: {
-          dirs: ['src', 'lib'],
-          decorators: ['Service'],
+          dirs: ["src", "lib"],
+          decorators: ["Service"],
         },
       };
 
       const plugin = crocoPlugin(customConfig);
 
       expect(plugin).not.toBeUndefined();
-      expect(plugin.name).toBe('croco-plugin');
+      expect(plugin.name).toBe("croco-plugin");
     });
 
-    it('should disable reflectMetadata when false', () => {
+    it("should disable reflectMetadata when false", () => {
       const customConfig = {
         reflectMetadata: false,
       };
@@ -67,8 +67,8 @@ describe('crocoPlugin', () => {
     });
   });
 
-  describe('onStart', () => {
-    it('should clear scanner cache', () => {
+  describe("onStart", () => {
+    it("should clear scanner cache", () => {
       const plugin = crocoPlugin({
         scan: {
           dirs: [FIXTURES_DIR],
@@ -79,8 +79,8 @@ describe('crocoPlugin', () => {
       expect(mockBuildContext.onStart).toHaveBeenCalled();
     });
 
-    it('should resolve entry points', () => {
-      mockBuildContext.initialOptions.entryPoints = ['src/index.ts'];
+    it("should resolve entry points", () => {
+      mockBuildContext.initialOptions.entryPoints = ["src/index.ts"];
 
       const plugin = crocoPlugin();
       plugin.setup(mockBuildContext);
@@ -88,8 +88,8 @@ describe('crocoPlugin', () => {
       expect(mockBuildContext.onStart).toHaveBeenCalled();
     });
 
-    it('should scan for components', () => {
-      mockBuildContext.initialOptions.entryPoints = [path.join(FIXTURES_DIR, 'WithComponent.ts')];
+    it("should scan for components", () => {
+      mockBuildContext.initialOptions.entryPoints = [path.join(FIXTURES_DIR, "WithComponent.ts")];
 
       const plugin = crocoPlugin({
         scan: {
@@ -102,25 +102,25 @@ describe('crocoPlugin', () => {
       expect(mockBuildContext.onStart).toHaveBeenCalled();
     });
 
-    it('should resolve default scan dirs from absWorkingDir instead of the entry file directory', async () => {
-      const projectRoot = path.join(TEMP_DIR, 'project-root');
-      const srcDir = path.join(projectRoot, 'src');
-      const entryFilePath = path.join(srcDir, 'index.ts');
-      const componentFilePath = path.join(srcDir, 'DefaultComponent.ts');
+    it("should resolve default scan dirs from absWorkingDir instead of the entry file directory", async () => {
+      const projectRoot = path.join(TEMP_DIR, "project-root");
+      const srcDir = path.join(projectRoot, "src");
+      const entryFilePath = path.join(srcDir, "index.ts");
+      const componentFilePath = path.join(srcDir, "DefaultComponent.ts");
       const onLoadArgs: esbuild.OnLoadArgs = {
         path: entryFilePath,
-        namespace: '',
-        suffix: '',
+        namespace: "",
+        suffix: "",
         pluginData: {},
         with: {},
       };
 
       fs.mkdirSync(srcDir, { recursive: true });
       fs.writeFileSync(entryFilePath, "console.log('hello');");
-      fs.writeFileSync(componentFilePath, '@Component()\nexport class DefaultComponent {}');
+      fs.writeFileSync(componentFilePath, "@Component()\nexport class DefaultComponent {}");
 
       mockBuildContext.initialOptions = {
-        entryPoints: ['src/index.ts'],
+        entryPoints: ["src/index.ts"],
         absWorkingDir: projectRoot,
       };
 
@@ -135,30 +135,30 @@ describe('crocoPlugin', () => {
       const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
       if (onLoadCallback) {
         const result = onLoadCallback(onLoadArgs) as esbuild.OnLoadResult;
-        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+        const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
         expect(actualResult?.contents).toContain("import './DefaultComponent';");
       }
     });
 
-    it('should generate entry-specific auto-imports for multi-entry builds in different directories', async () => {
-      const projectRoot = path.join(TEMP_DIR, 'multi-entry-project');
-      const appDir = path.join(projectRoot, 'src', 'app');
-      const adminDir = path.join(projectRoot, 'src', 'admin');
-      const appEntryPath = path.join(appDir, 'index.ts');
-      const adminEntryPath = path.join(adminDir, 'index.ts');
-      const appComponentPath = path.join(appDir, 'AppComponent.ts');
-      const adminComponentPath = path.join(adminDir, 'AdminComponent.ts');
+    it("should generate entry-specific auto-imports for multi-entry builds in different directories", async () => {
+      const projectRoot = path.join(TEMP_DIR, "multi-entry-project");
+      const appDir = path.join(projectRoot, "src", "app");
+      const adminDir = path.join(projectRoot, "src", "admin");
+      const appEntryPath = path.join(appDir, "index.ts");
+      const adminEntryPath = path.join(adminDir, "index.ts");
+      const appComponentPath = path.join(appDir, "AppComponent.ts");
+      const adminComponentPath = path.join(adminDir, "AdminComponent.ts");
 
       fs.mkdirSync(appDir, { recursive: true });
       fs.mkdirSync(adminDir, { recursive: true });
       fs.writeFileSync(appEntryPath, "console.log('app');");
       fs.writeFileSync(adminEntryPath, "console.log('admin');");
-      fs.writeFileSync(appComponentPath, '@Component()\nexport class AppComponent {}');
-      fs.writeFileSync(adminComponentPath, '@Component()\nexport class AdminComponent {}');
+      fs.writeFileSync(appComponentPath, "@Component()\nexport class AppComponent {}");
+      fs.writeFileSync(adminComponentPath, "@Component()\nexport class AdminComponent {}");
 
       mockBuildContext.initialOptions = {
-        entryPoints: ['src/app/index.ts', 'src/admin/index.ts'],
+        entryPoints: ["src/app/index.ts", "src/admin/index.ts"],
         absWorkingDir: projectRoot,
       };
 
@@ -172,22 +172,25 @@ describe('crocoPlugin', () => {
       if (onLoadCallback) {
         const appResult = onLoadCallback({
           path: appEntryPath,
-          namespace: '',
-          suffix: '',
+          namespace: "",
+          suffix: "",
           pluginData: {},
           with: {},
         }) as esbuild.OnLoadResult;
         const adminResult = onLoadCallback({
           path: adminEntryPath,
-          namespace: '',
-          suffix: '',
+          namespace: "",
+          suffix: "",
           pluginData: {},
           with: {},
         }) as esbuild.OnLoadResult;
 
-        const resolvedAppResult = typeof appResult === 'object' && 'then' in appResult ? await appResult : appResult;
+        const resolvedAppResult =
+          typeof appResult === "object" && "then" in appResult ? await appResult : appResult;
         const resolvedAdminResult =
-          typeof adminResult === 'object' && 'then' in adminResult ? await adminResult : adminResult;
+          typeof adminResult === "object" && "then" in adminResult
+            ? await adminResult
+            : adminResult;
 
         expect(resolvedAppResult?.contents).toContain("import './AppComponent';");
         expect(resolvedAppResult?.contents).toContain("import '../admin/AdminComponent';");
@@ -196,19 +199,19 @@ describe('crocoPlugin', () => {
       }
     });
 
-    it('should resolve object entry points from absWorkingDir', async () => {
-      const projectRoot = path.join(TEMP_DIR, 'object-entry-project');
-      const srcDir = path.join(projectRoot, 'src');
-      const entryFilePath = path.join(srcDir, 'main.ts');
-      const componentFilePath = path.join(srcDir, 'ObjectEntryComponent.ts');
+    it("should resolve object entry points from absWorkingDir", async () => {
+      const projectRoot = path.join(TEMP_DIR, "object-entry-project");
+      const srcDir = path.join(projectRoot, "src");
+      const entryFilePath = path.join(srcDir, "main.ts");
+      const componentFilePath = path.join(srcDir, "ObjectEntryComponent.ts");
 
       fs.mkdirSync(srcDir, { recursive: true });
       fs.writeFileSync(entryFilePath, "console.log('object-entry');");
-      fs.writeFileSync(componentFilePath, '@Component()\nexport class ObjectEntryComponent {}');
+      fs.writeFileSync(componentFilePath, "@Component()\nexport class ObjectEntryComponent {}");
 
       mockBuildContext.initialOptions = {
         entryPoints: {
-          app: 'src/main.ts',
+          app: "src/main.ts",
         },
         absWorkingDir: projectRoot,
       };
@@ -223,23 +226,23 @@ describe('crocoPlugin', () => {
       if (onLoadCallback) {
         const result = onLoadCallback({
           path: entryFilePath,
-          namespace: '',
-          suffix: '',
+          namespace: "",
+          suffix: "",
           pluginData: {},
           with: {},
         }) as esbuild.OnLoadResult;
-        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+        const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
         expect(actualResult?.contents).toContain("import './ObjectEntryComponent';");
       }
     });
 
-    it('should surface scan failures as build errors', () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
-      const invalidFilePath = path.join(TEMP_DIR, 'invalid.ts');
+    it("should surface scan failures as build errors", () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
+      const invalidFilePath = path.join(TEMP_DIR, "invalid.ts");
 
       fs.writeFileSync(entryFilePath, "console.log('hello');");
-      fs.writeFileSync(invalidFilePath, 'this is not valid typescript {{{');
+      fs.writeFileSync(invalidFilePath, "this is not valid typescript {{{");
 
       mockBuildContext.initialOptions.entryPoints = [entryFilePath];
 
@@ -258,7 +261,7 @@ describe('crocoPlugin', () => {
       expect(result).toEqual({
         errors: [
           expect.objectContaining({
-            text: expect.stringContaining('Component scan failed:'),
+            text: expect.stringContaining("Component scan failed:"),
             detail: expect.objectContaining({
               diagnostic: expect.any(Object),
               cause: expect.any(Object),
@@ -267,7 +270,7 @@ describe('crocoPlugin', () => {
               file: path.resolve(invalidFilePath),
               line: expect.any(Number),
               column: expect.any(Number),
-              lineText: 'this is not valid typescript {{{',
+              lineText: "this is not valid typescript {{{",
             }),
           }),
         ],
@@ -277,17 +280,17 @@ describe('crocoPlugin', () => {
     });
   });
 
-  describe('onLoad', () => {
+  describe("onLoad", () => {
     const createMockOnLoadArgs = (filePath: string): esbuild.OnLoadArgs => ({
       path: filePath,
-      namespace: '',
-      suffix: '',
+      namespace: "",
+      suffix: "",
       pluginData: {},
       with: {},
     });
 
-    it('should prepend reflect-metadata import to entry points', async () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+    it("should prepend reflect-metadata import to entry points", async () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
       fs.writeFileSync(entryFilePath, "console.log('hello');");
 
       mockBuildContext.initialOptions.entryPoints = [entryFilePath];
@@ -303,14 +306,14 @@ describe('crocoPlugin', () => {
       const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
       if (onLoadCallback) {
         const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+        const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
         expect(actualResult?.contents).toContain("import 'reflect-metadata';");
       }
     });
 
-    it('should prepend auto-import for component files', async () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+    it("should prepend auto-import for component files", async () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
       fs.writeFileSync(entryFilePath, "console.log('hello');");
 
       mockBuildContext.initialOptions.entryPoints = [entryFilePath];
@@ -331,15 +334,15 @@ describe('crocoPlugin', () => {
       const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
       if (onLoadCallback) {
         const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+        const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult?.contents).toContain('@croco/auto-import');
+        expect(actualResult?.contents).toContain("@croco/auto-import");
       }
     });
 
-    it('should not modify non-entry-point files', async () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
-      const nonEntryFilePath = path.join(TEMP_DIR, 'other.ts');
+    it("should not modify non-entry-point files", async () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
+      const nonEntryFilePath = path.join(TEMP_DIR, "other.ts");
 
       fs.writeFileSync(entryFilePath, "console.log('hello');");
       fs.writeFileSync(nonEntryFilePath, "console.log('world');");
@@ -360,14 +363,14 @@ describe('crocoPlugin', () => {
         if (!result) {
           return;
         }
-        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+        const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
         expect(actualResult).toBeUndefined();
       }
     });
 
-    it('should return undefined when no prepend needed', async () => {
-      const nonEntryFilePath = path.join(TEMP_DIR, 'other.ts');
+    it("should return undefined when no prepend needed", async () => {
+      const nonEntryFilePath = path.join(TEMP_DIR, "other.ts");
 
       fs.writeFileSync(nonEntryFilePath, "console.log('world');");
 
@@ -387,14 +390,14 @@ describe('crocoPlugin', () => {
         if (!result) {
           return;
         }
-        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+        const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
         expect(actualResult).toBeUndefined();
       }
     });
 
-    it('should disable reflect-metadata when config is false', async () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+    it("should disable reflect-metadata when config is false", async () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
       fs.writeFileSync(entryFilePath, "console.log('hello');");
 
       mockBuildContext.initialOptions.entryPoints = [entryFilePath];
@@ -413,17 +416,17 @@ describe('crocoPlugin', () => {
       const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
       if (onLoadCallback) {
         const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-        const actualResult = typeof result === 'object' && 'then' in result ? await result : result;
+        const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
         expect(actualResult?.contents).not.toContain("import 'reflect-metadata';");
       }
     });
   });
 
-  describe('watch mode optimization', () => {
-    it('should not clear cache on subsequent builds in watch mode', () => {
+  describe("watch mode optimization", () => {
+    it("should not clear cache on subsequent builds in watch mode", () => {
       mockBuildContext.initialOptions = {
-        entryPoints: [path.join(FIXTURES_DIR, 'WithComponent.ts')],
+        entryPoints: [path.join(FIXTURES_DIR, "WithComponent.ts")],
         metafile: true,
       };
 
@@ -462,9 +465,9 @@ describe('crocoPlugin', () => {
       expect(mockBuildContext.onStart).toHaveBeenCalled();
     });
 
-    it('should clear cache when not in watch mode', () => {
+    it("should clear cache when not in watch mode", () => {
       mockBuildContext.initialOptions = {
-        entryPoints: [path.join(FIXTURES_DIR, 'WithComponent.ts')],
+        entryPoints: [path.join(FIXTURES_DIR, "WithComponent.ts")],
       };
 
       const plugin = crocoPlugin({
@@ -484,9 +487,9 @@ describe('crocoPlugin', () => {
       expect(mockBuildContext.onStart).toHaveBeenCalled();
     });
 
-    it('should respect watch.optimize configuration', () => {
+    it("should respect watch.optimize configuration", () => {
       mockBuildContext.initialOptions = {
-        entryPoints: [path.join(FIXTURES_DIR, 'WithComponent.ts')],
+        entryPoints: [path.join(FIXTURES_DIR, "WithComponent.ts")],
         metafile: true,
       };
 
@@ -511,8 +514,8 @@ describe('crocoPlugin', () => {
     });
   });
 
-  describe('generateRegistry', () => {
-    const REGISTRY_DIR = path.join(TEMP_DIR, '.croco');
+  describe("generateRegistry", () => {
+    const REGISTRY_DIR = path.join(TEMP_DIR, ".croco");
 
     beforeEach(() => {
       if (!fs.existsSync(REGISTRY_DIR)) {
@@ -526,27 +529,33 @@ describe('crocoPlugin', () => {
       }
     });
 
-    it('should generate registry.gen.ts with controllers and components', () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+    it("should generate registry.gen.ts with controllers and components", () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
       fs.writeFileSync(entryFilePath, "console.log('hello');");
 
-      const controllerFilePath = path.join(TEMP_DIR, 'UserController.ts');
-      fs.writeFileSync(controllerFilePath, '@Controller()\nexport class UserController { id: string; }');
+      const controllerFilePath = path.join(TEMP_DIR, "UserController.ts");
+      fs.writeFileSync(
+        controllerFilePath,
+        "@Controller()\nexport class UserController { id: string; }",
+      );
 
-      const componentFilePath = path.join(TEMP_DIR, 'MyComponent.ts');
-      fs.writeFileSync(componentFilePath, '@Component()\nexport class MyComponent { name: string; }');
+      const componentFilePath = path.join(TEMP_DIR, "MyComponent.ts");
+      fs.writeFileSync(
+        componentFilePath,
+        "@Component()\nexport class MyComponent { name: string; }",
+      );
 
       mockBuildContext.initialOptions.entryPoints = [entryFilePath];
 
       const plugin = crocoPlugin({
         scan: {
           dirs: [TEMP_DIR],
-          decorators: ['Component', 'Controller'],
+          decorators: ["Component", "Controller"],
         },
         generateRegistry: {
           enabled: true,
           outDir: REGISTRY_DIR,
-          outFile: 'registry.gen.ts',
+          outFile: "registry.gen.ts",
         },
       });
 
@@ -557,32 +566,35 @@ describe('crocoPlugin', () => {
         onStartCallback();
       }
 
-      const registryPath = path.join(REGISTRY_DIR, 'registry.gen.ts');
+      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
       expect(fs.existsSync(registryPath)).toBe(true);
 
-      const registryContent = fs.readFileSync(registryPath, 'utf-8');
-      expect(registryContent).toContain('// AUTO-GENERATED - DO NOT EDIT');
+      const registryContent = fs.readFileSync(registryPath, "utf-8");
+      expect(registryContent).toContain("// AUTO-GENERATED - DO NOT EDIT");
       expect(registryContent).toContain("import { UserController } from '../UserController';");
       expect(registryContent).toContain("import { MyComponent } from '../MyComponent';");
-      expect(registryContent).toContain('export const controllers = [UserController] as const;');
-      expect(registryContent).toContain('export const components = [MyComponent] as const;');
-      expect(registryContent).toContain('export type Controllers = typeof controllers;');
-      expect(registryContent).toContain('export type Components = typeof components;');
+      expect(registryContent).toContain("export const controllers = [UserController] as const;");
+      expect(registryContent).toContain("export const components = [MyComponent] as const;");
+      expect(registryContent).toContain("export type Controllers = typeof controllers;");
+      expect(registryContent).toContain("export type Components = typeof components;");
     });
 
-    it('should use default outDir and outFile when not specified', () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+    it("should use default outDir and outFile when not specified", () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
       fs.writeFileSync(entryFilePath, "console.log('hello');");
 
-      const controllerFilePath = path.join(TEMP_DIR, 'UserController.ts');
-      fs.writeFileSync(controllerFilePath, '@Controller()\nexport class UserController { id: string; }');
+      const controllerFilePath = path.join(TEMP_DIR, "UserController.ts");
+      fs.writeFileSync(
+        controllerFilePath,
+        "@Controller()\nexport class UserController { id: string; }",
+      );
 
       mockBuildContext.initialOptions.entryPoints = [entryFilePath];
 
       const plugin = crocoPlugin({
         scan: {
           dirs: [TEMP_DIR],
-          decorators: ['Controller'],
+          decorators: ["Controller"],
         },
         generateRegistry: {
           enabled: true,
@@ -596,7 +608,7 @@ describe('crocoPlugin', () => {
         onStartCallback();
       }
 
-      const defaultRegistryPath = path.join(process.cwd(), '.croco', 'registry.gen.ts');
+      const defaultRegistryPath = path.join(process.cwd(), ".croco", "registry.gen.ts");
       expect(fs.existsSync(defaultRegistryPath)).toBe(true);
 
       if (fs.existsSync(defaultRegistryPath)) {
@@ -604,19 +616,22 @@ describe('crocoPlugin', () => {
       }
     });
 
-    it('should not generate registry when disabled', () => {
-      const entryFilePath = path.join(TEMP_DIR, 'entry.ts');
+    it("should not generate registry when disabled", () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
       fs.writeFileSync(entryFilePath, "console.log('hello');");
 
-      const controllerFilePath = path.join(TEMP_DIR, 'UserController.ts');
-      fs.writeFileSync(controllerFilePath, '@Controller()\nexport class UserController { id: string; }');
+      const controllerFilePath = path.join(TEMP_DIR, "UserController.ts");
+      fs.writeFileSync(
+        controllerFilePath,
+        "@Controller()\nexport class UserController { id: string; }",
+      );
 
       mockBuildContext.initialOptions.entryPoints = [entryFilePath];
 
       const plugin = crocoPlugin({
         scan: {
           dirs: [TEMP_DIR],
-          decorators: ['Controller'],
+          decorators: ["Controller"],
         },
         generateRegistry: {
           enabled: false,
@@ -630,7 +645,7 @@ describe('crocoPlugin', () => {
         onStartCallback();
       }
 
-      const registryPath = path.join(REGISTRY_DIR, 'registry.gen.ts');
+      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
       expect(fs.existsSync(registryPath)).toBe(false);
     });
   });

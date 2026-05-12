@@ -4,16 +4,16 @@
  */
 
 /** Cron trigger metadata key and decorator. */
-export { CRON_METADATA_KEY, Cron } from './libs/decorators/Cron';
+export { CRON_METADATA_KEY, Cron } from "./libs/decorators/Cron";
 
 /** Event trigger metadata key and decorator. */
-export { EVENT_METADATA_KEY, OnEvent } from './libs/decorators/OnEvent';
+export { EVENT_METADATA_KEY, OnEvent } from "./libs/decorators/OnEvent";
 
 /** Webhook trigger metadata key and decorator. */
-export { OnWebhook, WEBHOOK_METADATA_KEY } from './libs/decorators/OnWebhook';
+export { OnWebhook, WEBHOOK_METADATA_KEY } from "./libs/decorators/OnWebhook";
 
 /** Trigger registry APIs and shared metadata key. */
-export { TRIGGER_METADATA_KEY, TriggerRegistry, triggerRegistry } from './libs/TriggerRegistry';
+export { TRIGGER_METADATA_KEY, TriggerRegistry, triggerRegistry } from "./libs/TriggerRegistry";
 
 /** Trigger metadata and option types. */
 export type {
@@ -26,4 +26,4 @@ export type {
   TriggerType,
   WebhookOptions,
   WebhookTriggerMetadata,
-} from './libs/types';
+} from "./libs/types";

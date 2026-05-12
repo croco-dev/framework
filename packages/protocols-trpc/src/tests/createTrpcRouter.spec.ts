@@ -1,13 +1,13 @@
-import 'reflect-metadata';
-import type { RouteIR } from '@croco/protocols-core';
-import type { AnyRouter } from '@trpc/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
-import { createTrpcRouter } from '../libs/createTrpcRouter';
+import "reflect-metadata";
+import type { RouteIR } from "@croco/protocols-core";
+import type { AnyRouter } from "@trpc/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+import { createTrpcRouter } from "../libs/createTrpcRouter";
 
-const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
-const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
-const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
+const REST_CONTROLLER_KEY = Symbol.for("croco:rest:controller");
+const REST_ROUTES_KEY = Symbol.for("croco:rest:routes");
+const REST_PARAMS_KEY = Symbol.for("croco:rest:params");
 
 type TrpcCaller = {
   readonly [domain: string]: {
@@ -37,8 +37,8 @@ const mocked = vi.hoisted(() => ({
   extractRouteIR: undefined as ((controller: Function) => RouteIR[]) | undefined,
 }));
 
-vi.mock('@croco/protocols-core', async (importActual) => {
-  const actual = await importActual<typeof import('@croco/protocols-core')>();
+vi.mock("@croco/protocols-core", async (importActual) => {
+  const actual = await importActual<typeof import("@croco/protocols-core")>();
 
   return {
     ...actual,
@@ -48,62 +48,64 @@ vi.mock('@croco/protocols-core', async (importActual) => {
   };
 });
 
-describe('createTrpcRouter', () => {
+describe("createTrpcRouter", () => {
   afterEach(() => {
     mocked.extractRouteIR = undefined;
   });
 
-  it('should expose GET routes as queries', async () => {
-    @Controller('/users')
+  it("should expose GET routes as queries", async () => {
+    @Controller("/users")
     class UserController {
-      @Get('/')
+      @Get("/")
       listUsers(): { users: string[] } {
-        return { users: ['Ada'] };
+        return { users: ["Ada"] };
       }
     }
 
     const router = createTrpcRouter([UserController]);
     const caller = createCaller(router);
 
-    expect(getProcedureType(router, 'user', 'listUsers')).toBe('query');
-    await expect(caller.user.listUsers()).resolves.toEqual({ users: ['Ada'] });
+    expect(getProcedureType(router, "user", "listUsers")).toBe("query");
+    await expect(caller.user.listUsers()).resolves.toEqual({ users: ["Ada"] });
   });
 
-  it('should expose POST routes as mutations', async () => {
-    @Controller('/orders')
+  it("should expose POST routes as mutations", async () => {
+    @Controller("/orders")
     class OrderController {
-      @Post('/')
+      @Post("/")
       createOrder(): { id: string } {
-        return { id: 'order-1' };
+        return { id: "order-1" };
       }
     }
 
     const router = createTrpcRouter([OrderController]);
     const caller = createCaller(router);
 
-    expect(getProcedureType(router, 'order', 'createOrder')).toBe('mutation');
-    await expect(caller.order.createOrder()).resolves.toEqual({ id: 'order-1' });
+    expect(getProcedureType(router, "order", "createOrder")).toBe("mutation");
+    await expect(caller.order.createOrder()).resolves.toEqual({ id: "order-1" });
   });
 
-  it('should apply input and output schemas to procedures', async () => {
+  it("should apply input and output schemas to procedures", async () => {
     const createUserSchema = z.object({ name: z.string().min(1) });
     const userSchema = z.object({ id: z.string(), name: z.string() });
 
-    @Controller('/users')
+    @Controller("/users")
     class UserController {
-      @Post('/')
-      createUser(@Body(createUserSchema) input: z.infer<typeof createUserSchema>): z.infer<typeof userSchema> {
-        return { id: 'user-1', name: input.name };
+      @Post("/")
+      createUser(
+        @Body(createUserSchema) input: z.infer<typeof createUserSchema>,
+      ): z.infer<typeof userSchema> {
+        return { id: "user-1", name: input.name };
       }
     }
 
     mocked.extractRouteIR = () => [
       {
-        controllerName: 'UserController',
-        methodName: 'createUser',
-        httpMethod: 'POST',
-        path: '/users',
-        params: [{ kind: 'body', name: '', schema: createUserSchema }],
+        controllerName: "UserController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: createUserSchema }],
         inputSchema: createUserSchema,
         inputSchemas: { body: createUserSchema, path: null, query: null },
         outputSchema: userSchema,
@@ -114,31 +116,34 @@ describe('createTrpcRouter', () => {
     const router = createTrpcRouter([UserController]);
     const caller = createCaller(router);
 
-    await expect(caller.user.createUser({ name: 'Grace' })).resolves.toEqual({ id: 'user-1', name: 'Grace' });
-    await expect(caller.user.createUser({ name: '' })).rejects.toThrow();
+    await expect(caller.user.createUser({ name: "Grace" })).resolves.toEqual({
+      id: "user-1",
+      name: "Grace",
+    });
+    await expect(caller.user.createUser({ name: "" })).rejects.toThrow();
   });
 
-  it('should group controllers by domain namespace', () => {
-    @Controller('/users')
+  it("should group controllers by domain namespace", () => {
+    @Controller("/users")
     class UserController {
-      @Get('/')
+      @Get("/")
       listUsers(): string[] {
-        return ['user-1'];
+        return ["user-1"];
       }
     }
 
-    @Controller('/orders')
+    @Controller("/orders")
     class OrderController {
-      @Get('/')
+      @Get("/")
       listOrders(): string[] {
-        return ['order-1'];
+        return ["order-1"];
       }
     }
 
     const router = createTrpcRouter([UserController, OrderController]);
 
-    expect(router._def.record).toHaveProperty('user');
-    expect(router._def.record).toHaveProperty('order');
+    expect(router._def.record).toHaveProperty("user");
+    expect(router._def.record).toHaveProperty("order");
   });
 });
 
@@ -156,11 +161,11 @@ function getProcedureType(router: AnyRouter, domain: string, procedureName: stri
   return procedure._def.type;
 }
 
-function Controller(path: string = ''): ClassDecorator {
+function Controller(path: string = ""): ClassDecorator {
   return (target: Function) => {
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const metadata: ControllerMetadata = {
-      path: normalizedPath === '/' ? '' : normalizedPath,
+      path: normalizedPath === "/" ? "" : normalizedPath,
       target,
     };
 
@@ -169,37 +174,40 @@ function Controller(path: string = ''): ClassDecorator {
 }
 
 function createMethodDecorator(method: string) {
-  return (path: string = ''): MethodDecorator => {
+  return (path: string = ""): MethodDecorator => {
     return (target: Object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-      const existingRoutes = (Reflect.getMetadata(REST_ROUTES_KEY, target.constructor) ?? []) as RouteMetadata[];
+      const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+      const existingRoutes = (Reflect.getMetadata(REST_ROUTES_KEY, target.constructor) ??
+        []) as RouteMetadata[];
       const routeMetadata: RouteMetadata = {
         method,
-        path: normalizedPath === '/' ? '' : normalizedPath,
+        path: normalizedPath === "/" ? "" : normalizedPath,
         methodName: propertyKey,
       };
 
-      Reflect.defineMetadata(REST_ROUTES_KEY, [...existingRoutes, routeMetadata], target.constructor);
+      Reflect.defineMetadata(
+        REST_ROUTES_KEY,
+        [...existingRoutes, routeMetadata],
+        target.constructor,
+      );
 
       return descriptor;
     };
   };
 }
 
-const Get = createMethodDecorator('GET');
-const Post = createMethodDecorator('POST');
+const Get = createMethodDecorator("GET");
+const Post = createMethodDecorator("POST");
 
 function Body(schema?: z.ZodType): ParameterDecorator {
   return (target: object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
     if (!propertyKey) return;
 
-    const existingParams = (Reflect.getMetadata(REST_PARAMS_KEY, target.constructor) ?? new Map()) as Map<
-      string | symbol,
-      ParamMetadata[]
-    >;
+    const existingParams = (Reflect.getMetadata(REST_PARAMS_KEY, target.constructor) ??
+      new Map()) as Map<string | symbol, ParamMetadata[]>;
     const methodParams = existingParams.get(propertyKey) ?? [];
     const param: ParamMetadata = {
-      type: 'body',
+      type: "body",
       index: parameterIndex,
       pipes: schema ? [new ValidationPipe(schema)] : undefined,
     };

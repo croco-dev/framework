@@ -1,7 +1,7 @@
 /**
  * Tenant status
  */
-export type TenantStatus = 'active' | 'inactive' | 'suspended' | 'trial' | 'expired';
+export type TenantStatus = "active" | "inactive" | "suspended" | "trial" | "expired";
 
 /**
  * Tenant entity
@@ -68,7 +68,7 @@ export interface TenantStore {
    * @param data - Tenant data
    * @returns The created tenant
    */
-  create(data: Omit<Tenant, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tenant>;
+  create(data: Omit<Tenant, "id" | "createdAt" | "updatedAt">): Promise<Tenant>;
 
   /**
    * Update an existing tenant
@@ -76,7 +76,10 @@ export interface TenantStore {
    * @param data - Partial tenant data to update
    * @returns The updated tenant
    */
-  update(id: string, data: Partial<Omit<Tenant, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Tenant>;
+  update(
+    id: string,
+    data: Partial<Omit<Tenant, "id" | "createdAt" | "updatedAt">>,
+  ): Promise<Tenant>;
 
   /**
    * Delete a tenant by ID

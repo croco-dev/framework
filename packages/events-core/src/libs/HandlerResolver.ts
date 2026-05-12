@@ -1,5 +1,5 @@
-import type { DomainEvent } from './DomainEvent';
-import type { EventHandler, EventHandlerClass } from './EventHandler';
+import type { DomainEvent } from "./DomainEvent";
+import type { EventHandler, EventHandlerClass } from "./EventHandler";
 
 /**
  * DI 컨테이너 추상화 인터페이스

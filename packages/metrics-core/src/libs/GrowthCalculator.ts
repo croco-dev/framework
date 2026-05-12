@@ -1,4 +1,4 @@
-import type { MRRMovement } from '../types';
+import type { MRRMovement } from "../types";
 
 /**
  * Calculator for business growth metrics.

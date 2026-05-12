@@ -19,7 +19,7 @@ export type Period = {
   /** Period end date (exclusive) */
   to: Date;
   /** Aggregation granularity */
-  granularity: 'day' | 'week' | 'month';
+  granularity: "day" | "week" | "month";
 };
 
 /**
@@ -31,7 +31,13 @@ export type Percentage = number;
 /**
  * MRR movement type classification.
  */
-export type MRRMovementType = 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation' | 'unchanged';
+export type MRRMovementType =
+  | "new"
+  | "expansion"
+  | "contraction"
+  | "churned"
+  | "reactivation"
+  | "unchanged";
 
 /**
  * Monthly Recurring Revenue (MRR) movement breakdown.
@@ -166,7 +172,7 @@ export type PlanSnapshot = {
   id: string;
   amount: number;
   currency: string;
-  interval: 'month' | 'year';
+  interval: "month" | "year";
   intervalCount: number;
 };
 
@@ -197,7 +203,7 @@ export type CohortPeriodData = {
 };
 
 export type CohortAnalysisOptions = {
-  granularity: 'day' | 'week' | 'month';
+  granularity: "day" | "week" | "month";
   maxPeriods: number;
   startDate?: Date;
   endDate?: Date;

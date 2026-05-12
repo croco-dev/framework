@@ -1,6 +1,6 @@
-import { Component } from '@croco/framework-context';
-import { PlanEntitlementRegistry } from './interfaces';
-import type { EntitlementRule } from './types';
+import { Component } from "@croco/framework-context";
+import { PlanEntitlementRegistry } from "./interfaces";
+import type { EntitlementRule } from "./types";
 
 @Component()
 export class InMemoryPlanEntitlementRegistry extends PlanEntitlementRegistry {

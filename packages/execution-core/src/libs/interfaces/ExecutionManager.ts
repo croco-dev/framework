@@ -1,4 +1,4 @@
-import type { CreateExecutionParams, Execution, ExecutionError, ProgressInfo } from '../types';
+import type { CreateExecutionParams, Execution, ExecutionError, ProgressInfo } from "../types";
 
 /**
  * ExecutionManager defines the lifecycle management interface for executions.

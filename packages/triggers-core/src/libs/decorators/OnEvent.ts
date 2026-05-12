@@ -1,8 +1,8 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { EVENT_METADATA_KEY } from '../metadataKeys';
-import type { EventOptions, EventTriggerMetadata } from '../types';
+import { MetadataStorage } from "@croco/framework-context";
+import { EVENT_METADATA_KEY } from "../metadataKeys";
+import type { EventOptions, EventTriggerMetadata } from "../types";
 
-export { EVENT_METADATA_KEY } from '../metadataKeys';
+export { EVENT_METADATA_KEY } from "../metadataKeys";
 
 /**
  * OnEvent decorator for handling domain events.
@@ -23,9 +23,13 @@ export { EVENT_METADATA_KEY } from '../metadataKeys';
  * }
  */
 export function OnEvent(event: string, options: EventOptions = {}): MethodDecorator {
-  return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const metadata: EventTriggerMetadata = {
-      type: 'event',
+      type: "event",
       event,
       methodName: propertyKey,
       options,

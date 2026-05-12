@@ -1,4 +1,4 @@
-import type { Plan } from '../types';
+import type { Plan } from "../types";
 
 /**
  * Registry interface for managing billing plans.

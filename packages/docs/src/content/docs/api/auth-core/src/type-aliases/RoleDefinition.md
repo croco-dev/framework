@@ -13,13 +13,13 @@ title: "RoleDefinition"
 
 > `optional` **inherits**: `string`[]
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### permissions
 

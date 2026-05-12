@@ -1,6 +1,6 @@
-import { Context } from '@croco/framework-context';
-import { BatchLoaderImpl } from './BatchLoader';
-import type { BatchLoader, BatchLoaderOptions } from './types';
+import { Context } from "@croco/framework-context";
+import { BatchLoaderImpl } from "./BatchLoader";
+import type { BatchLoader, BatchLoaderOptions } from "./types";
 
 /**
  * Creates a factory that returns a BatchLoader instance.
@@ -17,9 +17,9 @@ export function createBatchLoader<K, V>(options: BatchLoaderOptions<K, V>): Batc
       return new BatchLoaderImpl(options);
     }
 
-    const staticScope = options.scope ? `:${options.scope}` : '';
+    const staticScope = options.scope ? `:${options.scope}` : "";
     const dynamicScope = options.resolveScope?.();
-    const dynamicScopeKey = dynamicScope ? `:scope:${dynamicScope}` : '';
+    const dynamicScopeKey = dynamicScope ? `:scope:${dynamicScope}` : "";
 
     const cacheKey = `dataloader:${options.name}:v1${staticScope}${dynamicScopeKey}`;
 

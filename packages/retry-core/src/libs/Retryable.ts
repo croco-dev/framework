@@ -1,15 +1,15 @@
-import { recordEvent, withSpan } from '@croco/telemetry-api';
-import type { BackoffOptions, BackoffPolicy } from './BackoffPolicy';
-import { CircuitBreaker } from './CircuitBreaker';
-import { CircuitState } from './CircuitBreakerState';
-import { CircuitBreakerOpenProblem } from './errors/CircuitBreakerOpenProblem';
-import { RetryExhaustedProblem } from './errors/RetryExhaustedProblem';
-import { LambdaTimeoutGuard } from './LambdaTimeoutGuard';
-import { findRecoverMethod, getRecoverMethods } from './Recover';
-import type { RetryContext } from './RetryContext';
-import type { RetryListener } from './RetryListener';
-import { RetryOrchestrator } from './RetryOrchestrator';
-import type { RetryPolicy, RetryPolicyOptions } from './RetryPolicy';
+import { recordEvent, withSpan } from "@croco/telemetry-api";
+import type { BackoffOptions, BackoffPolicy } from "./BackoffPolicy";
+import { CircuitBreaker } from "./CircuitBreaker";
+import { CircuitState } from "./CircuitBreakerState";
+import { CircuitBreakerOpenProblem } from "./errors/CircuitBreakerOpenProblem";
+import { RetryExhaustedProblem } from "./errors/RetryExhaustedProblem";
+import { LambdaTimeoutGuard } from "./LambdaTimeoutGuard";
+import { findRecoverMethod, getRecoverMethods } from "./Recover";
+import type { RetryContext } from "./RetryContext";
+import type { RetryListener } from "./RetryListener";
+import { RetryOrchestrator } from "./RetryOrchestrator";
+import type { RetryPolicy, RetryPolicyOptions } from "./RetryPolicy";
 
 /**
  * CircuitBreaker 설정 옵션.
@@ -89,10 +89,15 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
   const wrapExhausted = options.wrapExhausted ?? false;
   const trace = options.trace ?? true;
 
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const originalMethod = descriptor.value;
     const methodName = String(propertyKey);
-    const targetName = (_target as { constructor?: { name?: string } }).constructor?.name ?? 'UnknownTarget';
+    const targetName =
+      (_target as { constructor?: { name?: string } }).constructor?.name ?? "UnknownTarget";
     const defaultCircuitId = `${targetName}.${methodName}`;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
@@ -105,7 +110,8 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
           defaultCircuitId,
         }) ?? defaultCircuitId;
 
-      const halfOpenRequests = options.circuitBreaker?.successThreshold ?? options.circuitBreaker?.halfOpenAttempts;
+      const halfOpenRequests =
+        options.circuitBreaker?.successThreshold ?? options.circuitBreaker?.halfOpenAttempts;
       const circuitBreaker =
         options.circuitBreaker !== undefined
           ? new CircuitBreaker({
@@ -123,13 +129,14 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
       const hasRecover = options.recover !== undefined || getRecoverMethods(prototype).length > 0;
 
       const callback = circuitBreaker
-        ? async (): Promise<unknown> => await circuitBreaker.execute(async () => await originalMethod.apply(this, args))
+        ? async (): Promise<unknown> =>
+            await circuitBreaker.execute(async () => await originalMethod.apply(this, args))
         : async (): Promise<unknown> => await originalMethod.apply(this, args);
 
       const additionalHooks = {
         onStart: async (context: RetryContext): Promise<boolean> => {
           if (trace) {
-            context.setAttribute('telemetry.span_name', `retry:${methodName}`);
+            context.setAttribute("telemetry.span_name", `retry:${methodName}`);
           }
 
           return true;
@@ -139,12 +146,12 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
             return;
           }
 
-          recordEvent('retry.attempt_failed', {
-            'retry.attempt': context.attempt,
-            'retry.method_name': methodName,
-            'retry.error_type': error.name,
-            'retry.error_message': error.message,
-            'retry.will_retry': context.attempt < maxAttempts,
+          recordEvent("retry.attempt_failed", {
+            "retry.attempt": context.attempt,
+            "retry.method_name": methodName,
+            "retry.error_type": error.name,
+            "retry.error_message": error.message,
+            "retry.will_retry": context.attempt < maxAttempts,
           });
         },
         onSuccess: async (context: RetryContext): Promise<void> => {
@@ -152,9 +159,9 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
             return;
           }
 
-          recordEvent('retry.success', {
-            'retry.attempt': context.attempt,
-            'retry.method_name': methodName,
+          recordEvent("retry.success", {
+            "retry.attempt": context.attempt,
+            "retry.method_name": methodName,
           });
         },
         onExhausted: async (_error: Error, context: RetryContext): Promise<void> => {
@@ -162,10 +169,10 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
             return;
           }
 
-          recordEvent('retry.exhausted', {
-            'retry.max_attempts': maxAttempts,
-            'retry.method_name': methodName,
-            'retry.final_error': context.lastError?.name,
+          recordEvent("retry.exhausted", {
+            "retry.max_attempts": maxAttempts,
+            "retry.method_name": methodName,
+            "retry.final_error": context.lastError?.name,
           });
         },
         beforeWait: async (delay: number): Promise<boolean> => {
@@ -190,7 +197,7 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
               `Retry exhausted after ${maxAttempts} attempts for '${methodName}'`,
               null,
               maxAttempts,
-              methodName
+              methodName,
             );
             const lastError = context.lastError ?? fallbackError;
             const recoverableError = context.lastError ?? fallbackError.getOriginalError();
@@ -198,14 +205,14 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
             const recoverMeta = findRecoverMethod(prototype, recoverableError);
             if (recoverMeta) {
               const recoverMethod = (this as Record<string, unknown>)[recoverMeta.methodName];
-              if (typeof recoverMethod === 'function') {
+              if (typeof recoverMethod === "function") {
                 return await recoverMethod.call(this, recoverableError, ...args);
               }
             }
 
             if (options.recover) {
               const recoverMethod = (this as Record<string, unknown>)[options.recover];
-              if (typeof recoverMethod === 'function') {
+              if (typeof recoverMethod === "function") {
                 return await recoverMethod.call(this, recoverableError, ...args);
               }
             }
@@ -225,31 +232,31 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
           callback,
           { ...options, maxAttempts, wrapExhausted },
           additionalHooks,
-          recovery
+          recovery,
         );
 
       if (!trace) {
         return await executeWithRetry();
       }
 
-      const retryPolicyName = options.retryPolicy?.constructor.name ?? 'DefaultRetryPolicy';
+      const retryPolicyName = options.retryPolicy?.constructor.name ?? "DefaultRetryPolicy";
 
       return await withSpan(
         async (span) => {
           // Set span attributes
-          span.setAttribute('retry.max_attempts', maxAttempts);
-          span.setAttribute('retry.method_name', methodName);
-          span.setAttribute('retry.policy', retryPolicyName);
+          span.setAttribute("retry.max_attempts", maxAttempts);
+          span.setAttribute("retry.method_name", methodName);
+          span.setAttribute("retry.policy", retryPolicyName);
 
           return await executeWithRetry();
         },
         {
           name: `retry:${methodName}`,
           attributes: {
-            'retry.max_attempts': maxAttempts,
-            'retry.method_name': methodName,
+            "retry.max_attempts": maxAttempts,
+            "retry.method_name": methodName,
           },
-        }
+        },
       );
     };
 

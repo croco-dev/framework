@@ -61,7 +61,7 @@ export type GenerateResult = {
 /**
  * 스트리밍 파라미터
  */
-export type StreamParams = Omit<GenerateParams, 'modelId'> & {
+export type StreamParams = Omit<GenerateParams, "modelId"> & {
   modelId?: string;
   signal?: AbortSignal;
 };
@@ -93,7 +93,7 @@ export type GenerateObjectParams<T> = GenerateParams & {
   /**
    * 생성 모드
    */
-  mode?: 'json' | 'tool';
+  mode?: "json" | "tool";
 };
 
 /**
@@ -267,7 +267,7 @@ export type LlmMetadata = {
 /**
  * 토큰 사용량 정확도
  */
-export type UsageAccuracy = 'EXACT' | 'ESTIMATED' | 'UNKNOWN';
+export type UsageAccuracy = "EXACT" | "ESTIMATED" | "UNKNOWN";
 
 /**
  * LLM 모델 설정

@@ -1,14 +1,14 @@
-import 'reflect-metadata';
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { extractRouteIR } from '@croco/protocols-core';
-import { Controller, Get } from '@croco/protocols-rest';
-import { describe, expect, it } from 'vitest';
-import { emitOpenAPI } from '../libs/emitOpenAPI';
+import "reflect-metadata";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer, type Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { extractRouteIR } from "@croco/protocols-core";
+import { Controller, Get } from "@croco/protocols-rest";
+import { describe, expect, it } from "vitest";
+import { emitOpenAPI } from "../libs/emitOpenAPI";
 
 type User = {
   readonly id: number;
@@ -22,21 +22,21 @@ type GeneratedUsersClient = {
   }>;
 };
 
-describe('OpenAPI round trip', () => {
-  it('should generate a fetch client that can call a matching backend', async () => {
-    @Controller('/users')
+describe("OpenAPI round trip", () => {
+  it("should generate a fetch client that can call a matching backend", async () => {
+    @Controller("/users")
     class UserController {
-      @Get('/')
+      @Get("/")
       listUsers(): User[] {
-        return [{ id: 1, name: 'Alice' }];
+        return [{ id: 1, name: "Alice" }];
       }
     }
 
     const routes = extractRouteIR(UserController);
     const spec = emitOpenAPI([UserController]);
-    const tempDirectory = mkdtempSync(join(tmpdir(), 'openapi-roundtrip-'));
-    const specPath = join(tempDirectory, 'openapi.json');
-    const clientPath = join(tempDirectory, 'client.ts');
+    const tempDirectory = mkdtempSync(join(tmpdir(), "openapi-roundtrip-"));
+    const specPath = join(tempDirectory, "openapi.json");
+    const clientPath = join(tempDirectory, "client.ts");
     const server = await listenOnRandomPort();
     const originalFetch = globalThis.fetch;
 
@@ -50,7 +50,7 @@ describe('OpenAPI round trip', () => {
       const response = await client.userControllerListUsers();
 
       expect(response.status).toBe(200);
-      expect(response.data).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(response.data).toEqual([{ id: 1, name: "Alice" }]);
     } finally {
       globalThis.fetch = originalFetch;
       await closeServer(server.instance);
@@ -60,15 +60,19 @@ describe('OpenAPI round trip', () => {
 });
 
 function runOrval(specPath: string, clientPath: string): void {
-  execFileSync('pnpm', ['exec', 'orval', '--input', specPath, '--output', clientPath, '--client', 'fetch'], {
-    cwd: join(__dirname, '../..'),
-    stdio: 'pipe',
-  });
+  execFileSync(
+    "pnpm",
+    ["exec", "orval", "--input", specPath, "--output", clientPath, "--client", "fetch"],
+    {
+      cwd: join(__dirname, "../.."),
+      stdio: "pipe",
+    },
+  );
 }
 
 function createRelativeFetch(baseUrl: string, delegate: typeof fetch): typeof fetch {
   return (input, init) => {
-    if (typeof input === 'string' && input.startsWith('/')) {
+    if (typeof input === "string" && input.startsWith("/")) {
       return delegate(`${baseUrl}${input}`, init);
     }
 
@@ -78,24 +82,24 @@ function createRelativeFetch(baseUrl: string, delegate: typeof fetch): typeof fe
 
 function listenOnRandomPort(): Promise<{ readonly instance: Server; readonly url: string }> {
   const server = createServer((request, response) => {
-    if (request.method === 'GET' && request.url === '/users') {
-      response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(JSON.stringify([{ id: 1, name: 'Alice' }]));
+    if (request.method === "GET" && request.url === "/users") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify([{ id: 1, name: "Alice" }]));
       return;
     }
 
-    response.writeHead(404, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ message: 'Not Found' }));
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ message: "Not Found" }));
   });
 
   return new Promise((resolve, reject) => {
-    server.once('error', reject);
+    server.once("error", reject);
     server.listen(0, () => {
       const address = server.address();
 
-      if (!address || typeof address === 'string') {
+      if (!address || typeof address === "string") {
         server.close();
-        reject(new Error('Unable to allocate a test server port'));
+        reject(new Error("Unable to allocate a test server port"));
         return;
       }
 

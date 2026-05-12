@@ -1,6 +1,6 @@
-import { LlmModel } from './LlmModel';
-import { InvalidLlmResponseProblem } from './problems/LlmProblems';
-import { LlmToolExecutionProblem } from './problems/LlmServiceProblem';
+import { LlmModel } from "./LlmModel";
+import { InvalidLlmResponseProblem } from "./problems/LlmProblems";
+import { LlmToolExecutionProblem } from "./problems/LlmServiceProblem";
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -14,7 +14,7 @@ import type {
   StreamParams,
   ToolCallParams,
   ToolCallResult,
-} from './types';
+} from "./types";
 
 export class InMemoryLlmModel extends LlmModel {
   private static readonly EMBEDDING_DIMENSION = 1536;
@@ -52,7 +52,7 @@ export class InMemoryLlmModel extends LlmModel {
         promptTokens,
         completionTokens,
         totalTokens: promptTokens + completionTokens,
-        accuracy: 'ESTIMATED',
+        accuracy: "ESTIMATED",
       },
       metadata: {
         modelId: this.modelId,
@@ -67,7 +67,7 @@ export class InMemoryLlmModel extends LlmModel {
       return;
     }
 
-    const chunks = response.split(' ');
+    const chunks = response.split(" ");
     const promptTokens = params.prompt.length;
 
     for (let i = 0; i < chunks.length; i++) {
@@ -104,24 +104,24 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async callTool(params: ToolCallParams): Promise<ToolCallResult> {
-    const response = this.responses.get(params.prompt) ?? '';
+    const response = this.responses.get(params.prompt) ?? "";
 
-    if (!response || !response.includes(':')) {
+    if (!response || !response.includes(":")) {
       return {
         toolCalls: [],
         usage: {
           promptTokens: params.prompt.length,
           completionTokens: 0,
           totalTokens: params.prompt.length,
-          accuracy: 'ESTIMATED',
+          accuracy: "ESTIMATED",
         },
       };
     }
 
     const toolCalls = response
-      .split('|')
+      .split("|")
       .map((call) => {
-        const colonIndex = call.indexOf(':');
+        const colonIndex = call.indexOf(":");
         if (colonIndex === -1) {
           return null;
         }
@@ -135,11 +135,13 @@ export class InMemoryLlmModel extends LlmModel {
         } catch (error) {
           throw new LlmToolExecutionProblem(
             `Failed to parse tool arguments for '${name}'`,
-            error instanceof Error ? error : undefined
+            error instanceof Error ? error : undefined,
           );
         }
       })
-      .filter((call): call is { name: string; arguments: Record<string, unknown> } => call !== null);
+      .filter(
+        (call): call is { name: string; arguments: Record<string, unknown> } => call !== null,
+      );
 
     return {
       toolCalls,
@@ -147,7 +149,7 @@ export class InMemoryLlmModel extends LlmModel {
         promptTokens: params.prompt.length,
         completionTokens: response.length,
         totalTokens: params.prompt.length + response.length,
-        accuracy: 'ESTIMATED',
+        accuracy: "ESTIMATED",
       },
     };
   }
@@ -161,7 +163,7 @@ export class InMemoryLlmModel extends LlmModel {
         promptTokens: params.text.length,
         completionTokens: 0,
         totalTokens: params.text.length,
-        accuracy: 'ESTIMATED',
+        accuracy: "ESTIMATED",
       },
     };
   }
@@ -177,7 +179,7 @@ export class InMemoryLlmModel extends LlmModel {
         promptTokens: totalTokens,
         completionTokens: 0,
         totalTokens,
-        accuracy: 'ESTIMATED',
+        accuracy: "ESTIMATED",
       },
     };
   }

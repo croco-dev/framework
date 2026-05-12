@@ -1,15 +1,15 @@
-import 'reflect-metadata';
-import type { ILogger } from '@croco/framework-context';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LoggingInterceptor } from '../libs/interceptors/LoggingInterceptor';
-import type { CallHandler } from '../libs/interfaces/CallHandler';
-import type { ExecutionContext } from '../libs/interfaces/ExecutionContext';
+import "reflect-metadata";
+import type { ILogger } from "@croco/framework-context";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LoggingInterceptor } from "../libs/interceptors/LoggingInterceptor";
+import type { CallHandler } from "../libs/interfaces/CallHandler";
+import type { ExecutionContext } from "../libs/interfaces/ExecutionContext";
 
-describe('LoggingInterceptor', () => {
+describe("LoggingInterceptor", () => {
   let interceptor!: LoggingInterceptor;
   let mockContext!: ExecutionContext;
   let mockNext!: CallHandler;
-  let mockLogger!: Pick<ILogger, 'info'>;
+  let mockLogger!: Pick<ILogger, "info">;
 
   beforeEach(() => {
     mockLogger = {
@@ -21,8 +21,8 @@ describe('LoggingInterceptor', () => {
       getRequest: vi.fn(),
       getClass: vi.fn(),
       getHandler: vi.fn(),
-      getPath: vi.fn().mockReturnValue('/test/path'),
-      getMethod: vi.fn().mockReturnValue('GET'),
+      getPath: vi.fn().mockReturnValue("/test/path"),
+      getMethod: vi.fn().mockReturnValue("GET"),
     } as unknown as ExecutionContext;
 
     mockNext = {
@@ -34,18 +34,18 @@ describe('LoggingInterceptor', () => {
     vi.restoreAllMocks();
   });
 
-  it('should log request method and path', async () => {
-    (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: 'test' });
+  it("should log request method and path", async () => {
+    (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: "test" });
 
     await interceptor.intercept(mockContext, mockNext);
 
     expect(mockLogger.info).toHaveBeenCalledWith(
-      'HTTP request completed',
-      expect.objectContaining({ method: 'GET', path: '/test/path' })
+      "HTTP request completed",
+      expect.objectContaining({ method: "GET", path: "/test/path" }),
     );
   });
 
-  it('should log duration after handler completes', async () => {
+  it("should log duration after handler completes", async () => {
     (mockNext.handle as ReturnType<typeof vi.fn>).mockImplementation(async () => {
       return new Promise((resolve) => setTimeout(() => resolve({}), 10));
     });
@@ -56,8 +56,8 @@ describe('LoggingInterceptor', () => {
     expect(logContext.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it('should pass through handler result', async () => {
-    const expectedResult = { data: 'test-result', id: 123 };
+  it("should pass through handler result", async () => {
+    const expectedResult = { data: "test-result", id: 123 };
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue(expectedResult);
 
     const result = await interceptor.intercept(mockContext, mockNext);
@@ -65,31 +65,34 @@ describe('LoggingInterceptor', () => {
     expect(result).toEqual(expectedResult);
   });
 
-  it('should log different HTTP methods', async () => {
-    (mockContext.getMethod as ReturnType<typeof vi.fn>).mockReturnValue('POST');
-    (mockContext.getPath as ReturnType<typeof vi.fn>).mockReturnValue('/api/users');
+  it("should log different HTTP methods", async () => {
+    (mockContext.getMethod as ReturnType<typeof vi.fn>).mockReturnValue("POST");
+    (mockContext.getPath as ReturnType<typeof vi.fn>).mockReturnValue("/api/users");
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     await interceptor.intercept(mockContext, mockNext);
 
     expect(mockLogger.info).toHaveBeenCalledWith(
-      'HTTP request completed',
-      expect.objectContaining({ method: 'POST', path: '/api/users' })
+      "HTTP request completed",
+      expect.objectContaining({ method: "POST", path: "/api/users" }),
     );
   });
 
-  it('should handle long path strings', async () => {
-    const longPath = '/api/v1/users/123/posts/456/comments/789';
+  it("should handle long path strings", async () => {
+    const longPath = "/api/v1/users/123/posts/456/comments/789";
     (mockContext.getPath as ReturnType<typeof vi.fn>).mockReturnValue(longPath);
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     await interceptor.intercept(mockContext, mockNext);
 
-    expect(mockLogger.info).toHaveBeenCalledWith('HTTP request completed', expect.objectContaining({ path: longPath }));
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      "HTTP request completed",
+      expect.objectContaining({ path: longPath }),
+    );
   });
 
-  it('should work with different HTTP verbs', async () => {
-    const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+  it("should work with different HTTP verbs", async () => {
+    const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
     for (const method of methods) {
       (mockContext.getMethod as ReturnType<typeof vi.fn>).mockReturnValue(method);
@@ -97,11 +100,14 @@ describe('LoggingInterceptor', () => {
 
       await interceptor.intercept(mockContext, mockNext);
 
-      expect(mockLogger.info).toHaveBeenCalledWith('HTTP request completed', expect.objectContaining({ method }));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        "HTTP request completed",
+        expect.objectContaining({ method }),
+      );
     }
   });
 
-  it('should round duration to nearest millisecond', async () => {
+  it("should round duration to nearest millisecond", async () => {
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     await interceptor.intercept(mockContext, mockNext);
@@ -110,19 +116,19 @@ describe('LoggingInterceptor', () => {
     expect(Number.isInteger(logContext.durationMs)).toBe(true);
   });
 
-  it('should log structured method, path, and duration fields', async () => {
+  it("should log structured method, path, and duration fields", async () => {
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     await interceptor.intercept(mockContext, mockNext);
 
-    expect(mockLogger.info).toHaveBeenCalledWith('HTTP request completed', {
-      method: 'GET',
-      path: '/test/path',
+    expect(mockLogger.info).toHaveBeenCalledWith("HTTP request completed", {
+      method: "GET",
+      path: "/test/path",
       durationMs: expect.any(Number),
     });
   });
 
-  it('should work even when handler returns undefined', async () => {
+  it("should work even when handler returns undefined", async () => {
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
     const result = await interceptor.intercept(mockContext, mockNext);
@@ -131,16 +137,16 @@ describe('LoggingInterceptor', () => {
     expect(mockLogger.info).toHaveBeenCalled();
   });
 
-  it('should log for DELETE method', async () => {
-    (mockContext.getMethod as ReturnType<typeof vi.fn>).mockReturnValue('DELETE');
-    (mockContext.getPath as ReturnType<typeof vi.fn>).mockReturnValue('/api/items/123');
+  it("should log for DELETE method", async () => {
+    (mockContext.getMethod as ReturnType<typeof vi.fn>).mockReturnValue("DELETE");
+    (mockContext.getPath as ReturnType<typeof vi.fn>).mockReturnValue("/api/items/123");
     (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     await interceptor.intercept(mockContext, mockNext);
 
     expect(mockLogger.info).toHaveBeenCalledWith(
-      'HTTP request completed',
-      expect.objectContaining({ method: 'DELETE', path: '/api/items/123' })
+      "HTTP request completed",
+      expect.objectContaining({ method: "DELETE", path: "/api/items/123" }),
     );
   });
 });

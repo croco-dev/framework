@@ -1,12 +1,12 @@
-import { Component } from '@croco/framework-context';
-import { Problem } from '@croco/problems-core';
-import { Task } from '@croco/tasks-core';
-import type { NotificationProviderRegistry } from './NotificationProviderRegistry';
+import { Component } from "@croco/framework-context";
+import { Problem } from "@croco/problems-core";
+import { Task } from "@croco/tasks-core";
+import type { NotificationProviderRegistry } from "./NotificationProviderRegistry";
 import {
   NotificationDeliveryFailedProblem,
   NotificationProviderNotFoundProblem,
-} from './problems/NotificationProblems';
-import type { NotificationJobPayload, NotificationProvider } from './types';
+} from "./problems/NotificationProblems";
+import type { NotificationJobPayload, NotificationProvider } from "./types";
 
 function parseMaxAttempts(envValue: string | undefined, defaultValue: number): number {
   if (envValue === undefined) return defaultValue;
@@ -15,14 +15,17 @@ function parseMaxAttempts(envValue: string | undefined, defaultValue: number): n
 
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
     throw new Error(
-      `Invalid NOTIFICATIONS_SEND_MAX_ATTEMPTS value '${envValue}'. Must be an integer between 1 and 10.`
+      `Invalid NOTIFICATIONS_SEND_MAX_ATTEMPTS value '${envValue}'. Must be an integer between 1 and 10.`,
     );
   }
 
   return parsed;
 }
 
-const SEND_NOTIFICATION_MAX_ATTEMPTS = parseMaxAttempts(process.env.NOTIFICATIONS_SEND_MAX_ATTEMPTS, 3);
+const SEND_NOTIFICATION_MAX_ATTEMPTS = parseMaxAttempts(
+  process.env.NOTIFICATIONS_SEND_MAX_ATTEMPTS,
+  3,
+);
 
 @Component()
 export class SendNotificationTask {
@@ -33,7 +36,7 @@ export class SendNotificationTask {
   }
 
   @Task({
-    name: 'send-notification',
+    name: "send-notification",
     maxAttempts: SEND_NOTIFICATION_MAX_ATTEMPTS,
   })
   async handle(payload: NotificationJobPayload): Promise<void> {

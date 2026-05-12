@@ -1,22 +1,27 @@
-import { type ClerkClient, createClerkClient } from '@clerk/backend';
-import type { Session, SessionListOptions, SessionListResult, SessionProvider } from '@croco/auth-core';
-import type { ClerkAuthOptions } from './ClerkAuthProvider';
+import { type ClerkClient, createClerkClient } from "@clerk/backend";
+import type {
+  Session,
+  SessionListOptions,
+  SessionListResult,
+  SessionProvider,
+} from "@croco/auth-core";
+import type { ClerkAuthOptions } from "./ClerkAuthProvider";
 
-function mapClerkSessionStatus(status: string): Session['status'] {
-  const validStatuses: Session['status'][] = [
-    'abandoned',
-    'active',
-    'pending',
-    'ended',
-    'expired',
-    'removed',
-    'replaced',
-    'revoked',
+function mapClerkSessionStatus(status: string): Session["status"] {
+  const validStatuses: Session["status"][] = [
+    "abandoned",
+    "active",
+    "pending",
+    "ended",
+    "expired",
+    "removed",
+    "replaced",
+    "revoked",
   ];
-  if (validStatuses.includes(status as Session['status'])) {
-    return status as Session['status'];
+  if (validStatuses.includes(status as Session["status"])) {
+    return status as Session["status"];
   }
-  return 'ended';
+  return "ended";
 }
 
 function timestampToDate(timestamp: number | undefined): Date | undefined {

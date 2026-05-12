@@ -1,9 +1,13 @@
-import { Container, Context } from '@croco/framework-context';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BatchLoad } from '../../libs/decorators/BatchLoad';
-import type { BatchLoaderFactoryOptions, BatchLoaderLike, IBatchLoaderFactory } from '../../libs/IBatchLoaderFactory';
-import { BATCH_LOADER_FACTORY_TOKEN } from '../../libs/IBatchLoaderFactory';
-import { BatchLoaderFactoryNotRegisteredProblem } from '../../libs/problems/BatchLoadProblems';
+import { Container, Context } from "@croco/framework-context";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BatchLoad } from "../../libs/decorators/BatchLoad";
+import type {
+  BatchLoaderFactoryOptions,
+  BatchLoaderLike,
+  IBatchLoaderFactory,
+} from "../../libs/IBatchLoaderFactory";
+import { BATCH_LOADER_FACTORY_TOKEN } from "../../libs/IBatchLoaderFactory";
+import { BatchLoaderFactoryNotRegisteredProblem } from "../../libs/problems/BatchLoadProblems";
 
 type Entity = {
   id: string;
@@ -109,7 +113,7 @@ class TestRepository {
     return ids.map((id) => ({ id, value: `value-${id}` }));
   });
 
-  @BatchLoad({ by: 'id' })
+  @BatchLoad({ by: "id" })
   async findById(id: string) {
     return this.originalFindById(id);
   }
@@ -122,14 +126,14 @@ class TestRepository {
 class FallbackRepository {
   callCount = 0;
 
-  @BatchLoad({ by: 'id' })
+  @BatchLoad({ by: "id" })
   async findById(id: string) {
     this.callCount += 1;
     return { id, value: `value-${id}` };
   }
 }
 
-describe('BatchLoad Decorator', () => {
+describe("BatchLoad Decorator", () => {
   let factory!: TestBatchLoaderFactory;
 
   beforeEach(() => {
@@ -138,77 +142,79 @@ describe('BatchLoad Decorator', () => {
     Container.set(BATCH_LOADER_FACTORY_TOKEN, factory);
   });
 
-  it('should batch multiple calls into a single findByIds call', async () => {
-    await Context.run({ requestId: 'test-1' }, async () => {
+  it("should batch multiple calls into a single findByIds call", async () => {
+    await Context.run({ requestId: "test-1" }, async () => {
       const repository = new TestRepository();
 
-      const p1 = repository.findById('1');
-      const p2 = repository.findById('2');
-      const p3 = repository.findById('1');
+      const p1 = repository.findById("1");
+      const p2 = repository.findById("2");
+      const p3 = repository.findById("1");
 
       const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
 
-      expect(r1).toEqual({ id: '1', value: 'value-1' });
-      expect(r2).toEqual({ id: '2', value: 'value-2' });
-      expect(r3).toEqual({ id: '1', value: 'value-1' });
+      expect(r1).toEqual({ id: "1", value: "value-1" });
+      expect(r2).toEqual({ id: "2", value: "value-2" });
+      expect(r3).toEqual({ id: "1", value: "value-1" });
 
       expect(factory.createSpy).toHaveBeenCalledTimes(3);
       expect(repository.findByIds).toHaveBeenCalledTimes(1);
 
       const calledIds = repository.findByIds.mock.calls[0][0];
       expect(calledIds).toHaveLength(2);
-      expect(calledIds).toContain('1');
-      expect(calledIds).toContain('2');
+      expect(calledIds).toContain("1");
+      expect(calledIds).toContain("2");
     });
   });
 
-  it('should fallback to parallel calls if findByIds is missing', async () => {
-    await Context.run({ requestId: 'test-2' }, async () => {
+  it("should fallback to parallel calls if findByIds is missing", async () => {
+    await Context.run({ requestId: "test-2" }, async () => {
       const fallbackRepo = new FallbackRepository();
 
-      const [r1, r2] = await Promise.all([fallbackRepo.findById('A'), fallbackRepo.findById('B')]);
+      const [r1, r2] = await Promise.all([fallbackRepo.findById("A"), fallbackRepo.findById("B")]);
 
-      expect(r1).toEqual({ id: 'A', value: 'value-A' });
-      expect(r2).toEqual({ id: 'B', value: 'value-B' });
+      expect(r1).toEqual({ id: "A", value: "value-A" });
+      expect(r2).toEqual({ id: "B", value: "value-B" });
       expect(fallbackRepo.callCount).toBe(2);
     });
   });
 
-  it('should handle findByIds returning results in different order', async () => {
-    await Context.run({ requestId: 'test-3' }, async () => {
+  it("should handle findByIds returning results in different order", async () => {
+    await Context.run({ requestId: "test-3" }, async () => {
       const repository = new TestRepository();
       repository.findByIds.mockImplementation(async (_ids: string[]) => {
         return [
-          { id: '2', value: 'value-2' },
-          { id: '1', value: 'value-1' },
+          { id: "2", value: "value-2" },
+          { id: "1", value: "value-1" },
         ];
       });
 
-      const [r1, r2] = await Promise.all([repository.findById('1'), repository.findById('2')]);
+      const [r1, r2] = await Promise.all([repository.findById("1"), repository.findById("2")]);
 
-      expect(r1).toEqual({ id: '1', value: 'value-1' });
-      expect(r2).toEqual({ id: '2', value: 'value-2' });
+      expect(r1).toEqual({ id: "1", value: "value-1" });
+      expect(r2).toEqual({ id: "2", value: "value-2" });
     });
   });
 
-  it('should propagate errors from findByIds', async () => {
-    await Context.run({ requestId: 'test-4' }, async () => {
+  it("should propagate errors from findByIds", async () => {
+    await Context.run({ requestId: "test-4" }, async () => {
       const repository = new TestRepository();
-      const error = new Error('DB Error');
+      const error = new Error("DB Error");
       repository.findByIds.mockRejectedValue(error);
 
-      await expect(repository.findById('1')).rejects.toThrow('DB Error');
-      await expect(repository.findById('2')).rejects.toThrow('DB Error');
+      await expect(repository.findById("1")).rejects.toThrow("DB Error");
+      await expect(repository.findById("2")).rejects.toThrow("DB Error");
     });
   });
 
-  it('should throw an explicit Problem when batch loader factory is not registered', async () => {
-    const hasSpy = vi.spyOn(Container, 'has').mockReturnValue(false);
+  it("should throw an explicit Problem when batch loader factory is not registered", async () => {
+    const hasSpy = vi.spyOn(Container, "has").mockReturnValue(false);
 
-    await Context.run({ requestId: 'test-5' }, async () => {
+    await Context.run({ requestId: "test-5" }, async () => {
       const repository = new TestRepository();
 
-      await expect(repository.findById('1')).rejects.toThrow(BatchLoaderFactoryNotRegisteredProblem);
+      await expect(repository.findById("1")).rejects.toThrow(
+        BatchLoaderFactoryNotRegisteredProblem,
+      );
     });
 
     hasSpy.mockRestore();

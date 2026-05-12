@@ -1,12 +1,12 @@
-import { TxManager } from '@croco/tx-core';
-import { createDrizzleTxAdapter } from '@croco/tx-drizzle';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { type DrizzleDb, DrizzleMeterRepository } from '../libs/DrizzleMeterRepository';
-import { metersSqlite, usageRecordsSqlite } from '../libs/schema';
+import { TxManager } from "@croco/tx-core";
+import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { beforeEach, describe, expect, it } from "vitest";
+import { type DrizzleDb, DrizzleMeterRepository } from "../libs/DrizzleMeterRepository";
+import { metersSqlite, usageRecordsSqlite } from "../libs/schema";
 
-describe('DrizzleMeterRepository', () => {
+describe("DrizzleMeterRepository", () => {
   let repository!: DrizzleMeterRepository;
   let sqlite!: Database.Database;
   let db!: DrizzleDb;
@@ -14,7 +14,7 @@ describe('DrizzleMeterRepository', () => {
   let txManager!: TxManager<any, any>;
 
   beforeEach(() => {
-    sqlite = new Database(':memory:');
+    sqlite = new Database(":memory:");
     db = drizzle(sqlite) as DrizzleDb;
 
     sqlite.exec(`
@@ -49,8 +49,10 @@ describe('DrizzleMeterRepository', () => {
         WHERE idempotency_key IS NOT NULL
     `);
 
-    const adapter = createDrizzleTxAdapter(db as unknown as Parameters<typeof createDrizzleTxAdapter>[0]);
-    txManager = new TxManager(adapter, { defaultNesting: 'join' });
+    const adapter = createDrizzleTxAdapter(
+      db as unknown as Parameters<typeof createDrizzleTxAdapter>[0],
+    );
+    txManager = new TxManager(adapter, { defaultNesting: "join" });
 
     const meterSchema = {
       id: metersSqlite.id,
@@ -82,49 +84,49 @@ describe('DrizzleMeterRepository', () => {
     });
   });
 
-  describe('save', () => {
-    it('should create meter definition', async () => {
+  describe("save", () => {
+    it("should create meter definition", async () => {
       const meter = await repository.save({
-        tenantId: 'tenant-1',
-        meterId: 'api_calls',
-        type: 'COUNT',
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
         quota: 10000,
         allowOverQuota: false,
-        metadata: { description: 'API calls per month' },
+        metadata: { description: "API calls per month" },
       });
 
       expect(meter.id).toBeDefined();
-      expect(meter.tenantId).toBe('tenant-1');
-      expect(meter.meterId).toBe('api_calls');
-      expect(meter.type).toBe('COUNT');
+      expect(meter.tenantId).toBe("tenant-1");
+      expect(meter.meterId).toBe("api_calls");
+      expect(meter.type).toBe("COUNT");
       expect(meter.quota).toBe(10000);
       expect(meter.allowOverQuota).toBe(false);
-      expect(meter.metadata).toEqual({ description: 'API calls per month' });
+      expect(meter.metadata).toEqual({ description: "API calls per month" });
       expect(meter.createdAt).toBeInstanceOf(Date);
       expect(meter.updatedAt).toBeInstanceOf(Date);
     });
 
-    it('should create meter without optional fields', async () => {
+    it("should create meter without optional fields", async () => {
       const meter = await repository.save({
-        tenantId: 'tenant-1',
-        meterId: 'storage_bytes',
-        type: 'COUNT',
+        tenantId: "tenant-1",
+        meterId: "storage_bytes",
+        type: "COUNT",
       });
 
       expect(meter.id).toBeDefined();
-      expect(meter.tenantId).toBe('tenant-1');
-      expect(meter.meterId).toBe('storage_bytes');
-      expect(meter.type).toBe('COUNT');
+      expect(meter.tenantId).toBe("tenant-1");
+      expect(meter.meterId).toBe("storage_bytes");
+      expect(meter.type).toBe("COUNT");
       expect(meter.quota).toBeUndefined();
       expect(meter.allowOverQuota).toBe(false);
       expect(meter.metadata).toBeUndefined();
     });
 
-    it('should handle allowOverQuota true', async () => {
+    it("should handle allowOverQuota true", async () => {
       const meter = await repository.save({
-        tenantId: 'tenant-1',
-        meterId: 'bandwidth',
-        type: 'COUNT',
+        tenantId: "tenant-1",
+        meterId: "bandwidth",
+        type: "COUNT",
         allowOverQuota: true,
       });
 
@@ -132,53 +134,53 @@ describe('DrizzleMeterRepository', () => {
     });
   });
 
-  describe('findByMeterIdAndTenant', () => {
+  describe("findByMeterIdAndTenant", () => {
     beforeEach(async () => {
       await repository.save({
-        tenantId: 'tenant-1',
-        meterId: 'api_calls',
-        type: 'COUNT',
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
         quota: 10000,
       });
     });
 
-    it('should find meter by meterId and tenantId', async () => {
-      const meter = await repository.findByMeterIdAndTenant('api_calls', 'tenant-1');
+    it("should find meter by meterId and tenantId", async () => {
+      const meter = await repository.findByMeterIdAndTenant("api_calls", "tenant-1");
 
       expect(meter).not.toBeNull();
-      expect(meter?.meterId).toBe('api_calls');
-      expect(meter?.tenantId).toBe('tenant-1');
+      expect(meter?.meterId).toBe("api_calls");
+      expect(meter?.tenantId).toBe("tenant-1");
       expect(meter?.quota).toBe(10000);
     });
 
-    it('should return null when meter not found', async () => {
-      const meter = await repository.findByMeterIdAndTenant('nonexistent', 'tenant-1');
+    it("should return null when meter not found", async () => {
+      const meter = await repository.findByMeterIdAndTenant("nonexistent", "tenant-1");
 
       expect(meter).toBeNull();
     });
 
-    it('should return null when tenant not found', async () => {
-      const meter = await repository.findByMeterIdAndTenant('api_calls', 'tenant-nonexistent');
+    it("should return null when tenant not found", async () => {
+      const meter = await repository.findByMeterIdAndTenant("api_calls", "tenant-nonexistent");
 
       expect(meter).toBeNull();
     });
   });
 
-  describe('findAll', () => {
+  describe("findAll", () => {
     beforeEach(async () => {
-      await repository.save({ tenantId: 'tenant-1', meterId: 'api_calls', type: 'COUNT' });
-      await repository.save({ tenantId: 'tenant-1', meterId: 'storage', type: 'COUNT' });
-      await repository.save({ tenantId: 'tenant-2', meterId: 'api_calls', type: 'COUNT' });
+      await repository.save({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" });
+      await repository.save({ tenantId: "tenant-1", meterId: "storage", type: "COUNT" });
+      await repository.save({ tenantId: "tenant-2", meterId: "api_calls", type: "COUNT" });
     });
 
-    it('should return all meters', async () => {
+    it("should return all meters", async () => {
       const meters = await repository.findAll();
 
       expect(meters).toHaveLength(3);
     });
 
-    it('should return empty array when no meters', async () => {
-      const sqlite2 = new Database(':memory:');
+    it("should return empty array when no meters", async () => {
+      const sqlite2 = new Database(":memory:");
       const db2 = drizzle(sqlite2) as DrizzleDb;
       sqlite2.exec(`
         CREATE TABLE meters (
@@ -224,113 +226,115 @@ describe('DrizzleMeterRepository', () => {
     });
   });
 
-  describe('findByTenant', () => {
+  describe("findByTenant", () => {
     beforeEach(async () => {
-      await repository.save({ tenantId: 'tenant-1', meterId: 'api_calls', type: 'COUNT' });
-      await repository.save({ tenantId: 'tenant-1', meterId: 'storage', type: 'COUNT' });
-      await repository.save({ tenantId: 'tenant-2', meterId: 'api_calls', type: 'COUNT' });
+      await repository.save({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" });
+      await repository.save({ tenantId: "tenant-1", meterId: "storage", type: "COUNT" });
+      await repository.save({ tenantId: "tenant-2", meterId: "api_calls", type: "COUNT" });
     });
 
-    it('should return meters for specific tenant', async () => {
-      const meters = await repository.findByTenant('tenant-1');
+    it("should return meters for specific tenant", async () => {
+      const meters = await repository.findByTenant("tenant-1");
 
       expect(meters).toHaveLength(2);
-      expect(meters.every((m) => m.tenantId === 'tenant-1')).toBe(true);
+      expect(meters.every((m) => m.tenantId === "tenant-1")).toBe(true);
     });
 
-    it('should return empty array when tenant has no meters', async () => {
-      const meters = await repository.findByTenant('tenant-nonexistent');
+    it("should return empty array when tenant has no meters", async () => {
+      const meters = await repository.findByTenant("tenant-nonexistent");
 
       expect(meters).toHaveLength(0);
     });
   });
 
-  describe('saveUsageRecords', () => {
-    it('should save usage records', async () => {
+  describe("saveUsageRecords", () => {
+    it("should save usage records", async () => {
       await repository.saveUsageRecords([
         {
-          id: 'record-1',
-          tenantId: 'tenant-1',
-          meterId: 'api_calls',
+          id: "record-1",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
           value: 1,
           timestamp: new Date(),
-          idempotencyKey: 'idem-1',
-          metadata: { endpoint: '/api/users' },
+          idempotencyKey: "idem-1",
+          metadata: { endpoint: "/api/users" },
         },
         {
-          id: 'record-2',
-          tenantId: 'tenant-1',
-          meterId: 'api_calls',
+          id: "record-2",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
           value: 1,
           timestamp: new Date(),
-          idempotencyKey: 'idem-2',
-          metadata: { endpoint: '/api/orders' },
+          idempotencyKey: "idem-2",
+          metadata: { endpoint: "/api/orders" },
         },
       ]);
 
-      const result = sqlite.prepare('SELECT * FROM usage_records').all();
+      const result = sqlite.prepare("SELECT * FROM usage_records").all();
       expect(result).toHaveLength(2);
     });
 
-    it('should handle empty array', async () => {
+    it("should handle empty array", async () => {
       await repository.saveUsageRecords([]);
 
-      const result = sqlite.prepare('SELECT * FROM usage_records').all();
+      const result = sqlite.prepare("SELECT * FROM usage_records").all();
       expect(result).toHaveLength(0);
     });
 
-    it('should save records without metadata', async () => {
+    it("should save records without metadata", async () => {
       await repository.saveUsageRecords([
         {
-          id: 'record-1',
-          tenantId: 'tenant-1',
-          meterId: 'api_calls',
+          id: "record-1",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
           value: 5,
           timestamp: new Date(),
-          idempotencyKey: 'idem-1',
+          idempotencyKey: "idem-1",
         },
       ]);
 
-      const result = sqlite.prepare('SELECT * FROM usage_records').all() as Array<{
+      const result = sqlite.prepare("SELECT * FROM usage_records").all() as Array<{
         tenant_id: string;
         meter_id: string;
         value: number;
         idempotency_key: string;
       }>;
       expect(result).toHaveLength(1);
-      expect(result[0].tenant_id).toBe('tenant-1');
-      expect(result[0].meter_id).toBe('api_calls');
+      expect(result[0].tenant_id).toBe("tenant-1");
+      expect(result[0].meter_id).toBe("api_calls");
       expect(result[0].value).toBe(5);
-      expect(result[0].idempotency_key).toBe('idem-1');
+      expect(result[0].idempotency_key).toBe("idem-1");
     });
 
-    it('should ignore duplicate idempotency keys', async () => {
+    it("should ignore duplicate idempotency keys", async () => {
       const record = {
-        id: 'record-1',
-        tenantId: 'tenant-1',
-        meterId: 'api_calls',
+        id: "record-1",
+        tenantId: "tenant-1",
+        meterId: "api_calls",
         value: 1,
         timestamp: new Date(),
-        idempotencyKey: 'idem-1',
+        idempotencyKey: "idem-1",
       };
 
       await repository.saveUsageRecords([record]);
       await repository.saveUsageRecords([record]);
 
-      const result = sqlite.prepare('SELECT * FROM usage_records WHERE idempotency_key = ?').all('idem-1');
+      const result = sqlite
+        .prepare("SELECT * FROM usage_records WHERE idempotency_key = ?")
+        .all("idem-1");
       expect(result).toHaveLength(1);
     });
 
-    it('should keep latest usage record when deduplicating idempotency rows', () => {
-      sqlite.exec('DROP INDEX usage_records_idempotency_unique');
+    it("should keep latest usage record when deduplicating idempotency rows", () => {
+      sqlite.exec("DROP INDEX usage_records_idempotency_unique");
 
       const insert = sqlite.prepare(`
         INSERT INTO usage_records (tenant_id, meter_id, value, recorded_at, metadata, idempotency_key)
         VALUES (?, ?, ?, ?, '{}', ?)
       `);
-      insert.run('tenant-1', 'api_calls', 1, 1000, 'idem-1');
-      insert.run('tenant-1', 'api_calls', 2, 3000, 'idem-1');
-      insert.run('tenant-1', 'api_calls', 3, 2000, 'idem-1');
+      insert.run("tenant-1", "api_calls", 1, 1000, "idem-1");
+      insert.run("tenant-1", "api_calls", 2, 3000, "idem-1");
+      insert.run("tenant-1", "api_calls", 3, 2000, "idem-1");
 
       sqlite.exec(`
         DELETE FROM usage_records AS a
@@ -347,14 +351,14 @@ describe('DrizzleMeterRepository', () => {
       `);
 
       const result = sqlite
-        .prepare('SELECT recorded_at, value FROM usage_records WHERE idempotency_key = ?')
-        .all('idem-1') as Array<{ recorded_at: number; value: number }>;
+        .prepare("SELECT recorded_at, value FROM usage_records WHERE idempotency_key = ?")
+        .all("idem-1") as Array<{ recorded_at: number; value: number }>;
       expect(result).toEqual([{ recorded_at: 3000, value: 2 }]);
     });
   });
 
-  describe('transaction support', () => {
-    it('should use getClient when in transaction context', async () => {
+  describe("transaction support", () => {
+    it("should use getClient when in transaction context", async () => {
       const txDb = {
         insert: db.insert.bind(db),
         select: db.select.bind(db),
@@ -391,14 +395,14 @@ describe('DrizzleMeterRepository', () => {
       });
 
       const meter = await repoWithMockTx.save({
-        tenantId: 'tenant-1',
-        meterId: 'api_calls',
-        type: 'COUNT',
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
       });
 
       expect(meter.id).toBeDefined();
 
-      const found = await repoWithMockTx.findByMeterIdAndTenant('api_calls', 'tenant-1');
+      const found = await repoWithMockTx.findByMeterIdAndTenant("api_calls", "tenant-1");
       expect(found).not.toBeNull();
     });
   });

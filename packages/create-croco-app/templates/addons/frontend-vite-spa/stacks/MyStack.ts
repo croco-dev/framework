@@ -1,4 +1,4 @@
-import { Function as SstFunction, StaticSite } from 'sst/aws';
+import { Function as SstFunction, StaticSite } from "sst/aws";
 
 /**
  * Croco API(Lambda) + Vite SPA(S3/CloudFront) 배포 스택
@@ -12,15 +12,15 @@ import { Function as SstFunction, StaticSite } from 'sst/aws';
  */
 
 export async function myStack() {
-  const api = new SstFunction('Api', {
-    handler: 'apps/api/src/handler.ts',
+  const api = new SstFunction("Api", {
+    handler: "apps/api/src/handler.ts",
     url: true,
   });
 
-  new StaticSite('Web', {
+  new StaticSite("Web", {
     build: {
-      command: 'pnpm run build',
-      output: 'apps/web/dist',
+      command: "pnpm run build",
+      output: "apps/web/dist",
     },
     environment: {
       VITE_API_URL: api.url,

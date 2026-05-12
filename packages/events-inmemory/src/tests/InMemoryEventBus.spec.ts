@@ -1,13 +1,13 @@
-import { DomainEvent, type EventHandler, type EventSubscription } from '@croco/events-core';
-import { Container } from '@croco/framework-context';
-import * as telemetryApi from '@croco/telemetry-api';
-import * as otelApi from '@opentelemetry/api';
-import { SpanStatusCode } from '@opentelemetry/api';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { EventPublishFailedError, InMemoryEventBus } from '../index';
+import { DomainEvent, type EventHandler, type EventSubscription } from "@croco/events-core";
+import { Container } from "@croco/framework-context";
+import * as telemetryApi from "@croco/telemetry-api";
+import * as otelApi from "@opentelemetry/api";
+import { SpanStatusCode } from "@opentelemetry/api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EventPublishFailedError, InMemoryEventBus } from "../index";
 
 class TestEvent extends DomainEvent {
-  static readonly eventName = 'TestEvent';
+  static readonly eventName = "TestEvent";
 
   constructor(public readonly message: string) {
     super();
@@ -15,14 +15,14 @@ class TestEvent extends DomainEvent {
 }
 
 class MutablePayloadEvent extends DomainEvent {
-  static readonly eventName = 'MutablePayloadEvent';
+  static readonly eventName = "MutablePayloadEvent";
 
   constructor(
     public payload: {
       nested: {
         count: number;
       };
-    }
+    },
   ) {
     super();
   }
@@ -38,11 +38,11 @@ class TestHandler implements EventHandler<TestEvent> {
 
 class FailingHandler implements EventHandler<TestEvent> {
   async handle(): Promise<void> {
-    throw new Error('Handler failed intentionally');
+    throw new Error("Handler failed intentionally");
   }
 }
 
-describe('InMemoryEventBus', () => {
+describe("InMemoryEventBus", () => {
   let eventBus!: InMemoryEventBus;
   let testHandler!: TestHandler;
 
@@ -53,19 +53,22 @@ describe('InMemoryEventBus', () => {
     Container.reset();
   });
 
-  describe('subscribe', () => {
-    it('should subscribe a handler to an event', async () => {
+  describe("subscribe", () => {
+    it("should subscribe a handler to an event", async () => {
       Container.set(TestHandler, testHandler);
-      const subscription: EventSubscription<TestEvent> = { eventName: 'TestEvent', handlerClass: TestHandler };
+      const subscription: EventSubscription<TestEvent> = {
+        eventName: "TestEvent",
+        handlerClass: TestHandler,
+      };
       eventBus.subscribe(subscription);
 
-      const event = new TestEvent('subscribe-test');
+      const event = new TestEvent("subscribe-test");
       await eventBus.publish(event);
       expect(testHandler.handledEvents).toHaveLength(1);
-      expect(testHandler.handledEvents[0].message).toBe('subscribe-test');
+      expect(testHandler.handledEvents[0].message).toBe("subscribe-test");
     });
 
-    it('should allow multiple handlers for same event', async () => {
+    it("should allow multiple handlers for same event", async () => {
       class Handler1 extends TestHandler {}
       class Handler2 extends TestHandler {}
 
@@ -75,29 +78,29 @@ describe('InMemoryEventBus', () => {
       Container.set(Handler1, handler1);
       Container.set(Handler2, handler2);
 
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: Handler1 });
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: Handler2 });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: Handler1 });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: Handler2 });
 
-      const event = new TestEvent('multi-handler');
+      const event = new TestEvent("multi-handler");
       await eventBus.publish(event);
       expect(handler1.handledEvents).toHaveLength(1);
       expect(handler2.handledEvents).toHaveLength(1);
     });
   });
 
-  describe('publish', () => {
-    it('should publish event to subscribed handler', async () => {
+  describe("publish", () => {
+    it("should publish event to subscribed handler", async () => {
       Container.set(TestHandler, testHandler);
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: TestHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
 
-      const event = new TestEvent('hello');
+      const event = new TestEvent("hello");
       await eventBus.publish(event);
 
       expect(testHandler.handledEvents).toHaveLength(1);
-      expect(testHandler.handledEvents[0].message).toBe('hello');
+      expect(testHandler.handledEvents[0].message).toBe("hello");
     });
 
-    it('should publish to multiple handlers', async () => {
+    it("should publish to multiple handlers", async () => {
       class Handler1 extends TestHandler {}
       class Handler2 extends TestHandler {}
 
@@ -107,18 +110,18 @@ describe('InMemoryEventBus', () => {
       Container.set(Handler1, handler1);
       Container.set(Handler2, handler2);
 
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: Handler1 });
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: Handler2 });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: Handler1 });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: Handler2 });
 
-      const event = new TestEvent('broadcast');
+      const event = new TestEvent("broadcast");
       await eventBus.publish(event);
 
       expect(handler1.handledEvents).toHaveLength(1);
       expect(handler2.handledEvents).toHaveLength(1);
     });
 
-    describe('characterization', () => {
-      it('should call subscribed handlers when publishing an event', async () => {
+    describe("characterization", () => {
+      it("should call subscribed handlers when publishing an event", async () => {
         class RecordingHandler implements EventHandler<TestEvent> {
           public readonly receivedMessages: string[] = [];
 
@@ -129,72 +132,74 @@ describe('InMemoryEventBus', () => {
 
         const handler = new RecordingHandler();
         Container.set(RecordingHandler, handler);
-        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: RecordingHandler });
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: RecordingHandler });
 
-        await eventBus.publish(new TestEvent('characterization-single'));
+        await eventBus.publish(new TestEvent("characterization-single"));
 
-        expect(handler.receivedMessages).toEqual(['characterization-single']);
+        expect(handler.receivedMessages).toEqual(["characterization-single"]);
       });
 
-      it('should invoke multiple handlers in subscription order', async () => {
+      it("should invoke multiple handlers in subscription order", async () => {
         const callSequence: string[] = [];
 
         class FirstHandler implements EventHandler<TestEvent> {
           async handle(): Promise<void> {
-            callSequence.push('first');
+            callSequence.push("first");
           }
         }
 
         class SecondHandler implements EventHandler<TestEvent> {
           async handle(): Promise<void> {
-            callSequence.push('second');
+            callSequence.push("second");
           }
         }
 
         Container.set(FirstHandler, new FirstHandler());
         Container.set(SecondHandler, new SecondHandler());
 
-        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FirstHandler });
-        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SecondHandler });
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: FirstHandler });
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: SecondHandler });
 
-        await eventBus.publish(new TestEvent('characterization-order'));
+        await eventBus.publish(new TestEvent("characterization-order"));
 
-        expect(callSequence).toEqual(['first', 'second']);
+        expect(callSequence).toEqual(["first", "second"]);
       });
 
-      it('should log handler errors and continue with remaining handlers', async () => {
+      it("should log handler errors and continue with remaining handlers", async () => {
         class SuccessHandler extends TestHandler {}
         class FailHandler extends FailingHandler {}
 
         const successHandler = new SuccessHandler();
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
         Container.set(SuccessHandler, successHandler);
         Container.set(FailHandler, new FailHandler());
 
-        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailHandler });
-        eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SuccessHandler });
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailHandler });
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: SuccessHandler });
 
-        await expect(eventBus.publish(new TestEvent('characterization-error'))).rejects.toMatchObject({
-          eventName: 'TestEvent',
+        await expect(
+          eventBus.publish(new TestEvent("characterization-error")),
+        ).rejects.toMatchObject({
+          eventName: "TestEvent",
           failures: [
             expect.objectContaining({
-              handlerName: 'FailHandler',
-              error: expect.objectContaining({ message: 'Handler failed intentionally' }),
+              handlerName: "FailHandler",
+              error: expect.objectContaining({ message: "Handler failed intentionally" }),
             }),
           ],
         });
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'EventHandler error (TestEvent):',
-          expect.objectContaining({ message: 'Handler failed intentionally' })
+          "EventHandler error (TestEvent):",
+          expect.objectContaining({ message: "Handler failed intentionally" }),
         );
         expect(successHandler.handledEvents).toHaveLength(1);
 
         consoleErrorSpy.mockRestore();
       });
 
-      it('should deliver independent event copies to each handler', async () => {
+      it("should deliver independent event copies to each handler", async () => {
         class MutatingHandler implements EventHandler<MutablePayloadEvent> {
           public receivedEvent?: MutablePayloadEvent;
 
@@ -223,8 +228,14 @@ describe('InMemoryEventBus', () => {
         Container.set(MutatingHandler, mutatingHandler);
         Container.set(ObservingHandler, observingHandler);
 
-        eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: MutatingHandler });
-        eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: ObservingHandler });
+        eventBus.subscribe({
+          eventName: MutablePayloadEvent.eventName,
+          handlerClass: MutatingHandler,
+        });
+        eventBus.subscribe({
+          eventName: MutablePayloadEvent.eventName,
+          handlerClass: ObservingHandler,
+        });
 
         const event = new MutablePayloadEvent({ nested: { count: 1 } });
         await eventBus.publish(event);
@@ -241,12 +252,12 @@ describe('InMemoryEventBus', () => {
       });
     });
 
-    it('should not fail if no handlers subscribed', async () => {
-      const event = new TestEvent('orphan');
+    it("should not fail if no handlers subscribed", async () => {
+      const event = new TestEvent("orphan");
       await expect(eventBus.publish(event)).resolves.toBeUndefined();
     });
 
-    it('should continue with other handlers if one fails', async () => {
+    it("should continue with other handlers if one fails", async () => {
       class SuccessHandler extends TestHandler {}
       class FailHandler extends FailingHandler {}
 
@@ -256,27 +267,27 @@ describe('InMemoryEventBus', () => {
       Container.set(SuccessHandler, successHandler);
       Container.set(FailHandler, failHandler);
 
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailHandler });
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SuccessHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: SuccessHandler });
 
-      const event = new TestEvent('test');
+      const event = new TestEvent("test");
       await expect(eventBus.publish(event)).rejects.toMatchObject({
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         failures: [
           expect.objectContaining({
-            handlerName: 'FailHandler',
-            error: expect.objectContaining({ message: 'Handler failed intentionally' }),
+            handlerName: "FailHandler",
+            error: expect.objectContaining({ message: "Handler failed intentionally" }),
           }),
         ],
       });
       expect(successHandler.handledEvents).toHaveLength(1);
     });
 
-    it('should not mutate original event metadata when publishing same event twice', async () => {
+    it("should not mutate original event metadata when publishing same event twice", async () => {
       Container.set(TestHandler, testHandler);
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: TestHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
 
-      const event = new TestEvent('immutable');
+      const event = new TestEvent("immutable");
       const originalMetadata = event.metadata;
 
       await eventBus.publish(event);
@@ -286,7 +297,7 @@ describe('InMemoryEventBus', () => {
       expect(event.metadata).toBe(originalMetadata);
     });
 
-    it('should isolate traceContext between publishes when same event instance is reused', async () => {
+    it("should isolate traceContext between publishes when same event instance is reused", async () => {
       class TraceContextMutatingHandler implements EventHandler<TestEvent> {
         public readonly traceContextSpanIds: string[] = [];
 
@@ -295,22 +306,24 @@ describe('InMemoryEventBus', () => {
           const spanId = traceContext?.spanId;
           if (traceContext && spanId) {
             this.traceContextSpanIds.push(spanId);
-            traceContext.spanId = 'mutated-by-handler';
+            traceContext.spanId = "mutated-by-handler";
           }
         }
       }
 
       const handler = new TraceContextMutatingHandler();
       Container.set(TraceContextMutatingHandler, handler);
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: TraceContextMutatingHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TraceContextMutatingHandler });
 
       const sharedTraceContext = {
-        traceId: 'trace-1',
-        spanId: 'span-1',
+        traceId: "trace-1",
+        spanId: "span-1",
         traceFlags: 1,
         isValid: true,
       };
-      const traceInfoSpy = vi.spyOn(telemetryApi, 'getActiveTraceInfo').mockReturnValue(sharedTraceContext);
+      const traceInfoSpy = vi
+        .spyOn(telemetryApi, "getActiveTraceInfo")
+        .mockReturnValue(sharedTraceContext);
 
       const publishSpan = {
         setStatus: vi.fn(),
@@ -328,47 +341,47 @@ describe('InMemoryEventBus', () => {
           async (
             name: string,
             _options: { attributes: Record<string, unknown> },
-            callback: (span: typeof publishSpan) => Promise<void>
+            callback: (span: typeof publishSpan) => Promise<void>,
           ) => {
-            const span = name.startsWith('event.publish:') ? publishSpan : handleSpan;
+            const span = name.startsWith("event.publish:") ? publishSpan : handleSpan;
             await callback(span);
-          }
+          },
         ),
       };
 
-      Object.defineProperty(eventBus, 'tracer', {
+      Object.defineProperty(eventBus, "tracer", {
         value: mockTracer,
       });
 
-      const event = new TestEvent('trace-context-copy');
+      const event = new TestEvent("trace-context-copy");
       await eventBus.publish(event);
       await eventBus.publish(event);
 
-      expect(handler.traceContextSpanIds).toEqual(['span-1', 'span-1']);
-      expect(sharedTraceContext.spanId).toBe('span-1');
+      expect(handler.traceContextSpanIds).toEqual(["span-1", "span-1"]);
+      expect(sharedTraceContext.spanId).toBe("span-1");
       traceInfoSpy.mockRestore();
     });
 
-    it('should restore trace context before starting handler spans', async () => {
+    it("should restore trace context before starting handler spans", async () => {
       const handler = new TestHandler();
       Container.set(TestHandler, handler);
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: TestHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
 
-      const traceInfoSpy = vi.spyOn(telemetryApi, 'getActiveTraceInfo').mockReturnValue({
-        traceId: '0123456789abcdef0123456789abcdef',
-        spanId: '0123456789abcdef',
+      const traceInfoSpy = vi.spyOn(telemetryApi, "getActiveTraceInfo").mockReturnValue({
+        traceId: "0123456789abcdef0123456789abcdef",
+        spanId: "0123456789abcdef",
         traceFlags: 1,
         isValid: true,
       });
 
-      const contextWithSpy = vi.spyOn(otelApi.context, 'with');
-      const setSpanContextSpy = vi.spyOn(otelApi.trace, 'setSpanContext');
+      const contextWithSpy = vi.spyOn(otelApi.context, "with");
+      const setSpanContextSpy = vi.spyOn(otelApi.trace, "setSpanContext");
 
-      await eventBus.publish(new TestEvent('restore-trace-context'));
+      await eventBus.publish(new TestEvent("restore-trace-context"));
 
       expect(setSpanContextSpy).toHaveBeenCalledWith(expect.anything(), {
-        traceId: '0123456789abcdef0123456789abcdef',
-        spanId: '0123456789abcdef',
+        traceId: "0123456789abcdef0123456789abcdef",
+        spanId: "0123456789abcdef",
         traceFlags: 1,
         isRemote: true,
       });
@@ -379,10 +392,10 @@ describe('InMemoryEventBus', () => {
       setSpanContextSpy.mockRestore();
     });
 
-    it('should pass Error object to recordException', async () => {
+    it("should pass Error object to recordException", async () => {
       const failHandler = new FailingHandler();
       Container.set(FailingHandler, failHandler);
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailingHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailingHandler });
 
       const publishSpan = {
         setStatus: vi.fn(),
@@ -400,26 +413,28 @@ describe('InMemoryEventBus', () => {
           async (
             name: string,
             _options: { attributes: Record<string, unknown> },
-            callback: (span: typeof publishSpan) => Promise<void>
+            callback: (span: typeof publishSpan) => Promise<void>,
           ) => {
-            const span = name.startsWith('event.publish:') ? publishSpan : handleSpan;
+            const span = name.startsWith("event.publish:") ? publishSpan : handleSpan;
             await callback(span);
-          }
+          },
         ),
       };
 
-      Object.defineProperty(eventBus, 'tracer', {
+      Object.defineProperty(eventBus, "tracer", {
         value: mockTracer,
       });
 
-      await expect(eventBus.publish(new TestEvent('record-error'))).rejects.toThrow(EventPublishFailedError);
+      await expect(eventBus.publish(new TestEvent("record-error"))).rejects.toThrow(
+        EventPublishFailedError,
+      );
 
       expect(handleSpan.recordException).toHaveBeenCalledTimes(1);
       expect(handleSpan.recordException.mock.calls[0][0]).toBeInstanceOf(Error);
     });
 
-    it('should preserve error stack when recording exception', async () => {
-      const expectedError = new Error('stack-preserve-target');
+    it("should preserve error stack when recording exception", async () => {
+      const expectedError = new Error("stack-preserve-target");
 
       class StackFailingHandler implements EventHandler<TestEvent> {
         async handle(): Promise<void> {
@@ -429,7 +444,7 @@ describe('InMemoryEventBus', () => {
 
       const failHandler = new StackFailingHandler();
       Container.set(StackFailingHandler, failHandler);
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: StackFailingHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: StackFailingHandler });
 
       const publishSpan = {
         setStatus: vi.fn(),
@@ -447,26 +462,30 @@ describe('InMemoryEventBus', () => {
           async (
             name: string,
             _options: { attributes: Record<string, unknown> },
-            callback: (span: typeof publishSpan) => Promise<void>
+            callback: (span: typeof publishSpan) => Promise<void>,
           ) => {
-            const span = name.startsWith('event.publish:') ? publishSpan : handleSpan;
+            const span = name.startsWith("event.publish:") ? publishSpan : handleSpan;
             await callback(span);
-          }
+          },
         ),
       };
 
-      Object.defineProperty(eventBus, 'tracer', {
+      Object.defineProperty(eventBus, "tracer", {
         value: mockTracer,
       });
 
-      await expect(eventBus.publish(new TestEvent('record-stack-error'))).rejects.toThrow(EventPublishFailedError);
+      await expect(eventBus.publish(new TestEvent("record-stack-error"))).rejects.toThrow(
+        EventPublishFailedError,
+      );
 
       expect(handleSpan.recordException).toHaveBeenCalledTimes(1);
       expect(handleSpan.recordException).toHaveBeenCalledWith(expectedError);
-      expect((handleSpan.recordException.mock.calls[0][0] as Error).stack).toBe(expectedError.stack);
+      expect((handleSpan.recordException.mock.calls[0][0] as Error).stack).toBe(
+        expectedError.stack,
+      );
     });
 
-    it('should mark publish span as error when any handler fails', async () => {
+    it("should mark publish span as error when any handler fails", async () => {
       class SuccessHandler extends TestHandler {}
       class FailHandler extends FailingHandler {}
 
@@ -476,8 +495,8 @@ describe('InMemoryEventBus', () => {
       Container.set(SuccessHandler, successHandler);
       Container.set(FailHandler, failHandler);
 
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: FailHandler });
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: SuccessHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: SuccessHandler });
 
       const publishSpan = {
         setStatus: vi.fn(),
@@ -495,37 +514,37 @@ describe('InMemoryEventBus', () => {
           async (
             name: string,
             _options: { attributes: Record<string, unknown> },
-            callback: (span: typeof publishSpan) => Promise<void>
+            callback: (span: typeof publishSpan) => Promise<void>,
           ) => {
-            const span = name.startsWith('event.publish:') ? publishSpan : handleSpan;
+            const span = name.startsWith("event.publish:") ? publishSpan : handleSpan;
             await callback(span);
-          }
+          },
         ),
       };
 
-      Object.defineProperty(eventBus, 'tracer', {
+      Object.defineProperty(eventBus, "tracer", {
         value: mockTracer,
       });
 
-      await expect(eventBus.publish(new TestEvent('status-check'))).rejects.toMatchObject({
-        eventName: 'TestEvent',
+      await expect(eventBus.publish(new TestEvent("status-check"))).rejects.toMatchObject({
+        eventName: "TestEvent",
         failures: [
           expect.objectContaining({
-            handlerName: 'FailHandler',
-            error: expect.objectContaining({ message: 'Handler failed intentionally' }),
+            handlerName: "FailHandler",
+            error: expect.objectContaining({ message: "Handler failed intentionally" }),
           }),
         ],
       });
 
       expect(publishSpan.setStatus).toHaveBeenCalledWith({
         code: SpanStatusCode.ERROR,
-        message: '1 event handler(s) failed while publishing TestEvent',
+        message: "1 event handler(s) failed while publishing TestEvent",
       });
       expect(publishSpan.recordException).toHaveBeenCalledWith(expect.any(EventPublishFailedError));
       expect(successHandler.handledEvents).toHaveLength(1);
     });
 
-    it('should isolate mutable payload between handlers in the same publish', async () => {
+    it("should isolate mutable payload between handlers in the same publish", async () => {
       class MutatingHandler implements EventHandler<MutablePayloadEvent> {
         async handle(event: MutablePayloadEvent): Promise<void> {
           event.payload.nested.count = 99;
@@ -549,8 +568,14 @@ describe('InMemoryEventBus', () => {
       Container.set(MutatingHandler, mutatingHandler);
       Container.set(ObservingHandler, observingHandler);
 
-      eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: MutatingHandler });
-      eventBus.subscribe({ eventName: MutablePayloadEvent.eventName, handlerClass: ObservingHandler });
+      eventBus.subscribe({
+        eventName: MutablePayloadEvent.eventName,
+        handlerClass: MutatingHandler,
+      });
+      eventBus.subscribe({
+        eventName: MutablePayloadEvent.eventName,
+        handlerClass: ObservingHandler,
+      });
 
       const event = new MutablePayloadEvent({ nested: { count: 1 } });
 
@@ -560,30 +585,36 @@ describe('InMemoryEventBus', () => {
       expect(event.metadata).toEqual({});
       expect(observingHandler.observedCounts).toEqual([1]);
       expect(observingHandler.observedMetadata).toHaveLength(1);
-      expect(observingHandler.observedMetadata[0]).not.toHaveProperty('custom');
+      expect(observingHandler.observedMetadata[0]).not.toHaveProperty("custom");
     });
   });
 
-  describe('unsubscribe', () => {
-    it('should unsubscribe a handler', async () => {
+  describe("unsubscribe", () => {
+    it("should unsubscribe a handler", async () => {
       Container.set(TestHandler, testHandler);
-      const subscription: EventSubscription<TestEvent> = { eventName: 'TestEvent', handlerClass: TestHandler };
+      const subscription: EventSubscription<TestEvent> = {
+        eventName: "TestEvent",
+        handlerClass: TestHandler,
+      };
 
       eventBus.subscribe(subscription);
       eventBus.unsubscribe(subscription);
 
-      const event = new TestEvent('after-unsubscribe');
+      const event = new TestEvent("after-unsubscribe");
       await eventBus.publish(event);
 
       expect(testHandler.handledEvents).toHaveLength(0);
     });
 
-    it('should not fail when unsubscribing non-existent handler', () => {
-      const subscription: EventSubscription<TestEvent> = { eventName: 'TestEvent', handlerClass: TestHandler };
+    it("should not fail when unsubscribing non-existent handler", () => {
+      const subscription: EventSubscription<TestEvent> = {
+        eventName: "TestEvent",
+        handlerClass: TestHandler,
+      };
       expect(() => eventBus.unsubscribe(subscription)).not.toThrow();
     });
 
-    it('should clean up running handlers on unsubscribe', async () => {
+    it("should clean up running handlers on unsubscribe", async () => {
       class SlowHandler implements EventHandler<TestEvent> {
         public static completeCount = 0;
 
@@ -596,34 +627,34 @@ describe('InMemoryEventBus', () => {
       const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
-      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      limitedBus.publish(new TestEvent('slow1'));
-      limitedBus.publish(new TestEvent('slow2'));
+      limitedBus.publish(new TestEvent("slow1"));
+      limitedBus.publish(new TestEvent("slow2"));
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(limitedBus.getRunningHandlerCount()).toBe(1);
 
-      limitedBus.unsubscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      limitedBus.unsubscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
       expect(limitedBus.getRunningHandlerCount()).toBe(0);
     });
   });
 
-  describe('clear', () => {
-    it('should remove all subscriptions', async () => {
+  describe("clear", () => {
+    it("should remove all subscriptions", async () => {
       Container.set(TestHandler, testHandler);
-      eventBus.subscribe({ eventName: 'TestEvent', handlerClass: TestHandler });
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
       eventBus.clear();
 
-      const event = new TestEvent('after-clear');
+      const event = new TestEvent("after-clear");
       await eventBus.publish(event);
 
       expect(testHandler.handledEvents).toHaveLength(0);
     });
 
-    it('should clear running handlers', async () => {
+    it("should clear running handlers", async () => {
       class SlowHandler implements EventHandler<TestEvent> {
         async handle(): Promise<void> {
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -633,9 +664,9 @@ describe('InMemoryEventBus', () => {
       const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
-      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      limitedBus.publish(new TestEvent('slow'));
+      limitedBus.publish(new TestEvent("slow"));
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -647,8 +678,8 @@ describe('InMemoryEventBus', () => {
     });
   });
 
-  describe('backpressure', () => {
-    it('should respect maxConcurrency with block strategy', async () => {
+  describe("backpressure", () => {
+    it("should respect maxConcurrency with block strategy", async () => {
       const executionOrder: string[] = [];
 
       class SlowHandler implements EventHandler<TestEvent> {
@@ -659,28 +690,31 @@ describe('InMemoryEventBus', () => {
         }
       }
 
-      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'block' });
+      const limitedBus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: "block",
+      });
 
       Container.set(SlowHandler, new SlowHandler());
-      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
       await Promise.all([
-        limitedBus.publish(new TestEvent('first')),
-        limitedBus.publish(new TestEvent('second')),
-        limitedBus.publish(new TestEvent('third')),
+        limitedBus.publish(new TestEvent("first")),
+        limitedBus.publish(new TestEvent("second")),
+        limitedBus.publish(new TestEvent("third")),
       ]);
 
       expect(executionOrder).toEqual([
-        'start-first',
-        'end-first',
-        'start-second',
-        'end-second',
-        'start-third',
-        'end-third',
+        "start-first",
+        "end-first",
+        "start-second",
+        "end-second",
+        "start-third",
+        "end-third",
       ]);
     });
 
-    it('should drop events when using drop strategy', async () => {
+    it("should drop events when using drop strategy", async () => {
       const executionCount: string[] = [];
 
       class SlowHandler implements EventHandler<TestEvent> {
@@ -690,43 +724,51 @@ describe('InMemoryEventBus', () => {
         }
       }
 
-      const dropBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'drop' });
+      const dropBus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: "drop",
+      });
 
       Container.set(SlowHandler, new SlowHandler());
-      dropBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      dropBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      const promise1 = dropBus.publish(new TestEvent('first'));
-      const promise2 = dropBus.publish(new TestEvent('second'));
-      const promise3 = dropBus.publish(new TestEvent('third'));
+      const promise1 = dropBus.publish(new TestEvent("first"));
+      const promise2 = dropBus.publish(new TestEvent("second"));
+      const promise3 = dropBus.publish(new TestEvent("third"));
 
       await Promise.all([promise1, promise2, promise3]);
 
       expect(executionCount).toHaveLength(1);
-      expect(executionCount[0]).toBe('first');
+      expect(executionCount[0]).toBe("first");
     });
 
-    it('should throw error when using error strategy', async () => {
+    it("should throw error when using error strategy", async () => {
       class SlowHandler implements EventHandler<TestEvent> {
         async handle(): Promise<void> {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
 
-      const errorBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'error' });
+      const errorBus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: "error",
+      });
 
       Container.set(SlowHandler, new SlowHandler());
-      errorBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      errorBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      const promise1 = errorBus.publish(new TestEvent('first'));
+      const promise1 = errorBus.publish(new TestEvent("first"));
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      await expect(errorBus.publish(new TestEvent('second'))).rejects.toThrow('Backpressure exceeded');
+      await expect(errorBus.publish(new TestEvent("second"))).rejects.toThrow(
+        "Backpressure exceeded",
+      );
 
       await promise1;
     });
 
-    it('should throw timeout problem when block strategy exceeds configured timeout', async () => {
+    it("should throw timeout problem when block strategy exceeds configured timeout", async () => {
       vi.useFakeTimers();
 
       class SlowHandler implements EventHandler<TestEvent> {
@@ -737,19 +779,19 @@ describe('InMemoryEventBus', () => {
 
       const timeoutBus = new InMemoryEventBus<TestEvent>({
         maxConcurrency: 1,
-        backpressureStrategy: 'block',
+        backpressureStrategy: "block",
         backpressureTimeoutMs: 25,
       });
 
       Container.set(SlowHandler, new SlowHandler());
-      timeoutBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      timeoutBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      const firstPublish = timeoutBus.publish(new TestEvent('first'));
+      const firstPublish = timeoutBus.publish(new TestEvent("first"));
       await vi.advanceTimersByTimeAsync(1);
 
-      const secondPublish = timeoutBus.publish(new TestEvent('second'));
+      const secondPublish = timeoutBus.publish(new TestEvent("second"));
       const secondPublishExpectation = expect(secondPublish).rejects.toMatchObject({
-        message: 'Backpressure wait timed out after 25ms',
+        message: "Backpressure wait timed out after 25ms",
       });
 
       await vi.advanceTimersByTimeAsync(25);
@@ -760,7 +802,7 @@ describe('InMemoryEventBus', () => {
       vi.useRealTimers();
     });
 
-    it('should reject waitForSlot when AbortSignal is aborted', async () => {
+    it("should reject waitForSlot when AbortSignal is aborted", async () => {
       const controller = new AbortController();
       const abortBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
       const waitForSlot = abortBus as unknown as {
@@ -768,9 +810,9 @@ describe('InMemoryEventBus', () => {
         runningHandlers: Map<string, unknown>;
       };
 
-      waitForSlot.runningHandlers.set('handler-1', {
-        eventName: 'TestEvent',
-        handlerName: 'BlockingHandler',
+      waitForSlot.runningHandlers.set("handler-1", {
+        eventName: "TestEvent",
+        handlerName: "BlockingHandler",
         startTime: Date.now(),
       });
 
@@ -778,11 +820,11 @@ describe('InMemoryEventBus', () => {
       controller.abort();
 
       await expect(waitPromise).rejects.toMatchObject({
-        message: 'Backpressure wait aborted',
+        message: "Backpressure wait aborted",
       });
     });
 
-    it('should keep existing block behavior when timeout option is omitted', async () => {
+    it("should keep existing block behavior when timeout option is omitted", async () => {
       const executionOrder: string[] = [];
 
       class SlowHandler implements EventHandler<TestEvent> {
@@ -793,17 +835,23 @@ describe('InMemoryEventBus', () => {
         }
       }
 
-      const blockBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1, backpressureStrategy: 'block' });
+      const blockBus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: "block",
+      });
 
       Container.set(SlowHandler, new SlowHandler());
-      blockBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      blockBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      await Promise.all([blockBus.publish(new TestEvent('first')), blockBus.publish(new TestEvent('second'))]);
+      await Promise.all([
+        blockBus.publish(new TestEvent("first")),
+        blockBus.publish(new TestEvent("second")),
+      ]);
 
-      expect(executionOrder).toEqual(['start-first', 'end-first', 'start-second', 'end-second']);
+      expect(executionOrder).toEqual(["start-first", "end-first", "start-second", "end-second"]);
     });
 
-    it('should track running handlers correctly', async () => {
+    it("should track running handlers correctly", async () => {
       let resolveHandler: (() => void) | undefined;
 
       class BlockingHandler implements EventHandler<TestEvent> {
@@ -817,16 +865,16 @@ describe('InMemoryEventBus', () => {
       const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
 
       Container.set(BlockingHandler, new BlockingHandler());
-      limitedBus.subscribe({ eventName: 'TestEvent', handlerClass: BlockingHandler });
+      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
 
-      const publishPromise = limitedBus.publish(new TestEvent('block'));
+      const publishPromise = limitedBus.publish(new TestEvent("block"));
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(limitedBus.getRunningHandlerCount()).toBe(1);
       expect(limitedBus.getRunningHandlers()).toHaveLength(1);
-      expect(limitedBus.getRunningHandlers()[0].eventName).toBe('TestEvent');
-      expect(limitedBus.getRunningHandlers()[0].handlerName).toBe('BlockingHandler');
+      expect(limitedBus.getRunningHandlers()[0].eventName).toBe("TestEvent");
+      expect(limitedBus.getRunningHandlers()[0].handlerName).toBe("BlockingHandler");
 
       resolveHandler?.();
       await publishPromise;
@@ -834,7 +882,7 @@ describe('InMemoryEventBus', () => {
       expect(limitedBus.getRunningHandlerCount()).toBe(0);
     });
 
-    it('should allow unlimited concurrency by default', async () => {
+    it("should allow unlimited concurrency by default", async () => {
       const executionOrder: string[] = [];
 
       class SlowHandler implements EventHandler<TestEvent> {
@@ -848,21 +896,21 @@ describe('InMemoryEventBus', () => {
       const unlimitedBus = new InMemoryEventBus<TestEvent>();
 
       Container.set(SlowHandler, new SlowHandler());
-      unlimitedBus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      unlimitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
       await Promise.all([
-        unlimitedBus.publish(new TestEvent('first')),
-        unlimitedBus.publish(new TestEvent('second')),
-        unlimitedBus.publish(new TestEvent('third')),
+        unlimitedBus.publish(new TestEvent("first")),
+        unlimitedBus.publish(new TestEvent("second")),
+        unlimitedBus.publish(new TestEvent("third")),
       ]);
 
-      const starts = executionOrder.filter((e) => e.startsWith('start-'));
+      const starts = executionOrder.filter((e) => e.startsWith("start-"));
       expect(starts).toHaveLength(3);
     });
   });
 
-  describe('memory leak prevention', () => {
-    it('should clean up handler counter and not grow unbounded', async () => {
+  describe("memory leak prevention", () => {
+    it("should clean up handler counter and not grow unbounded", async () => {
       const handlerCount = 100;
 
       class QuickHandler implements EventHandler<TestEvent> {
@@ -874,7 +922,7 @@ describe('InMemoryEventBus', () => {
       const bus = new InMemoryEventBus<TestEvent>();
 
       Container.set(QuickHandler, new QuickHandler());
-      bus.subscribe({ eventName: 'TestEvent', handlerClass: QuickHandler });
+      bus.subscribe({ eventName: "TestEvent", handlerClass: QuickHandler });
 
       for (let i = 0; i < handlerCount; i++) {
         await bus.publish(new TestEvent(`event-${i}`));
@@ -883,7 +931,7 @@ describe('InMemoryEventBus', () => {
       expect(bus.getRunningHandlerCount()).toBe(0);
     });
 
-    it('should release all references on clear', async () => {
+    it("should release all references on clear", async () => {
       class SlowHandler implements EventHandler<TestEvent> {
         async handle(): Promise<void> {
           await new Promise((resolve) => setTimeout(resolve, 50));
@@ -893,9 +941,9 @@ describe('InMemoryEventBus', () => {
       const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
-      bus.subscribe({ eventName: 'TestEvent', handlerClass: SlowHandler });
+      bus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      const publishPromise = bus.publish(new TestEvent('slow'));
+      const publishPromise = bus.publish(new TestEvent("slow"));
 
       await new Promise((resolve) => setTimeout(resolve, 10));
       expect(bus.getRunningHandlerCount()).toBe(1);

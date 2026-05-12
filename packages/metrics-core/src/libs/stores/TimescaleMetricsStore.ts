@@ -1,6 +1,6 @@
-import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../../types';
-import { MetricsRepository } from '../interfaces/MetricsRepository';
-import { RetentionCalculator } from '../RetentionCalculator';
+import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from "../../types";
+import { MetricsRepository } from "../interfaces/MetricsRepository";
+import { RetentionCalculator } from "../RetentionCalculator";
 
 /**
  * PostgreSQL 클라이언트 인터페이스 (pg 또는 호환 라이브러리)
@@ -31,8 +31,8 @@ export interface PostgresClient {
  * 이 파일은 인터페이스와 스켈레톤만 제공합니다.
  */
 export class TimescaleMetricsStore extends MetricsRepository {
-  private static readonly MRR_MOVEMENTS_TABLE = 'mrr_movements';
-  private static readonly SNAPSHOTS_TABLE = 'metrics_snapshots';
+  private static readonly MRR_MOVEMENTS_TABLE = "mrr_movements";
+  private static readonly SNAPSHOTS_TABLE = "metrics_snapshots";
 
   private readonly retentionCalculator = new RetentionCalculator();
 
@@ -40,7 +40,12 @@ export class TimescaleMetricsStore extends MetricsRepository {
     super();
   }
 
-  async recordMRRMovement(tenantId: string, movement: MRRMovement, timestamp: Date, eventKey?: string): Promise<void> {
+  async recordMRRMovement(
+    tenantId: string,
+    movement: MRRMovement,
+    timestamp: Date,
+    eventKey?: string,
+  ): Promise<void> {
     const sql = eventKey
       ? `
       INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
@@ -117,7 +122,13 @@ export class TimescaleMetricsStore extends MetricsRepository {
         created_at = NOW()
     `;
 
-    const params = [tenantId, date, snapshot.totalMRR.amount, snapshot.totalMRR.currency, snapshot.activeCustomers];
+    const params = [
+      tenantId,
+      date,
+      snapshot.totalMRR.amount,
+      snapshot.totalMRR.currency,
+      snapshot.activeCustomers,
+    ];
 
     await this.db.query(sql, params);
   }
@@ -201,11 +212,17 @@ export class TimescaleMetricsStore extends MetricsRepository {
         ({
           new: { amount: row.new_mrr_amount, currency: row.new_mrr_currency },
           expansion: { amount: row.expansion_mrr_amount, currency: row.expansion_mrr_currency },
-          contraction: { amount: row.contraction_mrr_amount, currency: row.contraction_mrr_currency },
+          contraction: {
+            amount: row.contraction_mrr_amount,
+            currency: row.contraction_mrr_currency,
+          },
           churned: { amount: row.churned_mrr_amount, currency: row.churned_mrr_currency },
-          reactivation: { amount: row.reactivation_mrr_amount, currency: row.reactivation_mrr_currency },
+          reactivation: {
+            amount: row.reactivation_mrr_amount,
+            currency: row.reactivation_mrr_currency,
+          },
           net: { amount: row.net_mrr_amount, currency: row.net_mrr_currency },
-        }) as MRRMovement
+        }) as MRRMovement,
     );
   }
 
@@ -216,11 +233,14 @@ export class TimescaleMetricsStore extends MetricsRepository {
       this.getMRRHistory(tenantId, period),
     ]);
 
-    const movement = this.aggregateMovements(movements, startingSnapshot?.totalMRR.currency ?? 'USD');
+    const movement = this.aggregateMovements(
+      movements,
+      startingSnapshot?.totalMRR.currency ?? "USD",
+    );
     const startingMRR = startingSnapshot?.totalMRR.amount ?? 0;
 
     const [revenueChurn, grr, nrr] = await Promise.all([
-      this.retentionCalculator.calculateChurn(startingMRR, movement, 'revenue'),
+      this.retentionCalculator.calculateChurn(startingMRR, movement, "revenue"),
       this.retentionCalculator.calculateGRR(startingMRR, movement),
       this.retentionCalculator.calculateNRR(startingMRR, movement),
     ]);
@@ -233,7 +253,10 @@ export class TimescaleMetricsStore extends MetricsRepository {
     };
   }
 
-  private async getLatestSnapshotOnOrBefore(tenantId: string, date: Date): Promise<MetricsSnapshot | null> {
+  private async getLatestSnapshotOnOrBefore(
+    tenantId: string,
+    date: Date,
+  ): Promise<MetricsSnapshot | null> {
     const sql = `
       SELECT
         snapshot_date as "date",
@@ -293,12 +316,18 @@ export class TimescaleMetricsStore extends MetricsRepository {
     return totals;
   }
 
-  private calculateLogoChurn(startingSnapshot: MetricsSnapshot | null, endingSnapshot: MetricsSnapshot | null): number {
+  private calculateLogoChurn(
+    startingSnapshot: MetricsSnapshot | null,
+    endingSnapshot: MetricsSnapshot | null,
+  ): number {
     if (!startingSnapshot || !endingSnapshot || startingSnapshot.activeCustomers === 0) {
       return 0;
     }
 
-    const churnedCustomers = Math.max(startingSnapshot.activeCustomers - endingSnapshot.activeCustomers, 0);
+    const churnedCustomers = Math.max(
+      startingSnapshot.activeCustomers - endingSnapshot.activeCustomers,
+      0,
+    );
 
     return (churnedCustomers / startingSnapshot.activeCustomers) * 100;
   }

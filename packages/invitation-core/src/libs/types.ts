@@ -1,8 +1,8 @@
-import type { MembershipRole } from '@croco/membership-core';
+import type { MembershipRole } from "@croco/membership-core";
 
-export type InvitationType = 'email' | 'link';
+export type InvitationType = "email" | "link";
 
-export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked' | 'declined';
+export type InvitationStatus = "pending" | "accepted" | "expired" | "revoked" | "declined";
 
 export type Invitation = {
   id: string;
@@ -89,10 +89,10 @@ export type RateLimitConfig = {
  * Public email domains denylist (not allowed for auto-join)
  */
 export const PUBLIC_EMAIL_DOMAINS = [
-  'gmail.com',
-  'yahoo.com',
-  'outlook.com',
-  'hotmail.com',
-  'icloud.com',
-  'protonmail.com',
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "icloud.com",
+  "protonmail.com",
 ] as const;

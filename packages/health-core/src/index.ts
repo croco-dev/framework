@@ -54,7 +54,7 @@
  * };
  * ```
  */
-export type { HealthCheckResult, HealthCheckServiceOptions } from './libs/HealthCheckService';
+export type { HealthCheckResult, HealthCheckServiceOptions } from "./libs/HealthCheckService";
 
 /**
  * Service for orchestrating health checks across multiple indicators.
@@ -74,7 +74,7 @@ export type { HealthCheckResult, HealthCheckServiceOptions } from './libs/Health
  * // Returns overall status and detailed results from each indicator
  * ```
  */
-export { HealthCheckService } from './libs/HealthCheckService';
+export { HealthCheckService } from "./libs/HealthCheckService";
 /**
  * Interface for health check indicators.
  *
@@ -174,4 +174,4 @@ export type {
   HealthIndicatorSuccessDetails,
   HealthStatus,
   ReadinessIndicator,
-} from './libs/HealthIndicator';
+} from "./libs/HealthIndicator";

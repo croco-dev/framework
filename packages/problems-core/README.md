@@ -13,11 +13,11 @@ pnpm add @croco/problems-core
 ### Problem 서브클래스 정의
 
 ```typescript
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 class UserNotFoundProblem extends Problem {
   constructor(userId: string) {
-    super('user/not-found', ProblemCategory.NotFound, `사용자 '${userId}'를 찾을 수 없습니다.`);
+    super("user/not-found", ProblemCategory.NotFound, `사용자 '${userId}'를 찾을 수 없습니다.`);
   }
 }
 ```
@@ -25,18 +25,18 @@ class UserNotFoundProblem extends Problem {
 ### ProblemFactory 사용
 
 ```typescript
-import { ProblemFactory } from '@croco/problems-core';
+import { ProblemFactory } from "@croco/problems-core";
 
-throw ProblemFactory.validationError('user/invalid-email', '이메일 형식이 올바르지 않습니다.');
+throw ProblemFactory.validationError("user/invalid-email", "이메일 형식이 올바르지 않습니다.");
 ```
 
 ### 직렬화
 
 ```typescript
-import { ProblemSerializer } from '@croco/problems-core';
+import { ProblemSerializer } from "@croco/problems-core";
 
 const json = ProblemSerializer.serialize(
-  ProblemFactory.notFound('user/not-found', '사용자를 찾을 수 없습니다.').toJSON()
+  ProblemFactory.notFound("user/not-found", "사용자를 찾을 수 없습니다.").toJSON(),
 );
 ```
 

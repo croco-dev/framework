@@ -1,5 +1,5 @@
-import { type ClerkClient, createClerkClient } from '@clerk/backend';
-import type { ClerkAuthOptions } from './ClerkAuthProvider';
+import { type ClerkClient, createClerkClient } from "@clerk/backend";
+import type { ClerkAuthOptions } from "./ClerkAuthProvider";
 
 export type ClerkUser = {
   id: string;
@@ -37,7 +37,7 @@ export type UpdateClerkUserInput = {
 export type UserListOptions = {
   limit?: number;
   offset?: number;
-  orderBy?: '-created_at' | 'created_at' | '-updated_at' | 'updated_at';
+  orderBy?: "-created_at" | "created_at" | "-updated_at" | "updated_at";
   emailAddress?: string[];
   query?: string;
 };
@@ -70,7 +70,7 @@ function mapClerkUser(user: {
     emailAddresses: user.emailAddresses.map((email) => ({
       id: email.id,
       emailAddress: email.emailAddress,
-      verified: email.verification?.status === 'verified',
+      verified: email.verification?.status === "verified",
     })),
     primaryEmailAddressId: user.primaryEmailAddressId,
     publicMetadata: user.publicMetadata,
@@ -156,7 +156,7 @@ export class ClerkUserService {
     metadata: {
       publicMetadata?: Record<string, unknown>;
       privateMetadata?: Record<string, unknown>;
-    }
+    },
   ): Promise<ClerkUser> {
     const user = await this.clerkClient.users.updateUserMetadata(userId, {
       ...(metadata.publicMetadata && { publicMetadata: metadata.publicMetadata }),

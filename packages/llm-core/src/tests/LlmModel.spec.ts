@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { LlmModel } from '../libs/LlmModel';
+import { beforeEach, describe, expect, it } from "vitest";
+import { LlmModel } from "../libs/LlmModel";
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -14,11 +14,11 @@ import type {
   ToolCallParams,
   ToolCallResult,
   ToolDefinition,
-} from '../libs/types';
+} from "../libs/types";
 
-describe('LlmModel', () => {
+describe("LlmModel", () => {
   class TestLlmModel extends LlmModel {
-    readonly modelId = 'test-model';
+    readonly modelId = "test-model";
     readonly capabilities: LlmCapabilities = {
       streaming: true,
       objectGeneration: true,
@@ -38,12 +38,12 @@ describe('LlmModel', () => {
     }
 
     async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
-      const words = `Response to: ${params.prompt}`.split(' ');
+      const words = `Response to: ${params.prompt}`.split(" ");
       for (const word of words) {
         yield { delta: `${word} ` };
       }
       yield {
-        delta: '',
+        delta: "",
         usage: {
           promptTokens: 10,
           completionTokens: 20,
@@ -61,7 +61,7 @@ describe('LlmModel', () => {
       return {
         toolCalls: [
           {
-            name: params.tools[0]?.name || 'test',
+            name: params.tools[0]?.name || "test",
             arguments: { input: params.prompt },
           },
         ],
@@ -102,15 +102,15 @@ describe('LlmModel', () => {
     model = new TestLlmModel();
   });
 
-  it('should have token', () => {
-    expect(LlmModel.token.name).toBe('LlmModel');
+  it("should have token", () => {
+    expect(LlmModel.token.name).toBe("LlmModel");
   });
 
-  it('should have modelId', () => {
-    expect(model.modelId).toBe('test-model');
+  it("should have modelId", () => {
+    expect(model.modelId).toBe("test-model");
   });
 
-  it('should have capabilities', () => {
+  it("should have capabilities", () => {
     expect(model.capabilities).toEqual({
       streaming: true,
       objectGeneration: true,
@@ -119,66 +119,66 @@ describe('LlmModel', () => {
     });
   });
 
-  describe('generate', () => {
-    it('should generate text response', async () => {
-      const result = await model.generate({ prompt: 'Hello' });
-      expect(result.text).toContain('Hello');
+  describe("generate", () => {
+    it("should generate text response", async () => {
+      const result = await model.generate({ prompt: "Hello" });
+      expect(result.text).toContain("Hello");
       expect(result.usage.totalTokens).toBe(30);
     });
 
-    it('should support system prompt', async () => {
+    it("should support system prompt", async () => {
       const result = await model.generate({
-        prompt: 'Hello',
-        systemPrompt: 'You are a helpful assistant',
+        prompt: "Hello",
+        systemPrompt: "You are a helpful assistant",
       });
       expect(result.text).not.toBeUndefined();
     });
 
-    it('should support temperature option', async () => {
+    it("should support temperature option", async () => {
       const result = await model.generate({
-        prompt: 'Hello',
+        prompt: "Hello",
         temperature: 0.7,
       });
       expect(result.text).not.toBeUndefined();
     });
 
-    it('should support maxTokens option', async () => {
+    it("should support maxTokens option", async () => {
       const result = await model.generate({
-        prompt: 'Hello',
+        prompt: "Hello",
         maxTokens: 100,
       });
       expect(result.text).not.toBeUndefined();
     });
 
-    it('should support stop sequences', async () => {
+    it("should support stop sequences", async () => {
       const result = await model.generate({
-        prompt: 'Hello',
-        stopSequences: ['END'],
+        prompt: "Hello",
+        stopSequences: ["END"],
       });
       expect(result.text).not.toBeUndefined();
     });
 
-    it('should support metadata', async () => {
+    it("should support metadata", async () => {
       const result = await model.generate({
-        prompt: 'Hello',
-        metadata: { requestId: '123' },
+        prompt: "Hello",
+        metadata: { requestId: "123" },
       });
       expect(result.text).not.toBeUndefined();
     });
   });
 
-  describe('stream', () => {
-    it('should stream text response', async () => {
+  describe("stream", () => {
+    it("should stream text response", async () => {
       const chunks: string[] = [];
-      for await (const chunk of model.stream({ prompt: 'Hello' })) {
+      for await (const chunk of model.stream({ prompt: "Hello" })) {
         chunks.push(chunk.delta);
       }
       expect(chunks.length).toBeGreaterThan(0);
     });
 
-    it('should include usage in final chunk', async () => {
+    it("should include usage in final chunk", async () => {
       const chunks: StreamChunk[] = [];
-      for await (const chunk of model.stream({ prompt: 'Hello' })) {
+      for await (const chunk of model.stream({ prompt: "Hello" })) {
         chunks.push(chunk);
       }
       const lastChunk = chunks[chunks.length - 1];
@@ -187,52 +187,52 @@ describe('LlmModel', () => {
     });
   });
 
-  describe('generateObject', () => {
-    it('should generate object from schema', async () => {
-      const schema = { name: 'Test', value: 42 };
+  describe("generateObject", () => {
+    it("should generate object from schema", async () => {
+      const schema = { name: "Test", value: 42 };
       const result = await model.generateObject({
-        prompt: 'Create an object',
+        prompt: "Create an object",
         schema,
       });
       expect(result).toEqual(schema);
     });
   });
 
-  describe('callTool', () => {
-    it('should call tools and return results', async () => {
+  describe("callTool", () => {
+    it("should call tools and return results", async () => {
       const tools: ToolDefinition[] = [
         {
-          name: 'calculator',
-          description: 'Calculate',
+          name: "calculator",
+          description: "Calculate",
           parameters: {
-            type: 'object',
+            type: "object",
             properties: {
-              expression: { type: 'string' },
+              expression: { type: "string" },
             },
           },
         },
       ];
       const result = await model.callTool({
         tools,
-        prompt: 'Calculate 1+1',
+        prompt: "Calculate 1+1",
       });
       expect(result.toolCalls).toHaveLength(1);
-      expect(result.toolCalls[0]?.name).toBe('calculator');
+      expect(result.toolCalls[0]?.name).toBe("calculator");
       expect(result.usage.totalTokens).toBe(15);
     });
   });
 
-  describe('embed', () => {
-    it('should generate embedding for single text', async () => {
-      const result = await model.embed({ text: 'Hello world' });
+  describe("embed", () => {
+    it("should generate embedding for single text", async () => {
+      const result = await model.embed({ text: "Hello world" });
       expect(result.embedding).toHaveLength(1536);
       expect(result.usage.totalTokens).toBe(5);
     });
   });
 
-  describe('embedMany', () => {
-    it('should generate embeddings for multiple texts', async () => {
-      const texts = ['Hello', 'world', 'test'];
+  describe("embedMany", () => {
+    it("should generate embeddings for multiple texts", async () => {
+      const texts = ["Hello", "world", "test"];
       const result = await model.embedMany({ texts });
       expect(result.embeddings).toHaveLength(3);
       expect(result.embeddings[0]).toHaveLength(1536);

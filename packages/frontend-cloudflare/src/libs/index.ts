@@ -1,2 +1,2 @@
-export { createSsrHandler } from './CloudflareSsrHandler';
-export type { SsrHandlerOptions, SsrWorkerEnv } from './types';
+export { createSsrHandler } from "./CloudflareSsrHandler";
+export type { SsrHandlerOptions, SsrWorkerEnv } from "./types";

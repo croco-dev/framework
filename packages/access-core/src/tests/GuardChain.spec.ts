@@ -1,8 +1,8 @@
-import 'reflect-metadata';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AccessEngine } from '../libs/AccessEngine';
-import { Access } from '../libs/decorators/Access';
-import { AccessGuard, BadRequestProblem, ForbiddenProblem } from '../libs/guards/AccessGuard';
+import "reflect-metadata";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AccessEngine } from "../libs/AccessEngine";
+import { Access } from "../libs/decorators/Access";
+import { AccessGuard, BadRequestProblem, ForbiddenProblem } from "../libs/guards/AccessGuard";
 
 type AuthUser = {
   id: string;
@@ -35,7 +35,7 @@ type Guard<T> = {
 class MockPermissionGuard implements Guard<ExecutionContext> {
   constructor(
     _rbacEngine: RbacEngine,
-    private shouldPass: boolean
+    private shouldPass: boolean,
   ) {}
 
   canActivate(_context: ExecutionContext): boolean {
@@ -43,20 +43,20 @@ class MockPermissionGuard implements Guard<ExecutionContext> {
   }
 }
 
-describe('Guard Chain Integration (RBAC OR ReBAC)', () => {
+describe("Guard Chain Integration (RBAC OR ReBAC)", () => {
   let accessGuard!: AccessGuard;
   let mockAccessEngine!: AccessEngine;
   let mockRbacEngine!: RbacEngine;
 
-  const mockUser: AuthUser = { id: 'user-1', name: 'Test User', permissions: [] };
-  const mockTenantId = 'tenant-1';
+  const mockUser: AuthUser = { id: "user-1", name: "Test User", permissions: [] };
+  const mockTenantId = "tenant-1";
 
   const createMockContext = (
     target: any,
     handlerKey: string,
     user?: any,
     tenantId?: string,
-    params?: Record<string, string>
+    params?: Record<string, string>,
   ): ExecutionContext => {
     const request = {
       headers: new Headers(),
@@ -69,8 +69,8 @@ describe('Guard Chain Integration (RBAC OR ReBAC)', () => {
       getRequest: () => request,
       getClass: () => target,
       getHandler: () => handlerKey,
-      getPath: () => '/test',
-      getMethod: () => 'GET',
+      getPath: () => "/test",
+      getMethod: () => "GET",
     } as unknown as ExecutionContext;
   };
 
@@ -95,42 +95,42 @@ describe('Guard Chain Integration (RBAC OR ReBAC)', () => {
     accessGuard = new AccessGuard(mockAccessEngine);
   });
 
-  it('should allow when RBAC passes and ReBAC fails (OR logic)', async () => {
+  it("should allow when RBAC passes and ReBAC fails (OR logic)", async () => {
     class TestController {
-      @Access('document', 'viewer')
+      @Access("document", "viewer")
       testMethod() {}
     }
 
     const rbacGuard = new MockPermissionGuard(mockRbacEngine, true);
-    const context = createMockContext(TestController, 'testMethod', mockUser, mockTenantId, {
-      id: 'doc-1',
+    const context = createMockContext(TestController, "testMethod", mockUser, mockTenantId, {
+      id: "doc-1",
     });
 
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(true);
 
-    vi.spyOn(mockAccessEngine, 'check').mockResolvedValue({ allowed: false });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false });
     await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
 
     const finalResult = rbacResult || false;
     expect(finalResult).toBe(true);
   });
 
-  it('should allow when RBAC fails and ReBAC passes (OR logic)', async () => {
+  it("should allow when RBAC fails and ReBAC passes (OR logic)", async () => {
     class TestController {
-      @Access('document', 'viewer')
+      @Access("document", "viewer")
       testMethod() {}
     }
 
-    const context = createMockContext(TestController, 'testMethod', mockUser, mockTenantId, {
-      id: 'doc-1',
+    const context = createMockContext(TestController, "testMethod", mockUser, mockTenantId, {
+      id: "doc-1",
     });
 
     const rbacGuard = new MockPermissionGuard(mockRbacEngine, false);
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(false);
 
-    vi.spyOn(mockAccessEngine, 'check').mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
 
     const rebacResult = await accessGuard.canActivate(context);
     expect(rebacResult).toBe(true);
@@ -139,13 +139,13 @@ describe('Guard Chain Integration (RBAC OR ReBAC)', () => {
     expect(finalResult).toBe(true);
   });
 
-  it('should deny when both RBAC and ReBAC fail', async () => {
+  it("should deny when both RBAC and ReBAC fail", async () => {
     class TestController {
-      @Access('document', 'viewer')
+      @Access("document", "viewer")
       testMethod() {}
     }
 
-    const context = createMockContext(TestController, 'testMethod', mockUser, mockTenantId, {});
+    const context = createMockContext(TestController, "testMethod", mockUser, mockTenantId, {});
 
     const rbacGuard = new MockPermissionGuard(mockRbacEngine, false);
     const rbacResult = rbacGuard.canActivate(context);
@@ -157,21 +157,21 @@ describe('Guard Chain Integration (RBAC OR ReBAC)', () => {
     expect(finalResult).toBe(false);
   });
 
-  it('should allow when both RBAC and ReBAC pass', async () => {
+  it("should allow when both RBAC and ReBAC pass", async () => {
     class TestController {
-      @Access('document', 'viewer')
+      @Access("document", "viewer")
       testMethod() {}
     }
 
-    const context = createMockContext(TestController, 'testMethod', mockUser, mockTenantId, {
-      id: 'doc-1',
+    const context = createMockContext(TestController, "testMethod", mockUser, mockTenantId, {
+      id: "doc-1",
     });
 
     const rbacGuard = new MockPermissionGuard(mockRbacEngine, true);
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(true);
 
-    vi.spyOn(mockAccessEngine, 'check').mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
     const rebacResult = await accessGuard.canActivate(context);
     expect(rebacResult).toBe(true);
 
@@ -179,21 +179,21 @@ describe('Guard Chain Integration (RBAC OR ReBAC)', () => {
     expect(finalResult).toBe(true);
   });
 
-  it('should handle ReBAC ForbiddenProblem correctly in OR logic', async () => {
+  it("should handle ReBAC ForbiddenProblem correctly in OR logic", async () => {
     class TestController {
-      @Access('document', 'viewer')
+      @Access("document", "viewer")
       testMethod() {}
     }
 
-    const context = createMockContext(TestController, 'testMethod', mockUser, mockTenantId, {
-      id: 'doc-1',
+    const context = createMockContext(TestController, "testMethod", mockUser, mockTenantId, {
+      id: "doc-1",
     });
 
     const rbacGuard = new MockPermissionGuard(mockRbacEngine, true);
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(true);
 
-    vi.spyOn(mockAccessEngine, 'check').mockResolvedValue({ allowed: false });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false });
     await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
 
     const finalResult = rbacResult || false;

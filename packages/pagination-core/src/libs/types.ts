@@ -2,7 +2,7 @@
 export type CursorParams = {
   cursor?: string;
   limit: number;
-  direction?: 'forward' | 'backward';
+  direction?: "forward" | "backward";
 };
 
 // Offset mode parameters
@@ -12,7 +12,9 @@ export type OffsetParams = {
 };
 
 // Unified input (parse result)
-export type PaginationParams = ({ mode: 'cursor' } & CursorParams) | ({ mode: 'offset' } & OffsetParams);
+export type PaginationParams =
+  | ({ mode: "cursor" } & CursorParams)
+  | ({ mode: "offset" } & OffsetParams);
 
 // Cursor page response (REST: Stripe style)
 export type CursorPage<T> = {

@@ -1,8 +1,14 @@
-import type { NodeSDK } from '@opentelemetry/sdk-node';
-import type { BatchSpanProcessor, Sampler } from '@opentelemetry/sdk-trace-base';
-import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
-import type { TelemetryConfig } from './config';
-import { OtlpEndpointRequiredProblem, TelemetryRuntimeProblem } from './libs/problems/TelemetryProblems';
+import type { NodeSDK } from "@opentelemetry/sdk-node";
+import type { BatchSpanProcessor, Sampler } from "@opentelemetry/sdk-trace-base";
+import {
+  SEMRESATTRS_SERVICE_NAME,
+  SEMRESATTRS_SERVICE_VERSION,
+} from "@opentelemetry/semantic-conventions";
+import type { TelemetryConfig } from "./config";
+import {
+  OtlpEndpointRequiredProblem,
+  TelemetryRuntimeProblem,
+} from "./libs/problems/TelemetryProblems";
 
 type ForceFlushResult = {
   success: boolean;
@@ -30,12 +36,17 @@ class TelemetryRuntime {
       return undefined;
     }
 
-    const { ProbabilitySampler } = await import('./libs/samplers/ProbabilitySampler');
+    const { ProbabilitySampler } = await import("./libs/samplers/ProbabilitySampler");
     return new ProbabilitySampler({ probability: traceConfig.probability });
   }
 
-  private createRuntimeProblem(phase: 'init' | 'forceFlush' | 'shutdown', error: unknown): TelemetryRuntimeProblem {
-    return error instanceof TelemetryRuntimeProblem ? error : new TelemetryRuntimeProblem(phase, error);
+  private createRuntimeProblem(
+    phase: "init" | "forceFlush" | "shutdown",
+    error: unknown,
+  ): TelemetryRuntimeProblem {
+    return error instanceof TelemetryRuntimeProblem
+      ? error
+      : new TelemetryRuntimeProblem(phase, error);
   }
 
   static getInstance(): TelemetryRuntime {
@@ -57,10 +68,10 @@ class TelemetryRuntime {
     }
 
     const [{ Resource }, { NodeSDK }, traceBaseModule, { OTLPTraceExporter }] = await Promise.all([
-      import('@opentelemetry/resources'),
-      import('@opentelemetry/sdk-node'),
-      import('@opentelemetry/sdk-trace-base'),
-      import('@opentelemetry/exporter-trace-otlp-http'),
+      import("@opentelemetry/resources"),
+      import("@opentelemetry/sdk-node"),
+      import("@opentelemetry/sdk-trace-base"),
+      import("@opentelemetry/exporter-trace-otlp-http"),
     ]);
 
     const BatchSpanProcessor = traceBaseModule.BatchSpanProcessor;
@@ -68,9 +79,9 @@ class TelemetryRuntime {
     const resource = Resource.default().merge(
       new Resource({
         [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
-        [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion ?? '0.0.0',
+        [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion ?? "0.0.0",
         ...config.resourceAttributes,
-      })
+      }),
     );
 
     const traceConfig = config.trace ?? {};
@@ -112,7 +123,7 @@ class TelemetryRuntime {
       this.initialized = false;
       this.sdk = null;
       this.processor = null;
-      throw this.createRuntimeProblem('init', error);
+      throw this.createRuntimeProblem("init", error);
     }
   }
 
@@ -131,8 +142,11 @@ class TelemetryRuntime {
       if (timeoutMillis !== undefined) {
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutId = setTimeout(
-            () => reject(new TelemetryRuntimeProblem('forceFlush', `timed out after ${effectiveTimeout}ms`)),
-            effectiveTimeout
+            () =>
+              reject(
+                new TelemetryRuntimeProblem("forceFlush", `timed out after ${effectiveTimeout}ms`),
+              ),
+            effectiveTimeout,
           );
         });
 
@@ -148,7 +162,7 @@ class TelemetryRuntime {
     } catch (error) {
       return {
         success: false,
-        error: this.createRuntimeProblem('forceFlush', error),
+        error: this.createRuntimeProblem("forceFlush", error),
       };
     } finally {
       if (timeoutId !== undefined) {
@@ -168,7 +182,7 @@ class TelemetryRuntime {
       this.processor = null;
       this.initialized = false;
     } catch (error) {
-      throw this.createRuntimeProblem('shutdown', error);
+      throw this.createRuntimeProblem("shutdown", error);
     }
   }
 

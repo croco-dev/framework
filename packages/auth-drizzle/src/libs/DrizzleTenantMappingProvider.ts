@@ -1,7 +1,7 @@
-import type { TenantMappingProvider } from '@croco/auth-core';
-import type { SQLWrapper } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
-import type { tenantMappings as tenantMappingsSchema } from '../schema';
+import type { TenantMappingProvider } from "@croco/auth-core";
+import type { SQLWrapper } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import type { tenantMappings as tenantMappingsSchema } from "../schema";
 
 interface DrizzleDb {
   insert: (table: unknown) => {
@@ -26,14 +26,14 @@ interface TenantMappingRow {
 }
 
 function assertTenantMappingRow(row: unknown): row is TenantMappingRow {
-  if (!row || typeof row !== 'object') {
+  if (!row || typeof row !== "object") {
     return false;
   }
   const record = row as Record<string, unknown>;
   return (
-    typeof record.id === 'string' &&
-    typeof record.externalOrgId === 'string' &&
-    typeof record.tenantId === 'string' &&
+    typeof record.id === "string" &&
+    typeof record.externalOrgId === "string" &&
+    typeof record.tenantId === "string" &&
     record.createdAt instanceof Date &&
     record.updatedAt instanceof Date
   );
@@ -48,7 +48,7 @@ export class DrizzleTenantMappingProvider implements TenantMappingProvider {
    */
   constructor(
     private readonly db: DrizzleDb,
-    private readonly schema: { tenantMappings: typeof tenantMappingsSchema }
+    private readonly schema: { tenantMappings: typeof tenantMappingsSchema },
   ) {}
 
   /**
@@ -80,6 +80,8 @@ export class DrizzleTenantMappingProvider implements TenantMappingProvider {
    * 외부 조직 ID 매핑을 제거합니다.
    */
   async remove(externalOrgId: string): Promise<void> {
-    await this.db.delete(this.schema.tenantMappings).where(eq(this.schema.tenantMappings.externalOrgId, externalOrgId));
+    await this.db
+      .delete(this.schema.tenantMappings)
+      .where(eq(this.schema.tenantMappings.externalOrgId, externalOrgId));
   }
 }

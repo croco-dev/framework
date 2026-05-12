@@ -1,5 +1,9 @@
-import type { z } from 'zod';
-import { RequestValidationProblem, ResponseValidationProblem, type ValidationIssue } from './ValidationProblem';
+import type { z } from "zod";
+import {
+  RequestValidationProblem,
+  ResponseValidationProblem,
+  type ValidationIssue,
+} from "./ValidationProblem";
 
 /**
  * 요청 데이터를 Zod 스키마로 검증하고 실패 시 요청 검증 Problem을 발생시킵니다.
@@ -7,13 +11,13 @@ import { RequestValidationProblem, ResponseValidationProblem, type ValidationIss
 export function validateRequest<T>(
   schema: z.ZodType<T>,
   data: unknown,
-  source: 'body' | 'query' | 'params' | 'headers'
+  source: "body" | "query" | "params" | "headers",
 ): T {
   const result = schema.safeParse(data);
 
   if (!result.success) {
     const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
-      path: issue.path.join('.') || 'value',
+      path: issue.path.join(".") || "value",
       message: issue.message,
     }));
 
@@ -31,7 +35,7 @@ export function validateResponse<T>(schema: z.ZodType<T>, data: unknown): T {
 
   if (!result.success) {
     const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
-      path: issue.path.join('.') || 'value',
+      path: issue.path.join(".") || "value",
       message: issue.message,
     }));
 
@@ -51,11 +55,11 @@ export function createValidator<T>(schema: z.ZodType<T>) {
 
       if (!result.success) {
         const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
-          path: issue.path.join('.') || 'value',
+          path: issue.path.join(".") || "value",
           message: issue.message,
         }));
 
-        throw new RequestValidationProblem('body', issues);
+        throw new RequestValidationProblem("body", issues);
       }
 
       return result.data;
@@ -66,22 +70,24 @@ export function createValidator<T>(schema: z.ZodType<T>) {
 
       if (!result.success) {
         const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
-          path: issue.path.join('.') || 'value',
+          path: issue.path.join(".") || "value",
           message: issue.message,
         }));
 
-        throw new RequestValidationProblem('body', issues);
+        throw new RequestValidationProblem("body", issues);
       }
 
       return result.data;
     },
 
-    safeParse: (data: unknown): { success: true; data: T } | { success: false; error: ValidationIssue[] } => {
+    safeParse: (
+      data: unknown,
+    ): { success: true; data: T } | { success: false; error: ValidationIssue[] } => {
       const result = schema.safeParse(data);
 
       if (!result.success) {
         const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
-          path: issue.path.join('.') || 'value',
+          path: issue.path.join(".") || "value",
           message: issue.message,
         }));
 

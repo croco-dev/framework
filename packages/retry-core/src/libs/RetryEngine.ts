@@ -1,7 +1,7 @@
-import type { BackoffPolicy } from './BackoffPolicy';
-import { RetryAbortedProblem, RetryExhaustedProblem } from './errors';
-import type { RetryContext } from './RetryContext';
-import type { RetryPolicy } from './RetryPolicy';
+import type { BackoffPolicy } from "./BackoffPolicy";
+import { RetryAbortedProblem, RetryExhaustedProblem } from "./errors";
+import type { RetryContext } from "./RetryContext";
+import type { RetryPolicy } from "./RetryPolicy";
 
 interface RetryHooks {
   onStart?: (context: RetryContext) => boolean | Promise<boolean>;
@@ -22,7 +22,7 @@ export async function executeRetryLoop<T>(
     backoffPolicy: BackoffPolicy;
     context: RetryContext;
   },
-  hooks?: RetryHooks
+  hooks?: RetryHooks,
 ): Promise<T> {
   const retryHooks = hooks ?? {};
   const { maxAttempts, retryPolicy, backoffPolicy, context } = options;
@@ -74,7 +74,8 @@ export async function executeRetryLoop<T>(
   }
 
   const exhaustedError =
-    context.lastError ?? RetryExhaustedProblem.fromContext(context.methodName, maxAttempts, context.lastError);
+    context.lastError ??
+    RetryExhaustedProblem.fromContext(context.methodName, maxAttempts, context.lastError);
   context.setExhausted();
   await retryHooks.onExhausted?.(exhaustedError, context);
   throw exhaustedError;

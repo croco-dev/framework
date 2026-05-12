@@ -1,21 +1,21 @@
-import 'reflect-metadata';
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
-import { Problem, ProblemFactory } from '@croco/problems-core';
-import type { ExceptionFilter } from '@croco/protocols-rest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorHandler } from '../libs/ErrorHandler';
-import { HttpExecutionContext } from '../libs/HttpExecutionContext';
-import { PipelineRunner } from '../libs/PipelineRunner';
-import type { CrocoHttpContext } from '../libs/types';
+import "reflect-metadata";
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
+import { Problem, ProblemFactory } from "@croco/problems-core";
+import type { ExceptionFilter } from "@croco/protocols-rest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ErrorHandler } from "../libs/ErrorHandler";
+import { HttpExecutionContext } from "../libs/HttpExecutionContext";
+import { PipelineRunner } from "../libs/PipelineRunner";
+import type { CrocoHttpContext } from "../libs/types";
 
 function createMockHttpContext(): CrocoHttpContext {
-  const request = new Request('http://localhost/test');
+  const request = new Request("http://localhost/test");
 
   const req = {
-    method: 'GET',
+    method: "GET",
     url: request.url,
-    path: '/test',
+    path: "/test",
     params: {},
     query: {},
     headers: {},
@@ -33,22 +33,28 @@ function createMockHttpContext(): CrocoHttpContext {
       req: {
         raw: request,
       },
-    } as CrocoHttpContext['raw'],
+    } as CrocoHttpContext["raw"],
     param: vi.fn(),
     query: vi.fn(),
     header: vi.fn(),
     json: vi.fn(),
     set: vi.fn(),
     get: vi.fn(),
-    text: vi.fn().mockImplementation((body: string, status: number = 200) => new Response(body, { status })),
+    text: vi
+      .fn()
+      .mockImplementation((body: string, status: number = 200) => new Response(body, { status })),
     jsonResponse: vi
       .fn()
-      .mockImplementation((body: unknown, status: number = 200) => new Response(JSON.stringify(body), { status })),
-    redirect: vi.fn().mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
+      .mockImplementation(
+        (body: unknown, status: number = 200) => new Response(JSON.stringify(body), { status }),
+      ),
+    redirect: vi
+      .fn()
+      .mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
   };
 }
 
-describe('PipelineRunner', () => {
+describe("PipelineRunner", () => {
   let logger!: {
     info: ReturnType<typeof vi.fn>;
     warn: ReturnType<typeof vi.fn>;
@@ -73,26 +79,30 @@ describe('PipelineRunner', () => {
     Container.set(ErrorHandler, new ErrorHandler(logger as unknown as Logger));
   });
 
-  it('BUG-03 명시적 의존성으로 PipelineRunner 생성 가능', () => {
+  it("BUG-03 명시적 의존성으로 PipelineRunner 생성 가능", () => {
     expect(() => createRunner()).not.toThrow();
   });
 
-  it('BUG-01 다중 ExceptionFilter 중 매칭 필터 실행', async () => {
+  it("BUG-01 다중 ExceptionFilter 중 매칭 필터 실행", async () => {
     const runner = createRunner();
-    const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');
-    const httpProblem = ProblemFactory.badRequest('BAD_REQUEST', 'bad request');
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const httpProblem = ProblemFactory.badRequest("BAD_REQUEST", "bad request");
 
     const httpProblemFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
       catch: vi.fn().mockImplementation((error: unknown) => {
         if (error instanceof Problem) {
-          return 'http-problem-filter';
+          return "http-problem-filter";
         }
         throw error;
       }),
     };
 
     const genericFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
-      catch: vi.fn().mockReturnValue('generic-filter'),
+      catch: vi.fn().mockReturnValue("generic-filter"),
     };
 
     const httpProblemResult = await runner.run(
@@ -104,31 +114,31 @@ describe('PipelineRunner', () => {
         guards: [],
         interceptors: [],
         filters: [httpProblemFilter, genericFilter],
-      }
+      },
     );
 
-    expect(httpProblemResult).toBe('http-problem-filter');
+    expect(httpProblemResult).toBe("http-problem-filter");
     expect(httpProblemFilter.catch).toHaveBeenCalledTimes(1);
     expect(genericFilter.catch).not.toHaveBeenCalled();
 
     const genericErrorResult = await runner.run(
       execContext,
       async () => {
-        throw new TypeError('generic failure');
+        throw new TypeError("generic failure");
       },
       {
         guards: [],
         interceptors: [],
         filters: [httpProblemFilter, genericFilter],
-      }
+      },
     );
 
-    expect(genericErrorResult).toBe('generic-filter');
+    expect(genericErrorResult).toBe("generic-filter");
     expect(httpProblemFilter.catch).toHaveBeenCalledTimes(2);
     expect(genericFilter.catch).toHaveBeenCalledTimes(1);
   });
 
-  it('BUG-02 ErrorHandler가 Logger를 가져야 함', async () => {
+  it("BUG-02 ErrorHandler가 Logger를 가져야 함", async () => {
     const logger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -140,18 +150,22 @@ describe('PipelineRunner', () => {
     Container.set(ErrorHandler, new ErrorHandler(logger as unknown as Logger));
 
     const runner = createRunner();
-    const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
 
     const result = await runner.run(
       execContext,
       async () => {
-        throw new TypeError('boom');
+        throw new TypeError("boom");
       },
       {
         guards: [],
         interceptors: [],
         filters: [],
-      }
+      },
     );
 
     expect(result).toBeInstanceOf(Response);
@@ -159,14 +173,18 @@ describe('PipelineRunner', () => {
     expect(logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it('should preserve the original business error when a filter throws', async () => {
+  it("should preserve the original business error when a filter throws", async () => {
     const runner = createRunner();
-    const execContext = new HttpExecutionContext(createMockHttpContext(), class TestController {}, 'handler');
-    const originalProblem = ProblemFactory.badRequest('BAD_REQUEST', 'original business error');
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "original business error");
 
     const brokenFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
       catch: vi.fn().mockImplementation(() => {
-        throw new Error('filter failure');
+        throw new Error("filter failure");
       }),
     };
 
@@ -179,22 +197,22 @@ describe('PipelineRunner', () => {
         guards: [],
         interceptors: [],
         filters: [brokenFilter],
-      }
+      },
     );
 
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(400);
     expect(await (result as Response).json()).toMatchObject({
-      code: 'BAD_REQUEST',
-      detail: 'original business error',
+      code: "BAD_REQUEST",
+      detail: "original business error",
       status: 400,
     });
     expect(logger.warn).toHaveBeenCalledWith(
-      'Exception filter threw while handling an error; preserving original error',
+      "Exception filter threw while handling an error; preserving original error",
       {
-        originalError: 'original business error',
-        filterError: 'filter failure',
-      }
+        originalError: "original business error",
+        filterError: "filter failure",
+      },
     );
   });
 });

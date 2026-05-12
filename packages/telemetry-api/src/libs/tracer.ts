@@ -1,7 +1,7 @@
-import { type Tracer, trace } from '@opentelemetry/api';
+import { type Tracer, trace } from "@opentelemetry/api";
 
-const DEFAULT_TRACER_NAME = '@croco/telemetry-api';
-const DEFAULT_TRACER_VERSION = '0.0.1';
+const DEFAULT_TRACER_NAME = "@croco/telemetry-api";
+const DEFAULT_TRACER_VERSION = "0.0.1";
 
 export type TracerOptions = {
   name?: string;

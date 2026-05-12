@@ -1,4 +1,4 @@
-import type { RuntimeContext } from '../render/types';
+import type { RuntimeContext } from "../render/types";
 
 /**
  * Server Action configuration.
@@ -16,7 +16,7 @@ export type ServerActionConfig<T = unknown> = {
   /** Unique identifier for this action */
   name: string;
   /** Optional Zod schema for input validation */
-  schema?: import('zod').ZodSchema<T>;
+  schema?: import("zod").ZodSchema<T>;
   /** Action handler receiving parsed/validated data and optional runtime context */
   handler: (data: T, context?: RuntimeContext) => Promise<Response> | Response;
 };
@@ -44,13 +44,13 @@ export function createServerAction<T>(config: ServerActionConfig<T>): void {
 export async function dispatchServerAction(
   name: string,
   formData: FormData | Record<string, unknown>,
-  context?: RuntimeContext
+  context?: RuntimeContext,
 ): Promise<Response> {
   const config = registry.get(name);
   if (!config) {
-    return new Response(JSON.stringify({ code: 'ACTION_NOT_FOUND', name }), {
+    return new Response(JSON.stringify({ code: "ACTION_NOT_FOUND", name }), {
       status: 404,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -62,10 +62,10 @@ export async function dispatchServerAction(
     if (!parsed.success) {
       return new Response(
         JSON.stringify({
-          code: 'VALIDATION_ERROR',
+          code: "VALIDATION_ERROR",
           fields: parsed.error.flatten().fieldErrors,
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
     return config.handler(parsed.data, context);
@@ -109,29 +109,32 @@ function formDataToObject(formData: FormData): Record<string, unknown> {
  */
 export function createServerActionHandler(): {
   path: string;
-  method: 'POST';
+  method: "POST";
   handler: (request: Request) => Promise<Response>;
 } {
   return {
-    path: '/api/action',
-    method: 'POST',
+    path: "/api/action",
+    method: "POST",
     handler: async (request: Request): Promise<Response> => {
       const url = new URL(request.url);
       const pathname = url.pathname;
 
       // Extract action name: /api/action/signup → signup
-      const segments = pathname.split('/');
+      const segments = pathname.split("/");
       if (
         segments.length !== 4 ||
-        segments[0] !== '' ||
-        segments[1] !== 'api' ||
-        segments[2] !== 'action' ||
+        segments[0] !== "" ||
+        segments[1] !== "api" ||
+        segments[2] !== "action" ||
         !segments[3]
       ) {
-        return new Response(JSON.stringify({ code: 'INVALID_PATH', message: 'Invalid action path' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ code: "INVALID_PATH", message: "Invalid action path" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       const actionName = segments[3];

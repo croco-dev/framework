@@ -1,7 +1,7 @@
-import 'reflect-metadata';
-import { ApolloServer } from 'apollo-server';
-import { buildSchema } from 'type-graphql';
-import { HealthResolver } from './resolvers/health.resolver.js';
+import "reflect-metadata";
+import { ApolloServer } from "apollo-server";
+import { buildSchema } from "type-graphql";
+import { HealthResolver } from "./resolvers/health.resolver.js";
 
 async function bootstrap() {
   const schema = await buildSchema({

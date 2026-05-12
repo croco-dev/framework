@@ -1,7 +1,12 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { ProblemFactory } from '@croco/problems-core';
-import { CRON_METADATA_KEY, EVENT_METADATA_KEY, TRIGGER_METADATA_KEY, WEBHOOK_METADATA_KEY } from './metadataKeys';
-import type { AnyTriggerMetadata, TriggerType } from './types';
+import { MetadataStorage } from "@croco/framework-context";
+import { ProblemFactory } from "@croco/problems-core";
+import {
+  CRON_METADATA_KEY,
+  EVENT_METADATA_KEY,
+  TRIGGER_METADATA_KEY,
+  WEBHOOK_METADATA_KEY,
+} from "./metadataKeys";
+import type { AnyTriggerMetadata, TriggerType } from "./types";
 
 /**
  * Registry for trigger metadata.
@@ -20,14 +25,22 @@ export class TriggerRegistry {
   }
 
   register(metadata: AnyTriggerMetadata): void {
-    MetadataStorage.define(TRIGGER_METADATA_KEY, metadata.target, this.cloneMetadata(metadata), metadata.methodName);
+    MetadataStorage.define(
+      TRIGGER_METADATA_KEY,
+      metadata.target,
+      this.cloneMetadata(metadata),
+      metadata.methodName,
+    );
   }
 
   getTriggers(target: object): Map<string | symbol, AnyTriggerMetadata> {
     return this.createTriggerMap(this.getEntriesForTarget(target));
   }
 
-  getTriggersByType<T extends TriggerType>(target: object, type: T): Map<string | symbol, AnyTriggerMetadata> {
+  getTriggersByType<T extends TriggerType>(
+    target: object,
+    type: T,
+  ): Map<string | symbol, AnyTriggerMetadata> {
     const triggers = this.getTriggers(target);
     const filtered = new Map<string | symbol, AnyTriggerMetadata>();
 
@@ -54,8 +67,8 @@ export class TriggerRegistry {
       if (targetMap && entry.propertyKey) {
         if (targetMap.has(entry.propertyKey)) {
           throw ProblemFactory.internalServerError(
-            'triggers-core/duplicate-trigger-metadata',
-            `Multiple trigger metadata entries are registered for method '${String(entry.propertyKey)}'`
+            "triggers-core/duplicate-trigger-metadata",
+            `Multiple trigger metadata entries are registered for method '${String(entry.propertyKey)}'`,
           );
         }
 
@@ -66,7 +79,9 @@ export class TriggerRegistry {
     return result;
   }
 
-  private getEntriesForTarget(target: object): Array<{ propertyKey?: string | symbol; value: AnyTriggerMetadata }> {
+  private getEntriesForTarget(
+    target: object,
+  ): Array<{ propertyKey?: string | symbol; value: AnyTriggerMetadata }> {
     return [
       ...MetadataStorage.getAllForTarget<AnyTriggerMetadata>(TRIGGER_METADATA_KEY, target),
       ...MetadataStorage.getAllForTarget<AnyTriggerMetadata>(CRON_METADATA_KEY, target),
@@ -78,7 +93,11 @@ export class TriggerRegistry {
     }));
   }
 
-  private getAllEntries(): Array<{ target: object; propertyKey?: string | symbol; value: AnyTriggerMetadata }> {
+  private getAllEntries(): Array<{
+    target: object;
+    propertyKey?: string | symbol;
+    value: AnyTriggerMetadata;
+  }> {
     return [
       ...MetadataStorage.getAll<AnyTriggerMetadata>(TRIGGER_METADATA_KEY),
       ...MetadataStorage.getAll<AnyTriggerMetadata>(CRON_METADATA_KEY),
@@ -92,7 +111,7 @@ export class TriggerRegistry {
   }
 
   private createTriggerMap(
-    entries: Array<{ propertyKey?: string | symbol; value: AnyTriggerMetadata }>
+    entries: Array<{ propertyKey?: string | symbol; value: AnyTriggerMetadata }>,
   ): Map<string | symbol, AnyTriggerMetadata> {
     const map = new Map<string | symbol, AnyTriggerMetadata>();
 
@@ -100,8 +119,8 @@ export class TriggerRegistry {
       if (entry.propertyKey) {
         if (map.has(entry.propertyKey)) {
           throw ProblemFactory.internalServerError(
-            'triggers-core/duplicate-trigger-metadata',
-            `Multiple trigger metadata entries are registered for method '${String(entry.propertyKey)}'`
+            "triggers-core/duplicate-trigger-metadata",
+            `Multiple trigger metadata entries are registered for method '${String(entry.propertyKey)}'`,
           );
         }
 
@@ -113,7 +132,7 @@ export class TriggerRegistry {
   }
 
   private cloneMetadata<T>(value: T): T {
-    if (value === null || value === undefined || typeof value !== 'object') {
+    if (value === null || value === undefined || typeof value !== "object") {
       return value;
     }
 
@@ -129,7 +148,7 @@ export class TriggerRegistry {
     const source = value as Record<string | symbol, unknown>;
 
     for (const key of Reflect.ownKeys(value)) {
-      if (key === 'target') {
+      if (key === "target") {
         cloned[key] = source[key];
         continue;
       }
@@ -141,6 +160,6 @@ export class TriggerRegistry {
   }
 }
 
-export { TRIGGER_METADATA_KEY } from './metadataKeys';
+export { TRIGGER_METADATA_KEY } from "./metadataKeys";
 
 export const triggerRegistry = TriggerRegistry.getInstance();

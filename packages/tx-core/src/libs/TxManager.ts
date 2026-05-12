@@ -1,13 +1,13 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-import type { TransactionContext } from '@croco/framework-context';
-import type { Logger } from '@croco/framework-logger';
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { TransactionContext } from "@croco/framework-context";
+import type { Logger } from "@croco/framework-logger";
 import {
   AfterCommitHooksProblem,
   TransactionContextProblem,
   TransactionTimeoutProblem,
-} from './problems/TransactionProblems';
-import type { TxAdapter } from './TxAdapter';
-import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from './types';
+} from "./problems/TransactionProblems";
+import type { TxAdapter } from "./TxAdapter";
+import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from "./types";
 
 interface TxContext<TClient> {
   client: TClient;
@@ -17,7 +17,7 @@ interface TxContext<TClient> {
 
 type NullableTxContext<TClient> = TxContext<TClient> | null;
 
-type TxManagerLogger = Pick<Logger, 'error' | 'warn'>;
+type TxManagerLogger = Pick<Logger, "error" | "warn">;
 
 type AfterCommitHookFailure = {
   error: Error;
@@ -30,7 +30,7 @@ const DEFAULT_LOGGER: TxManagerLogger = console;
 function createTimeoutPromise<T>(
   ms: number,
   timeoutHandle: { id?: ReturnType<typeof setTimeout> },
-  controller: AbortController
+  controller: AbortController,
 ): Promise<T> {
   return new Promise((_, reject) => {
     timeoutHandle.id = setTimeout(() => {
@@ -53,9 +53,9 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
   constructor(
     private readonly adapter: TxAdapter<TClient, TOptions>,
     config: TxManagerConfig = {},
-    logger: TxManagerLogger = DEFAULT_LOGGER
+    logger: TxManagerLogger = DEFAULT_LOGGER,
   ) {
-    this.defaultNesting = config.defaultNesting ?? 'join';
+    this.defaultNesting = config.defaultNesting ?? "join";
     this.defaultTimeout = config.defaultTimeout;
     this.logger = logger;
   }
@@ -70,14 +70,18 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       return this.executeRoot(fn, options, timeout);
     }
 
-    if (nesting === 'join') {
+    if (nesting === "join") {
       return fn();
     }
 
     return this.executeNested(currentContext, fn, options, timeout);
   }
 
-  private async executeRoot<T>(fn: () => Promise<T>, options?: TOptions, timeout?: number): Promise<T> {
+  private async executeRoot<T>(
+    fn: () => Promise<T>,
+    options?: TOptions,
+    timeout?: number,
+  ): Promise<T> {
     const afterCommitHooks: AfterCommitHook[] = [];
     const controller = new AbortController();
 
@@ -93,7 +97,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
           return this.setupContext(context, fn);
         },
         options,
-        controller.signal
+        controller.signal,
       );
 
       if (afterCommitHooks.length > 0) {
@@ -107,7 +111,10 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
 
       try {
-        return await Promise.race([executeTransaction(), createTimeoutPromise<T>(timeout, timeoutHandle, controller)]);
+        return await Promise.race([
+          executeTransaction(),
+          createTimeoutPromise<T>(timeout, timeoutHandle, controller),
+        ]);
       } finally {
         if (timeoutHandle.id !== undefined) {
           clearTimeout(timeoutHandle.id);
@@ -122,7 +129,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     currentContext: TxContext<TClient>,
     fn: () => Promise<T>,
     options?: TOptions,
-    timeout?: number
+    timeout?: number,
   ): Promise<T> {
     if (!this.adapter.supportsSavepoint()) {
       this.warnSavepointNotSupported();
@@ -149,7 +156,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
           return nestedResult;
         },
         options,
-        controller.signal
+        controller.signal,
       );
 
       if (shouldMergeNestedHooks) {
@@ -163,7 +170,10 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
 
       try {
-        return await Promise.race([executeSavepoint(), createTimeoutPromise<T>(timeout, timeoutHandle, controller)]);
+        return await Promise.race([
+          executeSavepoint(),
+          createTimeoutPromise<T>(timeout, timeoutHandle, controller),
+        ]);
       } finally {
         if (timeoutHandle.id !== undefined) {
           clearTimeout(timeoutHandle.id);
@@ -174,7 +184,10 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     return executeSavepoint();
   }
 
-  private async setupContext<T>(context: NullableTxContext<TClient>, fn: () => Promise<T>): Promise<T> {
+  private async setupContext<T>(
+    context: NullableTxContext<TClient>,
+    fn: () => Promise<T>,
+  ): Promise<T> {
     return this.als.run(context, fn);
   }
 
@@ -208,14 +221,14 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
           name: normalizedError.name,
           message: normalizedError.message,
         });
-        this.safeLog('error', 'AfterCommit hook failed:', { error: normalizedError });
+        this.safeLog("error", "AfterCommit hook failed:", { error: normalizedError });
       }
     }
 
     if (failures.length > 0) {
       throw new AfterCommitHooksProblem(
         failures.map(({ name, message }) => ({ name, message })),
-        failures[0].error
+        failures[0].error,
       );
     }
   }
@@ -237,10 +250,13 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
   }
 
   private warnSavepointNotSupported(): void {
-    this.safeLog('warn', 'Savepoint nesting requested but adapter does not support savepoint. Falling back to join.');
+    this.safeLog(
+      "warn",
+      "Savepoint nesting requested but adapter does not support savepoint. Falling back to join.",
+    );
   }
 
-  private safeLog(level: 'error' | 'warn', message: string, meta?: Record<string, unknown>): void {
+  private safeLog(level: "error" | "warn", message: string, meta?: Record<string, unknown>): void {
     const formattedMessage = `[TxManager] ${message}`;
 
     if (meta) {

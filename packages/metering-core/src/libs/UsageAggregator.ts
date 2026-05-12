@@ -1,6 +1,6 @@
-import type { MeterRepository } from './MeterRepository';
-import type { AggregationPeriod, FlushResult, UsageQueryOptions } from './types';
-import type { UsageStorage } from './UsageStorage';
+import type { MeterRepository } from "./MeterRepository";
+import type { AggregationPeriod, FlushResult, UsageQueryOptions } from "./types";
+import type { UsageStorage } from "./UsageStorage";
 
 export type UsageAggregatorOptions = {
   usageStorage: UsageStorage;
@@ -35,7 +35,7 @@ export class UsageAggregator {
   async flushUsageToDB(
     tenantId: string,
     meterId: string,
-    period: AggregationPeriod = 'billing_cycle'
+    period: AggregationPeriod = "billing_cycle",
   ): Promise<FlushResult> {
     const options: UsageQueryOptions = {
       tenantId,

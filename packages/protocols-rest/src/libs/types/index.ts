@@ -7,4 +7,4 @@ export type {
   RouteHandler,
   TypedRouteConfig,
   TypedRouteHandler,
-} from './RouteTypes';
+} from "./RouteTypes";

@@ -1,7 +1,7 @@
-import { Component } from '@croco/framework-context';
-import { env } from './core';
+import { Component } from "@croco/framework-context";
+import { env } from "./core";
 
-@Component({ scope: 'singleton' })
+@Component({ scope: "singleton" })
 export class ConfigService {
   /**
    * Type-safe environment variable getter
@@ -11,14 +11,14 @@ export class ConfigService {
   }
 
   get isProduction(): boolean {
-    return this.get('NODE_ENV') === 'production';
+    return this.get("NODE_ENV") === "production";
   }
 
   get isDevelopment(): boolean {
-    return this.get('NODE_ENV') === 'development';
+    return this.get("NODE_ENV") === "development";
   }
 
   get isTest(): boolean {
-    return this.get('NODE_ENV') === 'test';
+    return this.get("NODE_ENV") === "test";
   }
 }

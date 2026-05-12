@@ -11,29 +11,29 @@ pnpm add @croco/search-meilisearch meilisearch
 ## 사용법
 
 ```typescript
-import { MeilisearchEngine } from '@croco/search-meilisearch';
+import { MeilisearchEngine } from "@croco/search-meilisearch";
 
 const engine = new MeilisearchEngine({
   host: process.env.MEILISEARCH_HOST!,
   apiKey: process.env.MEILISEARCH_API_KEY!,
   tenantTokenOptions: {
-    apiKeyUid: 'tenant-search',
+    apiKeyUid: "tenant-search",
     expiresIn: 3600,
   },
 });
 
-await engine.indexDocument('products', { id: 'p1', name: 'Croco Hoodie' });
-const result = await engine.search('products', { query: 'hoodie' });
+await engine.indexDocument("products", { id: "p1", name: "Croco Hoodie" });
+const result = await engine.search("products", { query: "hoodie" });
 ```
 
 ## API 레퍼런스
 
-| API | 설명 |
-|---|---|
-| `MeilisearchEngine` | 검색, 인덱싱, 삭제, 인덱스 생성, tenant token 발급을 담당합니다. |
-| `MeilisearchEngineOptions` | host, apiKey, tenant token 옵션을 지정합니다. |
-| `TenantTokenOptions` | tenant token용 API key UID와 만료 시간을 지정합니다. |
-| `TenantTokenNotConfiguredProblem` | tenant token 옵션 없이 토큰 발급을 시도할 때 발생합니다. |
+| API                               | 설명                                                             |
+| --------------------------------- | ---------------------------------------------------------------- |
+| `MeilisearchEngine`               | 검색, 인덱싱, 삭제, 인덱스 생성, tenant token 발급을 담당합니다. |
+| `MeilisearchEngineOptions`        | host, apiKey, tenant token 옵션을 지정합니다.                    |
+| `TenantTokenOptions`              | tenant token용 API key UID와 만료 시간을 지정합니다.             |
+| `TenantTokenNotConfiguredProblem` | tenant token 옵션 없이 토큰 발급을 시도할 때 발생합니다.         |
 
 ## 동작 메모
 

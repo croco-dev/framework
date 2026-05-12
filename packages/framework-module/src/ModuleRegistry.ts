@@ -1,7 +1,7 @@
-import { Container } from 'typedi';
-import { detectCircularDependency } from './CircularDependencyDetector';
-import { ModuleContext } from './ModuleContext';
-import type { ModuleOptions } from './types';
+import { Container } from "typedi";
+import { detectCircularDependency } from "./CircularDependencyDetector";
+import { ModuleContext } from "./ModuleContext";
+import type { ModuleOptions } from "./types";
 
 type CrocoModuleInternal = ModuleOptions;
 
@@ -43,8 +43,8 @@ export function isModuleInitialized(): boolean {
 }
 
 function validateModule(module: ModuleOptions): void {
-  if (typeof module.name !== 'string' || module.name.trim().length === 0) {
-    throw new Error('Module name must be a non-empty string.');
+  if (typeof module.name !== "string" || module.name.trim().length === 0) {
+    throw new Error("Module name must be a non-empty string.");
   }
 
   if (!module.setup && !module.start) {

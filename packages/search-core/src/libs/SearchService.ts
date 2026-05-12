@@ -1,13 +1,13 @@
-import { Context } from '@croco/framework-context';
-import { MissingTenantProblem } from './problems/SearchProblems';
-import type { SearchEngine } from './SearchEngine';
-import type { SearchDocument, SearchQuery, SearchResult } from './types';
+import { Context } from "@croco/framework-context";
+import { MissingTenantProblem } from "./problems/SearchProblems";
+import type { SearchEngine } from "./SearchEngine";
+import type { SearchDocument, SearchQuery, SearchResult } from "./types";
 
 export type SearchServiceDependencies = {
   engine: SearchEngine;
 };
 
-type DocumentInput = Omit<SearchDocument, 'tenantId'>;
+type DocumentInput = Omit<SearchDocument, "tenantId">;
 
 export class SearchService {
   constructor(private readonly deps: SearchServiceDependencies) {}
@@ -15,7 +15,7 @@ export class SearchService {
   async search<T>(index: string, query: SearchQuery): Promise<SearchResult<T>> {
     const tenantId = Context.getTenantId();
     if (!tenantId) {
-      throw new MissingTenantProblem('search');
+      throw new MissingTenantProblem("search");
     }
 
     const tenantQuery: SearchQuery = {
@@ -29,7 +29,7 @@ export class SearchService {
   async indexDocument(index: string, document: DocumentInput): Promise<void> {
     const tenantId = Context.getTenantId();
     if (!tenantId) {
-      throw new MissingTenantProblem('indexing');
+      throw new MissingTenantProblem("indexing");
     }
 
     const tenantDocument = { ...document, tenantId } as SearchDocument;
@@ -39,7 +39,7 @@ export class SearchService {
   async deleteDocument(index: string, documentId: string): Promise<void> {
     const tenantId = Context.getTenantId();
     if (!tenantId) {
-      throw new MissingTenantProblem('delete');
+      throw new MissingTenantProblem("delete");
     }
 
     return this.deps.engine.deleteDocument(index, documentId);
@@ -48,7 +48,7 @@ export class SearchService {
   async bulkIndex(index: string, documents: DocumentInput[]): Promise<void> {
     const tenantId = Context.getTenantId();
     if (!tenantId) {
-      throw new MissingTenantProblem('bulk indexing');
+      throw new MissingTenantProblem("bulk indexing");
     }
 
     const tenantDocuments = documents.map((doc) => ({ ...doc, tenantId }) as SearchDocument);

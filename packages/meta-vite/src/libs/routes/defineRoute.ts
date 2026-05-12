@@ -1,4 +1,4 @@
-import type { PageRouteDefinition } from './types';
+import type { PageRouteDefinition } from "./types";
 
 /**
  * Register a flat code-based page route.

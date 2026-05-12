@@ -1,15 +1,15 @@
-import { Container } from '@croco/framework-context';
-import type { NotificationPayload } from '@croco/notifications-core';
-import { NotificationChannel } from '@croco/notifications-core';
-import type { CreateEmailResponse } from 'resend';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ResendNotificationProblem } from '../libs/problems/ResendNotificationProblem';
-import { ResendProvider } from '../libs/ResendProvider';
+import { Container } from "@croco/framework-context";
+import type { NotificationPayload } from "@croco/notifications-core";
+import { NotificationChannel } from "@croco/notifications-core";
+import type { CreateEmailResponse } from "resend";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ResendNotificationProblem } from "../libs/problems/ResendNotificationProblem";
+import { ResendProvider } from "../libs/ResendProvider";
 
-type MockResendClient = InstanceType<typeof import('resend')['Resend']>;
+type MockResendClient = InstanceType<(typeof import("resend"))["Resend"]>;
 
 // Mock resend package
-vi.mock('resend', () => {
+vi.mock("resend", () => {
   const emailsSendMock = vi.fn();
   class MockResend {
     emails = {
@@ -19,13 +19,13 @@ vi.mock('resend', () => {
   return { Resend: MockResend };
 });
 
-describe('ResendProvider', () => {
+describe("ResendProvider", () => {
   let provider!: ResendProvider;
   let mockResendClient!: MockResendClient;
 
   const mockConfig = {
-    apiKey: 're_test-key',
-    from: 'noreply@example.com',
+    apiKey: "re_test-key",
+    from: "noreply@example.com",
   };
 
   beforeEach(async () => {
@@ -35,87 +35,87 @@ describe('ResendProvider', () => {
     provider = new ResendProvider(mockConfig);
 
     // Get mock instance
-    const { Resend } = await import('resend');
+    const { Resend } = await import("resend");
     mockResendClient = new Resend();
   });
 
-  describe('getName()', () => {
-    it('should return resend as provider name', () => {
-      expect(provider.getName()).toBe('resend');
+  describe("getName()", () => {
+    it("should return resend as provider name", () => {
+      expect(provider.getName()).toBe("resend");
     });
   });
 
-  describe('getChannel()', () => {
-    it('should return EMAIL channel', () => {
+  describe("getChannel()", () => {
+    it("should return EMAIL channel", () => {
       expect(provider.getChannel()).toBe(NotificationChannel.EMAIL);
     });
   });
 
-  describe('send()', () => {
+  describe("send()", () => {
     const mockSuccessResponse: CreateEmailResponse = {
-      data: { id: 'msg-123' },
+      data: { id: "msg-123" },
       error: null,
     };
 
     const mockErrorResponse: CreateEmailResponse = {
       data: null,
-      error: { message: 'Invalid API key', name: 'invalid_api_Key' },
+      error: { message: "Invalid API key", name: "invalid_api_Key" },
     };
 
-    it('should send email successfully with subject', async () => {
+    it("should send email successfully with subject", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Test Subject',
-        content: '<h1>Test Content</h1>',
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(true);
-      expect(result.messageId).toBe('msg-123');
+      expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
-          from: 'noreply@example.com',
-          to: 'recipient@example.com',
-          subject: 'Test Subject',
-          html: '<h1>Test Content</h1>',
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "Test Subject",
+          html: "<h1>Test Content</h1>",
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
-        }
+        },
       );
     });
 
-    it('should use provided idempotency key', async () => {
+    it("should use provided idempotency key", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Test Subject',
-        content: '<h1>Test Content</h1>',
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
       };
 
-      await provider.send(payload, { idempotencyKey: 'fixed-key' });
+      await provider.send(payload, { idempotencyKey: "fixed-key" });
 
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
-          from: 'noreply@example.com',
-          to: 'recipient@example.com',
-          subject: 'Test Subject',
-          html: '<h1>Test Content</h1>',
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "Test Subject",
+          html: "<h1>Test Content</h1>",
         },
-        { idempotencyKey: 'fixed-key' }
+        { idempotencyKey: "fixed-key" },
       );
     });
 
-    it('should use generated resend idempotency key without options', async () => {
+    it("should use generated resend idempotency key without options", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        content: '<h1>Test Content</h1>',
+        to: "recipient@example.com",
+        content: "<h1>Test Content</h1>",
       };
 
       await provider.send(payload);
@@ -125,76 +125,76 @@ describe('ResendProvider', () => {
       });
     });
 
-    it('should send email without subject using default', async () => {
+    it("should send email without subject using default", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        content: '<h1>Test Content</h1>',
+        to: "recipient@example.com",
+        content: "<h1>Test Content</h1>",
       };
 
       await provider.send(payload);
 
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
-          from: 'noreply@example.com',
-          to: 'recipient@example.com',
-          subject: 'No Subject',
-          html: '<h1>Test Content</h1>',
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "No Subject",
+          html: "<h1>Test Content</h1>",
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
-        }
+        },
       );
     });
 
-    it('should send email with templateId', async () => {
+    it("should send email with templateId", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Welcome',
-        content: '<h1>Welcome</h1>',
-        templateId: 'welcome-template',
+        to: "recipient@example.com",
+        subject: "Welcome",
+        content: "<h1>Welcome</h1>",
+        templateId: "welcome-template",
       };
 
       await provider.send(payload);
 
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
-          from: 'noreply@example.com',
-          to: 'recipient@example.com',
-          subject: 'Welcome',
-          html: '<h1>Welcome</h1>',
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "Welcome",
+          html: "<h1>Welcome</h1>",
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
-        }
+        },
       );
     });
 
-    it('should return error result when API returns error', async () => {
+    it("should return error result when API returns error", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockErrorResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Test Subject',
-        content: '<h1>Test Content</h1>',
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeInstanceOf(ResendNotificationProblem);
-      expect(result.error?.message).toBe('Invalid API key');
+      expect(result.error?.message).toBe("Invalid API key");
       expect(result.providerResponse).toEqual(mockErrorResponse);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
     });
 
-    it('should retry transient API error responses with the same idempotency key', async () => {
+    it("should retry transient API error responses with the same idempotency key", async () => {
       const transientErrorResponse: CreateEmailResponse = {
         data: null,
-        error: { message: 'Rate limit exceeded', name: 'rate_limit_exceeded' },
+        error: { message: "Rate limit exceeded", name: "rate_limit_exceeded" },
       };
 
       vi.mocked(mockResendClient.emails.send)
@@ -202,15 +202,15 @@ describe('ResendProvider', () => {
         .mockResolvedValueOnce(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Retry Subject',
-        content: '<h1>Retry Content</h1>',
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(true);
-      expect(result.messageId).toBe('msg-123');
+      expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
 
       const firstCallOptions = vi.mocked(mockResendClient.emails.send).mock.calls[0]?.[1];
@@ -220,79 +220,81 @@ describe('ResendProvider', () => {
       expect(secondCallOptions?.idempotencyKey).toBe(firstCallOptions?.idempotencyKey);
     });
 
-    it('should retry transient thrown errors before succeeding', async () => {
-      const networkError = Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' });
+    it("should retry transient thrown errors before succeeding", async () => {
+      const networkError = Object.assign(new Error("socket hang up"), { code: "ECONNRESET" });
 
       vi.mocked(mockResendClient.emails.send)
         .mockRejectedValueOnce(networkError)
         .mockResolvedValueOnce(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Retry Subject',
-        content: '<h1>Retry Content</h1>',
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(true);
-      expect(result.messageId).toBe('msg-123');
+      expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
     });
 
-    it('should not retry invalid idempotent request errors', async () => {
+    it("should not retry invalid idempotent request errors", async () => {
       const invalidIdempotentRequestResponse: CreateEmailResponse = {
         data: null,
-        error: { message: 'Invalid idempotency key reuse', name: 'invalid_idempotent_request' },
+        error: { message: "Invalid idempotency key reuse", name: "invalid_idempotent_request" },
       };
 
-      vi.mocked(mockResendClient.emails.send).mockResolvedValueOnce(invalidIdempotentRequestResponse);
+      vi.mocked(mockResendClient.emails.send).mockResolvedValueOnce(
+        invalidIdempotentRequestResponse,
+      );
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Retry Subject',
-        content: '<h1>Retry Content</h1>',
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeInstanceOf(ResendNotificationProblem);
-      expect(result.error?.message).toBe('Invalid idempotency key reuse');
+      expect(result.error?.message).toBe("Invalid idempotency key reuse");
       expect(result.providerResponse).toEqual(invalidIdempotentRequestResponse);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle network error', async () => {
-      const networkError = new Error('Network connection failed');
+    it("should handle network error", async () => {
+      const networkError = new Error("Network connection failed");
       vi.mocked(mockResendClient.emails.send).mockRejectedValue(networkError);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Test Subject',
-        content: '<h1>Test Content</h1>',
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeInstanceOf(ResendNotificationProblem);
-      expect(result.error?.message).toBe('Network connection failed');
+      expect(result.error?.message).toBe("Network connection failed");
 
       if (!(result.error instanceof ResendNotificationProblem)) {
-        throw new Error('Expected ResendNotificationProblem');
+        throw new Error("Expected ResendNotificationProblem");
       }
 
       expect(result.error.cause).toBe(networkError);
     });
 
-    it('should include providerResponse in success result', async () => {
+    it("should include providerResponse in success result", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Test Subject',
-        content: '<h1>Test Content</h1>',
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
       };
 
       const result = await provider.send(payload);
@@ -301,130 +303,130 @@ describe('ResendProvider', () => {
       expect(result.providerResponse).toEqual(mockSuccessResponse);
     });
 
-    it('should handle metadata and variables in payload', async () => {
+    it("should handle metadata and variables in payload", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Test Subject',
-        content: '<h1>Test Content</h1>',
-        metadata: { userId: '123' },
-        variables: { name: 'John' },
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
+        metadata: { userId: "123" },
+        variables: { name: "John" },
       };
 
       await provider.send(payload);
 
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
-          from: 'noreply@example.com',
-          to: 'recipient@example.com',
-          subject: 'Test Subject',
-          html: '<h1>Test Content</h1>',
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "Test Subject",
+          html: "<h1>Test Content</h1>",
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
-        }
+        },
       );
     });
 
-    it('should send email with template', async () => {
+    it("should send email with template", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Welcome',
-        content: '<h1>Welcome</h1>',
-        templateId: 'welcome-template',
-        variables: { name: 'John', email: 'john@example.com' },
+        to: "recipient@example.com",
+        subject: "Welcome",
+        content: "<h1>Welcome</h1>",
+        templateId: "welcome-template",
+        variables: { name: "John", email: "john@example.com" },
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(true);
-      expect(result.messageId).toBe('msg-123');
+      expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
-          from: 'noreply@example.com',
-          to: 'recipient@example.com',
-          subject: 'Welcome',
-          html: '<h1>Welcome</h1>',
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "Welcome",
+          html: "<h1>Welcome</h1>",
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
-        }
+        },
       );
     });
 
-    it('should send email with template without subject', async () => {
+    it("should send email with template without subject", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        content: '<h1>Welcome</h1>',
-        templateId: 'welcome-template',
-        variables: { name: 'John' },
+        to: "recipient@example.com",
+        content: "<h1>Welcome</h1>",
+        templateId: "welcome-template",
+        variables: { name: "John" },
       };
 
       await provider.send(payload);
 
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
-          from: 'noreply@example.com',
-          to: 'recipient@example.com',
-          subject: 'No Subject',
-          html: '<h1>Welcome</h1>',
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "No Subject",
+          html: "<h1>Welcome</h1>",
         },
         {
           idempotencyKey: expect.stringMatching(/^resend-/),
-        }
+        },
       );
     });
 
-    it('should handle error when sending template with invalid variables', async () => {
+    it("should handle error when sending template with invalid variables", async () => {
       const templateErrorResponse: CreateEmailResponse = {
         data: null,
-        error: { message: 'Missing variable: name', name: 'invalid_parameter' },
+        error: { message: "Missing variable: name", name: "invalid_parameter" },
       };
 
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(templateErrorResponse);
 
       const payload: NotificationPayload = {
-        to: 'recipient@example.com',
-        subject: 'Welcome',
-        content: '<h1>Welcome</h1>',
-        templateId: 'welcome-template',
-        variables: { email: 'john@example.com' },
+        to: "recipient@example.com",
+        subject: "Welcome",
+        content: "<h1>Welcome</h1>",
+        templateId: "welcome-template",
+        variables: { email: "john@example.com" },
       };
 
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeInstanceOf(ResendNotificationProblem);
-      expect(result.error?.message).toBe('Missing variable: name');
+      expect(result.error?.message).toBe("Missing variable: name");
       expect(result.providerResponse).toEqual(templateErrorResponse);
     });
 
-    it('should send multiple emails in batch', async () => {
+    it("should send multiple emails in batch", async () => {
       vi.mocked(mockResendClient.emails.send)
-        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-1' } })
-        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-2' } })
-        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-3' } });
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: "msg-1" } })
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: "msg-2" } })
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: "msg-3" } });
 
       const payloads: NotificationPayload[] = [
         {
-          to: 'user1@example.com',
-          subject: 'Batch Email 1',
-          content: '<h1>Email 1</h1>',
+          to: "user1@example.com",
+          subject: "Batch Email 1",
+          content: "<h1>Email 1</h1>",
         },
         {
-          to: 'user2@example.com',
-          subject: 'Batch Email 2',
-          content: '<h1>Email 2</h1>',
+          to: "user2@example.com",
+          subject: "Batch Email 2",
+          content: "<h1>Email 2</h1>",
         },
         {
-          to: 'user3@example.com',
-          subject: 'Batch Email 3',
-          content: '<h1>Email 3</h1>',
+          to: "user3@example.com",
+          subject: "Batch Email 3",
+          content: "<h1>Email 3</h1>",
         },
       ];
 
@@ -432,35 +434,35 @@ describe('ResendProvider', () => {
 
       expect(results).toHaveLength(3);
       expect(results[0].success).toBe(true);
-      expect(results[0].messageId).toBe('msg-1');
+      expect(results[0].messageId).toBe("msg-1");
       expect(results[1].success).toBe(true);
-      expect(results[1].messageId).toBe('msg-2');
+      expect(results[1].messageId).toBe("msg-2");
       expect(results[2].success).toBe(true);
-      expect(results[2].messageId).toBe('msg-3');
+      expect(results[2].messageId).toBe("msg-3");
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(3);
     });
 
-    it('should handle mixed success and failure in batch', async () => {
+    it("should handle mixed success and failure in batch", async () => {
       vi.mocked(mockResendClient.emails.send)
-        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-1' } })
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: "msg-1" } })
         .mockResolvedValueOnce(mockErrorResponse)
-        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-3' } });
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: "msg-3" } });
 
       const payloads: NotificationPayload[] = [
         {
-          to: 'user1@example.com',
-          subject: 'Batch Email 1',
-          content: '<h1>Email 1</h1>',
+          to: "user1@example.com",
+          subject: "Batch Email 1",
+          content: "<h1>Email 1</h1>",
         },
         {
-          to: 'user2@example.com',
-          subject: 'Batch Email 2',
-          content: '<h1>Email 2</h1>',
+          to: "user2@example.com",
+          subject: "Batch Email 2",
+          content: "<h1>Email 2</h1>",
         },
         {
-          to: 'user3@example.com',
-          subject: 'Batch Email 3',
-          content: '<h1>Email 3</h1>',
+          to: "user3@example.com",
+          subject: "Batch Email 3",
+          content: "<h1>Email 3</h1>",
         },
       ];
 
@@ -472,25 +474,25 @@ describe('ResendProvider', () => {
       expect(results[2].success).toBe(true);
     });
 
-    it('should send batch emails with templates', async () => {
+    it("should send batch emails with templates", async () => {
       vi.mocked(mockResendClient.emails.send)
-        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-1' } })
-        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: 'msg-2' } });
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: "msg-1" } })
+        .mockResolvedValueOnce({ ...mockSuccessResponse, data: { id: "msg-2" } });
 
       const payloads: NotificationPayload[] = [
         {
-          to: 'user1@example.com',
-          subject: 'Welcome',
-          content: '<h1>Welcome</h1>',
-          templateId: 'welcome-template',
-          variables: { name: 'John' },
+          to: "user1@example.com",
+          subject: "Welcome",
+          content: "<h1>Welcome</h1>",
+          templateId: "welcome-template",
+          variables: { name: "John" },
         },
         {
-          to: 'user2@example.com',
-          subject: 'Welcome',
-          content: '<h1>Welcome</h1>',
-          templateId: 'welcome-template',
-          variables: { name: 'Jane' },
+          to: "user2@example.com",
+          subject: "Welcome",
+          content: "<h1>Welcome</h1>",
+          templateId: "welcome-template",
+          variables: { name: "Jane" },
         },
       ];
 
@@ -502,33 +504,33 @@ describe('ResendProvider', () => {
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          html: '<h1>Welcome</h1>',
+          html: "<h1>Welcome</h1>",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          html: '<h1>Welcome</h1>',
+          html: "<h1>Welcome</h1>",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
-    it('should handle empty batch', async () => {
+    it("should handle empty batch", async () => {
       const results = await provider.sendBatch([]);
 
       expect(results).toHaveLength(0);
       expect(mockResendClient.emails.send).not.toHaveBeenCalled();
     });
 
-    it('should handle batch with single email', async () => {
+    it("should handle batch with single email", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValueOnce(mockSuccessResponse);
 
       const payloads: NotificationPayload[] = [
         {
-          to: 'user1@example.com',
-          subject: 'Single Email',
-          content: '<h1>Single</h1>',
+          to: "user1@example.com",
+          subject: "Single Email",
+          content: "<h1>Single</h1>",
         },
       ];
 
@@ -536,7 +538,7 @@ describe('ResendProvider', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0].success).toBe(true);
-      expect(results[0].messageId).toBe('msg-123');
+      expect(results[0].messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
     });
   });

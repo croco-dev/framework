@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite';
+import type { Plugin } from "vite";
 
 export type CrocoViteOptions = {
   /** SSR 활성화 여부 (기본: true) */

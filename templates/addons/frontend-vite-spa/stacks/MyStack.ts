@@ -1,5 +1,5 @@
-import { Function as SstFunction, StaticSite } from 'sst/aws';
-import type { Stack, StackProps } from 'sst/constructs';
+import { Function as SstFunction, StaticSite } from "sst/aws";
+import type { Stack, StackProps } from "sst/constructs";
 
 /**
  * SST는 선택사항이다.
@@ -25,10 +25,10 @@ export interface MyStackProps extends StackProps {
 
 export function MyStack(app: Stack, props: MyStackProps = {}) {
   const {
-    apiHandler = 'packages/api/src/handler.ts',
-    buildCommand = 'pnpm run build',
-    buildOutput = 'dist',
-    sitePath = 'packages/web',
+    apiHandler = "packages/api/src/handler.ts",
+    buildCommand = "pnpm run build",
+    buildOutput = "dist",
+    sitePath = "packages/web",
   } = props;
 
   /**
@@ -41,7 +41,7 @@ export function MyStack(app: Stack, props: MyStackProps = {}) {
    *
    * 참고: `createApp(config).lambdaHandler()`는 API Gateway v2와 호환된다.
    */
-  const api = new SstFunction(app, 'Api', {
+  const api = new SstFunction(app, "Api", {
     handler: apiHandler,
     url: true,
   });
@@ -53,7 +53,7 @@ export function MyStack(app: Stack, props: MyStackProps = {}) {
    * build.output: 빌드 출력 디렉토리 (기본: dist)
    * environment: Vite에서 사용할 환경변수 주입
    */
-  new StaticSite(app, 'Web', {
+  new StaticSite(app, "Web", {
     path: sitePath,
     build: {
       command: buildCommand,

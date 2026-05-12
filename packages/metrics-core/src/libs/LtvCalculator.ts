@@ -1,6 +1,6 @@
-import type { Money, Period } from '../types';
+import type { Money, Period } from "../types";
 
-import { GrossMarginRequiredProblem } from './problems/MetricsProblems';
+import { GrossMarginRequiredProblem } from "./problems/MetricsProblems";
 
 export type LtvConfig = {
   arpa: Money;

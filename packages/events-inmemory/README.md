@@ -11,16 +11,16 @@ pnpm add @croco/events-inmemory @croco/events-core typedi reflect-metadata
 ## 사용법
 
 ```typescript
-import 'reflect-metadata';
-import { EventBusConfig } from '@croco/events-core';
-import { InMemoryEventBus } from '@croco/events-inmemory';
+import "reflect-metadata";
+import { EventBusConfig } from "@croco/events-core";
+import { InMemoryEventBus } from "@croco/events-inmemory";
 
 const config = EventBusConfig.getInstance();
 config.setEventBus(
   new InMemoryEventBus({
     maxConcurrency: 10,
-    backpressureStrategy: 'block',
-  })
+    backpressureStrategy: "block",
+  }),
 );
 ```
 

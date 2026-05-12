@@ -1,7 +1,7 @@
-import 'reflect-metadata';
-import { RESOLVER_KEY } from '../constants';
-import type { GraphQLResolverMetadata } from '../types';
-import { ResolverRegistry, resolverRegistry } from './ResolverRegistry';
+import "reflect-metadata";
+import { RESOLVER_KEY } from "../constants";
+import type { GraphQLResolverMetadata } from "../types";
+import { ResolverRegistry, resolverRegistry } from "./ResolverRegistry";
 
 export function isResolver(target: Function): boolean {
   return !!Reflect.getMetadata(RESOLVER_KEY, target);
@@ -15,6 +15,8 @@ export function getAllResolvers(): Function[] {
   return ResolverRegistry.fromMetadata().getAll();
 }
 
-export function getAllResolversFromRegistry(registry: ResolverRegistry = resolverRegistry): Function[] {
+export function getAllResolversFromRegistry(
+  registry: ResolverRegistry = resolverRegistry,
+): Function[] {
   return registry.getAll();
 }

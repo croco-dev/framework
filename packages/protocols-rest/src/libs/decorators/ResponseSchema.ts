@@ -1,6 +1,6 @@
-import 'reflect-metadata';
-import type { z } from 'zod';
-import { RESPONSE_SCHEMA_KEY } from '../constants';
+import "reflect-metadata";
+import type { z } from "zod";
+import { RESPONSE_SCHEMA_KEY } from "../constants";
 
 export function ResponseSchema(schema: z.ZodType): MethodDecorator {
   return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {

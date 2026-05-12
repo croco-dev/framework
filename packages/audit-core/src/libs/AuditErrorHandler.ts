@@ -1,5 +1,5 @@
-import { Container, LOGGER_TOKEN } from '@croco/framework-context';
-import { recordError } from '@croco/telemetry-api';
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import { recordError } from "@croco/telemetry-api";
 
 type AuditErrorHandlerConfig = {
   maxRetries: number;
@@ -58,7 +58,7 @@ export class AuditErrorHandler {
 
     try {
       const logger = Container.get(LOGGER_TOKEN);
-      logger.error('[AuditErrorHandler] Audit operation failed after retries', {
+      logger.error("[AuditErrorHandler] Audit operation failed after retries", {
         context,
         attempts,
         error: error.message,
@@ -84,7 +84,7 @@ export type FireAndForgetResult<T> = {
 
 export function fireAndForgetWithRetry<T>(
   operation: () => Promise<T>,
-  config?: Partial<AuditErrorHandlerConfig>
+  config?: Partial<AuditErrorHandlerConfig>,
 ): FireAndForgetResult<T> {
   const handler = new AuditErrorHandler(config);
   let aborted = false;
@@ -93,7 +93,7 @@ export function fireAndForgetWithRetry<T>(
     if (aborted) {
       return undefined;
     }
-    return handler.executeWithRetry(operation, 'audit-log-write');
+    return handler.executeWithRetry(operation, "audit-log-write");
   })();
 
   const abort = (): void => {

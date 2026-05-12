@@ -1,11 +1,14 @@
-import { join } from 'node:path';
-import { mergeInto } from '../helpers/fs.js';
-import type { GeneratorOptions } from '../types.js';
+import { join } from "node:path";
+import { mergeInto } from "../helpers/fs.js";
+import type { GeneratorOptions } from "../types.js";
 
-const TEMPLATES_DIR = new URL('../../templates', import.meta.url).pathname;
+const TEMPLATES_DIR = new URL("../../templates", import.meta.url).pathname;
 
-export function installAgentRules(targetDir: string, options: Pick<GeneratorOptions, 'projectName' | 'scope'>): void {
-  const addonDir = join(TEMPLATES_DIR, 'addons/agent-rules');
+export function installAgentRules(
+  targetDir: string,
+  options: Pick<GeneratorOptions, "projectName" | "scope">,
+): void {
+  const addonDir = join(TEMPLATES_DIR, "addons/agent-rules");
   mergeInto(addonDir, targetDir, {
     projectName: options.projectName,
     scope: options.scope,

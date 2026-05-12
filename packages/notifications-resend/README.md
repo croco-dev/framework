@@ -11,18 +11,18 @@ pnpm add @croco/notifications-resend resend
 ## 사용법
 
 ```typescript
-import { ResendProvider } from '@croco/notifications-resend';
+import { ResendProvider } from "@croco/notifications-resend";
 
 const provider = new ResendProvider({
   apiKey: process.env.RESEND_API_KEY!,
-  from: 'noreply@example.com',
+  from: "noreply@example.com",
 });
 
 const result = await provider.send({
-  channel: 'email',
-  to: ['user@example.com'],
-  subject: '환영합니다',
-  content: '<p>가입을 환영합니다.</p>',
+  channel: "email",
+  to: ["user@example.com"],
+  subject: "환영합니다",
+  content: "<p>가입을 환영합니다.</p>",
 });
 ```
 
@@ -30,20 +30,20 @@ const result = await provider.send({
 
 ```typescript
 await provider.send({
-  channel: 'email',
-  to: ['user@example.com'],
-  templateId: 'welcome-email',
-  variables: { name: 'Croco' },
+  channel: "email",
+  to: ["user@example.com"],
+  templateId: "welcome-email",
+  variables: { name: "Croco" },
 });
 ```
 
 ## API 레퍼런스
 
-| API | 설명 |
-|---|---|
-| `ResendProvider` | 단건 전송과 배치 전송을 처리합니다. |
-| `ResendConfig` | API 키와 발신자 주소를 지정하는 설정 타입입니다. |
-| `ResendNotificationProblem` | Resend 요청 실패를 Problem으로 표현합니다. |
+| API                         | 설명                                             |
+| --------------------------- | ------------------------------------------------ |
+| `ResendProvider`            | 단건 전송과 배치 전송을 처리합니다.              |
+| `ResendConfig`              | API 키와 발신자 주소를 지정하는 설정 타입입니다. |
+| `ResendNotificationProblem` | Resend 요청 실패를 Problem으로 표현합니다.       |
 
 ## 동작 메모
 
@@ -55,12 +55,12 @@ await provider.send({
 
 ## 성숙도 안내
 
-| 항목 | 상태 | 설명 |
-|------|------|------|
-| **현재 상태** | 🔴 alpha | 개발 중, 사용 시 주의 필요 |
-| **주요 기능** | 단건 전송, 템플릿 전송, 재시도, 멱등성 | Resend API 기본 연동 |
-| **테스트 존재 여부** | ✅ | 단위테스트 1개 파일 (`ResendProvider.spec.ts`) |
-| **운영 증거 수준** | L1 | 단위테스트 있음 / 통합테스트 미존재 / 샌드박스 미실행 / 프로덕션 미사용 |
+| 항목                 | 상태                                   | 설명                                                                    |
+| -------------------- | -------------------------------------- | ----------------------------------------------------------------------- |
+| **현재 상태**        | 🔴 alpha                               | 개발 중, 사용 시 주의 필요                                              |
+| **주요 기능**        | 단건 전송, 템플릿 전송, 재시도, 멱등성 | Resend API 기본 연동                                                    |
+| **테스트 존재 여부** | ✅                                     | 단위테스트 1개 파일 (`ResendProvider.spec.ts`)                          |
+| **운영 증거 수준**   | L1                                     | 단위테스트 있음 / 통합테스트 미존재 / 샌드박스 미실행 / 프로덕션 미사용 |
 
 ### 참고
 

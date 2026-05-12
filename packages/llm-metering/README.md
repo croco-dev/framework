@@ -11,7 +11,7 @@ pnpm add @croco/llm-metering
 ## 사용법
 
 ```ts
-import { LlmMeteringService } from '@croco/llm-metering';
+import { LlmMeteringService } from "@croco/llm-metering";
 
 const metering = new LlmMeteringService({
   meteringService,
@@ -19,28 +19,28 @@ const metering = new LlmMeteringService({
 });
 
 await metering.recordUsage({
-  tenantId: 'tenant-123',
-  modelId: 'gpt-4o-mini',
-  provider: 'openai',
+  tenantId: "tenant-123",
+  modelId: "gpt-4o-mini",
+  provider: "openai",
   usage: {
     promptTokens: 120,
     completionTokens: 80,
     totalTokens: 200,
-    accuracy: 'EXACT',
+    accuracy: "EXACT",
   },
-  idempotencyKey: 'req-1',
+  idempotencyKey: "req-1",
 });
 ```
 
 ```ts
-import { AiMetered, setLlmMeteringService } from '@croco/llm-metering';
+import { AiMetered, setLlmMeteringService } from "@croco/llm-metering";
 
 setLlmMeteringService(metering);
 
 class LlmFacade {
   @AiMetered()
   async generate(): Promise<unknown> {
-    return llmService.generate({ modelId: 'default', prompt: '안녕' });
+    return llmService.generate({ modelId: "default", prompt: "안녕" });
   }
 }
 ```

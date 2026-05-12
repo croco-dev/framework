@@ -1,4 +1,4 @@
-import type { CrocoFetchHandler, RuntimeContext } from '../render/types';
+import type { CrocoFetchHandler, RuntimeContext } from "../render/types";
 
 type CloudflareApiHandler = {
   match: (request: Request) => boolean;
@@ -20,7 +20,7 @@ declare global {
 export function createCloudflareHandler(handler: CrocoFetchHandler): ExportedHandlerFetchHandler {
   return async (request: Request, env: unknown, executionContext: ExecutionContext) => {
     const ctx: RuntimeContext = {
-      platform: 'cloudflare',
+      platform: "cloudflare",
       env,
       executionContext,
     };
@@ -32,7 +32,9 @@ export function createCloudflareHandler(handler: CrocoFetchHandler): ExportedHan
  * Cloudflare adapter with API-first routing and page fallback.
  * InMemory ISR is process-local in Cloudflare Workers and is not durable across isolates or deploys.
  */
-export function createCloudflareComposedHandler(options: CloudflareComposedOptions): ExportedHandlerFetchHandler {
+export function createCloudflareComposedHandler(
+  options: CloudflareComposedOptions,
+): ExportedHandlerFetchHandler {
   return async (request: Request, env: unknown, executionContext: ExecutionContext) => {
     for (const apiHandler of options.apiHandlers) {
       if (apiHandler.match(request)) {
@@ -41,7 +43,7 @@ export function createCloudflareComposedHandler(options: CloudflareComposedOptio
     }
 
     const ctx: RuntimeContext = {
-      platform: 'cloudflare',
+      platform: "cloudflare",
       env,
       executionContext,
     };
@@ -52,5 +54,5 @@ export function createCloudflareComposedHandler(options: CloudflareComposedOptio
 type ExportedHandlerFetchHandler = (
   request: Request,
   env: unknown,
-  executionContext: ExecutionContext
+  executionContext: ExecutionContext,
 ) => Promise<Response>;

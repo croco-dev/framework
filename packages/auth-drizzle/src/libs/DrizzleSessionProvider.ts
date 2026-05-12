@@ -1,7 +1,12 @@
-import type { Session, SessionListOptions, SessionListResult, SessionProvider } from '@croco/auth-core';
-import type { SQL } from 'drizzle-orm';
-import { and, eq, or } from 'drizzle-orm';
-import type { sessions as sessionsSchema } from '../schema';
+import type {
+  Session,
+  SessionListOptions,
+  SessionListResult,
+  SessionProvider,
+} from "@croco/auth-core";
+import type { SQL } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
+import type { sessions as sessionsSchema } from "../schema";
 
 interface DrizzleDb {
   update: (table: unknown) => {
@@ -12,7 +17,11 @@ interface DrizzleDb {
   query: {
     sessions: {
       findFirst: (args: { where: SQL<unknown> }) => Promise<unknown>;
-      findMany: (args: { where?: SQL<unknown>; limit?: number; offset?: number }) => Promise<unknown[]>;
+      findMany: (args: {
+        where?: SQL<unknown>;
+        limit?: number;
+        offset?: number;
+      }) => Promise<unknown[]>;
     };
   };
 }
@@ -21,7 +30,15 @@ interface SessionRow {
   id: string;
   userId: string;
   clientId: string;
-  status: 'abandoned' | 'active' | 'pending' | 'ended' | 'expired' | 'removed' | 'replaced' | 'revoked';
+  status:
+    | "abandoned"
+    | "active"
+    | "pending"
+    | "ended"
+    | "expired"
+    | "removed"
+    | "replaced"
+    | "revoked";
   createdAt: Date;
   updatedAt: Date;
   expireAt: Date | null;
@@ -30,16 +47,25 @@ interface SessionRow {
 }
 
 function assertSessionRow(row: unknown): row is SessionRow {
-  if (!row || typeof row !== 'object') {
+  if (!row || typeof row !== "object") {
     return false;
   }
   const record = row as Record<string, unknown>;
-  const validStatuses = ['abandoned', 'active', 'pending', 'ended', 'expired', 'removed', 'replaced', 'revoked'];
+  const validStatuses = [
+    "abandoned",
+    "active",
+    "pending",
+    "ended",
+    "expired",
+    "removed",
+    "replaced",
+    "revoked",
+  ];
   return (
-    typeof record.id === 'string' &&
-    typeof record.userId === 'string' &&
-    typeof record.clientId === 'string' &&
-    typeof record.status === 'string' &&
+    typeof record.id === "string" &&
+    typeof record.userId === "string" &&
+    typeof record.clientId === "string" &&
+    typeof record.status === "string" &&
     validStatuses.includes(record.status) &&
     record.createdAt instanceof Date &&
     record.updatedAt instanceof Date
@@ -69,7 +95,7 @@ export class DrizzleSessionProvider implements SessionProvider {
    */
   constructor(
     private readonly db: DrizzleDb,
-    private readonly schema: { sessions: typeof sessionsSchema }
+    private readonly schema: { sessions: typeof sessionsSchema },
   ) {}
 
   /**
@@ -132,7 +158,7 @@ export class DrizzleSessionProvider implements SessionProvider {
   async revokeSession(sessionId: string): Promise<void> {
     await this.db
       .update(this.schema.sessions)
-      .set({ status: 'revoked', updatedAt: new Date() })
+      .set({ status: "revoked", updatedAt: new Date() })
       .where(eq(this.schema.sessions.id, sessionId));
   }
 
@@ -142,11 +168,14 @@ export class DrizzleSessionProvider implements SessionProvider {
   async revokeAllSessions(userId: string): Promise<void> {
     const condition = and(
       eq(this.schema.sessions.userId, userId),
-      or(eq(this.schema.sessions.status, 'active'), eq(this.schema.sessions.status, 'pending'))
+      or(eq(this.schema.sessions.status, "active"), eq(this.schema.sessions.status, "pending")),
     );
 
     if (condition) {
-      await this.db.update(this.schema.sessions).set({ status: 'revoked', updatedAt: new Date() }).where(condition);
+      await this.db
+        .update(this.schema.sessions)
+        .set({ status: "revoked", updatedAt: new Date() })
+        .where(condition);
     }
   }
 }

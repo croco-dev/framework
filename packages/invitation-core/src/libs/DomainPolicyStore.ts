@@ -1,4 +1,4 @@
-import type { DomainPolicy } from './types';
+import type { DomainPolicy } from "./types";
 
 export abstract class DomainPolicyStore {
   abstract findByTenantAndDomain(tenantId: string, domain: string): Promise<DomainPolicy | null>;

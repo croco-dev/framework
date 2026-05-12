@@ -1,9 +1,9 @@
-import 'reflect-metadata';
-import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
-import type { AuthRequest } from '../interfaces/AuthRequest';
-import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
-import { UnauthorizedProblem } from '../problems/AuthProblems';
-import { getHeaderValue } from './headerUtils';
+import "reflect-metadata";
+import type { ApiKeyProvider } from "../interfaces/ApiKeyProvider";
+import type { AuthRequest } from "../interfaces/AuthRequest";
+import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
+import { UnauthorizedProblem } from "../problems/AuthProblems";
+import { getHeaderValue } from "./headerUtils";
 
 export class ApiKeyGuard implements Guard<RouteExecutionContext> {
   constructor(private readonly apiKeyProvider: ApiKeyProvider) {}
@@ -13,13 +13,13 @@ export class ApiKeyGuard implements Guard<RouteExecutionContext> {
     const apiKey = this.extractApiKey(request);
 
     if (!apiKey) {
-      throw new UnauthorizedProblem('Missing API key');
+      throw new UnauthorizedProblem("Missing API key");
     }
 
     const principal = await this.apiKeyProvider.authenticate(request);
 
     if (!principal) {
-      throw new UnauthorizedProblem('Invalid API key');
+      throw new UnauthorizedProblem("Invalid API key");
     }
 
     request.principal = principal;
@@ -29,6 +29,6 @@ export class ApiKeyGuard implements Guard<RouteExecutionContext> {
   }
 
   private extractApiKey(request: Request): string | null {
-    return getHeaderValue(request, 'x-api-key');
+    return getHeaderValue(request, "x-api-key");
   }
 }

@@ -24,24 +24,24 @@ pnpm add @croco/customer-health-core @croco/framework-context @croco/events-core
 
 ### 신호 카테고리(Signal Category)
 
-| 카테고리 | 설명 | 예시 신호 |
-|---------|------|----------|
-| `usage` | 사용량 관련 | API 호출, 기능 사용률 |
-| `business` | 비즈니스 관련 | 구독 상태, MRR |
-| `engagement` | 참여도 관련 | 로그인 빈도, 세션 시간 |
+| 카테고리     | 설명          | 예시 신호              |
+| ------------ | ------------- | ---------------------- |
+| `usage`      | 사용량 관련   | API 호출, 기능 사용률  |
+| `business`   | 비즈니스 관련 | 구독 상태, MRR         |
+| `engagement` | 참여도 관련   | 로그인 빈도, 세션 시간 |
 
 ### 내장 신호(Builtin Signals)
 
 ```typescript
-import type { 
-  LoginFrequencySignal, 
-  FeatureUsageRateSignal, 
-  SupportTicketFrequencySignal 
-} from '@croco/customer-health-core';
+import type {
+  LoginFrequencySignal,
+  FeatureUsageRateSignal,
+  SupportTicketFrequencySignal,
+} from "@croco/customer-health-core";
 
 // 로그인 빈도
 const loginSignal: LoginFrequencySignal = {
-  type: 'login_frequency',
+  type: "login_frequency",
   loginsPerDay: 5.2,
   activeDays: 20,
   totalDays: 30,
@@ -49,15 +49,15 @@ const loginSignal: LoginFrequencySignal = {
 
 // 기능 사용률
 const featureSignal: FeatureUsageRateSignal = {
-  type: 'feature_usage_rate',
-  featureKey: 'reports',
+  type: "feature_usage_rate",
+  featureKey: "reports",
   usageCount: 150,
   uniqueUsers: 10,
 };
 
 // 지원 티켓 빈도
 const ticketSignal: SupportTicketFrequencySignal = {
-  type: 'support_ticket_frequency',
+  type: "support_ticket_frequency",
   openTickets: 3,
   resolvedTickets: 12,
   avgResolutionTime: 86400, // seconds
@@ -70,26 +70,28 @@ const ticketSignal: SupportTicketFrequencySignal = {
 ### 기본 사용
 
 ```typescript
-import { 
-  CustomerHealthService, 
+import {
+  CustomerHealthService,
   HealthScoreCalculator,
   InMemoryHealthScoreStore,
-  SignalProvider 
-} from '@croco/customer-health-core';
+  SignalProvider,
+} from "@croco/customer-health-core";
 
 // 신호 제공자 구현
 class MySignalProvider extends SignalProvider {
-  readonly category = 'usage';
-  
+  readonly category = "usage";
+
   async collect(tenantId: string): Promise<HealthSignal[]> {
-    return [{
-      category: 'usage',
-      name: 'api_calls',
-      value: 80,
-      weight: 1.0,
-      rawValue: { count: 8000 },
-      collectedAt: new Date(),
-    }];
+    return [
+      {
+        category: "usage",
+        name: "api_calls",
+        value: 80,
+        weight: 1.0,
+        rawValue: { count: 8000 },
+        collectedAt: new Date(),
+      },
+    ];
   }
 }
 
@@ -97,37 +99,33 @@ class MySignalProvider extends SignalProvider {
 const calculator = new HealthScoreCalculator();
 const store = new InMemoryHealthScoreStore();
 const signalRegistry = new MySignalRegistry();
-const service = new CustomerHealthService(
-  signalRegistry,
-  store,
-  calculator
-);
+const service = new CustomerHealthService(signalRegistry, store, calculator);
 
 // 건강 점수 계산
 const profile: HealthScoreProfile = {
-  id: 'default',
-  name: 'Default Profile',
+  id: "default",
+  name: "Default Profile",
   weights: { usage: 0.4, business: 0.4, engagement: 0.2 },
   thresholds: { healthy: 80, atRisk: 60 },
 };
 
-const score = await service.calculateAndStore('tenant-1', profile);
+const score = await service.calculateAndStore("tenant-1", profile);
 ```
 
 ### 추세 분석
 
 ```typescript
-import type { TrendPeriod, HealthTrendAnalysis } from '@croco/customer-health-core';
+import type { TrendPeriod, HealthTrendAnalysis } from "@croco/customer-health-core";
 
 // 추세 조회 (최근 30일)
-const trend = await service.getTrend('tenant-1', 30);
+const trend = await service.getTrend("tenant-1", 30);
 
 // 특정 기간의 상세 분석
 const analysis: HealthTrendAnalysis = await trendAnalyzer.analyzeTrend(
-  'tenant-1',
-  'month' as TrendPeriod,
-  new Date('2026-01-01'),
-  new Date('2026-01-31')
+  "tenant-1",
+  "month" as TrendPeriod,
+  new Date("2026-01-01"),
+  new Date("2026-01-31"),
 );
 
 console.log(analysis);
@@ -146,16 +144,13 @@ console.log(analysis);
 ### 이벤트 처리
 
 ```typescript
-import { 
-  HealthStatusChangedEvent, 
-  HealthScoreDroppedEvent 
-} from '@croco/customer-health-core';
+import { HealthStatusChangedEvent, HealthScoreDroppedEvent } from "@croco/customer-health-core";
 
 // 상태 변경 이벤트
 @RegisterEventHandler(HealthStatusChangedEvent)
 class StatusChangeHandler {
   async handle(event: HealthStatusChangedEvent) {
-    if (event.newStatus === 'critical') {
+    if (event.newStatus === "critical") {
       await notifyCustomerSuccess(event.tenantId);
     }
   }
@@ -175,22 +170,20 @@ class ScoreDropHandler {
 ### DI 컨테이너에서 사용
 
 ```typescript
-import { Container, Component, Inject, Token } from '@croco/framework-context';
-import { 
+import { Container, Component, Inject, Token } from "@croco/framework-context";
+import {
   CustomerHealthService,
   HealthSignalRegistry,
-  HealthScoreStore 
-} from '@croco/customer-health-core';
+  HealthScoreStore,
+} from "@croco/customer-health-core";
 
 Container.set(HealthSignalRegistry.token, myRegistry);
 Container.set(HealthScoreStore.token, myStore);
-Container.register(CustomerHealthService, 'singleton');
+Container.register(CustomerHealthService, "singleton");
 
 @Component()
 class MyService {
-  constructor(
-    @Inject(CustomerHealthService) private healthService: CustomerHealthService
-  ) {}
+  constructor(@Inject(CustomerHealthService) private healthService: CustomerHealthService) {}
 }
 ```
 
@@ -241,7 +234,7 @@ abstract class HealthScoreStore {
     tenantId: string,
     period: TrendPeriod,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<TenantHealthScore[]>;
 }
 ```
@@ -254,7 +247,7 @@ abstract class TrendAnalyzer {
     tenantId: string,
     period: TrendPeriod,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<HealthTrendAnalysis>;
 }
 ```
@@ -263,13 +256,13 @@ abstract class TrendAnalyzer {
 
 ```typescript
 // 건강 상태
-type HealthStatus = 'healthy' | 'at_risk' | 'critical';
+type HealthStatus = "healthy" | "at_risk" | "critical";
 
 // 추세 방향
-type HealthTrend = 'improving' | 'stable' | 'declining';
+type HealthTrend = "improving" | "stable" | "declining";
 
 // 추세 기간
-type TrendPeriod = 'day' | 'week' | 'month';
+type TrendPeriod = "day" | "week" | "month";
 
 // 건강 신호
 type HealthSignal = {

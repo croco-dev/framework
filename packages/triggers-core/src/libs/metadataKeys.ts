@@ -1,4 +1,4 @@
-export const TRIGGER_METADATA_KEY = Symbol('TRIGGER_METADATA');
-export const CRON_METADATA_KEY = Symbol('CRON_METADATA');
-export const EVENT_METADATA_KEY = Symbol('EVENT_METADATA');
-export const WEBHOOK_METADATA_KEY = Symbol('WEBHOOK_METADATA');
+export const TRIGGER_METADATA_KEY = Symbol("TRIGGER_METADATA");
+export const CRON_METADATA_KEY = Symbol("CRON_METADATA");
+export const EVENT_METADATA_KEY = Symbol("EVENT_METADATA");
+export const WEBHOOK_METADATA_KEY = Symbol("WEBHOOK_METADATA");

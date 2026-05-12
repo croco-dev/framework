@@ -1,9 +1,24 @@
 {
   "name": "@croco/batch-qstash",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
@@ -17,22 +32,7 @@
     "@upstash/qstash": "^2.0.0"
   },
   "devDependencies": {
-    "vitest": "4.0.16",
-    "tsup": "^8.0.0"
-  },
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+    "tsup": "^8.0.0",
+    "vitest": "4.0.16"
+  }
 }

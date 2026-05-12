@@ -1,5 +1,5 @@
-import type { DomainEvent } from '../DomainEvent';
-import type { EventSubscription } from '../types/EventSubscription';
+import type { DomainEvent } from "../DomainEvent";
+import type { EventSubscription } from "../types/EventSubscription";
 
 /**
  * 이벤트 구독 인터페이스입니다.

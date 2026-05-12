@@ -1,5 +1,5 @@
-import 'reflect-metadata';
-import { REST_ROLES_KEY } from '../constants';
+import "reflect-metadata";
+import { REST_ROLES_KEY } from "../constants";
 
 /**
  * 메서드에 필요한 역할 이름 목록을 등록합니다.

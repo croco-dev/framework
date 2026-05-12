@@ -1,5 +1,5 @@
-'use client';
-import { gql, useQuery } from '@apollo/client';
+"use client";
+import { gql, useQuery } from "@apollo/client";
 
 const HEALTH_QUERY = gql`
   query {

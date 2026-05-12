@@ -1,4 +1,4 @@
-import type { TenantResolver } from '../TenantResolver';
+import type { TenantResolver } from "../TenantResolver";
 
 export type JwtRequest = {
   headers?: Record<string, string | string[] | undefined>;
@@ -7,7 +7,7 @@ export type JwtRequest = {
 type JwtPayload = Record<string, unknown>;
 
 export type JwtClaimsResolver<TRequest extends JwtRequest = JwtRequest> = (
-  request: TRequest
+  request: TRequest,
 ) => Promise<JwtPayload | null> | JwtPayload | null;
 
 export type JwtTenantResolverOptions<TRequest extends JwtRequest = JwtRequest> = {
@@ -16,20 +16,22 @@ export type JwtTenantResolverOptions<TRequest extends JwtRequest = JwtRequest> =
 };
 
 function isJwtPayload(value: unknown): value is JwtPayload {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
-export class JwtTenantResolver<TRequest extends JwtRequest = JwtRequest> implements TenantResolver<TRequest> {
+export class JwtTenantResolver<
+  TRequest extends JwtRequest = JwtRequest,
+> implements TenantResolver<TRequest> {
   private readonly claimKey: string;
   private readonly resolveVerifiedClaims?: JwtClaimsResolver<TRequest>;
 
-  constructor(config: string | JwtTenantResolverOptions<TRequest> = 'tenant_id') {
-    if (typeof config === 'string') {
+  constructor(config: string | JwtTenantResolverOptions<TRequest> = "tenant_id") {
+    if (typeof config === "string") {
       this.claimKey = config;
       return;
     }
 
-    this.claimKey = config.claimKey ?? 'tenant_id';
+    this.claimKey = config.claimKey ?? "tenant_id";
     this.resolveVerifiedClaims = config.resolveVerifiedClaims;
   }
 
@@ -40,7 +42,7 @@ export class JwtTenantResolver<TRequest extends JwtRequest = JwtRequest> impleme
     }
 
     const tenantId = payload[this.claimKey];
-    if (typeof tenantId !== 'string') {
+    if (typeof tenantId !== "string") {
       return null;
     }
 

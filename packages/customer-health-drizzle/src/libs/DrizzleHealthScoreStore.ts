@@ -1,9 +1,9 @@
-import type { TenantHealthScore, TrendPeriod } from '@croco/customer-health-core';
-import { HealthScoreStore } from '@croco/customer-health-core';
-import { Component, Inject, Token } from '@croco/framework-context';
-import { and, desc, eq, gte, lte } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { tenantHealthScores } from './schema';
+import type { TenantHealthScore, TrendPeriod } from "@croco/customer-health-core";
+import { HealthScoreStore } from "@croco/customer-health-core";
+import { Component, Inject, Token } from "@croco/framework-context";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { tenantHealthScores } from "./schema";
 
 /**
  * 건강 점수 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
@@ -13,15 +13,15 @@ export type DrizzleHealthClient = NodePgDatabase<Record<string, never>>;
 /**
  * 건강 점수 저장소용 Drizzle 클라이언트 주입 토큰입니다.
  */
-export const DRIZZLE_TOKEN = new Token<DrizzleHealthClient>('DRIZZLE_TOKEN');
+export const DRIZZLE_TOKEN = new Token<DrizzleHealthClient>("DRIZZLE_TOKEN");
 
 type TenantHealthScoreRow = {
   tenantId: string;
   overallScore: number;
-  status: 'healthy' | 'at_risk' | 'critical';
+  status: "healthy" | "at_risk" | "critical";
   categoryScores: Record<string, number>;
   signals: unknown[];
-  trend: 'improving' | 'stable' | 'declining';
+  trend: "improving" | "stable" | "declining";
   previousScore: number | null;
   calculatedAt: Date;
 };
@@ -79,7 +79,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
     tenantId: string,
     _period: TrendPeriod,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<TenantHealthScore[]> {
     const results = await this.db
       .select()
@@ -88,8 +88,8 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
         and(
           eq(tenantHealthScores.tenantId, tenantId),
           gte(tenantHealthScores.calculatedAt, startDate),
-          lte(tenantHealthScores.calculatedAt, endDate)
-        )
+          lte(tenantHealthScores.calculatedAt, endDate),
+        ),
       )
       .orderBy(desc(tenantHealthScores.calculatedAt));
     return (results as TenantHealthScoreRow[]).map((row) => this.mapToTenantHealthScore(row));
@@ -100,9 +100,9 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
       tenantId: row.tenantId,
       overallScore: row.overallScore,
       status: row.status,
-      categoryScores: row.categoryScores as Record<'usage' | 'business' | 'engagement', number>,
+      categoryScores: row.categoryScores as Record<"usage" | "business" | "engagement", number>,
       signals: row.signals as Array<{
-        category: 'usage' | 'business' | 'engagement';
+        category: "usage" | "business" | "engagement";
         name: string;
         value: number;
         weight: number;

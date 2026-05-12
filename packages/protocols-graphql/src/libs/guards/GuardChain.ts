@@ -1,4 +1,4 @@
-import type { GraphQLGuard, GraphQLGuardContext } from '../types/GuardTypes';
+import type { GraphQLGuard, GraphQLGuardContext } from "../types/GuardTypes";
 
 export class GuardChain {
   private readonly guards: GraphQLGuard[];

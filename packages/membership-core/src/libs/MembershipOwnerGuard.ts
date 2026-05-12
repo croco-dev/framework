@@ -1,7 +1,7 @@
-import type { MembershipStore } from './MembershipStore';
-import { LastOwnerCannotBeRemovedProblem } from './problems/LastOwnerCannotBeRemovedProblem';
-import { MembershipConstraintProblem } from './problems/MembershipConstraintProblem';
-import type { Membership, MembershipRole } from './types';
+import type { MembershipStore } from "./MembershipStore";
+import { LastOwnerCannotBeRemovedProblem } from "./problems/LastOwnerCannotBeRemovedProblem";
+import { MembershipConstraintProblem } from "./problems/MembershipConstraintProblem";
+import type { Membership, MembershipRole } from "./types";
 
 export class MembershipOwnerGuard {
   constructor(private readonly store: MembershipStore) {}
@@ -10,11 +10,11 @@ export class MembershipOwnerGuard {
     tenantId: string;
     userId: string;
     currentRole: MembershipRole;
-    operation: 'remove' | 'demote';
+    operation: "remove" | "demote";
     nextRole?: MembershipRole;
   }): Promise<void> {
     const isOwnerMutation =
-      input.currentRole === 'owner' && (input.operation === 'remove' || input.nextRole !== 'owner');
+      input.currentRole === "owner" && (input.operation === "remove" || input.nextRole !== "owner");
 
     if (!isOwnerMutation) {
       return;
@@ -25,7 +25,7 @@ export class MembershipOwnerGuard {
       return;
     }
 
-    if (input.operation === 'remove') {
+    if (input.operation === "remove") {
       throw new LastOwnerCannotBeRemovedProblem(input.tenantId, input.userId);
     }
 
@@ -35,19 +35,27 @@ export class MembershipOwnerGuard {
         tenantId: input.tenantId,
         userId: input.userId,
         operation: input.operation,
-      }
+      },
     );
   }
 
-  async validateLastOwner(tenantId: string, userId: string, currentRole: MembershipRole): Promise<void> {
+  async validateLastOwner(
+    tenantId: string,
+    userId: string,
+    currentRole: MembershipRole,
+  ): Promise<void> {
     const isLastOwner = await this.isLastOwner(tenantId, userId, currentRole);
     if (isLastOwner) {
       throw new LastOwnerCannotBeRemovedProblem(tenantId, userId);
     }
   }
 
-  async isLastOwner(tenantId: string, userId: string, currentRole: MembershipRole): Promise<boolean> {
-    if (currentRole !== 'owner') {
+  async isLastOwner(
+    tenantId: string,
+    userId: string,
+    currentRole: MembershipRole,
+  ): Promise<boolean> {
+    if (currentRole !== "owner") {
       return false;
     }
 
@@ -58,6 +66,6 @@ export class MembershipOwnerGuard {
 
   async findOwners(tenantId: string): Promise<Membership[]> {
     const memberships = await this.store.findAllByTenant(tenantId);
-    return memberships.filter((membership) => membership.role === 'owner');
+    return memberships.filter((membership) => membership.role === "owner");
   }
 }

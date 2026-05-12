@@ -1,21 +1,21 @@
-import { createClerkClient } from '@clerk/backend';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ClerkOrganizationService } from '../libs/ClerkOrganizationService';
+import { createClerkClient } from "@clerk/backend";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ClerkOrganizationService } from "../libs/ClerkOrganizationService";
 
-vi.mock('@clerk/backend', () => ({
+vi.mock("@clerk/backend", () => ({
   createClerkClient: vi.fn(),
 }));
 
-describe('ClerkOrganizationService', () => {
+describe("ClerkOrganizationService", () => {
   let service!: ClerkOrganizationService;
   let mockClerkClient!: ReturnType<typeof createClerkClient>;
 
-  const options = { secretKey: 'sk_test_123', publishableKey: 'pk_test_123' };
+  const options = { secretKey: "sk_test_123", publishableKey: "pk_test_123" };
 
   const createMockOrg = (id: string) => ({
     id,
-    name: 'Test Org',
-    slug: 'test-org',
+    name: "Test Org",
+    slug: "test-org",
     maxAllowedMemberships: 100,
     adminDeleteEnabled: true,
     publicMetadata: {},
@@ -26,19 +26,19 @@ describe('ClerkOrganizationService', () => {
 
   const createMockMembership = (id: string) => ({
     id,
-    organization: { id: 'org_123', name: 'Test Org' },
-    publicUserData: { userId: 'user_123', firstName: 'John', lastName: 'Doe' },
-    role: 'org:member',
+    organization: { id: "org_123", name: "Test Org" },
+    publicUserData: { userId: "user_123", firstName: "John", lastName: "Doe" },
+    role: "org:member",
     createdAt: 1678886400000,
     updatedAt: 1678886500000,
   });
 
   const createMockInvitation = (id: string) => ({
     id,
-    organizationId: 'org_123',
-    emailAddress: 'invite@example.com',
-    role: 'org:member',
-    status: 'pending',
+    organizationId: "org_123",
+    emailAddress: "invite@example.com",
+    role: "org:member",
+    status: "pending",
     createdAt: 1678886400000,
     updatedAt: 1678886500000,
   });
@@ -67,51 +67,61 @@ describe('ClerkOrganizationService', () => {
     service = new ClerkOrganizationService(options);
   });
 
-  describe('getOrganization', () => {
-    it('should return organization on success', async () => {
-      const mockOrg = createMockOrg('org_123');
+  describe("getOrganization", () => {
+    it("should return organization on success", async () => {
+      const mockOrg = createMockOrg("org_123");
       vi.mocked(mockClerkClient.organizations.getOrganization).mockResolvedValue(
-        mockOrg as unknown as Awaited<ReturnType<typeof mockClerkClient.organizations.getOrganization>>
+        mockOrg as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.getOrganization>
+        >,
       );
 
-      const result = await service.getOrganization('org_123');
+      const result = await service.getOrganization("org_123");
 
       expect(result).not.toBeNull();
-      expect(result?.id).toBe('org_123');
-      expect(result?.name).toBe('Test Org');
+      expect(result?.id).toBe("org_123");
+      expect(result?.name).toBe("Test Org");
     });
 
-    it('should return null on error', async () => {
-      vi.mocked(mockClerkClient.organizations.getOrganization).mockRejectedValue(new Error('Org not found'));
+    it("should return null on error", async () => {
+      vi.mocked(mockClerkClient.organizations.getOrganization).mockRejectedValue(
+        new Error("Org not found"),
+      );
 
-      const result = await service.getOrganization('invalid-org');
+      const result = await service.getOrganization("invalid-org");
 
       expect(result).toBeNull();
     });
   });
 
-  describe('getOrganizationBySlug', () => {
-    it('should return organization by slug', async () => {
-      const mockOrg = createMockOrg('org_123');
+  describe("getOrganizationBySlug", () => {
+    it("should return organization by slug", async () => {
+      const mockOrg = createMockOrg("org_123");
       vi.mocked(mockClerkClient.organizations.getOrganization).mockResolvedValue(
-        mockOrg as unknown as Awaited<ReturnType<typeof mockClerkClient.organizations.getOrganization>>
+        mockOrg as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.getOrganization>
+        >,
       );
 
-      const result = await service.getOrganizationBySlug('test-org');
+      const result = await service.getOrganizationBySlug("test-org");
 
       expect(result).not.toBeNull();
-      expect(mockClerkClient.organizations.getOrganization).toHaveBeenCalledWith({ slug: 'test-org' });
+      expect(mockClerkClient.organizations.getOrganization).toHaveBeenCalledWith({
+        slug: "test-org",
+      });
     });
   });
 
-  describe('getOrganizationList', () => {
-    it('should return list of organizations', async () => {
+  describe("getOrganizationList", () => {
+    it("should return list of organizations", async () => {
       const mockResponse = {
-        data: [createMockOrg('org_1'), createMockOrg('org_2')],
+        data: [createMockOrg("org_1"), createMockOrg("org_2")],
         totalCount: 2,
       };
       vi.mocked(mockClerkClient.organizations.getOrganizationList).mockResolvedValue(
-        mockResponse as unknown as Awaited<ReturnType<typeof mockClerkClient.organizations.getOrganizationList>>
+        mockResponse as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.getOrganizationList>
+        >,
       );
 
       const result = await service.getOrganizationList({ limit: 10 });
@@ -121,201 +131,209 @@ describe('ClerkOrganizationService', () => {
     });
   });
 
-  describe('createOrganization', () => {
-    it('should create organization', async () => {
-      const mockOrg = createMockOrg('org_new');
+  describe("createOrganization", () => {
+    it("should create organization", async () => {
+      const mockOrg = createMockOrg("org_new");
       vi.mocked(mockClerkClient.organizations.createOrganization).mockResolvedValue(
-        mockOrg as unknown as Awaited<ReturnType<typeof mockClerkClient.organizations.createOrganization>>
+        mockOrg as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.createOrganization>
+        >,
       );
 
       const result = await service.createOrganization({
-        name: 'New Org',
-        createdBy: 'user_123',
-        slug: 'new-org',
+        name: "New Org",
+        createdBy: "user_123",
+        slug: "new-org",
         maxAllowedMemberships: 50,
       });
 
-      expect(result.id).toBe('org_new');
+      expect(result.id).toBe("org_new");
       expect(mockClerkClient.organizations.createOrganization).toHaveBeenCalledWith({
-        name: 'New Org',
-        createdBy: 'user_123',
-        slug: 'new-org',
+        name: "New Org",
+        createdBy: "user_123",
+        slug: "new-org",
         maxAllowedMemberships: 50,
       });
     });
   });
 
-  describe('updateOrganization', () => {
-    it('should update organization', async () => {
-      const mockOrg = { ...createMockOrg('org_123'), name: 'Updated Org' };
+  describe("updateOrganization", () => {
+    it("should update organization", async () => {
+      const mockOrg = { ...createMockOrg("org_123"), name: "Updated Org" };
       vi.mocked(mockClerkClient.organizations.updateOrganization).mockResolvedValue(
-        mockOrg as unknown as Awaited<ReturnType<typeof mockClerkClient.organizations.updateOrganization>>
+        mockOrg as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.updateOrganization>
+        >,
       );
 
-      const result = await service.updateOrganization('org_123', {
-        name: 'Updated Org',
-        publicMetadata: { plan: 'premium' },
+      const result = await service.updateOrganization("org_123", {
+        name: "Updated Org",
+        publicMetadata: { plan: "premium" },
       });
 
-      expect(result.name).toBe('Updated Org');
-      expect(mockClerkClient.organizations.updateOrganization).toHaveBeenCalledWith('org_123', {
-        name: 'Updated Org',
-        publicMetadata: { plan: 'premium' },
+      expect(result.name).toBe("Updated Org");
+      expect(mockClerkClient.organizations.updateOrganization).toHaveBeenCalledWith("org_123", {
+        name: "Updated Org",
+        publicMetadata: { plan: "premium" },
       });
     });
   });
 
-  describe('deleteOrganization', () => {
-    it('should delete organization', async () => {
+  describe("deleteOrganization", () => {
+    it("should delete organization", async () => {
       vi.mocked(mockClerkClient.organizations.deleteOrganization).mockResolvedValue(
-        {} as unknown as Awaited<ReturnType<typeof mockClerkClient.organizations.deleteOrganization>>
+        {} as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.deleteOrganization>
+        >,
       );
 
-      await service.deleteOrganization('org_123');
+      await service.deleteOrganization("org_123");
 
-      expect(mockClerkClient.organizations.deleteOrganization).toHaveBeenCalledWith('org_123');
+      expect(mockClerkClient.organizations.deleteOrganization).toHaveBeenCalledWith("org_123");
     });
   });
 
-  describe('getOrganizationMembershipList', () => {
-    it('should return memberships', async () => {
+  describe("getOrganizationMembershipList", () => {
+    it("should return memberships", async () => {
       const mockResponse = {
-        data: [createMockMembership('mem_1')],
+        data: [createMockMembership("mem_1")],
         totalCount: 1,
       };
       vi.mocked(mockClerkClient.organizations.getOrganizationMembershipList).mockResolvedValue(
         mockResponse as unknown as Awaited<
           ReturnType<typeof mockClerkClient.organizations.getOrganizationMembershipList>
-        >
+        >,
       );
 
-      const result = await service.getOrganizationMembershipList('org_123');
+      const result = await service.getOrganizationMembershipList("org_123");
 
       expect(result.memberships).toHaveLength(1);
       expect(result.totalCount).toBe(1);
-      expect(result.memberships[0].role).toBe('org:member');
+      expect(result.memberships[0].role).toBe("org:member");
     });
   });
 
-  describe('createOrganizationMembership', () => {
-    it('should create membership', async () => {
-      const mockMembership = createMockMembership('mem_new');
+  describe("createOrganizationMembership", () => {
+    it("should create membership", async () => {
+      const mockMembership = createMockMembership("mem_new");
       vi.mocked(mockClerkClient.organizations.createOrganizationMembership).mockResolvedValue(
         mockMembership as unknown as Awaited<
           ReturnType<typeof mockClerkClient.organizations.createOrganizationMembership>
-        >
+        >,
       );
 
       const result = await service.createOrganizationMembership({
-        organizationId: 'org_123',
-        userId: 'user_456',
-        role: 'org:admin',
+        organizationId: "org_123",
+        userId: "user_456",
+        role: "org:admin",
       });
 
-      expect(result.id).toBe('mem_new');
+      expect(result.id).toBe("mem_new");
       expect(mockClerkClient.organizations.createOrganizationMembership).toHaveBeenCalledWith({
-        organizationId: 'org_123',
-        userId: 'user_456',
-        role: 'org:admin',
+        organizationId: "org_123",
+        userId: "user_456",
+        role: "org:admin",
       });
     });
   });
 
-  describe('updateOrganizationMembership', () => {
-    it('should update membership role', async () => {
-      const mockMembership = { ...createMockMembership('mem_123'), role: 'org:admin' };
+  describe("updateOrganizationMembership", () => {
+    it("should update membership role", async () => {
+      const mockMembership = { ...createMockMembership("mem_123"), role: "org:admin" };
       vi.mocked(mockClerkClient.organizations.updateOrganizationMembership).mockResolvedValue(
         mockMembership as unknown as Awaited<
           ReturnType<typeof mockClerkClient.organizations.updateOrganizationMembership>
-        >
+        >,
       );
 
-      const result = await service.updateOrganizationMembership('org_123', 'user_456', 'org:admin');
+      const result = await service.updateOrganizationMembership("org_123", "user_456", "org:admin");
 
-      expect(result.role).toBe('org:admin');
+      expect(result.role).toBe("org:admin");
       expect(mockClerkClient.organizations.updateOrganizationMembership).toHaveBeenCalledWith({
-        organizationId: 'org_123',
-        userId: 'user_456',
-        role: 'org:admin',
+        organizationId: "org_123",
+        userId: "user_456",
+        role: "org:admin",
       });
     });
   });
 
-  describe('deleteOrganizationMembership', () => {
-    it('should delete membership', async () => {
+  describe("deleteOrganizationMembership", () => {
+    it("should delete membership", async () => {
       vi.mocked(mockClerkClient.organizations.deleteOrganizationMembership).mockResolvedValue(
-        {} as unknown as Awaited<ReturnType<typeof mockClerkClient.organizations.deleteOrganizationMembership>>
+        {} as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.deleteOrganizationMembership>
+        >,
       );
 
-      await service.deleteOrganizationMembership('org_123', 'user_456');
+      await service.deleteOrganizationMembership("org_123", "user_456");
 
       expect(mockClerkClient.organizations.deleteOrganizationMembership).toHaveBeenCalledWith({
-        organizationId: 'org_123',
-        userId: 'user_456',
+        organizationId: "org_123",
+        userId: "user_456",
       });
     });
   });
 
-  describe('createOrganizationInvitation', () => {
-    it('should create invitation', async () => {
-      const mockInvitation = createMockInvitation('inv_new');
+  describe("createOrganizationInvitation", () => {
+    it("should create invitation", async () => {
+      const mockInvitation = createMockInvitation("inv_new");
       vi.mocked(mockClerkClient.organizations.createOrganizationInvitation).mockResolvedValue(
         mockInvitation as unknown as Awaited<
           ReturnType<typeof mockClerkClient.organizations.createOrganizationInvitation>
-        >
+        >,
       );
 
       const result = await service.createOrganizationInvitation({
-        organizationId: 'org_123',
-        emailAddress: 'new@example.com',
-        role: 'org:member',
-        inviterUserId: 'user_123',
+        organizationId: "org_123",
+        emailAddress: "new@example.com",
+        role: "org:member",
+        inviterUserId: "user_123",
       });
 
-      expect(result.id).toBe('inv_new');
+      expect(result.id).toBe("inv_new");
       expect(mockClerkClient.organizations.createOrganizationInvitation).toHaveBeenCalledWith({
-        organizationId: 'org_123',
-        emailAddress: 'new@example.com',
-        role: 'org:member',
-        inviterUserId: 'user_123',
+        organizationId: "org_123",
+        emailAddress: "new@example.com",
+        role: "org:member",
+        inviterUserId: "user_123",
       });
     });
   });
 
-  describe('getOrganizationInvitationList', () => {
-    it('should return invitations', async () => {
+  describe("getOrganizationInvitationList", () => {
+    it("should return invitations", async () => {
       const mockResponse = {
-        data: [createMockInvitation('inv_1')],
+        data: [createMockInvitation("inv_1")],
         totalCount: 1,
       };
       vi.mocked(mockClerkClient.organizations.getOrganizationInvitationList).mockResolvedValue(
         mockResponse as unknown as Awaited<
           ReturnType<typeof mockClerkClient.organizations.getOrganizationInvitationList>
-        >
+        >,
       );
 
-      const result = await service.getOrganizationInvitationList('org_123');
+      const result = await service.getOrganizationInvitationList("org_123");
 
       expect(result.invitations).toHaveLength(1);
-      expect(result.invitations[0].status).toBe('pending');
+      expect(result.invitations[0].status).toBe("pending");
     });
   });
 
-  describe('revokeOrganizationInvitation', () => {
-    it('should revoke invitation', async () => {
-      const mockInvitation = { ...createMockInvitation('inv_123'), status: 'revoked' };
+  describe("revokeOrganizationInvitation", () => {
+    it("should revoke invitation", async () => {
+      const mockInvitation = { ...createMockInvitation("inv_123"), status: "revoked" };
       vi.mocked(mockClerkClient.organizations.revokeOrganizationInvitation).mockResolvedValue(
         mockInvitation as unknown as Awaited<
           ReturnType<typeof mockClerkClient.organizations.revokeOrganizationInvitation>
-        >
+        >,
       );
 
-      const result = await service.revokeOrganizationInvitation('org_123', 'inv_123');
+      const result = await service.revokeOrganizationInvitation("org_123", "inv_123");
 
-      expect(result.status).toBe('revoked');
+      expect(result.status).toBe("revoked");
       expect(mockClerkClient.organizations.revokeOrganizationInvitation).toHaveBeenCalledWith({
-        organizationId: 'org_123',
-        invitationId: 'inv_123',
+        organizationId: "org_123",
+        invitationId: "inv_123",
       });
     });
   });

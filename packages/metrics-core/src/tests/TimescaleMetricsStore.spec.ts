@@ -1,18 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MetricsSnapshot, MRRMovement } from '../../src/types';
-import { type PostgresClient, TimescaleMetricsStore } from '../libs/stores/TimescaleMetricsStore';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MetricsSnapshot, MRRMovement } from "../../src/types";
+import { type PostgresClient, TimescaleMetricsStore } from "../libs/stores/TimescaleMetricsStore";
 
-describe('TimescaleMetricsStore', () => {
+describe("TimescaleMetricsStore", () => {
   let db!: PostgresClient;
   let store!: TimescaleMetricsStore;
 
   const movement: MRRMovement = {
-    new: { amount: 1000, currency: 'USD' },
-    expansion: { amount: 0, currency: 'USD' },
-    contraction: { amount: 0, currency: 'USD' },
-    churned: { amount: 0, currency: 'USD' },
-    reactivation: { amount: 0, currency: 'USD' },
-    net: { amount: 1000, currency: 'USD' },
+    new: { amount: 1000, currency: "USD" },
+    expansion: { amount: 0, currency: "USD" },
+    contraction: { amount: 0, currency: "USD" },
+    churned: { amount: 0, currency: "USD" },
+    reactivation: { amount: 0, currency: "USD" },
+    net: { amount: 1000, currency: "USD" },
   };
 
   beforeEach(() => {
@@ -22,67 +22,72 @@ describe('TimescaleMetricsStore', () => {
     store = new TimescaleMetricsStore(db);
   });
 
-  it('should use conflict-safe insert when event key is provided', async () => {
-    await store.recordMRRMovement('tenant-1', movement, new Date('2026-03-02T00:00:00.000Z'), 'event-key-1');
+  it("should use conflict-safe insert when event key is provided", async () => {
+    await store.recordMRRMovement(
+      "tenant-1",
+      movement,
+      new Date("2026-03-02T00:00:00.000Z"),
+      "event-key-1",
+    );
 
     expect(db.query).toHaveBeenCalledTimes(1);
     const [sql, params] = vi.mocked(db.query).mock.calls[0] ?? [];
 
-    expect(sql).toContain('event_key');
-    expect(sql).toContain('ON CONFLICT (tenant_id, event_key) DO NOTHING');
+    expect(sql).toContain("event_key");
+    expect(sql).toContain("ON CONFLICT (tenant_id, event_key) DO NOTHING");
     expect(params).toEqual([
-      'tenant-1',
-      'event-key-1',
-      new Date('2026-03-02T00:00:00.000Z'),
+      "tenant-1",
+      "event-key-1",
+      new Date("2026-03-02T00:00:00.000Z"),
       1000,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       1000,
-      'USD',
+      "USD",
     ]);
   });
 
-  it('should keep legacy insert path when event key is omitted', async () => {
-    await store.recordMRRMovement('tenant-1', movement, new Date('2026-03-02T00:00:00.000Z'));
+  it("should keep legacy insert path when event key is omitted", async () => {
+    await store.recordMRRMovement("tenant-1", movement, new Date("2026-03-02T00:00:00.000Z"));
 
     expect(db.query).toHaveBeenCalledTimes(1);
     const [sql, params] = vi.mocked(db.query).mock.calls[0] ?? [];
 
-    expect(sql).not.toContain('event_key');
-    expect(sql).not.toContain('ON CONFLICT');
+    expect(sql).not.toContain("event_key");
+    expect(sql).not.toContain("ON CONFLICT");
     expect(params).toEqual([
-      'tenant-1',
-      new Date('2026-03-02T00:00:00.000Z'),
+      "tenant-1",
+      new Date("2026-03-02T00:00:00.000Z"),
       1000,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       0,
-      'USD',
+      "USD",
       1000,
-      'USD',
+      "USD",
     ]);
   });
 
-  it('should calculate retention metrics from snapshots and movement history', async () => {
+  it("should calculate retention metrics from snapshots and movement history", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({
         rows: [
           {
-            date: new Date('2026-03-01T00:00:00.000Z'),
+            date: new Date("2026-03-01T00:00:00.000Z"),
             total_mrr_amount: 100000,
-            total_mrr_currency: 'USD',
+            total_mrr_currency: "USD",
             activeCustomers: 100,
           },
         ],
@@ -90,9 +95,9 @@ describe('TimescaleMetricsStore', () => {
       .mockResolvedValueOnce({
         rows: [
           {
-            date: new Date('2026-03-31T00:00:00.000Z'),
+            date: new Date("2026-03-31T00:00:00.000Z"),
             total_mrr_amount: 103000,
-            total_mrr_currency: 'USD',
+            total_mrr_currency: "USD",
             activeCustomers: 95,
           },
         ],
@@ -101,28 +106,28 @@ describe('TimescaleMetricsStore', () => {
         rows: [
           {
             new_mrr_amount: 15000,
-            new_mrr_currency: 'USD',
+            new_mrr_currency: "USD",
             expansion_mrr_amount: 8000,
-            expansion_mrr_currency: 'USD',
+            expansion_mrr_currency: "USD",
             contraction_mrr_amount: 2000,
-            contraction_mrr_currency: 'USD',
+            contraction_mrr_currency: "USD",
             churned_mrr_amount: 3000,
-            churned_mrr_currency: 'USD',
+            churned_mrr_currency: "USD",
             reactivation_mrr_amount: 1000,
-            reactivation_mrr_currency: 'USD',
+            reactivation_mrr_currency: "USD",
             net_mrr_amount: 19000,
-            net_mrr_currency: 'USD',
+            net_mrr_currency: "USD",
           },
         ],
       });
 
     const period = {
-      from: new Date('2026-03-01T00:00:00.000Z'),
-      to: new Date('2026-04-01T00:00:00.000Z'),
-      granularity: 'month' as const,
+      from: new Date("2026-03-01T00:00:00.000Z"),
+      to: new Date("2026-04-01T00:00:00.000Z"),
+      granularity: "month" as const,
     };
 
-    const result = await store.getRetentionMetrics('tenant-1', period);
+    const result = await store.getRetentionMetrics("tenant-1", period);
 
     expect(result).toEqual({
       logoChurn: 5,
@@ -132,19 +137,19 @@ describe('TimescaleMetricsStore', () => {
     });
   });
 
-  it('should fall back to neutral retention values when baseline snapshot is missing', async () => {
+  it("should fall back to neutral retention values when baseline snapshot is missing", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
 
     const period = {
-      from: new Date('2026-03-01T00:00:00.000Z'),
-      to: new Date('2026-04-01T00:00:00.000Z'),
-      granularity: 'month' as const,
+      from: new Date("2026-03-01T00:00:00.000Z"),
+      to: new Date("2026-04-01T00:00:00.000Z"),
+      granularity: "month" as const,
     };
 
-    const result = await store.getRetentionMetrics('tenant-1', period);
+    const result = await store.getRetentionMetrics("tenant-1", period);
 
     expect(result).toEqual({
       logoChurn: 0,

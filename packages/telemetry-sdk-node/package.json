@@ -1,9 +1,24 @@
 {
   "name": "@croco/telemetry-sdk-node",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
@@ -14,28 +29,13 @@
   "dependencies": {
     "@croco/problems-core": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.57.2",
+    "@opentelemetry/auto-instrumentations-node": "^0.50.2",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.57.2",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.57.2",
+    "@opentelemetry/resources": "^1.30.1",
     "@opentelemetry/sdk-node": "^0.57.2",
     "@opentelemetry/sdk-trace-base": "^1.30.1",
-    "@opentelemetry/resources": "^1.30.1",
-    "@opentelemetry/semantic-conventions": "^1.30.1",
-    "@opentelemetry/auto-instrumentations-node": "^0.50.2"
+    "@opentelemetry/semantic-conventions": "^1.30.1"
   },
-  "devDependencies": {},
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  "devDependencies": {}
 }

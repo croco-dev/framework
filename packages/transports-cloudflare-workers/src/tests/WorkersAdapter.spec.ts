@@ -1,49 +1,52 @@
-import 'reflect-metadata';
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
-import { Body, Controller, Delete, Get, Param, Post, Put, Raw } from '@croco/protocols-rest';
-import type { CrocoApp } from '@croco/transports-http';
-import { createApp, ErrorHandler } from '@croco/transports-http';
-import { HealthCheckRegistry } from '@croco/transports-http/src/libs/HealthCheckRegistry';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { toWorkersHandler } from '../libs/adapters/WorkersAdapter';
+import "reflect-metadata";
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
+import { Body, Controller, Delete, Get, Param, Post, Put, Raw } from "@croco/protocols-rest";
+import type { CrocoApp } from "@croco/transports-http";
+import { createApp, ErrorHandler } from "@croco/transports-http";
+import { HealthCheckRegistry } from "@croco/transports-http/src/libs/HealthCheckRegistry";
+import { beforeEach, describe, expect, it } from "vitest";
+import { toWorkersHandler } from "../libs/adapters/WorkersAdapter";
 
-describe('WorkersAdapter', () => {
+describe("WorkersAdapter", () => {
   let app!: CrocoApp;
   const mockExecutionContext = {} as never;
 
-  @Controller('/api')
+  @Controller("/api")
   class TestController {
-    @Get('/hello')
+    @Get("/hello")
     hello() {
-      return { message: 'Hello, World!' };
+      return { message: "Hello, World!" };
     }
 
-    @Get('/users/:id')
-    getUser(@Param('id') id: string) {
-      return { id, name: 'Test User' };
+    @Get("/users/:id")
+    getUser(@Param("id") id: string) {
+      return { id, name: "Test User" };
     }
 
-    @Post('/users')
+    @Post("/users")
     createUser(@Body() body: { name: string }) {
       return { created: true, data: body };
     }
 
-    @Put('/users/:id')
-    updateUser(@Param('id') id: string, @Body() body: { name: string }) {
+    @Put("/users/:id")
+    updateUser(@Param("id") id: string, @Body() body: { name: string }) {
       return { id, name: body.name };
     }
 
-    @Delete('/users/:id')
-    deleteUser(@Param('id') id: string) {
+    @Delete("/users/:id")
+    deleteUser(@Param("id") id: string) {
       return { deleted: true, id };
     }
 
-    @Get('/env')
+    @Get("/env")
     getEnv(@Raw() raw: unknown) {
-      const env = typeof raw === 'object' && raw !== null && 'env' in raw ? raw.env : undefined;
+      const env = typeof raw === "object" && raw !== null && "env" in raw ? raw.env : undefined;
 
-      return { value: typeof env === 'object' && env !== null && 'TEST_VALUE' in env ? env.TEST_VALUE : null };
+      return {
+        value:
+          typeof env === "object" && env !== null && "TEST_VALUE" in env ? env.TEST_VALUE : null,
+      };
     }
   }
 
@@ -59,20 +62,20 @@ describe('WorkersAdapter', () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
-    app = createApp({ controllers: [TestController], securityValidation: 'off' });
+    app = createApp({ controllers: [TestController], securityValidation: "off" });
   });
 
-  describe('toWorkersHandler', () => {
-    it('should return an object with fetch method', () => {
+  describe("toWorkersHandler", () => {
+    it("should return an object with fetch method", () => {
       const handler = toWorkersHandler(app);
 
       expect(handler).toBeDefined();
-      expect(typeof handler.fetch).toBe('function');
+      expect(typeof handler.fetch).toBe("function");
     });
 
-    it('should handle GET request and return app.fetch response', async () => {
+    it("should handle GET request and return app.fetch response", async () => {
       const handler = toWorkersHandler(app);
-      const request = new Request('http://localhost/api/hello');
+      const request = new Request("http://localhost/api/hello");
       const env = {};
       const ctx = mockExecutionContext;
 
@@ -80,15 +83,15 @@ describe('WorkersAdapter', () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json).toEqual({ message: 'Hello, World!' });
+      expect(json).toEqual({ message: "Hello, World!" });
     });
 
-    it('should handle POST request with body', async () => {
+    it("should handle POST request with body", async () => {
       const handler = toWorkersHandler(app);
-      const request = new Request('http://localhost/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'New User' }),
+      const request = new Request("http://localhost/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "New User" }),
       });
       const env = {};
       const ctx = mockExecutionContext;
@@ -98,15 +101,15 @@ describe('WorkersAdapter', () => {
       expect(response.status).toBe(200);
       const json = await response.json();
       expect(json.created).toBe(true);
-      expect(json.data).toEqual({ name: 'New User' });
+      expect(json.data).toEqual({ name: "New User" });
     });
 
-    it('should handle PUT request', async () => {
+    it("should handle PUT request", async () => {
       const handler = toWorkersHandler(app);
-      const request = new Request('http://localhost/api/users/1', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Updated User' }),
+      const request = new Request("http://localhost/api/users/1", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Updated User" }),
       });
       const env = {};
       const ctx = mockExecutionContext;
@@ -115,14 +118,14 @@ describe('WorkersAdapter', () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json.id).toBe('1');
-      expect(json.name).toBe('Updated User');
+      expect(json.id).toBe("1");
+      expect(json.name).toBe("Updated User");
     });
 
-    it('should handle DELETE request', async () => {
+    it("should handle DELETE request", async () => {
       const handler = toWorkersHandler(app);
-      const request = new Request('http://localhost/api/users/1', {
-        method: 'DELETE',
+      const request = new Request("http://localhost/api/users/1", {
+        method: "DELETE",
       });
       const env = {};
       const ctx = mockExecutionContext;
@@ -132,12 +135,12 @@ describe('WorkersAdapter', () => {
       expect(response.status).toBe(200);
       const json = await response.json();
       expect(json.deleted).toBe(true);
-      expect(json.id).toBe('1');
+      expect(json.id).toBe("1");
     });
 
-    it('should extract path params correctly', async () => {
+    it("should extract path params correctly", async () => {
       const handler = toWorkersHandler(app);
-      const request = new Request('http://localhost/api/users/123');
+      const request = new Request("http://localhost/api/users/123");
       const env = {};
       const ctx = mockExecutionContext;
 
@@ -145,12 +148,12 @@ describe('WorkersAdapter', () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json).toEqual({ id: '123', name: 'Test User' });
+      expect(json).toEqual({ id: "123", name: "Test User" });
     });
 
-    it('should return 404 for unknown routes', async () => {
+    it("should return 404 for unknown routes", async () => {
       const handler = toWorkersHandler(app);
-      const request = new Request('http://localhost/unknown');
+      const request = new Request("http://localhost/unknown");
       const env = {};
       const ctx = mockExecutionContext;
 
@@ -159,17 +162,17 @@ describe('WorkersAdapter', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should inject Cloudflare env when injectEnv is enabled', async () => {
+    it("should inject Cloudflare env when injectEnv is enabled", async () => {
       const handler = toWorkersHandler(app, { injectEnv: true });
-      const request = new Request('http://localhost/api/env');
-      const env = { TEST_VALUE: 'from-worker-env' };
+      const request = new Request("http://localhost/api/env");
+      const env = { TEST_VALUE: "from-worker-env" };
       const ctx = mockExecutionContext;
 
       const response = await handler.fetch(request, env, ctx);
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json).toEqual({ value: 'from-worker-env' });
+      expect(json).toEqual({ value: "from-worker-env" });
     });
   });
 });

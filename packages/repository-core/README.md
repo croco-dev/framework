@@ -19,7 +19,7 @@ pnpm add @croco/repository-core
 Unified repository interface combining read and write operations.
 
 ```typescript
-import type { Repository } from '@croco/repository-core';
+import type { Repository } from "@croco/repository-core";
 
 interface User {
   id: string;
@@ -53,11 +53,15 @@ class UserRepository implements Repository<User, string> {
 Read-only operations for querying entities.
 
 ```typescript
-import type { ReadRepository } from '@croco/repository-core';
+import type { ReadRepository } from "@croco/repository-core";
 
 class UserQueryService implements ReadRepository<User, string> {
-  async findById(id: string): Promise<User | null> { /* ... */ }
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> { /* ... */ }
+  async findById(id: string): Promise<User | null> {
+    /* ... */
+  }
+  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> {
+    /* ... */
+  }
 }
 ```
 
@@ -66,11 +70,15 @@ class UserQueryService implements ReadRepository<User, string> {
 Write-only operations for persisting entities.
 
 ```typescript
-import type { WriteRepository } from '@croco/repository-core';
+import type { WriteRepository } from "@croco/repository-core";
 
 class UserCommandService implements WriteRepository<User, string> {
-  async save(entity: User): Promise<User> { /* ... */ }
-  async deleteById(id: string): Promise<void> { /* ... */ }
+  async save(entity: User): Promise<User> {
+    /* ... */
+  }
+  async deleteById(id: string): Promise<void> {
+    /* ... */
+  }
 }
 ```
 
@@ -79,16 +87,16 @@ class UserCommandService implements WriteRepository<User, string> {
 The `@BatchLoad` decorator automatically batches multiple `findById` calls into a single `findByIds` call, preventing N+1 queries.
 
 ```typescript
-import { BatchLoad } from '@croco/repository-core';
-import { BATCH_LOADER_FACTORY_TOKEN, IBatchLoaderFactory } from '@croco/repository-core';
-import { Container } from '@croco/framework-context';
+import { BatchLoad } from "@croco/repository-core";
+import { BATCH_LOADER_FACTORY_TOKEN, IBatchLoaderFactory } from "@croco/repository-core";
+import { Container } from "@croco/framework-context";
 
 // 1. Register the batch loader factory
 Container.set(BATCH_LOADER_FACTORY_TOKEN, myBatchLoaderFactory);
 
 // 2. Apply the decorator to repository methods
 class UserRepository {
-  @BatchLoad({ by: 'id' })
+  @BatchLoad({ by: "id" })
   async findById(id: string): Promise<User | null> {
     // Single record fetch
   }
@@ -99,9 +107,9 @@ class UserRepository {
 }
 
 // 3. Usage - automatically batched
-const user1 = await userRepository.findById('1');
-const user2 = await userRepository.findById('2');
-const user3 = await userRepository.findById('1'); // Cached, no query
+const user1 = await userRepository.findById("1");
+const user2 = await userRepository.findById("2");
+const user3 = await userRepository.findById("1"); // Cached, no query
 
 // Result: Only 1 batch query for ['1', '2'] instead of 3 separate queries
 ```
@@ -133,14 +141,16 @@ All interfaces are fully typed with generics:
 
 ```typescript
 // String IDs (common)
-class UserRepository implements Repository<User, string> { }
+class UserRepository implements Repository<User, string> {}
 
 // Number IDs
-class PostRepository implements Repository<Post, number> { }
+class PostRepository implements Repository<Post, number> {}
 
 // Custom ID class
-class UserId { constructor(public value: string) {} }
-class TenantRepository implements Repository<Tenant, UserId> { }
+class UserId {
+  constructor(public value: string) {}
+}
+class TenantRepository implements Repository<Tenant, UserId> {}
 ```
 
 ## Immutability
@@ -155,14 +165,12 @@ Repository methods return immutable types:
 Use with Croco's DI container:
 
 ```typescript
-import { Component } from '@croco/framework-context';
-import type { Repository } from '@croco/repository-core';
+import { Component } from "@croco/framework-context";
+import type { Repository } from "@croco/repository-core";
 
 @Component()
 class OrderService {
-  constructor(
-    private readonly orderRepository: Repository<Order, string>
-  ) {}
+  constructor(private readonly orderRepository: Repository<Order, string>) {}
 
   async getOrder(id: string): Promise<Order | null> {
     return this.orderRepository.findById(id);
@@ -192,10 +200,9 @@ Example implementation structure:
 
 ```typescript
 // packages/repository-drizzle/src/AbstractDrizzleRepository.ts
-import type { Repository } from '@croco/repository-core';
+import type { Repository } from "@croco/repository-core";
 
-export abstract class AbstractDrizzleRepository<T, ID>
-  implements Repository<T, ID> {
+export abstract class AbstractDrizzleRepository<T, ID> implements Repository<T, ID> {
   // Drizzle-specific implementation
 }
 ```

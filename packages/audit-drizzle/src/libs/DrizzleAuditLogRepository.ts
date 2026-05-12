@@ -1,10 +1,20 @@
-import type { AuditLogEntry, AuditQuery } from '@croco/audit-core';
-import { AuditLogRepository } from '@croco/audit-core';
-import { ProblemFactory } from '@croco/problems-core';
-import type { TxManager } from '@croco/tx-core';
-import { type AnyColumn, and, between, desc, eq, gte, lte, type SQL, type Table } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AuditLogEntry, AuditQuery } from "@croco/audit-core";
+import { AuditLogRepository } from "@croco/audit-core";
+import { ProblemFactory } from "@croco/problems-core";
+import type { TxManager } from "@croco/tx-core";
+import {
+  type AnyColumn,
+  and,
+  between,
+  desc,
+  eq,
+  gte,
+  lte,
+  type SQL,
+  type Table,
+} from "drizzle-orm";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 type InsertReturningQuery = {
   returning(): Promise<unknown[]>;
@@ -86,7 +96,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
   constructor(
     private readonly db: DrizzleDb,
     private readonly txManager: TxManager<DrizzleDb>,
-    config: DrizzleAuditLogRepositoryConfig
+    config: DrizzleAuditLogRepositoryConfig,
   ) {
     super();
     this.table = config.table;
@@ -102,7 +112,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
   /**
    * 감사 로그 항목을 생성하고 저장된 결과를 반환합니다.
    */
-  async create(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): Promise<AuditLogEntry> {
+  async create(entry: Omit<AuditLogEntry, "id" | "createdAt">): Promise<AuditLogEntry> {
     const client = this.getClient();
     const now = new Date();
 
@@ -124,7 +134,10 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       .returning();
 
     if (!inserted) {
-      throw ProblemFactory.internalServerError('audit/insert-failed', 'Failed to persist audit log entry');
+      throw ProblemFactory.internalServerError(
+        "audit/insert-failed",
+        "Failed to persist audit log entry",
+      );
     }
 
     return this.mapToEntry(inserted as Record<string, unknown>);
@@ -134,7 +147,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
    * 테넌트 기준으로 감사 로그를 조회합니다.
    */
   async find(
-    query: AuditQuery & { actorId?: string; resourceType?: string; resourceId?: string }
+    query: AuditQuery & { actorId?: string; resourceType?: string; resourceId?: string },
   ): Promise<AuditLogEntry[]> {
     const client = this.getClient();
     const conditions: SQL<unknown>[] = [eq(this.schema.tenantId, query.tenantId)];
@@ -169,14 +182,16 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     tenantId: string,
     startDate: Date,
     endDate: Date,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ): Promise<AuditLogEntry[]> {
     const client = this.getClient();
 
     const results = await client
       .select()
       .from(this.table as Table)
-      .where(and(eq(this.schema.tenantId, tenantId), between(this.schema.createdAt, startDate, endDate)))
+      .where(
+        and(eq(this.schema.tenantId, tenantId), between(this.schema.createdAt, startDate, endDate)),
+      )
       .limit(options?.limit ?? 50)
       .offset(options?.offset ?? 0)
       .orderBy(desc(this.schema.createdAt));
@@ -190,10 +205,13 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
   async findByActor(
     tenantId: string,
     actorId: string,
-    options?: { limit?: number; offset?: number; startDate?: Date; endDate?: Date }
+    options?: { limit?: number; offset?: number; startDate?: Date; endDate?: Date },
   ): Promise<AuditLogEntry[]> {
     const client = this.getClient();
-    const conditions: SQL<unknown>[] = [eq(this.schema.tenantId, tenantId), eq(this.schema.actorId, actorId)];
+    const conditions: SQL<unknown>[] = [
+      eq(this.schema.tenantId, tenantId),
+      eq(this.schema.actorId, actorId),
+    ];
 
     if (options?.startDate && options?.endDate) {
       conditions.push(between(this.schema.createdAt, options.startDate, options.endDate));
@@ -223,7 +241,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     tenantId: string,
     resourceType: string,
     resourceId: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ): Promise<AuditLogEntry[]> {
     const client = this.getClient();
 
@@ -234,8 +252,8 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
         and(
           eq(this.schema.tenantId, tenantId),
           eq(this.schema.resourceType, resourceType),
-          eq(this.schema.resourceId, resourceId)
-        )
+          eq(this.schema.resourceId, resourceId),
+        ),
       )
       .limit(options?.limit ?? 50)
       .offset(options?.offset ?? 0)

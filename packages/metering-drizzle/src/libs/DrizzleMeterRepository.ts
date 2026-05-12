@@ -1,10 +1,10 @@
-import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from '@croco/metering-core';
-import { MeterRepository } from '@croco/metering-core';
-import { ProblemFactory } from '@croco/problems-core';
-import type { TxManager } from '@croco/tx-core';
-import { and, eq, getTableColumns } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
+import { MeterRepository } from "@croco/metering-core";
+import { ProblemFactory } from "@croco/problems-core";
+import type { TxManager } from "@croco/tx-core";
+import { and, eq, getTableColumns } from "drizzle-orm";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 /**
  * 미터 저장소에서 사용하는 기본 Drizzle SQLite 클라이언트 타입입니다.
@@ -68,7 +68,7 @@ export class DrizzleMeterRepository extends MeterRepository {
   constructor(
     private readonly db: DrizzleDb,
     private readonly txManager: TxManager<DrizzleDb>,
-    config: DrizzleMeterRepositoryConfig
+    config: DrizzleMeterRepositoryConfig,
   ) {
     super();
     this.meterTable = config.meterTable;
@@ -126,7 +126,10 @@ export class DrizzleMeterRepository extends MeterRepository {
       .returning();
 
     if (!inserted) {
-      throw ProblemFactory.internalServerError('meter/insert-failed', 'Failed to persist meter definition');
+      throw ProblemFactory.internalServerError(
+        "meter/insert-failed",
+        "Failed to persist meter definition",
+      );
     }
 
     return this.mapToMeterDefinition(inserted as Record<string, unknown>);
@@ -184,13 +187,16 @@ export class DrizzleMeterRepository extends MeterRepository {
       .onConflictDoNothing();
   }
 
-  private getUsageRecordColumnKeys(columns: Record<string, SQLiteColumn>): Record<keyof UsageRecordTable, string> {
+  private getUsageRecordColumnKeys(
+    columns: Record<string, SQLiteColumn>,
+  ): Record<keyof UsageRecordTable, string> {
     return Object.fromEntries(
       Object.entries(this.usageRecordSchema).map(([schemaKey, schemaColumn]) => {
         const columnKey =
-          Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ?? schemaKey;
+          Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ??
+          schemaKey;
         return [schemaKey, columnKey];
-      })
+      }),
     ) as Record<keyof UsageRecordTable, string>;
   }
 
@@ -199,7 +205,7 @@ export class DrizzleMeterRepository extends MeterRepository {
       id: String(raw.id),
       tenantId: String(raw.tenantId),
       meterId: String(raw.meterId),
-      type: String(raw.type) as MeterDefinition['type'],
+      type: String(raw.type) as MeterDefinition["type"],
       quota: raw.quota ? Number(raw.quota) : undefined,
       allowOverQuota: Boolean(raw.allowOverQuota),
       metadata: this.deserializeMetadata(raw.metadata),
@@ -212,7 +218,7 @@ export class DrizzleMeterRepository extends MeterRepository {
     if (value === null || value === undefined) {
       return undefined;
     }
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       try {
         const parsed = this.deserializeJson(value) as Record<string, unknown>;
         return Object.keys(parsed).length === 0 ? undefined : parsed;
@@ -220,7 +226,7 @@ export class DrizzleMeterRepository extends MeterRepository {
         return undefined;
       }
     }
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === "object" && value !== null) {
       const obj = value as Record<string, unknown>;
       return Object.keys(obj).length === 0 ? undefined : obj;
     }
@@ -231,10 +237,10 @@ export class DrizzleMeterRepository extends MeterRepository {
     if (value instanceof Date) {
       return value;
     }
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       return new Date(value);
     }
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       return new Date(value);
     }
     return new Date();

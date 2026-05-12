@@ -1,7 +1,7 @@
-import type { AuditLogEntry } from './types';
+import type { AuditLogEntry } from "./types";
 
 export type AuditIntegrityConfig = {
-  algorithm?: 'sha256';
+  algorithm?: "sha256";
   secretKey?: string;
 };
 
@@ -13,7 +13,7 @@ export type AuditIntegrityMetadata = {
 
 export interface AuditIntegrityVerifier {
   verify(entry: AuditLogEntry): boolean;
-  computeHash(entry: Omit<AuditLogEntry, 'integrityHash'>): string;
+  computeHash(entry: Omit<AuditLogEntry, "integrityHash">): string;
 }
 
 export interface AuditChainVerifier {

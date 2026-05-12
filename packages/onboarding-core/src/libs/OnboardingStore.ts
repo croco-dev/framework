@@ -1,23 +1,41 @@
-import { Component, Token } from '@croco/framework-context';
-import type { OnboardingState } from './types';
+import { Component, Token } from "@croco/framework-context";
+import type { OnboardingState } from "./types";
 
 export abstract class OnboardingStore {
-  static readonly token = new Token<OnboardingStore>('OnboardingStore');
+  static readonly token = new Token<OnboardingStore>("OnboardingStore");
 
-  abstract getState(tenantId: string, userId: string, onboardingId: string): Promise<OnboardingState | null>;
-  abstract saveState(tenantId: string, userId: string, onboardingId: string, state: OnboardingState): Promise<void>;
+  abstract getState(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+  ): Promise<OnboardingState | null>;
+  abstract saveState(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+    state: OnboardingState,
+  ): Promise<void>;
 }
 
 @Component()
 export class InMemoryOnboardingStore extends OnboardingStore {
   private readonly storage = new Map<string, OnboardingState>();
 
-  async getState(tenantId: string, userId: string, onboardingId: string): Promise<OnboardingState | null> {
+  async getState(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+  ): Promise<OnboardingState | null> {
     const key = this.getKey(tenantId, userId, onboardingId);
     return this.storage.get(key) ?? null;
   }
 
-  async saveState(tenantId: string, userId: string, onboardingId: string, state: OnboardingState): Promise<void> {
+  async saveState(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+    state: OnboardingState,
+  ): Promise<void> {
     const key = this.getKey(tenantId, userId, onboardingId);
     this.storage.set(key, state);
   }

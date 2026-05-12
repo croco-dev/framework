@@ -1,10 +1,10 @@
-import { z } from 'zod';
-import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT, MIN_OFFSET } from './constants';
+import { z } from "zod";
+import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT, MIN_OFFSET } from "./constants";
 
 export const CursorParamsSchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_LIMIT).default(DEFAULT_LIMIT),
-  direction: z.enum(['forward', 'backward']).optional(),
+  direction: z.enum(["forward", "backward"]).optional(),
 });
 
 export const OffsetParamsSchema = z.object({
@@ -12,15 +12,15 @@ export const OffsetParamsSchema = z.object({
   limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_LIMIT).default(DEFAULT_LIMIT),
 });
 
-export const PaginationParamsSchema = z.discriminatedUnion('mode', [
+export const PaginationParamsSchema = z.discriminatedUnion("mode", [
   z
     .object({
-      mode: z.literal('cursor'),
+      mode: z.literal("cursor"),
     })
     .merge(CursorParamsSchema),
   z
     .object({
-      mode: z.literal('offset'),
+      mode: z.literal("offset"),
     })
     .merge(OffsetParamsSchema),
 ]);

@@ -1,19 +1,19 @@
-import { verifyWebhook } from '@clerk/backend/webhooks';
-import { InvalidWebhookPayloadProblem, WebhookVerificationProblem } from './problems/ClerkProblems';
+import { verifyWebhook } from "@clerk/backend/webhooks";
+import { InvalidWebhookPayloadProblem, WebhookVerificationProblem } from "./problems/ClerkProblems";
 import type {
   ClerkMembershipEvent,
   ClerkOrgEvent,
   ClerkUserEvent,
   WebhookEventHandler,
   WebhookHandlerOptions,
-} from './types';
+} from "./types";
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function hasStringField(data: Record<string, unknown>, key: string): boolean {
-  return typeof data[key] === 'string';
+  return typeof data[key] === "string";
 }
 
 function isArrayOfObjects(value: unknown): value is Array<Record<string, unknown>> {
@@ -21,17 +21,22 @@ function isArrayOfObjects(value: unknown): value is Array<Record<string, unknown
 }
 
 function isClerkUserEvent(data: unknown): data is ClerkUserEvent {
-  return isObjectRecord(data) && hasStringField(data, 'id') && isArrayOfObjects(data.email_addresses);
+  return (
+    isObjectRecord(data) && hasStringField(data, "id") && isArrayOfObjects(data.email_addresses)
+  );
 }
 
 function isClerkOrgEvent(data: unknown): data is ClerkOrgEvent {
   return (
-    isObjectRecord(data) && hasStringField(data, 'id') && hasStringField(data, 'name') && hasStringField(data, 'slug')
+    isObjectRecord(data) &&
+    hasStringField(data, "id") &&
+    hasStringField(data, "name") &&
+    hasStringField(data, "slug")
   );
 }
 
 function isClerkMembershipEvent(data: unknown): data is ClerkMembershipEvent {
-  if (!isObjectRecord(data) || !hasStringField(data, 'id') || !hasStringField(data, 'role')) {
+  if (!isObjectRecord(data) || !hasStringField(data, "id") || !hasStringField(data, "role")) {
     return false;
   }
 
@@ -42,7 +47,7 @@ function isClerkMembershipEvent(data: unknown): data is ClerkMembershipEvent {
     return false;
   }
 
-  return hasStringField(organization, 'id') && hasStringField(publicUserData, 'user_id');
+  return hasStringField(organization, "id") && hasStringField(publicUserData, "user_id");
 }
 
 type ParsedWebhookEvent = {
@@ -53,11 +58,11 @@ type ParsedWebhookEvent = {
 export class ClerkWebhookHandler {
   constructor(
     private options: WebhookHandlerOptions,
-    private handlers: WebhookEventHandler
+    private handlers: WebhookEventHandler,
   ) {}
 
   private parseWebhookEvent(event: unknown): ParsedWebhookEvent {
-    if (!isObjectRecord(event) || typeof event.type !== 'string') {
+    if (!isObjectRecord(event) || typeof event.type !== "string") {
       throw new InvalidWebhookPayloadProblem();
     }
 
@@ -99,32 +104,44 @@ export class ClerkWebhookHandler {
     const webhookEvent = this.parseWebhookEvent(event);
 
     switch (webhookEvent.type) {
-      case 'user.created':
-        await this.handlers['user.created']?.(this.parseUserEvent(webhookEvent.data, webhookEvent.type));
-        break;
-      case 'user.updated':
-        await this.handlers['user.updated']?.(this.parseUserEvent(webhookEvent.data, webhookEvent.type));
-        break;
-      case 'user.deleted':
-        await this.handlers['user.deleted']?.(this.parseUserEvent(webhookEvent.data, webhookEvent.type));
-        break;
-      case 'organization.created':
-        await this.handlers['organization.created']?.(this.parseOrgEvent(webhookEvent.data, webhookEvent.type));
-        break;
-      case 'organization.updated':
-        await this.handlers['organization.updated']?.(this.parseOrgEvent(webhookEvent.data, webhookEvent.type));
-        break;
-      case 'organization.deleted':
-        await this.handlers['organization.deleted']?.(this.parseOrgEvent(webhookEvent.data, webhookEvent.type));
-        break;
-      case 'organizationMembership.created':
-        await this.handlers['organizationMembership.created']?.(
-          this.parseMembershipEvent(webhookEvent.data, webhookEvent.type)
+      case "user.created":
+        await this.handlers["user.created"]?.(
+          this.parseUserEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
-      case 'organizationMembership.deleted':
-        await this.handlers['organizationMembership.deleted']?.(
-          this.parseMembershipEvent(webhookEvent.data, webhookEvent.type)
+      case "user.updated":
+        await this.handlers["user.updated"]?.(
+          this.parseUserEvent(webhookEvent.data, webhookEvent.type),
+        );
+        break;
+      case "user.deleted":
+        await this.handlers["user.deleted"]?.(
+          this.parseUserEvent(webhookEvent.data, webhookEvent.type),
+        );
+        break;
+      case "organization.created":
+        await this.handlers["organization.created"]?.(
+          this.parseOrgEvent(webhookEvent.data, webhookEvent.type),
+        );
+        break;
+      case "organization.updated":
+        await this.handlers["organization.updated"]?.(
+          this.parseOrgEvent(webhookEvent.data, webhookEvent.type),
+        );
+        break;
+      case "organization.deleted":
+        await this.handlers["organization.deleted"]?.(
+          this.parseOrgEvent(webhookEvent.data, webhookEvent.type),
+        );
+        break;
+      case "organizationMembership.created":
+        await this.handlers["organizationMembership.created"]?.(
+          this.parseMembershipEvent(webhookEvent.data, webhookEvent.type),
+        );
+        break;
+      case "organizationMembership.deleted":
+        await this.handlers["organizationMembership.deleted"]?.(
+          this.parseMembershipEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
     }

@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../DomainEvent';
+import type { DomainEvent } from "../DomainEvent";
 
 /**
  * 죽은 편지 큐(DLQ)에 저장된 이벤트 항목입니다.

@@ -1,9 +1,9 @@
-import { Container } from '@croco/framework-context';
-import { BATCH_LOADER_FACTORY_TOKEN, type IBatchLoaderFactory } from '../IBatchLoaderFactory';
+import { Container } from "@croco/framework-context";
+import { BATCH_LOADER_FACTORY_TOKEN, type IBatchLoaderFactory } from "../IBatchLoaderFactory";
 import {
   BatchLoaderFactoryNotRegisteredProblem,
   BatchLoaderFactoryResolutionProblem,
-} from '../problems/BatchLoadProblems';
+} from "../problems/BatchLoadProblems";
 
 type BatchKeyedRecord = Record<string, unknown>;
 
@@ -14,7 +14,7 @@ type BatchLoadableRepository<TKey, TValue extends BatchKeyedRecord> = {
 type BatchLoadMethod<TKey, TValue> = (this: object, arg: TKey) => Promise<TValue | null>;
 
 function hasBatchKey(value: unknown, key: string): value is BatchKeyedRecord {
-  return typeof value === 'object' && value !== null && key in value;
+  return typeof value === "object" && value !== null && key in value;
 }
 
 export type BatchLoadOptions = {
@@ -52,11 +52,14 @@ export function BatchLoad(options: BatchLoadOptions): MethodDecorator {
     const methodName = String(propertyKey);
     const loaderName = options.name || `${className}:${methodName}`;
 
-    descriptor.value = async function (this: BatchLoadableRepository<unknown, BatchKeyedRecord>, arg: unknown) {
+    descriptor.value = async function (
+      this: BatchLoadableRepository<unknown, BatchKeyedRecord>,
+      arg: unknown,
+    ) {
       const batchLoaderFactory = getBatchLoaderFactory();
       const batchFn = async (keys: ReadonlyArray<unknown>) => {
         // 1. Try to use findByIds if it exists (Optimization)
-        if (typeof this.findByIds === 'function') {
+        if (typeof this.findByIds === "function") {
           const results = await this.findByIds([...keys]);
 
           // Map results by the 'by' key to ensure order matches 'keys'
@@ -83,7 +86,7 @@ export function BatchLoad(options: BatchLoadOptions): MethodDecorator {
               // DataLoader expects Errors to be returned, not thrown, for partial failures
               return error instanceof Error ? error : new Error(String(error));
             }
-          })
+          }),
         );
       };
 

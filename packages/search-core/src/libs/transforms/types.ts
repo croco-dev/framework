@@ -1,7 +1,7 @@
-import { Token } from '@croco/framework-context';
+import { Token } from "@croco/framework-context";
 
 export abstract class SearchTransformAdapter<TOptions = unknown> {
-  static readonly token = new Token<SearchTransformAdapter>('SearchTransformAdapter');
+  static readonly token = new Token<SearchTransformAdapter>("SearchTransformAdapter");
 
   abstract readonly id: string;
   abstract readonly defaultSuffix: string;

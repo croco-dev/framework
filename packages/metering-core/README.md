@@ -17,7 +17,7 @@ import {
   MeteringService,
   RedisUsageStorage,
   setMeteringService,
-} from '@croco/metering-core';
+} from "@croco/metering-core";
 
 const usageStorage = new RedisUsageStorage(redisClient);
 const idempotencyManager = new IdempotencyManager(redisClient);
@@ -33,18 +33,18 @@ const meteringService = new MeteringService({
 setMeteringService(meteringService);
 
 await meteringService.record({
-  tenantId: 'tenant-123',
-  meterId: 'api_calls',
+  tenantId: "tenant-123",
+  meterId: "api_calls",
   value: 1,
 });
 ```
 
 ```ts
-import { Meter, Metered } from '@croco/metering-core';
+import { Meter, Metered } from "@croco/metering-core";
 
-@Meter({ meterId: 'api_calls', type: 'COUNT', quota: 10000 })
+@Meter({ meterId: "api_calls", type: "COUNT", quota: 10000 })
 class ApiController {
-  @Metered({ meterId: 'api_calls' })
+  @Metered({ meterId: "api_calls" })
   async listUsers(): Promise<void> {}
 }
 ```

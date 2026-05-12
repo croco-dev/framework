@@ -1,8 +1,8 @@
-import type { EventHandler } from '@croco/events-core';
-import { RegisterEventHandler } from '@croco/events-core';
-import { Container, type ILogger, LOGGER_TOKEN, MetadataStorage } from '@croco/framework-context';
-import { SEARCHABLE_METADATA, type SearchableMetadata } from '../decorators/Searchable';
-import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../events';
+import type { EventHandler } from "@croco/events-core";
+import { RegisterEventHandler } from "@croco/events-core";
+import { Container, type ILogger, LOGGER_TOKEN, MetadataStorage } from "@croco/framework-context";
+import { SEARCHABLE_METADATA, type SearchableMetadata } from "../decorators/Searchable";
+import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from "../events";
 
 class LRUCache<T> {
   private cache = new Map<string, T>();
@@ -31,7 +31,7 @@ class LRUCache<T> {
   }
 }
 
-import { SearchEngine } from '../SearchEngine';
+import { SearchEngine } from "../SearchEngine";
 
 export type SearchSyncFailedEventPublisher = {
   publish(event: SearchSyncFailedEvent): Promise<void>;
@@ -76,7 +76,7 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
         event.documentId,
         event.tenantId,
         error instanceof Error ? error : new Error(String(error)),
-        event instanceof DocumentIndexedEvent ? 'index' : 'delete'
+        event instanceof DocumentIndexedEvent ? "index" : "delete",
       );
 
       await this.publishFailedEvent(failedEvent);
@@ -94,10 +94,10 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
       const normalizedError = error instanceof Error ? error : new Error(String(error));
       try {
         const logger = Container.get(LOGGER_TOKEN) as ILogger;
-        logger.error('Failed to publish search sync failed event', normalizedError);
+        logger.error("Failed to publish search sync failed event", normalizedError);
       } catch {
         // eslint-disable-next-line no-console
-        console.error('Failed to publish search sync failed event', normalizedError);
+        console.error("Failed to publish search sync failed event", normalizedError);
       }
     }
   }

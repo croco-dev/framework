@@ -1,11 +1,11 @@
-import type { TxAdapter } from '@croco/tx-core';
-import { describe, expect, it, vi } from 'vitest';
+import type { TxAdapter } from "@croco/tx-core";
+import { describe, expect, it, vi } from "vitest";
 import {
   createDrizzleTxAdapter,
   createRlsTxAdapter,
   RlsExecuteUnsupportedProblem,
   SavepointUnsupportedProblem,
-} from '../index';
+} from "../index";
 
 interface MockTx {
   id: string;
@@ -19,10 +19,10 @@ interface MockRlsTx extends MockTx {
   execute(query: unknown): Promise<void>;
 }
 
-describe('DrizzleTxAdapter', () => {
+describe("DrizzleTxAdapter", () => {
   function createMockDrizzleDb() {
     const transactionFn = async <T>(fn: (tx: MockTx) => Promise<T>): Promise<T> => {
-      const tx: MockTx = { id: 'drizzle-tx' };
+      const tx: MockTx = { id: "drizzle-tx" };
       return fn(tx);
     };
 
@@ -31,44 +31,44 @@ describe('DrizzleTxAdapter', () => {
     };
   }
 
-  it('should create adapter from drizzle db', () => {
+  it("should create adapter from drizzle db", () => {
     const db = createMockDrizzleDb();
     const adapter = createDrizzleTxAdapter(db);
 
     expect(adapter).not.toBeUndefined();
-    expect(typeof adapter.transaction).toBe('function');
-    expect(typeof adapter.savepoint).toBe('function');
-    expect(typeof adapter.supportsSavepoint).toBe('function');
+    expect(typeof adapter.transaction).toBe("function");
+    expect(typeof adapter.savepoint).toBe("function");
+    expect(typeof adapter.supportsSavepoint).toBe("function");
   });
 
-  describe('transaction', () => {
-    it('should delegate to drizzle db.transaction', async () => {
+  describe("transaction", () => {
+    it("should delegate to drizzle db.transaction", async () => {
       const db = createMockDrizzleDb();
       const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
 
       const result = await adapter.transaction(async (tx) => {
-        expect(tx.id).toBe('drizzle-tx');
-        return 'result';
+        expect(tx.id).toBe("drizzle-tx");
+        return "result";
       });
 
-      expect(result).toBe('result');
+      expect(result).toBe("result");
       expect(db.transaction).toHaveBeenCalledTimes(1);
     });
 
-    it('should propagate errors', async () => {
+    it("should propagate errors", async () => {
       const db = createMockDrizzleDb();
       const adapter = createDrizzleTxAdapter(db);
 
       await expect(
         adapter.transaction(async () => {
-          throw new Error('DB error');
-        })
-      ).rejects.toThrow('DB error');
+          throw new Error("DB error");
+        }),
+      ).rejects.toThrow("DB error");
     });
   });
 
-  describe('supportsSavepoint', () => {
-    it('should return true', () => {
+  describe("supportsSavepoint", () => {
+    it("should return true", () => {
       const db = createMockDrizzleDb();
       const adapter = createDrizzleTxAdapter(db);
 
@@ -76,14 +76,14 @@ describe('DrizzleTxAdapter', () => {
     });
   });
 
-  describe('savepoint', () => {
-    it('should delegate to nested transaction client when savepoint is supported', async () => {
+  describe("savepoint", () => {
+    it("should delegate to nested transaction client when savepoint is supported", async () => {
       const db = createMockDrizzleDb();
       const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockNestedTx>;
       const nestedTransactionSpy = vi.fn();
 
       const client: MockNestedTx = {
-        id: 'existing-tx',
+        id: "existing-tx",
         transaction: async <T>(fn: (tx: MockNestedTx) => Promise<T>): Promise<T> => {
           nestedTransactionSpy();
           return fn(client);
@@ -91,33 +91,35 @@ describe('DrizzleTxAdapter', () => {
       };
 
       const result = await adapter.savepoint(client, async (tx) => {
-        expect(tx.id).toBe('existing-tx');
-        return 'savepoint-result';
+        expect(tx.id).toBe("existing-tx");
+        return "savepoint-result";
       });
 
-      expect(result).toBe('savepoint-result');
+      expect(result).toBe("savepoint-result");
       expect(nestedTransactionSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('should fail fast when nested transaction client does not support savepoint', async () => {
+    it("should fail fast when nested transaction client does not support savepoint", async () => {
       const db = createMockDrizzleDb();
       const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
 
-      const client: MockTx = { id: 'existing-tx' };
+      const client: MockTx = { id: "existing-tx" };
       const runQuery = vi.fn(async (tx: MockTx) => tx.id);
 
-      await expect(adapter.savepoint(client, runQuery)).rejects.toThrow(SavepointUnsupportedProblem);
+      await expect(adapter.savepoint(client, runQuery)).rejects.toThrow(
+        SavepointUnsupportedProblem,
+      );
       expect(runQuery).not.toHaveBeenCalled();
     });
   });
 });
 
-describe('RlsTxAdapter', () => {
+describe("RlsTxAdapter", () => {
   function createMockRlsDrizzleDb() {
     const execute = vi.fn(async (_query: unknown): Promise<void> => undefined);
     const transactionFn = async <T>(fn: (tx: MockRlsTx) => Promise<T>): Promise<T> => {
       const tx: MockRlsTx = {
-        id: 'drizzle-rls-tx',
+        id: "drizzle-rls-tx",
         execute,
       };
 
@@ -132,7 +134,7 @@ describe('RlsTxAdapter', () => {
 
   function createMockRlsDrizzleDbWithoutExecute() {
     const transactionFn = async <T>(fn: (tx: MockTx) => Promise<T>): Promise<T> => {
-      const tx: MockTx = { id: 'drizzle-rls-no-execute-tx' };
+      const tx: MockTx = { id: "drizzle-rls-no-execute-tx" };
       return fn(tx);
     };
 
@@ -141,52 +143,52 @@ describe('RlsTxAdapter', () => {
     };
   }
 
-  describe('transaction', () => {
-    it('should throw an error when tenant id is null', async () => {
+  describe("transaction", () => {
+    it("should throw an error when tenant id is null", async () => {
       const db = createMockRlsDrizzleDb();
       const tenantProvider = {
         getTenantId: vi.fn((): string | null => null),
       };
       const adapter = createRlsTxAdapter(db, tenantProvider);
-      const runQuery = vi.fn(async () => 'result');
+      const runQuery = vi.fn(async () => "result");
 
-      await expect(adapter.transaction(runQuery)).rejects.toThrow('Tenant context is required');
+      await expect(adapter.transaction(runQuery)).rejects.toThrow("Tenant context is required");
       expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
       expect(db.transaction).not.toHaveBeenCalled();
       expect(db.execute).not.toHaveBeenCalled();
       expect(runQuery).not.toHaveBeenCalled();
     });
 
-    it('should set RLS when tenant id exists', async () => {
+    it("should set RLS when tenant id exists", async () => {
       const db = createMockRlsDrizzleDb();
       const tenantProvider = {
-        getTenantId: vi.fn((): string | null => 'tenant-123'),
+        getTenantId: vi.fn((): string | null => "tenant-123"),
       };
       const adapter = createRlsTxAdapter(db, tenantProvider);
       const runQuery = vi.fn(async (tx: MockRlsTx) => {
-        expect(tx.id).toBe('drizzle-rls-tx');
-        return 'result';
+        expect(tx.id).toBe("drizzle-rls-tx");
+        return "result";
       });
 
       const result = await adapter.transaction(runQuery);
 
-      expect(result).toBe('result');
+      expect(result).toBe("result");
       expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
       expect(db.transaction).toHaveBeenCalledTimes(1);
       expect(db.execute).toHaveBeenCalledTimes(1);
       expect(runQuery).toHaveBeenCalledTimes(1);
     });
 
-    it('should fail fast when transaction client does not support execute', async () => {
+    it("should fail fast when transaction client does not support execute", async () => {
       const dbWithoutExecute = createMockRlsDrizzleDbWithoutExecute();
       const tenantProvider = {
-        getTenantId: vi.fn((): string | null => 'tenant-123'),
+        getTenantId: vi.fn((): string | null => "tenant-123"),
       };
       const adapter = createRlsTxAdapter(
         dbWithoutExecute as unknown as Parameters<typeof createRlsTxAdapter>[0],
-        tenantProvider
+        tenantProvider,
       );
-      const runQuery = vi.fn(async () => 'result');
+      const runQuery = vi.fn(async () => "result");
 
       await expect(adapter.transaction(runQuery)).rejects.toThrow(RlsExecuteUnsupportedProblem);
       expect(tenantProvider.getTenantId).toHaveBeenCalledTimes(1);
@@ -195,17 +197,19 @@ describe('RlsTxAdapter', () => {
     });
   });
 
-  describe('savepoint', () => {
-    it('should propagate savepoint support failures from base adapter', async () => {
+  describe("savepoint", () => {
+    it("should propagate savepoint support failures from base adapter", async () => {
       const db = createMockRlsDrizzleDb();
       const tenantProvider = {
-        getTenantId: vi.fn((): string | null => 'tenant-123'),
+        getTenantId: vi.fn((): string | null => "tenant-123"),
       };
       const adapter = createRlsTxAdapter(db, tenantProvider) as TxAdapter<MockTx>;
-      const client: MockTx = { id: 'rls-client' };
+      const client: MockTx = { id: "rls-client" };
       const runQuery = vi.fn(async (tx: MockTx) => tx.id);
 
-      await expect(adapter.savepoint(client, runQuery)).rejects.toThrow(SavepointUnsupportedProblem);
+      await expect(adapter.savepoint(client, runQuery)).rejects.toThrow(
+        SavepointUnsupportedProblem,
+      );
       expect(runQuery).not.toHaveBeenCalled();
     });
   });

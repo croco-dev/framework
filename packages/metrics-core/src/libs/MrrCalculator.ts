@@ -1,7 +1,7 @@
-import type { Money, SubscriptionSnapshot } from '../types';
+import type { Money, SubscriptionSnapshot } from "../types";
 
-import type { PlanProvider } from './interfaces/PlanProvider';
-import { MixedCurrencyMRRProblem } from './problems/MetricsProblems';
+import type { PlanProvider } from "./interfaces/PlanProvider";
+import { MixedCurrencyMRRProblem } from "./problems/MetricsProblems";
 
 /**
  * Calculator for Monthly Recurring Revenue (MRR).
@@ -17,7 +17,10 @@ export class MrrCalculator {
    * @param planRegistry - Registry to look up plan pricing details
    * @returns Total MRR as Money value
    */
-  async calculateMRR(subscriptions: SubscriptionSnapshot[], planProvider: PlanProvider): Promise<Money> {
+  async calculateMRR(
+    subscriptions: SubscriptionSnapshot[],
+    planProvider: PlanProvider,
+  ): Promise<Money> {
     let totalAmount = 0;
     let currency: string | null = null;
 
@@ -37,7 +40,7 @@ export class MrrCalculator {
       currency = plan.currency;
     }
 
-    return { amount: totalAmount, currency: currency ?? 'USD' };
+    return { amount: totalAmount, currency: currency ?? "USD" };
   }
 
   /**
@@ -48,8 +51,8 @@ export class MrrCalculator {
    * @param intervalCount - Number of intervals per billing cycle
    * @returns Normalized monthly MRR amount
    */
-  normalizeMRR(amount: number, interval: 'month' | 'year', intervalCount: number): number {
-    if (interval === 'year') {
+  normalizeMRR(amount: number, interval: "month" | "year", intervalCount: number): number {
+    if (interval === "year") {
       return amount / intervalCount / 12;
     }
 
@@ -70,28 +73,28 @@ export class MrrCalculator {
     hasPreviousSubscription: boolean,
     wasChurned: boolean,
     previousAmount: number | null,
-    newAmount: number
-  ): 'new' | 'expansion' | 'contraction' | 'churned' | 'reactivation' | 'unchanged' {
+    newAmount: number,
+  ): "new" | "expansion" | "contraction" | "churned" | "reactivation" | "unchanged" {
     if (!hasPreviousSubscription) {
-      return 'new';
+      return "new";
     }
 
     if (wasChurned) {
-      return 'reactivation';
+      return "reactivation";
     }
 
     if (previousAmount === null) {
-      return 'new';
+      return "new";
     }
 
     if (newAmount > previousAmount) {
-      return 'expansion';
+      return "expansion";
     }
 
     if (newAmount < previousAmount) {
-      return 'contraction';
+      return "contraction";
     }
 
-    return 'unchanged';
+    return "unchanged";
   }
 }

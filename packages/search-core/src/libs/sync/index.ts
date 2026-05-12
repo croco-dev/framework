@@ -1,1 +1,1 @@
-export * from './SearchAutoSync';
+export * from "./SearchAutoSync";

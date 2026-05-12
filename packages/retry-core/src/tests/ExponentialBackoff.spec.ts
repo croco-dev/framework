@@ -1,15 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { BackoffDependencies } from '../libs/BackoffPolicy';
-import { ExponentialBackoff } from '../libs/BackoffPolicy';
+import { describe, expect, it, vi } from "vitest";
+import type { BackoffDependencies } from "../libs/BackoffPolicy";
+import { ExponentialBackoff } from "../libs/BackoffPolicy";
 
-describe('ExponentialBackoff', () => {
-  describe('기본 동작', () => {
-    it('초기 delay를 반환해야 한다 (attempt=0)', () => {
+describe("ExponentialBackoff", () => {
+  describe("기본 동작", () => {
+    it("초기 delay를 반환해야 한다 (attempt=0)", () => {
       const backoff = new ExponentialBackoff({ delay: 1000, jitter: false });
       expect(backoff.getDelay(0)).toBe(1000);
     });
 
-    it('지수적으로 증가해야 한다 (jitter 없음)', () => {
+    it("지수적으로 증가해야 한다 (jitter 없음)", () => {
       const backoff = new ExponentialBackoff({ delay: 1000, multiplier: 2, jitter: false });
       expect(backoff.getDelay(0)).toBe(1000); // 1000 * 2^0
       expect(backoff.getDelay(1)).toBe(2000); // 1000 * 2^1
@@ -18,8 +18,8 @@ describe('ExponentialBackoff', () => {
     });
   });
 
-  describe('delay=0일 때 동작', () => {
-    it('delay=0이면 항상 0을 반환해야 한다', () => {
+  describe("delay=0일 때 동작", () => {
+    it("delay=0이면 항상 0을 반환해야 한다", () => {
       const backoff = new ExponentialBackoff({ delay: 0, multiplier: 2, jitter: false });
       expect(backoff.getDelay(0)).toBe(0);
       expect(backoff.getDelay(1)).toBe(0);
@@ -27,15 +27,15 @@ describe('ExponentialBackoff', () => {
     });
   });
 
-  describe('multiplier<=1일 때 선형/감소 백오프', () => {
-    it('multiplier=1이면 고정 지연을 유지해야 한다', () => {
+  describe("multiplier<=1일 때 선형/감소 백오프", () => {
+    it("multiplier=1이면 고정 지연을 유지해야 한다", () => {
       const backoff = new ExponentialBackoff({ delay: 1000, multiplier: 1, jitter: false });
       expect(backoff.getDelay(0)).toBe(1000);
       expect(backoff.getDelay(1)).toBe(1000);
       expect(backoff.getDelay(10)).toBe(1000);
     });
 
-    it('multiplier<1이면 감소하는 지연을 가져야 한다', () => {
+    it("multiplier<1이면 감소하는 지연을 가져야 한다", () => {
       const backoff = new ExponentialBackoff({ delay: 1000, multiplier: 0.5, jitter: false });
       expect(backoff.getDelay(0)).toBe(1000); // 1000 * 0.5^0
       expect(backoff.getDelay(1)).toBe(500); // 1000 * 0.5^1
@@ -44,9 +44,14 @@ describe('ExponentialBackoff', () => {
     });
   });
 
-  describe('maxDelay 도달 후 유지', () => {
-    it('maxDelay에 도달하면 더 이상 증가하지 않아야 한다', () => {
-      const backoff = new ExponentialBackoff({ delay: 1000, multiplier: 2, maxDelay: 3000, jitter: false });
+  describe("maxDelay 도달 후 유지", () => {
+    it("maxDelay에 도달하면 더 이상 증가하지 않아야 한다", () => {
+      const backoff = new ExponentialBackoff({
+        delay: 1000,
+        multiplier: 2,
+        maxDelay: 3000,
+        jitter: false,
+      });
       expect(backoff.getDelay(0)).toBe(1000);
       expect(backoff.getDelay(1)).toBe(2000);
       expect(backoff.getDelay(2)).toBe(3000);
@@ -54,23 +59,28 @@ describe('ExponentialBackoff', () => {
       expect(backoff.getDelay(10)).toBe(3000);
     });
 
-    it('maxDelay보다 작은 초기 delay는 정상 동작해야 한다', () => {
-      const backoff = new ExponentialBackoff({ delay: 500, multiplier: 10, maxDelay: 2000, jitter: false });
+    it("maxDelay보다 작은 초기 delay는 정상 동작해야 한다", () => {
+      const backoff = new ExponentialBackoff({
+        delay: 500,
+        multiplier: 10,
+        maxDelay: 2000,
+        jitter: false,
+      });
       expect(backoff.getDelay(0)).toBe(500);
       expect(backoff.getDelay(1)).toBe(2000);
       expect(backoff.getDelay(2)).toBe(2000);
     });
   });
 
-  describe('attempt가 매우 클 때 overflow 방지', () => {
-    it('매우 큰 attempt에서도 Infinity가 아니어야 한다', () => {
+  describe("attempt가 매우 클 때 overflow 방지", () => {
+    it("매우 큰 attempt에서도 Infinity가 아니어야 한다", () => {
       const backoff = new ExponentialBackoff({ delay: 1000, multiplier: 2, jitter: false });
       const delay = backoff.getDelay(1000);
       expect(delay).toBeLessThanOrEqual(Number.MAX_SAFE_INTEGER);
       expect(delay).toBeGreaterThan(0);
     });
 
-    it('maxDelay가 설정되면 큰 attempt에서도 capped되어야 한다', () => {
+    it("maxDelay가 설정되면 큰 attempt에서도 capped되어야 한다", () => {
       const backoff = new ExponentialBackoff({
         delay: 1,
         multiplier: 2,
@@ -82,8 +92,8 @@ describe('ExponentialBackoff', () => {
     });
   });
 
-  describe('jitter 적용 시 범위 검증', () => {
-    it('jitter가 활성화되면 [0, cap] 범위 내의 난수를 반환해야 한다', () => {
+  describe("jitter 적용 시 범위 검증", () => {
+    it("jitter가 활성화되면 [0, cap] 범위 내의 난수를 반환해야 한다", () => {
       const mockRandom = vi.fn();
       const deps: BackoffDependencies = { random: mockRandom };
       const backoff = new ExponentialBackoff({ delay: 1000, jitter: true }, deps);
@@ -98,10 +108,13 @@ describe('ExponentialBackoff', () => {
       expect(backoff.getDelay(0)).toBe(1000); // 1 * 1000
     });
 
-    it('jitter와 maxDelay 조합 시 올바르게 동작해야 한다', () => {
+    it("jitter와 maxDelay 조합 시 올바르게 동작해야 한다", () => {
       const mockRandom = vi.fn(() => 0.5);
       const deps: BackoffDependencies = { random: mockRandom };
-      const backoff = new ExponentialBackoff({ delay: 1000, multiplier: 2, maxDelay: 3000, jitter: true }, deps);
+      const backoff = new ExponentialBackoff(
+        { delay: 1000, multiplier: 2, maxDelay: 3000, jitter: true },
+        deps,
+      );
 
       // attempt=2: 1000 * 2^2 = 4000, capped to 3000
       // jitter: 3000 * 0.5 = 1500
@@ -109,8 +122,8 @@ describe('ExponentialBackoff', () => {
     });
   });
 
-  describe('wait() 함수 동작', () => {
-    it('지정된 시간만큼 대기해야 한다', async () => {
+  describe("wait() 함수 동작", () => {
+    it("지정된 시간만큼 대기해야 한다", async () => {
       vi.useFakeTimers();
       const sleepSpy = vi.fn();
       const deps: BackoffDependencies = { sleep: sleepSpy };
@@ -123,7 +136,7 @@ describe('ExponentialBackoff', () => {
       vi.useRealTimers();
     });
 
-    it('delay=0이면 즉시 반환해야 한다', async () => {
+    it("delay=0이면 즉시 반환해야 한다", async () => {
       const backoff = new ExponentialBackoff({ delay: 0 });
       const start = Date.now();
       await backoff.wait(0);
@@ -132,8 +145,8 @@ describe('ExponentialBackoff', () => {
     });
   });
 
-  describe('reset() 함수 동작', () => {
-    it('reset은 no-op이어야 한다 (stateless)', () => {
+  describe("reset() 함수 동작", () => {
+    it("reset은 no-op이어야 한다 (stateless)", () => {
       const backoff = new ExponentialBackoff({ delay: 1000, jitter: false });
       expect(() => backoff.reset()).not.toThrow();
       expect(backoff.getDelay(0)).toBe(1000);
@@ -142,8 +155,8 @@ describe('ExponentialBackoff', () => {
     });
   });
 
-  describe('의존성 주입을 통한 테스트', () => {
-    it('커스텀 sleep 함수로 대체 가능해야 한다', async () => {
+  describe("의존성 주입을 통한 테스트", () => {
+    it("커스텀 sleep 함수로 대체 가능해야 한다", async () => {
       const customSleep = vi.fn();
       const deps: BackoffDependencies = { sleep: customSleep };
       const backoff = new ExponentialBackoff({ delay: 1000, jitter: false }, deps);
@@ -152,7 +165,7 @@ describe('ExponentialBackoff', () => {
       expect(customSleep).toHaveBeenCalledWith(2000);
     });
 
-    it('커스텀 random 함수로 대체 가능해야 한다', () => {
+    it("커스텀 random 함수로 대체 가능해야 한다", () => {
       const customRandom = vi.fn(() => 0.25);
       const deps: BackoffDependencies = { random: customRandom };
       const backoff = new ExponentialBackoff({ delay: 1000, jitter: true }, deps);

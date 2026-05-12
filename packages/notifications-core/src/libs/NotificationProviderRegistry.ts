@@ -1,9 +1,9 @@
-import { Component } from '@croco/framework-context';
+import { Component } from "@croco/framework-context";
 import {
   NotificationDefaultProviderConflictProblem,
   NotificationProviderAlreadyRegisteredProblem,
-} from './problems/NotificationProblems';
-import type { NotificationChannel, NotificationProvider } from './types';
+} from "./problems/NotificationProblems";
+import type { NotificationChannel, NotificationProvider } from "./types";
 
 @Component()
 export class NotificationProviderRegistry {
@@ -26,7 +26,11 @@ export class NotificationProviderRegistry {
     const existingDefaultProvider = this.defaultProviders.get(channel);
 
     if (existingDefaultProvider !== undefined) {
-      throw new NotificationDefaultProviderConflictProblem(channel, existingDefaultProvider, providerName);
+      throw new NotificationDefaultProviderConflictProblem(
+        channel,
+        existingDefaultProvider,
+        providerName,
+      );
     }
 
     this.providers.set(providerName, provider);

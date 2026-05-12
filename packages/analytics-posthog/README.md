@@ -17,14 +17,12 @@ pnpm add @croco/analytics-posthog
 `PostHogAnalyticsManager`는 `@croco/integrations-posthog`의 `PostHogClient`를 의존성으로 주입받습니다.
 
 ```typescript
-import { Component } from '@croco/framework-context';
-import { PostHogAnalyticsManager } from '@croco/analytics-posthog';
+import { Component } from "@croco/framework-context";
+import { PostHogAnalyticsManager } from "@croco/analytics-posthog";
 
 @Component()
 class MyService {
-  constructor(
-    private readonly analytics: PostHogAnalyticsManager
-  ) {}
+  constructor(private readonly analytics: PostHogAnalyticsManager) {}
 }
 ```
 
@@ -33,8 +31,8 @@ class MyService {
 사용자 행동 이벤트를 PostHog에 전송합니다. `userId`와 `tenantId`는 Context에서 자동으로 주입됩니다.
 
 ```typescript
-this.analytics.capture('order.created', {
-  orderId: 'order-123',
+this.analytics.capture("order.created", {
+  orderId: "order-123",
   amount: 99.99,
 });
 ```
@@ -44,9 +42,9 @@ this.analytics.capture('order.created', {
 로그인 또는 회원가입 후 사용자를 식별합니다.
 
 ```typescript
-this.analytics.identify('user-123', {
-  name: 'John Doe',
-  email: 'john@example.com',
+this.analytics.identify("user-123", {
+  name: "John Doe",
+  email: "john@example.com",
 });
 ```
 
@@ -55,8 +53,8 @@ this.analytics.identify('user-123', {
 사용자를 테넌트 또는 조직과 연결합니다. B2B SaaS 환경에서 필수적입니다.
 
 ```typescript
-this.analytics.group('tenant', 'tenant-456', {
-  plan: 'enterprise',
+this.analytics.group("tenant", "tenant-456", {
+  plan: "enterprise",
   seats: 100,
 });
 ```

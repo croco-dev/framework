@@ -13,11 +13,11 @@ pnpm add @croco/events-core reflect-metadata
 ### 이벤트와 핸들러 정의
 
 ```typescript
-import 'reflect-metadata';
-import { DomainEvent, EventHandler, RegisterEventHandler } from '@croco/events-core';
+import "reflect-metadata";
+import { DomainEvent, EventHandler, RegisterEventHandler } from "@croco/events-core";
 
 class UserCreatedEvent extends DomainEvent {
-  static eventName = 'user.created';
+  static eventName = "user.created";
 
   constructor(readonly userId: string) {
     super();
@@ -35,20 +35,20 @@ class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
 ### 이벤트 버스 구성과 발행
 
 ```typescript
-import { EventBusConfig, EventPublisher } from '@croco/events-core';
-import { InMemoryEventBus } from '@croco/events-inmemory';
+import { EventBusConfig, EventPublisher } from "@croco/events-core";
+import { InMemoryEventBus } from "@croco/events-inmemory";
 
 const config = EventBusConfig.getInstance();
 config.setEventBus(new InMemoryEventBus());
 await config.start({ handlers: [UserCreatedHandler] });
 
-await new EventPublisher().publish(new UserCreatedEvent('user-1'));
+await new EventPublisher().publish(new UserCreatedEvent("user-1"));
 ```
 
 ### 이벤트 직렬화
 
 ```typescript
-import { DefaultEventSerializer, EventRegistry } from '@croco/events-core';
+import { DefaultEventSerializer, EventRegistry } from "@croco/events-core";
 
 const registry = EventRegistry.fromMetadata();
 const serializer = new DefaultEventSerializer(registry);

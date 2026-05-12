@@ -1,9 +1,10 @@
-import type { z } from 'zod';
-import type { HttpMethod } from '../constants';
+import type { z } from "zod";
+import type { HttpMethod } from "../constants";
 
-export type RouteHandler<Req extends Record<string, unknown> = Record<string, unknown>, Res = unknown> = (
-  request: Req
-) => Res | Promise<Res>;
+export type RouteHandler<
+  Req extends Record<string, unknown> = Record<string, unknown>,
+  Res = unknown,
+> = (request: Req) => Res | Promise<Res>;
 
 export type RouteInputSchemas = {
   body: z.ZodType | null;
@@ -27,17 +28,17 @@ export type TypedRouteConfig<
 };
 
 export type InferRouteRequest<T extends TypedRouteConfig> = {
-  body: T['body'] extends z.ZodType ? z.infer<T['body']> : unknown;
-  query: T['query'] extends z.ZodType ? z.infer<T['query']> : unknown;
-  params: T['params'] extends z.ZodType ? z.infer<T['params']> : unknown;
+  body: T["body"] extends z.ZodType ? z.infer<T["body"]> : unknown;
+  query: T["query"] extends z.ZodType ? z.infer<T["query"]> : unknown;
+  params: T["params"] extends z.ZodType ? z.infer<T["params"]> : unknown;
 };
 
-export type InferRouteResponse<T extends TypedRouteConfig> = T['response'] extends z.ZodType
-  ? z.infer<T['response']>
+export type InferRouteResponse<T extends TypedRouteConfig> = T["response"] extends z.ZodType
+  ? z.infer<T["response"]>
   : unknown;
 
 export type TypedRouteHandler<T extends TypedRouteConfig> = (
-  request: InferRouteRequest<T>
+  request: InferRouteRequest<T>,
 ) => InferRouteResponse<T> | Promise<InferRouteResponse<T>>;
 
 export type ApiEndpoint<
@@ -57,11 +58,11 @@ export type ApiEndpoint<
 };
 
 export type EndpointRequest<T extends ApiEndpoint> = {
-  body: T['body'] extends z.ZodType ? z.infer<T['body']> : undefined;
-  query: T['query'] extends z.ZodType ? z.infer<T['query']> : undefined;
-  params: T['params'] extends z.ZodType ? z.infer<T['params']> : undefined;
+  body: T["body"] extends z.ZodType ? z.infer<T["body"]> : undefined;
+  query: T["query"] extends z.ZodType ? z.infer<T["query"]> : undefined;
+  params: T["params"] extends z.ZodType ? z.infer<T["params"]> : undefined;
 };
 
-export type EndpointResponse<T extends ApiEndpoint> = T['response'] extends z.ZodType
-  ? z.infer<T['response']>
+export type EndpointResponse<T extends ApiEndpoint> = T["response"] extends z.ZodType
+  ? z.infer<T["response"]>
   : unknown;

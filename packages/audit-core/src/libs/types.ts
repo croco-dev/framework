@@ -34,11 +34,13 @@ export type AuditPayload = {
 };
 
 export function isAuditPayload(value: unknown): value is AuditPayload {
-  if (!value || typeof value !== 'object') {
+  if (!value || typeof value !== "object") {
     return false;
   }
   const obj = value as Record<string, unknown>;
-  return 'diff' in obj && (obj.diff === undefined || obj.diff === null || typeof obj.diff === 'object');
+  return (
+    "diff" in obj && (obj.diff === undefined || obj.diff === null || typeof obj.diff === "object")
+  );
 }
 
 export type AuditParamMetadata = {

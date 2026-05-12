@@ -1,6 +1,6 @@
-import { ulid } from 'ulid';
-import { DuplicateRecordProblem } from './problems/DuplicateRecordProblem';
-import type { RedisClient } from './RedisClient';
+import { ulid } from "ulid";
+import { DuplicateRecordProblem } from "./problems/DuplicateRecordProblem";
+import type { RedisClient } from "./RedisClient";
 
 /**
  * Idempotency 관리자
@@ -12,13 +12,13 @@ import type { RedisClient } from './RedisClient';
  */
 export class IdempotencyManager {
   private static readonly DEFAULT_TTL_SECONDS = 86400; // 24시간
-  private static readonly KEY_PREFIX = 'idem';
-  private static readonly STATUS_IN_PROGRESS = 'IN_PROGRESS';
-  private static readonly STATUS_COMPLETED = 'COMPLETED';
+  private static readonly KEY_PREFIX = "idem";
+  private static readonly STATUS_IN_PROGRESS = "IN_PROGRESS";
+  private static readonly STATUS_COMPLETED = "COMPLETED";
 
   constructor(
     private readonly redis: RedisClient,
-    private readonly ttlSeconds: number = IdempotencyManager.DEFAULT_TTL_SECONDS
+    private readonly ttlSeconds: number = IdempotencyManager.DEFAULT_TTL_SECONDS,
   ) {}
 
   /**
@@ -34,11 +34,21 @@ export class IdempotencyManager {
    */
   async checkAndMark(tenantId: string, meterId: string, idempotencyKey: string): Promise<boolean> {
     const key = this.buildKey(tenantId, meterId, idempotencyKey);
-    const result = await this.redis.set(key, IdempotencyManager.STATUS_COMPLETED, 'NX', 'EX', this.ttlSeconds);
-    return result === 'OK';
+    const result = await this.redis.set(
+      key,
+      IdempotencyManager.STATUS_COMPLETED,
+      "NX",
+      "EX",
+      this.ttlSeconds,
+    );
+    return result === "OK";
   }
 
-  async beginProcessing(tenantId: string, meterId: string, idempotencyKey: string): Promise<boolean> {
+  async beginProcessing(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+  ): Promise<boolean> {
     const key = this.buildKey(tenantId, meterId, idempotencyKey);
     const [result] = await this.redis.eval<[number]>(
       `
@@ -50,20 +60,28 @@ export class IdempotencyManager {
         return 1
       `,
       [key],
-      [IdempotencyManager.STATUS_IN_PROGRESS, String(this.ttlSeconds)]
+      [IdempotencyManager.STATUS_IN_PROGRESS, String(this.ttlSeconds)],
     );
 
     return result === 1;
   }
 
-  async beginProcessingOrThrow(tenantId: string, meterId: string, idempotencyKey: string): Promise<void> {
+  async beginProcessingOrThrow(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+  ): Promise<void> {
     const isNew = await this.beginProcessing(tenantId, meterId, idempotencyKey);
     if (!isNew) {
       throw new DuplicateRecordProblem(idempotencyKey);
     }
   }
 
-  async completeProcessing(tenantId: string, meterId: string, idempotencyKey: string): Promise<void> {
+  async completeProcessing(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+  ): Promise<void> {
     const key = this.buildKey(tenantId, meterId, idempotencyKey);
     await this.redis.eval<[number]>(
       `
@@ -73,7 +91,11 @@ export class IdempotencyManager {
         return 1
       `,
       [key],
-      [IdempotencyManager.STATUS_IN_PROGRESS, IdempotencyManager.STATUS_COMPLETED, String(this.ttlSeconds)]
+      [
+        IdempotencyManager.STATUS_IN_PROGRESS,
+        IdempotencyManager.STATUS_COMPLETED,
+        String(this.ttlSeconds),
+      ],
     );
   }
 
@@ -87,7 +109,7 @@ export class IdempotencyManager {
         return 1
       `,
       [key],
-      [IdempotencyManager.STATUS_IN_PROGRESS]
+      [IdempotencyManager.STATUS_IN_PROGRESS],
     );
   }
 
@@ -95,7 +117,11 @@ export class IdempotencyManager {
    * 중복 체크 - Problem throw 버전
    * @throws DuplicateRecordProblem 중복 시
    */
-  async checkAndMarkOrThrow(tenantId: string, meterId: string, idempotencyKey: string): Promise<void> {
+  async checkAndMarkOrThrow(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+  ): Promise<void> {
     const isNew = await this.checkAndMark(tenantId, meterId, idempotencyKey);
     if (!isNew) {
       throw new DuplicateRecordProblem(idempotencyKey);

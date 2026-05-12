@@ -1,5 +1,5 @@
-import type { Context } from '@croco/framework-context';
-import type { TenantGuard } from './guards/TenantGuard';
+import type { Context } from "@croco/framework-context";
+import type { TenantGuard } from "./guards/TenantGuard";
 
 export type MiddlewareRequest = {
   headers?: Record<string, string | string[] | undefined>;

@@ -15,7 +15,7 @@ title: "EventPublishFailure"
 
 > **error**: `Error`
 
-***
+---
 
 ### handlerName
 

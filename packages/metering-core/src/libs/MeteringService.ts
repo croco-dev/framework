@@ -1,13 +1,13 @@
-import type { EventBus } from '@croco/events-core';
-import { Component } from '@croco/framework-context';
-import { ulid } from 'ulid';
-import { QuotaExceededEvent } from './events/QuotaExceededEvent';
-import { UsageRecordedEvent } from './events/UsageRecordedEvent';
-import type { IdempotencyManager } from './IdempotencyManager';
-import type { MeterRegistry } from './MeterRegistry';
-import { QuotaManager } from './QuotaManager';
-import type { RecordOptions, UsageQueryOptions, UsageRecord } from './types';
-import type { UsageStorage } from './UsageStorage';
+import type { EventBus } from "@croco/events-core";
+import { Component } from "@croco/framework-context";
+import { ulid } from "ulid";
+import { QuotaExceededEvent } from "./events/QuotaExceededEvent";
+import { UsageRecordedEvent } from "./events/UsageRecordedEvent";
+import type { IdempotencyManager } from "./IdempotencyManager";
+import type { MeterRegistry } from "./MeterRegistry";
+import { QuotaManager } from "./QuotaManager";
+import type { RecordOptions, UsageQueryOptions, UsageRecord } from "./types";
+import type { UsageStorage } from "./UsageStorage";
 
 export type MeteringServiceOptions = {
   meterRegistry: MeterRegistry;
@@ -80,7 +80,9 @@ export class MeteringService {
         });
 
         if (quotaResult.exceeded && this.eventBus) {
-          await this.eventBus.publish(new QuotaExceededEvent(tenantId, meterId, quotaResult.newUsage, meter.quota));
+          await this.eventBus.publish(
+            new QuotaExceededEvent(tenantId, meterId, quotaResult.newUsage, meter.quota),
+          );
         }
 
         if (quotaResult.exceeded && !allowOverQuota) {
@@ -108,7 +110,9 @@ export class MeteringService {
       }
 
       if (this.eventBus) {
-        await this.eventBus.publish(new UsageRecordedEvent(tenantId, meterId, value, idempotencyKey, metadata));
+        await this.eventBus.publish(
+          new UsageRecordedEvent(tenantId, meterId, value, idempotencyKey, metadata),
+        );
       }
 
       await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);

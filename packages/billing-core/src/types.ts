@@ -1,6 +1,6 @@
-import type { Money } from './libs/Money';
+import type { Money } from "./libs/Money";
 
-export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'revoked' | 'trialing';
+export type SubscriptionStatus = "active" | "past_due" | "canceled" | "revoked" | "trialing";
 
 export type BillingAccount = {
   id: string;
@@ -27,7 +27,7 @@ export type Order = {
   externalOrderId: string;
   amount: number;
   currency: string;
-  reason: 'subscription_cycle' | 'subscription_update' | 'one_time';
+  reason: "subscription_cycle" | "subscription_update" | "one_time";
   paidAt: Date;
 };
 
@@ -37,7 +37,7 @@ export type ProcessedWebhook = {
   processedAt: Date;
 };
 
-export type PlanInterval = 'month' | 'year';
+export type PlanInterval = "month" | "year";
 
 export type Plan = {
   id: string;
@@ -48,7 +48,7 @@ export type Plan = {
   intervalCount: number;
 };
 
-export type InvoiceLineItemType = 'subscription' | 'proration' | 'credit' | 'one_time';
+export type InvoiceLineItemType = "subscription" | "proration" | "credit" | "one_time";
 
 export type InvoiceLineItem = {
   id: string;
@@ -61,7 +61,7 @@ export type InvoiceLineItem = {
   periodEnd?: Date;
 };
 
-export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void';
+export type InvoiceStatus = "draft" | "open" | "paid" | "void";
 
 export type Invoice = {
   id: string;

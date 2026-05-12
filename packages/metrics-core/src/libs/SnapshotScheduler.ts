@@ -1,8 +1,8 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
-import type { MetricsSnapshot, MRRMovement, SubscriptionSnapshot } from '../types';
-import type { MetricsRepository } from './interfaces/MetricsRepository';
-import type { PlanProvider } from './interfaces/PlanProvider';
-import { MrrCalculator } from './MrrCalculator';
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { MetricsSnapshot, MRRMovement, SubscriptionSnapshot } from "../types";
+import type { MetricsRepository } from "./interfaces/MetricsRepository";
+import type { PlanProvider } from "./interfaces/PlanProvider";
+import { MrrCalculator } from "./MrrCalculator";
 
 export type SnapshotSchedulerConfig = {
   tenantId: string;
@@ -16,23 +16,23 @@ export type SnapshotInput = {
 };
 
 export class SnapshotTenantRequiredProblem extends Problem {
-  readonly code = 'metrics-core/snapshot-tenant-required';
+  readonly code = "metrics-core/snapshot-tenant-required";
   readonly category = ProblemCategory.ValidationError;
   constructor() {
-    super('tenantId is required for snapshot capture');
+    super("tenantId is required for snapshot capture");
   }
 }
 
 export class SnapshotScheduler {
   constructor(
     private readonly metricsRepository: MetricsRepository,
-    private readonly mrrCalculator: MrrCalculator = new MrrCalculator()
+    private readonly mrrCalculator: MrrCalculator = new MrrCalculator(),
   ) {}
 
   async captureSnapshot(
     input: SnapshotInput,
     date: Date = this.getYesterday(),
-    config?: SnapshotSchedulerConfig
+    config?: SnapshotSchedulerConfig,
   ): Promise<void> {
     if (!config?.tenantId) {
       throw new SnapshotTenantRequiredProblem();
@@ -52,7 +52,7 @@ export class SnapshotScheduler {
     const mrrHistory = await this.metricsRepository.getMRRHistory(tenantId, {
       from: periodStart,
       to: snapshotDate,
-      granularity: 'day',
+      granularity: "day",
     });
 
     let movement: MRRMovement | undefined;

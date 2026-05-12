@@ -1,4 +1,4 @@
-import type { IsrCacheAdapter } from './types';
+import type { IsrCacheAdapter } from "./types";
 
 /**
  * Create an ISR handler that wraps a render function with CacheStore-backed caching.
@@ -7,7 +7,7 @@ import type { IsrCacheAdapter } from './types';
 export function createIsrHandler(options: {
   cache: IsrCacheAdapter;
   render: (path: string) => Promise<{ html: string; cacheTags?: string[] }>;
-}): (path: string) => Promise<{ html: string; source: 'cache' | 'render' }> {
+}): (path: string) => Promise<{ html: string; source: "cache" | "render" }> {
   const { cache, render } = options;
 
   return async (path: string) => {
@@ -18,13 +18,13 @@ export function createIsrHandler(options: {
       async () => {
         const rendered = await render(path);
         return rendered;
-      }
+      },
       // TTL is set per-route by the caller via render options
     );
 
     return {
       html: result.html,
-      source: 'render' as const,
+      source: "render" as const,
     };
   };
 }

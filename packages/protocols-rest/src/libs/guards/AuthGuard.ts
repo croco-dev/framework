@@ -1,7 +1,7 @@
-import type { Guard } from '@croco/framework-context';
-import { Problem, ProblemCategory } from '@croco/problems-core';
-import type { ExecutionContext } from '../interfaces/ExecutionContext';
-import type { HttpRequestLike } from '../types';
+import type { Guard } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { ExecutionContext } from "../interfaces/ExecutionContext";
+import type { HttpRequestLike } from "../types";
 
 export type TokenVerifier = (token: string) => Promise<unknown> | unknown;
 
@@ -33,7 +33,7 @@ function badRequest(code: string, detail: string): AuthGuardProblem {
 }
 
 function verifierUnavailable(detail: string): AuthGuardProblem {
-  return new AuthGuardProblem(500, 'AUTH_VERIFIER_UNAVAILABLE', detail);
+  return new AuthGuardProblem(500, "AUTH_VERIFIER_UNAVAILABLE", detail);
 }
 
 function isTokenVerificationError(error: unknown): boolean {
@@ -45,13 +45,13 @@ function isTokenVerificationError(error: unknown): boolean {
   const message = error.message.toLowerCase();
 
   return (
-    name.startsWith('ERR_JWT_') ||
-    name.startsWith('ERR_JWS_') ||
-    name.startsWith('ERR_JWE_') ||
-    message.includes('token expired') ||
-    message.includes('invalid token') ||
-    message.includes('jwt expired') ||
-    message.includes('token invalid')
+    name.startsWith("ERR_JWT_") ||
+    name.startsWith("ERR_JWS_") ||
+    name.startsWith("ERR_JWE_") ||
+    message.includes("token expired") ||
+    message.includes("invalid token") ||
+    message.includes("jwt expired") ||
+    message.includes("token invalid")
   );
 }
 
@@ -65,55 +65,55 @@ export class AuthGuard implements Guard<ExecutionContext> {
 
   constructor(options: AuthGuardOptions) {
     this.verifier = options.verifier;
-    this.headerName = options.headerName ?? 'authorization';
-    this.scheme = options.scheme ?? 'Bearer';
+    this.headerName = options.headerName ?? "authorization";
+    this.scheme = options.scheme ?? "Bearer";
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.getRequest();
 
     // 타입 가드로 HttpRequestLike 최소 속성 검증
-    if (typeof request !== 'object' || request === null || !('headers' in request)) {
-      throw badRequest('AUTH_INVALID_REQUEST', 'Invalid request object');
+    if (typeof request !== "object" || request === null || !("headers" in request)) {
+      throw badRequest("AUTH_INVALID_REQUEST", "Invalid request object");
     }
 
     const typedRequest = request as HttpRequestLike & { user?: unknown };
     const authHeader = this.getHeaderValue(typedRequest.headers, this.headerName);
 
     if (!authHeader) {
-      throw unauthorized('AUTH_MISSING_HEADER', 'Missing authorization header');
+      throw unauthorized("AUTH_MISSING_HEADER", "Missing authorization header");
     }
 
     const token = this.extractToken(authHeader);
     if (!token) {
-      throw badRequest('AUTH_INVALID_HEADER_FORMAT', 'Invalid authorization header format');
+      throw badRequest("AUTH_INVALID_HEADER_FORMAT", "Invalid authorization header format");
     }
 
     try {
       const user = await this.verifier(token);
 
       if (!user) {
-        throw unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired token');
+        throw unauthorized("AUTH_INVALID_TOKEN", "Invalid or expired token");
       }
 
       typedRequest.user = user;
 
       return true;
     } catch (error) {
-      if (error instanceof Problem && error.code === 'AUTH_INVALID_TOKEN') {
+      if (error instanceof Problem && error.code === "AUTH_INVALID_TOKEN") {
         throw error;
       }
 
       if (isTokenVerificationError(error)) {
-        throw unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired token');
+        throw unauthorized("AUTH_INVALID_TOKEN", "Invalid or expired token");
       }
 
-      throw verifierUnavailable('Authentication verifier is unavailable');
+      throw verifierUnavailable("Authentication verifier is unavailable");
     }
   }
 
   private extractToken(header: string): string | null {
-    const parts = header.split(' ');
+    const parts = header.split(" ");
     if (parts.length !== 2) {
       return null;
     }
@@ -135,21 +135,21 @@ export class AuthGuard implements Guard<ExecutionContext> {
       return headers.get(headerName) ?? undefined;
     }
 
-    if (typeof headers !== 'object' || headers === null) {
+    if (typeof headers !== "object" || headers === null) {
       return undefined;
     }
 
     const headerRecord = headers as Record<string, unknown>;
     const direct = headerRecord[headerName];
 
-    if (typeof direct === 'string') {
+    if (typeof direct === "string") {
       return direct;
     }
 
     const normalizedHeaderName = headerName.toLowerCase();
 
     for (const [key, value] of Object.entries(headerRecord)) {
-      if (key.toLowerCase() === normalizedHeaderName && typeof value === 'string') {
+      if (key.toLowerCase() === normalizedHeaderName && typeof value === "string") {
         return value;
       }
     }

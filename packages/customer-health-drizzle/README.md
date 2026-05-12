@@ -16,7 +16,7 @@ import {
   DrizzleHealthScoreStore,
   DrizzleHealthSignalRegistry,
   MeteringSignalProvider,
-} from '@croco/customer-health-drizzle';
+} from "@croco/customer-health-drizzle";
 
 const scoreStore = new DrizzleHealthScoreStore(db);
 const usageProvider = new MeteringSignalProvider(usageStorage);
@@ -24,16 +24,16 @@ const billingProvider = new BillingSignalProvider(subscriptionStorage);
 const registry = new DrizzleHealthSignalRegistry(usageProvider, billingProvider);
 
 await scoreStore.save({
-  tenantId: 'tenant-1',
+  tenantId: "tenant-1",
   overallScore: 85,
-  status: 'healthy',
+  status: "healthy",
   categoryScores: { usage: 90, business: 80, engagement: 85 },
   signals: [],
-  trend: 'stable',
+  trend: "stable",
   calculatedAt: new Date(),
 });
 
-const latest = await scoreStore.findLatest('tenant-1');
+const latest = await scoreStore.findLatest("tenant-1");
 const providers = registry.getProviders();
 ```
 

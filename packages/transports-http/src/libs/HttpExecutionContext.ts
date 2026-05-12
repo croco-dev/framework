@@ -1,5 +1,5 @@
-import type { Constructor, ExecutionContext } from '@croco/protocols-rest';
-import type { CrocoHttpContext } from './types';
+import type { Constructor, ExecutionContext } from "@croco/protocols-rest";
+import type { CrocoHttpContext } from "./types";
 
 type ContextRequest = Request & {
   params?: Record<string, string>;
@@ -13,15 +13,15 @@ export class HttpExecutionContext implements ExecutionContext {
   constructor(
     private readonly ctx: CrocoHttpContext,
     private readonly controllerClass: Constructor,
-    private readonly handlerName: string | symbol
+    private readonly handlerName: string | symbol,
   ) {}
 
   getRequest(): Request {
     const request = this.ctx.raw.req.raw as ContextRequest;
     request.params = this.ctx.req.params;
 
-    const contextTenantId = this.ctx.get<string>('tenantId');
-    if (typeof contextTenantId === 'string' && contextTenantId.length > 0) {
+    const contextTenantId = this.ctx.get<string>("tenantId");
+    if (typeof contextTenantId === "string" && contextTenantId.length > 0) {
       request.tenantId = contextTenantId;
     }
 

@@ -1,8 +1,8 @@
-import { Context } from '@croco/framework-context';
-import { MissingTenantProblem } from '@croco/search-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MeilisearchEngine } from '../libs/MeilisearchEngine';
-import type { MeilisearchEngineOptions } from '../libs/types';
+import { Context } from "@croco/framework-context";
+import { MissingTenantProblem } from "@croco/search-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MeilisearchEngine } from "../libs/MeilisearchEngine";
+import type { MeilisearchEngineOptions } from "../libs/types";
 
 const mocks = vi.hoisted(() => {
   const index = {
@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => {
   return { clientMock: client, indexMock: index };
 });
 
-vi.mock('meilisearch', () => ({
+vi.mock("meilisearch", () => ({
   MeiliSearch: class {
     constructor() {
       Object.assign(this, mocks.clientMock);
@@ -30,14 +30,14 @@ vi.mock('meilisearch', () => ({
   },
 }));
 
-describe('MeilisearchEngine', () => {
+describe("MeilisearchEngine", () => {
   let engine!: MeilisearchEngine;
 
   const options: MeilisearchEngineOptions = {
-    host: 'http://localhost:7700',
-    apiKey: 'masterKey',
+    host: "http://localhost:7700",
+    apiKey: "masterKey",
     tenantTokenOptions: {
-      apiKeyUid: 'uid',
+      apiKeyUid: "uid",
     },
   };
 
@@ -53,155 +53,158 @@ describe('MeilisearchEngine', () => {
 
     mocks.clientMock.createIndex.mockResolvedValue({ taskUid: 1 });
     mocks.clientMock.deleteIndex.mockResolvedValue({ taskUid: 1 });
-    mocks.clientMock.generateTenantToken.mockReturnValue('token');
+    mocks.clientMock.generateTenantToken.mockReturnValue("token");
 
     engine = new MeilisearchEngine(options);
   });
 
-  describe('search', () => {
-    it('should throw MissingTenantProblem if tenantId is missing', async () => {
-      vi.spyOn(Context, 'getTenantId').mockReturnValue(null);
-      await expect(engine.search('index', { query: 'test' })).rejects.toThrow(MissingTenantProblem);
+  describe("search", () => {
+    it("should throw MissingTenantProblem if tenantId is missing", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue(null);
+      await expect(engine.search("index", { query: "test" })).rejects.toThrow(MissingTenantProblem);
     });
 
-    it('should add tenant filter to search query', async () => {
-      vi.spyOn(Context, 'getTenantId').mockReturnValue('tenant-1');
-      await engine.search('index', { query: 'test' });
+    it("should add tenant filter to search query", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      await engine.search("index", { query: "test" });
 
-      expect(mocks.clientMock.index).toHaveBeenCalledWith('index');
+      expect(mocks.clientMock.index).toHaveBeenCalledWith("index");
       expect(mocks.indexMock.search).toHaveBeenCalledWith(
-        'test',
+        "test",
         expect.objectContaining({
           filter: expect.arrayContaining(['_tenantId = "tenant-1"']),
-        })
+        }),
       );
     });
 
-    it('should combine with existing filters', async () => {
-      vi.spyOn(Context, 'getTenantId').mockReturnValue('tenant-1');
-      await engine.search('index', { query: 'test', filters: { status: 'active' } });
+    it("should combine with existing filters", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      await engine.search("index", { query: "test", filters: { status: "active" } });
 
       expect(mocks.indexMock.search).toHaveBeenCalledWith(
-        'test',
+        "test",
         expect.objectContaining({
           filter: expect.arrayContaining(['_tenantId = "tenant-1"', 'status = "active"']),
-        })
+        }),
       );
     });
 
-    it('should escape quotes and backslashes in string filters and tenant filters', async () => {
-      vi.spyOn(Context, 'getTenantId').mockReturnValue('tenant-"one"\\x');
+    it("should escape quotes and backslashes in string filters and tenant filters", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue('tenant-"one"\\x');
 
-      await engine.search('index', {
-        query: 'test',
+      await engine.search("index", {
+        query: "test",
         filters: {
           status: 'active"\\flag',
         },
       });
 
       expect(mocks.indexMock.search).toHaveBeenCalledWith(
-        'test',
+        "test",
         expect.objectContaining({
-          filter: expect.arrayContaining(['_tenantId = "tenant-\\"one\\"\\\\x"', 'status = "active\\"\\\\flag"']),
-        })
+          filter: expect.arrayContaining([
+            '_tenantId = "tenant-\\"one\\"\\\\x"',
+            'status = "active\\"\\\\flag"',
+          ]),
+        }),
       );
     });
   });
 
-  describe('indexDocument', () => {
-    it('should throw MissingTenantProblem if tenantId is missing', async () => {
-      vi.spyOn(Context, 'getTenantId').mockReturnValue(null);
-      await expect(engine.indexDocument('index', { id: '1', tenantId: 'tenant-1' })).rejects.toThrow(
-        MissingTenantProblem
-      );
+  describe("indexDocument", () => {
+    it("should throw MissingTenantProblem if tenantId is missing", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue(null);
+      await expect(
+        engine.indexDocument("index", { id: "1", tenantId: "tenant-1" }),
+      ).rejects.toThrow(MissingTenantProblem);
     });
 
-    it('should add _tenantId field to document', async () => {
-      vi.spyOn(Context, 'getTenantId').mockReturnValue('tenant-1');
-      await engine.indexDocument('index', { id: '1', tenantId: 'tenant-1', title: 'test' });
+    it("should add _tenantId field to document", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      await engine.indexDocument("index", { id: "1", tenantId: "tenant-1", title: "test" });
 
       expect(mocks.indexMock.addDocuments).toHaveBeenCalledWith([
-        expect.objectContaining({ id: '1', title: 'test', _tenantId: 'tenant-1' }),
+        expect.objectContaining({ id: "1", title: "test", _tenantId: "tenant-1" }),
       ]);
     });
   });
 
-  describe('createIndex', () => {
-    it('should create index and update settings with _tenantId filterable', async () => {
-      await engine.createIndex({ name: 'new-index', filterableFields: ['category'] });
+  describe("createIndex", () => {
+    it("should create index and update settings with _tenantId filterable", async () => {
+      await engine.createIndex({ name: "new-index", filterableFields: ["category"] });
 
-      expect(mocks.clientMock.createIndex).toHaveBeenCalledWith('new-index', { primaryKey: 'id' });
+      expect(mocks.clientMock.createIndex).toHaveBeenCalledWith("new-index", { primaryKey: "id" });
       expect(mocks.indexMock.updateSettings).toHaveBeenCalledWith(
         expect.objectContaining({
-          filterableAttributes: expect.arrayContaining(['_tenantId', 'category']),
-        })
+          filterableAttributes: expect.arrayContaining(["_tenantId", "category"]),
+        }),
       );
     });
   });
 
-  describe('generateTenantToken', () => {
-    it('should generate tenant token using SDK', async () => {
-      const token = await engine.generateTenantToken('tenant-1');
+  describe("generateTenantToken", () => {
+    it("should generate tenant token using SDK", async () => {
+      const token = await engine.generateTenantToken("tenant-1");
       expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
         options.tenantTokenOptions?.apiKeyUid,
         {
-          '*': {
+          "*": {
             filter: `_tenantId = "tenant-1"`,
           },
         },
-        expect.anything()
+        expect.anything(),
       );
-      expect(token).toBe('token');
+      expect(token).toBe("token");
     });
 
-    it('should escape tenant ids in tenant token filters', async () => {
+    it("should escape tenant ids in tenant token filters", async () => {
       await engine.generateTenantToken('tenant-"one"\\x');
 
       expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
         options.tenantTokenOptions?.apiKeyUid,
         {
-          '*': {
+          "*": {
             filter: '_tenantId = "tenant-\\"one\\"\\\\x"',
           },
         },
-        expect.anything()
+        expect.anything(),
       );
     });
 
-    it('should compute expiresAt when expiresIn is 0', async () => {
-      const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+    it("should compute expiresAt when expiresIn is 0", async () => {
+      const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
 
       const engineWithZeroExpiresIn = new MeilisearchEngine({
         ...options,
         tenantTokenOptions: {
-          apiKeyUid: 'uid',
+          apiKeyUid: "uid",
           expiresIn: 0,
         },
       });
 
-      await engineWithZeroExpiresIn.generateTenantToken('tenant-1');
+      await engineWithZeroExpiresIn.generateTenantToken("tenant-1");
 
       expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
-        'uid',
+        "uid",
         {
-          '*': {
+          "*": {
             filter: `_tenantId = "tenant-1"`,
           },
         },
         {
           expiresAt: new Date(1_700_000_000_000),
-        }
+        },
       );
 
       dateNowSpy.mockRestore();
     });
   });
 
-  describe('deleteDocument', () => {
-    it('should escape tenant and document ids in delete filters', async () => {
-      vi.spyOn(Context, 'getTenantId').mockReturnValue('tenant-"one"\\x');
+  describe("deleteDocument", () => {
+    it("should escape tenant and document ids in delete filters", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue('tenant-"one"\\x');
 
-      await engine.deleteDocument('index', 'doc-"id"\\x');
+      await engine.deleteDocument("index", 'doc-"id"\\x');
 
       expect(mocks.indexMock.deleteDocuments).toHaveBeenCalledWith({
         filter: '_tenantId = "tenant-\\"one\\"\\\\x" AND id = "doc-\\"id\\"\\\\x"',

@@ -1,32 +1,32 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { CRON_METADATA_KEY, Cron } from '../libs/decorators/Cron';
-import { EVENT_METADATA_KEY, OnEvent } from '../libs/decorators/OnEvent';
-import { OnWebhook, WEBHOOK_METADATA_KEY } from '../libs/decorators/OnWebhook';
+import { MetadataStorage } from "@croco/framework-context";
+import { beforeEach, describe, expect, it } from "vitest";
+import { CRON_METADATA_KEY, Cron } from "../libs/decorators/Cron";
+import { EVENT_METADATA_KEY, OnEvent } from "../libs/decorators/OnEvent";
+import { OnWebhook, WEBHOOK_METADATA_KEY } from "../libs/decorators/OnWebhook";
 import {
   TRIGGER_METADATA_KEY,
   TriggerRegistry as TriggerRegistryClass,
   triggerRegistry,
-} from '../libs/TriggerRegistry';
+} from "../libs/TriggerRegistry";
 
-import type { CronTriggerMetadata } from '../libs/types';
+import type { CronTriggerMetadata } from "../libs/types";
 
-describe('TriggerRegistry', () => {
+describe("TriggerRegistry", () => {
   beforeEach(() => {
     MetadataStorage.clear();
     TriggerRegistryClass.getInstance();
   });
 
-  it('should be a singleton', () => {
+  it("should be a singleton", () => {
     const instance1 = TriggerRegistryClass.getInstance();
     const instance2 = TriggerRegistryClass.getInstance();
 
     expect(instance1).toBe(instance2);
   });
 
-  it('should register cron trigger', () => {
+  it("should register cron trigger", () => {
     class TestScheduler {
-      @Cron('0 0 * * *', { name: 'test-cron' })
+      @Cron("0 0 * * *", { name: "test-cron" })
       async dailyTask(): Promise<void> {}
     }
 
@@ -34,14 +34,18 @@ describe('TriggerRegistry', () => {
     expect(triggers.size).toBe(1);
 
     const [metadata] = Array.from(triggers.values());
-    expect(metadata.type).toBe('cron');
-    expect(MetadataStorage.get(CRON_METADATA_KEY, TestScheduler.prototype, 'dailyTask')).toEqual(metadata);
-    expect(MetadataStorage.get(TRIGGER_METADATA_KEY, TestScheduler.prototype, 'dailyTask')).toBeUndefined();
+    expect(metadata.type).toBe("cron");
+    expect(MetadataStorage.get(CRON_METADATA_KEY, TestScheduler.prototype, "dailyTask")).toEqual(
+      metadata,
+    );
+    expect(
+      MetadataStorage.get(TRIGGER_METADATA_KEY, TestScheduler.prototype, "dailyTask"),
+    ).toBeUndefined();
   });
 
-  it('should register event trigger', () => {
+  it("should register event trigger", () => {
     class TestEventHandler {
-      @OnEvent('TestEvent', { name: 'test-event' })
+      @OnEvent("TestEvent", { name: "test-event" })
       async handleEvent(): Promise<void> {}
     }
 
@@ -49,14 +53,18 @@ describe('TriggerRegistry', () => {
     expect(triggers.size).toBe(1);
 
     const [metadata] = Array.from(triggers.values());
-    expect(metadata.type).toBe('event');
-    expect(MetadataStorage.get(EVENT_METADATA_KEY, TestEventHandler.prototype, 'handleEvent')).toEqual(metadata);
-    expect(MetadataStorage.get(TRIGGER_METADATA_KEY, TestEventHandler.prototype, 'handleEvent')).toBeUndefined();
+    expect(metadata.type).toBe("event");
+    expect(
+      MetadataStorage.get(EVENT_METADATA_KEY, TestEventHandler.prototype, "handleEvent"),
+    ).toEqual(metadata);
+    expect(
+      MetadataStorage.get(TRIGGER_METADATA_KEY, TestEventHandler.prototype, "handleEvent"),
+    ).toBeUndefined();
   });
 
-  it('should register webhook trigger', () => {
+  it("should register webhook trigger", () => {
     class TestWebhookHandler {
-      @OnWebhook('/webhooks/test', 'POST', { name: 'test-webhook' })
+      @OnWebhook("/webhooks/test", "POST", { name: "test-webhook" })
       async handleWebhook(): Promise<void> {}
     }
 
@@ -64,20 +72,24 @@ describe('TriggerRegistry', () => {
     expect(triggers.size).toBe(1);
 
     const [metadata] = Array.from(triggers.values());
-    expect(metadata.type).toBe('webhook');
-    expect(MetadataStorage.get(WEBHOOK_METADATA_KEY, TestWebhookHandler.prototype, 'handleWebhook')).toEqual(metadata);
-    expect(MetadataStorage.get(TRIGGER_METADATA_KEY, TestWebhookHandler.prototype, 'handleWebhook')).toBeUndefined();
+    expect(metadata.type).toBe("webhook");
+    expect(
+      MetadataStorage.get(WEBHOOK_METADATA_KEY, TestWebhookHandler.prototype, "handleWebhook"),
+    ).toEqual(metadata);
+    expect(
+      MetadataStorage.get(TRIGGER_METADATA_KEY, TestWebhookHandler.prototype, "handleWebhook"),
+    ).toBeUndefined();
   });
 
-  it('should get all triggers for a target', () => {
+  it("should get all triggers for a target", () => {
     class MixedTriggerHandler {
-      @Cron('0 0 * * *')
+      @Cron("0 0 * * *")
       async cronMethod(): Promise<void> {}
 
-      @OnEvent('EventA')
+      @OnEvent("EventA")
       async eventMethod(): Promise<void> {}
 
-      @OnWebhook('/webhooks/test', 'POST')
+      @OnWebhook("/webhooks/test", "POST")
       async webhookMethod(): Promise<void> {}
     }
 
@@ -85,52 +97,58 @@ describe('TriggerRegistry', () => {
     expect(triggers.size).toBe(3);
 
     const types = Array.from(triggers.values()).map((m) => m.type);
-    expect(types).toContain('cron');
-    expect(types).toContain('event');
-    expect(types).toContain('webhook');
+    expect(types).toContain("cron");
+    expect(types).toContain("event");
+    expect(types).toContain("webhook");
   });
 
-  it('should filter triggers by type', () => {
+  it("should filter triggers by type", () => {
     class MixedTriggerHandler {
-      @Cron('0 0 * * *')
+      @Cron("0 0 * * *")
       async cronMethod(): Promise<void> {}
 
-      @Cron('*/5 * * * *')
+      @Cron("*/5 * * * *")
       async anotherCronMethod(): Promise<void> {}
 
-      @OnEvent('EventA')
+      @OnEvent("EventA")
       async eventMethod(): Promise<void> {}
 
-      @OnWebhook('/webhooks/test', 'POST')
+      @OnWebhook("/webhooks/test", "POST")
       async webhookMethod(): Promise<void> {}
     }
 
-    const cronTriggers = TriggerRegistryClass.getInstance().getTriggersByType(MixedTriggerHandler.prototype, 'cron');
+    const cronTriggers = TriggerRegistryClass.getInstance().getTriggersByType(
+      MixedTriggerHandler.prototype,
+      "cron",
+    );
     expect(cronTriggers.size).toBe(2);
 
-    const eventTriggers = TriggerRegistryClass.getInstance().getTriggersByType(MixedTriggerHandler.prototype, 'event');
+    const eventTriggers = TriggerRegistryClass.getInstance().getTriggersByType(
+      MixedTriggerHandler.prototype,
+      "event",
+    );
     expect(eventTriggers.size).toBe(1);
 
     const webhookTriggers = TriggerRegistryClass.getInstance().getTriggersByType(
       MixedTriggerHandler.prototype,
-      'webhook'
+      "webhook",
     );
     expect(webhookTriggers.size).toBe(1);
   });
 
-  it('should get all triggers across all targets', () => {
+  it("should get all triggers across all targets", () => {
     class Handler1 {
-      @Cron('0 0 * * *')
+      @Cron("0 0 * * *")
       async method1(): Promise<void> {}
     }
 
     class Handler2 {
-      @OnEvent('EventA')
+      @OnEvent("EventA")
       async method2(): Promise<void> {}
     }
 
     class Handler3 {
-      @OnWebhook('/webhooks/test', 'POST')
+      @OnWebhook("/webhooks/test", "POST")
       async method3(): Promise<void> {}
     }
 
@@ -147,7 +165,7 @@ describe('TriggerRegistry', () => {
     expect(totalTriggerCount).toBe(3);
   });
 
-  it('should return empty map for target with no triggers', () => {
+  it("should return empty map for target with no triggers", () => {
     class NoTriggerHandler {
       async regularMethod(): Promise<void> {}
     }
@@ -156,23 +174,23 @@ describe('TriggerRegistry', () => {
     expect(triggers.size).toBe(0);
   });
 
-  it('should export triggerRegistry instance', () => {
+  it("should export triggerRegistry instance", () => {
     expect(triggerRegistry).not.toBeUndefined();
     expect(triggerRegistry).toBeInstanceOf(TriggerRegistryClass);
   });
 
-  it('should export TRIGGER_METADATA_KEY symbol', () => {
-    expect(typeof TRIGGER_METADATA_KEY).toBe('symbol');
+  it("should export TRIGGER_METADATA_KEY symbol", () => {
+    expect(typeof TRIGGER_METADATA_KEY).toBe("symbol");
   });
 
-  it('should handle multiple classes with same method names', () => {
+  it("should handle multiple classes with same method names", () => {
     class Handler1 {
-      @Cron('0 0 * * *')
+      @Cron("0 0 * * *")
       async execute(): Promise<void> {}
     }
 
     class Handler2 {
-      @Cron('*/5 * * * *')
+      @Cron("*/5 * * * *")
       async execute(): Promise<void> {}
     }
 
@@ -185,14 +203,14 @@ describe('TriggerRegistry', () => {
     const metadata1 = Array.from(triggers1.values())[0] as CronTriggerMetadata;
     const metadata2 = Array.from(triggers2.values())[0] as CronTriggerMetadata;
 
-    expect(metadata1.expression).toBe('0 0 * * *');
-    expect(metadata2.expression).toBe('*/5 * * * *');
+    expect(metadata1.expression).toBe("0 0 * * *");
+    expect(metadata2.expression).toBe("*/5 * * * *");
   });
 
-  it('should fail fast when multiple trigger metadata entries target the same method', () => {
+  it("should fail fast when multiple trigger metadata entries target the same method", () => {
     class MultiDecoratedHandler {
-      @Cron('0 0 * * *')
-      @OnEvent('EventA')
+      @Cron("0 0 * * *")
+      @OnEvent("EventA")
       async execute(): Promise<void> {}
     }
 
@@ -201,13 +219,13 @@ describe('TriggerRegistry', () => {
     }).toThrow("Multiple trigger metadata entries are registered for method 'execute'");
   });
 
-  it('should preserve trigger options', () => {
+  it("should preserve trigger options", () => {
     class HandlerWithOptions {
-      @Cron('0 0 * * *', {
-        name: 'scheduled-task',
-        description: 'Daily scheduled task',
+      @Cron("0 0 * * *", {
+        name: "scheduled-task",
+        description: "Daily scheduled task",
         enabled: true,
-        timezone: 'UTC',
+        timezone: "UTC",
       })
       async task(): Promise<void> {}
     }
@@ -216,18 +234,18 @@ describe('TriggerRegistry', () => {
     const [metadata] = Array.from(triggers.values()) as CronTriggerMetadata[];
 
     expect(metadata.options).toEqual({
-      name: 'scheduled-task',
-      description: 'Daily scheduled task',
+      name: "scheduled-task",
+      description: "Daily scheduled task",
       enabled: true,
-      timezone: 'UTC',
+      timezone: "UTC",
     });
   });
 
-  it('should handle symbol method names in getAllTriggers', () => {
-    const methodSymbol = Symbol('symbolHandler');
+  it("should handle symbol method names in getAllTriggers", () => {
+    const methodSymbol = Symbol("symbolHandler");
 
     class SymbolHandler {
-      @Cron('0 0 * * *')
+      @Cron("0 0 * * *")
       async [methodSymbol](): Promise<void> {}
     }
 
@@ -238,9 +256,9 @@ describe('TriggerRegistry', () => {
     expect(symbolClassTriggers?.has(methodSymbol)).toBe(true);
   });
 
-  it('should isolate stored metadata from later caller mutations', () => {
+  it("should isolate stored metadata from later caller mutations", () => {
     type MutableCronMetadata = {
-      type: 'cron';
+      type: "cron";
       expression: string;
       methodName: string | symbol;
       options?: {
@@ -255,12 +273,12 @@ describe('TriggerRegistry', () => {
     }
 
     const metadata: CronTriggerMetadata = {
-      type: 'cron',
-      expression: '0 0 * * *',
-      methodName: 'run',
+      type: "cron",
+      expression: "0 0 * * *",
+      methodName: "run",
       options: {
-        name: 'before-mutation',
-        timezone: 'UTC',
+        name: "before-mutation",
+        timezone: "UTC",
       },
       target: ManualHandler.prototype,
     };
@@ -269,26 +287,26 @@ describe('TriggerRegistry', () => {
 
     const mutableMetadata = metadata as unknown as MutableCronMetadata;
 
-    mutableMetadata.expression = '*/5 * * * *';
+    mutableMetadata.expression = "*/5 * * * *";
     mutableMetadata.options = {
-      name: 'after-mutation',
-      timezone: 'Asia/Seoul',
+      name: "after-mutation",
+      timezone: "Asia/Seoul",
     };
 
     const stored = TriggerRegistryClass.getInstance()
       .getTriggers(ManualHandler.prototype)
-      .get('run') as CronTriggerMetadata;
+      .get("run") as CronTriggerMetadata;
 
-    expect(stored.expression).toBe('0 0 * * *');
+    expect(stored.expression).toBe("0 0 * * *");
     expect(stored.options).toEqual({
-      name: 'before-mutation',
-      timezone: 'UTC',
+      name: "before-mutation",
+      timezone: "UTC",
     });
   });
 
-  it('should isolate registry state from returned metadata mutations', () => {
+  it("should isolate registry state from returned metadata mutations", () => {
     type MutableWebhookMetadata = {
-      type: 'webhook';
+      type: "webhook";
       path: string;
       options?: {
         cors?: {
@@ -300,50 +318,54 @@ describe('TriggerRegistry', () => {
     };
 
     class WebhookHandler {
-      @OnWebhook('/webhooks/test', 'POST', {
+      @OnWebhook("/webhooks/test", "POST", {
         cors: {
-          origin: ['https://app1.com'],
-          methods: ['POST'],
-          allowedHeaders: ['content-type'],
+          origin: ["https://app1.com"],
+          methods: ["POST"],
+          allowedHeaders: ["content-type"],
         },
       })
       async handle(): Promise<void> {}
     }
 
-    const firstRead = TriggerRegistryClass.getInstance().getTriggers(WebhookHandler.prototype).get('handle');
-    if (!firstRead || firstRead.type !== 'webhook' || !firstRead.options?.cors) {
-      throw new Error('Expected webhook metadata to exist');
+    const firstRead = TriggerRegistryClass.getInstance()
+      .getTriggers(WebhookHandler.prototype)
+      .get("handle");
+    if (!firstRead || firstRead.type !== "webhook" || !firstRead.options?.cors) {
+      throw new Error("Expected webhook metadata to exist");
     }
 
     const mutableFirstRead = firstRead as unknown as MutableWebhookMetadata;
 
-    mutableFirstRead.path = '/mutated';
+    mutableFirstRead.path = "/mutated";
     mutableFirstRead.options ??= {};
     mutableFirstRead.options.cors ??= {};
-    mutableFirstRead.options.cors.origin = ['https://mutated.example.com'];
-    mutableFirstRead.options.cors.methods = ['GET'];
+    mutableFirstRead.options.cors.origin = ["https://mutated.example.com"];
+    mutableFirstRead.options.cors.methods = ["GET"];
 
-    const secondRead = TriggerRegistryClass.getInstance().getTriggers(WebhookHandler.prototype).get('handle');
+    const secondRead = TriggerRegistryClass.getInstance()
+      .getTriggers(WebhookHandler.prototype)
+      .get("handle");
     expect(secondRead).toMatchObject({
-      type: 'webhook',
-      path: '/webhooks/test',
+      type: "webhook",
+      path: "/webhooks/test",
       options: {
         cors: {
-          origin: ['https://app1.com'],
-          methods: ['POST'],
-          allowedHeaders: ['content-type'],
+          origin: ["https://app1.com"],
+          methods: ["POST"],
+          allowedHeaders: ["content-type"],
         },
       },
     });
   });
 
-  it('should return cloned metadata for getTriggers', () => {
+  it("should return cloned metadata for getTriggers", () => {
     class MutableMetadataHandler {
-      @Cron('0 0 * * *', {
-        name: 'original-name',
-        description: 'original description',
+      @Cron("0 0 * * *", {
+        name: "original-name",
+        description: "original description",
         enabled: true,
-        timezone: 'UTC',
+        timezone: "UTC",
       })
       async task(): Promise<void> {}
     }
@@ -352,47 +374,51 @@ describe('TriggerRegistry', () => {
     const triggers = registry.getTriggers(MutableMetadataHandler.prototype);
 
     const metadata = Array.from(triggers.values())[0] as Record<string, unknown>;
-    metadata.type = 'event';
+    metadata.type = "event";
     const options = (metadata.options as Record<string, unknown>) ?? {};
-    options.name = 'mutated-name';
+    options.name = "mutated-name";
 
-    const stored = MetadataStorage.get(CRON_METADATA_KEY, MutableMetadataHandler.prototype, 'task') as
-      | Record<string, unknown>
-      | undefined;
+    const stored = MetadataStorage.get(
+      CRON_METADATA_KEY,
+      MutableMetadataHandler.prototype,
+      "task",
+    ) as Record<string, unknown> | undefined;
 
-    expect(stored?.type).toBe('cron');
-    expect((stored?.options as Record<string, unknown>)?.name).toBe('original-name');
+    expect(stored?.type).toBe("cron");
+    expect((stored?.options as Record<string, unknown>)?.name).toBe("original-name");
   });
 
-  it('should return cloned metadata in getTriggersByType', () => {
+  it("should return cloned metadata in getTriggersByType", () => {
     class MutableCronHandler {
-      @Cron('*/10 * * * *', { name: 'event-target' })
+      @Cron("*/10 * * * *", { name: "event-target" })
       async cronTask(): Promise<void> {}
     }
 
     const registry = TriggerRegistryClass.getInstance();
-    const cronTriggers = registry.getTriggersByType(MutableCronHandler.prototype, 'cron');
+    const cronTriggers = registry.getTriggersByType(MutableCronHandler.prototype, "cron");
 
-    const metadata = cronTriggers.get('cronTask') as Record<string, unknown>;
+    const metadata = cronTriggers.get("cronTask") as Record<string, unknown>;
     const options = (metadata.options as Record<string, unknown>) ?? {};
-    options.timezone = 'Europe/Paris';
+    options.timezone = "Europe/Paris";
 
-    const stored = MetadataStorage.get(CRON_METADATA_KEY, MutableCronHandler.prototype, 'cronTask') as
-      | Record<string, unknown>
-      | undefined;
+    const stored = MetadataStorage.get(
+      CRON_METADATA_KEY,
+      MutableCronHandler.prototype,
+      "cronTask",
+    ) as Record<string, unknown> | undefined;
 
-    expect((stored?.options as Record<string, unknown>)?.name).toBe('event-target');
+    expect((stored?.options as Record<string, unknown>)?.name).toBe("event-target");
     expect((stored?.options as Record<string, unknown>)?.timezone).toBeUndefined();
   });
 
-  it('should return deep-cloned metadata in getAllTriggers', () => {
+  it("should return deep-cloned metadata in getAllTriggers", () => {
     class NestedWebhookHandler {
-      @OnWebhook('/webhooks/sample', 'POST', {
-        name: 'webhook-original',
+      @OnWebhook("/webhooks/sample", "POST", {
+        name: "webhook-original",
         cors: {
-          origin: 'https://original.example',
-          methods: ['POST'],
-          allowedHeaders: ['Content-Type'],
+          origin: "https://original.example",
+          methods: ["POST"],
+          allowedHeaders: ["Content-Type"],
         },
       })
       async hook(): Promise<void> {}
@@ -403,20 +429,22 @@ describe('TriggerRegistry', () => {
 
     expect(targetMap).not.toBeUndefined();
 
-    const metadata = targetMap?.get('hook') as Record<string, unknown> | undefined;
+    const metadata = targetMap?.get("hook") as Record<string, unknown> | undefined;
     const options = metadata?.options as Record<string, unknown>;
     const cors = options?.cors as Record<string, unknown>;
     const methods = cors?.methods as string[];
 
-    methods?.push('GET');
+    methods?.push("GET");
 
-    const stored = MetadataStorage.get(WEBHOOK_METADATA_KEY, NestedWebhookHandler.prototype, 'hook') as
-      | Record<string, unknown>
-      | undefined;
+    const stored = MetadataStorage.get(
+      WEBHOOK_METADATA_KEY,
+      NestedWebhookHandler.prototype,
+      "hook",
+    ) as Record<string, unknown> | undefined;
     const storedCors = stored?.options as Record<string, unknown>;
     const storedMethods = (storedCors?.cors as Record<string, unknown>)?.methods as string[];
 
-    expect(storedMethods).toEqual(['POST']);
-    expect(metadata?.type).toBe('webhook');
+    expect(storedMethods).toEqual(["POST"]);
+    expect(metadata?.type).toBe("webhook");
   });
 });

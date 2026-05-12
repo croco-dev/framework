@@ -4,7 +4,7 @@
  * - 'cjs': CommonJS (.cjs or .js with "type": "commonjs")
  * - 'dual': Both ESM and CJS formats
  */
-export type ArtifactFormat = 'esm' | 'cjs' | 'dual';
+export type ArtifactFormat = "esm" | "cjs" | "dual";
 
 /**
  * Type of build artifact
@@ -13,7 +13,7 @@ export type ArtifactFormat = 'esm' | 'cjs' | 'dual';
  * - 'config': Configuration file
  * - 'asset': Static asset (CSS, HTML, images)
  */
-export type ArtifactType = 'code' | 'types' | 'config' | 'asset';
+export type ArtifactType = "code" | "types" | "config" | "asset";
 
 /**
  * Represents a single build output artifact

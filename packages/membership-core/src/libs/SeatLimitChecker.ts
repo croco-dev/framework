@@ -1,4 +1,4 @@
-import type { EntitlementQuotaStatus } from '@croco/entitlements-core';
+import type { EntitlementQuotaStatus } from "@croco/entitlements-core";
 
 export abstract class SeatLimitChecker {
   abstract checkSeatAvailability(tenantId: string): Promise<EntitlementQuotaStatus>;

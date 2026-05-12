@@ -1,5 +1,5 @@
-import { BetterAuthSessionNotFoundProblem } from './problems/AuthProblems';
-import type { BetterAuthSession, BetterAuthSessionProvider } from './types';
+import { BetterAuthSessionNotFoundProblem } from "./problems/AuthProblems";
+import type { BetterAuthSession, BetterAuthSessionProvider } from "./types";
 
 /**
  * Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입니다.
@@ -11,17 +11,22 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
         api: {
           listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
           revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-          revokeUserSessions: (args: { headers: Headers; body: { userId: string } }) => Promise<void>;
+          revokeUserSessions: (args: {
+            headers: Headers;
+            body: { userId: string };
+          }) => Promise<void>;
         };
       };
-    }
+    },
   ) {}
 
   async getSession(token: string): Promise<BetterAuthSession | null> {
     const auth = this.factory.getAuth();
 
     try {
-      const sessions = await auth.api.listSessions({ headers: new Headers({ authorization: `Bearer ${token}` }) });
+      const sessions = await auth.api.listSessions({
+        headers: new Headers({ authorization: `Bearer ${token}` }),
+      });
 
       if (!Array.isArray(sessions)) {
         return null;
@@ -63,18 +68,27 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
 
   private mapToBetterAuthSession(session: Record<string, unknown>): BetterAuthSession {
     return {
-      id: String(session.id ?? ''),
-      userId: String(session.userId ?? ''),
-      expiresAt: session.expiresAt instanceof Date ? session.expiresAt : new Date(session.expiresAt as string),
-      token: String(session.token ?? ''),
-      createdAt: session.createdAt instanceof Date ? session.createdAt : new Date(session.createdAt as string),
-      updatedAt: session.updatedAt instanceof Date ? session.updatedAt : new Date(session.updatedAt as string),
-      ipAddress: typeof session.ipAddress === 'string' ? session.ipAddress : undefined,
-      userAgent: typeof session.userAgent === 'string' ? session.userAgent : undefined,
+      id: String(session.id ?? ""),
+      userId: String(session.userId ?? ""),
+      expiresAt:
+        session.expiresAt instanceof Date
+          ? session.expiresAt
+          : new Date(session.expiresAt as string),
+      token: String(session.token ?? ""),
+      createdAt:
+        session.createdAt instanceof Date
+          ? session.createdAt
+          : new Date(session.createdAt as string),
+      updatedAt:
+        session.updatedAt instanceof Date
+          ? session.updatedAt
+          : new Date(session.updatedAt as string),
+      ipAddress: typeof session.ipAddress === "string" ? session.ipAddress : undefined,
+      userAgent: typeof session.userAgent === "string" ? session.userAgent : undefined,
     };
   }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }

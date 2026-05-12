@@ -1,14 +1,14 @@
-import type { EventPublisher } from '@croco/events-core';
-import { Trace } from '@croco/telemetry-api';
-import type { Subscription, SubscriptionStatus } from '../types';
-import type { BillingGateway, CreateCheckoutParams } from './BillingGateway';
-import type { BillingStore } from './BillingStore';
-import { SubscriptionCanceledEvent } from './events/SubscriptionCanceledEvent';
+import type { EventPublisher } from "@croco/events-core";
+import { Trace } from "@croco/telemetry-api";
+import type { Subscription, SubscriptionStatus } from "../types";
+import type { BillingGateway, CreateCheckoutParams } from "./BillingGateway";
+import type { BillingStore } from "./BillingStore";
+import { SubscriptionCanceledEvent } from "./events/SubscriptionCanceledEvent";
 import {
   BillingAccountNotFoundProblem,
   BillingCheckoutCreationProblem,
   SubscriptionNotFoundProblem,
-} from './problems/BillingProblems';
+} from "./problems/BillingProblems";
 
 export type BillingServiceDependencies = {
   store: BillingStore;
@@ -16,7 +16,7 @@ export type BillingServiceDependencies = {
   eventPublisher?: EventPublisher;
 };
 
-export type CreateBillingCheckoutParams = Omit<CreateCheckoutParams, 'billingAccountId'> & {
+export type CreateBillingCheckoutParams = Omit<CreateCheckoutParams, "billingAccountId"> & {
   tenantId: string;
 };
 
@@ -41,7 +41,7 @@ export class BillingService {
   async hasActiveSubscription(tenantId: string): Promise<boolean> {
     const subscription = await this.findSubscriptionByTenantId(tenantId);
     if (!subscription) return false;
-    return subscription.status === 'active' || subscription.status === 'trialing';
+    return subscription.status === "active" || subscription.status === "trialing";
   }
 
   /**
@@ -62,12 +62,14 @@ export class BillingService {
   /**
    * Create a checkout session for a tenant.
    */
-  @Trace({ name: 'billing.checkout.create' })
+  @Trace({ name: "billing.checkout.create" })
   async createCheckout(params: CreateBillingCheckoutParams): Promise<{ checkoutUrl: string }> {
     const account = await this.store.findAccountByTenantId(params.tenantId);
 
     if (account) {
-      const result = await this.gateway.createCheckout(this.toGatewayCheckoutParams(params, account.id));
+      const result = await this.gateway.createCheckout(
+        this.toGatewayCheckoutParams(params, account.id),
+      );
       return { checkoutUrl: result.checkoutUrl };
     }
 
@@ -75,7 +77,7 @@ export class BillingService {
   }
 
   private async createCheckoutWithAccountTransaction(
-    params: CreateBillingCheckoutParams
+    params: CreateBillingCheckoutParams,
   ): Promise<{ checkoutUrl: string }> {
     const billingAccountId = params.tenantId;
     const externalCustomerId = await this.gateway.ensureCustomer(billingAccountId, params.email);
@@ -89,14 +91,19 @@ export class BillingService {
 
     try {
       await this.store.saveAccount(accountDraft);
-      const result = await this.gateway.createCheckout(this.toGatewayCheckoutParams(params, billingAccountId));
+      const result = await this.gateway.createCheckout(
+        this.toGatewayCheckoutParams(params, billingAccountId),
+      );
       return { checkoutUrl: result.checkoutUrl };
     } catch (error) {
       throw this.createCheckoutError(params.tenantId, error);
     }
   }
 
-  private toGatewayCheckoutParams(params: CreateBillingCheckoutParams, billingAccountId: string): CreateCheckoutParams {
+  private toGatewayCheckoutParams(
+    params: CreateBillingCheckoutParams,
+    billingAccountId: string,
+  ): CreateCheckoutParams {
     return {
       billingAccountId,
       email: params.email,
@@ -106,11 +113,14 @@ export class BillingService {
     };
   }
 
-  private createCheckoutError(billingAccountId: string, error: unknown): BillingCheckoutCreationProblem {
+  private createCheckoutError(
+    billingAccountId: string,
+    error: unknown,
+  ): BillingCheckoutCreationProblem {
     if (error instanceof Error) {
       return new BillingCheckoutCreationProblem(
         billingAccountId,
-        `Failed to create checkout for tenant ${billingAccountId}: ${error.message}`
+        `Failed to create checkout for tenant ${billingAccountId}: ${error.message}`,
       );
     }
 
@@ -120,7 +130,7 @@ export class BillingService {
   /**
    * Cancel a subscription (at period end by default).
    */
-  @Trace({ name: 'billing.subscription.cancel' })
+  @Trace({ name: "billing.subscription.cancel" })
   async cancelSubscription(tenantId: string, immediate = false): Promise<void> {
     const subscription = await this.findSubscriptionByTenantId(tenantId);
     if (!subscription) {
@@ -142,7 +152,7 @@ export class BillingService {
 
     if (this.eventPublisher) {
       await this.eventPublisher.publish(
-        new SubscriptionCanceledEvent(tenantId, subscription.externalSubscriptionId, !immediate)
+        new SubscriptionCanceledEvent(tenantId, subscription.externalSubscriptionId, !immediate),
       );
     }
   }
@@ -150,7 +160,7 @@ export class BillingService {
   /**
    * Resume a canceled subscription.
    */
-  @Trace({ name: 'billing.subscription.resume' })
+  @Trace({ name: "billing.subscription.resume" })
   async resumeSubscription(tenantId: string): Promise<void> {
     const subscription = await this.findSubscriptionByTenantId(tenantId);
     if (!subscription) {
@@ -169,7 +179,7 @@ export class BillingService {
   /**
    * Get customer portal URL.
    */
-  @Trace({ name: 'billing.portal.get' })
+  @Trace({ name: "billing.portal.get" })
   async getCustomerPortalUrl(tenantId: string): Promise<string> {
     const account = await this.store.findAccountByTenantId(tenantId);
     if (!account) {
@@ -195,7 +205,7 @@ export class BillingService {
       await this.store.saveSubscription({
         ...subscription,
         cancelAtPeriodEnd: false,
-        status: 'canceled',
+        status: "canceled",
         lastSyncedAt: new Date(),
       });
       return;

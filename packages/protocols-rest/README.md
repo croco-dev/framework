@@ -13,19 +13,19 @@ pnpm add @croco/protocols-rest @croco/framework-context reflect-metadata zod
 ### 컨트롤러와 라우트 정의
 
 ```typescript
-import 'reflect-metadata';
-import { Body, Controller, Get, Param, Post } from '@croco/protocols-rest';
+import "reflect-metadata";
+import { Body, Controller, Get, Param, Post } from "@croco/protocols-rest";
 
-@Controller('/users')
+@Controller("/users")
 class UserController {
-  @Get('/:id')
-  getUser(@Param('id') id: string) {
+  @Get("/:id")
+  getUser(@Param("id") id: string) {
     return { id };
   }
 
-  @Post('/')
+  @Post("/")
   createUser(@Body() body: { name: string }) {
-    return { id: 'user-1', ...body };
+    return { id: "user-1", ...body };
   }
 }
 ```
@@ -33,11 +33,11 @@ class UserController {
 ### Guard와 역할 검사
 
 ```typescript
-import { AuthGuard, Roles, RolesGuard, UseGuards } from '@croco/protocols-rest';
+import { AuthGuard, Roles, RolesGuard, UseGuards } from "@croco/protocols-rest";
 
 @UseGuards(AuthGuard, RolesGuard)
 class AdminController {
-  @Roles('admin')
+  @Roles("admin")
   removeUser() {
     return { ok: true };
   }
@@ -47,12 +47,12 @@ class AdminController {
 ### Zod 기반 검증
 
 ```typescript
-import { createValidationPipe, validateRequest } from '@croco/protocols-rest';
-import { z } from 'zod';
+import { createValidationPipe, validateRequest } from "@croco/protocols-rest";
+import { z } from "zod";
 
 const schema = z.object({ page: z.coerce.number().int().min(1) });
 const pipe = createValidationPipe(schema);
-const page = validateRequest(schema, { page: '1' });
+const page = validateRequest(schema, { page: "1" });
 ```
 
 ## API 레퍼런스

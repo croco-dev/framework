@@ -1,6 +1,12 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
-import type { AccessProvider } from './interfaces/AccessProvider.js';
-import type { CheckRequest, CheckResult, GrantRequest, ListRequest, RevokeRequest } from './types.js';
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { AccessProvider } from "./interfaces/AccessProvider.js";
+import type {
+  CheckRequest,
+  CheckResult,
+  GrantRequest,
+  ListRequest,
+  RevokeRequest,
+} from "./types.js";
 
 export class AccessEngine {
   constructor(private provider: AccessProvider) {}
@@ -29,7 +35,7 @@ export class AccessEngine {
     return this.provider.revoke(request);
   }
 
-  async list(request: ListRequest): Promise<ReturnType<AccessProvider['list']>> {
+  async list(request: ListRequest): Promise<ReturnType<AccessProvider["list"]>> {
     return this.provider.list(request);
   }
 }

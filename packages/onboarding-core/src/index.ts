@@ -1,12 +1,12 @@
-export { OnboardingManager } from './libs/OnboardingManager';
+export { OnboardingManager } from "./libs/OnboardingManager";
 
-export { InMemoryOnboardingStore, OnboardingStore } from './libs/OnboardingStore';
+export { InMemoryOnboardingStore, OnboardingStore } from "./libs/OnboardingStore";
 
 export {
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepNotFoundProblem,
-} from './libs/problems/OnboardingProblems';
+} from "./libs/problems/OnboardingProblems";
 
 export type {
   OnboardingContext,
@@ -18,4 +18,4 @@ export type {
   OnboardingStep,
   OnboardingStepType,
   StepState,
-} from './libs/types';
+} from "./libs/types";

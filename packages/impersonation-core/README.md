@@ -15,12 +15,12 @@ pnpm add @croco/impersonation-core
 사칭 세션 관리를 위한 서비스입니다.
 
 ```typescript
-import { ImpersonationService } from '@croco/impersonation-core';
+import { ImpersonationService } from "@croco/impersonation-core";
 
 const service = new ImpersonationService(store, authProvider, config);
 
 // 사칭 시작
-const session = await service.start('admin-1', 'user-123', 'Support request');
+const session = await service.start("admin-1", "user-123", "Support request");
 
 // 사칭 종료
 await service.end(session.sessionId);
@@ -40,15 +40,15 @@ const targetUserId = service.getTargetUser(context);
 사칭 컨텍스트 타입은 `RequestContext`를 확장합니다.
 
 ```typescript
-import type { ImpersonationContext } from '@croco/impersonation-core';
+import type { ImpersonationContext } from "@croco/impersonation-core";
 
 const context: ImpersonationContext = {
-  requestId: 'req-1',
+  requestId: "req-1",
   impersonation: {
-    sessionId: 'imp-123',
-    impersonatorId: 'admin-1',
-    targetUserId: 'user-123',
-    reason: 'Support request',
+    sessionId: "imp-123",
+    impersonatorId: "admin-1",
+    targetUserId: "user-123",
+    reason: "Support request",
     startedAt: new Date(),
     expiresAt: new Date(),
   },
@@ -60,7 +60,7 @@ const context: ImpersonationContext = {
 사칭 세션 시작 이벤트입니다.
 
 ```typescript
-import { ImpersonationStartedEvent } from '@croco/impersonation-core';
+import { ImpersonationStartedEvent } from "@croco/impersonation-core";
 
 const event = new ImpersonationStartedEvent(session);
 await eventPublisher.publish(event);
@@ -71,7 +71,7 @@ await eventPublisher.publish(event);
 사칭 세션 종료 이벤트입니다.
 
 ```typescript
-import { ImpersonationEndedEvent } from '@croco/impersonation-core';
+import { ImpersonationEndedEvent } from "@croco/impersonation-core";
 
 const event = new ImpersonationEndedEvent(session);
 await eventPublisher.publish(event);
@@ -82,7 +82,7 @@ await eventPublisher.publish(event);
 사칭 중 특정 작업을 차단합니다.
 
 ```typescript
-import { BlockDuringImpersonation } from '@croco/impersonation-core';
+import { BlockDuringImpersonation } from "@croco/impersonation-core";
 
 class UserService {
   @BlockDuringImpersonation()
@@ -97,11 +97,11 @@ class UserService {
 사칭 여부를 확인하고 차단합니다.
 
 ```typescript
-import { ImpersonationGuard } from '@croco/impersonation-core';
+import { ImpersonationGuard } from "@croco/impersonation-core";
 
 const guard = new ImpersonationGuard(service);
 
-if (guard.canPerformAction(context, 'deleteUser')) {
+if (guard.canPerformAction(context, "deleteUser")) {
   // 작업 수행
 }
 ```
@@ -111,7 +111,7 @@ if (guard.canPerformAction(context, 'deleteUser')) {
 인메모리 사칭 세션 저장소입니다.
 
 ```typescript
-import { InMemoryImpersonationStore } from '@croco/impersonation-core';
+import { InMemoryImpersonationStore } from "@croco/impersonation-core";
 
 const store = new InMemoryImpersonationStore();
 ```
@@ -120,32 +120,32 @@ const store = new InMemoryImpersonationStore();
 
 ### ImpersonationService
 
-| 메서드 | 설명 |
-|--------|------|
-| `start(impersonatorId, targetUserId, reason?)` | 사칭 세션 시작 |
-| `end(sessionId)` | 사칭 세션 종료 |
-| `isImpersonating(context)` | 사칭 여부 확인 |
-| `getImpersonator(context)` | 사칭자 ID 반환 |
-| `getTargetUser(context)` | 타겟 사용자 ID 반환 |
+| 메서드                                         | 설명                |
+| ---------------------------------------------- | ------------------- |
+| `start(impersonatorId, targetUserId, reason?)` | 사칭 세션 시작      |
+| `end(sessionId)`                               | 사칭 세션 종료      |
+| `isImpersonating(context)`                     | 사칭 여부 확인      |
+| `getImpersonator(context)`                     | 사칭자 ID 반환      |
+| `getTargetUser(context)`                       | 타겟 사용자 ID 반환 |
 
 ### ImpersonationConfig
 
-| 속성 | 타입 | 설명 |
-|------|------|------|
-| `maxDurationMs` | number | 최대 지속 시간 (밀리초) |
-| `requireReason` | boolean | 사칭 사유 필수 여부 |
-| `blockedActions` | string[] | 차단할 작업 목록 |
+| 속성             | 타입     | 설명                    |
+| ---------------- | -------- | ----------------------- |
+| `maxDurationMs`  | number   | 최대 지속 시간 (밀리초) |
+| `requireReason`  | boolean  | 사칭 사유 필수 여부     |
+| `blockedActions` | string[] | 차단할 작업 목록        |
 
 ### ImpersonationState
 
-| 속성 | 타입 | 설명 |
-|------|------|------|
-| `sessionId` | string | 세션 ID |
-| `impersonatorId` | string | 사칭자 ID |
-| `targetUserId` | string | 타겟 사용자 ID |
-| `reason` | string \| undefined | 사칭 사유 |
-| `startedAt` | Date | 시작 시간 |
-| `expiresAt` | Date | 만료 시간 |
+| 속성             | 타입                | 설명           |
+| ---------------- | ------------------- | -------------- |
+| `sessionId`      | string              | 세션 ID        |
+| `impersonatorId` | string              | 사칭자 ID      |
+| `targetUserId`   | string              | 타겟 사용자 ID |
+| `reason`         | string \| undefined | 사칭 사유      |
+| `startedAt`      | Date                | 시작 시간      |
+| `expiresAt`      | Date                | 만료 시간      |
 
 ## 타입 안전성
 
@@ -159,15 +159,15 @@ const store = new InMemoryImpersonationStore();
 ### 완전한 예시
 
 ```typescript
-import 'reflect-metadata';
-import { Container } from '@croco/framework-context';
-import { ImpersonationService } from '@croco/impersonation-core';
-import { InMemoryImpersonationStore } from '@croco/impersonation-core';
-import type { AuthProvider } from '@croco/impersonation-core';
+import "reflect-metadata";
+import { Container } from "@croco/framework-context";
+import { ImpersonationService } from "@croco/impersonation-core";
+import { InMemoryImpersonationStore } from "@croco/impersonation-core";
+import type { AuthProvider } from "@croco/impersonation-core";
 
 class MyAuthProvider implements AuthProvider {
   getCurrentUserId(): string | null {
-    return 'admin-1';
+    return "admin-1";
   }
 }
 
@@ -176,17 +176,18 @@ const authProvider = new MyAuthProvider();
 const config = {
   maxDurationMs: 30 * 60 * 1000,
   requireReason: true,
-  blockedActions: ['deleteUser', 'updatePassword'],
+  blockedActions: ["deleteUser", "updatePassword"],
 };
 
 const service = new ImpersonationService(store, authProvider, config);
 
-const session = await service.start('admin-1', 'user-123', 'Customer support');
+const session = await service.start("admin-1", "user-123", "Customer support");
 
 const context: ImpersonationContext = {
-  requestId: 'req-1',
+  requestId: "req-1",
   impersonation: session,
 };
 
 const isImpersonating = service.isImpersonating(context);
 console.log(isImpersonating);
+```

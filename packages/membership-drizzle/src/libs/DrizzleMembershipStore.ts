@@ -1,15 +1,15 @@
-import { Component, Inject, Token } from '@croco/framework-context';
+import { Component, Inject, Token } from "@croco/framework-context";
 import {
   type Membership,
   type MembershipCreateInput,
   type MembershipRole,
   MembershipStore,
-} from '@croco/membership-core';
-import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
-import { and, count, eq } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { memberships } from './schema';
+} from "@croco/membership-core";
+import type { TxManager } from "@croco/tx-core";
+import type { DrizzleDb } from "@croco/tx-drizzle";
+import { and, count, eq } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { memberships } from "./schema";
 
 type DrizzleMembershipClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
@@ -18,7 +18,7 @@ type MembershipRow = typeof memberships.$inferSelect;
 /**
  * 멤버십 저장소용 Drizzle 클라이언트 주입 토큰입니다.
  */
-export const DRIZZLE_TOKEN = new Token<DrizzleMembershipClient>('DRIZZLE_TOKEN');
+export const DRIZZLE_TOKEN = new Token<DrizzleMembershipClient>("DRIZZLE_TOKEN");
 
 /**
  * 멤버십 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
@@ -35,7 +35,7 @@ export class DrizzleMembershipStore extends MembershipStore {
    */
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleMembershipClient,
-    private readonly txManager: TxManager<DrizzleMembershipClient>
+    private readonly txManager: TxManager<DrizzleMembershipClient>,
   ) {
     super();
   }
@@ -65,7 +65,10 @@ export class DrizzleMembershipStore extends MembershipStore {
   async findAllByTenant(tenantId: string): Promise<Membership[]> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const rows = (await client.select().from(memberships).where(eq(memberships.tenantId, tenantId))) as MembershipRow[];
+    const rows = (await client
+      .select()
+      .from(memberships)
+      .where(eq(memberships.tenantId, tenantId))) as MembershipRow[];
     return rows.map((row) => this.mapToMembership(row));
   }
 
@@ -75,7 +78,10 @@ export class DrizzleMembershipStore extends MembershipStore {
   async findAllByUser(userId: string): Promise<Membership[]> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const rows = (await client.select().from(memberships).where(eq(memberships.userId, userId))) as MembershipRow[];
+    const rows = (await client
+      .select()
+      .from(memberships)
+      .where(eq(memberships.userId, userId))) as MembershipRow[];
     return rows.map((row) => this.mapToMembership(row));
   }
 
@@ -112,7 +118,9 @@ export class DrizzleMembershipStore extends MembershipStore {
   async delete(tenantId: string, userId: string): Promise<void> {
     const client = this.txManager.getClient() ?? this.db;
 
-    await client.delete(memberships).where(and(eq(memberships.tenantId, tenantId), eq(memberships.userId, userId)));
+    await client
+      .delete(memberships)
+      .where(and(eq(memberships.tenantId, tenantId), eq(memberships.userId, userId)));
   }
 
   /**
@@ -124,7 +132,9 @@ export class DrizzleMembershipStore extends MembershipStore {
     const rows = (await client
       .select({ total: count() })
       .from(memberships)
-      .where(and(eq(memberships.tenantId, tenantId), eq(memberships.role, role)))) as { total: number }[];
+      .where(and(eq(memberships.tenantId, tenantId), eq(memberships.role, role)))) as {
+      total: number;
+    }[];
 
     return Number(rows[0]?.total ?? 0);
   }

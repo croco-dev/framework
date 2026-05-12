@@ -1,4 +1,4 @@
-import RscEntry from './entry.rsc';
+import RscEntry from "./entry.rsc";
 
 export default function SsrEntry() {
   return (

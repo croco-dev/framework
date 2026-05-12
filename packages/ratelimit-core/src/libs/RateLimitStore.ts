@@ -5,7 +5,7 @@ import type {
   RateLimitStats,
   SlidingWindowPolicy,
   TokenBucketPolicy,
-} from './types';
+} from "./types";
 
 export type RateLimitEntry = {
   count: number;
@@ -41,8 +41,15 @@ export abstract class DistributedRateLimitStore extends RateLimitStore {
 }
 
 export abstract class FixedWindowStore extends DistributedRateLimitStore {
-  protected abstract getWindowEntry(key: string, policy: FixedWindowPolicy): Promise<RateLimitEntry | null>;
-  protected abstract setWindowEntry(key: string, entry: RateLimitEntry, ttlMs: number): Promise<void>;
+  protected abstract getWindowEntry(
+    key: string,
+    policy: FixedWindowPolicy,
+  ): Promise<RateLimitEntry | null>;
+  protected abstract setWindowEntry(
+    key: string,
+    entry: RateLimitEntry,
+    ttlMs: number,
+  ): Promise<void>;
 
   async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
     const now = Date.now();
@@ -138,7 +145,9 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
     await this.setBucket(key, bucket, ttlMs);
 
     const timeUntilNextToken = intervalMs / policy.refillRate;
-    const resetAtMs = success ? now + timeUntilNextToken : now + (1 - bucket.tokens) * timeUntilNextToken;
+    const resetAtMs = success
+      ? now + timeUntilNextToken
+      : now + (1 - bucket.tokens) * timeUntilNextToken;
 
     return {
       success,

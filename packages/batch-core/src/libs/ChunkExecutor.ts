@@ -1,15 +1,15 @@
-import type { ExecutionManager } from '@croco/execution-core';
-import type { Checkpointable } from './interfaces/ItemReader';
-import type { Step } from './Step';
+import type { ExecutionManager } from "@croco/execution-core";
+import type { Checkpointable } from "./interfaces/ItemReader";
+import type { Step } from "./Step";
 
 function isCheckpointable(obj: unknown): obj is Checkpointable {
   return (
-    typeof obj === 'object' &&
+    typeof obj === "object" &&
     obj !== null &&
-    'getCheckpoint' in obj &&
-    typeof (obj as Checkpointable).getCheckpoint === 'function' &&
-    'restoreCheckpoint' in obj &&
-    typeof (obj as Checkpointable).restoreCheckpoint === 'function'
+    "getCheckpoint" in obj &&
+    typeof (obj as Checkpointable).getCheckpoint === "function" &&
+    "restoreCheckpoint" in obj &&
+    typeof (obj as Checkpointable).restoreCheckpoint === "function"
   );
 }
 
@@ -61,7 +61,14 @@ export class ChunkExecutor {
 
         // Write if chunk full
         if (items.length >= step.chunkSize) {
-          await this.writeChunk(executionId, step, items, checkpointKey, processedCount + items.length, totalCount);
+          await this.writeChunk(
+            executionId,
+            step,
+            items,
+            checkpointKey,
+            processedCount + items.length,
+            totalCount,
+          );
           processedCount += items.length;
           items = [];
         }
@@ -69,7 +76,14 @@ export class ChunkExecutor {
 
       // Write remaining items
       if (items.length > 0) {
-        await this.writeChunk(executionId, step, items, checkpointKey, processedCount + items.length, totalCount);
+        await this.writeChunk(
+          executionId,
+          step,
+          items,
+          checkpointKey,
+          processedCount + items.length,
+          totalCount,
+        );
         processedCount += items.length;
       }
 
@@ -95,7 +109,7 @@ export class ChunkExecutor {
     items: O[],
     checkpointKey: string,
     currentProcessedCount: number,
-    totalCount?: number
+    totalCount?: number,
   ): Promise<void> {
     await step.writer.write(items);
 
@@ -114,6 +128,6 @@ export class ChunkExecutor {
   }
 
   private hasValidTotal(total: number | undefined): total is number {
-    return typeof total === 'number' && Number.isFinite(total) && total > 0;
+    return typeof total === "number" && Number.isFinite(total) && total > 0;
   }
 }

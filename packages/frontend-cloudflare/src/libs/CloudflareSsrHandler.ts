@@ -1,5 +1,5 @@
-import type { CrocoFetchHandler, RenderServer, RuntimeContext } from '@croco/meta-vite';
-import type { SsrHandlerOptions, SsrWorkerEnv } from './types';
+import type { CrocoFetchHandler, RenderServer, RuntimeContext } from "@croco/meta-vite";
+import type { SsrHandlerOptions, SsrWorkerEnv } from "./types";
 
 /**
  * Creates a Cloudflare Workers SSR handler using meta-vite's RenderServer.
@@ -8,9 +8,9 @@ import type { SsrHandlerOptions, SsrWorkerEnv } from './types';
  * @param options.apiBindingName - Service Binding name for API worker (default: 'API_WORKER')
  */
 export function createSsrHandler(
-  options: SsrHandlerOptions & { renderServer?: RenderServer } = {}
+  options: SsrHandlerOptions & { renderServer?: RenderServer } = {},
 ): (request: Request, env: SsrWorkerEnv, ctx: ExecutionContext) => Promise<Response> {
-  const { renderServer, apiBindingName = 'API_WORKER' } = options;
+  const { renderServer, apiBindingName = "API_WORKER" } = options;
 
   return async (request, env, _ctx): Promise<Response> => {
     const url = new URL(request.url);
@@ -30,21 +30,21 @@ export function createSsrHandler(
     // Service Binding API fetch
     const apiWorker = (env as SsrWorkerEnv & Record<string, Fetcher | undefined>)[apiBindingName];
 
-    if (apiWorker && url.pathname.startsWith('/api/')) {
+    if (apiWorker && url.pathname.startsWith("/api/")) {
       try {
         const apiResponse = await apiWorker.fetch(request);
         if (apiResponse) {
           return apiResponse;
         }
       } catch {
-        return new Response('API request failed', { status: 500 });
+        return new Response("API request failed", { status: 500 });
       }
     }
 
     // SSR page rendering via meta-vite RenderServer
     if (renderServer) {
       const ctx: RuntimeContext = {
-        platform: 'cloudflare',
+        platform: "cloudflare",
         env,
         executionContext: _ctx,
       };
@@ -52,12 +52,12 @@ export function createSsrHandler(
       try {
         return await renderServer.handle(request, ctx);
       } catch (error) {
-        console.error('SSR rendering error:', error);
-        return new Response('Internal server error', { status: 500 });
+        console.error("SSR rendering error:", error);
+        return new Response("Internal server error", { status: 500 });
       }
     }
 
-    return new Response('No render server configured', { status: 500 });
+    return new Response("No render server configured", { status: 500 });
   };
 }
 
@@ -66,9 +66,9 @@ export function createSsrHandler(
  * This is the internal handler used by the Cloudflare Workers exported fetch.
  */
 export function createSsrHandlerAsFetchHandler(
-  options: SsrHandlerOptions & { renderServer?: RenderServer } = {}
+  options: SsrHandlerOptions & { renderServer?: RenderServer } = {},
 ): CrocoFetchHandler {
-  const { renderServer, apiBindingName = 'API_WORKER' } = options;
+  const { renderServer, apiBindingName = "API_WORKER" } = options;
 
   return async (request: Request, context?: RuntimeContext): Promise<Response> => {
     const url = new URL(request.url);
@@ -89,14 +89,14 @@ export function createSsrHandlerAsFetchHandler(
     // Service Binding API fetch
     const apiWorker = (env as SsrWorkerEnv & Record<string, Fetcher | undefined>)?.[apiBindingName];
 
-    if (apiWorker && url.pathname.startsWith('/api/')) {
+    if (apiWorker && url.pathname.startsWith("/api/")) {
       try {
         const apiResponse = await apiWorker.fetch(request);
         if (apiResponse) {
           return apiResponse;
         }
       } catch {
-        return new Response('API request failed', { status: 500 });
+        return new Response("API request failed", { status: 500 });
       }
     }
 
@@ -105,11 +105,11 @@ export function createSsrHandlerAsFetchHandler(
       try {
         return await renderServer.handle(request, context);
       } catch (error) {
-        console.error('SSR rendering error:', error);
-        return new Response('Internal server error', { status: 500 });
+        console.error("SSR rendering error:", error);
+        return new Response("Internal server error", { status: 500 });
       }
     }
 
-    return new Response('No render server configured', { status: 500 });
+    return new Response("No render server configured", { status: 500 });
   };
 }

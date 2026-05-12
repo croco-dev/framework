@@ -1,4 +1,4 @@
-export type OnboardingStepType = 'required' | 'optional' | 'conditional';
+export type OnboardingStepType = "required" | "optional" | "conditional";
 
 export interface OnboardingStep {
   id: string;
@@ -18,7 +18,7 @@ export interface StepState {
   metadata?: Record<string, unknown>;
 }
 
-export type OnboardingStatus = 'not_started' | 'in_progress' | 'completed' | 'skipped';
+export type OnboardingStatus = "not_started" | "in_progress" | "completed" | "skipped";
 
 export interface OnboardingState {
   steps: Record<string, StepState>;
@@ -41,7 +41,11 @@ export interface OnboardingContext {
   onboardingId: string;
 }
 
-export type OnboardingEventType = 'step_completed' | 'step_skipped' | 'onboarding_completed' | 'onboarding_started';
+export type OnboardingEventType =
+  | "step_completed"
+  | "step_skipped"
+  | "onboarding_completed"
+  | "onboarding_started";
 
 export interface OnboardingEvent {
   type: OnboardingEventType;

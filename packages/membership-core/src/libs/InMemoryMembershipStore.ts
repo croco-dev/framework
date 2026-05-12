@@ -1,5 +1,5 @@
-import { MembershipStore } from './MembershipStore';
-import type { Membership, MembershipCreateInput, MembershipRole } from './types';
+import { MembershipStore } from "./MembershipStore";
+import type { Membership, MembershipCreateInput, MembershipRole } from "./types";
 
 export class InMemoryMembershipStore extends MembershipStore {
   private readonly storage = new Map<string, Membership>();
@@ -42,12 +42,13 @@ export class InMemoryMembershipStore extends MembershipStore {
 
   async countByRole(tenantId: string, role: MembershipRole): Promise<number> {
     return [...this.storage.values()].filter(
-      (membership) => membership.tenantId === tenantId && membership.role === role
+      (membership) => membership.tenantId === tenantId && membership.role === role,
     ).length;
   }
 
   async countAll(tenantId: string): Promise<number> {
-    return [...this.storage.values()].filter((membership) => membership.tenantId === tenantId).length;
+    return [...this.storage.values()].filter((membership) => membership.tenantId === tenantId)
+      .length;
   }
 
   private getKey(tenantId: string, userId: string): string {

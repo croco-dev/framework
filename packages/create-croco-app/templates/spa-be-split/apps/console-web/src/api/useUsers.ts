@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { request } from './client';
+import { useCallback, useEffect, useState } from "react";
+import { request } from "./client";
 
 export type User = {
   readonly id: string;
@@ -11,7 +11,7 @@ type UseUsersResult = {
   readonly users: readonly User[];
   readonly loading: boolean;
   readonly error: string | null;
-  readonly createUser: (input: Omit<User, 'id'>) => Promise<void>;
+  readonly createUser: (input: Omit<User, "id">) => Promise<void>;
   readonly refresh: () => Promise<void>;
 };
 
@@ -25,24 +25,24 @@ export function useUsers(): UseUsersResult {
     setError(null);
 
     try {
-      setUsers(await request<User[]>('/users'));
+      setUsers(await request<User[]>("/users"));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Failed to load users');
+      setError(caught instanceof Error ? caught.message : "Failed to load users");
     } finally {
       setLoading(false);
     }
   }, []);
 
   const createUser = useCallback(
-    async (input: Omit<User, 'id'>) => {
-      await request<User>('/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+    async (input: Omit<User, "id">) => {
+      await request<User>("/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
       await refresh();
     },
-    [refresh]
+    [refresh],
   );
 
   useEffect(() => {

@@ -5,6 +5,6 @@
 /**
  * `PostHogClient` 초기화에 사용되는 설정 타입입니다.
  */
-export type { PostHogConfig } from './libs/PostHogClient';
-export { PostHogClient } from './libs/PostHogClient';
-export { PostHogConfigProblem } from './libs/problems/PostHogProblems';
+export type { PostHogConfig } from "./libs/PostHogClient";
+export { PostHogClient } from "./libs/PostHogClient";
+export { PostHogConfigProblem } from "./libs/problems/PostHogProblems";

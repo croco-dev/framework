@@ -165,7 +165,7 @@ export type CloudflareTransformOptions = {
    * - cover: 비율 유지하며 지정 크기 채움 (자름)
    * - fill: 비율 무시하고 지정 크기 채움
    */
-  fit?: 'scale-down' | 'contain' | 'cover' | 'fill';
+  fit?: "scale-down" | "contain" | "cover" | "fill";
 
   /**
    * 품질 (1-100)
@@ -175,7 +175,7 @@ export type CloudflareTransformOptions = {
   /**
    * 출력 형식
    */
-  format?: 'webp' | 'avif' | 'jpeg' | 'png' | 'gif';
+  format?: "webp" | "avif" | "jpeg" | "png" | "gif";
 
   /**
    * Device Pixel Ratio

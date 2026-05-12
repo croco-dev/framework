@@ -1,17 +1,17 @@
-import path from 'node:path';
-import { defineConfig } from 'vitest/config';
+import path from "node:path";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
-    include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    environment: "node",
+    include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**"],
     testTimeout: 10000,
   },
   resolve: {
     alias: {
-      '@croco/problems-core': path.resolve(__dirname, '../problems-core/src'),
+      "@croco/problems-core": path.resolve(__dirname, "../problems-core/src"),
     },
   },
 });

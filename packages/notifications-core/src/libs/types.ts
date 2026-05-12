@@ -1,9 +1,9 @@
 export enum NotificationChannel {
-  EMAIL = 'EMAIL',
-  SMS = 'SMS',
-  PUSH = 'PUSH',
-  SLACK = 'SLACK',
-  IN_APP = 'IN_APP',
+  EMAIL = "EMAIL",
+  SMS = "SMS",
+  PUSH = "PUSH",
+  SLACK = "SLACK",
+  IN_APP = "IN_APP",
 }
 
 export interface NotificationPayload {
@@ -30,7 +30,10 @@ export interface NotificationProvider {
   /**
    * Send a notification via this provider
    */
-  send(payload: NotificationPayload, options?: NotificationSendOptions): Promise<NotificationResult>;
+  send(
+    payload: NotificationPayload,
+    options?: NotificationSendOptions,
+  ): Promise<NotificationResult>;
 
   /**
    * Get the channel this provider supports

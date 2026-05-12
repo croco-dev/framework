@@ -15,19 +15,19 @@ import {
   RateLimiter,
   SlidingWindowInMemoryStore,
   createSlidingWindowPolicy,
-} from '@croco/ratelimit-core';
+} from "@croco/ratelimit-core";
 
 const store = new SlidingWindowInMemoryStore();
-const rateLimiter = new RateLimiter(store, (context) => String(context.get('userId')));
+const rateLimiter = new RateLimiter(store, (context) => String(context.get("userId")));
 
-const result = await rateLimiter.check(context, createSlidingWindowPolicy('api', 100, 60_000));
+const result = await rateLimiter.check(context, createSlidingWindowPolicy("api", 100, 60_000));
 ```
 
 ```ts
-import { RateLimit } from '@croco/ratelimit-core';
+import { RateLimit } from "@croco/ratelimit-core";
 
 class ApiController {
-  @RateLimit({ limit: 20, window: '1m', algorithm: 'sliding' })
+  @RateLimit({ limit: 20, window: "1m", algorithm: "sliding" })
   async list(): Promise<void> {}
 }
 ```

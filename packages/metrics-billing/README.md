@@ -14,30 +14,30 @@ pnpm add @croco/metrics-billing
 
 ### 지원하는 이벤트
 
-| 이벤트 | 설명 | MRR Movement |
-|--------|------|--------------|
-| `OrderPaidEvent` | 주문 결제 완료 | `new` |
-| `PlanChangedEvent` | 플랜 변경 | `expansion` 또는 `contraction` |
-| `SubscriptionCanceledEvent` | 구독 취소 | `churned` |
+| 이벤트                      | 설명           | MRR Movement                   |
+| --------------------------- | -------------- | ------------------------------ |
+| `OrderPaidEvent`            | 주문 결제 완료 | `new`                          |
+| `PlanChangedEvent`          | 플랜 변경      | `expansion` 또는 `contraction` |
+| `SubscriptionCanceledEvent` | 구독 취소      | `churned`                      |
 
 ## 사용법
 
 ```typescript
-import { BillingEventHandler } from '@croco/metrics-billing';
-import { TimescaleMetricsStore } from '@croco/metrics-core';
-import { Container } from '@croco/framework-context';
+import { BillingEventHandler } from "@croco/metrics-billing";
+import { TimescaleMetricsStore } from "@croco/metrics-core";
+import { Container } from "@croco/framework-context";
 
 const metricsRepository = new TimescaleMetricsStore(db);
 const handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
 
-await eventBus.publish(new OrderPaidEvent('tenant-1', 'order-1', 2900, 'USD'));
+await eventBus.publish(new OrderPaidEvent("tenant-1", "order-1", 2900, "USD"));
 ```
 
 ### DI 컨테이너 등록
 
 ```typescript
-import { Container } from '@croco/framework-context';
-import { BillingEventHandler } from '@croco/metrics-billing';
+import { Container } from "@croco/framework-context";
+import { BillingEventHandler } from "@croco/metrics-billing";
 
 Container.register(BillingEventHandler, {
   planRegistry: Container.resolve(PlanRegistry),

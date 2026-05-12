@@ -1,4 +1,4 @@
-import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from '../../types';
+import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from "../../types";
 
 /**
  * Repository abstract class for storing and querying metrics data.
@@ -73,7 +73,7 @@ export abstract class MetricsRepository {
     tenantId: string,
     movement: MRRMovement,
     timestamp: Date,
-    eventKey?: string
+    eventKey?: string,
   ): Promise<void>;
 
   /**

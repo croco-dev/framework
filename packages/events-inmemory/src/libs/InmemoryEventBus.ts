@@ -1,11 +1,19 @@
-import type { DomainEvent, EventBus, EventHandlerClass, EventSubscription } from '@croco/events-core';
-import { EventSubscriptionIndex } from '@croco/events-core';
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
-import type { TraceInfo } from '@croco/telemetry-api';
-import { getActiveTraceInfo, getTracer } from '@croco/telemetry-api';
-import { type Context, context, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
-import { BackpressureExceededProblem, BackpressureTimeoutProblem } from './problems/EventsInmemoryProblems';
+import type {
+  DomainEvent,
+  EventBus,
+  EventHandlerClass,
+  EventSubscription,
+} from "@croco/events-core";
+import { EventSubscriptionIndex } from "@croco/events-core";
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
+import type { TraceInfo } from "@croco/telemetry-api";
+import { getActiveTraceInfo, getTracer } from "@croco/telemetry-api";
+import { type Context, context, type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import {
+  BackpressureExceededProblem,
+  BackpressureTimeoutProblem,
+} from "./problems/EventsInmemoryProblems";
 
 export type EventPublishFailure = {
   handlerName: string;
@@ -16,12 +24,12 @@ export type EventPublishFailure = {
  * 하나 이상의 이벤트 핸들러 실행이 실패했을 때 집계 결과를 담아 반환하는 에러입니다.
  */
 export class EventPublishFailedError extends Error {
-  readonly name = 'EventPublishFailedError';
+  readonly name = "EventPublishFailedError";
   readonly cause?: Error;
 
   constructor(
     readonly eventName: string,
-    readonly failures: EventPublishFailure[]
+    readonly failures: EventPublishFailure[],
   ) {
     super(`${failures.length} event handler(s) failed while publishing ${eventName}`);
     this.cause = failures[0]?.error;
@@ -32,14 +40,14 @@ export class EventPublishFailedError extends Error {
  * 이벤트 버스 옵션이 유효하지 않을 때 발생하는 구성 오류입니다.
  */
 export class InvalidEventBusConfigurationError extends Error {
-  readonly name = 'InvalidEventBusConfigurationError';
+  readonly name = "InvalidEventBusConfigurationError";
 
   constructor(message: string) {
     super(`Invalid EventBus configuration: ${message}`);
   }
 }
 
-export type BackpressureStrategy = 'drop' | 'block' | 'error';
+export type BackpressureStrategy = "drop" | "block" | "error";
 
 export type InMemoryEventBusOptions = {
   maxConcurrency?: number;
@@ -56,7 +64,9 @@ type RunningHandler = {
 /**
  * TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
  */
-export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implements EventBus<TEvent> {
+export class InMemoryEventBus<
+  TEvent extends DomainEvent = DomainEvent,
+> implements EventBus<TEvent> {
   private readonly index = new EventSubscriptionIndex<EventHandlerClass<TEvent>>();
   private readonly tracer = getTracer();
   private readonly maxConcurrency: number;
@@ -70,11 +80,11 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
     const maxConcurrency = options.maxConcurrency ?? 100;
     if (!Number.isFinite(maxConcurrency) || maxConcurrency <= 0) {
       throw new InvalidEventBusConfigurationError(
-        `maxConcurrency must be a positive finite number, got ${maxConcurrency}`
+        `maxConcurrency must be a positive finite number, got ${maxConcurrency}`,
       );
     }
     this.maxConcurrency = maxConcurrency;
-    this.backpressureStrategy = options.backpressureStrategy ?? 'block';
+    this.backpressureStrategy = options.backpressureStrategy ?? "block";
     this.backpressureTimeoutMs = options.backpressureTimeoutMs;
   }
 
@@ -87,7 +97,8 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
     await this.tracer.startActiveSpan(
       `event.publish:${eventName}`,
       { attributes: this.createPublishSpanAttributes(event, traceInfo) },
-      async (publishSpan: Span) => this.finishPublishSpan(publishSpan, handlerClasses, baseEvent, eventName)
+      async (publishSpan: Span) =>
+        this.finishPublishSpan(publishSpan, handlerClasses, baseEvent, eventName),
     );
   }
 
@@ -95,7 +106,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
     publishSpan: Span,
     handlerClasses: EventHandlerClass<TEvent>[],
     baseEvent: TEvent,
-    eventName: string
+    eventName: string,
   ): Promise<void> {
     try {
       await this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
@@ -116,11 +127,13 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
   private async executeWithBackpressure(
     handlerClasses: EventHandlerClass<TEvent>[],
     baseEvent: TEvent,
-    eventName: string
+    eventName: string,
   ): Promise<void> {
     if (this.maxConcurrency === Number.POSITIVE_INFINITY || handlerClasses.length === 0) {
       const results = await Promise.allSettled(
-        handlerClasses.map((handlerClass) => this.executeSubscriber(handlerClass, baseEvent, eventName))
+        handlerClasses.map((handlerClass) =>
+          this.executeSubscriber(handlerClass, baseEvent, eventName),
+        ),
       );
       const failures = this.collectFailures(results, handlerClasses);
       if (failures.length > 0) {
@@ -134,13 +147,13 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
 
     if (availableSlots <= 0) {
       switch (this.backpressureStrategy) {
-        case 'drop': {
+        case "drop": {
           return;
         }
-        case 'error': {
+        case "error": {
           throw new BackpressureExceededProblem(currentRunning);
         }
-        case 'block': {
+        case "block": {
           await this.waitForSlot();
           return this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
         }
@@ -151,7 +164,9 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
     const remainingHandlers = handlerClasses.slice(availableSlots);
 
     const results = await Promise.allSettled(
-      handlersToRun.map((handlerClass) => this.executeSubscriberWithTracking(handlerClass, baseEvent, eventName))
+      handlersToRun.map((handlerClass) =>
+        this.executeSubscriberWithTracking(handlerClass, baseEvent, eventName),
+      ),
     );
 
     if (remainingHandlers.length > 0) {
@@ -187,7 +202,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
-        signal?.removeEventListener('abort', onAbort);
+        signal?.removeEventListener("abort", onAbort);
       };
 
       const onAbort = () => {
@@ -213,7 +228,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
         }, timeoutMs);
       }
 
-      signal?.addEventListener('abort', onAbort, { once: true });
+      signal?.addEventListener("abort", onAbort, { once: true });
       onSlotAvailable();
     });
   }
@@ -227,7 +242,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
   private async executeSubscriberWithTracking(
     handlerClass: EventHandlerClass<TEvent>,
     baseEvent: TEvent,
-    eventName: string
+    eventName: string,
   ): Promise<EventPublishFailure | null> {
     const handlerName = handlerClass.name;
     const handlerId = `${handlerName}-${++this.handlerCounter}`;
@@ -245,29 +260,32 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
 
   private collectFailures(
     results: PromiseSettledResult<EventPublishFailure | null>[],
-    handlerClasses: EventHandlerClass<TEvent>[]
+    handlerClasses: EventHandlerClass<TEvent>[],
   ): EventPublishFailure[] {
     return results.flatMap((result, index) => {
-      if (result.status === 'fulfilled') {
+      if (result.status === "fulfilled") {
         return result.value ? [result.value] : [];
       }
 
       return [
         {
-          handlerName: handlerClasses[index]?.name ?? 'UnknownHandler',
+          handlerName: handlerClasses[index]?.name ?? "UnknownHandler",
           error: this.normalizeError(result.reason),
         },
       ];
     });
   }
 
-  private createPublishSpanAttributes(event: TEvent, traceInfo: TraceInfo): Record<string, boolean | number | string> {
+  private createPublishSpanAttributes(
+    event: TEvent,
+    traceInfo: TraceInfo,
+  ): Record<string, boolean | number | string> {
     return {
-      'event.name': event.eventName,
-      'event.timestamp': event.timestamp.toISOString(),
-      'trace.id': traceInfo.traceId ?? '',
-      'trace.span_id': traceInfo.spanId ?? '',
-      'trace.is_valid': traceInfo.isValid ?? false,
+      "event.name": event.eventName,
+      "event.timestamp": event.timestamp.toISOString(),
+      "trace.id": traceInfo.traceId ?? "",
+      "trace.span_id": traceInfo.spanId ?? "",
+      "trace.is_valid": traceInfo.isValid ?? false,
     };
   }
 
@@ -278,7 +296,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
   private async executeSubscriber(
     handlerClass: EventHandlerClass<TEvent>,
     baseEvent: TEvent,
-    eventName: string
+    eventName: string,
   ): Promise<EventPublishFailure | null> {
     const handlerName = handlerClass.name;
     const parentContext = this.createParentContext(baseEvent.metadata.traceContext);
@@ -289,9 +307,9 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
         `event.handle:${handlerName}`,
         {
           attributes: {
-            'event.name': eventName,
-            'handler.name': handlerName,
-            'handler.type': 'consumer',
+            "event.name": eventName,
+            "handler.name": handlerName,
+            "handler.type": "consumer",
           },
         },
         async (handleSpan: Span) => {
@@ -324,7 +342,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
           } finally {
             handleSpan.end();
           }
-        }
+        },
       );
     });
 
@@ -342,7 +360,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
     return eventCopy;
   }
 
-  private createParentContext(traceContext: TEvent['metadata']['traceContext']): Context {
+  private createParentContext(traceContext: TEvent["metadata"]["traceContext"]): Context {
     if (!traceContext?.isValid || !traceContext.traceId || !traceContext.spanId) {
       return context.active();
     }
@@ -371,7 +389,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
       return value.map((item) => this.cloneValue(item)) as T;
     }
 
-    if (!value || typeof value !== 'object') {
+    if (!value || typeof value !== "object") {
       return value;
     }
 
@@ -381,7 +399,10 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent> implemen
       return value;
     }
 
-    const clonedEntries = Object.entries(value).map(([key, entryValue]) => [key, this.cloneValue(entryValue)]);
+    const clonedEntries = Object.entries(value).map(([key, entryValue]) => [
+      key,
+      this.cloneValue(entryValue),
+    ]);
 
     return Object.fromEntries(clonedEntries) as T;
   }

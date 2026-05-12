@@ -1,10 +1,10 @@
-import type { EventBus } from '@croco/events-core';
-import { Token } from '@croco/framework-context';
-import { Trace, withSpan } from '@croco/telemetry-api';
-import { LlmGeneratedEvent } from './events/LlmGeneratedEvent';
-import { LlmStreamCompletedEvent } from './events/LlmStreamCompletedEvent';
-import type { LlmRegistry } from './LlmRegistry';
-import { LlmServiceProblem } from './problems/LlmServiceProblem';
+import type { EventBus } from "@croco/events-core";
+import { Token } from "@croco/framework-context";
+import { Trace, withSpan } from "@croco/telemetry-api";
+import { LlmGeneratedEvent } from "./events/LlmGeneratedEvent";
+import { LlmStreamCompletedEvent } from "./events/LlmStreamCompletedEvent";
+import type { LlmRegistry } from "./LlmRegistry";
+import { LlmServiceProblem } from "./problems/LlmServiceProblem";
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -18,27 +18,27 @@ import type {
   StreamParams,
   ToolCallParams,
   ToolCallResult,
-} from './types';
+} from "./types";
 
 const MAX_STREAM_BUFFER_CHUNKS = 1000;
 
 export class LlmService {
-  static readonly token = new Token<LlmService>('LlmService');
+  static readonly token = new Token<LlmService>("LlmService");
 
   constructor(
     private readonly registry: LlmRegistry,
-    private readonly eventBus: EventBus
+    private readonly eventBus: EventBus,
   ) {}
 
-  @Trace({ name: 'llm.generate' })
+  @Trace({ name: "llm.generate" })
   async generate(params: GenerateParams): Promise<GenerateResult> {
     try {
-      const modelId = params.modelId ?? 'default';
+      const modelId = params.modelId ?? "default";
       const model = await this.registry.getModel(modelId);
       const result = await model.generate(params);
 
       await this.publishCompletionEvent({
-        operation: 'generate',
+        operation: "generate",
         modelId: model.modelId,
         prompt: params.prompt,
         text: result.text,
@@ -52,7 +52,7 @@ export class LlmService {
   }
 
   async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
-    const modelId = params.modelId ?? 'default';
+    const modelId = params.modelId ?? "default";
     const queuedChunks: StreamChunk[] = [];
     let queuedError: unknown;
     let hasQueuedError = false;
@@ -105,8 +105,8 @@ export class LlmService {
     const removeAbortListener = params.signal
       ? (() => {
           const abort = (): void => cancelProducer();
-          params.signal.addEventListener('abort', abort, { once: true });
-          return () => params.signal?.removeEventListener('abort', abort);
+          params.signal.addEventListener("abort", abort, { once: true });
+          return () => params.signal?.removeEventListener("abort", abort);
         })()
       : undefined;
 
@@ -117,7 +117,7 @@ export class LlmService {
     const producer = withSpan(
       async (span) => {
         try {
-          span.setAttribute('llm.model_id', modelId);
+          span.setAttribute("llm.model_id", modelId);
 
           const model = await this.registry.getModel(modelId);
           const streamParams = { ...params, signal: abortController.signal };
@@ -159,11 +159,11 @@ export class LlmService {
             return;
           }
 
-          const text = streamedChunks.join('');
+          const text = streamedChunks.join("");
           const usage = this.buildStreamUsage(params.prompt, text, streamUsage);
 
           await this.publishCompletionEvent({
-            operation: 'stream',
+            operation: "stream",
             modelId: model.modelId,
             prompt: params.prompt,
             text,
@@ -181,7 +181,7 @@ export class LlmService {
           notifyConsumer();
         }
       },
-      { name: 'llm.stream' }
+      { name: "llm.stream" },
     ).catch((error) => {
       queuedError = error;
       hasQueuedError = true;
@@ -219,10 +219,10 @@ export class LlmService {
     }
   }
 
-  @Trace({ name: 'llm.embed' })
+  @Trace({ name: "llm.embed" })
   async embed(params: EmbedParams): Promise<EmbedResult> {
     try {
-      const model = params.modelId ?? 'default';
+      const model = params.modelId ?? "default";
       const llmModel = await this.registry.getModel(model);
       return await llmModel.embed(params);
     } catch (error) {
@@ -230,10 +230,10 @@ export class LlmService {
     }
   }
 
-  @Trace({ name: 'llm.embed_many' })
+  @Trace({ name: "llm.embed_many" })
   async embedMany(params: EmbedManyParams): Promise<EmbedManyResult> {
     try {
-      const model = params.modelId ?? 'default';
+      const model = params.modelId ?? "default";
       const llmModel = await this.registry.getModel(model);
       return await llmModel.embedMany(params);
     } catch (error) {
@@ -245,22 +245,22 @@ export class LlmService {
     return withSpan(
       async (span) => {
         try {
-          const modelId = params.modelId ?? 'default';
-          span.setAttribute('llm.model_id', modelId);
+          const modelId = params.modelId ?? "default";
+          span.setAttribute("llm.model_id", modelId);
           const model = await this.registry.getModel(modelId);
           return await model.generateObject(params);
         } catch (error) {
           throw LlmServiceProblem.fromError(error);
         }
       },
-      { name: 'llm.generate_object' }
+      { name: "llm.generate_object" },
     );
   }
 
-  @Trace({ name: 'llm.call_tool' })
+  @Trace({ name: "llm.call_tool" })
   async callTool(params: ToolCallParams): Promise<ToolCallResult> {
     try {
-      const modelId = params.modelId ?? 'default';
+      const modelId = params.modelId ?? "default";
       const model = await this.registry.getModel(modelId);
       return await model.callTool(params);
     } catch (error) {
@@ -269,7 +269,7 @@ export class LlmService {
   }
 
   private async publishCompletionEvent(params: {
-    operation: 'generate' | 'stream';
+    operation: "generate" | "stream";
     modelId: string;
     prompt: string;
     text: string;
@@ -277,7 +277,7 @@ export class LlmService {
     chunkCount?: number;
   }): Promise<void> {
     const event =
-      params.operation === 'stream'
+      params.operation === "stream"
         ? new LlmStreamCompletedEvent(params.modelId, params.text, params.usage, params.chunkCount)
         : new LlmGeneratedEvent(params.modelId, params.prompt, params.text, params.usage);
 

@@ -1,4 +1,4 @@
-import type { UsageQueryOptions, UsageRecord } from './types';
+import type { UsageQueryOptions, UsageRecord } from "./types";
 
 export type AtomicQuotaCheckOptions = {
   tenantId: string;
@@ -37,7 +37,12 @@ export interface UsageStorage {
    * Idempotency 체크 (SET NX 기반)
    * @returns true: 새 키 (기록 가능), false: 중복 (기록 불가)
    */
-  isIdempotent(tenantId: string, meterId: string, idempotencyKey: string, ttlSeconds: number): Promise<boolean>;
+  isIdempotent(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+    ttlSeconds: number,
+  ): Promise<boolean>;
 
   /**
    * Usage 데이터 조회 (배치 저장용)

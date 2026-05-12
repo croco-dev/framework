@@ -1,4 +1,4 @@
-import { DomainEvent } from '@croco/events-core';
+import { DomainEvent } from "@croco/events-core";
 
 export type ApiKeyUsedEventData = {
   keyId: string;
@@ -25,7 +25,7 @@ export type ApiKeyRotatedEventData = {
 };
 
 export class ApiKeyUsedEvent extends DomainEvent {
-  static eventName = 'auth.api_key_used';
+  static eventName = "auth.api_key_used";
 
   constructor(public readonly data: ApiKeyUsedEventData) {
     super();
@@ -33,7 +33,7 @@ export class ApiKeyUsedEvent extends DomainEvent {
 }
 
 export class ApiKeyCreatedEvent extends DomainEvent {
-  static eventName = 'auth.api_key_created';
+  static eventName = "auth.api_key_created";
 
   constructor(public readonly data: ApiKeyCreatedEventData) {
     super();
@@ -41,14 +41,14 @@ export class ApiKeyCreatedEvent extends DomainEvent {
 }
 
 export class ApiKeyRevokedEvent extends DomainEvent {
-  static eventName = 'auth.api_key_revoked';
+  static eventName = "auth.api_key_revoked";
   constructor(public readonly data: ApiKeyRevokedEventData) {
     super();
   }
 }
 
 export class ApiKeyRotatedEvent extends DomainEvent {
-  static eventName = 'auth.api_key_rotated';
+  static eventName = "auth.api_key_rotated";
 
   constructor(public readonly data: ApiKeyRotatedEventData) {
     super();

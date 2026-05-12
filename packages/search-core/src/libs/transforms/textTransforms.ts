@@ -1,4 +1,4 @@
-import type { SearchTransformRef } from './types';
+import type { SearchTransformRef } from "./types";
 
 export type InitialsOptions = {
   locale?: string;
@@ -6,7 +6,7 @@ export type InitialsOptions = {
 
 export type DecomposedOptions = {
   locale?: string;
-  form?: 'nfd' | 'nfkd' | 'jamo';
+  form?: "nfd" | "nfkd" | "jamo";
 };
 
 export type RomanizedOptions = {
@@ -16,17 +16,17 @@ export type RomanizedOptions = {
 
 export const textTransforms = {
   initials: {
-    id: 'text.initials',
-    defaultSuffix: '_initials',
+    id: "text.initials",
+    defaultSuffix: "_initials",
   } as SearchTransformRef<InitialsOptions>,
 
   decomposed: {
-    id: 'text.decomposed',
-    defaultSuffix: '_decomposed',
+    id: "text.decomposed",
+    defaultSuffix: "_decomposed",
   } as SearchTransformRef<DecomposedOptions>,
 
   romanized: {
-    id: 'text.romanized',
-    defaultSuffix: '_romanized',
+    id: "text.romanized",
+    defaultSuffix: "_romanized",
   } as SearchTransformRef<RomanizedOptions>,
 };

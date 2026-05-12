@@ -13,10 +13,10 @@ pnpm add @croco/telemetry-api @opentelemetry/api
 ### `@Trace` 데코레이터
 
 ```typescript
-import { Trace } from '@croco/telemetry-api';
+import { Trace } from "@croco/telemetry-api";
 
 class OrderService {
-  @Trace({ name: 'order.create' })
+  @Trace({ name: "order.create" })
   async createOrder(): Promise<void> {}
 }
 ```
@@ -24,18 +24,18 @@ class OrderService {
 ### `withSpan`과 이벤트 기록
 
 ```typescript
-import { recordEvent, withSpan } from '@croco/telemetry-api';
+import { recordEvent, withSpan } from "@croco/telemetry-api";
 
 await withSpan(async (span) => {
-  span.setAttribute('feature', 'checkout');
-  recordEvent('checkout.started');
+  span.setAttribute("feature", "checkout");
+  recordEvent("checkout.started");
 });
 ```
 
 ### 현재 Trace 정보 읽기
 
 ```typescript
-import { getActiveTraceInfo } from '@croco/telemetry-api';
+import { getActiveTraceInfo } from "@croco/telemetry-api";
 
 const traceInfo = getActiveTraceInfo();
 ```

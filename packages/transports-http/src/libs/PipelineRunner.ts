@@ -1,8 +1,13 @@
-import type { Guard, ILogger } from '@croco/framework-context';
-import { ProblemFactory } from '@croco/problems-core';
-import type { CallHandler, ExceptionFilter, ExecutionContext, Interceptor } from '@croco/protocols-rest';
-import type { ErrorHandler } from './ErrorHandler';
-import type { HttpExecutionContext } from './HttpExecutionContext';
+import type { Guard, ILogger } from "@croco/framework-context";
+import { ProblemFactory } from "@croco/problems-core";
+import type {
+  CallHandler,
+  ExceptionFilter,
+  ExecutionContext,
+  Interceptor,
+} from "@croco/protocols-rest";
+import type { ErrorHandler } from "./ErrorHandler";
+import type { HttpExecutionContext } from "./HttpExecutionContext";
 
 type FilterResponse = {
   status: number;
@@ -12,12 +17,12 @@ type FilterResponse = {
 
 function isFilterResponse(value: unknown): value is FilterResponse {
   return (
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value !== null &&
-    'status' in value &&
-    'headers' in value &&
-    'body' in value &&
-    typeof (value as FilterResponse).status === 'number'
+    "status" in value &&
+    "headers" in value &&
+    "body" in value &&
+    typeof (value as FilterResponse).status === "number"
   );
 }
 
@@ -33,13 +38,13 @@ export interface PipelineConfig {
 export class PipelineRunner {
   constructor(
     private readonly errorHandler: ErrorHandler,
-    private readonly logger: ILogger
+    private readonly logger: ILogger,
   ) {}
 
   async run(
     execContext: HttpExecutionContext,
     handler: () => Promise<unknown>,
-    config: PipelineConfig
+    config: PipelineConfig,
   ): Promise<unknown> {
     try {
       await this.runGuards(execContext, config.guards);
@@ -50,11 +55,14 @@ export class PipelineRunner {
     }
   }
 
-  private async runGuards(context: ExecutionContext, guards: Guard<ExecutionContext>[]): Promise<void> {
+  private async runGuards(
+    context: ExecutionContext,
+    guards: Guard<ExecutionContext>[],
+  ): Promise<void> {
     for (const guard of guards) {
       const canActivate = await guard.canActivate(context);
       if (!canActivate) {
-        throw ProblemFactory.forbidden('ACCESS_DENIED', 'Access denied');
+        throw ProblemFactory.forbidden("ACCESS_DENIED", "Access denied");
       }
     }
   }
@@ -62,7 +70,7 @@ export class PipelineRunner {
   private async runInterceptorChain(
     context: ExecutionContext,
     handler: () => Promise<unknown>,
-    interceptors: Interceptor<ExecutionContext>[]
+    interceptors: Interceptor<ExecutionContext>[],
   ): Promise<unknown> {
     if (interceptors.length === 0) {
       return handler();
@@ -84,7 +92,7 @@ export class PipelineRunner {
   private runFilters(
     error: unknown,
     context: HttpExecutionContext,
-    filters: ExceptionFilter<unknown, HttpExecutionContext>[]
+    filters: ExceptionFilter<unknown, HttpExecutionContext>[],
   ): unknown {
     const nextError = error;
 
@@ -107,10 +115,13 @@ export class PipelineRunner {
         }
         return result;
       } catch (caughtError) {
-        this.logger.warn('Exception filter threw while handling an error; preserving original error', {
-          originalError: nextError instanceof Error ? nextError.message : String(nextError),
-          filterError: caughtError instanceof Error ? caughtError.message : String(caughtError),
-        });
+        this.logger.warn(
+          "Exception filter threw while handling an error; preserving original error",
+          {
+            originalError: nextError instanceof Error ? nextError.message : String(nextError),
+            filterError: caughtError instanceof Error ? caughtError.message : String(caughtError),
+          },
+        );
       }
     }
 

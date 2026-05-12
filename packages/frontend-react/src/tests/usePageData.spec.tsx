@@ -1,7 +1,12 @@
-import { act, createElement, type FunctionComponent, type ReactNode, useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { act, createElement, type FunctionComponent, type ReactNode, useState } from "react";
+import { describe, expect, it } from "vitest";
 
-import { PageDataContext, PageDataProvider, usePageData, usePageMeta } from '../libs/hooks/usePageData';
+import {
+  PageDataContext,
+  PageDataProvider,
+  usePageData,
+  usePageMeta,
+} from "../libs/hooks/usePageData";
 
 // Simple renderHook without @testing-library/react
 interface RenderHookOptions {
@@ -36,8 +41,8 @@ function renderHook<T>(hook: () => T, options?: RenderHookOptions) {
   };
 }
 
-describe('usePageData', () => {
-  it('Context에서 data를 가져온다', () => {
+describe("usePageData", () => {
+  it("Context에서 data를 가져온다", () => {
     const wrapper: FunctionComponent<{ children: ReactNode }> = ({ children }) =>
       createElement(PageDataProvider, { value: { data: { userId: 1 } } }, children);
 
@@ -46,7 +51,7 @@ describe('usePageData', () => {
     expect(result.current.userId).toBe(1);
   });
 
-  it('data가 없으면 undefined 반환', () => {
+  it("data가 없으면 undefined 반환", () => {
     const wrapper: FunctionComponent<{ children: ReactNode }> = ({ children }) =>
       createElement(PageDataContext.Provider, { value: {} }, children);
 
@@ -56,17 +61,19 @@ describe('usePageData', () => {
   });
 });
 
-describe('usePageMeta', () => {
-  it('title과 description을 반환한다', () => {
+describe("usePageMeta", () => {
+  it("title과 description을 반환한다", () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <PageDataProvider value={{ title: 'Test Title', description: 'Test Desc', urlOriginal: '/test' }}>
+      <PageDataProvider
+        value={{ title: "Test Title", description: "Test Desc", urlOriginal: "/test" }}
+      >
         {children}
       </PageDataProvider>
     );
     const { result } = renderHook(() => usePageMeta(), { wrapper });
 
-    expect(result.current.title).toBe('Test Title');
-    expect(result.current.description).toBe('Test Desc');
-    expect(result.current.urlOriginal).toBe('/test');
+    expect(result.current.title).toBe("Test Title");
+    expect(result.current.description).toBe("Test Desc");
+    expect(result.current.urlOriginal).toBe("/test");
   });
 });

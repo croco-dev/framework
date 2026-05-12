@@ -1,6 +1,9 @@
 {
   "name": "@croco/search-core",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -12,26 +15,7 @@
       "import": "./dist/ko/index.js"
     }
   },
-  "scripts": {
-    "build": "tsup src/index.ts src/ko/index.ts --format esm --dts",
-    "lint": "oxlint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*"
-  },
-  "peerDependencies": {
-    "@croco/events-core": "workspace:*"
-  },
-  "devDependencies": {
-    "typescript": "5.9.3",
-    "tsup": "8.5.1",
-    "vitest": "4.0.16"
-  },
   "publishConfig": {
-    "access": "public",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -43,9 +27,25 @@
         "import": "./dist/ko/index.js",
         "types": "./dist/ko/index.d.ts"
       }
-    }
+    },
+    "access": "public"
   },
-  "files": [
-    "dist"
-  ]
+  "scripts": {
+    "build": "tsup src/index.ts src/ko/index.ts --format esm --dts",
+    "lint": "oxlint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  },
+  "peerDependencies": {
+    "@croco/events-core": "workspace:*"
+  }
 }

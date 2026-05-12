@@ -1,9 +1,9 @@
-import 'reflect-metadata';
-import type { AuthRequest, AuthUser } from '@croco/auth-core';
-import type { Guard } from '@croco/framework-context';
-import { ENTITLEMENT_REQUIRED_KEY } from './decorators/RequireEntitlement';
-import type { EntitlementManager } from './EntitlementManager';
-import { EntitlementDeniedProblem } from './problems/EntitlementProblems';
+import "reflect-metadata";
+import type { AuthRequest, AuthUser } from "@croco/auth-core";
+import type { Guard } from "@croco/framework-context";
+import { ENTITLEMENT_REQUIRED_KEY } from "./decorators/RequireEntitlement";
+import type { EntitlementManager } from "./EntitlementManager";
+import { EntitlementDeniedProblem } from "./problems/EntitlementProblems";
 
 export type RouteExecutionContext = {
   getClass(): unknown;
@@ -15,8 +15,11 @@ type EntitlementAuthUser = AuthUser & { tenantId?: string };
 
 function getRequiredFeature(controllerTarget: unknown, handler: string | symbol): string | null {
   const classTarget =
-    typeof controllerTarget === 'function' ? controllerTarget : (controllerTarget as object).constructor;
-  const prototypeTarget = typeof controllerTarget === 'function' ? controllerTarget.prototype : controllerTarget;
+    typeof controllerTarget === "function"
+      ? controllerTarget
+      : (controllerTarget as object).constructor;
+  const prototypeTarget =
+    typeof controllerTarget === "function" ? controllerTarget.prototype : controllerTarget;
 
   return (
     Reflect.getMetadata(ENTITLEMENT_REQUIRED_KEY, classTarget, handler) ??
@@ -27,7 +30,7 @@ function getRequiredFeature(controllerTarget: unknown, handler: string | symbol)
 }
 
 function isMetadataTarget(value: unknown): value is object {
-  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+  return (typeof value === "object" && value !== null) || typeof value === "function";
 }
 
 export class EntitlementGuard implements Guard<RouteExecutionContext> {
@@ -52,7 +55,7 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
     const tenantId = request.tenantId ?? user?.tenantId;
 
     if (!tenantId) {
-      throw new EntitlementDeniedProblem(featureKey, 'tenantId not found in request');
+      throw new EntitlementDeniedProblem(featureKey, "tenantId not found in request");
     }
 
     const result = await this.entitlementManager.check(tenantId, featureKey);

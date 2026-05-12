@@ -1,34 +1,34 @@
-import type { Readable } from 'node:stream';
-import { S3Client } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type { ConfigService } from '@croco/framework-config';
-import { Component } from '@croco/framework-context';
-import type { Logger } from '@croco/framework-logger';
-import type { RetryPolicy } from '@croco/retry-core';
-import { RetryTemplate } from '@croco/retry-core';
-import type { ObjectMetadata, PutOptions, SignedUrlOptions } from '@croco/storage-core';
-import { BaseStorageProvider } from '@croco/storage-core';
-import { EmptyR2BodyProblem } from './problems/EmptyR2BodyProblem';
-import { MissingR2ConfigProblem } from './problems/MissingR2ConfigProblem';
-import { R2ObjectTooLargeProblem } from './problems/R2ObjectTooLargeProblem';
-import type { R2Options } from './types';
+import type { Readable } from "node:stream";
+import { S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { ConfigService } from "@croco/framework-config";
+import { Component } from "@croco/framework-context";
+import type { Logger } from "@croco/framework-logger";
+import type { RetryPolicy } from "@croco/retry-core";
+import { RetryTemplate } from "@croco/retry-core";
+import type { ObjectMetadata, PutOptions, SignedUrlOptions } from "@croco/storage-core";
+import { BaseStorageProvider } from "@croco/storage-core";
+import { EmptyR2BodyProblem } from "./problems/EmptyR2BodyProblem";
+import { MissingR2ConfigProblem } from "./problems/MissingR2ConfigProblem";
+import { R2ObjectTooLargeProblem } from "./problems/R2ObjectTooLargeProblem";
+import type { R2Options } from "./types";
 
 const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const TRANSIENT_ERROR_CODES = new Set([
-  'ECONNABORTED',
-  'ECONNRESET',
-  'ENETDOWN',
-  'ENETRESET',
-  'ENETUNREACH',
-  'ENOTFOUND',
-  'ETIMEDOUT',
-  'RequestTimeout',
-  'RequestTimeoutException',
-  'SlowDown',
-  'Throttling',
-  'ThrottlingException',
-  'TimeoutError',
-  'TooManyRequestsException',
+  "ECONNABORTED",
+  "ECONNRESET",
+  "ENETDOWN",
+  "ENETRESET",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "RequestTimeout",
+  "RequestTimeoutException",
+  "SlowDown",
+  "Throttling",
+  "ThrottlingException",
+  "TimeoutError",
+  "TooManyRequestsException",
 ]);
 
 type R2Error = Error & {
@@ -42,22 +42,22 @@ type R2Error = Error & {
 };
 
 const getErrorStatus = (error: unknown): number | undefined => {
-  if (!error || typeof error !== 'object') {
+  if (!error || typeof error !== "object") {
     return undefined;
   }
 
-  if ('$metadata' in error) {
+  if ("$metadata" in error) {
     const metadata = error.$metadata as { httpStatusCode?: number };
-    if (typeof metadata.httpStatusCode === 'number') {
+    if (typeof metadata.httpStatusCode === "number") {
       return metadata.httpStatusCode;
     }
   }
 
-  if ('statusCode' in error && typeof error.statusCode === 'number') {
+  if ("statusCode" in error && typeof error.statusCode === "number") {
     return error.statusCode;
   }
 
-  if ('status' in error && typeof error.status === 'number') {
+  if ("status" in error && typeof error.status === "number") {
     return error.status;
   }
 
@@ -65,15 +65,15 @@ const getErrorStatus = (error: unknown): number | undefined => {
 };
 
 const getErrorCode = (error: unknown): string | undefined => {
-  if (!error || typeof error !== 'object') {
+  if (!error || typeof error !== "object") {
     return undefined;
   }
 
-  if ('code' in error && typeof error.code === 'string') {
+  if ("code" in error && typeof error.code === "string") {
     return error.code;
   }
 
-  if ('name' in error && typeof error.name === 'string') {
+  if ("name" in error && typeof error.name === "string") {
     return error.name;
   }
 
@@ -85,11 +85,16 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     return error.message;
   }
 
-  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
     return error.message;
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
 
@@ -103,24 +108,24 @@ const normalizeR2Error = (error: unknown, fallback: string): R2Error => {
 
   const normalizedError = new Error(getErrorMessage(error, fallback)) as R2Error;
 
-  if (error && typeof error === 'object') {
-    if ('code' in error && typeof error.code === 'string') {
+  if (error && typeof error === "object") {
+    if ("code" in error && typeof error.code === "string") {
       normalizedError.code = error.code;
     }
 
-    if ('name' in error && typeof error.name === 'string') {
+    if ("name" in error && typeof error.name === "string") {
       normalizedError.name = error.name;
     }
 
-    if ('status' in error && typeof error.status === 'number') {
+    if ("status" in error && typeof error.status === "number") {
       normalizedError.status = error.status;
     }
 
-    if ('statusCode' in error && typeof error.statusCode === 'number') {
+    if ("statusCode" in error && typeof error.statusCode === "number") {
       normalizedError.statusCode = error.statusCode;
     }
 
-    if ('$metadata' in error && error.$metadata && typeof error.$metadata === 'object') {
+    if ("$metadata" in error && error.$metadata && typeof error.$metadata === "object") {
       normalizedError.$metadata = error.$metadata as { httpStatusCode?: number };
     }
   }
@@ -131,12 +136,12 @@ const normalizeR2Error = (error: unknown, fallback: string): R2Error => {
 const isRetryableR2Error = (error: unknown): boolean => {
   const status = getErrorStatus(error);
 
-  if (typeof status === 'number' && TRANSIENT_HTTP_STATUSES.has(status)) {
+  if (typeof status === "number" && TRANSIENT_HTTP_STATUSES.has(status)) {
     return true;
   }
 
   const code = getErrorCode(error);
-  return typeof code === 'string' && TRANSIENT_ERROR_CODES.has(code);
+  return typeof code === "string" && TRANSIENT_ERROR_CODES.has(code);
 };
 
 const R2_RETRY_POLICY: RetryPolicy = {
@@ -166,27 +171,27 @@ export class R2StorageProvider extends BaseStorageProvider {
     retryPolicy: R2_RETRY_POLICY,
   });
   private static readonly REQUIRED_CONFIG_KEYS = [
-    'R2_ACCOUNT_ID',
-    'R2_ACCESS_KEY_ID',
-    'R2_SECRET_ACCESS_KEY',
-    'R2_BUCKET',
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET",
   ] as const;
 
   constructor(
     private readonly config: ConfigService,
-    readonly _logger: Logger
+    readonly _logger: Logger,
   ) {
     super();
     this.options = {
-      accountId: this.validateRequiredConfig('R2_ACCOUNT_ID'),
-      accessKeyId: this.validateRequiredConfig('R2_ACCESS_KEY_ID'),
-      secretAccessKey: this.validateRequiredConfig('R2_SECRET_ACCESS_KEY'),
-      bucket: this.validateRequiredConfig('R2_BUCKET'),
-      publicUrlBase: this.config.get('R2_PUBLIC_URL_BASE'),
+      accountId: this.validateRequiredConfig("R2_ACCOUNT_ID"),
+      accessKeyId: this.validateRequiredConfig("R2_ACCESS_KEY_ID"),
+      secretAccessKey: this.validateRequiredConfig("R2_SECRET_ACCESS_KEY"),
+      bucket: this.validateRequiredConfig("R2_BUCKET"),
+      publicUrlBase: this.config.get("R2_PUBLIC_URL_BASE"),
     };
 
     this.client = new S3Client({
-      region: 'auto',
+      region: "auto",
       endpoint: `https://${this.options.accountId}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: this.options.accessKeyId,
@@ -195,7 +200,9 @@ export class R2StorageProvider extends BaseStorageProvider {
     });
   }
 
-  private validateRequiredConfig(configKey: (typeof R2StorageProvider.REQUIRED_CONFIG_KEYS)[number]): string {
+  private validateRequiredConfig(
+    configKey: (typeof R2StorageProvider.REQUIRED_CONFIG_KEYS)[number],
+  ): string {
     const value = this.config.get(configKey);
 
     if (!value) {
@@ -210,7 +217,7 @@ export class R2StorageProvider extends BaseStorageProvider {
 
     try {
       const upload = async (shouldRetry: boolean) => {
-        const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+        const { PutObjectCommand } = await import("@aws-sdk/client-s3");
 
         const command = new PutObjectCommand({
           Bucket: this.options.bucket,
@@ -221,7 +228,8 @@ export class R2StorageProvider extends BaseStorageProvider {
           Metadata: options?.metadata,
         });
 
-        const send = async () => await this.executeR2Operation(() => this.client.send(command), 'Unknown upload error');
+        const send = async () =>
+          await this.executeR2Operation(() => this.client.send(command), "Unknown upload error");
 
         if (shouldRetry) {
           await this.executeWithRetry(send);
@@ -240,7 +248,7 @@ export class R2StorageProvider extends BaseStorageProvider {
   async getStream(key: string): Promise<Readable> {
     this.validateKey(key);
 
-    const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+    const { GetObjectCommand } = await import("@aws-sdk/client-s3");
 
     const command = new GetObjectCommand({
       Bucket: this.options.bucket,
@@ -249,7 +257,8 @@ export class R2StorageProvider extends BaseStorageProvider {
 
     try {
       const response = await this.executeWithRetry(
-        async () => await this.executeR2Operation(() => this.client.send(command), 'Unknown download error')
+        async () =>
+          await this.executeR2Operation(() => this.client.send(command), "Unknown download error"),
       );
 
       if (!response.Body) {
@@ -266,7 +275,7 @@ export class R2StorageProvider extends BaseStorageProvider {
     this.validateKey(key);
 
     try {
-      const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+      const { GetObjectCommand } = await import("@aws-sdk/client-s3");
 
       const command = new GetObjectCommand({
         Bucket: this.options.bucket,
@@ -274,7 +283,8 @@ export class R2StorageProvider extends BaseStorageProvider {
       });
 
       const response = await this.executeWithRetry(
-        async () => await this.executeR2Operation(() => this.client.send(command), 'Unknown download error')
+        async () =>
+          await this.executeR2Operation(() => this.client.send(command), "Unknown download error"),
       );
 
       if (!response.Body) {
@@ -306,14 +316,14 @@ export class R2StorageProvider extends BaseStorageProvider {
 
     try {
       await this.executeWithRetry(async () => {
-        const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+        const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
 
         const command = new DeleteObjectCommand({
           Bucket: this.options.bucket,
           Key: key,
         });
 
-        await this.executeR2Operation(() => this.client.send(command), 'Unknown delete error');
+        await this.executeR2Operation(() => this.client.send(command), "Unknown delete error");
       });
     } catch (error) {
       this.throwDeleteFailed(key, error);
@@ -324,7 +334,7 @@ export class R2StorageProvider extends BaseStorageProvider {
     this.validateKey(key);
 
     if (this.options.publicUrlBase) {
-      const normalizedBase = this.options.publicUrlBase.replace(/\/+$/, '');
+      const normalizedBase = this.options.publicUrlBase.replace(/\/+$/, "");
       return `${normalizedBase}/${key}`;
     }
 
@@ -334,7 +344,7 @@ export class R2StorageProvider extends BaseStorageProvider {
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
 
-    const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+    const { GetObjectCommand } = await import("@aws-sdk/client-s3");
 
     const command = new GetObjectCommand({
       Bucket: this.options.bucket,
@@ -351,14 +361,17 @@ export class R2StorageProvider extends BaseStorageProvider {
 
     try {
       const response = await this.executeWithRetry(async () => {
-        const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
+        const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
 
         const command = new HeadObjectCommand({
           Bucket: this.options.bucket,
           Key: key,
         });
 
-        return await this.executeR2Operation(() => this.client.send(command), 'Unknown metadata error');
+        return await this.executeR2Operation(
+          () => this.client.send(command),
+          "Unknown metadata error",
+        );
       });
 
       return {
@@ -374,12 +387,12 @@ export class R2StorageProvider extends BaseStorageProvider {
   }
 
   private isNotFoundError(error: unknown): boolean {
-    if (error && typeof error === 'object' && '$metadata' in error) {
+    if (error && typeof error === "object" && "$metadata" in error) {
       const metadata = error.$metadata as { httpStatusCode?: number };
       return metadata.httpStatusCode === 404;
     }
-    if (error instanceof Error && 'name' in error) {
-      return error.name === 'NotFound';
+    if (error instanceof Error && "name" in error) {
+      return error.name === "NotFound";
     }
     return false;
   }
@@ -395,7 +408,10 @@ export class R2StorageProvider extends BaseStorageProvider {
     return await this.retryTemplate.execute(async () => await operation());
   }
 
-  private async executeR2Operation<T>(operation: () => Promise<T>, fallbackMessage: string): Promise<T> {
+  private async executeR2Operation<T>(
+    operation: () => Promise<T>,
+    fallbackMessage: string,
+  ): Promise<T> {
     try {
       return await operation();
     } catch (error) {

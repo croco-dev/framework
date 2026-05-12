@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '@cloudflare/workers-types';
+import type { ExecutionContext } from "@cloudflare/workers-types";
 
 export type CloudflareEnv = Record<string, unknown>;
 

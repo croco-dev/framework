@@ -1,5 +1,5 @@
-import { DomainEvent } from '@croco/events-core';
-import type { MembershipRole } from '../types';
+import { DomainEvent } from "@croco/events-core";
+import type { MembershipRole } from "../types";
 
 export type MembershipUpdatedEventData = {
   tenantId: string;
@@ -9,7 +9,7 @@ export type MembershipUpdatedEventData = {
 };
 
 export class MembershipUpdatedEvent extends DomainEvent {
-  static eventName = 'membership.updated';
+  static eventName = "membership.updated";
 
   constructor(public readonly data: MembershipUpdatedEventData) {
     super();

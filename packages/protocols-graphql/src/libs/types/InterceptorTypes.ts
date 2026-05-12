@@ -1,4 +1,4 @@
-import type { ResolverData } from 'type-graphql';
+import type { ResolverData } from "type-graphql";
 
 export type GraphQLInterceptorContext = ResolverData<Record<string, unknown>>;
 

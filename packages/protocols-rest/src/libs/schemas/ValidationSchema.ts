@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type { z } from "zod";
 
 export type RequestSchema = {
   body?: z.ZodType;
@@ -15,10 +15,10 @@ export type RouteSchema<Req extends RequestSchema = RequestSchema, Res = unknown
 };
 
 export type InferRequestType<T extends RequestSchema> = {
-  body: T['body'] extends z.ZodType ? z.infer<T['body']> : unknown;
-  query: T['query'] extends z.ZodType ? z.infer<T['query']> : unknown;
-  params: T['params'] extends z.ZodType ? z.infer<T['params']> : unknown;
-  headers: T['headers'] extends z.ZodType ? z.infer<T['headers']> : unknown;
+  body: T["body"] extends z.ZodType ? z.infer<T["body"]> : unknown;
+  query: T["query"] extends z.ZodType ? z.infer<T["query"]> : unknown;
+  params: T["params"] extends z.ZodType ? z.infer<T["params"]> : unknown;
+  headers: T["headers"] extends z.ZodType ? z.infer<T["headers"]> : unknown;
 };
 
 export type InferResponseType<T extends ResponseSchema> = z.infer<T>;

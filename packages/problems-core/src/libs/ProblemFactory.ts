@@ -1,5 +1,5 @@
-import { Problem, type ProblemOptions } from './Problem';
-import { ProblemCategory } from './ProblemCategory';
+import { Problem, type ProblemOptions } from "./Problem";
+import { ProblemCategory } from "./ProblemCategory";
 
 class GenericProblem extends Problem {
   // biome-ignore lint/complexity/noUselessConstructor: Problem's constructor is protected, so subclass needs explicit constructor

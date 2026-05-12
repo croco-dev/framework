@@ -1,4 +1,4 @@
-import type { Step } from './Step';
+import type { Step } from "./Step";
 
 export interface Job {
   name: string;

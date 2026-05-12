@@ -1,6 +1,6 @@
-import { type Execution, ExecutionProblem, type ExecutionStatus } from '@croco/execution-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DrizzleExecutionStore } from '../libs/DrizzleExecutionStore';
+import { type Execution, ExecutionProblem, type ExecutionStatus } from "@croco/execution-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
 
 type MockDb = {
   select: () => any;
@@ -11,9 +11,9 @@ type MockDb = {
 
 function createMockExecution(overrides: Partial<Execution> = {}): Execution {
   return {
-    id: 'test-execution-id',
-    type: 'task',
-    status: 'pending' as ExecutionStatus,
+    id: "test-execution-id",
+    type: "task",
+    status: "pending" as ExecutionStatus,
     attempts: 0,
     maxAttempts: 1,
     createdAt: new Date(),
@@ -63,7 +63,7 @@ function createMockDb(): MockDb {
   };
 }
 
-describe('DrizzleExecutionStore', () => {
+describe("DrizzleExecutionStore", () => {
   let mockDb!: MockDb;
   let store!: DrizzleExecutionStore<MockDb>;
 
@@ -72,11 +72,11 @@ describe('DrizzleExecutionStore', () => {
     store = new DrizzleExecutionStore(mockDb);
   });
 
-  describe('create', () => {
-    it('should create a new execution record', async () => {
+  describe("create", () => {
+    it("should create a new execution record", async () => {
       const params = {
-        type: 'task',
-        payload: { data: 'test' },
+        type: "task",
+        payload: { data: "test" },
         maxAttempts: 3,
         timeout: 5000,
       };
@@ -84,35 +84,35 @@ describe('DrizzleExecutionStore', () => {
       const result = await store.create(params);
 
       expect(result).not.toBeNull();
-      expect(result.type).toBe('task');
-      expect(result.payload).toEqual({ data: 'test' });
+      expect(result.type).toBe("task");
+      expect(result.payload).toEqual({ data: "test" });
       expect(result.maxAttempts).toBe(3);
-      expect(result.status).toBe('pending');
+      expect(result.status).toBe("pending");
       expect(result.attempts).toBe(0);
     });
 
-    it('should return existing execution when idempotency key is provided and exists', async () => {
-      const existing = createMockExecution({ idempotencyKey: 'unique-key-123' });
-      vi.spyOn(store, 'findByIdempotencyKey').mockResolvedValueOnce(existing);
+    it("should return existing execution when idempotency key is provided and exists", async () => {
+      const existing = createMockExecution({ idempotencyKey: "unique-key-123" });
+      vi.spyOn(store, "findByIdempotencyKey").mockResolvedValueOnce(existing);
 
       const params = {
-        type: 'task',
-        idempotencyKey: 'unique-key-123',
+        type: "task",
+        idempotencyKey: "unique-key-123",
       };
 
       const result = await store.create(params);
 
       expect(result).toEqual(existing);
-      expect(store.findByIdempotencyKey).toHaveBeenCalledWith('unique-key-123');
+      expect(store.findByIdempotencyKey).toHaveBeenCalledWith("unique-key-123");
     });
 
-    it('should create with optional fields', async () => {
+    it("should create with optional fields", async () => {
       const execution = createMockExecution({
-        idempotencyKey: 'batch-key-123',
-        type: 'batch',
-        scheduledFor: new Date('2026-01-01T00:00:00Z'),
-        parentId: 'parent-execution-id',
-        metadata: { source: 'api' },
+        idempotencyKey: "batch-key-123",
+        type: "batch",
+        scheduledFor: new Date("2026-01-01T00:00:00Z"),
+        parentId: "parent-execution-id",
+        metadata: { source: "api" },
       });
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
@@ -124,28 +124,30 @@ describe('DrizzleExecutionStore', () => {
       mockDb.select = selectMock;
 
       const params = {
-        type: 'batch',
-        scheduledFor: new Date('2026-01-01T00:00:00Z'),
-        idempotencyKey: 'batch-key-123',
-        parentId: 'parent-execution-id',
-        metadata: { source: 'api' },
+        type: "batch",
+        scheduledFor: new Date("2026-01-01T00:00:00Z"),
+        idempotencyKey: "batch-key-123",
+        parentId: "parent-execution-id",
+        metadata: { source: "api" },
       };
 
       const result = await store.create(params);
 
-      expect(result.scheduledFor).toEqual(new Date('2026-01-01T00:00:00Z'));
-      expect(result.idempotencyKey).toBe('batch-key-123');
-      expect(result.parentId).toBe('parent-execution-id');
-      expect(result.metadata).toEqual({ source: 'api' });
+      expect(result.scheduledFor).toEqual(new Date("2026-01-01T00:00:00Z"));
+      expect(result.idempotencyKey).toBe("batch-key-123");
+      expect(result.parentId).toBe("parent-execution-id");
+      expect(result.metadata).toEqual({ source: "api" });
     });
 
-    it('should return existing execution when idempotency key conflicts during insert', async () => {
+    it("should return existing execution when idempotency key conflicts during insert", async () => {
       const existing = createMockExecution({
-        id: 'existing-execution-id',
-        idempotencyKey: 'race-key-123',
+        id: "existing-execution-id",
+        idempotencyKey: "race-key-123",
       });
 
-      vi.spyOn(store, 'findByIdempotencyKey').mockResolvedValueOnce(null).mockResolvedValueOnce(existing);
+      vi.spyOn(store, "findByIdempotencyKey")
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existing);
 
       mockDb.insert = vi.fn(() => ({
         values: vi.fn(() => ({
@@ -157,18 +159,18 @@ describe('DrizzleExecutionStore', () => {
       }));
 
       const result = await store.create({
-        type: 'task',
-        idempotencyKey: 'race-key-123',
+        type: "task",
+        idempotencyKey: "race-key-123",
       });
 
       expect(result).toEqual(existing);
       expect(store.findByIdempotencyKey).toHaveBeenCalledTimes(2);
-      expect(store.findByIdempotencyKey).toHaveBeenNthCalledWith(1, 'race-key-123');
-      expect(store.findByIdempotencyKey).toHaveBeenNthCalledWith(2, 'race-key-123');
+      expect(store.findByIdempotencyKey).toHaveBeenNthCalledWith(1, "race-key-123");
+      expect(store.findByIdempotencyKey).toHaveBeenNthCalledWith(2, "race-key-123");
     });
 
-    it('should throw conflict when duplicate key persists without existing record', async () => {
-      vi.spyOn(store, 'findByIdempotencyKey').mockResolvedValue(null);
+    it("should throw conflict when duplicate key persists without existing record", async () => {
+      vi.spyOn(store, "findByIdempotencyKey").mockResolvedValue(null);
 
       mockDb.insert = vi.fn(() => ({
         values: vi.fn(() => ({
@@ -181,34 +183,34 @@ describe('DrizzleExecutionStore', () => {
 
       await expect(
         store.create({
-          type: 'task',
-          idempotencyKey: 'race-key-456',
-        })
+          type: "task",
+          idempotencyKey: "race-key-456",
+        }),
       ).rejects.toThrow("Execution with idempotency key 'race-key-456' already exists");
     });
 
-    it('should propagate insert errors when idempotency key is not provided', async () => {
+    it("should propagate insert errors when idempotency key is not provided", async () => {
       mockDb.insert = vi.fn(() => ({
         values: vi.fn(() => ({
           onConflictDoNothing: vi.fn(() => ({
             returning: vi.fn(() => Promise.resolve([])),
           })),
           returning: vi.fn(() => {
-            throw new Error('insert failed');
+            throw new Error("insert failed");
           }),
         })),
       }));
 
       await expect(
         store.create({
-          type: 'task',
-        })
-      ).rejects.toThrow('insert failed');
+          type: "task",
+        }),
+      ).rejects.toThrow("insert failed");
     });
   });
 
-  describe('findById', () => {
-    it('should return execution when found', async () => {
+  describe("findById", () => {
+    it("should return execution when found", async () => {
       const execution = createMockExecution();
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
@@ -219,12 +221,12 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.select = selectMock;
 
-      const result = await store.findById('test-execution-id');
+      const result = await store.findById("test-execution-id");
 
       expect(result).toEqual(execution);
     });
 
-    it('should return null when not found', async () => {
+    it("should return null when not found", async () => {
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
@@ -234,15 +236,15 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.select = selectMock;
 
-      const result = await store.findById('non-existent-id');
+      const result = await store.findById("non-existent-id");
 
       expect(result).toBeNull();
     });
   });
 
-  describe('findByIdempotencyKey', () => {
-    it('should return execution when found', async () => {
-      const execution = createMockExecution({ idempotencyKey: 'unique-key' });
+  describe("findByIdempotencyKey", () => {
+    it("should return execution when found", async () => {
+      const execution = createMockExecution({ idempotencyKey: "unique-key" });
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
@@ -252,12 +254,12 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.select = selectMock;
 
-      const result = await store.findByIdempotencyKey('unique-key');
+      const result = await store.findByIdempotencyKey("unique-key");
 
       expect(result).toEqual(execution);
     });
 
-    it('should return null when not found', async () => {
+    it("should return null when not found", async () => {
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
@@ -267,16 +269,16 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.select = selectMock;
 
-      const result = await store.findByIdempotencyKey('non-existent-key');
+      const result = await store.findByIdempotencyKey("non-existent-key");
 
       expect(result).toBeNull();
     });
   });
 
-  describe('update', () => {
-    it('should update execution and return updated record', async () => {
+  describe("update", () => {
+    it("should update execution and return updated record", async () => {
       const execution = createMockExecution();
-      const updated = { ...execution, status: 'completed' as ExecutionStatus };
+      const updated = { ...execution, status: "completed" as ExecutionStatus };
 
       const updateMock = vi.fn(() => ({
         set: vi.fn(() => ({
@@ -287,18 +289,18 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.update = updateMock;
 
-      const result = await store.update(execution.id, { status: 'completed' });
+      const result = await store.update(execution.id, { status: "completed" });
 
-      expect(result.status).toBe('completed');
+      expect(result.status).toBe("completed");
     });
 
-    it('should not null out omitted fields during partial updates', async () => {
+    it("should not null out omitted fields during partial updates", async () => {
       const execution = createMockExecution({
-        payload: { task: 'keep-me' },
+        payload: { task: "keep-me" },
         result: { ok: true },
-        metadata: { source: 'api' },
+        metadata: { source: "api" },
       });
-      const updated = { ...execution, status: 'completed' as ExecutionStatus };
+      const updated = { ...execution, status: "completed" as ExecutionStatus };
 
       const setMock = vi.fn(() => ({
         where: vi.fn(() => ({
@@ -310,14 +312,14 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.update = updateMock;
 
-      await store.update(execution.id, { status: 'completed' });
+      await store.update(execution.id, { status: "completed" });
 
       expect(setMock).toHaveBeenCalledWith({
-        status: 'completed',
+        status: "completed",
       });
     });
 
-    it('should throw error when execution not found', async () => {
+    it("should throw error when execution not found", async () => {
       const updateMock = vi.fn(() => ({
         set: vi.fn(() => ({
           where: vi.fn(() => ({
@@ -327,13 +329,15 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.update = updateMock;
 
-      await expect(store.update('non-existent-id', { status: 'completed' })).rejects.toThrow(ExecutionProblem);
+      await expect(store.update("non-existent-id", { status: "completed" })).rejects.toThrow(
+        ExecutionProblem,
+      );
     });
   });
 
-  describe('list', () => {
-    it('should return all executions when no filters provided', async () => {
-      const executions = [createMockExecution(), createMockExecution({ id: 'another-id' })];
+  describe("list", () => {
+    it("should return all executions when no filters provided", async () => {
+      const executions = [createMockExecution(), createMockExecution({ id: "another-id" })];
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
@@ -350,8 +354,8 @@ describe('DrizzleExecutionStore', () => {
       expect(result).toHaveLength(2);
     });
 
-    it('should filter by status', async () => {
-      const pendingExecutions = [createMockExecution({ status: 'pending' })];
+    it("should filter by status", async () => {
+      const pendingExecutions = [createMockExecution({ status: "pending" })];
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
@@ -363,13 +367,13 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.select = selectMock;
 
-      const result = await store.list({ status: 'pending' });
+      const result = await store.list({ status: "pending" });
 
       expect(result).toHaveLength(1);
-      expect(result[0].status).toBe('pending');
+      expect(result[0].status).toBe("pending");
     });
 
-    it('should support pagination with limit and offset', async () => {
+    it("should support pagination with limit and offset", async () => {
       const executions = [createMockExecution()];
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
@@ -390,8 +394,8 @@ describe('DrizzleExecutionStore', () => {
     });
   });
 
-  describe('delete', () => {
-    it('should delete execution', async () => {
+  describe("delete", () => {
+    it("should delete execution", async () => {
       const execution = createMockExecution();
       const deleteMock = vi.fn(() => ({
         where: vi.fn(() => ({
@@ -403,7 +407,7 @@ describe('DrizzleExecutionStore', () => {
       await expect(store.delete(execution.id)).resolves.toBeUndefined();
     });
 
-    it('should throw error when execution not found', async () => {
+    it("should throw error when execution not found", async () => {
       const deleteMock = vi.fn(() => ({
         where: vi.fn(() => ({
           returning: vi.fn(() => Promise.resolve([])),
@@ -411,7 +415,7 @@ describe('DrizzleExecutionStore', () => {
       }));
       mockDb.delete = deleteMock;
 
-      await expect(store.delete('non-existent-id')).rejects.toThrow(ExecutionProblem);
+      await expect(store.delete("non-existent-id")).rejects.toThrow(ExecutionProblem);
     });
   });
 });

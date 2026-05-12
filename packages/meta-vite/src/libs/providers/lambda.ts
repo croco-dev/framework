@@ -1,4 +1,4 @@
-import type { CrocoFetchHandler, RuntimeContext } from '../render/types';
+import type { CrocoFetchHandler, RuntimeContext } from "../render/types";
 
 type LambdaApiHandler = {
   match: (request: Request) => boolean;
@@ -16,12 +16,12 @@ type LambdaComposedOptions = {
  * Lambda uses a buffered Response by default; streaming responses are not supported by this adapter.
  */
 export function createLambdaHandler(
-  handler: CrocoFetchHandler
+  handler: CrocoFetchHandler,
 ): (event: unknown, context: unknown) => Promise<Response> {
   return async (event: unknown, lambdaContext: unknown) => {
     const request = convertApiGatewayEventToRequest(event);
     const ctx: RuntimeContext = {
-      platform: 'lambda',
+      platform: "lambda",
       event,
       lambdaContext,
     };
@@ -34,7 +34,7 @@ export function createLambdaHandler(
  * Lambda requires buffered responses; streaming responses should be handled before returning from this adapter.
  */
 export function createLambdaComposedHandler(
-  options: LambdaComposedOptions
+  options: LambdaComposedOptions,
 ): (event: unknown, context: unknown) => Promise<Response> {
   return async (event: unknown, lambdaContext: unknown) => {
     const request = convertApiGatewayEventToRequest(event);
@@ -46,7 +46,7 @@ export function createLambdaComposedHandler(
     }
 
     const ctx: RuntimeContext = {
-      platform: 'lambda',
+      platform: "lambda",
       event,
       lambdaContext,
     };
@@ -60,13 +60,14 @@ function convertApiGatewayEventToRequest(event: unknown): Request {
   const requestContext = evt.requestContext as Record<string, unknown> | undefined;
   const http = requestContext?.http as Record<string, unknown> | undefined;
   const headers = (evt.headers as Record<string, string> | undefined) ?? {};
-  const method = (http?.method as string | undefined) ?? (evt.httpMethod as string | undefined) ?? 'GET';
-  const path = (evt.rawPath as string | undefined) ?? (evt.path as string | undefined) ?? '/';
-  const queryString = evt.rawQueryString ? `?${evt.rawQueryString}` : '';
+  const method =
+    (http?.method as string | undefined) ?? (evt.httpMethod as string | undefined) ?? "GET";
+  const path = (evt.rawPath as string | undefined) ?? (evt.path as string | undefined) ?? "/";
+  const queryString = evt.rawQueryString ? `?${evt.rawQueryString}` : "";
   const body = evt.body as string | undefined;
   const isBase64 = evt.isBase64Encoded as boolean | undefined;
-  const baseUrl = headers['x-forwarded-proto'] === 'https' ? 'https://' : 'http://';
-  const host = headers.host ?? 'lambda.local';
+  const baseUrl = headers["x-forwarded-proto"] === "https" ? "https://" : "http://";
+  const host = headers.host ?? "lambda.local";
 
   let requestBody: BodyInit | undefined;
   if (body && isBase64) {

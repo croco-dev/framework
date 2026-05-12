@@ -66,4 +66,4 @@ export {
    * @returns AnalyticsManager 추상 클래스 타입
    */
   AnalyticsManager,
-} from './libs/AnalyticsManager';
+} from "./libs/AnalyticsManager";

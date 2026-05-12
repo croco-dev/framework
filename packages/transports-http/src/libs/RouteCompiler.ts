@@ -1,6 +1,6 @@
-import type { Guard, ILogger } from '@croco/framework-context';
-import { ProblemFactory } from '@croco/problems-core';
-import { extractRouteIR, type RouteIR } from '@croco/protocols-core';
+import type { Guard, ILogger } from "@croco/framework-context";
+import { ProblemFactory } from "@croco/problems-core";
+import { extractRouteIR, type RouteIR } from "@croco/protocols-core";
 import {
   type Constructor,
   type ExceptionFilter,
@@ -9,10 +9,10 @@ import {
   getGuards,
   getInterceptors,
   type Interceptor,
-} from '@croco/protocols-rest';
-import { HttpExecutionContext } from './HttpExecutionContext';
-import { ParamResolver } from './ParamResolver';
-import type { PipelineRunner } from './PipelineRunner';
+} from "@croco/protocols-rest";
+import { HttpExecutionContext } from "./HttpExecutionContext";
+import { ParamResolver } from "./ParamResolver";
+import type { PipelineRunner } from "./PipelineRunner";
 import type {
   CompiledRoute,
   CrocoHttpContext,
@@ -20,7 +20,7 @@ import type {
   GuardProvider,
   InterceptorProvider,
   PipeProvider,
-} from './types';
+} from "./types";
 
 export interface CompileOptions {
   container?: { get<T>(type: Constructor<T>): T };
@@ -30,9 +30,12 @@ export interface CompileOptions {
   globalPipes?: PipeProvider[];
 }
 
-function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<T>(type: Constructor<T>): T }): T {
+function instantiateProvider<T>(
+  provider: Constructor<T> | T,
+  container?: { get<T>(type: Constructor<T>): T },
+): T {
   // If it's already an instance (not a constructor function)
-  if (typeof provider !== 'function') {
+  if (typeof provider !== "function") {
     return provider;
   }
   // If it's a constructor, instantiate it
@@ -45,8 +48,8 @@ function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<
   const resolved = container.get(Ctor) as T | null | undefined;
   if (resolved == null) {
     throw ProblemFactory.internalServerError(
-      'transports-http/provider-resolution-failed',
-      `Container did not return an instance for provider ${Ctor.name}`
+      "transports-http/provider-resolution-failed",
+      `Container did not return an instance for provider ${Ctor.name}`,
     );
   }
 
@@ -59,7 +62,7 @@ function instantiateProvider<T>(provider: Constructor<T> | T, container?: { get<
 export class RouteCompiler {
   constructor(
     private readonly logger: ILogger,
-    private readonly pipelineRunner: PipelineRunner
+    private readonly pipelineRunner: PipelineRunner,
   ) {}
 
   compile(controllers: Constructor[], options: CompileOptions = {}): CompiledRoute[] {
@@ -92,8 +95,8 @@ export class RouteCompiler {
 
       if (existingRoute) {
         throw ProblemFactory.internalServerError(
-          'transports-http/duplicate-route-definition',
-          `Duplicate route detected for ${routeKey}`
+          "transports-http/duplicate-route-definition",
+          `Duplicate route detected for ${routeKey}`,
         );
       }
 
@@ -101,8 +104,12 @@ export class RouteCompiler {
     }
   }
 
-  private compileRouteFromIR(controller: Constructor, routeIR: RouteIR, options: CompileOptions): CompiledRoute {
-    const fullPath = this.joinPaths('', routeIR.path);
+  private compileRouteFromIR(
+    controller: Constructor,
+    routeIR: RouteIR,
+    options: CompileOptions,
+  ): CompiledRoute {
+    const fullPath = this.joinPaths("", routeIR.path);
     const paramResolver = new ParamResolver((pipe) => instantiateProvider(pipe, options.container));
 
     // Instantiate guards/interceptors/filters once at compile time (not per-request)
@@ -131,8 +138,12 @@ export class RouteCompiler {
         ...routeGuards.map((guard) => instantiateProvider(guard, options.container)),
       ] as Guard<ExecutionContext>[];
       const interceptors = [
-        ...globalInterceptors.map((interceptor) => instantiateProvider(interceptor, options.container)),
-        ...routeInterceptors.map((interceptor) => instantiateProvider(interceptor, options.container)),
+        ...globalInterceptors.map((interceptor) =>
+          instantiateProvider(interceptor, options.container),
+        ),
+        ...routeInterceptors.map((interceptor) =>
+          instantiateProvider(interceptor, options.container),
+        ),
       ] as Interceptor<ExecutionContext>[];
       const filters = [
         ...globalFilters.map((filter) => instantiateProvider(filter, options.container)),
@@ -142,10 +153,10 @@ export class RouteCompiler {
       const controllerHandler = async (): Promise<unknown> => {
         const args = await paramResolver.resolveParams(ctx, controller, routeIR.methodName);
         const method = (instance as Record<PropertyKey, unknown>)[routeIR.methodName];
-        if (typeof method !== 'function') {
+        if (typeof method !== "function") {
           throw ProblemFactory.internalServerError(
-            'transports-http/route-method-not-function',
-            `Method ${String(routeIR.methodName)} is not a function`
+            "transports-http/route-method-not-function",
+            `Method ${String(routeIR.methodName)} is not a function`,
           );
         }
         const typedMethod = method as (...args: unknown[]) => unknown;
@@ -169,11 +180,11 @@ export class RouteCompiler {
   }
 
   private joinPaths(base: string, path: string): string {
-    const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
+    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
     // 빈 path는 빈 문자열로 유지
-    const cleanPath = path === '' ? '' : path.startsWith('/') ? path : `/${path}`;
-    const result = `${cleanBase}${cleanPath}`.replace(/\/+/g, '/');
+    const cleanPath = path === "" ? "" : path.startsWith("/") ? path : `/${path}`;
+    const result = `${cleanBase}${cleanPath}`.replace(/\/+/g, "/");
     // trailing slash 제거 (루트 제외)
-    return result.length > 1 && result.endsWith('/') ? result.slice(0, -1) : result || '/';
+    return result.length > 1 && result.endsWith("/") ? result.slice(0, -1) : result || "/";
   }
 }

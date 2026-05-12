@@ -1,11 +1,11 @@
-import { sql } from 'drizzle-orm';
-import type { DatabaseClient } from './db-types';
-import type { MigrationRecord } from './types';
+import { sql } from "drizzle-orm";
+import type { DatabaseClient } from "./db-types";
+import type { MigrationRecord } from "./types";
 
 export class MigrationStore {
   private readonly tableName: string;
 
-  constructor(tableName = '_migrations') {
+  constructor(tableName = "_migrations") {
     this.tableName = tableName;
   }
 

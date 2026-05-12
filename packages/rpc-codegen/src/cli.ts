@@ -1,10 +1,10 @@
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { extractRouteIR, type RouteIR } from '@croco/protocols-core';
-import { type ClassDeclaration, Project, type SourceFile, ts } from 'ts-morph';
-import { generateClientFiles } from './libs/generate';
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
+import { extractRouteIR, type RouteIR } from "@croco/protocols-core";
+import { type ClassDeclaration, Project, type SourceFile, ts } from "ts-morph";
+import { generateClientFiles } from "./libs/generate";
 
 type Constructor = new (...args: unknown[]) => unknown;
 
@@ -31,12 +31,12 @@ async function main(): Promise<void> {
 }
 
 function parseArgs(args: string[]): CliOptions | null {
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     return null;
   }
 
-  const controllers = getFlagValue(args, '--controllers');
-  const outDir = getFlagValue(args, '--out');
+  const controllers = getFlagValue(args, "--controllers");
+  const outDir = getFlagValue(args, "--out");
 
   if (!controllers || !outDir) {
     return null;
@@ -45,7 +45,7 @@ function parseArgs(args: string[]): CliOptions | null {
   return {
     controllers,
     outDir,
-    reactQuery: args.includes('--react-query'),
+    reactQuery: args.includes("--react-query"),
   };
 }
 
@@ -53,7 +53,7 @@ function getFlagValue(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
   const value = index >= 0 ? args[index + 1] : undefined;
 
-  return value && !value.startsWith('--') ? value : null;
+  return value && !value.startsWith("--") ? value : null;
 }
 
 async function loadRoutes(glob: string): Promise<RouteIR[]> {
@@ -74,7 +74,7 @@ async function loadRoutes(glob: string): Promise<RouteIR[]> {
   }
 
   const rootDir = getCommonSourceDir(sourceFiles);
-  const emitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'croco-rpc-codegen-'));
+  const emitDir = fs.mkdtempSync(path.join(os.tmpdir(), "croco-rpc-codegen-"));
   project.compilerOptions.set({ rootDir, outDir: emitDir });
 
   try {
@@ -82,7 +82,10 @@ async function loadRoutes(glob: string): Promise<RouteIR[]> {
     const routes: RouteIR[] = [];
 
     for (const cls of sourceFiles.flatMap((sourceFile) => sourceFile.getClasses())) {
-      const controllerCtor = await importController(cls, getEmittedFilePath(rootDir, emitDir, cls.getSourceFile()));
+      const controllerCtor = await importController(
+        cls,
+        getEmittedFilePath(rootDir, emitDir, cls.getSourceFile()),
+      );
       routes.push(...extractRouteIR(controllerCtor));
     }
 
@@ -94,10 +97,12 @@ async function loadRoutes(glob: string): Promise<RouteIR[]> {
 
 async function importController(cls: ClassDeclaration, filePath: string): Promise<Constructor> {
   const module = (await import(pathToFileURL(filePath).href)) as Record<string, unknown>;
-  const exported = module[cls.getName() ?? ''];
+  const exported = module[cls.getName() ?? ""];
 
-  if (typeof exported !== 'function') {
-    throw new Error(`Controller class '${cls.getName() ?? '<anonymous>'}' is not exported from ${filePath}`);
+  if (typeof exported !== "function") {
+    throw new Error(
+      `Controller class '${cls.getName() ?? "<anonymous>"}' is not exported from ${filePath}`,
+    );
   }
 
   return exported as Constructor;
@@ -111,14 +116,18 @@ function getCommonSourceDir(sourceFiles: SourceFile[]): string {
     return process.cwd();
   }
 
-  const commonParts = firstDir.filter((part, index) => remainingDirs.every((dir) => dir[index] === part));
+  const commonParts = firstDir.filter((part, index) =>
+    remainingDirs.every((dir) => dir[index] === part),
+  );
   const commonDir = commonParts.join(path.sep);
 
   return commonDir.startsWith(path.sep) ? commonDir : `${path.sep}${commonDir}`;
 }
 
 function getEmittedFilePath(rootDir: string, emitDir: string, sourceFile: SourceFile): string {
-  const relativePath = path.relative(rootDir, sourceFile.getFilePath()).replace(/\.[cm]?tsx?$/, '.js');
+  const relativePath = path
+    .relative(rootDir, sourceFile.getFilePath())
+    .replace(/\.[cm]?tsx?$/, ".js");
 
   return path.join(emitDir, relativePath);
 }

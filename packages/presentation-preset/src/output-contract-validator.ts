@@ -1,6 +1,6 @@
-import type { BuildArtifact, EntryDescriptor, OutputContract } from './output-contract';
+import type { BuildArtifact, EntryDescriptor, OutputContract } from "./output-contract";
 
-export type ValidationSeverity = 'error' | 'warning';
+export type ValidationSeverity = "error" | "warning";
 
 export type ValidationResult = {
   readonly path: string;
@@ -20,19 +20,23 @@ export class OutputContractValidator {
     const path = `contract:${contract.presetName}`;
 
     if (!contract.presetName) {
-      results.push({ path, severity: 'error', message: 'presetName is required' });
+      results.push({ path, severity: "error", message: "presetName is required" });
     }
     if (!contract.buildTime) {
-      results.push({ path, severity: 'error', message: 'buildTime is required' });
+      results.push({ path, severity: "error", message: "buildTime is required" });
     }
     if (!contract.format) {
-      results.push({ path, severity: 'error', message: 'format is required' });
+      results.push({ path, severity: "error", message: "format is required" });
     }
     if (!contract.artifacts || contract.artifacts.length === 0) {
-      results.push({ path, severity: 'warning', message: 'No artifacts defined — contract is empty' });
+      results.push({
+        path,
+        severity: "warning",
+        message: "No artifacts defined — contract is empty",
+      });
     }
     if (!contract.entries || contract.entries.length === 0) {
-      results.push({ path, severity: 'error', message: 'At least one entry point is required' });
+      results.push({ path, severity: "error", message: "At least one entry point is required" });
     }
 
     if (contract.artifacts) {
@@ -51,7 +55,7 @@ export class OutputContractValidator {
 
     return {
       contractName: contract.presetName,
-      passed: results.filter((result) => result.severity === 'error').length === 0,
+      passed: results.filter((result) => result.severity === "error").length === 0,
       results,
     };
   }
@@ -59,30 +63,49 @@ export class OutputContractValidator {
   private validateArtifact(artifact: BuildArtifact, results: ValidationResult[]): void {
     const path = `artifact:${artifact.path}`;
     if (!artifact.path) {
-      results.push({ path, severity: 'error', message: 'Artifact path is required' });
+      results.push({ path, severity: "error", message: "Artifact path is required" });
     }
     if (!artifact.format) {
-      results.push({ path, severity: 'error', message: `Artifact '${artifact.path}' missing format` });
+      results.push({
+        path,
+        severity: "error",
+        message: `Artifact '${artifact.path}' missing format`,
+      });
     }
     if (!artifact.type) {
-      results.push({ path, severity: 'error', message: `Artifact '${artifact.path}' missing type` });
+      results.push({
+        path,
+        severity: "error",
+        message: `Artifact '${artifact.path}' missing type`,
+      });
     }
   }
 
   private validateEntry(entry: EntryDescriptor, results: ValidationResult[]): void {
     const path = `entry:${entry.exportName}`;
     if (!entry.exportName) {
-      results.push({ path, severity: 'error', message: 'Entry export name is required' });
+      results.push({ path, severity: "error", message: "Entry export name is required" });
     }
     if (!entry.main) {
-      results.push({ path, severity: 'error', message: `Entry '${entry.exportName}' missing main file` });
+      results.push({
+        path,
+        severity: "error",
+        message: `Entry '${entry.exportName}' missing main file`,
+      });
     }
     if (!entry.types) {
-      results.push({ path, severity: 'warning', message: `Entry '${entry.exportName}' missing types file` });
+      results.push({
+        path,
+        severity: "warning",
+        message: `Entry '${entry.exportName}' missing types file`,
+      });
     }
   }
 
-  private crossCheckEntriesVsArtifacts(contract: OutputContract, results: ValidationResult[]): void {
+  private crossCheckEntriesVsArtifacts(
+    contract: OutputContract,
+    results: ValidationResult[],
+  ): void {
     const artifactPaths = new Set(contract.artifacts.map((artifact) => artifact.path));
     const referencedPaths = new Set<string>();
 
@@ -102,7 +125,7 @@ export class OutputContractValidator {
       if (!artifactPaths.has(refPath)) {
         results.push({
           path: `cross-check:${refPath}`,
-          severity: 'warning',
+          severity: "warning",
           message: `Entry references '${refPath}' but no matching artifact exists`,
         });
       }

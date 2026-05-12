@@ -23,7 +23,7 @@ OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 �
 
 `Promise`\<[`ForceFlushResult`](/api/telemetry-sdk-node/src/type-aliases/forceflushresult/)\>
 
-***
+---
 
 ### getConfig()
 
@@ -33,7 +33,7 @@ OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 �
 
 [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/)
 
-***
+---
 
 ### init()
 
@@ -49,7 +49,7 @@ OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 �
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### isInitialized()
 
@@ -59,7 +59,7 @@ OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 �
 
 `boolean`
 
-***
+---
 
 ### shutdown()
 
@@ -69,7 +69,7 @@ OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 �
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getInstance()
 
@@ -79,7 +79,7 @@ OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 �
 
 `TelemetryRuntime`
 
-***
+---
 
 ### reset()
 

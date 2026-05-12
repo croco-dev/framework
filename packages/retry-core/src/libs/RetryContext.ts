@@ -12,7 +12,7 @@ export class RetryContext {
   constructor(
     public readonly methodName: string,
     public readonly args: unknown[],
-    public readonly maxAttempts: number
+    public readonly maxAttempts: number,
   ) {
     this._startTimeMs = Date.now();
   }

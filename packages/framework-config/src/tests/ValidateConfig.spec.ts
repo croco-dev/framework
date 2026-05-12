@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import 'reflect-metadata';
-import { z } from 'zod';
-import { bootstrapConfig, ConfigSchema, getConfigSchema } from '../decorators/ConfigSchema';
-import { ConfigValidationProblem } from '../libs/problems/ConfigProblems';
-import { validateConfig } from '../validateConfig';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import "reflect-metadata";
+import { z } from "zod";
+import { bootstrapConfig, ConfigSchema, getConfigSchema } from "../decorators/ConfigSchema";
+import { ConfigValidationProblem } from "../libs/problems/ConfigProblems";
+import { validateConfig } from "../validateConfig";
 
-describe('validateConfig', () => {
+describe("validateConfig", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {});
@@ -15,28 +15,28 @@ describe('validateConfig', () => {
     process.env = originalEnv;
   });
 
-  describe('with valid config', () => {
-    it('should return validated config when all required fields are present', () => {
+  describe("with valid config", () => {
+    it("should return validated config when all required fields are present", () => {
       const schema = z.object({
         DATABASE_URL: z.string(),
-        PORT: z.string().default('3000'),
+        PORT: z.string().default("3000"),
       });
 
       const env = {
-        DATABASE_URL: 'postgresql://localhost:5432/test',
+        DATABASE_URL: "postgresql://localhost:5432/test",
       };
 
       const result = validateConfig(schema, env);
 
       expect(result).toEqual({
-        DATABASE_URL: 'postgresql://localhost:5432/test',
-        PORT: '3000',
+        DATABASE_URL: "postgresql://localhost:5432/test",
+        PORT: "3000",
       });
     });
 
-    it('should use process.env when env parameter is not provided', () => {
+    it("should use process.env when env parameter is not provided", () => {
       const originalProcessEnv = process.env;
-      process.env = { NODE_ENV: 'test', TEST_VAR: 'test-value' };
+      process.env = { NODE_ENV: "test", TEST_VAR: "test-value" };
 
       const schema = z.object({
         TEST_VAR: z.string(),
@@ -44,44 +44,44 @@ describe('validateConfig', () => {
 
       const result = validateConfig(schema);
 
-      expect(result).toEqual({ TEST_VAR: 'test-value' });
+      expect(result).toEqual({ TEST_VAR: "test-value" });
       process.env = originalProcessEnv;
     });
 
-    it('should handle optional fields', () => {
+    it("should handle optional fields", () => {
       const schema = z.object({
         REQUIRED: z.string(),
         OPTIONAL: z.string().optional(),
       });
 
       const env = {
-        REQUIRED: 'required-value',
+        REQUIRED: "required-value",
       };
 
       const result = validateConfig(schema, env);
 
       expect(result).toEqual({
-        REQUIRED: 'required-value',
+        REQUIRED: "required-value",
         OPTIONAL: undefined,
       });
     });
   });
 
-  describe('with invalid config', () => {
-    it('should throw when required field is missing', () => {
+  describe("with invalid config", () => {
+    it("should throw when required field is missing", () => {
       const schema = z.object({
         DATABASE_URL: z.string(),
         API_KEY: z.string(),
       });
 
       const env = {
-        DATABASE_URL: 'postgresql://localhost:5432/test',
+        DATABASE_URL: "postgresql://localhost:5432/test",
       };
 
       expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
     });
 
-    it('should throw when a single required field is missing', () => {
+    it("should throw when a single required field is missing", () => {
       const schema = z.object({
         MISSING_VAR: z.string(),
       });
@@ -91,7 +91,7 @@ describe('validateConfig', () => {
       expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
     });
 
-    it('should handle multiple missing fields', () => {
+    it("should handle multiple missing fields", () => {
       const schema = z.object({
         VAR1: z.string(),
         VAR2: z.string(),
@@ -102,7 +102,7 @@ describe('validateConfig', () => {
       expect(() => validateConfig(schema, env)).toThrow(ConfigValidationProblem);
     });
 
-    it('should handle nested path in error message', () => {
+    it("should handle nested path in error message", () => {
       const schema = z.object({
         DATABASE: z.object({
           URL: z.string(),
@@ -115,40 +115,40 @@ describe('validateConfig', () => {
     });
   });
 
-  describe('type coercion', () => {
-    it('should coerce string to number', () => {
+  describe("type coercion", () => {
+    it("should coerce string to number", () => {
       const schema = z.object({
         PORT: z.coerce.number(),
       });
 
       const env = {
-        PORT: '3000',
+        PORT: "3000",
       };
 
       const result = validateConfig(schema, env);
 
       expect(result.PORT).toBe(3000);
-      expect(typeof result.PORT).toBe('number');
+      expect(typeof result.PORT).toBe("number");
     });
 
-    it('should handle enum values', () => {
+    it("should handle enum values", () => {
       const schema = z.object({
-        NODE_ENV: z.enum(['development', 'test', 'production']),
+        NODE_ENV: z.enum(["development", "test", "production"]),
       });
 
       const env = {
-        NODE_ENV: 'production',
+        NODE_ENV: "production",
       };
 
       const result = validateConfig(schema, env);
 
-      expect(result.NODE_ENV).toBe('production');
+      expect(result.NODE_ENV).toBe("production");
     });
   });
 });
 
-describe('ConfigSchema decorator', () => {
-  it('should store schema as metadata on class', () => {
+describe("ConfigSchema decorator", () => {
+  it("should store schema as metadata on class", () => {
     const schema = z.object({
       API_KEY: z.string(),
     });
@@ -161,7 +161,7 @@ describe('ConfigSchema decorator', () => {
     expect(storedSchema).toBe(schema);
   });
 
-  it('should return undefined for class without decorator', () => {
+  it("should return undefined for class without decorator", () => {
     class PlainConfig {}
 
     const storedSchema = getConfigSchema(PlainConfig);
@@ -169,16 +169,16 @@ describe('ConfigSchema decorator', () => {
   });
 });
 
-describe('bootstrapConfig', () => {
+describe("bootstrapConfig", () => {
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('should validate and return config for decorated class', () => {
+  it("should validate and return config for decorated class", () => {
     const schema = z.object({
       API_KEY: z.string(),
     });
@@ -188,21 +188,23 @@ describe('bootstrapConfig', () => {
     ConfigSchema(schema)(AppConfig);
 
     const env = {
-      API_KEY: 'test-api-key',
+      API_KEY: "test-api-key",
     };
 
     const result = bootstrapConfig(AppConfig, env);
 
-    expect(result).toEqual({ API_KEY: 'test-api-key' });
+    expect(result).toEqual({ API_KEY: "test-api-key" });
   });
 
-  it('should throw error for class without decorator', () => {
+  it("should throw error for class without decorator", () => {
     class PlainConfig {}
 
-    expect(() => bootstrapConfig(PlainConfig, {})).toThrow("No config schema found for 'PlainConfig'");
+    expect(() => bootstrapConfig(PlainConfig, {})).toThrow(
+      "No config schema found for 'PlainConfig'",
+    );
   });
 
-  it('should throw when validation fails', () => {
+  it("should throw when validation fails", () => {
     const schema = z.object({
       REQUIRED_VAR: z.string(),
     });

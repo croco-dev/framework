@@ -1,22 +1,25 @@
-import { ProblemCategory } from '@croco/problems-core';
-import { describe, expect, it } from 'vitest';
-import { InvalidPermissionActionProblem, InvalidPermissionFormatProblem } from '../libs/problems/AuthProblems';
+import { ProblemCategory } from "@croco/problems-core";
+import { describe, expect, it } from "vitest";
+import {
+  InvalidPermissionActionProblem,
+  InvalidPermissionFormatProblem,
+} from "../libs/problems/AuthProblems";
 
-describe('AuthProblems', () => {
-  describe('InvalidPermissionFormatProblem', () => {
-    it('has correct code and category', () => {
-      const problem = new InvalidPermissionFormatProblem('invalid');
+describe("AuthProblems", () => {
+  describe("InvalidPermissionFormatProblem", () => {
+    it("has correct code and category", () => {
+      const problem = new InvalidPermissionFormatProblem("invalid");
 
-      expect(problem.code).toBe('auth-core/invalid-permission-format');
+      expect(problem.code).toBe("auth-core/invalid-permission-format");
       expect(problem.category).toBe(ProblemCategory.ValidationError);
     });
   });
 
-  describe('InvalidPermissionActionProblem', () => {
-    it('has correct code and category', () => {
-      const problem = new InvalidPermissionActionProblem('invalid_action');
+  describe("InvalidPermissionActionProblem", () => {
+    it("has correct code and category", () => {
+      const problem = new InvalidPermissionActionProblem("invalid_action");
 
-      expect(problem.code).toBe('auth-core/invalid-permission-action');
+      expect(problem.code).toBe("auth-core/invalid-permission-action");
       expect(problem.category).toBe(ProblemCategory.ValidationError);
     });
   });

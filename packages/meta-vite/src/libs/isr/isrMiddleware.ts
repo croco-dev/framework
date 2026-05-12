@@ -1,11 +1,11 @@
-import type { IsrMiddleware, IsrMiddlewareOptions } from './types';
+import type { IsrMiddleware, IsrMiddlewareOptions } from "./types";
 
-const CACHEABLE_METHODS = new Set(['GET', 'HEAD']);
-const PERSONALIZED_HEADERS = ['authorization', 'cookie'] as const;
+const CACHEABLE_METHODS = new Set(["GET", "HEAD"]);
+const PERSONALIZED_HEADERS = ["authorization", "cookie"] as const;
 
 class NonCacheableResponseError extends Error {
   constructor(readonly response: Response) {
-    super('Response is not cacheable');
+    super("Response is not cacheable");
   }
 }
 
@@ -30,11 +30,11 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
 
           return rendered.clone();
         },
-        { ttlMs }
+        { ttlMs },
       );
 
       if (response === undefined) {
-        throw new Error('CacheStore returned no ISR response');
+        throw new Error("CacheStore returned no ISR response");
       }
 
       return response.clone();

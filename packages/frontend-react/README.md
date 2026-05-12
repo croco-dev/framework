@@ -1,4 +1,5 @@
 # @croco/frontend-react
+
 > Croco Presentation Tier — 5th layer: Framework → Protocols → Transports → Integrations → Presentation
 
 React 앱에서 Croco의 SSR 기능을 사용하기 위한 유틸리티 패키지입니다.
@@ -19,7 +20,7 @@ pnpm add @croco/frontend-react
 
 ```typescript
 // pages/index/+config.ts
-import { createCrocoPageConfig } from '@croco/frontend-react';
+import { createCrocoPageConfig } from "@croco/frontend-react";
 
 export default createCrocoPageConfig({ ssr: true });
 ```
@@ -30,11 +31,11 @@ export default createCrocoPageConfig({ ssr: true });
 
 ```typescript
 // pages/index/+data.ts
-import { type CrocoDataFn } from '@croco/frontend-react';
+import { type CrocoDataFn } from "@croco/frontend-react";
 
 export const data: CrocoDataFn<{ message: string }> = async () => {
   return {
-    message: 'Hello from SSR!',
+    message: "Hello from SSR!",
   };
 };
 ```
@@ -61,13 +62,15 @@ export default function Page() {
 Vike 페이지 설정의 기본값을 제공합니다.
 
 **옵션:**
+
 - `ssr?: boolean` - SSR 활성화 여부 (기본값: `true`)
 
 **반환값:**
+
 ```typescript
 {
   ssr: boolean;
-  passToClient: readonly ['data', 'title', 'description'];
+  passToClient: readonly[("data", "title", "description")];
 }
 ```
 
@@ -76,6 +79,7 @@ Vike 페이지 설정의 기본값을 제공합니다.
 Vike의 `usePageContext`를 래핑하여 데이터에 타입 안전 접근을 제공합니다.
 
 **제네릭:**
+
 - `T` - 페이지 데이터 타입 (기본값: `unknown`)
 
 **반환값:** `T`

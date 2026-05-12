@@ -21,17 +21,16 @@ pnpm add @croco/tasks-core
 클래스 메서드를 태스크로 지정합니다.
 
 ```typescript
-import { Task } from '@croco/tasks-core';
-import { Component } from '@croco/framework-context';
+import { Task } from "@croco/tasks-core";
+import { Component } from "@croco/framework-context";
 
 @Component()
 export class ImageProcessor {
-
-  @Task({ name: 'process-image-resize' })
+  @Task({ name: "process-image-resize" })
   async resizeImage(payload: { imageUrl: string; width: number }) {
     console.log(`Resizing image: ${payload.imageUrl}`);
     // ... 이미지 처리 로직
-    return { status: 'resized', url: '...' };
+    return { status: "resized", url: "..." };
   }
 }
 ```
@@ -42,5 +41,5 @@ export class ImageProcessor {
 
 ```typescript
 const processor = new ImageProcessor();
-await processor.resizeImage({ imageUrl: 'http://...', width: 100 });
+await processor.resizeImage({ imageUrl: "http://...", width: 100 });
 ```

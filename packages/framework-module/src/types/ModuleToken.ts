@@ -1,4 +1,4 @@
-import type { Token } from 'typedi';
+import type { Token } from "typedi";
 
 export type Constructor<T = unknown> = new (...args: unknown[]) => T;
 

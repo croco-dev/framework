@@ -11,23 +11,23 @@ pnpm add @croco/search-core @croco/events-core
 ## 사용법
 
 ```ts
-import { SearchField, SearchService, Searchable } from '@croco/search-core';
+import { SearchField, SearchService, Searchable } from "@croco/search-core";
 
-@Searchable({ index: 'users', autoSync: true })
+@Searchable({ index: "users", autoSync: true })
 class UserDocument {
   @SearchField({ searchable: true, filterable: true })
   name!: string;
 }
 
 const searchService = new SearchService({ engine: searchEngine });
-const result = await searchService.search('users', { query: '홍길동' });
+const result = await searchService.search("users", { query: "홍길동" });
 ```
 
 ```ts
-import { derive, textTransforms } from '@croco/search-core';
+import { derive, textTransforms } from "@croco/search-core";
 
-const derived = derive({ type: 'ngram', source: 'name', options: { min: 2, max: 3 } });
-const chosung = textTransforms.initials('크로코 프레임워크');
+const derived = derive({ type: "ngram", source: "name", options: { min: 2, max: 3 } });
+const chosung = textTransforms.initials("크로코 프레임워크");
 void derived;
 void chosung;
 ```

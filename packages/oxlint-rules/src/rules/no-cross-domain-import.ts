@@ -1,14 +1,14 @@
-import path from 'node:path';
-import type { Rule } from 'eslint';
+import path from "node:path";
+import type { Rule } from "eslint";
 
-const DATASOURCE_SEGMENT = '/datasource/';
-const SHARED_DOMAIN = 'shared';
+const DATASOURCE_SEGMENT = "/datasource/";
+const SHARED_DOMAIN = "shared";
 
 const isDatasourcePath = (pathRest: string): boolean =>
-  pathRest.startsWith('src/datasource/') || pathRest.includes(DATASOURCE_SEGMENT);
+  pathRest.startsWith("src/datasource/") || pathRest.includes(DATASOURCE_SEGMENT);
 
 const getLibPathParts = (filePath: string): readonly [string, string] | null => {
-  const match = filePath.replace(/\\/g, '/').match(/libs\/([^/]+)\/(.*)/);
+  const match = filePath.replace(/\\/g, "/").match(/libs\/([^/]+)\/(.*)/);
 
   if (!match) {
     return null;
@@ -19,9 +19,9 @@ const getLibPathParts = (filePath: string): readonly [string, string] | null => 
 
 const rule: Rule.RuleModule = {
   meta: {
-    type: 'problem',
+    type: "problem",
     docs: {
-      description: 'Disallow cross-domain imports in DDD architecture',
+      description: "Disallow cross-domain imports in DDD architecture",
     },
     messages: {
       crossDomainImport:
@@ -33,7 +33,7 @@ const rule: Rule.RuleModule = {
     return {
       ImportDeclaration(node) {
         const sourceValue = node.source.value;
-        if (typeof sourceValue !== 'string' || !sourceValue.startsWith('.')) {
+        if (typeof sourceValue !== "string" || !sourceValue.startsWith(".")) {
           return;
         }
 
@@ -64,7 +64,7 @@ const rule: Rule.RuleModule = {
 
         context.report({
           node,
-          messageId: 'crossDomainImport',
+          messageId: "crossDomainImport",
           data: {
             sourceDomain,
             targetDomain,

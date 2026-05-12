@@ -1,5 +1,9 @@
-import { vi } from 'vitest';
-import type { NotificationChannel, NotificationProvider, NotificationResult } from '../../libs/types';
+import { vi } from "vitest";
+import type {
+  NotificationChannel,
+  NotificationProvider,
+  NotificationResult,
+} from "../../libs/types";
 
 export type MockNotificationProvider = NotificationProvider & {
   getName: ReturnType<typeof vi.fn>;
@@ -7,7 +11,10 @@ export type MockNotificationProvider = NotificationProvider & {
   send: ReturnType<typeof vi.fn>;
 };
 
-export const createProvider = (name: string, channel: NotificationChannel): MockNotificationProvider => {
+export const createProvider = (
+  name: string,
+  channel: NotificationChannel,
+): MockNotificationProvider => {
   const send = vi.fn<() => Promise<NotificationResult>>().mockResolvedValue({
     success: true,
     messageId: `${name}-message`,

@@ -1,20 +1,20 @@
-import { Readable } from 'node:stream';
-import { DeleteFailedProblem } from './problems/DeleteFailedProblem';
-import { FileNotFoundProblem } from './problems/FileNotFoundProblem';
-import { InvalidKeyProblem } from './problems/InvalidKeyProblem';
-import { UploadFailedProblem } from './problems/UploadFailedProblem';
-import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from './types';
+import { Readable } from "node:stream";
+import { DeleteFailedProblem } from "./problems/DeleteFailedProblem";
+import { FileNotFoundProblem } from "./problems/FileNotFoundProblem";
+import { InvalidKeyProblem } from "./problems/InvalidKeyProblem";
+import { UploadFailedProblem } from "./problems/UploadFailedProblem";
+import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from "./types";
 
 export abstract class BaseStorageProvider implements StorageProvider {
   protected validateKey(key: string): void {
-    if (!key || typeof key !== 'string') {
-      throw new InvalidKeyProblem(key, 'Key must be a non-empty string');
+    if (!key || typeof key !== "string") {
+      throw new InvalidKeyProblem(key, "Key must be a non-empty string");
     }
-    if (key.startsWith('/') || key.endsWith('/')) {
-      throw new InvalidKeyProblem(key, 'Key must not start or end with /');
+    if (key.startsWith("/") || key.endsWith("/")) {
+      throw new InvalidKeyProblem(key, "Key must not start or end with /");
     }
-    if (key.includes('//')) {
-      throw new InvalidKeyProblem(key, 'Key must not contain //');
+    if (key.includes("//")) {
+      throw new InvalidKeyProblem(key, "Key must not contain //");
     }
   }
 
@@ -40,7 +40,8 @@ export abstract class BaseStorageProvider implements StorageProvider {
   }
 
   protected throwUploadFailed(key: string, cause?: unknown): never {
-    const reason = cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : undefined;
+    const reason =
+      cause instanceof Error ? cause.message : typeof cause === "string" ? cause : undefined;
     throw new UploadFailedProblem(key, reason, cause instanceof Error ? cause : undefined);
   }
 

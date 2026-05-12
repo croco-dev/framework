@@ -1,13 +1,13 @@
-import { DuplicateTenantManagerRegistrationProblem } from './problems/DuplicateTenantManagerRegistrationProblem';
-import { TenantManagerNotRegisteredProblem } from './problems/TenantManagerNotRegisteredProblem';
-import type { TenantManager } from './TenantManager';
+import { DuplicateTenantManagerRegistrationProblem } from "./problems/DuplicateTenantManagerRegistrationProblem";
+import { TenantManagerNotRegisteredProblem } from "./problems/TenantManagerNotRegisteredProblem";
+import type { TenantManager } from "./TenantManager";
 
 /**
  * Global registry for TenantManager instances.
  * Supports multiple managers with key-based lookup.
  */
 export class TenantManagerRegistry {
-  private static readonly DEFAULT_KEY = Symbol.for('default');
+  private static readonly DEFAULT_KEY = Symbol.for("default");
   private static instance: TenantManagerRegistry;
 
   private readonly managers: Map<string | symbol, TenantManager>;
@@ -35,7 +35,9 @@ export class TenantManagerRegistry {
     const managerKey = key ?? TenantManagerRegistry.DEFAULT_KEY;
 
     if (this.managers.has(managerKey)) {
-      throw new DuplicateTenantManagerRegistrationProblem(key === undefined ? undefined : String(key));
+      throw new DuplicateTenantManagerRegistrationProblem(
+        key === undefined ? undefined : String(key),
+      );
     }
 
     this.managers.set(managerKey, manager);

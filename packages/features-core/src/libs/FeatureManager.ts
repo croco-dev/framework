@@ -1,7 +1,7 @@
-import { Token } from '@croco/framework-context';
+import { Token } from "@croco/framework-context";
 
 export abstract class FeatureManager {
-  static readonly token = new Token<FeatureManager>('FeatureManager');
+  static readonly token = new Token<FeatureManager>("FeatureManager");
 
   /**
    * Check if a feature flag is enabled.
@@ -14,5 +14,8 @@ export abstract class FeatureManager {
    * Get the value of a feature flag.
    * Useful for multivariate flags or JSON configuration.
    */
-  abstract getVariant(key: string, context?: Record<string, unknown>): Promise<string | boolean | number | object>;
+  abstract getVariant(
+    key: string,
+    context?: Record<string, unknown>,
+  ): Promise<string | boolean | number | object>;
 }

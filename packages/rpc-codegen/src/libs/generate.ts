@@ -1,6 +1,6 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import type { RouteIR } from '@croco/protocols-core';
+import * as fs from "node:fs";
+import * as path from "node:path";
+import type { RouteIR } from "@croco/protocols-core";
 
 export type GenerateClientOptions = {
   readonly reactQuery?: boolean;
@@ -11,7 +11,11 @@ type DomainRoutes = {
   readonly routes: RouteIR[];
 };
 
-export function generateClientFiles(routes: RouteIR[], outDir: string, options: GenerateClientOptions = {}): string[] {
+export function generateClientFiles(
+  routes: RouteIR[],
+  outDir: string,
+  options: GenerateClientOptions = {},
+): string[] {
   fs.mkdirSync(outDir, { recursive: true });
 
   return groupRoutesByDomain(routes).map((domainRoutes) => {
@@ -44,11 +48,13 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const types = [...inputTypes, ...outputTypes];
-  const clientMethods = domainRoutes.routes.map(generateClientMethod).join('\n');
-  const imports = options.reactQuery ? "import { useMutation, useQuery } from '@tanstack/react-query';\n" : '';
-  const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : '';
+  const clientMethods = domainRoutes.routes.map(generateClientMethod).join("\n");
+  const imports = options.reactQuery
+    ? "import { useMutation, useQuery } from '@tanstack/react-query';\n"
+    : "";
+  const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
 
-  return `${imports}${types.join('\n')}
+  return `${imports}${types.join("\n")}
 export const ${clientName} = {
 ${clientMethods}
 };
@@ -57,28 +63,32 @@ ${hooks}`;
 
 function generateInputType(route: RouteIR): string {
   if (!needsInput(route)) {
-    return '';
+    return "";
   }
 
   if (hasLegacyBodyInput(route)) {
     return `export type ${getInputTypeName(route)} = ${zodTypeToTypeScript(route.inputSchemas.body)};`;
   }
 
-  const fields = getInputSchemaEntries(route).map(([name, schema]) => `${name}: ${zodTypeToTypeScript(schema)};`);
+  const fields = getInputSchemaEntries(route).map(
+    ([name, schema]) => `${name}: ${zodTypeToTypeScript(schema)};`,
+  );
 
-  return `export type ${getInputTypeName(route)} = { ${fields.join(' ')} };`;
+  return `export type ${getInputTypeName(route)} = { ${fields.join(" ")} };`;
 }
 
 function generateOutputType(route: RouteIR): string {
   if (!route.outputSchema) {
-    return '';
+    return "";
   }
 
   return `export type ${getOutputTypeName(route)} = ${zodTypeToTypeScript(route.outputSchema)};`;
 }
 
 function generateClientMethod(route: RouteIR): string {
-  const input = needsInput(route) ? `input${hasRequiredInput(route) ? '' : '?'}: ${getInputTypeName(route)}` : '';
+  const input = needsInput(route)
+    ? `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`
+    : "";
   const fetchOptions = getFetchOptions(route);
   const response = getResponseExpression(route);
 
@@ -96,23 +106,23 @@ function getFetchOptions(route: RouteIR): string {
   const options = [`method: '${route.httpMethod.toUpperCase()}'`];
 
   if (hasBody(route)) {
-    options.push(`body: JSON.stringify(${hasStructuredInput(route) ? 'input.body' : 'input'})`);
+    options.push(`body: JSON.stringify(${hasStructuredInput(route) ? "input.body" : "input"})`);
     options.push("headers: { 'Content-Type': 'application/json' }");
   }
 
-  return `{ ${options.join(', ')} }`;
+  return `{ ${options.join(", ")} }`;
 }
 
 function getResponseExpression(route: RouteIR): string {
   if (!route.outputSchema) {
-    return 'response.json()';
+    return "response.json()";
   }
 
   return `response.json() as Promise<${getOutputTypeName(route)}>`;
 }
 
 function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {
-  return domainRoutes.routes.map((route) => generateReactQueryHook(route, clientName)).join('\n');
+  return domainRoutes.routes.map((route) => generateReactQueryHook(route, clientName)).join("\n");
 }
 
 function generateReactQueryHook(route: RouteIR, clientName: string): string {
@@ -124,8 +134,10 @@ function generateReactQueryHook(route: RouteIR, clientName: string): string {
 }`;
   }
 
-  const input = needsInput(route) ? `input${hasRequiredInput(route) ? '' : '?'}: ${getInputTypeName(route)}` : '';
-  const callInput = needsInput(route) ? 'input' : '';
+  const input = needsInput(route)
+    ? `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`
+    : "";
+  const callInput = needsInput(route) ? "input" : "";
   const queryKey = needsInput(route) ? `['${route.methodName}', input]` : `['${route.methodName}']`;
 
   return `export function ${hookName}(${input}) {
@@ -136,51 +148,51 @@ function generateReactQueryHook(route: RouteIR, clientName: string): string {
 function zodTypeToTypeScript(schema: unknown): string {
   const schemaName = getSchemaName(schema);
 
-  if (schemaName === 'ZodString') {
-    return 'string';
+  if (schemaName === "ZodString") {
+    return "string";
   }
 
-  if (schemaName === 'ZodNumber') {
-    return 'number';
+  if (schemaName === "ZodNumber") {
+    return "number";
   }
 
-  if (schemaName === 'ZodBoolean') {
-    return 'boolean';
+  if (schemaName === "ZodBoolean") {
+    return "boolean";
   }
 
-  if (schemaName === 'ZodOptional') {
+  if (schemaName === "ZodOptional") {
     return `${zodTypeToTypeScript(getInnerSchema(schema))} | undefined`;
   }
 
-  if (schemaName === 'ZodNullable') {
+  if (schemaName === "ZodNullable") {
     return `${zodTypeToTypeScript(getInnerSchema(schema))} | null`;
   }
 
-  if (schemaName === 'ZodDefault') {
+  if (schemaName === "ZodDefault") {
     return zodTypeToTypeScript(getInnerSchema(schema));
   }
 
-  if (schemaName === 'ZodArray') {
+  if (schemaName === "ZodArray") {
     return `${zodTypeToTypeScript(getArrayElementSchema(schema))}[]`;
   }
 
-  if (schemaName === 'ZodObject') {
+  if (schemaName === "ZodObject") {
     return getObjectTypeScript(schema);
   }
 
-  return 'unknown';
+  return "unknown";
 }
 
 function getSchemaName(schema: unknown): string {
-  if (!schema || typeof schema !== 'object') {
-    return '';
+  if (!schema || typeof schema !== "object") {
+    return "";
   }
 
   return schema.constructor.name;
 }
 
 function getInnerSchema(schema: unknown): unknown {
-  if (!schema || typeof schema !== 'object' || !('_def' in schema)) {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
     return undefined;
   }
 
@@ -190,7 +202,7 @@ function getInnerSchema(schema: unknown): unknown {
 }
 
 function getArrayElementSchema(schema: unknown): unknown {
-  if (!schema || typeof schema !== 'object' || !('_def' in schema)) {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
     return undefined;
   }
 
@@ -200,30 +212,32 @@ function getArrayElementSchema(schema: unknown): unknown {
 }
 
 function getObjectTypeScript(schema: unknown): string {
-  const fields = Object.entries(getObjectShape(schema)).map(([key, value]) => `${key}: ${zodTypeToTypeScript(value)};`);
+  const fields = Object.entries(getObjectShape(schema)).map(
+    ([key, value]) => `${key}: ${zodTypeToTypeScript(value)};`,
+  );
 
-  return `{ ${fields.join(' ')} }`;
+  return `{ ${fields.join(" ")} }`;
 }
 
 function getObjectShape(schema: unknown): Record<string, unknown> {
-  if (!schema || typeof schema !== 'object') {
+  if (!schema || typeof schema !== "object") {
     return {};
   }
 
-  if ('shape' in schema) {
+  if ("shape" in schema) {
     const shape = schema.shape;
 
-    return shape && typeof shape === 'object' ? (shape as Record<string, unknown>) : {};
+    return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
   }
 
-  if (!('_def' in schema)) {
+  if (!("_def" in schema)) {
     return {};
   }
 
   const definition = schema._def as { readonly shape?: unknown };
-  const shape = typeof definition.shape === 'function' ? definition.shape() : definition.shape;
+  const shape = typeof definition.shape === "function" ? definition.shape() : definition.shape;
 
-  return shape && typeof shape === 'object' ? (shape as Record<string, unknown>) : {};
+  return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
 }
 
 function getPathExpression(route: RouteIR): string {
@@ -234,8 +248,9 @@ function getPathExpression(route: RouteIR): string {
   }
 
   const pathExpression = pathParams.reduce(
-    (currentPath, paramName) => currentPath.split(`:${paramName}`).join(`\${input.path.${paramName}}`),
-    route.path
+    (currentPath, paramName) =>
+      currentPath.split(`:${paramName}`).join(`\${input.path.${paramName}}`),
+    route.path,
   );
 
   return `\`${pathExpression}\``;
@@ -251,23 +266,23 @@ function getPathParamNames(route: RouteIR): string[] {
 
 function getQueryStatements(route: RouteIR): string {
   if (!route.inputSchemas.query) {
-    return '';
+    return "";
   }
 
   return `    const query = new URLSearchParams(input.query).toString();
-    const url = query ? \`${'${path}'}?${'${query}'}\` : path;
+    const url = query ? \`${"${path}"}?${"${query}"}\` : path;
 `;
 }
 
 function getUrlExpression(route: RouteIR): string {
-  return route.inputSchemas.query ? 'url' : 'path';
+  return route.inputSchemas.query ? "url" : "path";
 }
 
 function getInputSchemaEntries(route: RouteIR): [string, unknown][] {
   const entries: [string, unknown | null][] = [
-    ['body', route.inputSchemas.body],
-    ['path', route.inputSchemas.path],
-    ['query', route.inputSchemas.query],
+    ["body", route.inputSchemas.body],
+    ["path", route.inputSchemas.path],
+    ["query", route.inputSchemas.query],
   ];
 
   return entries.filter((entry): entry is [string, unknown] => entry[1] !== null);
@@ -294,7 +309,7 @@ function hasLegacyBodyInput(route: RouteIR): boolean {
 }
 
 function getDomainName(route: RouteIR): string {
-  const rawName = route.domain ?? route.controllerName.replace(/Controller$/, '');
+  const rawName = route.domain ?? route.controllerName.replace(/Controller$/, "");
 
   return toCamelCase(rawName);
 }
@@ -308,8 +323,12 @@ function getOutputTypeName(route: RouteIR): string {
 }
 
 function assertNoZodImport(content: string): void {
-  if (content.includes("from 'zod'") || content.includes('import { z }') || content.includes('zod')) {
-    throw new Error('Generated client must not import zod.');
+  if (
+    content.includes("from 'zod'") ||
+    content.includes("import { z }") ||
+    content.includes("zod")
+  ) {
+    throw new Error("Generated client must not import zod.");
   }
 }
 
@@ -321,9 +340,9 @@ function toCamelCase(value: string): string {
 
 function toPascalCase(value: string): string {
   return value
-    .replace(/Controller$/, '')
+    .replace(/Controller$/, "")
     .split(/[^a-zA-Z0-9]+/)
     .filter((part) => part.length > 0)
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join('');
+    .join("");
 }

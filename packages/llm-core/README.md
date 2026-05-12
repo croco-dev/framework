@@ -11,24 +11,24 @@ pnpm add @croco/llm-core
 ## 사용법
 
 ```ts
-import { InMemoryLlmRegistry, LlmService } from '@croco/llm-core';
+import { InMemoryLlmRegistry, LlmService } from "@croco/llm-core";
 
 const registry = new InMemoryLlmRegistry([defaultModel]);
 const llmService = new LlmService(registry, eventBus);
 
 const result = await llmService.generate({
-  modelId: 'default',
-  prompt: '구독 이탈 고객을 줄이는 아이디어를 3개 제안해줘.',
+  modelId: "default",
+  prompt: "구독 이탈 고객을 줄이는 아이디어를 3개 제안해줘.",
 });
 ```
 
 ```ts
-import { Llm, setLlmService } from '@croco/llm-core';
+import { Llm, setLlmService } from "@croco/llm-core";
 
 setLlmService(llmService);
 
 class AssistantService {
-  @Llm({ modelId: 'default', systemPrompt: '항상 한국어로 답변해.' })
+  @Llm({ modelId: "default", systemPrompt: "항상 한국어로 답변해." })
   async summarize(prompt: string): Promise<string> {
     return prompt;
   }

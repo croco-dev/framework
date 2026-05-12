@@ -1,4 +1,4 @@
-import { Token } from '@croco/framework-context';
+import { Token } from "@croco/framework-context";
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -12,7 +12,7 @@ import type {
   StreamParams,
   ToolCallParams,
   ToolCallResult,
-} from './types';
+} from "./types";
 
 /**
  * LLM 모델 추상 클래스
@@ -22,7 +22,7 @@ import type {
  * Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상속받아야 합니다.
  */
 export abstract class LlmModel {
-  static readonly token = new Token<LlmModel>('LlmModel');
+  static readonly token = new Token<LlmModel>("LlmModel");
 
   /**
    * 모델 식별자

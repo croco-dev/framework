@@ -1,10 +1,10 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-import 'reflect-metadata';
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
-import type { MeteringService } from '../MeteringService';
+import { AsyncLocalStorage } from "node:async_hooks";
+import "reflect-metadata";
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
+import type { MeteringService } from "../MeteringService";
 
-export const METERED_METADATA_KEY = Symbol('meter:metered');
+export const METERED_METADATA_KEY = Symbol("meter:metered");
 
 export type MeteredOptions = {
   meterId: string;
@@ -76,7 +76,11 @@ function resolveMeteringService(): MeteringService | null {
  * ```
  */
 export function Metered(options: MeteredOptions): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const originalMethod = descriptor.value;
 
     const metadata: MeteredMetadata = {
@@ -96,7 +100,7 @@ export function Metered(options: MeteredOptions): MethodDecorator {
       // MeteringService가 설정되어 있으면 기록
       const service = resolveMeteringService();
       if (service) {
-        const tenantId = (this as { tenantId?: string }).tenantId ?? 'default';
+        const tenantId = (this as { tenantId?: string }).tenantId ?? "default";
 
         try {
           await service.record({
@@ -127,6 +131,9 @@ export function Metered(options: MeteredOptions): MethodDecorator {
 /**
  * 메서드에서 Metered 메타데이터 조회
  */
-export function getMeteredMetadata(target: object, propertyKey: string | symbol): MeteredMetadata | undefined {
+export function getMeteredMetadata(
+  target: object,
+  propertyKey: string | symbol,
+): MeteredMetadata | undefined {
   return Reflect.getMetadata(METERED_METADATA_KEY, target, propertyKey);
 }

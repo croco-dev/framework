@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
-import { AnalyticsManager } from '@croco/analytics-core';
-import { Component, Context, type ILogger, Inject, LOGGER_TOKEN } from '@croco/framework-context';
-import type { PostHogClient } from '@croco/integrations-posthog';
+import { randomUUID } from "node:crypto";
+import { AnalyticsManager } from "@croco/analytics-core";
+import { Component, Context, type ILogger, Inject, LOGGER_TOKEN } from "@croco/framework-context";
+import type { PostHogClient } from "@croco/integrations-posthog";
 
 /**
  * Croco Context 정보를 활용해 PostHog 이벤트와 그룹 정보를 전송하는 분석 관리자입니다.
@@ -10,7 +10,7 @@ import type { PostHogClient } from '@croco/integrations-posthog';
 export class PostHogAnalyticsManager extends AnalyticsManager {
   constructor(
     private readonly posthogClient: PostHogClient,
-    @Inject(LOGGER_TOKEN) private readonly logger: ILogger
+    @Inject(LOGGER_TOKEN) private readonly logger: ILogger,
   ) {
     super();
   }
@@ -77,7 +77,7 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 
   private logCaptureFailure(event: string, error: unknown): void {
-    this.logger.warn('PostHog capture failed', {
+    this.logger.warn("PostHog capture failed", {
       event,
       error: error instanceof Error ? error.message : String(error),
     });

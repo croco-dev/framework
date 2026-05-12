@@ -1,6 +1,11 @@
-export type MembershipRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type MembershipRole = "owner" | "admin" | "member" | "viewer";
 
-export const VALID_MEMBERSHIP_ROLES = ['owner', 'admin', 'member', 'viewer'] as const satisfies MembershipRole[];
+export const VALID_MEMBERSHIP_ROLES = [
+  "owner",
+  "admin",
+  "member",
+  "viewer",
+] as const satisfies MembershipRole[];
 
 export function isMembershipRole(role: string): role is MembershipRole {
   return VALID_MEMBERSHIP_ROLES.some((validRole) => validRole === role);

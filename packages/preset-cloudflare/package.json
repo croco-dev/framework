@@ -1,9 +1,27 @@
 {
   "name": "@croco/preset-cloudflare",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "types": "./dist/index.d.ts"
+      },
+      "./fetch": {
+        "import": "./dist/fetch.mjs",
+        "types": "./dist/fetch.d.ts"
+      }
+    },
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup && cp dist/index.d.mts dist/index.d.ts && cp dist/fetch.d.mts dist/fetch.d.ts",
     "lint": "oxlint .",
@@ -16,23 +34,5 @@
   "devDependencies": {
     "tsup": "8.5.1",
     "vitest": "4.0.16"
-  },
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.mjs",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.mjs",
-        "types": "./dist/index.d.ts"
-      },
-      "./fetch": {
-        "import": "./dist/fetch.mjs",
-        "types": "./dist/fetch.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }

@@ -1,6 +1,6 @@
-import { DomainEvent } from '@croco/events-core';
-import type { MembershipRole } from '@croco/membership-core';
-import type { InvitationType } from '../types';
+import { DomainEvent } from "@croco/events-core";
+import type { MembershipRole } from "@croco/membership-core";
+import type { InvitationType } from "../types";
 
 export type InvitationCreatedEventData = {
   invitationId: string;
@@ -38,28 +38,28 @@ export type InvitationDeclinedEventData = {
 };
 
 export class InvitationCreatedEvent extends DomainEvent {
-  static eventName = 'invitation.created';
+  static eventName = "invitation.created";
   constructor(public readonly data: InvitationCreatedEventData) {
     super();
   }
 }
 
 export class InvitationAcceptedEvent extends DomainEvent {
-  static eventName = 'invitation.accepted';
+  static eventName = "invitation.accepted";
   constructor(public readonly data: InvitationAcceptedEventData) {
     super();
   }
 }
 
 export class InvitationRevokedEvent extends DomainEvent {
-  static eventName = 'invitation.revoked';
+  static eventName = "invitation.revoked";
   constructor(public readonly data: InvitationRevokedEventData) {
     super();
   }
 }
 
 export class InvitationDeclinedEvent extends DomainEvent {
-  static eventName = 'invitation.declined';
+  static eventName = "invitation.declined";
   constructor(public readonly data: InvitationDeclinedEventData) {
     super();
   }

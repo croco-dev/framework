@@ -1,4 +1,4 @@
-import type { BillingAccount, Order, ProcessedWebhook, Subscription } from '../types';
+import type { BillingAccount, Order, ProcessedWebhook, Subscription } from "../types";
 
 /**
  * Abstract storage for billing data.
@@ -13,7 +13,9 @@ export abstract class BillingStore {
 
   // Subscription
   abstract findSubscription(billingAccountId: string): Promise<Subscription | null>;
-  abstract findSubscriptionByExternalId(externalSubscriptionId: string): Promise<Subscription | null>;
+  abstract findSubscriptionByExternalId(
+    externalSubscriptionId: string,
+  ): Promise<Subscription | null>;
   abstract saveSubscription(subscription: Subscription): Promise<void>;
   abstract deleteSubscription(billingAccountId: string): Promise<void>;
 

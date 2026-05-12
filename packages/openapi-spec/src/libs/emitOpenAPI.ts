@@ -3,22 +3,24 @@ import {
   OpenAPIRegistry,
   OpenApiGeneratorV31,
   type RouteConfig,
-} from '@asteasolutions/zod-to-openapi';
-import { extractRouteIR, type ParamIR, type RouteIR } from '@croco/protocols-core';
-import { type ZodType, z } from 'zod';
+} from "@asteasolutions/zod-to-openapi";
+import { extractRouteIR, type ParamIR, type RouteIR } from "@croco/protocols-core";
+import { type ZodType, z } from "zod";
 
 extendZodWithOpenApi(z);
 
-const HTTP_METHODS = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options', 'trace'] as const;
+const HTTP_METHODS = ["get", "post", "put", "delete", "patch", "head", "options", "trace"] as const;
 
-type OpenAPIDocument = ReturnType<OpenApiGeneratorV31['generateDocument']>;
+type OpenAPIDocument = ReturnType<OpenApiGeneratorV31["generateDocument"]>;
 type HttpMethod = (typeof HTTP_METHODS)[number];
 type ControllerConstructor = new (...args: unknown[]) => unknown;
-type OpenAPIParamLocation = 'path' | 'query' | 'header';
+type OpenAPIParamLocation = "path" | "query" | "header";
 
 export function emitOpenAPI(controllers: Function[]): OpenAPIDocument {
   const registry = new OpenAPIRegistry();
-  const routes = controllers.flatMap((controller) => extractRouteIR(controller as ControllerConstructor));
+  const routes = controllers.flatMap((controller) =>
+    extractRouteIR(controller as ControllerConstructor),
+  );
 
   routes.forEach((route) => {
     registry.registerPath(toRouteConfig(route));
@@ -27,16 +29,16 @@ export function emitOpenAPI(controllers: Function[]): OpenAPIDocument {
   const generator = new OpenApiGeneratorV31(registry.definitions);
 
   return generator.generateDocument({
-    openapi: '3.1.0',
+    openapi: "3.1.0",
     info: {
-      title: 'Croco API',
-      version: '1.0.0',
+      title: "Croco API",
+      version: "1.0.0",
       license: {
-        name: 'MIT',
-        identifier: 'MIT',
+        name: "MIT",
+        identifier: "MIT",
       },
     },
-    servers: [{ url: 'https://api.croco.dev' }],
+    servers: [{ url: "https://api.croco.dev" }],
     security: [],
     tags: toTags(routes),
   });
@@ -51,10 +53,10 @@ function toRouteConfig(route: RouteIR): RouteConfig {
     tags: [route.domain ?? route.controllerName],
     responses: {
       200: {
-        description: 'Successful response',
+        description: "Successful response",
       },
       400: {
-        description: 'Invalid request',
+        description: "Invalid request",
       },
     },
     ...(route.params.length > 0 || route.inputSchema ? { request: toRequestConfig(route) } : {}),
@@ -70,11 +72,13 @@ function toTags(routes: RouteIR[]): { name: string; description: string }[] {
   }));
 }
 
-function toRequestConfig(route: RouteIR): RouteConfig['request'] {
-  const params = toZodObject(route.params.filter((param) => param.kind === 'path'));
-  const query = toZodObject(route.params.filter((param) => param.kind === 'query'));
-  const headers = toZodObject(route.params.filter((param) => param.kind === 'header'));
-  const bodySchema = unwrapZodEffects(route.inputSchema ?? route.params.find((param) => param.kind === 'body')?.schema);
+function toRequestConfig(route: RouteIR): RouteConfig["request"] {
+  const params = toZodObject(route.params.filter((param) => param.kind === "path"));
+  const query = toZodObject(route.params.filter((param) => param.kind === "query"));
+  const headers = toZodObject(route.params.filter((param) => param.kind === "header"));
+  const bodySchema = unwrapZodEffects(
+    route.inputSchema ?? route.params.find((param) => param.kind === "body")?.schema,
+  );
 
   return {
     ...(bodySchema
@@ -82,7 +86,7 @@ function toRequestConfig(route: RouteIR): RouteConfig['request'] {
           body: {
             required: true,
             content: {
-              'application/json': {
+              "application/json": {
                 schema: bodySchema,
               },
             },
@@ -100,7 +104,9 @@ function toZodObject(params: ParamIR[]): z.ZodObject<Record<string, ZodType>> | 
     return undefined;
   }
 
-  const shape = Object.fromEntries(params.map((param) => [param.name, withParameterMetadata(param)]));
+  const shape = Object.fromEntries(
+    params.map((param) => [param.name, withParameterMetadata(param)]),
+  );
 
   return z.object(shape);
 }
@@ -113,7 +119,7 @@ function withParameterMetadata(param: ParamIR): ZodType {
     param: {
       name: param.name,
       in: location,
-      required: param.kind === 'path',
+      required: param.kind === "path",
     },
   });
 }
@@ -126,8 +132,8 @@ function unwrapZodEffects(schema: ZodType | null | undefined): ZodType | null | 
   return unwrapZodEffects(schema.innerType());
 }
 
-function toOpenAPIParamLocation(kind: ParamIR['kind']): OpenAPIParamLocation {
-  if (kind === 'path' || kind === 'query' || kind === 'header') {
+function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {
+  if (kind === "path" || kind === "query" || kind === "header") {
     return kind;
   }
 
@@ -135,7 +141,7 @@ function toOpenAPIParamLocation(kind: ParamIR['kind']): OpenAPIParamLocation {
 }
 
 function toOpenAPIPath(path: string): string {
-  return path.replace(/:([^/]+)/g, '{$1}');
+  return path.replace(/:([^/]+)/g, "{$1}");
 }
 
 function toHttpMethod(method: string): HttpMethod {

@@ -1,5 +1,5 @@
-import { Component } from '@croco/framework-context';
-import { SubscriptionProvider } from './interfaces';
+import { Component } from "@croco/framework-context";
+import { SubscriptionProvider } from "./interfaces";
 
 @Component()
 export class StaticSubscriptionProvider extends SubscriptionProvider {

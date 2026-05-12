@@ -1,9 +1,9 @@
-import type { MiddlewareFunction } from '../types';
+import type { MiddlewareFunction } from "../types";
 
 export type SecurityHeadersOptions = {
   contentTypeOptions?: boolean;
   strictTransportSecurity?: boolean | { maxAge: number; includeSubDomains?: boolean };
-  frameOptions?: boolean | 'DENY' | 'SAMEORIGIN' | 'ALLOW-FROM';
+  frameOptions?: boolean | "DENY" | "SAMEORIGIN" | "ALLOW-FROM";
   frameOptionsAllowFrom?: string;
   xssProtection?: boolean;
   referrerPolicy?: boolean | ReferrerPolicyValue;
@@ -12,22 +12,24 @@ export type SecurityHeadersOptions = {
 };
 
 export type ReferrerPolicyValue =
-  | 'no-referrer'
-  | 'no-referrer-when-downgrade'
-  | 'origin'
-  | 'origin-when-cross-origin'
-  | 'same-origin'
-  | 'strict-origin'
-  | 'strict-origin-when-cross-origin'
-  | 'unsafe-url';
+  | "no-referrer"
+  | "no-referrer-when-downgrade"
+  | "origin"
+  | "origin-when-cross-origin"
+  | "same-origin"
+  | "strict-origin"
+  | "strict-origin-when-cross-origin"
+  | "unsafe-url";
 
 const DEFAULT_HSTS_MAX_AGE = 31536000;
-const DEFAULT_REFERRER_POLICY: ReferrerPolicyValue = 'strict-origin-when-cross-origin';
+const DEFAULT_REFERRER_POLICY: ReferrerPolicyValue = "strict-origin-when-cross-origin";
 
 /**
  * 보안 관련 HTTP 헤더를 일괄 적용하는 미들웨어입니다.
  */
-export const securityHeadersMiddleware = (options: SecurityHeadersOptions = {}): MiddlewareFunction => {
+export const securityHeadersMiddleware = (
+  options: SecurityHeadersOptions = {},
+): MiddlewareFunction => {
   const {
     contentTypeOptions = true,
     strictTransportSecurity = true,
@@ -45,54 +47,62 @@ export const securityHeadersMiddleware = (options: SecurityHeadersOptions = {}):
 
   return async (ctx, next): Promise<void> => {
     if (contentTypeOptions) {
-      ctx.raw.header('X-Content-Type-Options', 'nosniff');
+      ctx.raw.header("X-Content-Type-Options", "nosniff");
     }
 
     if (hstsValue) {
-      ctx.raw.header('Strict-Transport-Security', hstsValue);
+      ctx.raw.header("Strict-Transport-Security", hstsValue);
     }
 
     if (frameValue) {
-      ctx.raw.header('X-Frame-Options', frameValue);
+      ctx.raw.header("X-Frame-Options", frameValue);
     }
 
     if (xssProtection) {
-      ctx.raw.header('X-XSS-Protection', '1; mode=block');
+      ctx.raw.header("X-XSS-Protection", "1; mode=block");
     }
 
     if (referrerValue) {
-      ctx.raw.header('Referrer-Policy', referrerValue);
+      ctx.raw.header("Referrer-Policy", referrerValue);
     }
 
     if (contentSecurityPolicy) {
-      const cspValue = typeof contentSecurityPolicy === 'string' ? contentSecurityPolicy : "default-src 'self'";
-      ctx.raw.header('Content-Security-Policy', cspValue);
+      const cspValue =
+        typeof contentSecurityPolicy === "string" ? contentSecurityPolicy : "default-src 'self'";
+      ctx.raw.header("Content-Security-Policy", cspValue);
     }
 
     if (permissionsPolicy) {
       const ppValue =
-        typeof permissionsPolicy === 'string' ? permissionsPolicy : 'camera=(), microphone=(), geolocation=()';
-      ctx.raw.header('Permissions-Policy', ppValue);
+        typeof permissionsPolicy === "string"
+          ? permissionsPolicy
+          : "camera=(), microphone=(), geolocation=()";
+      ctx.raw.header("Permissions-Policy", ppValue);
     }
 
     await next();
   };
 };
 
-function buildHstsValue(option: boolean | { maxAge: number; includeSubDomains?: boolean }): string | null {
+function buildHstsValue(
+  option: boolean | { maxAge: number; includeSubDomains?: boolean },
+): string | null {
   if (option === false) return null;
   if (option === true) {
     return `max-age=${DEFAULT_HSTS_MAX_AGE}; includeSubDomains`;
   }
   const maxAge = option.maxAge ?? DEFAULT_HSTS_MAX_AGE;
   const subDomains = option.includeSubDomains ?? true;
-  return `max-age=${maxAge}${subDomains ? '; includeSubDomains' : ''}`;
+  return `max-age=${maxAge}${subDomains ? "; includeSubDomains" : ""}`;
 }
 
-function buildFrameValue(option: boolean | 'DENY' | 'SAMEORIGIN' | 'ALLOW-FROM', allowFrom?: string): string | null {
+function buildFrameValue(
+  option: boolean | "DENY" | "SAMEORIGIN" | "ALLOW-FROM",
+  allowFrom?: string,
+): string | null {
   if (option === false) return null;
-  if (option === true) return 'DENY';
-  if (option === 'ALLOW-FROM' && allowFrom) {
+  if (option === true) return "DENY";
+  if (option === "ALLOW-FROM" && allowFrom) {
     return `ALLOW-FROM ${allowFrom}`;
   }
   return option;

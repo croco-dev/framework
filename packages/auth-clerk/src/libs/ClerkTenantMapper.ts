@@ -1,7 +1,7 @@
-import type { AuthUser, TenantMappingProvider } from '@croco/auth-core';
-import type { TenantResolver } from '@croco/tenant-core';
+import type { AuthUser, TenantMappingProvider } from "@croco/auth-core";
+import type { TenantResolver } from "@croco/tenant-core";
 
-import { DuplicateTenantMappingProblem } from './problems/ClerkProblems';
+import { DuplicateTenantMappingProblem } from "./problems/ClerkProblems";
 
 export interface TenantMappingStore {
   get(externalOrgId: string): Promise<string | null>;
@@ -13,13 +13,15 @@ export type ClerkTenantRequest = {
   user?: AuthUser;
 };
 
-export class ClerkTenantMapper implements TenantMappingProvider, TenantResolver<ClerkTenantRequest> {
+export class ClerkTenantMapper
+  implements TenantMappingProvider, TenantResolver<ClerkTenantRequest>
+{
   private inMemoryStore = new Map<string, string>();
 
   constructor(private store?: TenantMappingStore) {}
 
   async resolve(requestOrOrgId: string | ClerkTenantRequest): Promise<string | null> {
-    if (typeof requestOrOrgId === 'string') {
+    if (typeof requestOrOrgId === "string") {
       return this.resolveByOrgId(requestOrOrgId);
     }
     return this.resolveByRequest(requestOrOrgId);
@@ -62,7 +64,7 @@ export class ClerkTenantMapper implements TenantMappingProvider, TenantResolver<
   private async resolveByRequest(request: ClerkTenantRequest): Promise<string | null> {
     const orgId = request.user?.metadata?.orgId;
 
-    if (typeof orgId === 'string') {
+    if (typeof orgId === "string") {
       return this.resolveByOrgId(orgId);
     }
 

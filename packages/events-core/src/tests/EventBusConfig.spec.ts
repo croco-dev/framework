@@ -1,14 +1,18 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { DomainEvent } from '../libs/DomainEvent';
-import type { EventBus } from '../libs/EventBus';
-import { EventBusConfig } from '../libs/EventBusConfig';
-import { type EventHandler, type EventHandlerClass, RegisterEventHandler } from '../libs/EventHandler';
-import type { HandlerResolver } from '../libs/HandlerResolver';
-import type { EventSubscription } from '../libs/types/EventSubscription';
+import { MetadataStorage } from "@croco/framework-context";
+import { beforeEach, describe, expect, it } from "vitest";
+import { DomainEvent } from "../libs/DomainEvent";
+import type { EventBus } from "../libs/EventBus";
+import { EventBusConfig } from "../libs/EventBusConfig";
+import {
+  type EventHandler,
+  type EventHandlerClass,
+  RegisterEventHandler,
+} from "../libs/EventHandler";
+import type { HandlerResolver } from "../libs/HandlerResolver";
+import type { EventSubscription } from "../libs/types/EventSubscription";
 
 class TestEvent extends DomainEvent {
-  static eventName = 'TestEvent';
+  static eventName = "TestEvent";
   constructor(public readonly data: string) {
     super();
   }
@@ -16,13 +20,13 @@ class TestEvent extends DomainEvent {
 
 class TestHandler implements EventHandler<TestEvent> {
   async handle(event: TestEvent): Promise<void> {
-    expect(event.data).toBe('test');
+    expect(event.data).toBe("test");
   }
 }
 
 class AnotherHandler implements EventHandler<TestEvent> {
   async handle(event: TestEvent): Promise<void> {
-    expect(event.data).toBe('test');
+    expect(event.data).toBe("test");
   }
 }
 
@@ -37,7 +41,9 @@ class MockEventBus implements EventBus {
 
   unsubscribe(subscription: EventSubscription): void {
     this.subscriptions = this.subscriptions.filter(
-      (entry) => entry.eventName !== subscription.eventName || entry.handlerClass !== subscription.handlerClass
+      (entry) =>
+        entry.eventName !== subscription.eventName ||
+        entry.handlerClass !== subscription.handlerClass,
     );
   }
 
@@ -46,21 +52,21 @@ class MockEventBus implements EventBus {
   }
 }
 
-describe('EventBusConfig', () => {
+describe("EventBusConfig", () => {
   beforeEach(() => {
     EventBusConfig.setInstance(new EventBusConfig());
     MetadataStorage.clear();
   });
 
-  describe('singleton pattern', () => {
-    it('should return same instance across multiple calls', () => {
+  describe("singleton pattern", () => {
+    it("should return same instance across multiple calls", () => {
       const instance1 = EventBusConfig.getInstance();
       const instance2 = EventBusConfig.getInstance();
 
       expect(instance1).toBe(instance2);
     });
 
-    it('should maintain state across getInstance calls', () => {
+    it("should maintain state across getInstance calls", () => {
       const config1 = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
@@ -73,8 +79,8 @@ describe('EventBusConfig', () => {
     });
   });
 
-  describe('setEventBus and getEventBus', () => {
-    it('should set and get event bus instance', () => {
+  describe("setEventBus and getEventBus", () => {
+    it("should set and get event bus instance", () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
@@ -84,7 +90,7 @@ describe('EventBusConfig', () => {
       expect(retrieved).toBe(mockBus);
     });
 
-    it('should allow updating event bus', () => {
+    it("should allow updating event bus", () => {
       const config = EventBusConfig.getInstance();
       const firstBus = new MockEventBus();
       const secondBus = new MockEventBus();
@@ -96,7 +102,7 @@ describe('EventBusConfig', () => {
       expect(config.getEventBus()).toBe(secondBus);
     });
 
-    it('should reconnect started subscriptions when event bus is updated', async () => {
+    it("should reconnect started subscriptions when event bus is updated", async () => {
       const config = EventBusConfig.getInstance();
       const firstBus = new MockEventBus();
       const secondBus = new MockEventBus();
@@ -109,7 +115,7 @@ describe('EventBusConfig', () => {
 
       config.setEventBus(firstBus as EventBus);
       config.subscribe({
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
       await config.start({ handlers: [], resolver: customResolver as HandlerResolver });
@@ -118,18 +124,18 @@ describe('EventBusConfig', () => {
 
       expect(secondBus.subscriptions).toHaveLength(1);
       expect(secondBus.subscriptions[0]).toMatchObject({
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         handlerClass: TestHandler,
         handler: customHandler,
       });
     });
   });
 
-  describe('subscribe', () => {
-    it('should register event subscription', () => {
+  describe("subscribe", () => {
+    it("should register event subscription", () => {
       const config = EventBusConfig.getInstance();
       const subscription: EventSubscription = {
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       };
 
@@ -138,29 +144,29 @@ describe('EventBusConfig', () => {
       expect(true).toBe(true);
     });
 
-    it('should allow multiple subscriptions', () => {
+    it("should allow multiple subscriptions", () => {
       const config = EventBusConfig.getInstance();
 
       config.subscribe({
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
       config.subscribe({
-        eventName: 'AnotherEvent',
+        eventName: "AnotherEvent",
         handlerClass: AnotherHandler as EventHandlerClass,
       });
 
       expect(true).toBe(true);
     });
 
-    it('should store subscriptions for later use in start', async () => {
+    it("should store subscriptions for later use in start", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
       const subscription: EventSubscription = {
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       };
 
@@ -169,16 +175,16 @@ describe('EventBusConfig', () => {
       await config.start({ handlers: [] });
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
-      expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].eventName).toBe('TestEvent');
+      expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].eventName).toBe("TestEvent");
     });
   });
 
-  describe('resource cleanup', () => {
-    it('should unsubscribe started subscriptions', async () => {
+  describe("resource cleanup", () => {
+    it("should unsubscribe started subscriptions", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
       const subscription: EventSubscription = {
-        eventName: 'CleanupEvent',
+        eventName: "CleanupEvent",
         handlerClass: TestHandler as EventHandlerClass,
       };
 
@@ -188,16 +194,18 @@ describe('EventBusConfig', () => {
 
       config.unsubscribe(subscription);
 
-      expect(mockBus.subscriptions.find((entry) => entry.eventName === 'CleanupEvent')).toBeUndefined();
+      expect(
+        mockBus.subscriptions.find((entry) => entry.eventName === "CleanupEvent"),
+      ).toBeUndefined();
     });
 
-    it('should clear tracked subscriptions and event bus state', async () => {
+    it("should clear tracked subscriptions and event bus state", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
       config.subscribe({
-        eventName: 'ClearEvent',
+        eventName: "ClearEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
       await config.start({ handlers: [] });
@@ -208,17 +216,17 @@ describe('EventBusConfig', () => {
     });
   });
 
-  describe('start', () => {
-    it('should throw error when event bus is not set', async () => {
+  describe("start", () => {
+    it("should throw error when event bus is not set", async () => {
       const config = EventBusConfig.getInstance();
       config.setEventBus(undefined as unknown as EventBus);
 
       await expect(config.start({ handlers: [] })).rejects.toThrow(
-        'EventBus has not been set. Call setEventBus() first.'
+        "EventBus has not been set. Call setEventBus() first.",
       );
     });
 
-    it('should register subscriptions from handlers array metadata', async () => {
+    it("should register subscriptions from handlers array metadata", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
@@ -233,18 +241,18 @@ describe('EventBusConfig', () => {
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
       const lastSub = mockBus.subscriptions[mockBus.subscriptions.length - 1];
-      expect(lastSub.eventName).toBe('TestEvent');
+      expect(lastSub.eventName).toBe("TestEvent");
       expect(lastSub.handlerClass).toBe(DecoratedHandler);
     });
 
-    it('should use DefaultHandlerResolver when no resolver provided', async () => {
+    it("should use DefaultHandlerResolver when no resolver provided", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
       config.subscribe({
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
 
@@ -254,7 +262,7 @@ describe('EventBusConfig', () => {
       expect(lastSub.handler).toBeInstanceOf(TestHandler);
     });
 
-    it('should use custom resolver when provided', async () => {
+    it("should use custom resolver when provided", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
@@ -268,7 +276,7 @@ describe('EventBusConfig', () => {
       };
 
       config.subscribe({
-        eventName: 'TestEvent',
+        eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
 
@@ -281,54 +289,54 @@ describe('EventBusConfig', () => {
       expect(lastSub.handler).toBe(customHandler);
     });
 
-    it('should handle multiple subscriptions', async () => {
+    it("should handle multiple subscriptions", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
       config.subscribe({
-        eventName: 'MultiTestEvent1',
+        eventName: "MultiTestEvent1",
         handlerClass: TestHandler as EventHandlerClass,
       });
       config.subscribe({
-        eventName: 'MultiTestEvent2',
+        eventName: "MultiTestEvent2",
         handlerClass: AnotherHandler as EventHandlerClass,
       });
 
       await config.start({ handlers: [] });
 
       const multiTestSubs = mockBus.subscriptions.filter(
-        (s) => s.eventName === 'MultiTestEvent1' || s.eventName === 'MultiTestEvent2'
+        (s) => s.eventName === "MultiTestEvent1" || s.eventName === "MultiTestEvent2",
       );
       expect(multiTestSubs.length).toBe(2);
     });
 
-    it('should preserve subscription order', async () => {
+    it("should preserve subscription order", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
       config.subscribe({
-        eventName: 'FirstEvent',
+        eventName: "FirstEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
       config.subscribe({
-        eventName: 'SecondEvent',
+        eventName: "SecondEvent",
         handlerClass: AnotherHandler as EventHandlerClass,
       });
 
       await config.start({ handlers: [] });
 
       const lastSubs = mockBus.subscriptions.slice(-2);
-      expect(lastSubs[0].eventName).toBe('FirstEvent');
-      expect(lastSubs[1].eventName).toBe('SecondEvent');
+      expect(lastSubs[0].eventName).toBe("FirstEvent");
+      expect(lastSubs[1].eventName).toBe("SecondEvent");
     });
   });
 
-  describe('integration with handlers', () => {
-    it('should work with RegisterEventHandler decorator pattern', async () => {
+  describe("integration with handlers", () => {
+    it("should work with RegisterEventHandler decorator pattern", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
@@ -342,19 +350,21 @@ describe('EventBusConfig', () => {
       await config.start({ handlers: [DecoratedHandler] });
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
-      expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].handler).toBeInstanceOf(DecoratedHandler);
+      expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].handler).toBeInstanceOf(
+        DecoratedHandler,
+      );
     });
   });
 
-  describe('edge cases', () => {
-    it('should handle calling start with existing subscriptions', async () => {
+  describe("edge cases", () => {
+    it("should handle calling start with existing subscriptions", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
       config.subscribe({
-        eventName: 'NewEvent',
+        eventName: "NewEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
 
@@ -364,21 +374,21 @@ describe('EventBusConfig', () => {
       expect(mockBus.subscriptions.length).toBeGreaterThan(beforeCount);
     });
 
-    it('should allow calling start multiple times with same subscriptions', async () => {
+    it("should allow calling start multiple times with same subscriptions", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
       config.subscribe({
-        eventName: 'RepeatEvent',
+        eventName: "RepeatEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
 
       await config.start({ handlers: [] });
       await config.start({ handlers: [] });
 
-      const repeatEventSubs = mockBus.subscriptions.filter((s) => s.eventName === 'RepeatEvent');
+      const repeatEventSubs = mockBus.subscriptions.filter((s) => s.eventName === "RepeatEvent");
       expect(repeatEventSubs.length).toBe(1);
     });
   });

@@ -1,4 +1,4 @@
-import { Component, Context, Inject } from '@croco/framework-context';
+import { Component, Context, Inject } from "@croco/framework-context";
 import {
   type IndexConfig,
   MissingTenantProblem,
@@ -9,13 +9,13 @@ import {
   type SearchQuery,
   type SearchResult,
   StrategyUnavailableProblem,
-} from '@croco/search-core';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { InvalidSearchRowProblem } from './problems/InvalidSearchRowProblem';
-import { DRIZZLE_TOKEN, type SearchResultRow, type SearchStrategy } from './types';
+} from "@croco/search-core";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { InvalidSearchRowProblem } from "./problems/InvalidSearchRowProblem";
+import { DRIZZLE_TOKEN, type SearchResultRow, type SearchStrategy } from "./types";
 
 function isSearchResultRow(value: unknown): value is SearchResultRow {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 /**
@@ -30,7 +30,7 @@ export class DrizzleSearchEngine extends SearchEngine {
    */
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: NodePgDatabase<Record<string, never>>,
-    private readonly strategy: SearchStrategy
+    private readonly strategy: SearchStrategy,
   ) {
     super();
   }
@@ -47,7 +47,7 @@ export class DrizzleSearchEngine extends SearchEngine {
    */
   async search<T>(index: string, query: SearchQuery): Promise<SearchResult<T>> {
     await this.ensureCapable();
-    const tenantId = this.getTenantId('search');
+    const tenantId = this.getTenantId("search");
 
     const sql = this.strategy.buildSearchQuery(index, query, tenantId);
     const result = await this.db.execute(sql);
@@ -58,7 +58,7 @@ export class DrizzleSearchEngine extends SearchEngine {
       }
 
       const mappedDocument = this.strategy.mapSearchRow?.<T>(row) ?? (row as unknown as T);
-      const score = typeof row.score === 'number' ? row.score : 1;
+      const score = typeof row.score === "number" ? row.score : 1;
 
       return {
         score,
@@ -79,7 +79,7 @@ export class DrizzleSearchEngine extends SearchEngine {
    */
   async indexDocument(index: string, document: SearchDocument): Promise<void> {
     await this.ensureCapable();
-    const tenantId = this.getTenantId('indexDocument');
+    const tenantId = this.getTenantId("indexDocument");
 
     const sql = this.strategy.buildIndexQuery(index, document, tenantId);
     await this.db.execute(sql);
@@ -90,7 +90,7 @@ export class DrizzleSearchEngine extends SearchEngine {
    */
   async deleteDocument(index: string, documentId: string): Promise<void> {
     await this.ensureCapable();
-    const tenantId = this.getTenantId('deleteDocument');
+    const tenantId = this.getTenantId("deleteDocument");
 
     const sql = this.strategy.buildDeleteQuery(index, documentId, tenantId);
     await this.db.execute(sql);
@@ -111,7 +111,7 @@ export class DrizzleSearchEngine extends SearchEngine {
    */
   async createIndex(_config: IndexConfig): Promise<void> {
     await this.ensureCapable();
-    throw new SearchCapabilityUnavailableProblem('createIndex', 'DrizzleSearchEngine');
+    throw new SearchCapabilityUnavailableProblem("createIndex", "DrizzleSearchEngine");
   }
 
   /**
@@ -119,7 +119,7 @@ export class DrizzleSearchEngine extends SearchEngine {
    */
   async deleteIndex(_name: string): Promise<void> {
     await this.ensureCapable();
-    throw new SearchCapabilityUnavailableProblem('deleteIndex', 'DrizzleSearchEngine');
+    throw new SearchCapabilityUnavailableProblem("deleteIndex", "DrizzleSearchEngine");
   }
 
   private async checkStrategy(): Promise<void> {
@@ -127,7 +127,7 @@ export class DrizzleSearchEngine extends SearchEngine {
     if (!isCapable) {
       throw new StrategyUnavailableProblem(
         this.strategy.constructor.name,
-        `Database does not support required extensions: ${this.strategy.getRequiredExtensions().join(', ')}`
+        `Database does not support required extensions: ${this.strategy.getRequiredExtensions().join(", ")}`,
       );
     }
   }

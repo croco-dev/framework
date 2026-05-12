@@ -1,31 +1,33 @@
-import 'reflect-metadata';
-import { AUTH_PUBLIC_KEY } from '../constants';
-import type { ApiKeyProvider } from '../interfaces/ApiKeyProvider';
-import type { AuthProvider } from '../interfaces/AuthProvider';
-import type { AuthRequest } from '../interfaces/AuthRequest';
-import type { Guard, RouteExecutionContext } from '../interfaces/Guard';
-import { UnauthorizedProblem } from '../problems/AuthProblems';
-import { getHeaderValue } from './headerUtils';
+import "reflect-metadata";
+import { AUTH_PUBLIC_KEY } from "../constants";
+import type { ApiKeyProvider } from "../interfaces/ApiKeyProvider";
+import type { AuthProvider } from "../interfaces/AuthProvider";
+import type { AuthRequest } from "../interfaces/AuthRequest";
+import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
+import { UnauthorizedProblem } from "../problems/AuthProblems";
+import { getHeaderValue } from "./headerUtils";
 
 function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
-  const classTarget = typeof controllerTarget === 'function' ? controllerTarget : controllerTarget.constructor;
-  const prototypeTarget = typeof controllerTarget === 'function' ? controllerTarget.prototype : controllerTarget;
+  const classTarget =
+    typeof controllerTarget === "function" ? controllerTarget : controllerTarget.constructor;
+  const prototypeTarget =
+    typeof controllerTarget === "function" ? controllerTarget.prototype : controllerTarget;
 
   return Boolean(
     Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget, handler) ??
-      Reflect.getMetadata(AUTH_PUBLIC_KEY, prototypeTarget, handler) ??
-      Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget)
+    Reflect.getMetadata(AUTH_PUBLIC_KEY, prototypeTarget, handler) ??
+    Reflect.getMetadata(AUTH_PUBLIC_KEY, classTarget),
   );
 }
 
 function isMetadataTarget(value: unknown): value is object {
-  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+  return (typeof value === "object" && value !== null) || typeof value === "function";
 }
 
 export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
   constructor(
     private readonly authProvider: AuthProvider,
-    private readonly apiKeyProvider: ApiKeyProvider
+    private readonly apiKeyProvider: ApiKeyProvider,
   ) {}
 
   async canActivate(context: RouteExecutionContext): Promise<boolean> {
@@ -43,7 +45,7 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
     }
 
     const request = context.getRequest() as AuthRequest;
-    const apiKeyHeader = getHeaderValue(request, 'x-api-key');
+    const apiKeyHeader = getHeaderValue(request, "x-api-key");
 
     if (apiKeyHeader) {
       const principal = await this.apiKeyProvider.authenticate(request);
@@ -52,12 +54,12 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
         request.apiKey = principal;
         return true;
       }
-      throw new UnauthorizedProblem('Invalid API key');
+      throw new UnauthorizedProblem("Invalid API key");
     }
 
     const user = await this.authProvider.authenticate(request);
     if (user) {
-      request.principal = { ...user, type: 'user' as const };
+      request.principal = { ...user, type: "user" as const };
       request.user = user;
       return true;
     }

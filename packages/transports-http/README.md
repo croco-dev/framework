@@ -13,14 +13,14 @@ pnpm add @croco/transports-http @croco/protocols-rest reflect-metadata
 ### 앱 생성과 Lambda 핸들러 노출
 
 ```typescript
-import 'reflect-metadata';
+import "reflect-metadata";
 import {
   createSlidingWindowPolicy,
   RateLimitKeyBuilder,
   RateLimiter,
   SlidingWindowInMemoryStore,
-} from '@croco/ratelimit-core';
-import { Controller, Get } from '@croco/protocols-rest';
+} from "@croco/ratelimit-core";
+import { Controller, Get } from "@croco/protocols-rest";
 import {
   bodyLimitMiddleware,
   corsMiddleware,
@@ -28,27 +28,30 @@ import {
   mb,
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
-} from '@croco/transports-http';
+} from "@croco/transports-http";
 
-@Controller('/users')
+@Controller("/users")
 class UserController {
-  @Get('/')
+  @Get("/")
   list() {
-    return [{ id: 'user-1' }];
+    return [{ id: "user-1" }];
   }
 }
 
-const rateLimiter = new RateLimiter(new SlidingWindowInMemoryStore(), new RateLimitKeyBuilder(['ip']));
+const rateLimiter = new RateLimiter(
+  new SlidingWindowInMemoryStore(),
+  new RateLimitKeyBuilder(["ip"]),
+);
 
 const app = createApp({
   controllers: [UserController],
   middlewares: [
     securityHeadersMiddleware(),
-    corsMiddleware({ origins: ['https://example.com'] }),
+    corsMiddleware({ origins: ["https://example.com"] }),
     bodyLimitMiddleware({ limit: mb(1) }),
     rateLimitHttpMiddleware({
       rateLimiter,
-      policy: createSlidingWindowPolicy('http', 100, 60_000),
+      policy: createSlidingWindowPolicy("http", 100, 60_000),
     }),
   ],
 });
@@ -65,10 +68,10 @@ await app.listen(3000);
 ### 헬스체크 등록
 
 ```typescript
-import { Container } from '@croco/framework-context';
-import { HealthCheckRegistry } from '@croco/transports-http';
+import { Container } from "@croco/framework-context";
+import { HealthCheckRegistry } from "@croco/transports-http";
 
-Container.get(HealthCheckRegistry).register('database', async () => ({ status: 'up' }));
+Container.get(HealthCheckRegistry).register("database", async () => ({ status: "up" }));
 ```
 
 ## Security Middleware Contract
@@ -83,7 +86,7 @@ import {
   RateLimitKeyBuilder,
   RateLimiter,
   SlidingWindowInMemoryStore,
-} from '@croco/ratelimit-core';
+} from "@croco/ratelimit-core";
 import {
   bodyLimitMiddleware,
   corsMiddleware,
@@ -91,20 +94,23 @@ import {
   mb,
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
-} from '@croco/transports-http';
+} from "@croco/transports-http";
 
-const rateLimiter = new RateLimiter(new SlidingWindowInMemoryStore(), new RateLimitKeyBuilder(['ip']));
+const rateLimiter = new RateLimiter(
+  new SlidingWindowInMemoryStore(),
+  new RateLimitKeyBuilder(["ip"]),
+);
 
 const app = createApp({
   controllers: [UserController],
   middlewares: [
-    securityHeadersMiddleware(),       // HSTS, X-Frame-Options, CSP, etc.
-    corsMiddleware({ origins: ['https://example.com'] }), // Cross-Origin policy
-    bodyLimitMiddleware({ limit: mb(1) }),                // Request body size cap
+    securityHeadersMiddleware(), // HSTS, X-Frame-Options, CSP, etc.
+    corsMiddleware({ origins: ["https://example.com"] }), // Cross-Origin policy
+    bodyLimitMiddleware({ limit: mb(1) }), // Request body size cap
     rateLimitHttpMiddleware({
       rateLimiter,
-      policy: createSlidingWindowPolicy('http', 100, 60_000),
-    }),                                                   // Rate limiting
+      policy: createSlidingWindowPolicy("http", 100, 60_000),
+    }), // Rate limiting
   ],
 });
 ```
@@ -115,7 +121,7 @@ const app = createApp({
 const app = createApp({
   controllers: [UserController],
   middlewares: [securityHeadersMiddleware()],
-  securityValidation: 'off',
+  securityValidation: "off",
 });
 ```
 
@@ -123,12 +129,12 @@ const app = createApp({
 
 ### Required middleware
 
-| Middleware | Export | Purpose |
-|---|---|---|
+| Middleware                  | Export                   | Purpose                                                                        |
+| --------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
 | `securityHeadersMiddleware` | `@croco/transports-http` | Sets HTTP security headers: HSTS, X-Frame-Options, X-Content-Type-Options, CSP |
-| `corsMiddleware` | `@croco/transports-http` | Configures Cross-Origin Resource Sharing policy |
-| `bodyLimitMiddleware` | `@croco/transports-http` | Caps request body size to prevent payload-based DoS |
-| `rateLimitHttpMiddleware` | `@croco/transports-http` | Applies rate limiting to HTTP requests |
+| `corsMiddleware`            | `@croco/transports-http` | Configures Cross-Origin Resource Sharing policy                                |
+| `bodyLimitMiddleware`       | `@croco/transports-http` | Caps request body size to prevent payload-based DoS                            |
+| `rateLimitHttpMiddleware`   | `@croco/transports-http` | Applies rate limiting to HTTP requests                                         |
 
 All four are part of the public API and can be imported directly from `@croco/transports-http`. Unless `securityValidation: 'off'` is set, missing any of them will cause bootstrap validation to fail.
 

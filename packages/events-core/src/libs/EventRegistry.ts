@@ -1,17 +1,15 @@
-import { MetadataStorage } from '@croco/framework-context';
-import type { DomainEvent } from './DomainEvent';
-import { DuplicateEventNameProblem, EventDefinitionProblem } from './problems/EventsProblems';
+import { MetadataStorage } from "@croco/framework-context";
+import type { DomainEvent } from "./DomainEvent";
+import { DuplicateEventNameProblem, EventDefinitionProblem } from "./problems/EventsProblems";
 
-type EventClass<T extends DomainEvent = DomainEvent> = (new (
-  ...args: any[]
-) => T) & {
+type EventClass<T extends DomainEvent = DomainEvent> = (new (...args: any[]) => T) & {
   eventName: string;
 };
 
 /**
  * 이벤트 클래스 등록 여부를 메타데이터로 표시할 때 사용하는 키입니다.
  */
-export const REGISTERED_EVENT_KEY = Symbol('REGISTERED_EVENT');
+export const REGISTERED_EVENT_KEY = Symbol("REGISTERED_EVENT");
 
 /**
  * 이벤트 타입 레지스트리
@@ -36,7 +34,9 @@ export class EventRegistry {
     return this;
   }
 
-  static fromMetadata(eventClasses: EventClass[] = EventRegistry.getMetadataEventClasses()): EventRegistry {
+  static fromMetadata(
+    eventClasses: EventClass[] = EventRegistry.getMetadataEventClasses(),
+  ): EventRegistry {
     return new EventRegistry().registerMany(eventClasses);
   }
 
@@ -90,7 +90,9 @@ export class EventRegistry {
   }
 
   private static getMetadataEventClasses(): EventClass[] {
-    return MetadataStorage.getAll<boolean>(REGISTERED_EVENT_KEY).map((entry) => entry.target as EventClass);
+    return MetadataStorage.getAll<boolean>(REGISTERED_EVENT_KEY).map(
+      (entry) => entry.target as EventClass,
+    );
   }
 }
 

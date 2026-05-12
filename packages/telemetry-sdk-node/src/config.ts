@@ -1,6 +1,6 @@
-import type { Instrumentation } from '@opentelemetry/instrumentation';
-import type { Sampler } from '@opentelemetry/sdk-trace-base';
-import type { AutoInstrumentationConfig } from './libs/instrumentation/AutoInstrumentation';
+import type { Instrumentation } from "@opentelemetry/instrumentation";
+import type { Sampler } from "@opentelemetry/sdk-trace-base";
+import type { AutoInstrumentationConfig } from "./libs/instrumentation/AutoInstrumentation";
 
 /**
  * Configuration for telemetry traces.

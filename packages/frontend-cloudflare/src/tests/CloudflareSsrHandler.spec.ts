@@ -1,19 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
-import { createSsrHandler } from '../libs/CloudflareSsrHandler';
-import type { SsrWorkerEnv } from '../libs/types';
+import { describe, expect, it, vi } from "vitest";
+import { createSsrHandler } from "../libs/CloudflareSsrHandler";
+import type { SsrWorkerEnv } from "../libs/types";
 
-describe('createSsrHandler', () => {
-  it('createSsrHandler() returns a function', () => {
+describe("createSsrHandler", () => {
+  it("createSsrHandler() returns a function", () => {
     const handler = createSsrHandler();
 
     expect(handler).toBeInstanceOf(Function);
     expect(handler.length).toBe(3);
   });
 
-  it('function signature type validation - Request, SsrWorkerEnv, ExecutionContext args', async () => {
+  it("function signature type validation - Request, SsrWorkerEnv, ExecutionContext args", async () => {
     const handler = createSsrHandler();
 
-    const mockRequest = new Request('https://example.com/test');
+    const mockRequest = new Request("https://example.com/test");
     const mockEnv: SsrWorkerEnv = {};
     const mockCtx = {
       waitUntil: vi.fn(),
@@ -25,10 +25,10 @@ describe('createSsrHandler', () => {
     expect(result).toBeDefined();
   });
 
-  it('should route API requests through configured apiBindingName', async () => {
-    const handler = createSsrHandler({ apiBindingName: 'MY_API' });
+  it("should route API requests through configured apiBindingName", async () => {
+    const handler = createSsrHandler({ apiBindingName: "MY_API" });
     const apiResponse = new Response(JSON.stringify({ ok: true }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
     const customApi = {
       fetch: vi.fn().mockResolvedValue(apiResponse),
@@ -41,7 +41,7 @@ describe('createSsrHandler', () => {
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext;
 
-    const result = await handler(new Request('https://example.com/api/users'), env, mockCtx);
+    const result = await handler(new Request("https://example.com/api/users"), env, mockCtx);
 
     expect(customApi.fetch).toHaveBeenCalledTimes(1);
     expect(result).toBe(apiResponse);

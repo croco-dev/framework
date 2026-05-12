@@ -1,13 +1,16 @@
-import type { EventBus } from '@croco/events-core';
-import { Container } from '@croco/framework-context';
-import type { MeteringService } from '@croco/metering-core';
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
-import { LlmUsageRecordedEvent } from '../libs/events/LlmUsageRecordedEvent';
-import { LlmMeteringService } from '../libs/LlmMeteringService';
-import { PricingTable } from '../libs/PricingTable';
-import { LlmMeteringRecordFailedProblem, LlmQuotaExceededProblem } from '../libs/problems/LlmMeteringProblems';
+import type { EventBus } from "@croco/events-core";
+import { Container } from "@croco/framework-context";
+import type { MeteringService } from "@croco/metering-core";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { LlmUsageRecordedEvent } from "../libs/events/LlmUsageRecordedEvent";
+import { LlmMeteringService } from "../libs/LlmMeteringService";
+import { PricingTable } from "../libs/PricingTable";
+import {
+  LlmMeteringRecordFailedProblem,
+  LlmQuotaExceededProblem,
+} from "../libs/problems/LlmMeteringProblems";
 
-describe('LlmMeteringService', () => {
+describe("LlmMeteringService", () => {
   let meteringService!: LlmMeteringService;
   let mockMeteringCore!: MeteringService;
   let mockEventBus!: EventBus;
@@ -18,9 +21,9 @@ describe('LlmMeteringService', () => {
     // Mock MeteringService
     mockMeteringCore = {
       record: vi.fn().mockResolvedValue({
-        id: 'test-record-id',
-        tenantId: 'tenant-123',
-        meterId: 'llm.prompt_tokens',
+        id: "test-record-id",
+        tenantId: "tenant-123",
+        meterId: "llm.prompt_tokens",
         value: 100,
         timestamp: new Date(),
       }),
@@ -39,20 +42,20 @@ describe('LlmMeteringService', () => {
     });
   });
 
-  describe('recordUsage', () => {
-    it('should record prompt, completion, and cost meters', async () => {
+  describe("recordUsage", () => {
+    it("should record prompt, completion, and cost meters", async () => {
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'gpt-4',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "gpt-4",
+        provider: "openai",
         usage: {
           promptTokens: 100,
           completionTokens: 50,
           totalTokens: 150,
-          accuracy: 'EXACT' as const,
+          accuracy: "EXACT" as const,
         },
-        idempotencyKey: 'test-key-123',
-        metadata: { operationType: 'generate' },
+        idempotencyKey: "test-key-123",
+        metadata: { operationType: "generate" },
       };
 
       await meteringService.recordUsage(usageEvent);
@@ -63,53 +66,53 @@ describe('LlmMeteringService', () => {
       // Check prompt tokens record
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          tenantId: 'tenant-123',
-          meterId: 'llm.prompt_tokens',
+          tenantId: "tenant-123",
+          meterId: "llm.prompt_tokens",
           value: 100,
-          idempotencyKey: 'test-key-123:prompt',
+          idempotencyKey: "test-key-123:prompt",
           metadata: expect.objectContaining({
-            provider: 'openai',
-            model: 'gpt-4',
-            accuracy: 'EXACT',
-            operationType: 'generate',
+            provider: "openai",
+            model: "gpt-4",
+            accuracy: "EXACT",
+            operationType: "generate",
           }),
-        })
+        }),
       );
 
       // Check completion tokens record
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          tenantId: 'tenant-123',
-          meterId: 'llm.completion_tokens',
+          tenantId: "tenant-123",
+          meterId: "llm.completion_tokens",
           value: 50,
-          idempotencyKey: 'test-key-123:completion',
-        })
+          idempotencyKey: "test-key-123:completion",
+        }),
       );
 
       // Check cost record
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          tenantId: 'tenant-123',
-          meterId: 'llm.cost_usd',
-          idempotencyKey: 'test-key-123:cost',
-        })
+          tenantId: "tenant-123",
+          meterId: "llm.cost_usd",
+          idempotencyKey: "test-key-123:cost",
+        }),
       );
 
       // Verify event was published
       expect(mockEventBus.publish).toHaveBeenCalledWith(expect.any(LlmUsageRecordedEvent));
     });
 
-    it('should throw when any metering record fails', async () => {
+    it("should throw when any metering record fails", async () => {
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'gpt-4',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "gpt-4",
+        provider: "openai",
         usage: {
           promptTokens: 100,
           completionTokens: 50,
           totalTokens: 150,
         },
-        idempotencyKey: 'test-key-123',
+        idempotencyKey: "test-key-123",
       };
 
       // First call
@@ -120,51 +123,55 @@ describe('LlmMeteringService', () => {
 
       // Second call with same key - should handle gracefully
       // Simulate idempotency check failure for prompt tokens
-      (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error('Duplicate idempotency key'));
+      (mockMeteringCore.record as Mock).mockRejectedValueOnce(
+        new Error("Duplicate idempotency key"),
+      );
 
-      await expect(meteringService.recordUsage(usageEvent)).rejects.toThrow(LlmMeteringRecordFailedProblem);
+      await expect(meteringService.recordUsage(usageEvent)).rejects.toThrow(
+        LlmMeteringRecordFailedProblem,
+      );
     });
 
-    it('should expose failed meter ids when metering fails', async () => {
+    it("should expose failed meter ids when metering fails", async () => {
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'gpt-4',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "gpt-4",
+        provider: "openai",
         usage: {
           promptTokens: 100,
           completionTokens: 50,
           totalTokens: 150,
         },
-        idempotencyKey: 'test-key-123',
+        idempotencyKey: "test-key-123",
       };
 
       (mockMeteringCore.record as Mock)
-        .mockRejectedValueOnce(new Error('Duplicate idempotency key'))
-        .mockResolvedValueOnce({ id: 'completion', tenantId: 'tenant-123' })
-        .mockRejectedValueOnce(new Error('Cost persistence failed'));
+        .mockRejectedValueOnce(new Error("Duplicate idempotency key"))
+        .mockResolvedValueOnce({ id: "completion", tenantId: "tenant-123" })
+        .mockRejectedValueOnce(new Error("Cost persistence failed"));
 
       await expect(meteringService.recordUsage(usageEvent)).rejects.toMatchObject({
-        code: 'llm-metering/record-failed',
+        code: "llm-metering/record-failed",
         extensions: {
-          operation: 'generate',
-          meterIds: ['llm.prompt_tokens', 'llm.cost_usd'],
-          cause: 'Duplicate idempotency key',
+          operation: "generate",
+          meterIds: ["llm.prompt_tokens", "llm.cost_usd"],
+          cause: "Duplicate idempotency key",
         },
       });
     });
 
-    it('should handle estimated usage accuracy flag', async () => {
+    it("should handle estimated usage accuracy flag", async () => {
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'gpt-4',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "gpt-4",
+        provider: "openai",
         usage: {
           promptTokens: 100,
           completionTokens: 50,
           totalTokens: 150,
-          accuracy: 'ESTIMATED' as const,
+          accuracy: "ESTIMATED" as const,
         },
-        idempotencyKey: 'test-key-123',
+        idempotencyKey: "test-key-123",
       };
 
       await meteringService.recordUsage(usageEvent);
@@ -172,21 +179,21 @@ describe('LlmMeteringService', () => {
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: expect.objectContaining({
-            accuracy: 'ESTIMATED',
+            accuracy: "ESTIMATED",
           }),
-        })
+        }),
       );
     });
   });
 
-  describe('recordEmbeddingUsage', () => {
-    it('should record embedding tokens and cost', async () => {
+  describe("recordEmbeddingUsage", () => {
+    it("should record embedding tokens and cost", async () => {
       const embeddingEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'text-embedding-3-small',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "text-embedding-3-small",
+        provider: "openai",
         embeddingTokens: 100,
-        idempotencyKey: 'embed-key-123',
+        idempotencyKey: "embed-key-123",
       };
 
       await meteringService.recordEmbeddingUsage(embeddingEvent);
@@ -196,110 +203,112 @@ describe('LlmMeteringService', () => {
 
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          tenantId: 'tenant-123',
-          meterId: 'llm.embedding_tokens',
+          tenantId: "tenant-123",
+          meterId: "llm.embedding_tokens",
           value: 100,
-          idempotencyKey: 'embed-key-123:tokens',
-        })
+          idempotencyKey: "embed-key-123:tokens",
+        }),
       );
 
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          tenantId: 'tenant-123',
-          meterId: 'llm.cost_usd',
-          idempotencyKey: 'embed-key-123:cost',
-        })
+          tenantId: "tenant-123",
+          meterId: "llm.cost_usd",
+          idempotencyKey: "embed-key-123:cost",
+        }),
       );
     });
 
-    it('should throw when embedding metering fails', async () => {
-      (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error('Embedding metering failed'));
+    it("should throw when embedding metering fails", async () => {
+      (mockMeteringCore.record as Mock).mockRejectedValueOnce(
+        new Error("Embedding metering failed"),
+      );
 
       await expect(
         meteringService.recordEmbeddingUsage({
-          tenantId: 'tenant-123',
-          modelId: 'text-embedding-3-small',
-          provider: 'openai',
+          tenantId: "tenant-123",
+          modelId: "text-embedding-3-small",
+          provider: "openai",
           embeddingTokens: 100,
-          idempotencyKey: 'embed-key-123',
-        })
+          idempotencyKey: "embed-key-123",
+        }),
       ).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
   });
 
-  describe('checkQuota', () => {
-    it('should return true when quota is not exceeded', async () => {
+  describe("checkQuota", () => {
+    it("should return true when quota is not exceeded", async () => {
       (mockMeteringCore.getUsage as Mock).mockResolvedValue(1000);
 
-      const result = await meteringService.checkQuota('tenant-123', 'llm.prompt_tokens', 10000);
+      const result = await meteringService.checkQuota("tenant-123", "llm.prompt_tokens", 10000);
 
       expect(result).toBe(true);
       expect(mockMeteringCore.getUsage).toHaveBeenCalledWith({
-        tenantId: 'tenant-123',
-        meterId: 'llm.prompt_tokens',
-        period: 'billing_cycle',
+        tenantId: "tenant-123",
+        meterId: "llm.prompt_tokens",
+        period: "billing_cycle",
       });
     });
 
-    it('should throw LlmQuotaExceededProblem when quota exceeded', async () => {
+    it("should throw LlmQuotaExceededProblem when quota exceeded", async () => {
       (mockMeteringCore.getUsage as Mock).mockResolvedValue(15000);
 
-      await expect(meteringService.checkQuota('tenant-123', 'llm.prompt_tokens', 10000)).rejects.toThrow(
-        LlmQuotaExceededProblem
-      );
+      await expect(
+        meteringService.checkQuota("tenant-123", "llm.prompt_tokens", 10000),
+      ).rejects.toThrow(LlmQuotaExceededProblem);
     });
 
-    it('should not throw when quota is exactly at limit', async () => {
+    it("should not throw when quota is exactly at limit", async () => {
       (mockMeteringCore.getUsage as Mock).mockResolvedValue(10000);
 
-      const result = await meteringService.checkQuota('tenant-123', 'llm.prompt_tokens', 10000);
+      const result = await meteringService.checkQuota("tenant-123", "llm.prompt_tokens", 10000);
 
       expect(result).toBe(true);
     });
   });
 
-  describe('trackCost', () => {
-    it('should calculate cost using PricingTable and return cost record', async () => {
+  describe("trackCost", () => {
+    it("should calculate cost using PricingTable and return cost record", async () => {
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'gpt-4',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "gpt-4",
+        provider: "openai",
         usage: {
           promptTokens: 1000,
           completionTokens: 500,
           totalTokens: 1500,
         },
-        idempotencyKey: 'cost-key-123',
+        idempotencyKey: "cost-key-123",
       };
 
       const costRecord = await meteringService.trackCost(usageEvent);
 
       // Verify cost calculation: 1000 * 0.00003 + 500 * 0.00006 = 0.03 + 0.03 = 0.06
       expect(costRecord.costUsd).toBeCloseTo(0.06, 5);
-      expect(costRecord.modelId).toBe('gpt-4');
-      expect(costRecord.provider).toBe('openai');
+      expect(costRecord.modelId).toBe("gpt-4");
+      expect(costRecord.provider).toBe("openai");
 
       // Verify cost meter was recorded
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          tenantId: 'tenant-123',
-          meterId: 'llm.cost_usd',
+          tenantId: "tenant-123",
+          meterId: "llm.cost_usd",
           value: expect.any(Number),
-        })
+        }),
       );
     });
 
-    it('should use default pricing for unknown models', async () => {
+    it("should use default pricing for unknown models", async () => {
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'unknown-model',
-        provider: 'unknown-provider',
+        tenantId: "tenant-123",
+        modelId: "unknown-model",
+        provider: "unknown-provider",
         usage: {
           promptTokens: 1000,
           completionTokens: 500,
           totalTokens: 1500,
         },
-        idempotencyKey: 'cost-key-123',
+        idempotencyKey: "cost-key-123",
       };
 
       const costRecord = await meteringService.trackCost(usageEvent);
@@ -309,12 +318,12 @@ describe('LlmMeteringService', () => {
       expect(costRecord.costUsd).toBeGreaterThanOrEqual(0);
     });
 
-    it('should prefer an injected pricing table over the shared default table', async () => {
+    it("should prefer an injected pricing table over the shared default table", async () => {
       const pricingTable = new PricingTable();
-      pricingTable.setPrice('openai', 'gpt-4', {
+      pricingTable.setPrice("openai", "gpt-4", {
         inputPricePerToken: 1,
         outputPricePerToken: 2,
-        currency: 'USD',
+        currency: "USD",
       });
 
       const isolatedMeteringService = new LlmMeteringService({
@@ -324,15 +333,15 @@ describe('LlmMeteringService', () => {
       });
 
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'gpt-4',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "gpt-4",
+        provider: "openai",
         usage: {
           promptTokens: 2,
           completionTokens: 3,
           totalTokens: 5,
         },
-        idempotencyKey: 'cost-key-override',
+        idempotencyKey: "cost-key-override",
       };
 
       const costRecord = await isolatedMeteringService.trackCost(usageEvent);
@@ -340,22 +349,24 @@ describe('LlmMeteringService', () => {
       expect(costRecord.costUsd).toBe(8);
     });
 
-    it('should throw when cost metering fails', async () => {
+    it("should throw when cost metering fails", async () => {
       const usageEvent = {
-        tenantId: 'tenant-123',
-        modelId: 'gpt-4',
-        provider: 'openai',
+        tenantId: "tenant-123",
+        modelId: "gpt-4",
+        provider: "openai",
         usage: {
           promptTokens: 1000,
           completionTokens: 500,
           totalTokens: 1500,
         },
-        idempotencyKey: 'cost-key-123',
+        idempotencyKey: "cost-key-123",
       };
 
-      (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error('Cost metering failed'));
+      (mockMeteringCore.record as Mock).mockRejectedValueOnce(new Error("Cost metering failed"));
 
-      await expect(meteringService.trackCost(usageEvent)).rejects.toThrow(LlmMeteringRecordFailedProblem);
+      await expect(meteringService.trackCost(usageEvent)).rejects.toThrow(
+        LlmMeteringRecordFailedProblem,
+      );
     });
   });
 });

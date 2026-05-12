@@ -1,4 +1,4 @@
-import { Token } from '@croco/framework-context';
+import { Token } from "@croco/framework-context";
 
 /**
  * Batch loader interface for loading multiple values in a single batch.
@@ -79,4 +79,4 @@ export interface IBatchLoaderFactory {
  * Container.set(BATCH_LOADER_FACTORY_TOKEN, new MyBatchLoaderFactory());
  * ```
  */
-export const BATCH_LOADER_FACTORY_TOKEN = new Token<IBatchLoaderFactory>('IBatchLoaderFactory');
+export const BATCH_LOADER_FACTORY_TOKEN = new Token<IBatchLoaderFactory>("IBatchLoaderFactory");

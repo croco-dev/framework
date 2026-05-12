@@ -1,8 +1,8 @@
-import type { ApiKey } from '@croco/auth-core';
-import { ApiKeyCreationFailedProblem, ApiKeyStore } from '@croco/auth-core';
-import type { SQLWrapper } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
-import type { apiKeys as apiKeysSchema } from '../schema';
+import type { ApiKey } from "@croco/auth-core";
+import { ApiKeyCreationFailedProblem, ApiKeyStore } from "@croco/auth-core";
+import type { SQLWrapper } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import type { apiKeys as apiKeysSchema } from "../schema";
 
 interface DrizzleDb {
   insert: (table: unknown) => {
@@ -46,19 +46,19 @@ interface ApiKeyRow {
 }
 
 function assertApiKeyRow(row: unknown): row is ApiKeyRow {
-  if (!row || typeof row !== 'object') {
+  if (!row || typeof row !== "object") {
     return false;
   }
   const record = row as Record<string, unknown>;
   return (
-    typeof record.id === 'string' &&
-    typeof record.prefix === 'string' &&
-    typeof record.shortToken === 'string' &&
-    typeof record.hash === 'string' &&
+    typeof record.id === "string" &&
+    typeof record.prefix === "string" &&
+    typeof record.shortToken === "string" &&
+    typeof record.hash === "string" &&
     Array.isArray(record.permissions) &&
-    typeof record.name === 'string' &&
-    typeof record.tenantId === 'string' &&
-    typeof record.createdBy === 'string'
+    typeof record.name === "string" &&
+    typeof record.tenantId === "string" &&
+    typeof record.createdBy === "string"
   );
 }
 
@@ -90,7 +90,7 @@ export class DrizzleApiKeyStore extends ApiKeyStore {
    */
   constructor(
     private readonly db: DrizzleDb,
-    private readonly schema: { apiKeys: typeof apiKeysSchema }
+    private readonly schema: { apiKeys: typeof apiKeysSchema },
   ) {
     super();
   }
@@ -128,7 +128,7 @@ export class DrizzleApiKeyStore extends ApiKeyStore {
   /**
    * 새 API 키를 저장하고 저장된 값을 반환합니다.
    */
-  async save(key: Omit<ApiKey, 'id' | 'createdAt'>): Promise<ApiKey> {
+  async save(key: Omit<ApiKey, "id" | "createdAt">): Promise<ApiKey> {
     const [row] = await this.db
       .insert(this.schema.apiKeys)
       .values({
@@ -158,14 +158,20 @@ export class DrizzleApiKeyStore extends ApiKeyStore {
    * 마지막 사용 시각을 현재 시각으로 갱신합니다.
    */
   async updateLastUsed(id: string): Promise<void> {
-    await this.db.update(this.schema.apiKeys).set({ lastUsedAt: new Date() }).where(eq(this.schema.apiKeys.id, id));
+    await this.db
+      .update(this.schema.apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(this.schema.apiKeys.id, id));
   }
 
   /**
    * API 키를 폐기 처리합니다.
    */
   async revoke(id: string): Promise<void> {
-    await this.db.update(this.schema.apiKeys).set({ revokedAt: new Date() }).where(eq(this.schema.apiKeys.id, id));
+    await this.db
+      .update(this.schema.apiKeys)
+      .set({ revokedAt: new Date() })
+      .where(eq(this.schema.apiKeys.id, id));
   }
 
   /**

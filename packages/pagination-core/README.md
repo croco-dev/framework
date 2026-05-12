@@ -23,7 +23,7 @@ pnpm add @croco/pagination-core
 실시간 데이터 스트리밍이나 무한 스크롤에 적합합니다.
 
 ```typescript
-import { createCursorPage, encodeCursor, decodeCursor } from '@croco/pagination-core';
+import { createCursorPage, encodeCursor, decodeCursor } from "@croco/pagination-core";
 
 interface User {
   id: string;
@@ -31,9 +31,9 @@ interface User {
 }
 
 const users: User[] = [
-  { id: 'usr_01HXY...', name: 'Alice' },
-  { id: 'usr_01HXZ...', name: 'Bob' },
-  { id: 'usr_01HY0...', name: 'Charlie' },
+  { id: "usr_01HXY...", name: "Alice" },
+  { id: "usr_01HXZ...", name: "Bob" },
+  { id: "usr_01HY0...", name: "Charlie" },
 ];
 
 const page = createCursorPage(users, {
@@ -56,7 +56,7 @@ const fullPage = createCursorPage(users, {
   limit: 2,
   getId: (user) => user.id,
   hasPrevious: true,
-  prevCursor: 'eyJ2IjoxLCJpZCI6InVzcl8wMVhYLi4uIn0=',
+  prevCursor: "eyJ2IjoxLCJpZCI6InVzcl8wMVhYLi4uIn0=",
 });
 
 console.log(fullPage);
@@ -72,7 +72,7 @@ console.log(fullPage);
 커서 인코딩/디코딩:
 
 ```typescript
-const cursor = encodeCursor({ v: 1, id: 'usr_01HXY...' });
+const cursor = encodeCursor({ v: 1, id: "usr_01HXY..." });
 console.log(cursor); // 'eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9'
 
 const payload = decodeCursor(cursor);
@@ -108,16 +108,16 @@ console.log(page);
 쿼리 스트링을 페이지네이션 파라미터로 변환합니다.
 
 ```typescript
-import { parsePaginationParams } from '@croco/pagination-core';
+import { parsePaginationParams } from "@croco/pagination-core";
 
 const query = {
-  cursor: 'eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9',
-  limit: '20',
+  cursor: "eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9",
+  limit: "20",
 };
 
 const params = parsePaginationParams(query);
 
-if (params.mode === 'cursor') {
+if (params.mode === "cursor") {
   console.log(params.cursor); // 'eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9'
   console.log(params.limit); // 20
 }
@@ -127,13 +127,13 @@ if (params.mode === 'cursor') {
 
 ```typescript
 const query = {
-  offset: '40',
-  limit: '20',
+  offset: "40",
+  limit: "20",
 };
 
 const params = parsePaginationParams(query);
 
-if (params.mode === 'offset') {
+if (params.mode === "offset") {
   console.log(params.offset); // 40
   console.log(params.limit); // 20
 }
@@ -142,12 +142,12 @@ if (params.mode === 'offset') {
 ### Zod 스키마 검증
 
 ```typescript
-import { PaginationParamsSchema, CursorParamsSchema } from '@croco/pagination-core';
+import { PaginationParamsSchema, CursorParamsSchema } from "@croco/pagination-core";
 
 const query = {
-  mode: 'cursor',
-  cursor: 'eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9',
-  limit: '25',
+  mode: "cursor",
+  cursor: "eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9",
+  limit: "25",
 };
 
 const result = PaginationParamsSchema.safeParse(query);
@@ -162,21 +162,22 @@ if (result.success) {
 ### REST API 예시 (Hono)
 
 ```typescript
-import { Hono } from 'hono';
-import { parsePaginationParams, createCursorPage } from '@croco/pagination-core';
-import { ConflictingPaginationProblem } from '@croco/pagination-core';
+import { Hono } from "hono";
+import { parsePaginationParams, createCursorPage } from "@croco/pagination-core";
+import { ConflictingPaginationProblem } from "@croco/pagination-core";
 
 const app = new Hono();
 
-app.get('/users', async (c) => {
+app.get("/users", async (c) => {
   const query = c.req.query();
   const params = parsePaginationParams(query);
 
   const users = await db.users.findMany({
     take: params.limit + 1,
-    cursor: params.mode === 'cursor' && params.cursor
-      ? { id: decodeCursor(params.cursor).id }
-      : undefined,
+    cursor:
+      params.mode === "cursor" && params.cursor
+        ? { id: decodeCursor(params.cursor).id }
+        : undefined,
   });
 
   const page = createCursorPage(users, {
@@ -195,12 +196,14 @@ app.get('/users', async (c) => {
 커서 기반 페이지를 생성합니다.
 
 **옵션:**
+
 - `limit: number` - 페이지당 항목 수
 - `getId: (item: T) => string` - 항목에서 ID 추출 함수
 - `hasPrevious?: boolean` - 이전 페이지 존재 여부
 - `prevCursor?: string | null` - 이전 커서
 
 **반환값:**
+
 ```typescript
 {
   data: T[];
@@ -210,6 +213,7 @@ app.get('/users', async (c) => {
 ```
 
 양방향 모드 사용 시:
+
 ```typescript
 {
   data: T[];
@@ -225,11 +229,13 @@ app.get('/users', async (c) => {
 오프셋 기반 페이지를 생성합니다.
 
 **옵션:**
+
 - `total: number` - 전체 항목 수
 - `limit: number` - 페이지당 항목 수
 - `offset: number` - 건너뛸 항목 수
 
 **반환값:**
+
 ```typescript
 {
   data: T[];
@@ -244,7 +250,7 @@ app.get('/users', async (c) => {
 커서 페이로드를 Base64로 인코딩합니다.
 
 ```typescript
-encodeCursor({ v: 1, id: 'usr_01HXY...' })
+encodeCursor({ v: 1, id: "usr_01HXY..." });
 // 'eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9'
 ```
 
@@ -253,7 +259,7 @@ encodeCursor({ v: 1, id: 'usr_01HXY...' })
 Base64 커서를 디코딩합니다. 유효하지 않은 커서면 `InvalidCursorProblem`을 던집니다.
 
 ```typescript
-decodeCursor('eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9')
+decodeCursor("eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9");
 // { v: 1, id: 'usr_01HXY...' }
 ```
 
@@ -262,12 +268,14 @@ decodeCursor('eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9')
 쿼리 스트링을 페이지네이션 파라미터로 파싱합니다.
 
 **기본값:**
+
 - `limit`: 20 (최소 1, 최대 100)
 - `offset`: 0
 - `cursor`: undefined
 - `mode`: 자동 감지 (`cursor` 또는 `offset` 둘 중 하나만 사용)
 
 **에러:**
+
 - `cursor`와 `offset`을 동시에 사용하면 `ConflictingPaginationProblem`
 
 ## Zod 스키마
@@ -280,7 +288,7 @@ import {
   OffsetParamsSchema,
   PaginationParamsSchema,
   CursorPayloadSchema,
-} from '@croco/pagination-core';
+} from "@croco/pagination-core";
 ```
 
 ## 타입
@@ -289,7 +297,7 @@ import {
 type CursorParams = {
   cursor?: string;
   limit: number;
-  direction?: 'forward' | 'backward';
+  direction?: "forward" | "backward";
 };
 
 type OffsetParams = {
@@ -297,9 +305,7 @@ type OffsetParams = {
   limit: number;
 };
 
-type PaginationParams =
-  | { mode: 'cursor' } & CursorParams
-  | { mode: 'offset' } & OffsetParams;
+type PaginationParams = ({ mode: "cursor" } & CursorParams) | ({ mode: "offset" } & OffsetParams);
 
 type CursorPage<T> = {
   data: T[];

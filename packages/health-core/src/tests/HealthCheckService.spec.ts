@@ -1,20 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { HealthCheckService } from '../libs/HealthCheckService';
-import type { HealthIndicator, HealthIndicatorResult, ReadinessIndicator } from '../libs/HealthIndicator';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HealthCheckService } from "../libs/HealthCheckService";
+import type {
+  HealthIndicator,
+  HealthIndicatorResult,
+  ReadinessIndicator,
+} from "../libs/HealthIndicator";
 
-describe('HealthCheckService', () => {
+describe("HealthCheckService", () => {
   let service!: HealthCheckService;
 
   beforeEach(() => {
     service = new HealthCheckService();
   });
 
-  it('should return up status when all indicators are up', async () => {
+  it("should return up status when all indicators are up", async () => {
     const indicator1: HealthIndicator = {
-      check: vi.fn().mockResolvedValue({ name: 'indicator1', status: 'up' }),
+      check: vi.fn().mockResolvedValue({ name: "indicator1", status: "up" }),
     };
     const indicator2: HealthIndicator = {
-      check: vi.fn().mockResolvedValue({ name: 'indicator2', status: 'up' }),
+      check: vi.fn().mockResolvedValue({ name: "indicator2", status: "up" }),
     };
 
     service.register(indicator1);
@@ -22,21 +26,21 @@ describe('HealthCheckService', () => {
 
     const result = await service.check();
 
-    expect(result.status).toBe('up');
+    expect(result.status).toBe("up");
     expect(result.results).toHaveLength(2);
-    expect(result.results[0].status).toBe('up');
-    expect(result.results[1].status).toBe('up');
+    expect(result.results[0].status).toBe("up");
+    expect(result.results[1].status).toBe("up");
   });
 
-  it('should return down status when any indicator is down', async () => {
+  it("should return down status when any indicator is down", async () => {
     const indicator1: HealthIndicator = {
-      check: vi.fn().mockResolvedValue({ name: 'indicator1', status: 'up' }),
+      check: vi.fn().mockResolvedValue({ name: "indicator1", status: "up" }),
     };
     const indicator2: HealthIndicator = {
       check: vi.fn().mockResolvedValue({
-        name: 'indicator2',
-        status: 'down',
-        details: { error: 'Connection failed', message: 'Unable to connect to database' },
+        name: "indicator2",
+        status: "down",
+        details: { error: "Connection failed", message: "Unable to connect to database" },
       }),
     };
 
@@ -45,48 +49,51 @@ describe('HealthCheckService', () => {
 
     const result = await service.check();
 
-    expect(result.status).toBe('down');
+    expect(result.status).toBe("down");
     expect(result.results).toHaveLength(2);
-    expect(result.results[1].status).toBe('down');
-    expect(result.results[1].details).toEqual({ error: 'Connection failed', message: 'Unable to connect to database' });
+    expect(result.results[1].status).toBe("down");
+    expect(result.results[1].details).toEqual({
+      error: "Connection failed",
+      message: "Unable to connect to database",
+    });
   });
 
-  it('should return down status when indicator throws error', async () => {
+  it("should return down status when indicator throws error", async () => {
     const indicator: HealthIndicator = {
-      check: vi.fn().mockRejectedValue(new Error('Connection timeout')),
+      check: vi.fn().mockRejectedValue(new Error("Connection timeout")),
     };
 
     service.register(indicator);
 
     const result = await service.check();
 
-    expect(result.status).toBe('down');
+    expect(result.status).toBe("down");
     expect(result.results).toHaveLength(1);
-    expect(result.results[0].status).toBe('down');
-    expect(result.results[0].details?.error).toBe('Connection timeout');
-    expect(result.results[0].details).toHaveProperty('error');
+    expect(result.results[0].status).toBe("down");
+    expect(result.results[0].details?.error).toBe("Connection timeout");
+    expect(result.results[0].details).toHaveProperty("error");
   });
 
-  it('should return empty results when no indicators registered', async () => {
+  it("should return empty results when no indicators registered", async () => {
     const result = await service.check();
 
-    expect(result.status).toBe('up');
+    expect(result.status).toBe("up");
     expect(result.results).toHaveLength(0);
   });
 
-  it('should handle timeout for slow indicators', async () => {
+  it("should handle timeout for slow indicators", async () => {
     let didAbort = false;
 
     const slowIndicator: HealthIndicator = {
       check: vi.fn().mockImplementation(
         (signal?: AbortSignal) =>
           new Promise<HealthIndicatorResult>((resolve) => {
-            signal?.addEventListener('abort', () => {
+            signal?.addEventListener("abort", () => {
               didAbort = true;
             });
 
-            setTimeout(() => resolve({ name: 'slow', status: 'up' }), 10000);
-          })
+            setTimeout(() => resolve({ name: "slow", status: "up" }), 10000);
+          }),
       ),
     };
 
@@ -95,21 +102,23 @@ describe('HealthCheckService', () => {
 
     const result = await fastService.check();
 
-    expect(result.status).toBe('down');
-    expect(result.results[0].status).toBe('down');
-    expect(result.results[0].details?.error).toContain('timeout');
+    expect(result.status).toBe("down");
+    expect(result.results[0].status).toBe("down");
+    expect(result.results[0].details?.error).toContain("timeout");
     expect(didAbort).toBe(true);
   });
 
-  it('should use default timeout of 5000ms', () => {
+  it("should use default timeout of 5000ms", () => {
     const defaultService = new HealthCheckService();
     expect(defaultService).toBeInstanceOf(HealthCheckService);
   });
 
-  it('should include indicator name in timeout error', async () => {
+  it("should include indicator name in timeout error", async () => {
     class CustomIndicator implements HealthIndicator {
       async check(_signal?: AbortSignal): Promise<HealthIndicatorResult> {
-        return new Promise((resolve) => setTimeout(() => resolve({ name: 'custom', status: 'up' }), 10000));
+        return new Promise((resolve) =>
+          setTimeout(() => resolve({ name: "custom", status: "up" }), 10000),
+        );
       }
     }
 
@@ -118,14 +127,14 @@ describe('HealthCheckService', () => {
 
     const result = await fastService.check();
 
-    expect(result.results[0].details?.error).toContain('CustomIndicator');
+    expect(result.results[0].details?.error).toContain("CustomIndicator");
   });
 
-  it('should support typed success details', async () => {
+  it("should support typed success details", async () => {
     const indicator: HealthIndicator = {
       check: vi.fn().mockResolvedValue({
-        name: 'database',
-        status: 'up',
+        name: "database",
+        status: "up",
         details: { latency: 15, connections: 5 },
       }),
     };
@@ -134,19 +143,19 @@ describe('HealthCheckService', () => {
 
     const result = await service.check();
 
-    expect(result.status).toBe('up');
-    if (result.results[0].details && 'latency' in result.results[0].details) {
+    expect(result.status).toBe("up");
+    if (result.results[0].details && "latency" in result.results[0].details) {
       expect(result.results[0].details.latency).toBe(15);
       expect(result.results[0].details.connections).toBe(5);
     }
   });
 
-  it('should support typed error details with code', async () => {
+  it("should support typed error details with code", async () => {
     const indicator: HealthIndicator = {
       check: vi.fn().mockResolvedValue({
-        name: 'api',
-        status: 'down',
-        details: { error: 'Service unavailable', code: '503', message: 'API rate limit exceeded' },
+        name: "api",
+        status: "down",
+        details: { error: "Service unavailable", code: "503", message: "API rate limit exceeded" },
       }),
     };
 
@@ -154,26 +163,26 @@ describe('HealthCheckService', () => {
 
     const result = await service.check();
 
-    expect(result.status).toBe('down');
-    expect(result.results[0].details?.error).toBe('Service unavailable');
-    expect(result.results[0].details?.code).toBe('503');
-    expect(result.results[0].details?.message).toBe('API rate limit exceeded');
+    expect(result.status).toBe("down");
+    expect(result.results[0].details?.error).toBe("Service unavailable");
+    expect(result.results[0].details?.code).toBe("503");
+    expect(result.results[0].details?.message).toBe("API rate limit exceeded");
   });
 
-  it('should handle non-Error objects in error details', async () => {
+  it("should handle non-Error objects in error details", async () => {
     const indicator: HealthIndicator = {
-      check: vi.fn().mockRejectedValue('String error message'),
+      check: vi.fn().mockRejectedValue("String error message"),
     };
 
     service.register(indicator);
 
     const result = await service.check();
 
-    expect(result.status).toBe('down');
-    expect(result.results[0].details?.error).toBe('String error message');
+    expect(result.status).toBe("down");
+    expect(result.results[0].details?.error).toBe("String error message");
   });
 
-  it('should handle null error objects', async () => {
+  it("should handle null error objects", async () => {
     const indicator: HealthIndicator = {
       check: vi.fn().mockRejectedValue(null),
     };
@@ -182,15 +191,15 @@ describe('HealthCheckService', () => {
 
     const result = await service.check();
 
-    expect(result.status).toBe('down');
-    expect(result.results[0].details?.error).toBe('null');
+    expect(result.status).toBe("down");
+    expect(result.results[0].details?.error).toBe("null");
   });
 
-  it('should clear timeout when indicator completes quickly', async () => {
+  it("should clear timeout when indicator completes quickly", async () => {
     const fastIndicator: HealthIndicator = {
       check: vi.fn().mockResolvedValue({
-        name: 'fast',
-        status: 'up',
+        name: "fast",
+        status: "up",
         details: { responseTime: 1 },
       }),
     };
@@ -200,20 +209,20 @@ describe('HealthCheckService', () => {
 
     const result = await fastService.check();
 
-    expect(result.status).toBe('up');
-    expect(result.results[0].status).toBe('up');
+    expect(result.status).toBe("up");
+    expect(result.results[0].status).toBe("up");
   });
 
-  describe('liveness', () => {
-    it('should return true when process is alive', () => {
+  describe("liveness", () => {
+    it("should return true when process is alive", () => {
       const service = new HealthCheckService();
       expect(service.isLive()).toBe(true);
     });
 
-    it('should always return true regardless of indicators', () => {
+    it("should always return true regardless of indicators", () => {
       const service = new HealthCheckService();
       const indicator: HealthIndicator = {
-        check: vi.fn().mockRejectedValue(new Error('Failed')),
+        check: vi.fn().mockRejectedValue(new Error("Failed")),
       };
       service.register(indicator);
 
@@ -221,18 +230,18 @@ describe('HealthCheckService', () => {
     });
   });
 
-  describe('readiness', () => {
-    it('should return true when no readiness indicators registered', async () => {
+  describe("readiness", () => {
+    it("should return true when no readiness indicators registered", async () => {
       const service = new HealthCheckService();
       const isReady = await service.isReady();
       expect(isReady).toBe(true);
     });
 
-    it('should return true when all readiness indicators are up', async () => {
+    it("should return true when all readiness indicators are up", async () => {
       const service = new HealthCheckService();
       const readinessIndicator: ReadinessIndicator = {
-        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
-        isReady: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        check: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
+        isReady: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
       };
 
       service.registerReadiness(readinessIndicator);
@@ -242,14 +251,14 @@ describe('HealthCheckService', () => {
       expect(readinessIndicator.isReady).toHaveBeenCalled();
     });
 
-    it('should return false when any readiness indicator is down', async () => {
+    it("should return false when any readiness indicator is down", async () => {
       const service = new HealthCheckService();
       const readinessIndicator: ReadinessIndicator = {
-        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        check: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
         isReady: vi.fn().mockResolvedValue({
-          name: 'db',
-          status: 'down',
-          details: { error: 'Connection failed' },
+          name: "db",
+          status: "down",
+          details: { error: "Connection failed" },
         }),
       };
 
@@ -259,11 +268,11 @@ describe('HealthCheckService', () => {
       expect(isReady).toBe(false);
     });
 
-    it('should return false when readiness indicator throws error', async () => {
+    it("should return false when readiness indicator throws error", async () => {
       const service = new HealthCheckService();
       const readinessIndicator: ReadinessIndicator = {
-        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
-        isReady: vi.fn().mockRejectedValue(new Error('Timeout')),
+        check: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
+        isReady: vi.fn().mockRejectedValue(new Error("Timeout")),
       };
 
       service.registerReadiness(readinessIndicator);
@@ -272,15 +281,15 @@ describe('HealthCheckService', () => {
       expect(isReady).toBe(false);
     });
 
-    it('should handle multiple readiness indicators', async () => {
+    it("should handle multiple readiness indicators", async () => {
       const service = new HealthCheckService();
       const indicator1: ReadinessIndicator = {
-        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
-        isReady: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        check: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
+        isReady: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
       };
       const indicator2: ReadinessIndicator = {
-        check: vi.fn().mockResolvedValue({ name: 'redis', status: 'up' }),
-        isReady: vi.fn().mockResolvedValue({ name: 'redis', status: 'up' }),
+        check: vi.fn().mockResolvedValue({ name: "redis", status: "up" }),
+        isReady: vi.fn().mockResolvedValue({ name: "redis", status: "up" }),
       };
 
       service.registerReadiness(indicator1);
@@ -292,14 +301,17 @@ describe('HealthCheckService', () => {
       expect(indicator2.isReady).toHaveBeenCalled();
     });
 
-    it('should use timeout for readiness checks', async () => {
+    it("should use timeout for readiness checks", async () => {
       const service = new HealthCheckService({ timeout: 100 });
       const slowIndicator: ReadinessIndicator = {
-        check: vi.fn().mockResolvedValue({ name: 'db', status: 'up' }),
+        check: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
         isReady: vi
           .fn()
           .mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve({ name: 'db', status: 'up' }), 10000))
+            () =>
+              new Promise((resolve) =>
+                setTimeout(() => resolve({ name: "db", status: "up" }), 10000),
+              ),
           ),
       };
 

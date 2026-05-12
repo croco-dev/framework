@@ -1,6 +1,6 @@
-import type { LlmModel } from './LlmModel';
-import { LlmRegistry } from './LlmRegistry';
-import { ModelNotFoundError } from './problems/LlmServiceProblem';
+import type { LlmModel } from "./LlmModel";
+import { LlmRegistry } from "./LlmRegistry";
+import { ModelNotFoundError } from "./problems/LlmServiceProblem";
 
 export class InMemoryLlmRegistry extends LlmRegistry {
   private providers = new Map<string, () => LlmModel>();

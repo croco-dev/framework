@@ -21,19 +21,19 @@ pnpm add @croco/framework-config
 ### 1. ConfigService 사용
 
 ```typescript
-import { ConfigService } from '@croco/framework-config';
-import { Component } from '@croco/framework-context';
+import { ConfigService } from "@croco/framework-config";
+import { Component } from "@croco/framework-context";
 
 @Component()
 class MyService {
   constructor(private readonly config: ConfigService) {}
 
   async execute() {
-    const nodeEnv = this.config.get('NODE_ENV');
-    const port = this.config.get('PORT');
+    const nodeEnv = this.config.get("NODE_ENV");
+    const port = this.config.get("PORT");
 
     if (this.config.isProduction) {
-      console.log('Production mode');
+      console.log("Production mode");
     }
   }
 }
@@ -42,16 +42,20 @@ class MyService {
 ### 2. @ConfigSchema 데코레이터 사용
 
 ```typescript
-import { ConfigSchema, bootstrapConfig } from '@croco/framework-config';
-import { z } from 'zod';
+import { ConfigSchema, bootstrapConfig } from "@croco/framework-config";
+import { z } from "zod";
 
-@ConfigSchema(z.object({
-  API_KEY: z.string().min(1),
-  TIMEOUT: z.coerce.number().default(5000),
-}))
-
+@ConfigSchema(
+  z.object({
+    API_KEY: z.string().min(1),
+    TIMEOUT: z.coerce.number().default(5000),
+  }),
+)
 class AppConfig {
-  constructor(public readonly API_KEY: string, public readonly TIMEOUT: number) {}
+  constructor(
+    public readonly API_KEY: string,
+    public readonly TIMEOUT: number,
+  ) {}
 }
 
 const config = bootstrapConfig<AppConfig>(AppConfig);
@@ -60,8 +64,8 @@ const config = bootstrapConfig<AppConfig>(AppConfig);
 ### 3. 직접 validateConfig 사용
 
 ```typescript
-import { validateConfig } from '@croco/framework-config';
-import { z } from 'zod';
+import { validateConfig } from "@croco/framework-config";
+import { z } from "zod";
 
 const schema = z.object({
   DATABASE_URL: z.string().url(),
@@ -79,7 +83,7 @@ env.REDIS_URL;
 사전 정의된 프리셋을 사용하여 환경 변수를 구성합니다.
 
 ```typescript
-import { env } from '@croco/framework-config/core';
+import { env } from "@croco/framework-config/core";
 
 env.NODE_ENV;
 env.PORT;
@@ -90,12 +94,12 @@ env.R2_ACCOUNT_ID;
 
 ## 프리셋 목록
 
-| 프리셋 | 환경 변수 | 설명 |
-|--------|-----------|------|
-| `app` | `NODE_ENV`, `PORT`, `LOG_LEVEL` | 애플리케이션 기본 설정 |
-| `database` | `DATABASE_URL` | 데이터베이스 연결 |
-| `redis` | `REDIS_URL`, `REDIS_TOKEN` | Redis 연결 |
-| `storage` | `R2_*` | Cloudflare R2 스토리지 |
+| 프리셋     | 환경 변수                       | 설명                   |
+| ---------- | ------------------------------- | ---------------------- |
+| `app`      | `NODE_ENV`, `PORT`, `LOG_LEVEL` | 애플리케이션 기본 설정 |
+| `database` | `DATABASE_URL`                  | 데이터베이스 연결      |
+| `redis`    | `REDIS_URL`, `REDIS_TOKEN`      | Redis 연결             |
+| `storage`  | `R2_*`                          | Cloudflare R2 스토리지 |
 
 ## 환경 변수 검증 건너뛰기
 
@@ -110,13 +114,13 @@ SKIP_ENV_VALIDATION=true
 유효하지 않은 환경 변수가 감지되면 `ConfigValidationProblem`이 발생합니다.
 
 ```typescript
-import { ConfigValidationProblem } from '@croco/framework-config';
+import { ConfigValidationProblem } from "@croco/framework-config";
 
 try {
   validateConfig(schema);
 } catch (error) {
   if (error instanceof ConfigValidationProblem) {
-    console.error('환경 변수 검증 실패:', error.details);
+    console.error("환경 변수 검증 실패:", error.details);
   }
 }
 ```
@@ -128,8 +132,8 @@ try {
 ```typescript
 const config = validateConfig(schema);
 
-config.NODE_ENV;       // string
-config.PORT;           // number
-config.API_KEY;        // string
-config.MISSING_VAR;    // TypeScript 에러
+config.NODE_ENV; // string
+config.PORT; // number
+config.API_KEY; // string
+config.MISSING_VAR; // TypeScript 에러
 ```

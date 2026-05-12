@@ -1,16 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { EVENT_METADATA_KEY, OnEvent } from '../libs/decorators/OnEvent';
-import { TriggerRegistry } from '../libs/TriggerRegistry';
-import type { EventTriggerMetadata } from '../libs/types';
+import { beforeEach, describe, expect, it } from "vitest";
+import { EVENT_METADATA_KEY, OnEvent } from "../libs/decorators/OnEvent";
+import { TriggerRegistry } from "../libs/TriggerRegistry";
+import type { EventTriggerMetadata } from "../libs/types";
 
-describe('@OnEvent decorator', () => {
+describe("@OnEvent decorator", () => {
   beforeEach(() => {
     TriggerRegistry.getInstance();
   });
 
-  it('should register event trigger metadata', () => {
+  it("should register event trigger metadata", () => {
     class TestEventHandler {
-      @OnEvent('OrderPlaced')
+      @OnEvent("OrderPlaced")
       async handleOrderPlaced(event: unknown): Promise<void> {}
     }
 
@@ -18,16 +18,16 @@ describe('@OnEvent decorator', () => {
     expect(triggers.size).toBe(1);
 
     const [metadata] = Array.from(triggers.values());
-    expect(metadata.type).toBe('event');
-    expect((metadata as EventTriggerMetadata).event).toBe('OrderPlaced');
-    expect(metadata.methodName).toBe('handleOrderPlaced');
+    expect(metadata.type).toBe("event");
+    expect((metadata as EventTriggerMetadata).event).toBe("OrderPlaced");
+    expect(metadata.methodName).toBe("handleOrderPlaced");
   });
 
-  it('should store custom options', () => {
+  it("should store custom options", () => {
     class TestEventHandler {
-      @OnEvent('PaymentFailed', {
-        name: 'payment-failure-handler',
-        description: 'Handle payment failure events',
+      @OnEvent("PaymentFailed", {
+        name: "payment-failure-handler",
+        description: "Handle payment failure events",
         enabled: true,
         concurrency: 5,
         timeout: 10000,
@@ -39,23 +39,23 @@ describe('@OnEvent decorator', () => {
     const [metadata] = Array.from(triggers.values());
 
     expect(metadata.options).toEqual({
-      name: 'payment-failure-handler',
-      description: 'Handle payment failure events',
+      name: "payment-failure-handler",
+      description: "Handle payment failure events",
       enabled: true,
       concurrency: 5,
       timeout: 10000,
     });
   });
 
-  it('should handle multiple event handlers on same class', () => {
+  it("should handle multiple event handlers on same class", () => {
     class MultiEventHandler {
-      @OnEvent('OrderPlaced', { name: 'order-placed' })
+      @OnEvent("OrderPlaced", { name: "order-placed" })
       async onOrderPlaced(): Promise<void> {}
 
-      @OnEvent('OrderCancelled', { name: 'order-cancelled' })
+      @OnEvent("OrderCancelled", { name: "order-cancelled" })
       async onOrderCancelled(): Promise<void> {}
 
-      @OnEvent('OrderShipped', { name: 'order-shipped' })
+      @OnEvent("OrderShipped", { name: "order-shipped" })
       async onOrderShipped(): Promise<void> {}
     }
 
@@ -63,17 +63,17 @@ describe('@OnEvent decorator', () => {
     expect(triggers.size).toBe(3);
 
     const events = Array.from(triggers.values()).map((m) => (m as EventTriggerMetadata).event);
-    expect(events).toContain('OrderPlaced');
-    expect(events).toContain('OrderCancelled');
-    expect(events).toContain('OrderShipped');
+    expect(events).toContain("OrderPlaced");
+    expect(events).toContain("OrderCancelled");
+    expect(events).toContain("OrderShipped");
   });
 
-  it('should handle same event with multiple handlers', () => {
+  it("should handle same event with multiple handlers", () => {
     class MultiHandlerSameEvent {
-      @OnEvent('UserCreated', { name: 'send-welcome-email' })
+      @OnEvent("UserCreated", { name: "send-welcome-email" })
       async sendWelcomeEmail(): Promise<void> {}
 
-      @OnEvent('UserCreated', { name: 'create-user-profile' })
+      @OnEvent("UserCreated", { name: "create-user-profile" })
       async createUserProfile(): Promise<void> {}
     }
 
@@ -81,14 +81,14 @@ describe('@OnEvent decorator', () => {
     expect(triggers.size).toBe(2);
 
     const events = Array.from(triggers.values()).map((m) => (m as EventTriggerMetadata).event);
-    expect(events.filter((e) => e === 'UserCreated')).toHaveLength(2);
+    expect(events.filter((e) => e === "UserCreated")).toHaveLength(2);
   });
 
-  it('should support symbol method names', () => {
-    const methodSymbol = Symbol('eventHandler');
+  it("should support symbol method names", () => {
+    const methodSymbol = Symbol("eventHandler");
 
     class TestEventHandler {
-      @OnEvent('CustomEvent', { name: 'symbol-handler' })
+      @OnEvent("CustomEvent", { name: "symbol-handler" })
       async [methodSymbol](event: unknown): Promise<void> {}
     }
 
@@ -96,31 +96,37 @@ describe('@OnEvent decorator', () => {
     expect(triggers.has(methodSymbol)).toBe(true);
 
     const metadata = triggers.get(methodSymbol);
-    expect(metadata?.type).toBe('event');
+    expect(metadata?.type).toBe("event");
     expect(metadata?.methodName).toBe(methodSymbol);
   });
 
-  it('should filter triggers by event type', () => {
+  it("should filter triggers by event type", () => {
     class MixedEventHandler {
-      @OnEvent('EventA')
+      @OnEvent("EventA")
       async handleEventA(): Promise<void> {}
 
-      @OnEvent('EventB')
+      @OnEvent("EventB")
       async handleEventB(): Promise<void> {}
     }
 
-    const eventTriggers = TriggerRegistry.getInstance().getTriggersByType(MixedEventHandler.prototype, 'event');
+    const eventTriggers = TriggerRegistry.getInstance().getTriggersByType(
+      MixedEventHandler.prototype,
+      "event",
+    );
     expect(eventTriggers.size).toBe(2);
 
-    const cronTriggers = TriggerRegistry.getInstance().getTriggersByType(MixedEventHandler.prototype, 'cron');
+    const cronTriggers = TriggerRegistry.getInstance().getTriggersByType(
+      MixedEventHandler.prototype,
+      "cron",
+    );
     expect(cronTriggers.size).toBe(0);
   });
 
-  it('should preserve original method behavior', async () => {
+  it("should preserve original method behavior", async () => {
     let callCount = 0;
 
     class TestEventHandler {
-      @OnEvent('TestEvent')
+      @OnEvent("TestEvent")
       async handleEvent(payload: string): Promise<string> {
         callCount++;
         return `processed: ${payload}`;
@@ -128,19 +134,19 @@ describe('@OnEvent decorator', () => {
     }
 
     const handler = new TestEventHandler();
-    const result = await handler.handleEvent('test-payload');
+    const result = await handler.handleEvent("test-payload");
 
-    expect(result).toBe('processed: test-payload');
+    expect(result).toBe("processed: test-payload");
     expect(callCount).toBe(1);
   });
 
-  it('should export EVENT_METADATA_KEY symbol', () => {
-    expect(typeof EVENT_METADATA_KEY).toBe('symbol');
+  it("should export EVENT_METADATA_KEY symbol", () => {
+    expect(typeof EVENT_METADATA_KEY).toBe("symbol");
   });
 
-  it('should support default options (empty object)', () => {
+  it("should support default options (empty object)", () => {
     class TestEventHandler {
-      @OnEvent('SimpleEvent')
+      @OnEvent("SimpleEvent")
       async handle(): Promise<void> {}
     }
 

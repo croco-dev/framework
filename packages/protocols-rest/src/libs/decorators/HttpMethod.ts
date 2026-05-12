@@ -1,11 +1,11 @@
-import 'reflect-metadata';
-import { HttpMethod as HttpMethodEnum, REST_ROUTES_KEY } from '../constants';
-import type { RouteMetadata } from '../types';
+import "reflect-metadata";
+import { HttpMethod as HttpMethodEnum, REST_ROUTES_KEY } from "../constants";
+import type { RouteMetadata } from "../types";
 
 function createMethodDecorator(method: HttpMethodEnum) {
-  return (path: string = ''): MethodDecorator => {
+  return (path: string = ""): MethodDecorator => {
     return (target: Object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+      const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
       const existingRoutes: RouteMetadata[] =
         Reflect.getOwnMetadata(REST_ROUTES_KEY, target.constructor) ??
@@ -14,11 +14,15 @@ function createMethodDecorator(method: HttpMethodEnum) {
 
       const routeMetadata: RouteMetadata = {
         method,
-        path: normalizedPath === '/' ? '' : normalizedPath,
+        path: normalizedPath === "/" ? "" : normalizedPath,
         methodName: propertyKey,
       };
 
-      Reflect.defineMetadata(REST_ROUTES_KEY, [...existingRoutes, routeMetadata], target.constructor);
+      Reflect.defineMetadata(
+        REST_ROUTES_KEY,
+        [...existingRoutes, routeMetadata],
+        target.constructor,
+      );
 
       return descriptor;
     };

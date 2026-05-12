@@ -11,7 +11,7 @@ pnpm add @croco/metrics-core
 ## 사용법
 
 ```ts
-import { MetricsEngine } from '@croco/metrics-core';
+import { MetricsEngine } from "@croco/metrics-core";
 
 const engine = new MetricsEngine(
   mrrCalculator,
@@ -19,16 +19,16 @@ const engine = new MetricsEngine(
   growthCalculator,
   carryingCapacityCalculator,
   ltvCalculator,
-  snapshotScheduler
+  snapshotScheduler,
 );
 
 const mrr = await engine.calculateMRR(subscriptions, planProvider);
 const nrr = await engine.calculateNRR(10000, movement);
-const ltv = await engine.calculateLTV({ arpa, monthlyChurnRate: 0.03, currency: 'USD' });
+const ltv = await engine.calculateLTV({ arpa, monthlyChurnRate: 0.03, currency: "USD" });
 ```
 
 ```ts
-import { RetentionCalculator } from '@croco/metrics-core';
+import { RetentionCalculator } from "@croco/metrics-core";
 
 const retention = new RetentionCalculator();
 

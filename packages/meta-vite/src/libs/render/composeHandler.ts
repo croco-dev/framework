@@ -1,23 +1,26 @@
-import type { ApiRouteIR } from '../routes/types';
-import type { RenderServer } from './renderServer';
-import type { CrocoApiHandlerResult, CrocoFetchHandler, RuntimeContext } from './types';
+import type { ApiRouteIR } from "../routes/types";
+import type { RenderServer } from "./renderServer";
+import type { CrocoApiHandlerResult, CrocoFetchHandler, RuntimeContext } from "./types";
 
 const NOT_FOUND_HEADERS = {
-  'content-type': 'text/html; charset=utf-8',
+  "content-type": "text/html; charset=utf-8",
 } as const;
 
-const NOT_FOUND_RESPONSE = new Response('<h1>Not Found</h1>', {
+const NOT_FOUND_RESPONSE = new Response("<h1>Not Found</h1>", {
   status: 404,
   headers: NOT_FOUND_HEADERS,
 });
 
-const API_NOT_FOUND_RESPONSE = new Response(JSON.stringify({ error: 'Not Found' }), {
+const API_NOT_FOUND_RESPONSE = new Response(JSON.stringify({ error: "Not Found" }), {
   status: 404,
-  headers: { 'content-type': 'application/json' },
+  headers: { "content-type": "application/json" },
 });
 
 export type MetaFetchHandlerOptions = {
-  readonly apiHandler?: (request: Request, context?: RuntimeContext) => Promise<CrocoApiHandlerResult>;
+  readonly apiHandler?: (
+    request: Request,
+    context?: RuntimeContext,
+  ) => Promise<CrocoApiHandlerResult>;
   readonly pageHandler?: RenderServer | CrocoFetchHandler;
   readonly apiRoutes?: readonly ApiRouteIR[];
 };
@@ -28,7 +31,7 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
     const pathname = url.pathname;
 
     // URL-based API route dispatch: /api/* → apiRoutes matching
-    if (options.apiRoutes && pathname.startsWith('/api/')) {
+    if (options.apiRoutes && pathname.startsWith("/api/")) {
       const route = options.apiRoutes.find((r) => {
         const methodMatch = r.method === undefined || r.method === request.method;
         const exactMatch = pathname === r.path;
@@ -73,6 +76,8 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
   };
 }
 
-function isRenderServer(pageHandler: RenderServer | CrocoFetchHandler): pageHandler is RenderServer {
-  return 'handle' in pageHandler && typeof pageHandler.handle === 'function';
+function isRenderServer(
+  pageHandler: RenderServer | CrocoFetchHandler,
+): pageHandler is RenderServer {
+  return "handle" in pageHandler && typeof pageHandler.handle === "function";
 }

@@ -1,10 +1,10 @@
-export type SignalCategory = 'usage' | 'business' | 'engagement';
+export type SignalCategory = "usage" | "business" | "engagement";
 
-export type HealthStatus = 'healthy' | 'at_risk' | 'critical';
+export type HealthStatus = "healthy" | "at_risk" | "critical";
 
-export type HealthTrend = 'improving' | 'stable' | 'declining';
+export type HealthTrend = "improving" | "stable" | "declining";
 
-export type TrendPeriod = 'day' | 'week' | 'month';
+export type TrendPeriod = "day" | "week" | "month";
 
 export type HealthSignal = {
   category: SignalCategory;
@@ -15,31 +15,37 @@ export type HealthSignal = {
   collectedAt: Date;
 };
 
-export type BuiltinSignalType = 'login_frequency' | 'feature_usage_rate' | 'support_ticket_frequency';
+export type BuiltinSignalType =
+  | "login_frequency"
+  | "feature_usage_rate"
+  | "support_ticket_frequency";
 
 export type LoginFrequencySignal = {
-  type: 'login_frequency';
+  type: "login_frequency";
   loginsPerDay: number;
   activeDays: number;
   totalDays: number;
 };
 
 export type FeatureUsageRateSignal = {
-  type: 'feature_usage_rate';
+  type: "feature_usage_rate";
   featureKey: string;
   usageCount: number;
   uniqueUsers: number;
 };
 
 export type SupportTicketFrequencySignal = {
-  type: 'support_ticket_frequency';
+  type: "support_ticket_frequency";
   openTickets: number;
   resolvedTickets: number;
   avgResolutionTime: number;
   ticketsPerUser: number;
 };
 
-export type BuiltinSignal = LoginFrequencySignal | FeatureUsageRateSignal | SupportTicketFrequencySignal;
+export type BuiltinSignal =
+  | LoginFrequencySignal
+  | FeatureUsageRateSignal
+  | SupportTicketFrequencySignal;
 
 export type HealthScoreProfile = {
   id: string;

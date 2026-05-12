@@ -49,7 +49,7 @@ title: "LlmToolCalledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -59,7 +59,7 @@ title: "LlmToolCalledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -69,13 +69,13 @@ title: "LlmToolCalledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### modelId
 
 > `readonly` **modelId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -85,25 +85,25 @@ title: "LlmToolCalledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### toolCall
 
 > `readonly` **toolCall**: [`ToolCall`](/api/llm-core/src/type-aliases/toolcall/)
 
-***
+---
 
 ### type
 
 > `readonly` **type**: `"llm.tool_called"` = `'llm.tool_called'`
 
-***
+---
 
 ### usage
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-***
+---
 
 ### eventName
 

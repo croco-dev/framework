@@ -1,9 +1,9 @@
-import 'reflect-metadata';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { Container, Context as FrameworkContext } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
+import "reflect-metadata";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { Container, Context as FrameworkContext } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
 import {
   type ArgumentMetadata,
   Body,
@@ -17,33 +17,33 @@ import {
   Post,
   Raw,
   REST_PARAMS_KEY,
-} from '@croco/protocols-rest';
+} from "@croco/protocols-rest";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
-} from '@croco/ratelimit-core';
-import { serve } from '@hono/node-server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createApp } from '../libs/CrocoApp';
-import { CrocoRouteRegistrar } from '../libs/CrocoRouteRegistrar';
-import { ErrorHandler } from '../libs/ErrorHandler';
-import { HealthCheckRegistry } from '../libs/HealthCheckRegistry';
-import { bodyLimitMiddleware, mb } from '../libs/middleware/BodyLimitMiddleware';
-import { corsMiddleware } from '../libs/middleware/CorsMiddleware';
-import { rateLimitHttpMiddleware } from '../libs/middleware/RateLimitMiddleware';
-import { securityHeadersMiddleware } from '../libs/middleware/SecurityHeadersMiddleware';
-import type { LambdaContext, LambdaEvent } from '../libs/types';
+} from "@croco/ratelimit-core";
+import { serve } from "@hono/node-server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createApp } from "../libs/CrocoApp";
+import { CrocoRouteRegistrar } from "../libs/CrocoRouteRegistrar";
+import { ErrorHandler } from "../libs/ErrorHandler";
+import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import { bodyLimitMiddleware, mb } from "../libs/middleware/BodyLimitMiddleware";
+import { corsMiddleware } from "../libs/middleware/CorsMiddleware";
+import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
+import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
+import type { LambdaContext, LambdaEvent } from "../libs/types";
 
-vi.mock('@hono/node-server', () => ({
+vi.mock("@hono/node-server", () => ({
   serve: vi.fn((_options: unknown, callback?: () => void) => {
     callback?.();
     return {};
   }),
 }));
 
-describe('CrocoApp', () => {
+describe("CrocoApp", () => {
   beforeEach(() => {
     Container.reset();
     vi.mocked(serve).mockClear();
@@ -58,39 +58,39 @@ describe('CrocoApp', () => {
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
   });
 
-  @Controller('/api')
+  @Controller("/api")
   class TestController {
-    @Get('/hello')
+    @Get("/hello")
     hello() {
-      return { message: 'Hello, World!' };
+      return { message: "Hello, World!" };
     }
 
-    @Get('/users/:id')
-    getUser(@Param('id') id: string) {
-      return { id, name: 'Test User' };
+    @Get("/users/:id")
+    getUser(@Param("id") id: string) {
+      return { id, name: "Test User" };
     }
 
-    @Post('/users')
+    @Post("/users")
     createUser(@Body() body: unknown) {
       return { created: true, data: body };
     }
   }
 
-  @Controller('/lambda')
+  @Controller("/lambda")
   class LambdaController {
-    @Post('/binary-echo')
+    @Post("/binary-echo")
     async binaryEcho(@Raw() raw: unknown): Promise<Response> {
       const request = (raw as { req: { raw: Request } }).req.raw;
       const body = await request.arrayBuffer();
       return new Response(body, {
         status: 200,
         headers: {
-          'content-type': 'image/png',
+          "content-type": "image/png",
         },
       });
     }
 
-    @Get('/trace-context')
+    @Get("/trace-context")
     getTraceContext(): Record<string, string | null> {
       const context = FrameworkContext.get() as {
         traceId?: string;
@@ -105,10 +105,10 @@ describe('CrocoApp', () => {
       };
     }
 
-    @Get('/event-metadata')
+    @Get("/event-metadata")
     getEventMetadata(@Raw() raw: unknown) {
       const env =
-        typeof raw === 'object' && raw !== null && 'env' in raw
+        typeof raw === "object" && raw !== null && "env" in raw
           ? (
               raw as {
                 env?: {
@@ -138,13 +138,13 @@ describe('CrocoApp', () => {
 
   const lambdaContext: LambdaContext = {
     callbackWaitsForEmptyEventLoop: false,
-    functionName: 'test-function',
-    functionVersion: '$LATEST',
-    invokedFunctionArn: 'arn:aws:lambda:ap-northeast-2:123456789012:function:test-function',
-    logGroupName: '/aws/lambda/test-function',
-    logStreamName: '2026/03/17/[$LATEST]abcdef',
-    memoryLimitInMB: '128',
-    awsRequestId: 'req-123',
+    functionName: "test-function",
+    functionVersion: "$LATEST",
+    invokedFunctionArn: "arn:aws:lambda:ap-northeast-2:123456789012:function:test-function",
+    logGroupName: "/aws/lambda/test-function",
+    logStreamName: "2026/03/17/[$LATEST]abcdef",
+    memoryLimitInMB: "128",
+    awsRequestId: "req-123",
     done: () => undefined,
     getRemainingTimeInMillis: () => 5000,
     fail: () => undefined,
@@ -153,27 +153,27 @@ describe('CrocoApp', () => {
 
   function createLambdaEvent(overrides: Partial<LambdaEvent> = {}): LambdaEvent {
     return {
-      version: '2.0',
-      routeKey: '$default',
-      rawPath: '/',
-      rawQueryString: '',
+      version: "2.0",
+      routeKey: "$default",
+      rawPath: "/",
+      rawQueryString: "",
       headers: {},
       requestContext: {
-        accountId: '123456789012',
-        apiId: 'api-123',
-        domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
-        domainPrefix: 'example',
+        accountId: "123456789012",
+        apiId: "api-123",
+        domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+        domainPrefix: "example",
         http: {
-          method: 'GET',
-          path: '/',
-          protocol: 'HTTP/1.1',
-          sourceIp: '127.0.0.1',
-          userAgent: 'vitest',
+          method: "GET",
+          path: "/",
+          protocol: "HTTP/1.1",
+          sourceIp: "127.0.0.1",
+          userAgent: "vitest",
         },
-        requestId: 'gateway-req-123',
-        routeKey: '$default',
-        stage: '$default',
-        time: '17/Mar/2026:12:00:00 +0000',
+        requestId: "gateway-req-123",
+        routeKey: "$default",
+        stage: "$default",
+        time: "17/Mar/2026:12:00:00 +0000",
         timeEpoch: 1710676800000,
       },
       isBase64Encoded: false,
@@ -182,117 +182,121 @@ describe('CrocoApp', () => {
   }
 
   function createRequiredSecurityMiddlewares() {
-    const rateLimiter = new RateLimiter(new SlidingWindowInMemoryStore(), new RateLimitKeyBuilder(['ip']), {
-      failOpen: false,
-    });
+    const rateLimiter = new RateLimiter(
+      new SlidingWindowInMemoryStore(),
+      new RateLimitKeyBuilder(["ip"]),
+      {
+        failOpen: false,
+      },
+    );
 
     return [
       securityHeadersMiddleware(),
-      corsMiddleware({ origins: ['https://example.com'] }),
+      corsMiddleware({ origins: ["https://example.com"] }),
       bodyLimitMiddleware({ limit: mb(1) }),
       rateLimitHttpMiddleware({
         rateLimiter,
-        policy: createSlidingWindowPolicy('test', 100, 60000),
+        policy: createSlidingWindowPolicy("test", 100, 60000),
       }),
     ];
   }
 
   async function createStaticFixture(files: Record<string, string>): Promise<string> {
-    const directory = await mkdtemp(join(tmpdir(), 'croco-transports-http-'));
+    const directory = await mkdtemp(join(tmpdir(), "croco-transports-http-"));
 
     await Promise.all(
       Object.entries(files).map(async ([filePath, contents]) => {
         const absolutePath = join(directory, filePath);
         await mkdir(dirname(absolutePath), { recursive: true });
         await writeFile(absolutePath, contents);
-      })
+      }),
     );
 
     return directory;
   }
 
-  it('should handle GET request', async () => {
+  it("should handle GET request", async () => {
     const app = createApp({ controllers: [TestController] });
 
-    const response = await app.fetch(new Request('http://localhost/api/hello'));
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
 
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual({ message: 'Hello, World!' });
+    expect(json).toEqual({ message: "Hello, World!" });
   });
 
-  it('should bootstrap when all required security middlewares are configured', async () => {
+  it("should bootstrap when all required security middlewares are configured", async () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: createRequiredSecurityMiddlewares(),
-      securityValidation: 'enforce',
+      securityValidation: "enforce",
     });
 
-    const response = await app.fetch(new Request('http://localhost/api/hello'));
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
 
     expect(response.status).toBe(200);
   });
 
-  it('should fail bootstrap when required security middlewares are missing', () => {
+  it("should fail bootstrap when required security middlewares are missing", () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: [securityHeadersMiddleware()],
-      securityValidation: 'enforce',
+      securityValidation: "enforce",
     });
 
     expect(() => app.lambdaHandler()).toThrow(/Missing required security middleware/);
   });
 
-  it('should allow bootstrap when securityValidation is set to off', async () => {
+  it("should allow bootstrap when securityValidation is set to off", async () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: [securityHeadersMiddleware()],
-      securityValidation: 'off',
+      securityValidation: "off",
     });
 
-    const response = await app.fetch(new Request('http://localhost/api/hello'));
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
 
     expect(response.status).toBe(200);
   });
 
-  it('should extract path params', async () => {
+  it("should extract path params", async () => {
     const app = createApp({ controllers: [TestController] });
 
-    const response = await app.fetch(new Request('http://localhost/api/users/123'));
+    const response = await app.fetch(new Request("http://localhost/api/users/123"));
 
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual({ id: '123', name: 'Test User' });
+    expect(json).toEqual({ id: "123", name: "Test User" });
   });
 
-  it('should return headers without a response body for HEAD requests', async () => {
+  it("should return headers without a response body for HEAD requests", async () => {
     const app = createApp({ controllers: [TestController] });
 
-    const response = await app.fetch(new Request('http://localhost/api/hello', { method: 'HEAD' }));
+    const response = await app.fetch(new Request("http://localhost/api/hello", { method: "HEAD" }));
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe('');
-    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("content-type")).toContain("application/json");
   });
 
-  it('should handle POST with body', async () => {
+  it("should handle POST with body", async () => {
     const app = createApp({ controllers: [TestController] });
 
     const response = await app.fetch(
-      new Request('http://localhost/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'New User' }),
-      })
+      new Request("http://localhost/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "New User" }),
+      }),
     );
 
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json.created).toBe(true);
-    expect(json.data).toEqual({ name: 'New User' });
+    expect(json.data).toEqual({ name: "New User" });
   });
 
-  it('should resolve parameter pipes through the app container', async () => {
+  it("should resolve parameter pipes through the app container", async () => {
     class PipeDependency {
       format(value: string): string {
         return `container:${value}`;
@@ -305,23 +309,25 @@ describe('CrocoApp', () => {
       transform(value: unknown, metadata: ArgumentMetadata): string {
         void metadata;
         const input =
-          value && typeof value === 'object' && 'name' in value ? (value as { name?: unknown }).name : value;
+          value && typeof value === "object" && "name" in value
+            ? (value as { name?: unknown }).name
+            : value;
         return this.dependency.format(String(input));
       }
     }
 
     const ContainerBackedPipeCtor = ContainerBackedPipe as unknown as PipeTransformConstructor;
 
-    @Controller('/pipes')
+    @Controller("/pipes")
     class PipeController {
-      @Post('/body')
+      @Post("/body")
       create(value: string) {
         return { value };
       }
     }
 
     const params = new Map<string | symbol, ParamMetadata[]>();
-    params.set('create', [
+    params.set("create", [
       {
         type: ParamType.BODY,
         index: 0,
@@ -334,34 +340,34 @@ describe('CrocoApp', () => {
 
     const app = createApp({
       controllers: [PipeController],
-      securityValidation: 'off',
+      securityValidation: "off",
     });
 
     const response = await app.fetch(
-      new Request('http://localhost/pipes/body', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'croco' }),
-      })
+      new Request("http://localhost/pipes/body", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "croco" }),
+      }),
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ value: 'container:croco' });
+    await expect(response.json()).resolves.toEqual({ value: "container:croco" });
   });
 
-  it('should return 404 for unknown routes', async () => {
+  it("should return 404 for unknown routes", async () => {
     const app = createApp({ controllers: [TestController] });
 
-    const response = await app.fetch(new Request('http://localhost/unknown'));
+    const response = await app.fetch(new Request("http://localhost/unknown"));
 
     expect(response.status).toBe(404);
   });
 
-  it('should serve static assets and keep listen callback compatibility', async () => {
+  it("should serve static assets and keep listen callback compatibility", async () => {
     const app = createApp({ controllers: [TestController] });
     const staticDir = await createStaticFixture({
-      'index.html': '<html><body>spa</body></html>',
-      'assets/app.js': 'console.log("app")',
+      "index.html": "<html><body>spa</body></html>",
+      "assets/app.js": 'console.log("app")',
     });
     const callback = vi.fn();
 
@@ -376,63 +382,63 @@ describe('CrocoApp', () => {
       expect(vi.mocked(serve)).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenCalledTimes(2);
 
-      const assetResponse = await app.fetch(new Request('http://localhost/assets/app.js'));
+      const assetResponse = await app.fetch(new Request("http://localhost/assets/app.js"));
 
       expect(assetResponse.status).toBe(200);
-      expect(assetResponse.headers.get('content-type')).toContain('text/javascript');
-      expect(await assetResponse.text()).toContain('console.log');
+      expect(assetResponse.headers.get("content-type")).toContain("text/javascript");
+      expect(await assetResponse.text()).toContain("console.log");
     } finally {
       await rm(staticDir, { recursive: true, force: true });
     }
   });
 
-  it('should return index.html for SPA routes when fallback is enabled', async () => {
+  it("should return index.html for SPA routes when fallback is enabled", async () => {
     const app = createApp({ controllers: [TestController] });
     const staticDir = await createStaticFixture({
-      'index.html': '<html><body>spa shell</body></html>',
+      "index.html": "<html><body>spa shell</body></html>",
     });
 
     try {
       await app.listen(3000, { staticDir, spaFallback: true });
 
       const response = await app.fetch(
-        new Request('http://localhost/dashboard', {
-          headers: { Accept: 'text/html,application/xhtml+xml' },
-        })
+        new Request("http://localhost/dashboard", {
+          headers: { Accept: "text/html,application/xhtml+xml" },
+        }),
       );
 
       expect(response.status).toBe(200);
-      expect(response.headers.get('content-type')).toContain('text/html');
-      expect(await response.text()).toContain('spa shell');
+      expect(response.headers.get("content-type")).toContain("text/html");
+      expect(await response.text()).toContain("spa shell");
 
-      const apiResponse = await app.fetch(new Request('http://localhost/api/hello'));
+      const apiResponse = await app.fetch(new Request("http://localhost/api/hello"));
 
       expect(apiResponse.status).toBe(200);
-      expect(await apiResponse.json()).toEqual({ message: 'Hello, World!' });
+      expect(await apiResponse.json()).toEqual({ message: "Hello, World!" });
     } finally {
       await rm(staticDir, { recursive: true, force: true });
     }
   });
 
-  it('should not use SPA fallback for extension paths or non-html accept headers', async () => {
+  it("should not use SPA fallback for extension paths or non-html accept headers", async () => {
     const app = createApp({ controllers: [TestController] });
     const staticDir = await createStaticFixture({
-      'index.html': '<html><body>spa shell</body></html>',
+      "index.html": "<html><body>spa shell</body></html>",
     });
 
     try {
       await app.listen(3000, { staticDir, spaFallback: true });
 
       const assetLikeResponse = await app.fetch(
-        new Request('http://localhost/missing.js', {
-          headers: { Accept: 'text/html' },
-        })
+        new Request("http://localhost/missing.js", {
+          headers: { Accept: "text/html" },
+        }),
       );
 
       const jsonResponse = await app.fetch(
-        new Request('http://localhost/dashboard', {
-          headers: { Accept: 'application/json' },
-        })
+        new Request("http://localhost/dashboard", {
+          headers: { Accept: "application/json" },
+        }),
       );
 
       expect(assetLikeResponse.status).toBe(404);
@@ -442,20 +448,20 @@ describe('CrocoApp', () => {
     }
   });
 
-  it('should return 404 for missing assets inside asset directories', async () => {
+  it("should return 404 for missing assets inside asset directories", async () => {
     const app = createApp({ controllers: [TestController] });
     const staticDir = await createStaticFixture({
-      'index.html': '<html><body>spa shell</body></html>',
-      'assets/app.js': 'console.log("app")',
+      "index.html": "<html><body>spa shell</body></html>",
+      "assets/app.js": 'console.log("app")',
     });
 
     try {
       await app.listen(3000, { staticDir, spaFallback: true });
 
       const response = await app.fetch(
-        new Request('http://localhost/assets/missing.js', {
-          headers: { Accept: 'text/html,application/xhtml+xml' },
-        })
+        new Request("http://localhost/assets/missing.js", {
+          headers: { Accept: "text/html,application/xhtml+xml" },
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -464,30 +470,30 @@ describe('CrocoApp', () => {
     }
   });
 
-  it('should not return SPA html for application json requests', async () => {
+  it("should not return SPA html for application json requests", async () => {
     const app = createApp({ controllers: [TestController] });
     const staticDir = await createStaticFixture({
-      'index.html': '<html><body>spa shell</body></html>',
+      "index.html": "<html><body>spa shell</body></html>",
     });
 
     try {
       await app.listen(3000, { staticDir, spaFallback: true });
 
       const response = await app.fetch(
-        new Request('http://localhost/dashboard', {
-          headers: { Accept: 'application/json' },
-        })
+        new Request("http://localhost/dashboard", {
+          headers: { Accept: "application/json" },
+        }),
       );
 
       expect(response.status).toBe(404);
-      expect(response.headers.get('content-type')?.includes('text/html') ?? false).toBe(false);
-      expect(await response.text()).not.toContain('spa shell');
+      expect(response.headers.get("content-type")?.includes("text/html") ?? false).toBe(false);
+      expect(await response.text()).not.toContain("spa shell");
     } finally {
       await rm(staticDir, { recursive: true, force: true });
     }
   });
 
-  it('should preserve binary body through lambda request/response', async () => {
+  it("should preserve binary body through lambda request/response", async () => {
     const app = createApp({ controllers: [LambdaController] });
     const handler = app.lambdaHandler();
     const binaryBody = Buffer.from([0xc3, 0x28, 0xff, 0xfe, 0x00, 0x61, 0x80]);
@@ -495,44 +501,44 @@ describe('CrocoApp', () => {
     const response = await handler(
       createLambdaEvent({
         requestContext: {
-          accountId: '123456789012',
-          apiId: 'api-123',
-          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
-          domainPrefix: 'example',
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
           http: {
-            method: 'POST',
-            path: '/lambda/binary-echo',
-            protocol: 'HTTP/1.1',
-            sourceIp: '127.0.0.1',
-            userAgent: 'vitest',
+            method: "POST",
+            path: "/lambda/binary-echo",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
           },
-          requestId: 'gateway-req-123',
-          routeKey: '$default',
-          stage: '$default',
-          time: '17/Mar/2026:12:00:00 +0000',
+          requestId: "gateway-req-123",
+          routeKey: "$default",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
           timeEpoch: 1710676800000,
         },
-        rawPath: '/lambda/binary-echo',
-        rawQueryString: '',
-        headers: { 'content-type': 'application/octet-stream' },
-        body: binaryBody.toString('base64'),
+        rawPath: "/lambda/binary-echo",
+        rawQueryString: "",
+        headers: { "content-type": "application/octet-stream" },
+        body: binaryBody.toString("base64"),
         isBase64Encoded: true,
       }),
-      lambdaContext
+      lambdaContext,
     );
 
     expect(response.statusCode).toBe(200);
     expect(response.isBase64Encoded).toBe(true);
     expect(response.body).not.toBeUndefined();
 
-    const decoded = Buffer.from(response.body ?? '', 'base64');
+    const decoded = Buffer.from(response.body ?? "", "base64");
     expect(Buffer.compare(decoded, binaryBody)).toBe(0);
   });
 
-  it('should fail fast for unsupported route methods instead of registering all routes', () => {
+  it("should fail fast for unsupported route methods instead of registering all routes", () => {
     const hono = {
       all: () => {
-        throw new Error('should not register unsupported methods as all');
+        throw new Error("should not register unsupported methods as all");
       },
       get: () => {},
       post: () => {},
@@ -553,154 +559,154 @@ describe('CrocoApp', () => {
 
     expect(() => {
       registrar.register({
-        method: 'TRACE',
-        path: '/trace',
-        methodName: 'trace',
+        method: "TRACE",
+        path: "/trace",
+        methodName: "trace",
         handler: async () => undefined,
       });
-    }).toThrow('Unsupported route method: TRACE');
+    }).toThrow("Unsupported route method: TRACE");
   });
 
-  it('should keep json lambda response behavior unchanged', async () => {
+  it("should keep json lambda response behavior unchanged", async () => {
     const app = createApp({ controllers: [TestController] });
     const handler = app.lambdaHandler();
 
     const response = await handler(
       createLambdaEvent({
         requestContext: {
-          accountId: '123456789012',
-          apiId: 'api-123',
-          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
-          domainPrefix: 'example',
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
           http: {
-            method: 'GET',
-            path: '/api/hello',
-            protocol: 'HTTP/1.1',
-            sourceIp: '127.0.0.1',
-            userAgent: 'vitest',
+            method: "GET",
+            path: "/api/hello",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
           },
-          requestId: 'gateway-req-123',
-          routeKey: '$default',
-          stage: '$default',
-          time: '17/Mar/2026:12:00:00 +0000',
+          requestId: "gateway-req-123",
+          routeKey: "$default",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
           timeEpoch: 1710676800000,
         },
-        rawPath: '/api/hello',
-        rawQueryString: '',
-        headers: { 'content-type': 'application/json' },
+        rawPath: "/api/hello",
+        rawQueryString: "",
+        headers: { "content-type": "application/json" },
       }),
-      lambdaContext
+      lambdaContext,
     );
 
     expect(response.statusCode).toBe(200);
     expect(response.isBase64Encoded).toBe(false);
-    expect(JSON.parse(response.body ?? '{}')).toEqual({ message: 'Hello, World!' });
+    expect(JSON.parse(response.body ?? "{}")).toEqual({ message: "Hello, World!" });
   });
 
-  it('should parse traceparent with traceId spanId and traceFlags', async () => {
+  it("should parse traceparent with traceId spanId and traceFlags", async () => {
     const app = createApp({ controllers: [LambdaController] });
     const handler = app.lambdaHandler();
 
-    const traceId = '4bf92f3577b34da6a3ce929d0e0e4736';
-    const spanId = '00f067aa0ba902b7';
-    const traceFlagsHex = '01';
+    const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const spanId = "00f067aa0ba902b7";
+    const traceFlagsHex = "01";
     const expectedTraceFlags = 1; // Number.parseInt('01', 16)
 
     const response = await handler(
       createLambdaEvent({
         requestContext: {
-          accountId: '123456789012',
-          apiId: 'api-123',
-          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
-          domainPrefix: 'example',
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
           http: {
-            method: 'GET',
-            path: '/lambda/trace-context',
-            protocol: 'HTTP/1.1',
-            sourceIp: '127.0.0.1',
-            userAgent: 'vitest',
+            method: "GET",
+            path: "/lambda/trace-context",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
           },
-          requestId: 'gateway-req-123',
-          routeKey: '$default',
-          stage: '$default',
-          time: '17/Mar/2026:12:00:00 +0000',
+          requestId: "gateway-req-123",
+          routeKey: "$default",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
           timeEpoch: 1710676800000,
         },
-        rawPath: '/lambda/trace-context',
-        rawQueryString: '',
+        rawPath: "/lambda/trace-context",
+        rawQueryString: "",
         headers: {
           traceparent: `00-${traceId}-${spanId}-${traceFlagsHex}`,
         },
       }),
-      lambdaContext
+      lambdaContext,
     );
 
     expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.body ?? '{}')).toEqual({
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
       traceId,
       spanId,
       traceFlags: expectedTraceFlags,
     });
   });
 
-  it('should preserve lambda event metadata in raw hono env', async () => {
+  it("should preserve lambda event metadata in raw hono env", async () => {
     const app = createApp({ controllers: [LambdaController] });
     const handler = app.lambdaHandler();
 
     const response = await handler(
       createLambdaEvent({
-        version: '2.0',
-        routeKey: 'GET /lambda/event-metadata',
-        rawPath: '/lambda/event-metadata',
-        rawQueryString: '',
-        cookies: ['session=abc', 'theme=dark'],
-        headers: { 'content-type': 'application/json' },
+        version: "2.0",
+        routeKey: "GET /lambda/event-metadata",
+        rawPath: "/lambda/event-metadata",
+        rawQueryString: "",
+        cookies: ["session=abc", "theme=dark"],
+        headers: { "content-type": "application/json" },
         requestContext: {
-          accountId: '123456789012',
-          apiId: 'api-123',
-          domainName: 'example.execute-api.ap-northeast-2.amazonaws.com',
-          domainPrefix: 'example',
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
           http: {
-            method: 'GET',
-            path: '/lambda/event-metadata',
-            protocol: 'HTTP/1.1',
-            sourceIp: '127.0.0.1',
-            userAgent: 'vitest',
+            method: "GET",
+            path: "/lambda/event-metadata",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
           },
-          requestId: 'gateway-req-123',
-          routeKey: 'GET /lambda/event-metadata',
-          stage: '$default',
-          time: '17/Mar/2026:12:00:00 +0000',
+          requestId: "gateway-req-123",
+          routeKey: "GET /lambda/event-metadata",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
           timeEpoch: 1710676800000,
           authorizer: {
             jwt: {
               claims: {
-                sub: 'user-123',
-                tenantId: 'tenant-456',
+                sub: "user-123",
+                tenantId: "tenant-456",
               },
-              scopes: ['read:users'],
+              scopes: ["read:users"],
             },
           },
         },
         isBase64Encoded: false,
       }),
-      lambdaContext
+      lambdaContext,
     );
 
     expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.body ?? '{}')).toEqual({
-      stage: '$default',
-      cookies: ['session=abc', 'theme=dark'],
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      stage: "$default",
+      cookies: ["session=abc", "theme=dark"],
       authorizer: {
         jwt: {
           claims: {
-            sub: 'user-123',
-            tenantId: 'tenant-456',
+            sub: "user-123",
+            tenantId: "tenant-456",
           },
-          scopes: ['read:users'],
+          scopes: ["read:users"],
         },
       },
-      awsRequestId: 'req-123',
+      awsRequestId: "req-123",
     });
   });
 });

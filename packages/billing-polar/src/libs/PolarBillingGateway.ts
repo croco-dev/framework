@@ -1,11 +1,11 @@
-import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from '@croco/billing-core';
-import type { ILogger } from '@croco/framework-context';
-import { Component, Inject, LOGGER_TOKEN } from '@croco/framework-context';
-import { Polar } from '@polar-sh/sdk';
-import type { PolarConfig } from '../types';
+import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
+import type { ILogger } from "@croco/framework-context";
+import { Component, Inject, LOGGER_TOKEN } from "@croco/framework-context";
+import { Polar } from "@polar-sh/sdk";
+import type { PolarConfig } from "../types";
 
 const POLAR_RETRY_CONFIG = {
-  strategy: 'backoff' as const,
+  strategy: "backoff" as const,
   retryConnectionErrors: true,
   backoff: {
     initialInterval: 500,
@@ -15,7 +15,7 @@ const POLAR_RETRY_CONFIG = {
   },
 };
 
-const POLAR_RETRY_CODES = ['429', '500', '502', '503', '504'];
+const POLAR_RETRY_CODES = ["429", "500", "502", "503", "504"];
 
 type PolarLookupError = Error & {
   error?: string;
@@ -28,7 +28,7 @@ export class PolarBillingGateway implements BillingGateway {
 
   constructor(
     config: PolarConfig,
-    @Inject(LOGGER_TOKEN) private readonly logger: ILogger
+    @Inject(LOGGER_TOKEN) private readonly logger: ILogger,
   ) {
     this.client = new Polar({
       accessToken: config.accessToken,
@@ -46,7 +46,7 @@ export class PolarBillingGateway implements BillingGateway {
         {
           retries: POLAR_RETRY_CONFIG,
           retryCodes: POLAR_RETRY_CODES,
-        }
+        },
       );
 
       if (existing) {
@@ -57,7 +57,7 @@ export class PolarBillingGateway implements BillingGateway {
         throw error;
       }
 
-      this.logger.info('Customer not found, creating new customer', {
+      this.logger.info("Customer not found, creating new customer", {
         billingAccountId,
       });
     }
@@ -78,7 +78,7 @@ export class PolarBillingGateway implements BillingGateway {
 
     const polarError = error as PolarLookupError;
 
-    return polarError.name === 'ResourceNotFound' || polarError.error === 'ResourceNotFound';
+    return polarError.name === "ResourceNotFound" || polarError.error === "ResourceNotFound";
   }
 
   async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {

@@ -1,4 +1,4 @@
-import { usePageData } from '@croco/frontend-react';
+import { usePageData } from "@croco/frontend-react";
 
 export default function Page() {
   const { message } = usePageData<{ message: string }>();

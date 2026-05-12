@@ -1,5 +1,5 @@
-import 'reflect-metadata';
-import { ROUTE_PARAMS_METADATA_KEY } from '../constants';
+import "reflect-metadata";
+import { ROUTE_PARAMS_METADATA_KEY } from "../constants";
 
 export function CurrentPrincipal(): ParameterDecorator {
   return (target: Object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
@@ -12,7 +12,7 @@ export function CurrentPrincipal(): ParameterDecorator {
     const methodParams = existingParams.get(propertyKey) || [];
 
     methodParams.push({
-      type: 'principal',
+      type: "principal",
       index: parameterIndex,
       name: undefined,
     });

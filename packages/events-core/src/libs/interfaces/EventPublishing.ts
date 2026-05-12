@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../DomainEvent';
+import type { DomainEvent } from "../DomainEvent";
 
 /**
  * 이벤트 발행 인터페이스입니다.

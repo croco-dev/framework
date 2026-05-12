@@ -1,21 +1,21 @@
-import type { ExecutionManager } from '@croco/execution-core';
-import type { Constructor } from '@croco/framework-context';
-import { Container } from '@croco/framework-context';
-import { Problem, ProblemCategory, ProblemCategoryMapper } from '@croco/problems-core';
-import { triggerRegistry } from '@croco/triggers-core';
-import type { Receiver } from '@upstash/qstash';
+import type { ExecutionManager } from "@croco/execution-core";
+import type { Constructor } from "@croco/framework-context";
+import { Container } from "@croco/framework-context";
+import { Problem, ProblemCategory, ProblemCategoryMapper } from "@croco/problems-core";
+import { triggerRegistry } from "@croco/triggers-core";
+import type { Receiver } from "@upstash/qstash";
 
 type ServiceResolver = (targetClass: Constructor) => unknown;
 
 class DefaultServiceResolverError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'DefaultServiceResolverError';
+    this.name = "DefaultServiceResolverError";
   }
 }
 
-const GENERIC_EXECUTION_ERROR_CODE = 'triggers-qstash/execution-failed';
-const SERVICE_RESOLUTION_ERROR_CODE = 'triggers-qstash/service-resolution-failed';
+const GENERIC_EXECUTION_ERROR_CODE = "triggers-qstash/execution-failed";
+const SERVICE_RESOLUTION_ERROR_CODE = "triggers-qstash/service-resolution-failed";
 
 /**
  * Configuration options for QStashTriggerHandler.
@@ -111,7 +111,7 @@ export type HandleResult = {
 };
 
 type ErrorResponse = {
-  readonly error: 'Execution failed';
+  readonly error: "Execution failed";
   readonly code: string;
   readonly category: ProblemCategory;
 };
@@ -161,7 +161,9 @@ export class QStashTriggerHandler {
         try {
           return Container.get(targetClass);
         } catch (error) {
-          throw new DefaultServiceResolverError(error instanceof Error ? error.message : String(error));
+          throw new DefaultServiceResolverError(
+            error instanceof Error ? error.message : String(error),
+          );
         }
       });
   }
@@ -180,7 +182,7 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 401,
-        body: { error: 'Invalid signature' },
+        body: { error: "Invalid signature" },
       };
     }
 
@@ -192,7 +194,7 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 400,
-        body: { error: 'Invalid JSON payload' },
+        body: { error: "Invalid JSON payload" },
       };
     }
 
@@ -218,12 +220,12 @@ export class QStashTriggerHandler {
     }
   }
 
-  private toErrorResult(error: unknown): Pick<HandleResult, 'statusCode' | 'body'> {
+  private toErrorResult(error: unknown): Pick<HandleResult, "statusCode" | "body"> {
     if (error instanceof Problem) {
       return {
         statusCode: error.status,
         body: {
-          error: 'Execution failed',
+          error: "Execution failed",
           code: error.code,
           category: error.category,
         } satisfies ErrorResponse,
@@ -234,7 +236,7 @@ export class QStashTriggerHandler {
       return {
         statusCode: 500,
         body: {
-          error: 'Execution failed',
+          error: "Execution failed",
           code: SERVICE_RESOLUTION_ERROR_CODE,
           category: ProblemCategory.InternalServerError,
         } satisfies ErrorResponse,
@@ -244,7 +246,7 @@ export class QStashTriggerHandler {
     return {
       statusCode: ProblemCategoryMapper.toHttpStatus(ProblemCategory.InternalServerError),
       body: {
-        error: 'Execution failed',
+        error: "Execution failed",
         code: GENERIC_EXECUTION_ERROR_CODE,
         category: ProblemCategory.InternalServerError,
       } satisfies ErrorResponse,
@@ -275,13 +277,13 @@ export class QStashTriggerHandler {
    */
   private validatePayload(payload: QStashWebhookPayload): string | undefined {
     if (!payload.scheduleId) {
-      return 'Missing scheduleId';
+      return "Missing scheduleId";
     }
     if (!payload.methodName) {
-      return 'Missing methodName';
+      return "Missing methodName";
     }
     if (!payload.cronExpression) {
-      return 'Missing cronExpression';
+      return "Missing cronExpression";
     }
     return undefined;
   }
@@ -304,7 +306,7 @@ export class QStashTriggerHandler {
 
     // Verify method exists
     const method = (target as Record<string, unknown>)[methodName];
-    if (typeof method !== 'function') {
+    if (typeof method !== "function") {
       return {
         success: false,
         statusCode: 400,
@@ -314,17 +316,17 @@ export class QStashTriggerHandler {
 
     // Create execution
     const execution = await this.executionManager.create({
-      type: 'cron',
+      type: "cron",
       payload: {
         scheduleId,
-        className: payload.className ?? 'unknown',
+        className: payload.className ?? "unknown",
         methodName,
         cronExpression: payload.cronExpression,
         timestamp: payload.timestamp,
       },
       metadata: {
         scheduleId,
-        triggerType: 'cron',
+        triggerType: "cron",
         options: options ?? {},
       },
     });
@@ -383,7 +385,7 @@ export class QStashTriggerHandler {
       }
 
       const hasMatchingMethod = [...triggers.keys()].some(
-        (registeredMethodName) => String(registeredMethodName) === payload.methodName
+        (registeredMethodName) => String(registeredMethodName) === payload.methodName,
       );
 
       if (!hasMatchingMethod) {
@@ -392,9 +394,14 @@ export class QStashTriggerHandler {
 
       const matchingTrigger = [...triggers.values()].find(
         (trigger) =>
-          trigger.type === 'cron' &&
+          trigger.type === "cron" &&
           String(trigger.methodName) === payload.methodName &&
-          this.matchesScheduleId(payload.scheduleId, targetClass.name, trigger.options?.name, payload.methodName)
+          this.matchesScheduleId(
+            payload.scheduleId,
+            targetClass.name,
+            trigger.options?.name,
+            payload.methodName,
+          ),
       );
 
       if (matchingTrigger) {
@@ -415,12 +422,18 @@ export class QStashTriggerHandler {
     scheduleId: string,
     className: string,
     triggerName: string | undefined,
-    methodName: string
+    methodName: string,
   ): boolean {
     const identifier = triggerName ?? methodName;
-    const [payloadClassName, payloadIdentifier, payloadMethodName] = scheduleId.split(':').slice(-3);
+    const [payloadClassName, payloadIdentifier, payloadMethodName] = scheduleId
+      .split(":")
+      .slice(-3);
 
-    return payloadClassName === className && payloadIdentifier === identifier && payloadMethodName === methodName;
+    return (
+      payloadClassName === className &&
+      payloadIdentifier === identifier &&
+      payloadMethodName === methodName
+    );
   }
 
   private formatTriggerKey(payload: QStashWebhookPayload): string {
@@ -432,11 +445,11 @@ export class QStashTriggerHandler {
   }
 
   private getTargetClass(target: object): Constructor | undefined {
-    if (typeof target === 'function') {
+    if (typeof target === "function") {
       return target as Constructor;
     }
 
-    if (typeof target.constructor === 'function') {
+    if (typeof target.constructor === "function") {
       return target.constructor as unknown as Constructor;
     }
 
@@ -450,9 +463,9 @@ export class QStashTriggerHandler {
     if (error instanceof Error) {
       // Network errors, timeouts are retryable
       if (
-        error.message.includes('ECONNREFUSED') ||
-        error.message.includes('ETIMEDOUT') ||
-        error.message.includes('timeout')
+        error.message.includes("ECONNREFUSED") ||
+        error.message.includes("ETIMEDOUT") ||
+        error.message.includes("timeout")
       ) {
         return true;
       }
@@ -472,13 +485,17 @@ export class QStashTriggerHandler {
    * ```
    */
   static createLambdaHandler(
-    options: QStashTriggerHandlerOptions
-  ): (event: { body?: string; headers?: Record<string, string> }) => Promise<{ statusCode: number; body: string }> {
+    options: QStashTriggerHandlerOptions,
+  ): (event: {
+    body?: string;
+    headers?: Record<string, string>;
+  }) => Promise<{ statusCode: number; body: string }> {
     const handler = new QStashTriggerHandler(options);
 
     return async (event) => {
-      const body = event.body ?? '';
-      const signature = event.headers?.['Upstash-Signature'] ?? event.headers?.['upstash-signature'];
+      const body = event.body ?? "";
+      const signature =
+        event.headers?.["Upstash-Signature"] ?? event.headers?.["upstash-signature"];
 
       const result = await handler.handle(body, signature);
 

@@ -1,12 +1,14 @@
-import { Container } from '@croco/framework-context';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type TxAdapter, TxManager } from '../index';
-import { AfterCommitHooksProblem } from '../libs/problems/TransactionProblems';
+import { Container } from "@croco/framework-context";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { type TxAdapter, TxManager } from "../index";
+import { AfterCommitHooksProblem } from "../libs/problems/TransactionProblems";
 
-function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAdapter<{ id: string }> {
+function createMockAdapter(
+  options: { supportsSavepoint?: boolean } = {},
+): TxAdapter<{ id: string }> {
   return {
     transaction: vi.fn(async (fn) => {
-      const client = { id: 'tx-client' };
+      const client = { id: "tx-client" };
       return fn(client);
     }),
     savepoint: vi.fn(async (client, fn) => {
@@ -16,7 +18,7 @@ function createMockAdapter(options: { supportsSavepoint?: boolean } = {}): TxAda
   };
 }
 
-describe('TxManager', () => {
+describe("TxManager", () => {
   let txManager!: TxManager<{ id: string }>;
   let mockAdapter!: TxAdapter<{ id: string }>;
 
@@ -26,65 +28,65 @@ describe('TxManager', () => {
     txManager = new TxManager(mockAdapter);
   });
 
-  describe('run', () => {
-    it('should execute function within transaction', async () => {
+  describe("run", () => {
+    it("should execute function within transaction", async () => {
       const result = await txManager.run(async () => {
-        return 'success';
+        return "success";
       });
 
-      expect(result).toBe('success');
+      expect(result).toBe("success");
       expect(mockAdapter.transaction).toHaveBeenCalledTimes(1);
     });
 
-    it('should provide client within transaction', async () => {
+    it("should provide client within transaction", async () => {
       await txManager.run(async () => {
         const client = txManager.getClient();
         expect(client).not.toBeUndefined();
-        expect(client?.id).toBe('tx-client');
+        expect(client?.id).toBe("tx-client");
       });
     });
 
-    it('should propagate errors from transaction', async () => {
+    it("should propagate errors from transaction", async () => {
       await expect(
         txManager.run(async () => {
-          throw new Error('Transaction failed');
-        })
-      ).rejects.toThrow('Transaction failed');
+          throw new Error("Transaction failed");
+        }),
+      ).rejects.toThrow("Transaction failed");
     });
   });
 
-  describe('isInTransaction', () => {
-    it('should return false outside transaction', () => {
+  describe("isInTransaction", () => {
+    it("should return false outside transaction", () => {
       expect(txManager.isInTransaction()).toBe(false);
     });
 
-    it('should return true inside transaction', async () => {
+    it("should return true inside transaction", async () => {
       await txManager.run(async () => {
         expect(txManager.isInTransaction()).toBe(true);
       });
     });
 
-    it('should return false after transaction completes', async () => {
+    it("should return false after transaction completes", async () => {
       await txManager.run(async () => {});
       expect(txManager.isInTransaction()).toBe(false);
     });
   });
 
-  describe('getClient', () => {
-    it('should return null outside transaction', () => {
+  describe("getClient", () => {
+    it("should return null outside transaction", () => {
       expect(txManager.getClient()).toBeNull();
     });
 
-    it('should return client inside transaction', async () => {
+    it("should return client inside transaction", async () => {
       await txManager.run(async () => {
         const client = txManager.getClient();
-        expect(client).toEqual({ id: 'tx-client' });
+        expect(client).toEqual({ id: "tx-client" });
       });
     });
   });
 
-  describe('nesting with join strategy', () => {
-    it('should reuse existing transaction by default', async () => {
+  describe("nesting with join strategy", () => {
+    it("should reuse existing transaction by default", async () => {
       await txManager.run(async () => {
         await txManager.run(async () => {
           expect(txManager.isInTransaction()).toBe(true);
@@ -95,10 +97,10 @@ describe('TxManager', () => {
     });
   });
 
-  describe('nesting with savepoint strategy', () => {
-    it('should create savepoint for nested transaction', async () => {
+  describe("nesting with savepoint strategy", () => {
+    it("should create savepoint for nested transaction", async () => {
       const savepointAdapter = createMockAdapter({ supportsSavepoint: true });
-      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: 'savepoint' });
+      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: "savepoint" });
 
       await savepointTxManager.run(async () => {
         await savepointTxManager.run(async () => {
@@ -110,10 +112,12 @@ describe('TxManager', () => {
       expect(savepointAdapter.savepoint).toHaveBeenCalledTimes(1);
     });
 
-    it('should fall back to join if savepoint not supported', async () => {
+    it("should fall back to join if savepoint not supported", async () => {
       const noSavepointAdapter = createMockAdapter({ supportsSavepoint: false });
-      const noSavepointTxManager = new TxManager(noSavepointAdapter, { defaultNesting: 'savepoint' });
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const noSavepointTxManager = new TxManager(noSavepointAdapter, {
+        defaultNesting: "savepoint",
+      });
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       await noSavepointTxManager.run(async () => {
         await noSavepointTxManager.run(async () => {
@@ -124,62 +128,62 @@ describe('TxManager', () => {
       expect(noSavepointAdapter.transaction).toHaveBeenCalledTimes(1);
       expect(noSavepointAdapter.savepoint).not.toHaveBeenCalled();
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[TxManager] Savepoint nesting requested but adapter does not support savepoint. Falling back to join.'
+        "[TxManager] Savepoint nesting requested but adapter does not support savepoint. Falling back to join.",
       );
 
       consoleWarnSpy.mockRestore();
     });
 
-    it('should discard savepoint hooks when savepoint rolls back', async () => {
+    it("should discard savepoint hooks when savepoint rolls back", async () => {
       const savepointAdapter = createMockAdapter({ supportsSavepoint: true });
-      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: 'savepoint' });
+      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: "savepoint" });
       const rolledBackHook = vi.fn();
 
       await savepointTxManager.run(async () => {
         await expect(
           savepointTxManager.run(async () => {
             savepointTxManager.onAfterCommit(rolledBackHook);
-            throw new Error('savepoint rollback');
-          })
-        ).rejects.toThrow('savepoint rollback');
+            throw new Error("savepoint rollback");
+          }),
+        ).rejects.toThrow("savepoint rollback");
       });
 
       expect(rolledBackHook).not.toHaveBeenCalled();
     });
 
-    it('should discard savepoint hooks when adapter swallows rollback error', async () => {
+    it("should discard savepoint hooks when adapter swallows rollback error", async () => {
       const savepointAdapter: TxAdapter<{ id: string }> = {
         transaction: vi.fn(async (fn) => {
-          const client = { id: 'tx-client' };
+          const client = { id: "tx-client" };
           return fn(client);
         }),
         savepoint: vi.fn(async (client, fn) => {
           try {
             return await fn(client);
           } catch {
-            return 'rolled-back';
+            return "rolled-back";
           }
         }),
         supportsSavepoint: () => true,
       };
-      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: 'savepoint' });
+      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: "savepoint" });
       const rolledBackHook = vi.fn();
 
       await savepointTxManager.run(async () => {
         const nestedResult = await savepointTxManager.run(async () => {
           savepointTxManager.onAfterCommit(rolledBackHook);
-          throw new Error('savepoint rollback');
+          throw new Error("savepoint rollback");
         });
 
-        expect(nestedResult).toBe('rolled-back');
+        expect(nestedResult).toBe("rolled-back");
       });
 
       expect(rolledBackHook).not.toHaveBeenCalled();
     });
 
-    it('should execute savepoint hooks after root commit when savepoint succeeds', async () => {
+    it("should execute savepoint hooks after root commit when savepoint succeeds", async () => {
       const savepointAdapter = createMockAdapter({ supportsSavepoint: true });
-      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: 'savepoint' });
+      const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: "savepoint" });
       const rootHook = vi.fn();
       const savepointHook = vi.fn();
 
@@ -195,7 +199,7 @@ describe('TxManager', () => {
       expect(savepointHook).toHaveBeenCalledTimes(1);
     });
 
-    it('should clear transaction context before running afterCommit hooks', async () => {
+    it("should clear transaction context before running afterCommit hooks", async () => {
       const observedClients: Array<{ id: string } | null> = [];
       const observedTransactionStates: boolean[] = [];
 
@@ -211,7 +215,7 @@ describe('TxManager', () => {
       expect(txManager.getClient()).toBeNull();
     });
 
-    it('should reject after root commit when afterCommit hook fails', async () => {
+    it("should reject after root commit when afterCommit hook fails", async () => {
       const observedClients: Array<{ id: string } | null> = [];
       const observedTransactionStates: boolean[] = [];
 
@@ -220,9 +224,9 @@ describe('TxManager', () => {
           txManager.onAfterCommit(async () => {
             observedClients.push(txManager.getClient());
             observedTransactionStates.push(txManager.isInTransaction());
-            throw new Error('post-commit event publish failed');
+            throw new Error("post-commit event publish failed");
           });
-        })
+        }),
       ).rejects.toThrow(AfterCommitHooksProblem);
 
       expect(observedClients).toEqual([null]);
@@ -231,18 +235,18 @@ describe('TxManager', () => {
     });
   });
 
-  describe('run with options', () => {
-    it('should accept nesting strategy option', async () => {
+  describe("run with options", () => {
+    it("should accept nesting strategy option", async () => {
       await txManager.run(
         async () => {
           await txManager.run(
             async () => {
               expect(txManager.isInTransaction()).toBe(true);
             },
-            { nesting: 'join' }
+            { nesting: "join" },
           );
         },
-        { nesting: 'join' }
+        { nesting: "join" },
       );
 
       expect(mockAdapter.transaction).toHaveBeenCalledTimes(1);
@@ -250,12 +254,12 @@ describe('TxManager', () => {
   });
 });
 
-describe('TxAdapter interface', () => {
-  it('should have required methods', () => {
+describe("TxAdapter interface", () => {
+  it("should have required methods", () => {
     const adapter = createMockAdapter();
 
-    expect(typeof adapter.transaction).toBe('function');
-    expect(typeof adapter.savepoint).toBe('function');
-    expect(typeof adapter.supportsSavepoint).toBe('function');
+    expect(typeof adapter.transaction).toBe("function");
+    expect(typeof adapter.savepoint).toBe("function");
+    expect(typeof adapter.supportsSavepoint).toBe("function");
   });
 });

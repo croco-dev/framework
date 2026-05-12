@@ -1,5 +1,5 @@
-import { type Db, MongoClient } from 'mongodb';
-import { Service } from 'typedi';
+import { type Db, MongoClient } from "mongodb";
+import { Service } from "typedi";
 
 @Service()
 export class MongoDbProvider {
@@ -14,7 +14,7 @@ export class MongoDbProvider {
 
   getDb(): Db {
     if (!this.db) {
-      throw new Error('MongoDB not connected. Call connect() first.');
+      throw new Error("MongoDB not connected. Call connect() first.");
     }
     return this.db;
   }

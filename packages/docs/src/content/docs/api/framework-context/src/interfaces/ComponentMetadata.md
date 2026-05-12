@@ -10,10 +10,10 @@ title: "ComponentMetadata"
 ## Example
 
 ```typescript
-import type { ComponentMetadata } from '@croco/framework-context';
+import type { ComponentMetadata } from "@croco/framework-context";
 
 const metadata: ComponentMetadata = {
-  scope: 'singleton',
+  scope: "singleton",
   target: class Service {},
 };
 ```
@@ -26,7 +26,7 @@ const metadata: ComponentMetadata = {
 
 컴포넌트 생명주기 범위입니다.
 
-***
+---
 
 ### target
 

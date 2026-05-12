@@ -1,8 +1,8 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from "node:crypto";
 
 export class ApiKeyHasher {
   hash(value: string): string {
-    return createHash('sha256').update(value).digest('hex');
+    return createHash("sha256").update(value).digest("hex");
   }
 
   verify(value: string, hash: string): boolean {

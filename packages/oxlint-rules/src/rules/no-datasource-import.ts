@@ -1,12 +1,12 @@
-import path from 'node:path';
-import type { Rule } from 'eslint';
+import path from "node:path";
+import type { Rule } from "eslint";
 
-const RESTRICTED_LAYERS = ['domain', 'service', 'application'] as const;
+const RESTRICTED_LAYERS = ["domain", "service", "application"] as const;
 
 type RestrictedLayer = (typeof RESTRICTED_LAYERS)[number];
 
 const getLibPathRest = (filePath: string): string | null => {
-  const match = filePath.replace(/\\/g, '/').match(/libs\/[^/]+\/(.*)/);
+  const match = filePath.replace(/\\/g, "/").match(/libs\/[^/]+\/(.*)/);
 
   if (!match) {
     return null;
@@ -26,16 +26,16 @@ const getRestrictedLayer = (pathRest: string): RestrictedLayer | null => {
 };
 
 const isDatasourcePath = (pathRest: string): boolean =>
-  pathRest.startsWith('src/datasource/') || pathRest.includes('/datasource/');
+  pathRest.startsWith("src/datasource/") || pathRest.includes("/datasource/");
 
 const rule: Rule.RuleModule = {
   meta: {
-    type: 'problem',
+    type: "problem",
     docs: {
-      description: 'Disallow importing datasource from domain/service/application layers',
+      description: "Disallow importing datasource from domain/service/application layers",
     },
     messages: {
-      noDatasourceImport: 'Datasource layer cannot be imported from {{layer}} layer.',
+      noDatasourceImport: "Datasource layer cannot be imported from {{layer}} layer.",
     },
     schema: [],
   },
@@ -43,7 +43,7 @@ const rule: Rule.RuleModule = {
     return {
       ImportDeclaration(node) {
         const sourceValue = node.source.value;
-        if (typeof sourceValue !== 'string' || !sourceValue.startsWith('.')) {
+        if (typeof sourceValue !== "string" || !sourceValue.startsWith(".")) {
           return;
         }
 
@@ -66,7 +66,7 @@ const rule: Rule.RuleModule = {
 
         context.report({
           node,
-          messageId: 'noDatasourceImport',
+          messageId: "noDatasourceImport",
           data: {
             layer: currentLayer,
           },

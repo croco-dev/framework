@@ -1,11 +1,11 @@
-import type { DomainEvent } from './DomainEvent';
-import { getEventFields } from './decorators/EventField';
-import { EventRegistry } from './EventRegistry';
+import type { DomainEvent } from "./DomainEvent";
+import { getEventFields } from "./decorators/EventField";
+import { EventRegistry } from "./EventRegistry";
 import {
   DuplicateEventFieldProblem,
   EventDeserializationError,
   UnknownEventTypeProblem,
-} from './problems/EventsProblems';
+} from "./problems/EventsProblems";
 
 type EventFromPayload = (payload: Record<string, unknown>) => DomainEvent;
 
@@ -61,7 +61,7 @@ export class DefaultEventSerializer implements EventSerializer {
   }
 
   private extractAggregateId(event: DomainEvent): string | undefined {
-    const aggregateIdKey = 'aggregateId';
+    const aggregateIdKey = "aggregateId";
     if (aggregateIdKey in event) {
       return (event as unknown as Record<string, unknown>)[aggregateIdKey] as string;
     }
@@ -82,7 +82,7 @@ export class DefaultEventSerializer implements EventSerializer {
     }
 
     const result: Record<string, unknown> = {};
-    const reservedKeys = new Set(['eventId', 'eventName', 'timestamp', 'metadata']);
+    const reservedKeys = new Set(["eventId", "eventName", "timestamp", "metadata"]);
     for (const key in event) {
       if (!reservedKeys.has(key)) {
         result[key] = obj[key];
@@ -91,7 +91,10 @@ export class DefaultEventSerializer implements EventSerializer {
     return result;
   }
 
-  private reconstructEvent<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, data: SerializedEvent): T {
+  private reconstructEvent<T extends DomainEvent>(
+    EventClass: new (...args: unknown[]) => T,
+    data: SerializedEvent,
+  ): T {
     const eventClassWithFromPayload = EventClass as EventClassWithOptionalFromPayload<T>;
     if (eventClassWithFromPayload.fromPayload) {
       return eventClassWithFromPayload.fromPayload(data.payload) as T;
@@ -111,23 +114,29 @@ export class DefaultEventSerializer implements EventSerializer {
 
     throw new EventDeserializationError(
       EventClass.name,
-      'EventSerializer requires @EventField decorator or static fromPayload() method for deserialization. ' +
-        'Constructor parameter name inference via toString() has been removed for minification safety.'
+      "EventSerializer requires @EventField decorator or static fromPayload() method for deserialization. " +
+        "Constructor parameter name inference via toString() has been removed for minification safety.",
     );
   }
 
-  private createInstance<T extends DomainEvent>(EventClass: new (...args: unknown[]) => T, _data: SerializedEvent): T {
+  private createInstance<T extends DomainEvent>(
+    EventClass: new (...args: unknown[]) => T,
+    _data: SerializedEvent,
+  ): T {
     try {
       return new EventClass();
     } catch {
       throw new EventDeserializationError(
         EventClass.name,
-        'Events with required constructor arguments must provide a static fromPayload() method for deserialization.'
+        "Events with required constructor arguments must provide a static fromPayload() method for deserialization.",
       );
     }
   }
 
-  private assertNoDuplicateSerializedKeys(eventClassName: string, fields: { serializedKey: string }[]): void {
+  private assertNoDuplicateSerializedKeys(
+    eventClassName: string,
+    fields: { serializedKey: string }[],
+  ): void {
     const seenKeys = new Set<string>();
 
     for (const field of fields) {

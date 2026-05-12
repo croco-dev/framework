@@ -6,7 +6,7 @@ ULID 기반 타입 안전 Prefix ID 생성 및 검증 라이브러리입니다.
 
 - **ULID 기반**: 시간순 정렬 가능하고 충돌 확률이 낮은 ULID 사용
 - **타입 안전성**: Branded Type으로 컴파일 타임에 ID 타입 검증
-- **Prefix 기반**: 도메인별로 고유한 prefix로 ID 구분 (usr_, ord_, wks_ 등)
+- **Prefix 기반**: 도메인별로 고유한 prefix로 ID 구분 (usr*, ord*, wks\_ 등)
 - **런타임 검증**: 유효하지 않은 ID 형식을 런타임에 안전하게 거부
 
 ## 설치
@@ -20,35 +20,35 @@ pnpm add @croco/gid-core
 ### 단일 ID 생성
 
 ```typescript
-import { IdPrefix } from '@croco/gid-core';
+import { IdPrefix } from "@croco/gid-core";
 
-const UserId = new IdPrefix('usr');
+const UserId = new IdPrefix("usr");
 
-type UserId = PrefixedId<'usr'>;
+type UserId = PrefixedId<"usr">;
 
 const userId: UserId = UserId.generate();
 // 예: usr_01HXY5XM9Z8Y7W6V5U4T3S2R1
 
 const isValid: boolean = UserId.validate(userId);
 if (isValid) {
-  console.log('유효한 사용자 ID입니다');
+  console.log("유효한 사용자 ID입니다");
 }
 ```
 
 ### 여러 ID 타입 관리
 
 ```typescript
-import { defineIdPrefixes } from '@croco/gid-core';
+import { defineIdPrefixes } from "@croco/gid-core";
 
 const Ids = defineIdPrefixes({
-  USER: 'usr',
-  ORDER: 'ord',
-  WORKSPACE: 'wks',
+  USER: "usr",
+  ORDER: "ord",
+  WORKSPACE: "wks",
 } as const);
 
-type UserId = PrefixedId<'usr'>;
-type OrderId = PrefixedId<'ord'>;
-type WorkspaceId = PrefixedId<'wks'>;
+type UserId = PrefixedId<"usr">;
+type OrderId = PrefixedId<"ord">;
+type WorkspaceId = PrefixedId<"wks">;
 
 const userId: UserId = Ids.USER.generate();
 const orderId: OrderId = Ids.ORDER.generate();
@@ -59,23 +59,23 @@ function getUserById(id: UserId) {
   return Ids.USER.validate(id);
 }
 
-getUserById(userId);     // ✅ OK
-getUserById(orderId);    // ❌ Compile Error
+getUserById(userId); // ✅ OK
+getUserById(orderId); // ❌ Compile Error
 ```
 
 ### 타입 가드 활용
 
 ```typescript
-import { IdPrefix } from '@croco/gid-core';
+import { IdPrefix } from "@croco/gid-core";
 
-const ProductId = new IdPrefix('prd');
+const ProductId = new IdPrefix("prd");
 
 function processProductId(id: unknown) {
   if (ProductId.validate(id)) {
     // id는 타입 가드에 의해 PrefixedId<'prd'> 타입으로 좁혀짐
     console.log(`Product ID: ${id}`);
   } else {
-    throw new Error('Invalid product ID');
+    throw new Error("Invalid product ID");
   }
 }
 ```
@@ -111,9 +111,7 @@ constructor(prefix: TPrefix)
 여러 ID prefix를 한 번에 정의합니다.
 
 ```typescript
-function defineIdPrefixes<const T extends Record<string, string>>(
-  config: T
-): IdPrefixRegistry<T>
+function defineIdPrefixes<const T extends Record<string, string>>(config: T): IdPrefixRegistry<T>;
 ```
 
 - 중복된 prefix 값이 있으면 컴파일 에러 발생
@@ -130,6 +128,7 @@ export type PrefixedId<TPrefix extends string> = `${TPrefix}_${string}` & {
 ```
 
 이 타입은:
+
 - 컴파일 타임에 형식 검증 (`usr_xxx` 형태 강제)
 - 다른 prefix와의 혼용 방지
 - 런타임 오버헤드 없음 (타입 정보만 제공)
@@ -145,6 +144,7 @@ export type PrefixedId<TPrefix extends string> = `${TPrefix}_${string}` & {
 - 전체 길이: `prefix.length + 1 + 26`
 
 예시:
+
 - `usr_01HXY5XM9Z8Y7W6V5U4T3S2R1` (30자, prefix=usr)
 - `wks_01HXY5XM9Z8Y7W6V5U4T3S2R1` (30자, prefix=wks)
 
@@ -160,11 +160,11 @@ ID는 다음 조건을 모두 만족해야 유효합니다:
 ## 에러 처리
 
 ```typescript
-import { IdPrefix } from '@croco/gid-core';
-import { InvalidIdPrefixProblem } from '@croco/gid-core';
+import { IdPrefix } from "@croco/gid-core";
+import { InvalidIdPrefixProblem } from "@croco/gid-core";
 
 try {
-  const TooShort = new IdPrefix('ab');
+  const TooShort = new IdPrefix("ab");
 } catch (error) {
   if (error instanceof InvalidIdPrefixProblem) {
     console.error(error.detail);
@@ -176,29 +176,33 @@ try {
 ## 타입 안전성 예시
 
 ```typescript
-import { defineIdPrefixes } from '@croco/gid-core';
+import { defineIdPrefixes } from "@croco/gid-core";
 
 const Ids = defineIdPrefixes({
-  USER: 'usr',
-  ORDER: 'ord',
+  USER: "usr",
+  ORDER: "ord",
 } as const);
 
-type UserId = PrefixedId<'usr'>;
-type OrderId = PrefixedId<'ord'>;
+type UserId = PrefixedId<"usr">;
+type OrderId = PrefixedId<"ord">;
 
 // 함수 시그니처에 특정 ID 타입 명시
-function getUser(id: UserId) { /* ... */ }
-function getOrder(id: OrderId) { /* ... */ }
+function getUser(id: UserId) {
+  /* ... */
+}
+function getOrder(id: OrderId) {
+  /* ... */
+}
 
 const userId = Ids.USER.generate();
 const orderId = Ids.ORDER.generate();
 
-getUser(userId);   // ✅ OK
-getUser(orderId);  // ❌ Compile Error: 타입 불일치
+getUser(userId); // ✅ OK
+getUser(orderId); // ❌ Compile Error: 타입 불일치
 
 // assignability 체크
-let id: PrefixedId<'usr'> = userId;     // ✅ OK
-id = orderId;                            // ❌ Compile Error
+let id: PrefixedId<"usr"> = userId; // ✅ OK
+id = orderId; // ❌ Compile Error
 ```
 
 ## Best Practices

@@ -11,14 +11,14 @@ pnpm add @croco/membership-core
 ## 사용법
 
 ```ts
-import { InMemoryMembershipStore, MembershipManager } from '@croco/membership-core';
+import { InMemoryMembershipStore, MembershipManager } from "@croco/membership-core";
 
 const store = new InMemoryMembershipStore();
 const manager = new MembershipManager(store, eventPublisher, seatLimitChecker);
 
-await manager.addMember('tenant-123', 'user-1', 'admin');
-await manager.updateRole('tenant-123', 'user-1', 'owner');
-await manager.transferOwnership('tenant-123', 'user-1', 'user-2');
+await manager.addMember("tenant-123", "user-1", "admin");
+await manager.updateRole("tenant-123", "user-1", "owner");
+await manager.transferOwnership("tenant-123", "user-1", "user-2");
 ```
 
 ## API 레퍼런스

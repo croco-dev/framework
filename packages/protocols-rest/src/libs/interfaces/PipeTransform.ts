@@ -3,7 +3,7 @@ export interface PipeTransform<T = unknown, R = unknown> {
 }
 
 export interface ArgumentMetadata {
-  type: 'param' | 'query' | 'body' | 'header' | 'custom';
+  type: "param" | "query" | "body" | "header" | "custom";
   name?: string;
   metatype?: Function;
 }

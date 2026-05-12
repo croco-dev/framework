@@ -1,4 +1,4 @@
-import { EventDefinitionProblem } from './problems/EventsProblems';
+import { EventDefinitionProblem } from "./problems/EventsProblems";
 
 export type EventTraceContext = {
   traceId?: string;

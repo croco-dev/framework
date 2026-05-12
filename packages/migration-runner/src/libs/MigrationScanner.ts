@@ -1,6 +1,6 @@
-import { readdir, stat } from 'node:fs/promises';
-import { join, parse } from 'node:path';
-import type { MigrationFile } from './types';
+import { readdir, stat } from "node:fs/promises";
+import { join, parse } from "node:path";
+import type { MigrationFile } from "./types";
 
 export class MigrationScanner {
   private readonly migrationsDir: string;
@@ -20,7 +20,7 @@ export class MigrationScanner {
       if (!stats.isFile()) continue;
 
       const { ext, name } = parse(entry);
-      if (ext !== '.ts' && ext !== '.js') continue;
+      if (ext !== ".ts" && ext !== ".js") continue;
 
       const match = name.match(/^(\d{14})_(.+)$/);
       if (!match) continue;

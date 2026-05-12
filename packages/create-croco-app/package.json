@@ -1,7 +1,6 @@
 {
   "name": "create-croco-app",
   "version": "0.1.0",
-  "type": "module",
   "bin": {
     "create-croco-app": "./dist/index.js"
   },
@@ -9,6 +8,7 @@
     "dist",
     "templates"
   ],
+  "type": "module",
   "scripts": {
     "build": "tsup",
     "lint": "oxlint .",
@@ -16,9 +16,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clack/prompts": "^0.9.0",
     "@croco/problems-core": "workspace:*",
     "@croco/telemetry-sdk-node": "workspace:*",
-    "@clack/prompts": "^0.9.0",
     "commander": "^12.0.0",
     "fs-extra": "^11.0.0",
     "handlebars": "^4.7.9",

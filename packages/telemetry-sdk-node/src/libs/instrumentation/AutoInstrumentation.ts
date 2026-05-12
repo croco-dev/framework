@@ -1,33 +1,33 @@
-import type { Instrumentation } from '@opentelemetry/instrumentation';
+import type { Instrumentation } from "@opentelemetry/instrumentation";
 
 /**
  * Auto-instrumentation modules that can be enabled.
  * These map to popular Node.js libraries and frameworks.
  */
 export type AutoInstrumentationModule =
-  | 'http'
-  | 'https'
-  | 'express'
-  | 'fastify'
-  | 'koa'
-  | 'restify'
-  | 'nest'
-  | 'aws-sdk'
-  | 'aws-lambda'
-  | 'dns'
-  | 'net'
-  | 'fs'
-  | 'graphql'
-  | 'grpc'
-  | 'ioredis'
-  | 'mongodb'
-  | 'mysql'
-  | 'mysql2'
-  | 'pg'
-  | 'redis'
-  | 'bunyan'
-  | 'pino'
-  | 'winston';
+  | "http"
+  | "https"
+  | "express"
+  | "fastify"
+  | "koa"
+  | "restify"
+  | "nest"
+  | "aws-sdk"
+  | "aws-lambda"
+  | "dns"
+  | "net"
+  | "fs"
+  | "graphql"
+  | "grpc"
+  | "ioredis"
+  | "mongodb"
+  | "mysql"
+  | "mysql2"
+  | "pg"
+  | "redis"
+  | "bunyan"
+  | "pino"
+  | "winston";
 
 /**
  * Configuration for auto-instrumentation.
@@ -92,13 +92,25 @@ export interface AutoInstrumentationConfig {
  * Default modules enabled for Lambda environments.
  * Optimized for minimal overhead and maximum utility.
  */
-export const LAMBDA_DEFAULT_MODULES: AutoInstrumentationModule[] = ['http', 'https', 'aws-sdk', 'aws-lambda'];
+export const LAMBDA_DEFAULT_MODULES: AutoInstrumentationModule[] = [
+  "http",
+  "https",
+  "aws-sdk",
+  "aws-lambda",
+];
 
 /**
  * Default modules enabled for standard Node.js applications.
  * Includes common web framework and database instrumentations.
  */
-export const NODE_DEFAULT_MODULES: AutoInstrumentationModule[] = ['http', 'https', 'express', 'fastify', 'dns', 'net'];
+export const NODE_DEFAULT_MODULES: AutoInstrumentationModule[] = [
+  "http",
+  "https",
+  "express",
+  "fastify",
+  "dns",
+  "net",
+];
 
 /**
  * Creates a safe auto-instrumentation configuration.
@@ -110,9 +122,10 @@ export const NODE_DEFAULT_MODULES: AutoInstrumentationModule[] = ['http', 'https
  */
 export function normalizeAutoInstrumentationConfig(
   config: AutoInstrumentationConfig | undefined,
-  environment: 'lambda' | 'node'
-): Required<Pick<AutoInstrumentationConfig, 'enabled'>> & Omit<AutoInstrumentationConfig, 'enabled'> {
-  const defaultModules = environment === 'lambda' ? LAMBDA_DEFAULT_MODULES : NODE_DEFAULT_MODULES;
+  environment: "lambda" | "node",
+): Required<Pick<AutoInstrumentationConfig, "enabled">> &
+  Omit<AutoInstrumentationConfig, "enabled"> {
+  const defaultModules = environment === "lambda" ? LAMBDA_DEFAULT_MODULES : NODE_DEFAULT_MODULES;
 
   if (!config || config.enabled === false) {
     return {

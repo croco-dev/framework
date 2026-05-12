@@ -5,8 +5,8 @@ import {
   SubscriptionCanceledEvent,
   SubscriptionPastDueEvent,
   SubscriptionRevokedEvent,
-} from '@croco/billing-core';
-import type { DomainEvent } from '@croco/events-core';
+} from "@croco/billing-core";
+import type { DomainEvent } from "@croco/events-core";
 
 /**
  * Maps Polar webhook events to internal domain events.
@@ -25,31 +25,41 @@ export class PolarEventMapper {
       status: string;
       cancelAtPeriodEnd?: boolean;
     },
-    previousPlanId?: string
+    previousPlanId?: string,
   ): DomainEvent[] {
     const events: DomainEvent[] = [];
 
     switch (eventType) {
-      case 'subscription.created':
-      case 'subscription.active':
-        events.push(new SubscriptionActivatedEvent(tenantId, subscription.productId, subscription.id));
+      case "subscription.created":
+      case "subscription.active":
+        events.push(
+          new SubscriptionActivatedEvent(tenantId, subscription.productId, subscription.id),
+        );
         break;
 
-      case 'subscription.updated':
+      case "subscription.updated":
         if (previousPlanId && previousPlanId !== subscription.productId) {
-          events.push(new PlanChangedEvent(tenantId, previousPlanId, subscription.productId, subscription.id));
+          events.push(
+            new PlanChangedEvent(tenantId, previousPlanId, subscription.productId, subscription.id),
+          );
         }
 
-        if (subscription.status === 'past_due') {
+        if (subscription.status === "past_due") {
           events.push(new SubscriptionPastDueEvent(tenantId, subscription.id));
         }
         break;
 
-      case 'subscription.canceled':
-        events.push(new SubscriptionCanceledEvent(tenantId, subscription.id, subscription.cancelAtPeriodEnd ?? true));
+      case "subscription.canceled":
+        events.push(
+          new SubscriptionCanceledEvent(
+            tenantId,
+            subscription.id,
+            subscription.cancelAtPeriodEnd ?? true,
+          ),
+        );
         break;
 
-      case 'subscription.revoked':
+      case "subscription.revoked":
         events.push(new SubscriptionRevokedEvent(tenantId, subscription.id));
         break;
     }
@@ -67,9 +77,9 @@ export class PolarEventMapper {
       id: string;
       amount: number;
       currency: string;
-    }
+    },
   ): DomainEvent[] {
-    if (eventType === 'order.paid') {
+    if (eventType === "order.paid") {
       return [new OrderPaidEvent(tenantId, order.id, order.amount, order.currency)];
     }
     return [];

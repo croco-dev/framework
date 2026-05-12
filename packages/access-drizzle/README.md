@@ -11,26 +11,26 @@ pnpm add @croco/access-drizzle @croco/access-core drizzle-orm
 ## 사용법
 
 ```typescript
-import { AccessEngine } from '@croco/access-core';
-import { DrizzleAccessProvider } from '@croco/access-drizzle';
+import { AccessEngine } from "@croco/access-core";
+import { DrizzleAccessProvider } from "@croco/access-drizzle";
 
 const provider = new DrizzleAccessProvider(db);
 const engine = new AccessEngine(provider);
 
 await engine.grant({
-  tenantId: 'tenant-1',
+  tenantId: "tenant-1",
   tuple: {
-    object: 'document:1',
-    relation: 'editor',
-    subject: 'user:1',
+    object: "document:1",
+    relation: "editor",
+    subject: "user:1",
   },
 });
 
 const result = await engine.check({
-  tenantId: 'tenant-1',
-  object: 'document:1',
-  relation: 'editor',
-  subject: 'user:1',
+  tenantId: "tenant-1",
+  object: "document:1",
+  relation: "editor",
+  subject: "user:1",
 });
 ```
 

@@ -1,11 +1,11 @@
-import type { HealthSignal, SignalCategory } from '@croco/customer-health-core';
-import { SignalProvider } from '@croco/customer-health-core';
-import { Component, Inject, Token } from '@croco/framework-context';
+import type { HealthSignal, SignalCategory } from "@croco/customer-health-core";
+import { SignalProvider } from "@croco/customer-health-core";
+import { Component, Inject, Token } from "@croco/framework-context";
 
 /**
  * 구독 상태 값입니다.
  */
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled';
+export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled";
 
 /**
  * 건강 점수 계산에 필요한 구독 데이터 구조입니다.
@@ -29,7 +29,9 @@ export interface SubscriptionStorage {
 /**
  * 구독 저장소 주입에 사용하는 토큰입니다.
  */
-export const SUBSCRIPTION_STORAGE_TOKEN = new Token<SubscriptionStorage>('SUBSCRIPTION_STORAGE_TOKEN');
+export const SUBSCRIPTION_STORAGE_TOKEN = new Token<SubscriptionStorage>(
+  "SUBSCRIPTION_STORAGE_TOKEN",
+);
 
 const STATUS_SCORE_MAP: Record<SubscriptionStatus, number> = {
   active: 100,
@@ -43,12 +45,14 @@ const STATUS_SCORE_MAP: Record<SubscriptionStatus, number> = {
  */
 @Component()
 export class BillingSignalProvider extends SignalProvider {
-  readonly category: SignalCategory = 'business';
+  readonly category: SignalCategory = "business";
 
   /**
    * 구독 저장소를 받아 신호 제공자를 초기화합니다.
    */
-  constructor(@Inject(SUBSCRIPTION_STORAGE_TOKEN) private readonly subscriptionStorage: SubscriptionStorage) {
+  constructor(
+    @Inject(SUBSCRIPTION_STORAGE_TOKEN) private readonly subscriptionStorage: SubscriptionStorage,
+  ) {
     super();
   }
 
@@ -62,8 +66,8 @@ export class BillingSignalProvider extends SignalProvider {
     if (!subscription) {
       return [
         {
-          category: 'business',
-          name: 'subscription_status',
+          category: "business",
+          name: "subscription_status",
           value: 0,
           weight: 1.0,
           rawValue: { status: null, hasSubscription: false },
@@ -76,8 +80,8 @@ export class BillingSignalProvider extends SignalProvider {
 
     const signals: HealthSignal[] = [
       {
-        category: 'business',
-        name: 'subscription_status',
+        category: "business",
+        name: "subscription_status",
         value: statusScore,
         weight: 0.7,
         rawValue: {
@@ -90,8 +94,8 @@ export class BillingSignalProvider extends SignalProvider {
 
     if (subscription.cancelAtPeriodEnd) {
       signals.push({
-        category: 'business',
-        name: 'cancellation_scheduled',
+        category: "business",
+        name: "cancellation_scheduled",
         value: 50,
         weight: 0.3,
         rawValue: {

@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 const entries = [
-  ['entry.rsc', './fixtures/rsc-basic/entry.rsc'],
-  ['entry.ssr', './fixtures/rsc-basic/entry.ssr'],
-  ['entry.browser', './fixtures/rsc-basic/entry.browser'],
+  ["entry.rsc", "./fixtures/rsc-basic/entry.rsc"],
+  ["entry.ssr", "./fixtures/rsc-basic/entry.ssr"],
+  ["entry.browser", "./fixtures/rsc-basic/entry.browser"],
 ] as const;
 
 async function loadEntry(entryName: string, path: string) {
@@ -16,17 +16,17 @@ async function loadEntry(entryName: string, path: string) {
   }
 }
 
-describe('rsc-basic fixture entries', () => {
-  it.each(entries)('loads %s independently', async (entryName, path) => {
+describe("rsc-basic fixture entries", () => {
+  it.each(entries)("loads %s independently", async (entryName, path) => {
     const mod = await loadEntry(entryName, path);
 
     expect(mod.default).toBeDefined();
-    expect(typeof mod.default).toBe('function');
+    expect(typeof mod.default).toBe("function");
   });
 
-  it('fails clearly when the browser entry is missing', async () => {
-    await expect(loadEntry('entry.browser', './fixtures/rsc-basic/entry.browser-missing')).rejects.toThrow(
-      'entry.browser'
-    );
+  it("fails clearly when the browser entry is missing", async () => {
+    await expect(
+      loadEntry("entry.browser", "./fixtures/rsc-basic/entry.browser-missing"),
+    ).rejects.toThrow("entry.browser");
   });
 });

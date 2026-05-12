@@ -1,14 +1,14 @@
-import type { AuthProvider, AuthUser } from '@croco/auth-core';
-import { Component } from '@croco/framework-context';
-import type { BetterAuthFactory } from './BetterAuthFactory';
-import { BetterAuthInvalidSessionProblem } from './problems/BetterAuthInvalidSessionProblem';
+import type { AuthProvider, AuthUser } from "@croco/auth-core";
+import { Component } from "@croco/framework-context";
+import type { BetterAuthFactory } from "./BetterAuthFactory";
+import { BetterAuthInvalidSessionProblem } from "./problems/BetterAuthInvalidSessionProblem";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function toStringArray(value: unknown): string[] {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return [value];
   }
 
@@ -16,7 +16,7 @@ function toStringArray(value: unknown): string[] {
     return [];
   }
 
-  return value.filter((item): item is string => typeof item === 'string');
+  return value.filter((item): item is string => typeof item === "string");
 }
 
 function mergeStringArrays(...values: unknown[]): string[] {
@@ -60,11 +60,11 @@ function getNestedValue(source: Record<string, unknown>, key: string): unknown {
 }
 
 function extractRoles(user: Record<string, unknown>): string[] {
-  return mergeStringArrays(getNestedValue(user, 'roles'), getNestedValue(user, 'role'));
+  return mergeStringArrays(getNestedValue(user, "roles"), getNestedValue(user, "role"));
 }
 
 function extractPermissions(user: Record<string, unknown>): string[] {
-  return mergeStringArrays(getNestedValue(user, 'permissions'), getNestedValue(user, 'permission'));
+  return mergeStringArrays(getNestedValue(user, "permissions"), getNestedValue(user, "permission"));
 }
 
 /**
@@ -90,13 +90,13 @@ export class BetterAuthProvider implements AuthProvider<Request> {
     const { user } = session;
     const userRecord = isRecord(user) ? user : null;
 
-    if (!userRecord || typeof userRecord.id !== 'string') {
+    if (!userRecord || typeof userRecord.id !== "string") {
       throw new BetterAuthInvalidSessionProblem();
     }
 
     return {
       id: userRecord.id,
-      email: typeof userRecord.email === 'string' ? userRecord.email : undefined,
+      email: typeof userRecord.email === "string" ? userRecord.email : undefined,
       roles: extractRoles(userRecord),
       permissions: extractPermissions(userRecord),
       metadata: {

@@ -1,5 +1,5 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
-import type { RateLimitResult } from '../types';
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { RateLimitResult } from "../types";
 
 /**
  * Problem thrown when rate limit is exceeded.
@@ -13,9 +13,9 @@ export class RateLimitExceededProblem extends Problem {
 
   constructor(result: RateLimitResult) {
     super(
-      'RATE_LIMIT_EXCEEDED',
+      "RATE_LIMIT_EXCEEDED",
       ProblemCategory.TooManyRequests,
-      'Rate limit exceeded. Please retry after the reset time.',
+      "Rate limit exceeded. Please retry after the reset time.",
       {
         extensions: {
           limit: result.limit,
@@ -23,7 +23,7 @@ export class RateLimitExceededProblem extends Problem {
           resetAt: new Date(result.resetAtMs).toISOString(),
           retryAfterSeconds: Math.ceil((result.resetAtMs - Date.now()) / 1000),
         },
-      }
+      },
     );
 
     this.retryAfterMs = Math.max(0, result.resetAtMs - Date.now());

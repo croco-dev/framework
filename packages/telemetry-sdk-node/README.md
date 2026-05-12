@@ -13,14 +13,14 @@ pnpm add @croco/telemetry-sdk-node
 ### 기본 초기화
 
 ```typescript
-import { TelemetryRuntime } from '@croco/telemetry-sdk-node';
+import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();
 await telemetry.init({
-  serviceName: 'orders',
+  serviceName: "orders",
   trace: {
     enabled: true,
-    exporterUrl: 'http://localhost:4318/v1/traces',
+    exporterUrl: "http://localhost:4318/v1/traces",
   },
 });
 ```
@@ -28,14 +28,14 @@ await telemetry.init({
 ### Lambda 프리셋
 
 ```typescript
-import { TelemetryRuntime, lambdaPreset } from '@croco/telemetry-sdk-node';
+import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();
 await telemetry.init(
   lambdaPreset({
-    serviceName: 'orders',
+    serviceName: "orders",
     probability: 0.1,
-  })
+  }),
 );
 ```
 
@@ -44,7 +44,7 @@ await telemetry.init(
 ```typescript
 const result = await telemetry.forceFlush(5000);
 if (!result.success) {
-  throw result.error ?? new Error('telemetry flush failed');
+  throw result.error ?? new Error("telemetry flush failed");
 }
 ```
 

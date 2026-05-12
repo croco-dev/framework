@@ -1,12 +1,12 @@
-import type { AnalyticsManager } from '@croco/analytics-core';
-import { Component, Context } from '@croco/framework-context';
-import type { OnboardingStore } from './OnboardingStore';
+import type { AnalyticsManager } from "@croco/analytics-core";
+import { Component, Context } from "@croco/framework-context";
+import type { OnboardingStore } from "./OnboardingStore";
 import {
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepNotFoundProblem,
-} from './problems/OnboardingProblems';
-import type { OnboardingDefinition, OnboardingState } from './types';
+} from "./problems/OnboardingProblems";
+import type { OnboardingDefinition, OnboardingState } from "./types";
 
 @Component()
 export class OnboardingManager {
@@ -14,7 +14,7 @@ export class OnboardingManager {
 
   constructor(
     private readonly store: OnboardingStore,
-    private readonly analytics: AnalyticsManager
+    private readonly analytics: AnalyticsManager,
   ) {}
 
   register(definition: OnboardingDefinition): void {
@@ -69,7 +69,7 @@ export class OnboardingManager {
       state.completedAt = new Date();
 
       // Track onboarding completion
-      this.analytics.capture('onboarding_completed', {
+      this.analytics.capture("onboarding_completed", {
         onboardingId,
         completedAt: state.completedAt,
       });
@@ -78,7 +78,7 @@ export class OnboardingManager {
     await this.store.saveState(tenantId, userId, onboardingId, state);
 
     // Track step completion
-    this.analytics.capture('onboarding_step_completed', {
+    this.analytics.capture("onboarding_step_completed", {
       onboardingId,
       stepId,
       stepTitle: step.title,

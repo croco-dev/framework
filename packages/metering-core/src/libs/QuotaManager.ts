@@ -1,7 +1,7 @@
-import { AtomicQuotaNotSupportedProblem } from './problems/AtomicQuotaNotSupportedProblem';
-import { QuotaExceededProblem } from './problems/QuotaExceededProblem';
-import type { UsageRecord } from './types';
-import type { AtomicQuotaCheckResult, UsageStorage } from './UsageStorage';
+import { AtomicQuotaNotSupportedProblem } from "./problems/AtomicQuotaNotSupportedProblem";
+import { QuotaExceededProblem } from "./problems/QuotaExceededProblem";
+import type { UsageRecord } from "./types";
+import type { AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
 
 export type QuotaManagerOptions = {
   usageStorage: UsageStorage;

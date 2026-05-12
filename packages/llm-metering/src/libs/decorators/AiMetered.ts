@@ -1,9 +1,9 @@
-import { createHash } from 'node:crypto';
-import 'reflect-metadata';
-import type { LlmMeteringService } from '../LlmMeteringService';
-import { createMeteredAsyncIterable, isAsyncIterable } from '../streamMetering';
+import { createHash } from "node:crypto";
+import "reflect-metadata";
+import type { LlmMeteringService } from "../LlmMeteringService";
+import { createMeteredAsyncIterable, isAsyncIterable } from "../streamMetering";
 
-export const AI_METERED_METADATA_KEY = Symbol('llm-meter:ai-metered');
+export const AI_METERED_METADATA_KEY = Symbol("llm-meter:ai-metered");
 
 export type AiMeteredOptions = {
   /**
@@ -15,15 +15,19 @@ export type AiMeteredOptions = {
    */
   usageExtractor?: (
     args: unknown[],
-    result: unknown
-  ) => { promptTokens: number; completionTokens: number; accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN' } | null;
+    result: unknown,
+  ) => {
+    promptTokens: number;
+    completionTokens: number;
+    accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN";
+  } | null;
   /**
    * 메서드에서 embedding usage를 추출하는 함수
    */
   embeddingUsageExtractor?: (
     args: unknown[],
-    result: unknown
-  ) => { tokens: number; accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN' } | null;
+    result: unknown,
+  ) => { tokens: number; accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN" } | null;
   /**
    * idempotencyKey 추출기
    */
@@ -38,12 +42,16 @@ export type AiMeteredMetadata = {
   tenantId?: string;
   usageExtractor?: (
     args: unknown[],
-    result: unknown
-  ) => { promptTokens: number; completionTokens: number; accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN' } | null;
+    result: unknown,
+  ) => {
+    promptTokens: number;
+    completionTokens: number;
+    accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN";
+  } | null;
   embeddingUsageExtractor?: (
     args: unknown[],
-    result: unknown
-  ) => { tokens: number; accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN' } | null;
+    result: unknown,
+  ) => { tokens: number; accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN" } | null;
   idempotencyKeyExtractor?: (args: unknown[]) => string | undefined;
   metadataExtractor?: (args: unknown[], result: unknown) => Record<string, unknown> | undefined;
 };
@@ -52,23 +60,28 @@ export type AiMeteredMetadata = {
 let llmMeteringServiceInstance: LlmMeteringService | null = null;
 
 function normalizeForIdempotency(value: unknown, seen: WeakSet<object>): unknown {
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return value;
   }
 
-  if (typeof value === 'bigint') {
+  if (typeof value === "bigint") {
     return value.toString();
   }
 
-  if (typeof value === 'undefined') {
-    return '[undefined]';
+  if (typeof value === "undefined") {
+    return "[undefined]";
   }
 
-  if (typeof value === 'function') {
-    return '[function]';
+  if (typeof value === "function") {
+    return "[function]";
   }
 
-  if (typeof value === 'symbol') {
+  if (typeof value === "symbol") {
     return value.toString();
   }
 
@@ -80,12 +93,12 @@ function normalizeForIdempotency(value: unknown, seen: WeakSet<object>): unknown
     return value.map((item) => normalizeForIdempotency(item, seen));
   }
 
-  if (typeof value !== 'object') {
+  if (typeof value !== "object") {
     return String(value);
   }
 
   if (seen.has(value)) {
-    return '[circular]';
+    return "[circular]";
   }
 
   seen.add(value);
@@ -101,7 +114,7 @@ function normalizeForIdempotency(value: unknown, seen: WeakSet<object>): unknown
 
 function createDefaultIdempotencyKey(propertyKey: string | symbol, args: unknown[]): string {
   const normalizedArgs = normalizeForIdempotency(args, new WeakSet<object>());
-  const hash = createHash('sha256').update(JSON.stringify(normalizedArgs)).digest('hex');
+  const hash = createHash("sha256").update(JSON.stringify(normalizedArgs)).digest("hex");
 
   return `${String(propertyKey)}:${hash}`;
 }
@@ -146,7 +159,11 @@ export function getLlmMeteringService(): LlmMeteringService | null {
  * ```
  */
 export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const originalMethod = descriptor.value;
 
     const metadata: AiMeteredMetadata = {
@@ -170,8 +187,9 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
         return result;
       }
 
-      const tenantId = metadata.tenantId ?? (this as { tenantId?: string }).tenantId ?? 'default';
-      const idempotencyKey = metadata.idempotencyKeyExtractor?.(args) ?? createDefaultIdempotencyKey(propertyKey, args);
+      const tenantId = metadata.tenantId ?? (this as { tenantId?: string }).tenantId ?? "default";
+      const idempotencyKey =
+        metadata.idempotencyKeyExtractor?.(args) ?? createDefaultIdempotencyKey(propertyKey, args);
       const additionalMetadata = metadata.metadataExtractor?.(args, result);
 
       if (isAsyncIterable(result)) {
@@ -187,30 +205,35 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
               provider: usageInfo.provider,
               usage: usageInfo.usage,
               idempotencyKey,
-              metadata: { ...additionalMetadata, operationType: 'stream', modelId: usageInfo.modelId },
+              metadata: {
+                ...additionalMetadata,
+                operationType: "stream",
+                modelId: usageInfo.modelId,
+              },
             });
           },
         });
       }
 
       // GenerateResult 타입 감지 (usage 필드 확인)
-      if (result && typeof result === 'object' && 'usage' in result) {
+      if (result && typeof result === "object" && "usage" in result) {
         const usageData = (result as { usage: unknown }).usage;
 
-        if (usageData && typeof usageData === 'object') {
+        if (usageData && typeof usageData === "object") {
           // LlmUsage 타입: promptTokens + completionTokens
-          if ('promptTokens' in usageData && 'completionTokens' in usageData) {
+          if ("promptTokens" in usageData && "completionTokens" in usageData) {
             const usage = usageData as {
               promptTokens: number;
               completionTokens: number;
               totalTokens: number;
-              accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN';
+              accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN";
             };
 
             // metadata에서 modelId, provider 추출
-            const resultMetadata = (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
-            const modelId = resultMetadata.modelId ?? 'unknown';
-            const provider = resultMetadata.provider ?? 'unknown';
+            const resultMetadata =
+              (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
+            const modelId = resultMetadata.modelId ?? "unknown";
+            const provider = resultMetadata.provider ?? "unknown";
 
             // recordUsage 호출
             await service.recordUsage({
@@ -224,21 +247,22 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
                 accuracy: usage.accuracy,
               },
               idempotencyKey,
-              metadata: { ...additionalMetadata, operationType: 'generate', modelId },
+              metadata: { ...additionalMetadata, operationType: "generate", modelId },
             });
           }
           // EmbedResult 타입: tokens (또는 embedding 존재)
-          else if ('tokens' in usageData || 'embedding' in result) {
-            const tokens = 'tokens' in usageData ? (usageData as { tokens: number }).tokens : 0;
+          else if ("tokens" in usageData || "embedding" in result) {
+            const tokens = "tokens" in usageData ? (usageData as { tokens: number }).tokens : 0;
             const accuracy =
-              'accuracy' in usageData
-                ? (usageData as { accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN' }).accuracy
+              "accuracy" in usageData
+                ? (usageData as { accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN" }).accuracy
                 : undefined;
 
             // metadata에서 modelId, provider 추출
-            const resultMetadata = (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
-            const modelId = resultMetadata.modelId ?? 'unknown';
-            const provider = resultMetadata.provider ?? 'unknown';
+            const resultMetadata =
+              (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
+            const modelId = resultMetadata.modelId ?? "unknown";
+            const provider = resultMetadata.provider ?? "unknown";
 
             // recordEmbeddingUsage 호출
             await service.recordEmbeddingUsage({
@@ -263,6 +287,9 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
 /**
  * 메서드에서 AiMetered 메타데이터 조회
  */
-export function getAiMeteredMetadata(target: object, propertyKey: string | symbol): AiMeteredMetadata | undefined {
+export function getAiMeteredMetadata(
+  target: object,
+  propertyKey: string | symbol,
+): AiMeteredMetadata | undefined {
   return Reflect.getMetadata(AI_METERED_METADATA_KEY, target, propertyKey);
 }

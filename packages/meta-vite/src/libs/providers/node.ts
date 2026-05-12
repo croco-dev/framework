@@ -1,4 +1,4 @@
-import type { CrocoFetchHandler, RuntimeContext } from '../render/types';
+import type { CrocoFetchHandler, RuntimeContext } from "../render/types";
 
 type NodeApiHandler = {
   match: (request: Request) => boolean;
@@ -14,11 +14,13 @@ type NodeComposedOptions = {
  * Node.js HTTP server adapter.
  * Wraps a CrocoFetchHandler for `@hono/node-server`-compatible `serve({ fetch })`.
  */
-export function createNodeHandler(handler: CrocoFetchHandler): { fetch: (request: Request) => Promise<Response> } {
+export function createNodeHandler(handler: CrocoFetchHandler): {
+  fetch: (request: Request) => Promise<Response>;
+} {
   return {
     fetch: async (request: Request) => {
       const ctx: RuntimeContext = {
-        platform: 'node',
+        platform: "node",
       };
       return handler(request, ctx);
     },
@@ -37,7 +39,7 @@ export function createNodeComposedHandler(options: NodeComposedOptions): {
       }
 
       const ctx: RuntimeContext = {
-        platform: 'node',
+        platform: "node",
       };
       return options.pageHandler(request, ctx);
     },

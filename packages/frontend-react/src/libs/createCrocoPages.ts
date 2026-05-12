@@ -1,4 +1,4 @@
-import type { RenderMode } from '@croco/meta-vite';
+import type { RenderMode } from "@croco/meta-vite";
 
 export type CrocoPageOptions = {
   /** SSR 렌더링 여부 (default: true) */
@@ -19,7 +19,7 @@ export type CrocoPageConfig = {
 
 export function createCrocoPageConfig(options?: CrocoPageOptions): CrocoPageConfig {
   return {
-    mode: options?.ssr === false ? 'ssg' : 'ssr',
+    mode: options?.ssr === false ? "ssg" : "ssr",
     head: options?.head,
     revalidateMs: options?.revalidate,
   };

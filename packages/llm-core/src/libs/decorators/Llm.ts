@@ -1,9 +1,9 @@
-import 'reflect-metadata';
-import type { LlmService } from '../LlmService';
-import { InvalidLlmPromptProblem, LlmServiceNotInitializedProblem } from '../problems/LlmProblems';
-import type { GenerateParams, GenerateResult, LlmMetadata } from '../types';
+import "reflect-metadata";
+import type { LlmService } from "../LlmService";
+import { InvalidLlmPromptProblem, LlmServiceNotInitializedProblem } from "../problems/LlmProblems";
+import type { GenerateParams, GenerateResult, LlmMetadata } from "../types";
 
-export const LLM_METADATA_KEY = Symbol('llm:llm');
+export const LLM_METADATA_KEY = Symbol("llm:llm");
 
 export type LlmOptions = {
   modelId?: string;
@@ -56,9 +56,13 @@ export function getLlmService(): LlmService | null {
  * ```
  */
 export function Llm(options: LlmOptions = {}): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const metadata: LlmMethodMetadata = {
-      modelId: options.modelId ?? 'default',
+      modelId: options.modelId ?? "default",
     };
 
     // 메타데이터 저장 (선택적 조회용)
@@ -71,8 +75,8 @@ export function Llm(options: LlmOptions = {}): MethodDecorator {
       }
 
       const prompt = args[0];
-      if (typeof prompt !== 'string') {
-        throw new InvalidLlmPromptProblem(prompt === undefined ? 'undefined' : typeof prompt);
+      if (typeof prompt !== "string") {
+        throw new InvalidLlmPromptProblem(prompt === undefined ? "undefined" : typeof prompt);
       }
 
       // GenerateParams 구성
@@ -98,6 +102,9 @@ export function Llm(options: LlmOptions = {}): MethodDecorator {
 /**
  * 메서드에서 Llm 메타데이터 조회
  */
-export function getLlmMetadata(target: object, propertyKey: string | symbol): LlmMethodMetadata | undefined {
+export function getLlmMetadata(
+  target: object,
+  propertyKey: string | symbol,
+): LlmMethodMetadata | undefined {
   return Reflect.getMetadata(LLM_METADATA_KEY, target, propertyKey);
 }

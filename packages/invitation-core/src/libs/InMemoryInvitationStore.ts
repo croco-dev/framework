@@ -1,5 +1,5 @@
-import { InvitationStore } from './InvitationStore';
-import type { Invitation, InvitationStatus } from './types';
+import { InvitationStore } from "./InvitationStore";
+import type { Invitation, InvitationStatus } from "./types";
 
 export class InMemoryInvitationStore extends InvitationStore {
   private readonly storage = new Map<string, Invitation>();
@@ -37,7 +37,11 @@ export class InMemoryInvitationStore extends InvitationStore {
     return invitation;
   }
 
-  async updateStatus(tenantId: string, id: string, status: InvitationStatus): Promise<Invitation | null> {
+  async updateStatus(
+    tenantId: string,
+    id: string,
+    status: InvitationStatus,
+  ): Promise<Invitation | null> {
     const invitation = this.storage.get(id);
     if (!invitation || invitation.tenantId !== tenantId) {
       return null;
@@ -57,7 +61,7 @@ export class InMemoryInvitationStore extends InvitationStore {
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
-    meta: { acceptedAt?: Date; rejectedAt?: Date } = {}
+    meta: { acceptedAt?: Date; rejectedAt?: Date } = {},
   ): Promise<Invitation | null> {
     const invitation = this.storage.get(id);
     if (!invitation || invitation.tenantId !== tenantId || invitation.status !== expected) {
@@ -78,7 +82,11 @@ export class InMemoryInvitationStore extends InvitationStore {
     let count = 0;
 
     for (const invitation of this.storage.values()) {
-      if (invitation.tenantId === tenantId && invitation.status === 'pending' && invitation.createdAt >= since) {
+      if (
+        invitation.tenantId === tenantId &&
+        invitation.status === "pending" &&
+        invitation.createdAt >= since
+      ) {
         count += 1;
       }
     }

@@ -1,9 +1,23 @@
 {
   "name": "@croco/frontend-cloudflare",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/worker.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/worker.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "wrangler dev",
@@ -12,32 +26,18 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
   },
-  "peerDependencies": {},
   "dependencies": {
     "@croco/meta-vite": "workspace:*"
   },
   "devDependencies": {
-    "@croco/frontend-react": "workspace:*",
     "@cloudflare/workers-types": "^4.20250214.0",
+    "@croco/frontend-react": "workspace:*",
     "vitest": "^4.0.16"
   },
+  "peerDependencies": {},
   "vitest": {
     "include": [
       "src/**/*.spec.ts"
     ]
-  },
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/worker.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/worker.js",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }

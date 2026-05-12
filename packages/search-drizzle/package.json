@@ -1,12 +1,26 @@
 {
   "name": "@croco/search-drizzle",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
@@ -15,32 +29,18 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
-    "@croco/search-core": "workspace:*",
-    "@croco/framework-context": "workspace:*"
+    "@croco/search-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "drizzle-orm": "catalog:",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:"
-  },
-  "devDependencies": {
-    "drizzle-orm": "catalog:",
-    "typescript": "5.9.3",
-    "tsup": "8.5.1",
-    "vitest": "4.0.16",
-    "@types/node": "^22"
-  },
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }

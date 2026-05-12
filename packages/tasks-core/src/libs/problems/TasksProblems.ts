@@ -1,7 +1,7 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class TaskNotFoundProblem extends Problem {
-  readonly code = 'tasks-core/task-not-found';
+  readonly code = "tasks-core/task-not-found";
   readonly category = ProblemCategory.NotFound;
   constructor(taskId: string) {
     super(undefined, undefined, `Task not found: '${taskId}'`);
@@ -11,7 +11,7 @@ export class TaskNotFoundProblem extends Problem {
 export class DuplicateTaskRegistrationProblem extends Problem {
   constructor(taskName: string) {
     super(
-      'tasks-core/duplicate-task-registration',
+      "tasks-core/duplicate-task-registration",
       ProblemCategory.InternalServerError,
       `Task ${taskName} is already registered`,
       {
@@ -19,7 +19,7 @@ export class DuplicateTaskRegistrationProblem extends Problem {
           taskName,
           retryable: false,
         },
-      }
+      },
     );
   }
 }
@@ -27,7 +27,7 @@ export class DuplicateTaskRegistrationProblem extends Problem {
 export class TaskRunnerDIFailureProblem extends Problem {
   constructor(taskName: string, cause: string) {
     super(
-      'tasks-core/task-runner-di-failure',
+      "tasks-core/task-runner-di-failure",
       ProblemCategory.InternalServerError,
       `Failed to resolve task '${taskName}'`,
       {
@@ -36,7 +36,7 @@ export class TaskRunnerDIFailureProblem extends Problem {
           cause,
           retryable: false,
         },
-      }
+      },
     );
   }
 }

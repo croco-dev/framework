@@ -2,7 +2,15 @@ export type Session = {
   id: string;
   userId: string;
   clientId: string;
-  status: 'abandoned' | 'active' | 'pending' | 'ended' | 'expired' | 'removed' | 'replaced' | 'revoked';
+  status:
+    | "abandoned"
+    | "active"
+    | "pending"
+    | "ended"
+    | "expired"
+    | "removed"
+    | "replaced"
+    | "revoked";
   createdAt: Date;
   updatedAt: Date;
   expireAt?: Date;
@@ -13,7 +21,7 @@ export type Session = {
 export type SessionListOptions = {
   userId?: string;
   clientId?: string;
-  status?: Session['status'];
+  status?: Session["status"];
   limit?: number;
   offset?: number;
 };

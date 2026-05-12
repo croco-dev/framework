@@ -1,9 +1,9 @@
-import type { EventBus } from './EventBus';
-import { type EventHandlerClass, getEventHandlerSubscriptions } from './EventHandler';
-import type { HandlerResolver } from './HandlerResolver';
-import { DefaultHandlerResolver } from './HandlerResolver';
-import { EventBusNotSetProblem } from './problems/EventsProblems';
-import type { EventSubscription } from './types/EventSubscription';
+import type { EventBus } from "./EventBus";
+import { type EventHandlerClass, getEventHandlerSubscriptions } from "./EventHandler";
+import type { HandlerResolver } from "./HandlerResolver";
+import { DefaultHandlerResolver } from "./HandlerResolver";
+import { EventBusNotSetProblem } from "./problems/EventsProblems";
+import type { EventSubscription } from "./types/EventSubscription";
 
 export interface EventBusStartOptions {
   handlers: EventHandlerClass[];
@@ -11,7 +11,7 @@ export interface EventBusStartOptions {
 }
 
 type StartedSubscription = EventSubscription & {
-  handler: NonNullable<EventSubscription['handler']>;
+  handler: NonNullable<EventSubscription["handler"]>;
 };
 
 /**

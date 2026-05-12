@@ -1,4 +1,4 @@
-export type Scope = 'singleton' | 'request' | 'transient';
+export type Scope = "singleton" | "request" | "transient";
 
 export type Constructor<T = unknown> = new (...args: never[]) => T;
 
@@ -24,7 +24,10 @@ export interface RequestContext {
   traceId?: string;
 }
 
-export type Middleware<TContext = RequestContext> = (ctx: TContext, next: () => Promise<void>) => Promise<void>;
+export type Middleware<TContext = RequestContext> = (
+  ctx: TContext,
+  next: () => Promise<void>,
+) => Promise<void>;
 
 export interface LifecycleHooks<TContext = RequestContext> {
   onRequestStart?: (ctx: TContext) => Promise<void> | void;

@@ -1,5 +1,5 @@
-import 'reflect-metadata';
-import type { z } from 'zod';
+import "reflect-metadata";
+import type { z } from "zod";
 import {
   type ControllerMetadata,
   type ParamMetadata,
@@ -8,7 +8,7 @@ import {
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
   type RouteMetadata,
-} from '../../libs/sharedTypes';
+} from "../../libs/sharedTypes";
 
 export function Controller(path: string): ClassDecorator {
   return (target) => {
@@ -18,12 +18,12 @@ export function Controller(path: string): ClassDecorator {
   };
 }
 
-export function Get(path = ''): MethodDecorator {
-  return createRouteDecorator('GET', path);
+export function Get(path = ""): MethodDecorator {
+  return createRouteDecorator("GET", path);
 }
 
-export function Post(path = ''): MethodDecorator {
-  return createRouteDecorator('POST', path);
+export function Post(path = ""): MethodDecorator {
+  return createRouteDecorator("POST", path);
 }
 
 export function Param(name: string, schema?: z.ZodType): ParameterDecorator {
@@ -45,7 +45,8 @@ export function Header(name: string, schema?: z.ZodType): ParameterDecorator {
 function createRouteDecorator(method: string, path: string): MethodDecorator {
   return (target, propertyKey) => {
     const ctor = target.constructor;
-    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+    const routes =
+      (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
     const route: RouteMetadata = { method, path, methodName: propertyKey };
 
     Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, route], ctor);
@@ -55,18 +56,24 @@ function createRouteDecorator(method: string, path: string): MethodDecorator {
 function createParamDecorator(
   type: ParamType,
   name: string | undefined,
-  schema: z.ZodType | undefined
+  schema: z.ZodType | undefined,
 ): ParameterDecorator {
   return (target, propertyKey, parameterIndex) => {
     if (!propertyKey) return;
 
     const paramCtor = target.constructor;
     const paramsMap =
-      (Reflect.getMetadata(REST_PARAMS_KEY, paramCtor) as Map<string | symbol, ParamMetadata[]> | undefined) ??
-      new Map();
+      (Reflect.getMetadata(REST_PARAMS_KEY, paramCtor) as
+        | Map<string | symbol, ParamMetadata[]>
+        | undefined) ?? new Map();
     const methodParams = paramsMap.get(propertyKey) ?? [];
 
-    methodParams.push({ type, index: parameterIndex, name, pipes: schema ? [{ schema }] : undefined });
+    methodParams.push({
+      type,
+      index: parameterIndex,
+      name,
+      pipes: schema ? [{ schema }] : undefined,
+    });
     paramsMap.set(propertyKey, methodParams);
 
     Reflect.defineMetadata(REST_PARAMS_KEY, paramsMap, paramCtor);

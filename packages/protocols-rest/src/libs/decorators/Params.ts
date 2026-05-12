@@ -1,8 +1,8 @@
-import 'reflect-metadata';
-import type { z } from 'zod';
-import { ParamType, REST_PARAMS_KEY } from '../constants';
-import type { ParamMetadata } from '../types';
-import { ValidationPipe } from '../validators/ValidationPipe';
+import "reflect-metadata";
+import type { z } from "zod";
+import { ParamType, REST_PARAMS_KEY } from "../constants";
+import type { ParamMetadata } from "../types";
+import { ValidationPipe } from "../validators/ValidationPipe";
 
 function createParamDecorator(type: ParamType) {
   return (name?: string, schema?: z.ZodType): ParameterDecorator => {
@@ -35,22 +35,26 @@ function createParamDecorator(type: ParamType) {
 /**
  * 경로 파라미터를 메서드 인자에 바인딩합니다.
  */
-export const Param = (name: string, schema?: z.ZodType) => createParamDecorator(ParamType.PARAM)(name, schema);
+export const Param = (name: string, schema?: z.ZodType) =>
+  createParamDecorator(ParamType.PARAM)(name, schema);
 
 /**
  * 쿼리스트링 값을 메서드 인자에 바인딩합니다.
  */
-export const Query = (name: string, schema?: z.ZodType) => createParamDecorator(ParamType.QUERY)(name, schema);
+export const Query = (name: string, schema?: z.ZodType) =>
+  createParamDecorator(ParamType.QUERY)(name, schema);
 
 /**
  * 요청 헤더 값을 메서드 인자에 바인딩합니다.
  */
-export const Header = (name: string, schema?: z.ZodType) => createParamDecorator(ParamType.HEADER)(name, schema);
+export const Header = (name: string, schema?: z.ZodType) =>
+  createParamDecorator(ParamType.HEADER)(name, schema);
 
 /**
  * 요청 본문 전체를 메서드 인자에 바인딩합니다.
  */
-export const Body = (schema?: z.ZodType): ParameterDecorator => createParamDecorator(ParamType.BODY)(undefined, schema);
+export const Body = (schema?: z.ZodType): ParameterDecorator =>
+  createParamDecorator(ParamType.BODY)(undefined, schema);
 
 /**
  * 추상화된 HTTP 컨텍스트를 메서드 인자에 바인딩합니다.

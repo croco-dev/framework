@@ -11,30 +11,36 @@ pnpm add @croco/auth-core
 ## 사용법
 
 ```ts
-import { ApiKeyGenerator, ApiKeyHasher, ApiKeyManager } from '@croco/auth-core';
+import { ApiKeyGenerator, ApiKeyHasher, ApiKeyManager } from "@croco/auth-core";
 
-const manager = new ApiKeyManager(apiKeyStore, new ApiKeyGenerator(), new ApiKeyHasher(), eventBus, logger);
+const manager = new ApiKeyManager(
+  apiKeyStore,
+  new ApiKeyGenerator(),
+  new ApiKeyHasher(),
+  eventBus,
+  logger,
+);
 
 const created = await manager.create({
-  tenantId: 'tenant-123',
-  name: 'server-to-server',
-  permissions: ['project:read', 'project:write'],
+  tenantId: "tenant-123",
+  name: "server-to-server",
+  permissions: ["project:read", "project:write"],
 });
 
 const principal = await manager.verify(created.key);
 ```
 
 ```ts
-import { RequirePermission, RbacEngine, RoleRegistry } from '@croco/auth-core';
+import { RequirePermission, RbacEngine, RoleRegistry } from "@croco/auth-core";
 
 const roleRegistry = new RoleRegistry({
-  admin: ['project:read', 'project:write'],
+  admin: ["project:read", "project:write"],
 });
 
 const rbac = new RbacEngine(roleRegistry);
 
 class ProjectController {
-  @RequirePermission('project:write')
+  @RequirePermission("project:write")
   async update(): Promise<void> {}
 }
 ```

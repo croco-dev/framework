@@ -1,10 +1,10 @@
-import { Component, Inject, Token } from '@croco/framework-context';
-import { type OnboardingState, OnboardingStore } from '@croco/onboarding-core';
-import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
-import { and, eq } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { onboardingStates } from './schema';
+import { Component, Inject, Token } from "@croco/framework-context";
+import { type OnboardingState, OnboardingStore } from "@croco/onboarding-core";
+import type { TxManager } from "@croco/tx-core";
+import type { DrizzleDb } from "@croco/tx-drizzle";
+import { and, eq } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { onboardingStates } from "./schema";
 
 /**
  * 온보딩 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
@@ -19,7 +19,7 @@ export type OnboardingStateRow = typeof onboardingStates.$inferSelect;
 /**
  * 온보딩 저장소용 Drizzle 클라이언트 주입 토큰입니다.
  */
-export const DRIZZLE_TOKEN = new Token<DrizzleOnboardingClient>('DRIZZLE_TOKEN');
+export const DRIZZLE_TOKEN = new Token<DrizzleOnboardingClient>("DRIZZLE_TOKEN");
 
 /**
  * 온보딩 상태를 Drizzle로 저장하고 조회하는 구현체입니다.
@@ -31,7 +31,7 @@ export class DrizzleOnboardingStore extends OnboardingStore {
    */
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleOnboardingClient,
-    private readonly txManager: TxManager<DrizzleOnboardingClient>
+    private readonly txManager: TxManager<DrizzleOnboardingClient>,
   ) {
     super();
   }
@@ -39,7 +39,11 @@ export class DrizzleOnboardingStore extends OnboardingStore {
   /**
    * 테넌트, 사용자, 온보딩 ID 기준으로 상태를 조회합니다.
    */
-  async getState(tenantId: string, userId: string, onboardingId: string): Promise<OnboardingState | null> {
+  async getState(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+  ): Promise<OnboardingState | null> {
     const client = this.txManager.getClient() ?? this.db;
 
     const rows = (await client
@@ -49,8 +53,8 @@ export class DrizzleOnboardingStore extends OnboardingStore {
         and(
           eq(onboardingStates.tenantId, tenantId),
           eq(onboardingStates.userId, userId),
-          eq(onboardingStates.onboardingId, onboardingId)
-        )
+          eq(onboardingStates.onboardingId, onboardingId),
+        ),
       )
       .limit(1)) as OnboardingStateRow[];
 
@@ -60,7 +64,7 @@ export class DrizzleOnboardingStore extends OnboardingStore {
 
     const row = rows[0];
     return {
-      steps: row.steps as OnboardingState['steps'],
+      steps: row.steps as OnboardingState["steps"],
       isCompleted: row.isCompleted,
       completedAt: row.completedAt ?? undefined,
     };
@@ -69,7 +73,12 @@ export class DrizzleOnboardingStore extends OnboardingStore {
   /**
    * 온보딩 상태를 upsert 방식으로 저장합니다.
    */
-  async saveState(tenantId: string, userId: string, onboardingId: string, state: OnboardingState): Promise<void> {
+  async saveState(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+    state: OnboardingState,
+  ): Promise<void> {
     const client = this.txManager.getClient() ?? this.db;
 
     await client

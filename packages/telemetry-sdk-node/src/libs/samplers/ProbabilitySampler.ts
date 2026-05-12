@@ -1,7 +1,7 @@
-import type { Attributes, Context, Link, SpanKind } from '@opentelemetry/api';
-import { isSpanContextValid, isValidTraceId, TraceFlags, trace } from '@opentelemetry/api';
-import { type Sampler, SamplingDecision, type SamplingResult } from '@opentelemetry/sdk-trace-base';
-import { SamplerProblem } from '../problems/TelemetryProblems';
+import type { Attributes, Context, Link, SpanKind } from "@opentelemetry/api";
+import { isSpanContextValid, isValidTraceId, TraceFlags, trace } from "@opentelemetry/api";
+import { type Sampler, SamplingDecision, type SamplingResult } from "@opentelemetry/sdk-trace-base";
+import { SamplerProblem } from "../problems/TelemetryProblems";
 
 type ProbabilitySamplerOptions = {
   probability: number;
@@ -13,7 +13,7 @@ class ProbabilitySampler implements Sampler {
 
   constructor(options: ProbabilitySamplerOptions) {
     if (options.probability < 0 || options.probability > 1) {
-      throw new SamplerProblem('Probability must be between 0 and 1');
+      throw new SamplerProblem("Probability must be between 0 and 1");
     }
     this.probability = options.probability;
     this.threshold = Math.floor(options.probability * 0xffffffff);
@@ -25,7 +25,7 @@ class ProbabilitySampler implements Sampler {
     _spanName: string,
     _spanKind: SpanKind,
     _attributes: Attributes,
-    _links: Link[]
+    _links: Link[],
   ): SamplingResult {
     const spanContext = trace.getSpanContext(context);
 

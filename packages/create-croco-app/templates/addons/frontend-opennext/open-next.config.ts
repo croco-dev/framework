@@ -1,18 +1,18 @@
-import type { OpenNextConfig } from '@opennextjs/cloudflare';
+import type { OpenNextConfig } from "@opennextjs/cloudflare";
 
 const config: OpenNextConfig = {
   default: {
     override: {
-      wrapper: 'cloudflare-node',
-      converter: 'edge',
-      proxyExternalRequest: 'fetch',
+      wrapper: "cloudflare-node",
+      converter: "edge",
+      proxyExternalRequest: "fetch",
     },
   },
   middleware: {
     external: true,
     override: {
-      wrapper: 'cloudflare-edge',
-      converter: 'edge',
+      wrapper: "cloudflare-edge",
+      converter: "edge",
     },
   },
 };

@@ -1,13 +1,18 @@
-import type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse } from '@croco/transports-http';
-import { CrocoLambdaAdapter } from '@croco/transports-http';
-import { Hono } from 'hono';
-import type { LambdaPresetOptions } from './index';
+import type {
+  LambdaContext,
+  LambdaEvent,
+  LambdaHandler,
+  LambdaResponse,
+} from "@croco/transports-http";
+import { CrocoLambdaAdapter } from "@croco/transports-http";
+import { Hono } from "hono";
+import type { LambdaPresetOptions } from "./index";
 
 export type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse };
 
 export function createLambdaHandler(
   honoApp: Hono | { readonly fetch: (req: Request) => Promise<Response> },
-  options?: LambdaPresetOptions
+  options?: LambdaPresetOptions,
 ): LambdaHandler {
   void options;
 
@@ -16,7 +21,7 @@ export function createLambdaHandler(
   }
 
   const hono = new Hono();
-  hono.all('/*', (c) => honoApp.fetch(c.req.raw));
+  hono.all("/*", (c) => honoApp.fetch(c.req.raw));
 
   return new CrocoLambdaAdapter(hono).createHandler();
 }

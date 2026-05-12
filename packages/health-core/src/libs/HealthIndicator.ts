@@ -1,4 +1,4 @@
-export type HealthStatus = 'up' | 'down';
+export type HealthStatus = "up" | "down";
 
 export type HealthIndicatorErrorDetails = {
   error: string;

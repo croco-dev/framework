@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const PolarEventSchema = z.object({
   id: z.string(),
@@ -18,7 +18,7 @@ const PolarProductSchema = z.object({
 export const PolarSubscriptionDataSchema = z
   .object({
     id: z.string(),
-    status: z.enum(['active', 'past_due', 'canceled', 'revoked', 'trialing']),
+    status: z.enum(["active", "past_due", "canceled", "revoked", "trialing"]),
     customer: PolarCustomerSchema.optional(),
     product: PolarProductSchema.optional(),
     currentPeriodEnd: z.union([z.string(), z.date()]).nullable().optional(),

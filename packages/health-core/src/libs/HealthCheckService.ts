@@ -1,4 +1,9 @@
-import type { HealthIndicator, HealthIndicatorResult, HealthStatus, ReadinessIndicator } from './HealthIndicator';
+import type {
+  HealthIndicator,
+  HealthIndicatorResult,
+  HealthStatus,
+  ReadinessIndicator,
+} from "./HealthIndicator";
 
 export type HealthCheckResult = {
   status: HealthStatus;
@@ -38,23 +43,25 @@ export class HealthCheckService {
     }
 
     const results = await Promise.all(
-      this.readinessIndicators.map((indicator) => this.checkWithTimeout(indicator, 'isReady'))
+      this.readinessIndicators.map((indicator) => this.checkWithTimeout(indicator, "isReady")),
     );
 
-    return results.every((r) => r.status === 'up');
+    return results.every((r) => r.status === "up");
   }
 
   async check(): Promise<HealthCheckResult> {
-    const results = await Promise.all(this.indicators.map((indicator) => this.checkWithTimeout(indicator, 'check')));
+    const results = await Promise.all(
+      this.indicators.map((indicator) => this.checkWithTimeout(indicator, "check")),
+    );
 
-    const status = results.every((r) => r.status === 'up') ? 'up' : 'down';
+    const status = results.every((r) => r.status === "up") ? "up" : "down";
 
     return { status, results };
   }
 
   private async checkWithTimeout(
     indicator: HealthIndicator | ReadinessIndicator,
-    method: 'check' | 'isReady'
+    method: "check" | "isReady",
   ): Promise<HealthIndicatorResult> {
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -68,7 +75,7 @@ export class HealthCheckService {
 
     try {
       const checkFn =
-        method === 'isReady' && 'isReady' in indicator
+        method === "isReady" && "isReady" in indicator
           ? indicator.isReady.bind(indicator)
           : indicator.check.bind(indicator);
       return await Promise.race([checkFn(controller.signal), timeoutPromise]);
@@ -76,7 +83,7 @@ export class HealthCheckService {
       const message = error instanceof Error ? error.message : String(error);
       return {
         name: indicator.constructor.name,
-        status: 'down',
+        status: "down",
         details: { error: message },
       };
     } finally {

@@ -13,12 +13,12 @@ pnpm add @croco/esbuild-plugin
 ### 기본 (Zero Config)
 
 ```typescript
-import * as esbuild from 'esbuild';
-import { crocoPlugin } from '@croco/esbuild-plugin';
+import * as esbuild from "esbuild";
+import { crocoPlugin } from "@croco/esbuild-plugin";
 
 await esbuild.build({
-  entryPoints: ['src/index.ts'],
-  outdir: 'dist',
+  entryPoints: ["src/index.ts"],
+  outdir: "dist",
   plugins: [crocoPlugin()],
 });
 ```
@@ -27,16 +27,16 @@ await esbuild.build({
 
 ```typescript
 await esbuild.build({
-  entryPoints: ['src/index.ts'],
-  outdir: 'dist',
+  entryPoints: ["src/index.ts"],
+  outdir: "dist",
   plugins: [
     crocoPlugin({
-      reflectMetadata: true,  // reflect-metadata 자동 주입 (기본값: true)
+      reflectMetadata: true, // reflect-metadata 자동 주입 (기본값: true)
       scan: {
-        dirs: ['src', 'lib'],        // 스캔 디렉토리 (기본값: ['src'])
-        exclude: ['**/*.test.ts'],   // 제외 패턴 (기본값: 테스트 파일 제외)
-        decorators: ['Component'],   // 탐지할 데코레이터 (기본값: ['Component'])
-        cache: true,                 // 캐시 사용 (기본값: true)
+        dirs: ["src", "lib"], // 스캔 디렉토리 (기본값: ['src'])
+        exclude: ["**/*.test.ts"], // 제외 패턴 (기본값: 테스트 파일 제외)
+        decorators: ["Component"], // 탐지할 데코레이터 (기본값: ['Component'])
+        cache: true, // 캐시 사용 (기본값: true)
       },
     }),
   ],
@@ -57,25 +57,25 @@ Entry point 파일의 맨 첫 줄에 `import 'reflect-metadata';`를 자동 추�
 
 ### crocoPlugin(config?)
 
-| 옵션 | 타입 | 기본값 | 설명 |
-|------|------|--------|------|
-| `reflectMetadata` | boolean | `true` | reflect-metadata 자동 주입 |
-| `scan.dirs` | string[] | `['src']` | 스캔할 디렉토리 |
-| `scan.exclude` | string[] | 테스트 파일 제외 | 제외할 패턴 |
-| `scan.decorators` | string[] | `['Component']` | 탐지할 데코레이터 |
-| `scan.cache` | boolean | `true` | 파일 변경 캐시 사용 |
+| 옵션              | 타입     | 기본값           | 설명                       |
+| ----------------- | -------- | ---------------- | -------------------------- |
+| `reflectMetadata` | boolean  | `true`           | reflect-metadata 자동 주입 |
+| `scan.dirs`       | string[] | `['src']`        | 스캔할 디렉토리            |
+| `scan.exclude`    | string[] | 테스트 파일 제외 | 제외할 패턴                |
+| `scan.decorators` | string[] | `['Component']`  | 탐지할 데코레이터          |
+| `scan.cache`      | boolean  | `true`           | 파일 변경 캐시 사용        |
 
 ## 예제
 
 ```typescript
 // esbuild.config.ts
-import * as esbuild from 'esbuild';
-import { crocoPlugin } from '@croco/esbuild-plugin';
+import * as esbuild from "esbuild";
+import { crocoPlugin } from "@croco/esbuild-plugin";
 
 export default async () => {
   await esbuild.build({
-    entryPoints: ['src/index.ts'],
-    outdir: 'dist',
+    entryPoints: ["src/index.ts"],
+    outdir: "dist",
     bundle: true,
     plugins: [crocoPlugin()],
   });

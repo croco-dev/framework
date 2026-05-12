@@ -1,11 +1,10 @@
-import type { DomainEvent } from './DomainEvent';
-import type { EventPublishing } from './interfaces/EventPublishing';
-import type { EventSubscribing } from './interfaces/EventSubscribing';
-import type { EventNamePattern } from './types/EventSubscription';
+import type { DomainEvent } from "./DomainEvent";
+import type { EventPublishing } from "./interfaces/EventPublishing";
+import type { EventSubscribing } from "./interfaces/EventSubscribing";
+import type { EventNamePattern } from "./types/EventSubscription";
 
 export interface EventBus<TEvent extends DomainEvent = DomainEvent>
-  extends EventPublishing<TEvent>,
-    EventSubscribing<TEvent> {}
+  extends EventPublishing<TEvent>, EventSubscribing<TEvent> {}
 
 type TrieNode<TValue> = {
   children: Map<string, TrieNode<TValue>>;
@@ -92,12 +91,12 @@ type GlobEntry<TValue> = {
 };
 
 function getSingleTrailingWildcardPrefix(pattern: EventNamePattern): string | undefined {
-  const firstWildcardIndex = pattern.indexOf('*');
+  const firstWildcardIndex = pattern.indexOf("*");
   if (firstWildcardIndex === -1) {
     return undefined;
   }
 
-  const lastWildcardIndex = pattern.lastIndexOf('*');
+  const lastWildcardIndex = pattern.lastIndexOf("*");
   if (firstWildcardIndex === pattern.length - 1 && lastWildcardIndex === firstWildcardIndex) {
     return pattern.slice(0, -1);
   }
@@ -106,8 +105,8 @@ function getSingleTrailingWildcardPrefix(pattern: EventNamePattern): string | un
 }
 
 function compileGlobPattern(pattern: EventNamePattern): (eventName: string) => boolean {
-  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
-  const source = `^${escaped.replace(/\*/g, '.*')}$`;
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+  const source = `^${escaped.replace(/\*/g, ".*")}$`;
   const regex = new RegExp(source);
   return (eventName: string) => regex.test(eventName);
 }
@@ -153,7 +152,7 @@ export class EventSubscriptionIndex<TValue> {
       return;
     }
 
-    if (!pattern.includes('*')) {
+    if (!pattern.includes("*")) {
       addToMapSet(this.exact, pattern, value);
       return;
     }
@@ -177,7 +176,7 @@ export class EventSubscriptionIndex<TValue> {
       return;
     }
 
-    if (!pattern.includes('*')) {
+    if (!pattern.includes("*")) {
       deleteFromMapSet(this.exact, pattern, value);
       return;
     }

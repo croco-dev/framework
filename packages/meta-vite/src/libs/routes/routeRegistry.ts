@@ -5,12 +5,12 @@ import type {
   PageRouteIR,
   RenderMode,
   RenderRouteIR,
-} from './types';
+} from "./types";
 
 export class RouteConflictError extends Error {
   constructor(path: string, method: string) {
     super(`API route conflict: '${method} ${path}' is already registered`);
-    this.name = 'RouteConflictError';
+    this.name = "RouteConflictError";
   }
 }
 
@@ -44,17 +44,21 @@ export class RouteRegistry {
       componentRef: definition.path,
       mode: this.resolveMode(definition.mode),
       ...(definition.head ? { head: definition.head } : {}),
-      ...(definition.revalidate !== undefined ? { revalidateMs: definition.revalidate * 1000 } : {}),
+      ...(definition.revalidate !== undefined
+        ? { revalidateMs: definition.revalidate * 1000 }
+        : {}),
     };
   }
 
   private resolveMode(mode?: RenderMode): RenderMode {
-    return mode ?? 'ssr';
+    return mode ?? "ssr";
   }
 
   registerApiRoute(definition: ApiRouteDefinition): void {
-    const method = definition.method ?? 'GET';
-    const conflict = this.apiDefinitions.some((r) => r.path === definition.path && (r.method ?? 'GET') === method);
+    const method = definition.method ?? "GET";
+    const conflict = this.apiDefinitions.some(
+      (r) => r.path === definition.path && (r.method ?? "GET") === method,
+    );
     if (conflict) {
       throw new RouteConflictError(definition.path, method);
     }

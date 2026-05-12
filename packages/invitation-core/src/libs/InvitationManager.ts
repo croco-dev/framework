@@ -1,25 +1,29 @@
-import { randomUUID } from 'node:crypto';
-import type { EventPublisher } from '@croco/events-core';
-import { Component } from '@croco/framework-context';
-import type { AbstractMembershipManager, MembershipRole } from '@croco/membership-core';
-import { NotificationChannel, type NotificationPayload, type NotificationService } from '@croco/notifications-core';
-import type { TxManager } from '@croco/tx-core';
+import { randomUUID } from "node:crypto";
+import type { EventPublisher } from "@croco/events-core";
+import { Component } from "@croco/framework-context";
+import type { AbstractMembershipManager, MembershipRole } from "@croco/membership-core";
+import {
+  NotificationChannel,
+  type NotificationPayload,
+  type NotificationService,
+} from "@croco/notifications-core";
+import type { TxManager } from "@croco/tx-core";
 import {
   InvitationAcceptedEvent,
   InvitationCreatedEvent,
   InvitationDeclinedEvent,
   InvitationRevokedEvent,
-} from './events/InvitationEvents';
-import type { InvitationStore } from './InvitationStore';
+} from "./events/InvitationEvents";
+import type { InvitationStore } from "./InvitationStore";
 import {
   InvitationAlreadyAcceptedProblem,
   InvitationEmailMismatchProblem,
   InvitationExpiredProblem,
   InvitationInvalidStatusProblem,
   InvitationNotFoundProblem,
-} from './problems/InvitationProblems';
-import { generateToken, hashToken } from './token';
-import type { Invitation, InvitationStatus, InvitationType } from './types';
+} from "./problems/InvitationProblems";
+import { generateToken, hashToken } from "./token";
+import type { Invitation, InvitationStatus, InvitationType } from "./types";
 
 const DEFAULT_EMAIL_EXPIRES_IN_DAYS = 7;
 const DEFAULT_LINK_EXPIRES_IN_DAYS = 30;
@@ -52,7 +56,7 @@ export class InvitationManager {
     private readonly membershipManager: AbstractMembershipManager,
     private readonly notificationService: NotificationService,
     private readonly eventPublisher: EventPublisher,
-    private readonly txManager: TxManager<unknown>
+    private readonly txManager: TxManager<unknown>,
   ) {}
 
   async createEmailInvitation(input: CreateEmailInvitationInput): Promise<string> {
@@ -63,7 +67,7 @@ export class InvitationManager {
       inviterId: input.inviterId,
       email,
       role: input.role,
-      type: 'email',
+      type: "email",
       token,
       expiresInDays: input.expiresInDays,
     });
@@ -79,7 +83,7 @@ export class InvitationManager {
         role: invitation.role,
         type: invitation.type,
         expiresAt: invitation.expiresAt,
-      })
+      }),
     );
 
     return token;
@@ -92,7 +96,7 @@ export class InvitationManager {
       inviterId: input.inviterId,
       email: null,
       role: input.role,
-      type: 'link',
+      type: "link",
       token,
       expiresInDays: input.expiresInDays,
     });
@@ -107,7 +111,7 @@ export class InvitationManager {
         role: invitation.role,
         type: invitation.type,
         expiresAt: invitation.expiresAt,
-      })
+      }),
     );
 
     return token;
@@ -115,16 +119,16 @@ export class InvitationManager {
 
   async acceptInvitation(input: AcceptInvitationInput): Promise<Invitation> {
     const invitation = await this.getByTokenOrThrow(input.token);
-    this.ensureAcceptableStatus(invitation, 'accept');
+    this.ensureAcceptableStatus(invitation, "accept");
 
     if (this.isExpired(invitation)) {
       const expiredInvitation = await this.updateInvitation(invitation, {
-        status: 'expired',
+        status: "expired",
       });
       throw new InvitationExpiredProblem(expiredInvitation.id);
     }
 
-    if (invitation.type === 'email') {
+    if (invitation.type === "email") {
       const providedEmail = this.normalizeOptionalEmail(input.email);
       if (!providedEmail || providedEmail !== invitation.email) {
         throw new InvitationEmailMismatchProblem(invitation.id, invitation.email, providedEmail);
@@ -132,9 +136,15 @@ export class InvitationManager {
     }
 
     return this.txManager.run(async () => {
-      const accepted = await this.store.compareAndSetStatus(invitation.tenantId, invitation.id, 'pending', 'accepted', {
-        acceptedAt: new Date(),
-      });
+      const accepted = await this.store.compareAndSetStatus(
+        invitation.tenantId,
+        invitation.id,
+        "pending",
+        "accepted",
+        {
+          acceptedAt: new Date(),
+        },
+      );
 
       if (!accepted) {
         throw new InvitationAlreadyAcceptedProblem(invitation.id);
@@ -151,8 +161,8 @@ export class InvitationManager {
             email: accepted.email,
             role: accepted.role,
             type: accepted.type,
-          })
-        )
+          }),
+        ),
       );
 
       return accepted;
@@ -161,10 +171,10 @@ export class InvitationManager {
 
   async declineInvitation(token: string): Promise<Invitation> {
     const invitation = await this.getByTokenOrThrow(token);
-    this.ensurePendingStatus(invitation, 'decline');
+    this.ensurePendingStatus(invitation, "decline");
 
     const declined = await this.updateInvitation(invitation, {
-      status: 'declined',
+      status: "declined",
     });
 
     await this.publishSafely(
@@ -174,7 +184,7 @@ export class InvitationManager {
         email: declined.email,
         role: declined.role,
         type: declined.type,
-      })
+      }),
     );
 
     return declined;
@@ -186,16 +196,16 @@ export class InvitationManager {
       throw new InvitationNotFoundProblem(invitationId);
     }
 
-    if (invitation.status === 'accepted') {
-      throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, 'revoke');
+    if (invitation.status === "accepted") {
+      throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, "revoke");
     }
 
-    if (invitation.status === 'revoked') {
+    if (invitation.status === "revoked") {
       return invitation;
     }
 
     const revoked = await this.updateInvitation(invitation, {
-      status: 'revoked',
+      status: "revoked",
       revokedAt: new Date(),
     });
 
@@ -206,7 +216,7 @@ export class InvitationManager {
         email: revoked.email,
         role: revoked.role,
         type: revoked.type,
-      })
+      }),
     );
 
     return revoked;
@@ -218,17 +228,17 @@ export class InvitationManager {
       throw new InvitationNotFoundProblem(invitationId);
     }
 
-    if (invitation.status === 'accepted') {
-      throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, 'resend');
+    if (invitation.status === "accepted") {
+      throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, "resend");
     }
 
     await this.revokeInvitation(invitation.id);
 
-    if (invitation.type === 'email') {
+    if (invitation.type === "email") {
       const token = await this.createEmailInvitation({
         tenantId: invitation.tenantId,
         inviterId: invitation.inviterId,
-        email: invitation.email ?? '',
+        email: invitation.email ?? "",
         role: invitation.role,
       });
       return token;
@@ -252,7 +262,8 @@ export class InvitationManager {
   }): Invitation {
     const createdAt = new Date();
     const expiresInDays =
-      input.expiresInDays ?? (input.type === 'email' ? DEFAULT_EMAIL_EXPIRES_IN_DAYS : DEFAULT_LINK_EXPIRES_IN_DAYS);
+      input.expiresInDays ??
+      (input.type === "email" ? DEFAULT_EMAIL_EXPIRES_IN_DAYS : DEFAULT_LINK_EXPIRES_IN_DAYS);
 
     return {
       id: randomUUID(),
@@ -262,7 +273,7 @@ export class InvitationManager {
       tokenHash: hashToken(input.token),
       type: input.type,
       role: input.role,
-      status: 'pending',
+      status: "pending",
       expiresAt: this.addDays(createdAt, expiresInDays),
       acceptedAt: null,
       revokedAt: null,
@@ -282,17 +293,21 @@ export class InvitationManager {
   }
 
   private ensureAcceptableStatus(invitation: Invitation, operation: string): void {
-    if (invitation.status === 'accepted') {
+    if (invitation.status === "accepted") {
       throw new InvitationAlreadyAcceptedProblem(invitation.id);
     }
 
-    if (invitation.status === 'revoked' || invitation.status === 'declined' || invitation.status === 'expired') {
+    if (
+      invitation.status === "revoked" ||
+      invitation.status === "declined" ||
+      invitation.status === "expired"
+    ) {
       throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, operation);
     }
   }
 
   private ensurePendingStatus(invitation: Invitation, operation: string): void {
-    if (invitation.status !== 'pending') {
+    if (invitation.status !== "pending") {
       throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, operation);
     }
 
@@ -331,7 +346,7 @@ export class InvitationManager {
 
     const payload: NotificationPayload = {
       to: invitation.email,
-      subject: 'You are invited to join tenant',
+      subject: "You are invited to join tenant",
       content: `Use this invitation token: ${token}`,
       metadata: {
         invitationId: invitation.id,
@@ -349,7 +364,7 @@ export class InvitationManager {
       status?: InvitationStatus;
       acceptedAt?: Date | null;
       revokedAt?: Date | null;
-    }
+    },
   ): Promise<Invitation> {
     const updated: Invitation = {
       ...invitation,
@@ -363,7 +378,11 @@ export class InvitationManager {
   }
 
   private async publishSafely(
-    event: InvitationCreatedEvent | InvitationAcceptedEvent | InvitationRevokedEvent | InvitationDeclinedEvent
+    event:
+      | InvitationCreatedEvent
+      | InvitationAcceptedEvent
+      | InvitationRevokedEvent
+      | InvitationDeclinedEvent,
   ): Promise<void> {
     await this.eventPublisher.publish(event);
   }

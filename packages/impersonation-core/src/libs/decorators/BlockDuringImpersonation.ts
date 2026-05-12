@@ -1,19 +1,27 @@
-import { Context } from '@croco/framework-context';
-import type { ImpersonationContext } from '../ImpersonationService';
-import { BlockedDuringImpersonationProblem } from '../problems/ImpersonationProblems';
+import { Context } from "@croco/framework-context";
+import type { ImpersonationContext } from "../ImpersonationService";
+import { BlockedDuringImpersonationProblem } from "../problems/ImpersonationProblems";
 
 type MethodDecorator = (
   target: object,
   propertyKey: string | symbol,
-  descriptor: PropertyDescriptor
+  descriptor: PropertyDescriptor,
 ) => PropertyDescriptor | undefined;
 
 export function BlockDuringImpersonation(): MethodDecorator {
-  return (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor => {
+  return (
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     const original = descriptor.value;
     descriptor.value = async function (...args: unknown[]) {
       const context = Context.get();
-      if (context && 'impersonation' in context && (context as ImpersonationContext).impersonation) {
+      if (
+        context &&
+        "impersonation" in context &&
+        (context as ImpersonationContext).impersonation
+      ) {
         throw new BlockedDuringImpersonationProblem(String(propertyKey));
       }
       return original.apply(this, args);

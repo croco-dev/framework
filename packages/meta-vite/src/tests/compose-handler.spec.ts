@@ -1,200 +1,203 @@
-import { createElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { createMetaFetchHandler } from '../libs/render/composeHandler';
-import { RenderServer } from '../libs/render/renderServer';
-import { defineRoute } from '../libs/routes/defineRoute';
-import { RouteRegistry } from '../libs/routes/routeRegistry';
-import type { ApiRouteIR } from '../libs/routes/types';
+import { createElement } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { createMetaFetchHandler } from "../libs/render/composeHandler";
+import { RenderServer } from "../libs/render/renderServer";
+import { defineRoute } from "../libs/routes/defineRoute";
+import { RouteRegistry } from "../libs/routes/routeRegistry";
+import type { ApiRouteIR } from "../libs/routes/types";
 
-describe('createMetaFetchHandler', () => {
-  it('returns API response when the API handler handles the request', async () => {
+describe("createMetaFetchHandler", () => {
+  it("returns API response when the API handler handles the request", async () => {
     const handler = createMetaFetchHandler({
-      apiHandler: async () => ({ handled: true, response: new Response('api-data') }),
+      apiHandler: async () => ({ handled: true, response: new Response("api-data") }),
     });
 
-    const response = await handler(new Request('https://example.com/api/data'));
+    const response = await handler(new Request("https://example.com/api/data"));
 
-    await expect(response.text()).resolves.toBe('api-data');
+    await expect(response.text()).resolves.toBe("api-data");
   });
 
-  it('falls back to page handler when the API handler declines the request', async () => {
+  it("falls back to page handler when the API handler declines the request", async () => {
     const apiHandler = vi.fn(async () => ({ handled: false as const }));
-    const pageHandler = vi.fn(async () => new Response('page-fallback'));
+    const pageHandler = vi.fn(async () => new Response("page-fallback"));
     const handler = createMetaFetchHandler({ apiHandler, pageHandler });
 
-    const response = await handler(new Request('https://example.com/page'));
+    const response = await handler(new Request("https://example.com/page"));
 
-    await expect(response.text()).resolves.toContain('page-fallback');
+    await expect(response.text()).resolves.toContain("page-fallback");
     expect(apiHandler).toHaveBeenCalledOnce();
     expect(pageHandler).toHaveBeenCalledOnce();
   });
 
-  it('does not fall back to page handler for an intentional API 404', async () => {
+  it("does not fall back to page handler for an intentional API 404", async () => {
     const pageHandler = vi.fn(async () => {
-      throw new Error('page handler should not be called');
+      throw new Error("page handler should not be called");
     });
     const handler = createMetaFetchHandler({
-      apiHandler: async () => ({ handled: true, response: new Response('API 404', { status: 404 }) }),
+      apiHandler: async () => ({
+        handled: true,
+        response: new Response("API 404", { status: 404 }),
+      }),
       pageHandler,
     });
 
-    const response = await handler(new Request('https://example.com/api/missing'));
+    const response = await handler(new Request("https://example.com/api/missing"));
 
     expect(response.status).toBe(404);
-    await expect(response.text()).resolves.toBe('API 404');
+    await expect(response.text()).resolves.toBe("API 404");
     expect(pageHandler).not.toHaveBeenCalled();
   });
 
-  it('returns 404 when no page handler is available', async () => {
+  it("returns 404 when no page handler is available", async () => {
     const handler = createMetaFetchHandler({
       apiHandler: async () => ({ handled: false }),
     });
 
-    const response = await handler(new Request('https://example.com/missing'));
+    const response = await handler(new Request("https://example.com/missing"));
 
     expect(response.status).toBe(404);
-    await expect(response.text()).resolves.toContain('Not Found');
+    await expect(response.text()).resolves.toContain("Not Found");
   });
 
-  it('delegates directly to page handler when no API handler is provided', async () => {
+  it("delegates directly to page handler when no API handler is provided", async () => {
     const handler = createMetaFetchHandler({
-      pageHandler: async () => new Response('page-direct'),
+      pageHandler: async () => new Response("page-direct"),
     });
 
-    const response = await handler(new Request('https://example.com/page'));
+    const response = await handler(new Request("https://example.com/page"));
 
-    await expect(response.text()).resolves.toContain('page-direct');
+    await expect(response.text()).resolves.toContain("page-direct");
   });
 
-  it('supports RenderServer as the page handler', async () => {
+  it("supports RenderServer as the page handler", async () => {
     const registry = new RouteRegistry();
     registry.register(
       defineRoute({
-        path: '/registry-page',
-        component: () => createElement('main', null, 'Rendered through registry'),
-        mode: 'ssr',
-      })
+        path: "/registry-page",
+        component: () => createElement("main", null, "Rendered through registry"),
+        mode: "ssr",
+      }),
     );
     const handler = createMetaFetchHandler({ pageHandler: new RenderServer(registry.compile()) });
 
-    const response = await handler(new Request('https://example.com/registry-page'));
+    const response = await handler(new Request("https://example.com/registry-page"));
 
     expect(response.status).toBe(200);
-    await expect(response.text()).resolves.toContain('Rendered through registry');
+    await expect(response.text()).resolves.toContain("Rendered through registry");
   });
 
-  it('falls back to page handler when the API handler throws', async () => {
+  it("falls back to page handler when the API handler throws", async () => {
     const handler = createMetaFetchHandler({
       apiHandler: async () => {
-        throw new Error('api failed');
+        throw new Error("api failed");
       },
-      pageHandler: async () => new Response('fallback-after-error'),
+      pageHandler: async () => new Response("fallback-after-error"),
     });
 
-    const response = await handler(new Request('https://example.com/page'));
+    const response = await handler(new Request("https://example.com/page"));
 
-    await expect(response.text()).resolves.toBe('fallback-after-error');
+    await expect(response.text()).resolves.toBe("fallback-after-error");
   });
 });
 
-describe('createMetaFetchHandler with apiRoutes', () => {
+describe("createMetaFetchHandler with apiRoutes", () => {
   const createApiRoutes = (routes: ApiRouteIR[]): readonly ApiRouteIR[] => routes;
 
-  it('dispatches to matching API route handler', async () => {
+  it("dispatches to matching API route handler", async () => {
     const apiRoutes = createApiRoutes([
       {
-        path: '/api/hello',
-        handler: async () => new Response('Hello from API'),
+        path: "/api/hello",
+        handler: async () => new Response("Hello from API"),
       },
     ]);
 
     const handler = createMetaFetchHandler({
       apiRoutes,
-      pageHandler: async () => new Response('page'),
+      pageHandler: async () => new Response("page"),
     });
 
-    const response = await handler(new Request('https://example.com/api/hello'));
+    const response = await handler(new Request("https://example.com/api/hello"));
 
-    await expect(response.text()).resolves.toBe('Hello from API');
+    await expect(response.text()).resolves.toBe("Hello from API");
   });
 
-  it('returns 404 for non-existent /api/* route', async () => {
+  it("returns 404 for non-existent /api/* route", async () => {
     const apiRoutes = createApiRoutes([
       {
-        path: '/api/exists',
-        handler: async () => new Response('exists'),
+        path: "/api/exists",
+        handler: async () => new Response("exists"),
       },
     ]);
 
-    const pageHandler = vi.fn(async () => new Response('page'));
+    const pageHandler = vi.fn(async () => new Response("page"));
     const handler = createMetaFetchHandler({ apiRoutes, pageHandler });
 
-    const response = await handler(new Request('https://example.com/api/nonexistent'));
+    const response = await handler(new Request("https://example.com/api/nonexistent"));
 
     expect(response.status).toBe(404);
     expect(pageHandler).not.toHaveBeenCalled();
   });
 
-  it('returns 404 for /api/* with wrong method', async () => {
+  it("returns 404 for /api/* with wrong method", async () => {
     const apiRoutes = createApiRoutes([
       {
-        path: '/api/data',
-        method: 'POST',
-        handler: async () => new Response('created'),
+        path: "/api/data",
+        method: "POST",
+        handler: async () => new Response("created"),
       },
     ]);
 
-    const pageHandler = vi.fn(async () => new Response('page'));
+    const pageHandler = vi.fn(async () => new Response("page"));
     const handler = createMetaFetchHandler({ apiRoutes, pageHandler });
 
-    const response = await handler(new Request('https://example.com/api/data', { method: 'GET' }));
+    const response = await handler(new Request("https://example.com/api/data", { method: "GET" }));
 
     expect(response.status).toBe(404);
     expect(pageHandler).not.toHaveBeenCalled();
   });
 
-  it('falls through to page handler for non-/api/* routes', async () => {
+  it("falls through to page handler for non-/api/* routes", async () => {
     const apiRoutes = createApiRoutes([
       {
-        path: '/api/hello',
-        handler: async () => new Response('api'),
+        path: "/api/hello",
+        handler: async () => new Response("api"),
       },
     ]);
 
-    const pageHandler = vi.fn(async () => new Response('page'));
+    const pageHandler = vi.fn(async () => new Response("page"));
     const handler = createMetaFetchHandler({ apiRoutes, pageHandler });
 
-    const response = await handler(new Request('https://example.com/page'));
+    const response = await handler(new Request("https://example.com/page"));
 
-    await expect(response.text()).resolves.toBe('page');
+    await expect(response.text()).resolves.toBe("page");
     expect(pageHandler).toHaveBeenCalledOnce();
   });
 
-  it('dispatches to GET method-specific route', async () => {
+  it("dispatches to GET method-specific route", async () => {
     const apiRoutes = createApiRoutes([
       {
-        path: '/api/users',
-        method: 'GET',
-        handler: async () => new Response('user list'),
+        path: "/api/users",
+        method: "GET",
+        handler: async () => new Response("user list"),
       },
     ]);
 
     const handler = createMetaFetchHandler({
       apiRoutes,
-      pageHandler: async () => new Response('page'),
+      pageHandler: async () => new Response("page"),
     });
 
-    const response = await handler(new Request('https://example.com/api/users', { method: 'GET' }));
+    const response = await handler(new Request("https://example.com/api/users", { method: "GET" }));
 
-    await expect(response.text()).resolves.toBe('user list');
+    await expect(response.text()).resolves.toBe("user list");
   });
 
-  it('returns 404 when apiRoutes is provided but request is /api/*', async () => {
+  it("returns 404 when apiRoutes is provided but request is /api/*", async () => {
     const apiRoutes = createApiRoutes([]);
-    const pageHandler = vi.fn(async () => new Response('page'));
+    const pageHandler = vi.fn(async () => new Response("page"));
     const handler = createMetaFetchHandler({ apiRoutes, pageHandler });
 
-    const response = await handler(new Request('https://example.com/api/empty'));
+    const response = await handler(new Request("https://example.com/api/empty"));
 
     expect(response.status).toBe(404);
     expect(pageHandler).not.toHaveBeenCalled();

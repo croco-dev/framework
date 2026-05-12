@@ -1,4 +1,11 @@
-import type { CheckRequest, CheckResult, GrantRequest, ListRequest, RelationTuple, RevokeRequest } from '../types.js';
+import type {
+  CheckRequest,
+  CheckResult,
+  GrantRequest,
+  ListRequest,
+  RelationTuple,
+  RevokeRequest,
+} from "../types.js";
 
 export interface AccessProvider {
   check(request: CheckRequest): Promise<CheckResult>;

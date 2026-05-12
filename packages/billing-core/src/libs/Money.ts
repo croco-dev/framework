@@ -3,9 +3,9 @@ import {
   InvalidMoneyCurrencyProblem,
   MoneyCurrencyMismatchProblem,
   MoneyDivisionByZeroProblem,
-} from './problems/BillingProblems';
+} from "./problems/BillingProblems";
 
-export type MoneyRoundingMode = 'half_up' | 'down' | 'up';
+export type MoneyRoundingMode = "half_up" | "down" | "up";
 
 type DecimalRatio = {
   numerator: number;
@@ -25,7 +25,11 @@ export class Money {
     return new Money(0, currency);
   }
 
-  static fromDecimal(amount: number, currency: string, roundingMode: MoneyRoundingMode = 'half_up'): Money {
+  static fromDecimal(
+    amount: number,
+    currency: string,
+    roundingMode: MoneyRoundingMode = "half_up",
+  ): Money {
     const normalizedCurrency = Money.normalizeCurrency(currency);
     const fractionDigits = Money.getFractionDigits(normalizedCurrency);
     const scale = 10 ** fractionDigits;
@@ -43,13 +47,13 @@ export class Money {
     return new Money(this.amount - other.amount, this.currency);
   }
 
-  multiply(multiplier: number, roundingMode: MoneyRoundingMode = 'half_up'): Money {
+  multiply(multiplier: number, roundingMode: MoneyRoundingMode = "half_up"): Money {
     const ratio = Money.toDecimalRatio(multiplier);
     const result = Money.applyRatio(this.amount, ratio, roundingMode);
     return new Money(result, this.currency);
   }
 
-  divide(divisor: number, roundingMode: MoneyRoundingMode = 'half_up'): Money {
+  divide(divisor: number, roundingMode: MoneyRoundingMode = "half_up"): Money {
     const ratio = Money.toDecimalRatio(divisor);
 
     if (ratio.numerator === 0) {
@@ -62,7 +66,7 @@ export class Money {
         numerator: ratio.denominator,
         denominator: ratio.numerator,
       },
-      roundingMode
+      roundingMode,
     );
 
     return new Money(result, this.currency);
@@ -103,9 +107,9 @@ export class Money {
     return `${this.currency} ${this.toDecimal().toFixed(fractionDigits)}`;
   }
 
-  toFormattedString(locale = 'en-US'): string {
+  toFormattedString(locale = "en-US"): string {
     return new Intl.NumberFormat(locale, {
-      style: 'currency',
+      style: "currency",
       currency: this.currency,
     }).format(this.toDecimal());
   }
@@ -143,8 +147,8 @@ export class Money {
 
   private static getFractionDigits(currency: string): number {
     return (
-      new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency,
       }).resolvedOptions().maximumFractionDigits ?? 2
     );
@@ -156,10 +160,10 @@ export class Money {
     }
 
     const valueText = Money.normalizeDecimalText(value);
-    const sign = valueText.startsWith('-') ? -1 : 1;
-    const unsignedText = valueText.replace(/^[+-]/, '');
-    const [integerPart, fractionalPart = ''] = unsignedText.split('.');
-    const digits = `${integerPart}${fractionalPart}`.replace(/^0+(?=\d)/, '') || '0';
+    const sign = valueText.startsWith("-") ? -1 : 1;
+    const unsignedText = valueText.replace(/^[+-]/, "");
+    const [integerPart, fractionalPart = ""] = unsignedText.split(".");
+    const digits = `${integerPart}${fractionalPart}`.replace(/^0+(?=\d)/, "") || "0";
     const numerator = Money.toSafeInteger(Number(digits) * sign);
     const denominator = Money.toSafeInteger(10 ** fractionalPart.length);
 
@@ -175,18 +179,18 @@ export class Money {
 
     const [mantissaText, exponentText] = text.split(/[eE]/);
     const exponent = Number.parseInt(exponentText, 10);
-    const sign = mantissaText.startsWith('-') ? '-' : '';
-    const unsignedMantissa = mantissaText.replace(/^[+-]/, '');
-    const [integerPart, fractionalPart = ''] = unsignedMantissa.split('.');
-    const digits = `${integerPart}${fractionalPart}`.replace(/^0+(?=\d)/, '') || '0';
+    const sign = mantissaText.startsWith("-") ? "-" : "";
+    const unsignedMantissa = mantissaText.replace(/^[+-]/, "");
+    const [integerPart, fractionalPart = ""] = unsignedMantissa.split(".");
+    const digits = `${integerPart}${fractionalPart}`.replace(/^0+(?=\d)/, "") || "0";
     const decimalIndex = integerPart.length + exponent;
 
     if (decimalIndex <= 0) {
-      return `${sign}0.${'0'.repeat(Math.abs(decimalIndex))}${digits}`;
+      return `${sign}0.${"0".repeat(Math.abs(decimalIndex))}${digits}`;
     }
 
     if (decimalIndex >= digits.length) {
-      return `${sign}${digits}${'0'.repeat(decimalIndex - digits.length)}`;
+      return `${sign}${digits}${"0".repeat(decimalIndex - digits.length)}`;
     }
 
     return `${sign}${digits.slice(0, decimalIndex)}.${digits.slice(decimalIndex)}`;
@@ -201,7 +205,11 @@ export class Money {
     };
   }
 
-  private static applyRatio(amount: number, ratio: DecimalRatio, roundingMode: MoneyRoundingMode): number {
+  private static applyRatio(
+    amount: number,
+    ratio: DecimalRatio,
+    roundingMode: MoneyRoundingMode,
+  ): number {
     const numerator = Money.toSafeInteger(amount * ratio.numerator);
     const denominator = ratio.denominator;
     const quotient = Math.trunc(numerator / denominator);
@@ -215,7 +223,7 @@ export class Money {
     quotient: number,
     remainder: number,
     denominator: number,
-    roundingMode: MoneyRoundingMode
+    roundingMode: MoneyRoundingMode,
   ): number {
     if (remainder === 0) {
       return quotient;
@@ -224,11 +232,11 @@ export class Money {
     const remainderSign = remainder > 0 ? 1 : -1;
     const absoluteRemainder = Money.absInteger(remainder);
 
-    if (roundingMode === 'down') {
+    if (roundingMode === "down") {
       return quotient;
     }
 
-    if (roundingMode === 'up') {
+    if (roundingMode === "up") {
       return quotient + remainderSign;
     }
 
@@ -236,11 +244,11 @@ export class Money {
   }
 
   private static applyRounding(value: number, roundingMode: MoneyRoundingMode): number {
-    if (roundingMode === 'down') {
+    if (roundingMode === "down") {
       return Math.trunc(value);
     }
 
-    if (roundingMode === 'up') {
+    if (roundingMode === "up") {
       return value >= 0 ? Math.ceil(value) : Math.floor(value);
     }
 

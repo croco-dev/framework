@@ -1,22 +1,22 @@
-import type { Hono, HonoRequest } from 'hono';
-import type { LambdaContext, LambdaEvent, LambdaHandler } from './types';
+import type { Hono, HonoRequest } from "hono";
+import type { LambdaContext, LambdaEvent, LambdaHandler } from "./types";
 
 function isBinaryContentType(contentType: string): boolean {
-  const mimeType = contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+  const mimeType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
 
-  if (mimeType === '') {
+  if (mimeType === "") {
     return false;
   }
 
-  if (mimeType.startsWith('text/')) {
+  if (mimeType.startsWith("text/")) {
     return false;
   }
 
   if (
-    mimeType.includes('json') ||
-    mimeType.includes('xml') ||
-    mimeType.includes('javascript') ||
-    mimeType === 'application/x-www-form-urlencoded'
+    mimeType.includes("json") ||
+    mimeType.includes("xml") ||
+    mimeType.includes("javascript") ||
+    mimeType === "application/x-www-form-urlencoded"
   ) {
     return false;
   }
@@ -31,7 +31,7 @@ export interface LambdaExecutionEnv {
 
 export type TypedLambdaHandler = (
   event: LambdaEvent,
-  context: LambdaContext
+  context: LambdaContext,
 ) => Promise<{
   statusCode: number;
   headers?: Record<string, string>;
@@ -47,10 +47,10 @@ export class CrocoLambdaAdapter {
 
   createHandler(): LambdaHandler {
     return async (event: LambdaEvent, lambdaContext: LambdaContext) => {
-      const method = event.requestContext?.http?.method ?? 'GET';
-      const path = event.rawPath ?? '/';
-      const queryString = event.rawQueryString ?? '';
-      const url = `https://lambda.local${path}${queryString ? `?${queryString}` : ''}`;
+      const method = event.requestContext?.http?.method ?? "GET";
+      const path = event.rawPath ?? "/";
+      const queryString = event.rawQueryString ?? "";
+      const url = `https://lambda.local${path}${queryString ? `?${queryString}` : ""}`;
 
       const headers = new Headers();
       if (event.headers) {
@@ -63,13 +63,13 @@ export class CrocoLambdaAdapter {
 
       let body: BodyInit | null = null;
       if (event.body) {
-        body = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : event.body;
+        body = event.isBase64Encoded ? Buffer.from(event.body, "base64") : event.body;
       }
 
       const request = new Request(url, {
         method,
         headers,
-        body: ['GET', 'HEAD'].includes(method) ? null : body,
+        body: ["GET", "HEAD"].includes(method) ? null : body,
       });
 
       const executionEnv: LambdaExecutionEnv = {
@@ -79,10 +79,10 @@ export class CrocoLambdaAdapter {
 
       const response = await this.hono.fetch(request, executionEnv);
 
-      const contentType = response.headers.get('content-type') ?? '';
+      const contentType = response.headers.get("content-type") ?? "";
       const isBinary = isBinaryContentType(contentType);
       const responseBody = isBinary
-        ? Buffer.from(await response.arrayBuffer()).toString('base64')
+        ? Buffer.from(await response.arrayBuffer()).toString("base64")
         : await response.text();
       const responseHeaders: Record<string, string> = {};
 

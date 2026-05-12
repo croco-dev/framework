@@ -1,6 +1,6 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-import { MiddlewareChain } from './MiddlewareChain';
-import type { Constructor, LifecycleHooks, Middleware, RequestContext } from './types';
+import { AsyncLocalStorage } from "node:async_hooks";
+import { MiddlewareChain } from "./MiddlewareChain";
+import type { Constructor, LifecycleHooks, Middleware, RequestContext } from "./types";
 
 interface ContextData {
   context: RequestContext;
@@ -35,7 +35,7 @@ export class Context {
     return context?.requestId ?? null;
   }
 
-  static getCurrentUser(): RequestContext['user'] | null {
+  static getCurrentUser(): RequestContext["user"] | null {
     const context = Context.get();
     return context?.user ?? null;
   }
@@ -75,7 +75,7 @@ export class Context {
     context: RequestContext,
     middlewares: Middleware[],
     hooks: LifecycleHooks<RequestContext>,
-    fn: () => Promise<T>
+    fn: () => Promise<T>,
   ): Promise<T> {
     return Context.STORAGE.run(
       {
@@ -103,7 +103,7 @@ export class Context {
           await hooks.onRequestError?.(context, normalizedError);
           throw error;
         }
-      }
+      },
     );
   }
 }

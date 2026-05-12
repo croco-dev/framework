@@ -1,9 +1,24 @@
 {
   "name": "@croco/transports-graphql",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
@@ -17,23 +32,8 @@
     "@croco/framework-logger": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-graphql": "workspace:*",
-    "graphql-yoga": "^5.10.1",
-    "class-validator": "^0.14.1"
+    "class-validator": "^0.14.1",
+    "graphql-yoga": "^5.10.1"
   },
-  "devDependencies": {},
-  "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
-        "types": "./dist/index.d.ts"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ]
+  "devDependencies": {}
 }

@@ -1,5 +1,4 @@
-import type { CacheStore } from '@croco/cache-core';
-import type { IsrCacheStore } from '../types';
+import type { IsrCacheStore } from "../types";
 
 /**
  * Abstract adapter for ISR cache stores.
@@ -12,7 +11,11 @@ export abstract class AbstractCacheStoreAdapter implements IsrCacheStore {
 
   abstract _delete(key: string): Promise<void>;
 
-  async getOrSet(key: string, fetcher: () => Promise<Response>, options?: { ttlMs?: number }): Promise<Response> {
+  async getOrSet(
+    key: string,
+    fetcher: () => Promise<Response>,
+    options?: { ttlMs?: number },
+  ): Promise<Response> {
     const cached = await this._get(key);
     if (cached) {
       return cached.clone();

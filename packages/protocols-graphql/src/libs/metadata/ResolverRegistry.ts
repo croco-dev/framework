@@ -1,5 +1,5 @@
-import { MetadataStorage } from '@croco/framework-context';
-import { RESOLVERS_KEY } from '../constants';
+import { MetadataStorage } from "@croco/framework-context";
+import { RESOLVERS_KEY } from "../constants";
 
 export class ResolverRegistry {
   private static instance: ResolverRegistry;
@@ -18,7 +18,9 @@ export class ResolverRegistry {
     return ResolverRegistry.instance;
   }
 
-  static fromMetadata(resolvers: Function[] = ResolverRegistry.getMetadataResolvers()): ResolverRegistry {
+  static fromMetadata(
+    resolvers: Function[] = ResolverRegistry.getMetadataResolvers(),
+  ): ResolverRegistry {
     return new ResolverRegistry(resolvers);
   }
 

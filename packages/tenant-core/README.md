@@ -11,21 +11,21 @@ pnpm add @croco/tenant-core
 ## 사용법
 
 ```ts
-import { TenantManager } from '@croco/tenant-core';
+import { TenantManager } from "@croco/tenant-core";
 
 const tenantManager = new TenantManager();
 
-await tenantManager.run('tenant-123', async () => {
+await tenantManager.run("tenant-123", async () => {
   const tenantId = tenantManager.requireTenantId();
   void tenantId;
 });
 ```
 
 ```ts
-import { HeaderTenantResolver, SubdomainTenantResolver } from '@croco/tenant-core';
+import { HeaderTenantResolver, SubdomainTenantResolver } from "@croco/tenant-core";
 
-const headerResolver = new HeaderTenantResolver({ headerName: 'x-tenant-id' });
-const subdomainResolver = new SubdomainTenantResolver({ domainSuffix: '.example.com' });
+const headerResolver = new HeaderTenantResolver({ headerName: "x-tenant-id" });
+const subdomainResolver = new SubdomainTenantResolver({ domainSuffix: ".example.com" });
 ```
 
 ## API 레퍼런스

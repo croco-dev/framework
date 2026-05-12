@@ -1,14 +1,14 @@
 /**
  * Isolation strategy type
  */
-export type TenantIsolationType = 'schema-per-tenant' | 'row-level' | 'hybrid';
+export type TenantIsolationType = "schema-per-tenant" | "row-level" | "hybrid";
 
 /**
  * ORM-neutral filter representation for tenant isolation.
  * Concrete implementations (e.g., Drizzle) will convert this to SQL.
  */
 export type TenantIsolationFilter = {
-  type: 'sql';
+  type: "sql";
   condition: string;
   params?: unknown[];
 };
@@ -18,17 +18,17 @@ export type TenantIsolationFilter = {
  */
 export type TenantIsolationConfig =
   | {
-      type: 'schema-per-tenant';
+      type: "schema-per-tenant";
       getSchemaName: (tenantId: string) => string;
     }
   | {
-      type: 'row-level';
+      type: "row-level";
       columnName: string;
       sqlBuilder: (tenantId: string) => TenantIsolationFilter;
     }
   | {
-      type: 'hybrid';
-      default: 'schema-per-tenant' | 'row-level';
+      type: "hybrid";
+      default: "schema-per-tenant" | "row-level";
       getSchemaName: (tenantId: string) => string;
       columnName: string;
       sqlBuilder: (tenantId: string) => TenantIsolationFilter;

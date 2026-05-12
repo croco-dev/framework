@@ -1,10 +1,10 @@
-import { createEnv } from '@t3-oss/env-core';
+import { createEnv } from "@t3-oss/env-core";
 
-import { InvalidBooleanEnvProblem } from './libs/problems/ConfigProblems';
-import { appConfig } from './presets/app';
-import { databaseConfig } from './presets/database';
-import { redisConfig } from './presets/redis';
-import { storageConfig } from './presets/storage';
+import { InvalidBooleanEnvProblem } from "./libs/problems/ConfigProblems";
+import { appConfig } from "./presets/app";
+import { databaseConfig } from "./presets/database";
+import { redisConfig } from "./presets/redis";
+import { storageConfig } from "./presets/storage";
 
 function parseOptionalBooleanEnv(envName: string): boolean {
   const rawValue = process.env[envName];
@@ -15,11 +15,11 @@ function parseOptionalBooleanEnv(envName: string): boolean {
 
   const normalizedValue = rawValue.trim().toLowerCase();
 
-  if (normalizedValue === 'true' || normalizedValue === '1' || normalizedValue === 'yes') {
+  if (normalizedValue === "true" || normalizedValue === "1" || normalizedValue === "yes") {
     return true;
   }
 
-  if (normalizedValue === 'false' || normalizedValue === '0' || normalizedValue === 'no') {
+  if (normalizedValue === "false" || normalizedValue === "0" || normalizedValue === "no") {
     return false;
   }
 
@@ -33,7 +33,7 @@ export const env = createEnv({
     ...redisConfig.server,
     ...storageConfig.server,
   },
-  clientPrefix: 'NEXT_PUBLIC_',
+  clientPrefix: "NEXT_PUBLIC_",
   client: {
     ...appConfig.client,
     ...databaseConfig.client,
@@ -48,5 +48,5 @@ export const env = createEnv({
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
-  skipValidation: parseOptionalBooleanEnv('SKIP_ENV_VALIDATION'),
+  skipValidation: parseOptionalBooleanEnv("SKIP_ENV_VALIDATION"),
 });

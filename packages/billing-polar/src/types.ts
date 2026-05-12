@@ -1,6 +1,6 @@
 export type PolarConfig = {
   accessToken: string;
-  environment: 'sandbox' | 'production';
+  environment: "sandbox" | "production";
   organizationId?: string;
   webhookSecret: string;
 };

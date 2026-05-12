@@ -1,7 +1,7 @@
-import 'reflect-metadata';
-import type { Guard } from '@croco/framework-context';
-import { Container } from '@croco/framework-context';
-import { Logger } from '@croco/framework-logger';
+import "reflect-metadata";
+import type { Guard } from "@croco/framework-context";
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
 import {
   type Constructor,
   Controller,
@@ -16,21 +16,21 @@ import {
   UseFilters,
   UseGuards,
   UseInterceptors,
-} from '@croco/protocols-rest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorHandler } from '../libs/ErrorHandler';
-import { PipelineRunner } from '../libs/PipelineRunner';
-import { RouteCompiler } from '../libs/RouteCompiler';
-import type { CrocoHttpContext } from '../libs/types';
+} from "@croco/protocols-rest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ErrorHandler } from "../libs/ErrorHandler";
+import { PipelineRunner } from "../libs/PipelineRunner";
+import { RouteCompiler } from "../libs/RouteCompiler";
+import type { CrocoHttpContext } from "../libs/types";
 
 function createMockHttpContext(): CrocoHttpContext {
-  const request = new Request('http://localhost/secured/resource');
+  const request = new Request("http://localhost/secured/resource");
 
   return {
     req: {
-      method: 'GET',
+      method: "GET",
       url: request.url,
-      path: '/secured/resource',
+      path: "/secured/resource",
       params: {},
       query: {},
       headers: {},
@@ -43,22 +43,28 @@ function createMockHttpContext(): CrocoHttpContext {
       req: {
         raw: request,
       },
-    } as CrocoHttpContext['raw'],
+    } as CrocoHttpContext["raw"],
     param: vi.fn(),
     query: vi.fn(),
     header: vi.fn(),
     json: vi.fn(),
     set: vi.fn(),
     get: vi.fn(),
-    text: vi.fn().mockImplementation((body: string, status: number = 200) => new Response(body, { status })),
+    text: vi
+      .fn()
+      .mockImplementation((body: string, status: number = 200) => new Response(body, { status })),
     jsonResponse: vi
       .fn()
-      .mockImplementation((body: unknown, status: number = 200) => new Response(JSON.stringify(body), { status })),
-    redirect: vi.fn().mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
+      .mockImplementation(
+        (body: unknown, status: number = 200) => new Response(JSON.stringify(body), { status }),
+      ),
+    redirect: vi
+      .fn()
+      .mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
   };
 }
 
-describe('RouteCompiler', () => {
+describe("RouteCompiler", () => {
   function createCompiler(): RouteCompiler {
     const logger = Container.get(Logger);
     const errorHandler = Container.get(ErrorHandler);
@@ -78,16 +84,16 @@ describe('RouteCompiler', () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
   });
 
-  it('should compile routes from controller', () => {
-    @Controller('/users')
+  it("should compile routes from controller", () => {
+    @Controller("/users")
     class UserController {
       @Get()
       list() {
         return [];
       }
 
-      @Get('/:id')
-      getById(@Param('id') id: string) {
+      @Get("/:id")
+      getById(@Param("id") id: string) {
         return { id };
       }
 
@@ -101,13 +107,13 @@ describe('RouteCompiler', () => {
     const routes = compiler.compile([UserController]);
 
     expect(routes).toHaveLength(3);
-    expect(routes[0].path).toBe('/users');
-    expect(routes[0].method).toBe('GET');
-    expect(routes[1].path).toBe('/users/:id');
-    expect(routes[2].method).toBe('POST');
+    expect(routes[0].path).toBe("/users");
+    expect(routes[0].method).toBe("GET");
+    expect(routes[1].path).toBe("/users/:id");
+    expect(routes[2].method).toBe("POST");
   });
 
-  it('should skip non-controller classes', () => {
+  it("should skip non-controller classes", () => {
     class NotAController {
       @Get()
       test() {}
@@ -119,7 +125,7 @@ describe('RouteCompiler', () => {
     expect(routes).toHaveLength(0);
   });
 
-  it('BUG-03 라우트 레벨 가드가 DI로 인스턴스화', async () => {
+  it("BUG-03 라우트 레벨 가드가 DI로 인스턴스화", async () => {
     class GuardDependency {
       readonly allowed = true;
     }
@@ -137,7 +143,7 @@ describe('RouteCompiler', () => {
 
       async intercept(_context: unknown, next: { handle(): Promise<unknown> }) {
         if (!this.dependency.allowed) {
-          throw new TypeError('interceptor dependency missing');
+          throw new TypeError("interceptor dependency missing");
         }
         return next.handle();
       }
@@ -158,9 +164,9 @@ describe('RouteCompiler', () => {
     const RouteLevelInterceptorCtor = RouteLevelInterceptor as unknown as InterceptorConstructor;
     const RouteLevelFilterCtor = RouteLevelFilter as unknown as ExceptionFilterConstructor;
 
-    @Controller('/secured')
+    @Controller("/secured")
     class SecuredController {
-      @Get('/resource')
+      @Get("/resource")
       @UseFilters(RouteLevelFilterCtor)
       @UseInterceptors(RouteLevelInterceptorCtor)
       @UseGuards(RouteLevelGuardCtor)
@@ -211,7 +217,7 @@ describe('RouteCompiler', () => {
     expect(requestedTypes.filter((type) => type === RouteLevelFilter)).toHaveLength(2);
   });
 
-  it('should fail fast when a provider cannot be resolved in container mode', async () => {
+  it("should fail fast when a provider cannot be resolved in container mode", async () => {
     class GuardDependency {
       readonly allowed = true;
     }
@@ -226,9 +232,9 @@ describe('RouteCompiler', () => {
 
     const RouteLevelGuardCtor = RouteLevelGuard as unknown as GuardConstructor;
 
-    @Controller('/secured')
+    @Controller("/secured")
     class SecuredController {
-      @Get('/resource')
+      @Get("/resource")
       @UseGuards(RouteLevelGuardCtor)
       getResource() {
         return { ok: true };
@@ -251,19 +257,19 @@ describe('RouteCompiler', () => {
     });
 
     await expect(route.handler(createMockHttpContext())).rejects.toThrow(
-      'Container did not return an instance for provider RouteLevelGuard'
+      "Container did not return an instance for provider RouteLevelGuard",
     );
   });
 
-  it('should fail fast when duplicate routes resolve to the same method and path', () => {
-    @Controller('/users')
+  it("should fail fast when duplicate routes resolve to the same method and path", () => {
+    @Controller("/users")
     class DuplicateRouteController {
-      @Get('/:id')
+      @Get("/:id")
       getById() {
         return { ok: true };
       }
 
-      @Get(':id')
+      @Get(":id")
       getByIdWithoutLeadingSlash() {
         return { ok: true };
       }
@@ -273,21 +279,21 @@ describe('RouteCompiler', () => {
 
     expect(() => {
       compiler.compile([DuplicateRouteController]);
-    }).toThrow('Duplicate route detected for GET /users/:id');
+    }).toThrow("Duplicate route detected for GET /users/:id");
   });
 
-  it('should fail fast when duplicate routes are contributed by different controllers', () => {
-    @Controller('/users')
+  it("should fail fast when duplicate routes are contributed by different controllers", () => {
+    @Controller("/users")
     class FirstController {
-      @Get('/:id')
+      @Get("/:id")
       first() {
         return { ok: true };
       }
     }
 
-    @Controller('/users')
+    @Controller("/users")
     class SecondController {
-      @Get('/:id')
+      @Get("/:id")
       second() {
         return { ok: true };
       }
@@ -297,6 +303,6 @@ describe('RouteCompiler', () => {
 
     expect(() => {
       compiler.compile([FirstController, SecondController]);
-    }).toThrow('Duplicate route detected for GET /users/:id');
+    }).toThrow("Duplicate route detected for GET /users/:id");
   });
 });

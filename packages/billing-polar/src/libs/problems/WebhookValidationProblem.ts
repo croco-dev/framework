@@ -1,7 +1,7 @@
-import { Problem, ProblemCategory } from '@croco/problems-core';
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class WebhookValidationProblem extends Problem {
-  readonly code = 'WEBHOOK_VALIDATION_FAILED';
+  readonly code = "WEBHOOK_VALIDATION_FAILED";
   readonly category = ProblemCategory.BadRequest;
   constructor(reason: string) {
     super(undefined, undefined, `Webhook validation failed: ${reason}`);

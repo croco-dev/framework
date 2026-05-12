@@ -4,12 +4,12 @@
  * - UNIQUE_COUNT: 고유 값 카운트 (MAU/DAU)
  * - CUSTOM_EVENT: 사용자 정의 이벤트
  */
-export type MeterType = 'COUNT' | 'UNIQUE_COUNT' | 'CUSTOM_EVENT';
+export type MeterType = "COUNT" | "UNIQUE_COUNT" | "CUSTOM_EVENT";
 
 /**
  * 집계 기간
  */
-export type AggregationPeriod = 'hour' | 'day' | 'billing_cycle';
+export type AggregationPeriod = "hour" | "day" | "billing_cycle";
 
 /**
  * Meter 정의 (DB 저장)
@@ -64,7 +64,7 @@ export type UsageQueryOptions = {
 /**
  * Meter 등록 옵션 (DB 저장 전)
  */
-export type MeterRegistrationOptions = Omit<MeterDefinition, 'id' | 'createdAt' | 'updatedAt'>;
+export type MeterRegistrationOptions = Omit<MeterDefinition, "id" | "createdAt" | "updatedAt">;
 
 /**
  * 배치 저장 결과

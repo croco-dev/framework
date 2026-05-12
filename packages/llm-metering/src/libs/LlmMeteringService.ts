@@ -1,15 +1,15 @@
-import type { EventBus } from '@croco/events-core';
-import { Token } from '@croco/framework-context';
-import type { LlmMetadata, LlmUsage } from '@croco/llm-core';
-import type { MeteringService } from '@croco/metering-core';
-import { LlmUsageRecordedEvent } from './events/LlmUsageRecordedEvent';
-import { defaultPricingTable, type PricingTable } from './PricingTable';
+import type { EventBus } from "@croco/events-core";
+import { Token } from "@croco/framework-context";
+import type { LlmMetadata, LlmUsage } from "@croco/llm-core";
+import type { MeteringService } from "@croco/metering-core";
+import { LlmUsageRecordedEvent } from "./events/LlmUsageRecordedEvent";
+import { defaultPricingTable, type PricingTable } from "./PricingTable";
 import {
   LlmMeteringRecordFailedProblem,
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
-} from './problems/LlmMeteringProblems';
-import type { LlmEmbeddingUsageRecord, LlmUsageRecord } from './types';
+} from "./problems/LlmMeteringProblems";
+import type { LlmEmbeddingUsageRecord, LlmUsageRecord } from "./types";
 
 type MeterRecordAttempt = {
   meterId: string;
@@ -22,7 +22,7 @@ export type LlmUsageEvent = {
   provider: string;
   usage: LlmUsage;
   idempotencyKey: string;
-  metadata?: Omit<LlmMetadata, 'modelId'> & {
+  metadata?: Omit<LlmMetadata, "modelId"> & {
     operationType?: string;
   };
 };
@@ -32,7 +32,7 @@ export type LlmCostRecord = {
   modelId: string;
   provider: string;
   costUsd: number;
-  accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN';
+  accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN";
   idempotencyKey: string;
   timestamp: Date;
 };
@@ -59,12 +59,12 @@ export type LlmMeteringServiceOptions = {
  * - checkQuota: quota 초과 체크
  */
 export class LlmMeteringService {
-  static readonly token = new Token<LlmMeteringService>('LlmMeteringService');
+  static readonly token = new Token<LlmMeteringService>("LlmMeteringService");
 
   private readonly meteringService: MeteringService;
   private readonly eventBus?: EventBus;
   private readonly pricingTable: PricingTable;
-  private readonly defaultPricing: LlmMeteringServiceOptions['defaultPricing'];
+  private readonly defaultPricing: LlmMeteringServiceOptions["defaultPricing"];
 
   constructor(options: LlmMeteringServiceOptions) {
     this.meteringService = options.meteringService;
@@ -73,7 +73,7 @@ export class LlmMeteringService {
     this.defaultPricing = options.defaultPricing ?? {
       inputPricePerToken: 0.000001,
       outputPricePerToken: 0.000002,
-      currency: 'USD',
+      currency: "USD",
     };
   }
 
@@ -107,25 +107,25 @@ export class LlmMeteringService {
         timestamp: new Date(),
         accuracy: usage.accuracy,
       },
-      pricing
+      pricing,
     );
 
     // 3. 3개 meter 기록 (병렬)
     const baseMetadata = {
       provider,
       model: modelId,
-      accuracy: usage.accuracy ?? 'UNKNOWN',
-      operationType: metadata?.operationType ?? 'generate',
+      accuracy: usage.accuracy ?? "UNKNOWN",
+      operationType: metadata?.operationType ?? "generate",
       ...metadata,
     };
 
     const recordAttempts: MeterRecordAttempt[] = [
       // Prompt tokens
       {
-        meterId: 'llm.prompt_tokens',
+        meterId: "llm.prompt_tokens",
         promise: this.meteringService.record({
           tenantId,
-          meterId: 'llm.prompt_tokens',
+          meterId: "llm.prompt_tokens",
           value: usage.promptTokens,
           idempotencyKey: `${idempotencyKey}:prompt`,
           metadata: baseMetadata,
@@ -134,10 +134,10 @@ export class LlmMeteringService {
 
       // Completion tokens
       {
-        meterId: 'llm.completion_tokens',
+        meterId: "llm.completion_tokens",
         promise: this.meteringService.record({
           tenantId,
-          meterId: 'llm.completion_tokens',
+          meterId: "llm.completion_tokens",
           value: usage.completionTokens,
           idempotencyKey: `${idempotencyKey}:completion`,
           metadata: baseMetadata,
@@ -146,10 +146,10 @@ export class LlmMeteringService {
 
       // Cost USD
       {
-        meterId: 'llm.cost_usd',
+        meterId: "llm.cost_usd",
         promise: this.meteringService.record({
           tenantId,
-          meterId: 'llm.cost_usd',
+          meterId: "llm.cost_usd",
           value: costUsd,
           idempotencyKey: `${idempotencyKey}:cost`,
           metadata: baseMetadata,
@@ -193,7 +193,7 @@ export class LlmMeteringService {
     provider: string;
     embeddingTokens: number;
     idempotencyKey: string;
-    accuracy?: 'EXACT' | 'ESTIMATED' | 'UNKNOWN';
+    accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN";
   }): Promise<LlmEmbeddingUsageRecord> {
     const { tenantId, modelId, provider, embeddingTokens, idempotencyKey, accuracy } = event;
 
@@ -215,41 +215,41 @@ export class LlmMeteringService {
         timestamp: new Date(),
         accuracy,
       },
-      pricing
+      pricing,
     );
 
     // 3. 2개 meter 기록
     const baseMetadata = {
       provider,
       model: modelId,
-      accuracy: accuracy ?? 'UNKNOWN',
-      operationType: 'embed',
+      accuracy: accuracy ?? "UNKNOWN",
+      operationType: "embed",
     };
 
     await this.assertRecordAttempts(
       [
         {
-          meterId: 'llm.embedding_tokens',
+          meterId: "llm.embedding_tokens",
           promise: this.meteringService.record({
             tenantId,
-            meterId: 'llm.embedding_tokens',
+            meterId: "llm.embedding_tokens",
             value: embeddingTokens,
             idempotencyKey: `${idempotencyKey}:tokens`,
             metadata: baseMetadata,
           }),
         },
         {
-          meterId: 'llm.cost_usd',
+          meterId: "llm.cost_usd",
           promise: this.meteringService.record({
             tenantId,
-            meterId: 'llm.cost_usd',
+            meterId: "llm.cost_usd",
             value: costUsd,
             idempotencyKey: `${idempotencyKey}:cost`,
             metadata: baseMetadata,
           }),
         },
       ],
-      baseMetadata.operationType
+      baseMetadata.operationType,
     );
 
     // 4. LlmEmbeddingUsageRecord 생성
@@ -296,29 +296,29 @@ export class LlmMeteringService {
         timestamp: new Date(),
         accuracy: usage.accuracy,
       },
-      pricing
+      pricing,
     );
 
     // 3. cost_usd meter 기록
     await this.assertRecordAttempts(
       [
         {
-          meterId: 'llm.cost_usd',
+          meterId: "llm.cost_usd",
           promise: this.meteringService.record({
             tenantId,
-            meterId: 'llm.cost_usd',
+            meterId: "llm.cost_usd",
             value: costUsd,
             idempotencyKey: `${idempotencyKey}:cost`,
             metadata: {
               provider,
               model: modelId,
-              accuracy: usage.accuracy ?? 'UNKNOWN',
-              operationType: 'cost_tracking',
+              accuracy: usage.accuracy ?? "UNKNOWN",
+              operationType: "cost_tracking",
             },
           }),
         },
       ],
-      'cost_tracking'
+      "cost_tracking",
     );
 
     return {
@@ -343,7 +343,7 @@ export class LlmMeteringService {
     const currentUsage = await this.meteringService.getUsage({
       tenantId,
       meterId,
-      period: 'billing_cycle',
+      period: "billing_cycle",
     });
 
     if (currentUsage > quotaLimit) {
@@ -353,20 +353,23 @@ export class LlmMeteringService {
     return true;
   }
 
-  private async assertRecordAttempts(attempts: MeterRecordAttempt[], operation: string): Promise<void> {
+  private async assertRecordAttempts(
+    attempts: MeterRecordAttempt[],
+    operation: string,
+  ): Promise<void> {
     const results = await Promise.allSettled(attempts.map((attempt) => attempt.promise));
-    const firstRejectedIndex = results.findIndex((result) => result.status === 'rejected');
+    const firstRejectedIndex = results.findIndex((result) => result.status === "rejected");
 
     if (firstRejectedIndex === -1) {
       return;
     }
 
     const failedMeterIds = results.flatMap((result, index) =>
-      result.status === 'rejected' ? [attempts[index]?.meterId ?? 'unknown'] : []
+      result.status === "rejected" ? [attempts[index]?.meterId ?? "unknown"] : [],
     );
     const firstError = results[firstRejectedIndex];
 
-    if (firstError.status === 'rejected') {
+    if (firstError.status === "rejected") {
       throw new LlmMeteringRecordFailedProblem(operation, failedMeterIds, firstError.reason);
     }
   }

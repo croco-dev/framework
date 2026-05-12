@@ -1,4 +1,4 @@
-import type { Guard } from '@croco/framework-context';
+import type { Guard } from "@croco/framework-context";
 
 export type { Guard };
 

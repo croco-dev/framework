@@ -1,6 +1,6 @@
-import { CURSOR_VERSION } from './constants';
-import { encodeCursor } from './cursor';
-import type { CreateCursorPageOptions, CursorPage, CursorPageFull } from './types';
+import { CURSOR_VERSION } from "./constants";
+import { encodeCursor } from "./cursor";
+import type { CreateCursorPageOptions, CursorPage, CursorPageFull } from "./types";
 
 type CursorPageWithHasPreviousOptions<T> = CreateCursorPageOptions<T> & {
   hasPrevious: boolean;
@@ -18,12 +18,18 @@ type CursorPageWithPrevCursorOptions<T> = CreateCursorPageOptions<T> & {
  * 2. If items.length <= limit: keep all, hasMore=false, nextCursor=null
  * 3. If hasPrevious/prevCursor provided, return CursorPageFull
  */
-export function createCursorPage<T>(items: T[], options: CursorPageWithHasPreviousOptions<T>): CursorPageFull<T>;
-export function createCursorPage<T>(items: T[], options: CursorPageWithPrevCursorOptions<T>): CursorPageFull<T>;
+export function createCursorPage<T>(
+  items: T[],
+  options: CursorPageWithHasPreviousOptions<T>,
+): CursorPageFull<T>;
+export function createCursorPage<T>(
+  items: T[],
+  options: CursorPageWithPrevCursorOptions<T>,
+): CursorPageFull<T>;
 export function createCursorPage<T>(items: T[], options: CreateCursorPageOptions<T>): CursorPage<T>;
 export function createCursorPage<T>(
   items: T[],
-  options: CreateCursorPageOptions<T>
+  options: CreateCursorPageOptions<T>,
 ): CursorPage<T> | CursorPageFull<T> {
   const { limit, getId, hasPrevious, prevCursor } = options;
 

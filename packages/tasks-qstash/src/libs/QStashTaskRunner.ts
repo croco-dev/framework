@@ -1,4 +1,4 @@
-import { Client } from '@upstash/qstash';
+import { Client } from "@upstash/qstash";
 
 export type QStashTaskRunnerOptions = {
   /**
@@ -50,7 +50,7 @@ export class QStashTaskRunner {
        * 이번 요청에만 추가할 헤더입니다.
        */
       headers?: Record<string, string>;
-    }
+    },
   ): Promise<{ messageId: string }> {
     const delay = options?.delay ?? this.defaultDelay;
     const headers = { ...this.defaultHeaders, ...options?.headers };

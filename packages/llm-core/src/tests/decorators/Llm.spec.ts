@@ -1,23 +1,23 @@
-import 'reflect-metadata';
-import { Container } from '@croco/framework-context';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LLM_METADATA_KEY, Llm, setLlmService } from '../../libs/decorators/Llm';
-import type { LlmService } from '../../libs/LlmService';
-import { InvalidLlmPromptProblem } from '../../libs/problems/LlmProblems';
-import type { LlmMetadata } from '../../libs/types';
+import "reflect-metadata";
+import { Container } from "@croco/framework-context";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LLM_METADATA_KEY, Llm, setLlmService } from "../../libs/decorators/Llm";
+import type { LlmService } from "../../libs/LlmService";
+import { InvalidLlmPromptProblem } from "../../libs/problems/LlmProblems";
+import type { LlmMetadata } from "../../libs/types";
 
-describe('@Llm Decorator', () => {
+describe("@Llm Decorator", () => {
   let mockLlmService!: LlmService;
   let testService!: TestService;
 
   // 테스트용 서비스 클래스
   class TestService {
-    @Llm({ modelId: 'gpt-4' })
+    @Llm({ modelId: "gpt-4" })
     async generateText(prompt: string): Promise<string> {
       return prompt; // 데코레이터가 오버라이드함
     }
 
-    @Llm({ modelId: 'gpt-3.5-turbo', systemPrompt: 'You are helpful.' })
+    @Llm({ modelId: "gpt-3.5-turbo", systemPrompt: "You are helpful." })
     async chat(userPrompt: string): Promise<string> {
       return userPrompt; // 데코레이터가 오버라이드함
     }
@@ -42,7 +42,7 @@ describe('@Llm Decorator', () => {
             totalTokens: 30,
           },
           metadata: {
-            modelId: params.modelId ?? 'default',
+            modelId: params.modelId ?? "default",
           },
         };
       }),
@@ -55,76 +55,86 @@ describe('@Llm Decorator', () => {
     testService = new TestService();
   });
 
-  describe('metadata storage', () => {
-    it('should store metadata with modelId', () => {
-      const metadata: LlmMetadata = Reflect.getMetadata(LLM_METADATA_KEY, TestService.prototype, 'generateText');
+  describe("metadata storage", () => {
+    it("should store metadata with modelId", () => {
+      const metadata: LlmMetadata = Reflect.getMetadata(
+        LLM_METADATA_KEY,
+        TestService.prototype,
+        "generateText",
+      );
 
       expect(metadata).not.toBeUndefined();
-      expect(metadata?.modelId).toBe('gpt-4');
+      expect(metadata?.modelId).toBe("gpt-4");
     });
 
-    it('should use default modelId if not provided', () => {
-      const metadata: LlmMetadata = Reflect.getMetadata(LLM_METADATA_KEY, TestService.prototype, 'defaultModel');
+    it("should use default modelId if not provided", () => {
+      const metadata: LlmMetadata = Reflect.getMetadata(
+        LLM_METADATA_KEY,
+        TestService.prototype,
+        "defaultModel",
+      );
 
       expect(metadata).not.toBeUndefined();
-      expect(metadata?.modelId).toBe('default');
+      expect(metadata?.modelId).toBe("default");
     });
   });
 
-  describe('method wrapping', () => {
-    it('should call LlmService.generate with correct params', async () => {
-      await testService.generateText('Hello, world!');
+  describe("method wrapping", () => {
+    it("should call LlmService.generate with correct params", async () => {
+      await testService.generateText("Hello, world!");
 
       expect(mockLlmService.generate).toHaveBeenCalledWith({
-        modelId: 'gpt-4',
-        prompt: 'Hello, world!',
+        modelId: "gpt-4",
+        prompt: "Hello, world!",
       });
     });
 
-    it('should return generated text from LlmService', async () => {
-      const result = await testService.generateText('Test prompt');
+    it("should return generated text from LlmService", async () => {
+      const result = await testService.generateText("Test prompt");
 
-      expect(result).toBe('Generated: Test prompt');
+      expect(result).toBe("Generated: Test prompt");
     });
 
-    it('should handle multiple parameters', async () => {
-      await testService.chat('What is AI?');
+    it("should handle multiple parameters", async () => {
+      await testService.chat("What is AI?");
 
       expect(mockLlmService.generate).toHaveBeenCalledWith({
-        modelId: 'gpt-3.5-turbo',
-        systemPrompt: 'You are helpful.',
-        prompt: 'What is AI?',
+        modelId: "gpt-3.5-turbo",
+        systemPrompt: "You are helpful.",
+        prompt: "What is AI?",
       });
     });
 
-    it('should use default modelId when not specified', async () => {
-      await testService.defaultModel('Test');
+    it("should use default modelId when not specified", async () => {
+      await testService.defaultModel("Test");
 
       expect(mockLlmService.generate).toHaveBeenCalledWith({
-        modelId: 'default',
-        prompt: 'Test',
+        modelId: "default",
+        prompt: "Test",
       });
     });
 
-    it('should fail fast when the first argument is not a string', async () => {
-      await expect(testService.generateText(123 as unknown as string)).rejects.toBeInstanceOf(InvalidLlmPromptProblem);
+    it("should fail fast when the first argument is not a string", async () => {
+      await expect(testService.generateText(123 as unknown as string)).rejects.toBeInstanceOf(
+        InvalidLlmPromptProblem,
+      );
       expect(mockLlmService.generate).not.toHaveBeenCalled();
     });
 
-    it('should fail fast when the first argument is missing', async () => {
+    it("should fail fast when the first argument is missing", async () => {
       await expect(testService.generateText(undefined as unknown as string)).rejects.toBeInstanceOf(
-        InvalidLlmPromptProblem
+        InvalidLlmPromptProblem,
       );
       expect(mockLlmService.generate).not.toHaveBeenCalled();
     });
   });
 
-  describe('error handling', () => {
-    it('should propagate errors from LlmService', async () => {
-      const error = new Error('LLM service error');
+  describe("error handling", () => {
+    it("should propagate errors from LlmService", async () => {
+      const error = new Error("LLM service error");
       vi.mocked(mockLlmService.generate).mockRejectedValueOnce(error);
 
-      await expect(testService.generateText('Test')).rejects.toThrow('LLM service error');
+      await expect(testService.generateText("Test")).rejects.toThrow("LLM service error");
     });
   });
 });

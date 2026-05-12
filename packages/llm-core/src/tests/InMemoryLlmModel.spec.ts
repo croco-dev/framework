@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { InMemoryLlmModel } from '../libs/InMemoryLlmModel';
-import { LlmToolExecutionProblem } from '../libs/problems/LlmServiceProblem';
+import { beforeEach, describe, expect, it } from "vitest";
+import { InMemoryLlmModel } from "../libs/InMemoryLlmModel";
+import { LlmToolExecutionProblem } from "../libs/problems/LlmServiceProblem";
 import type {
   EmbedManyParams,
   EmbedParams,
@@ -8,120 +8,120 @@ import type {
   GenerateParams,
   StreamParams,
   ToolCallParams,
-} from '../libs/types';
+} from "../libs/types";
 
 type StringShape = {
   [key: string]: string;
 };
 
-describe('InMemoryLlmModel', () => {
+describe("InMemoryLlmModel", () => {
   let model!: InMemoryLlmModel;
 
   beforeEach(() => {
-    model = new InMemoryLlmModel('test-model', {
-      Hello: 'Hi there!',
-      'How are you?': 'I am doing well!',
-      'Stream this': 'This is a streaming response with multiple words',
+    model = new InMemoryLlmModel("test-model", {
+      Hello: "Hi there!",
+      "How are you?": "I am doing well!",
+      "Stream this": "This is a streaming response with multiple words",
     });
   });
 
-  describe('constructor', () => {
-    it('should create model with modelId', () => {
-      expect(model.modelId).toBe('test-model');
+  describe("constructor", () => {
+    it("should create model with modelId", () => {
+      expect(model.modelId).toBe("test-model");
     });
 
-    it('should have all capabilities enabled', () => {
+    it("should have all capabilities enabled", () => {
       expect(model.capabilities.streaming).toBe(true);
       expect(model.capabilities.objectGeneration).toBe(true);
       expect(model.capabilities.toolCalling).toBe(true);
       expect(model.capabilities.embedding).toBe(true);
     });
 
-    it('should initialize with predefined responses', () => {
+    it("should initialize with predefined responses", () => {
       expect(model).not.toBeUndefined();
     });
 
-    it('should create model without responses', () => {
-      const emptyModel = new InMemoryLlmModel('empty-model');
-      expect(emptyModel.modelId).toBe('empty-model');
+    it("should create model without responses", () => {
+      const emptyModel = new InMemoryLlmModel("empty-model");
+      expect(emptyModel.modelId).toBe("empty-model");
     });
   });
 
-  describe('generate', () => {
-    it('should return predefined response for known prompt', async () => {
-      const params: GenerateParams = { prompt: 'Hello' };
+  describe("generate", () => {
+    it("should return predefined response for known prompt", async () => {
+      const params: GenerateParams = { prompt: "Hello" };
       const result = await model.generate(params);
 
-      expect(result.text).toBe('Hi there!');
+      expect(result.text).toBe("Hi there!");
       expect(result.usage.totalTokens).toBeGreaterThan(0);
-      expect(result.usage.accuracy).toBe('ESTIMATED');
+      expect(result.usage.accuracy).toBe("ESTIMATED");
     });
 
-    it('should return default response for unknown prompt', async () => {
-      const params: GenerateParams = { prompt: 'Unknown prompt' };
+    it("should return default response for unknown prompt", async () => {
+      const params: GenerateParams = { prompt: "Unknown prompt" };
       const result = await model.generate(params);
 
-      expect(result.text).toContain('Mock response to:');
-      expect(result.text).toContain('Unknown prompt');
+      expect(result.text).toContain("Mock response to:");
+      expect(result.text).toContain("Unknown prompt");
     });
 
-    it('should handle system prompt', async () => {
+    it("should handle system prompt", async () => {
       const params: GenerateParams = {
-        prompt: 'Hello',
-        systemPrompt: 'You are a helpful assistant',
+        prompt: "Hello",
+        systemPrompt: "You are a helpful assistant",
       };
       const result = await model.generate(params);
 
-      expect(result.text).toBe('Hi there!');
+      expect(result.text).toBe("Hi there!");
     });
 
-    it('should handle temperature parameter', async () => {
+    it("should handle temperature parameter", async () => {
       const params: GenerateParams = {
-        prompt: 'Hello',
+        prompt: "Hello",
         temperature: 0.7,
       };
       const result = await model.generate(params);
 
-      expect(result.text).toBe('Hi there!');
+      expect(result.text).toBe("Hi there!");
     });
 
-    it('should handle maxTokens parameter', async () => {
+    it("should handle maxTokens parameter", async () => {
       const params: GenerateParams = {
-        prompt: 'Hello',
+        prompt: "Hello",
         maxTokens: 100,
       };
       const result = await model.generate(params);
 
-      expect(result.text).toBe('Hi there!');
+      expect(result.text).toBe("Hi there!");
     });
 
-    it('should include metadata in result', async () => {
+    it("should include metadata in result", async () => {
       const params: GenerateParams = {
-        prompt: 'Hello',
-        metadata: { key: 'value' },
+        prompt: "Hello",
+        metadata: { key: "value" },
       };
       const result = await model.generate(params);
 
       expect(result.metadata).not.toBeUndefined();
-      expect(result.metadata?.modelId).toBe('test-model');
+      expect(result.metadata?.modelId).toBe("test-model");
     });
   });
 
-  describe('stream', () => {
-    it('should stream predefined response word by word', async () => {
-      const params: StreamParams = { prompt: 'Stream this' };
+  describe("stream", () => {
+    it("should stream predefined response word by word", async () => {
+      const params: StreamParams = { prompt: "Stream this" };
       const chunks: string[] = [];
 
       for await (const chunk of model.stream(params)) {
         chunks.push(chunk.delta);
       }
 
-      const fullText = chunks.join('').trim();
-      expect(fullText).toBe('This is a streaming response with multiple words');
+      const fullText = chunks.join("").trim();
+      expect(fullText).toBe("This is a streaming response with multiple words");
     });
 
-    it('should provide usage information', async () => {
-      const params: StreamParams = { prompt: 'Hello' };
+    it("should provide usage information", async () => {
+      const params: StreamParams = { prompt: "Hello" };
       const chunks = model.stream(params);
 
       let usageFound = false;
@@ -135,9 +135,9 @@ describe('InMemoryLlmModel', () => {
       expect(usageFound).toBe(true);
     });
 
-    it('should handle empty response', async () => {
-      const emptyModel = new InMemoryLlmModel('empty', { Empty: '' });
-      const params: StreamParams = { prompt: 'Empty' };
+    it("should handle empty response", async () => {
+      const emptyModel = new InMemoryLlmModel("empty", { Empty: "" });
+      const params: StreamParams = { prompt: "Empty" };
       const chunks: string[] = [];
 
       for await (const chunk of emptyModel.stream(params)) {
@@ -147,8 +147,8 @@ describe('InMemoryLlmModel', () => {
       expect(chunks.length).toBe(0);
     });
 
-    it('should simulate streaming delay', async () => {
-      const params: StreamParams = { prompt: 'Hello' };
+    it("should simulate streaming delay", async () => {
+      const params: StreamParams = { prompt: "Hello" };
       const startTime = Date.now();
 
       for await (const _chunk of model.stream(params)) {
@@ -161,66 +161,66 @@ describe('InMemoryLlmModel', () => {
     });
   });
 
-  describe('generateObject', () => {
-    it('should generate object from JSON response', async () => {
-      const jsonResponse = JSON.stringify({ name: 'John', age: 30 });
-      const objectModel = new InMemoryLlmModel('object-model', {
-        'Create user': jsonResponse,
+  describe("generateObject", () => {
+    it("should generate object from JSON response", async () => {
+      const jsonResponse = JSON.stringify({ name: "John", age: 30 });
+      const objectModel = new InMemoryLlmModel("object-model", {
+        "Create user": jsonResponse,
       });
 
       const params: GenerateObjectParams<{ name: string; age: number }> = {
-        prompt: 'Create user',
-        schema: { name: 'string', age: 'number' } as unknown as { name: string; age: number },
+        prompt: "Create user",
+        schema: { name: "string", age: "number" } as unknown as { name: string; age: number },
       };
 
       const result = await objectModel.generateObject(params);
 
-      expect(result).toEqual({ name: 'John', age: 30 });
+      expect(result).toEqual({ name: "John", age: 30 });
     });
 
-    it('should throw error for invalid JSON', async () => {
-      const invalidModel = new InMemoryLlmModel('invalid-model', {
-        Invalid: 'not a json',
+    it("should throw error for invalid JSON", async () => {
+      const invalidModel = new InMemoryLlmModel("invalid-model", {
+        Invalid: "not a json",
       });
 
       const params: GenerateObjectParams<StringShape> = {
-        prompt: 'Invalid',
-        schema: { name: 'string' },
+        prompt: "Invalid",
+        schema: { name: "string" },
       };
 
       await expect(invalidModel.generateObject(params)).rejects.toThrow();
     });
 
-    it('should include usage in result', async () => {
-      const jsonResponse = JSON.stringify({ key: 'value' });
-      const objectModel = new InMemoryLlmModel('object-model', {
+    it("should include usage in result", async () => {
+      const jsonResponse = JSON.stringify({ key: "value" });
+      const objectModel = new InMemoryLlmModel("object-model", {
         Test: jsonResponse,
       });
 
       const params: GenerateObjectParams<StringShape> = {
-        prompt: 'Test',
+        prompt: "Test",
         schema: {},
       };
 
       const result = await objectModel.generateObject(params);
 
-      expect(result).toEqual({ key: 'value' });
+      expect(result).toEqual({ key: "value" });
     });
   });
 
-  describe('callTool', () => {
-    it('should return tool calls based on prompt', async () => {
-      const toolModel = new InMemoryLlmModel('tool-model', {
-        'Call the weather tool': 'weather:{"location":"Seoul"}',
+  describe("callTool", () => {
+    it("should return tool calls based on prompt", async () => {
+      const toolModel = new InMemoryLlmModel("tool-model", {
+        "Call the weather tool": 'weather:{"location":"Seoul"}',
       });
 
       const params: ToolCallParams = {
-        prompt: 'Call the weather tool',
+        prompt: "Call the weather tool",
         tools: [
           {
-            name: 'weather',
-            description: 'Get weather information',
-            parameters: { location: 'string' },
+            name: "weather",
+            description: "Get weather information",
+            parameters: { location: "string" },
           },
         ],
       };
@@ -228,20 +228,20 @@ describe('InMemoryLlmModel', () => {
       const result = await toolModel.callTool(params);
 
       expect(result.toolCalls).toHaveLength(1);
-      expect(result.toolCalls[0].name).toBe('weather');
-      expect(result.toolCalls[0].arguments).toEqual({ location: 'Seoul' });
+      expect(result.toolCalls[0].name).toBe("weather");
+      expect(result.toolCalls[0].arguments).toEqual({ location: "Seoul" });
     });
 
-    it('should handle multiple tools in response', async () => {
-      const toolModel = new InMemoryLlmModel('tool-model', {
-        'Call multiple': 'tool1:{"arg":"value1"}|tool2:{"arg":"value2"}',
+    it("should handle multiple tools in response", async () => {
+      const toolModel = new InMemoryLlmModel("tool-model", {
+        "Call multiple": 'tool1:{"arg":"value1"}|tool2:{"arg":"value2"}',
       });
 
       const params: ToolCallParams = {
-        prompt: 'Call multiple',
+        prompt: "Call multiple",
         tools: [
-          { name: 'tool1', description: 'Tool 1', parameters: {} },
-          { name: 'tool2', description: 'Tool 2', parameters: {} },
+          { name: "tool1", description: "Tool 1", parameters: {} },
+          { name: "tool2", description: "Tool 2", parameters: {} },
         ],
       };
 
@@ -250,17 +250,17 @@ describe('InMemoryLlmModel', () => {
       expect(result.toolCalls).toHaveLength(2);
     });
 
-    it('should return empty array when no tool calls', async () => {
-      const toolModel = new InMemoryLlmModel('tool-model', {
-        'No tools': 'Just a regular response',
+    it("should return empty array when no tool calls", async () => {
+      const toolModel = new InMemoryLlmModel("tool-model", {
+        "No tools": "Just a regular response",
       });
 
       const params: ToolCallParams = {
-        prompt: 'No tools',
+        prompt: "No tools",
         tools: [
           {
-            name: 'weather',
-            description: 'Get weather',
+            name: "weather",
+            description: "Get weather",
             parameters: {},
           },
         ],
@@ -271,18 +271,18 @@ describe('InMemoryLlmModel', () => {
       expect(result.toolCalls).toEqual([]);
     });
 
-    it('should throw when tool arguments are malformed JSON', async () => {
-      const toolModel = new InMemoryLlmModel('tool-model', {
-        'Malformed tool args': 'weather:{invalid-json}',
+    it("should throw when tool arguments are malformed JSON", async () => {
+      const toolModel = new InMemoryLlmModel("tool-model", {
+        "Malformed tool args": "weather:{invalid-json}",
       });
 
       const params: ToolCallParams = {
-        prompt: 'Malformed tool args',
+        prompt: "Malformed tool args",
         tools: [
           {
-            name: 'weather',
-            description: 'Get weather information',
-            parameters: { location: 'string' },
+            name: "weather",
+            description: "Get weather information",
+            parameters: { location: "string" },
           },
         ],
       };
@@ -291,10 +291,10 @@ describe('InMemoryLlmModel', () => {
     });
   });
 
-  describe('embed', () => {
-    it('should generate embedding vector', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
-      const params: EmbedParams = { text: 'Hello world' };
+  describe("embed", () => {
+    it("should generate embedding vector", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
+      const params: EmbedParams = { text: "Hello world" };
 
       const result = await embedModel.embed(params);
 
@@ -303,9 +303,9 @@ describe('InMemoryLlmModel', () => {
       expect(result.usage.totalTokens).toBeGreaterThan(0);
     });
 
-    it('should generate consistent embeddings for same text', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
-      const params: EmbedParams = { text: 'Consistent' };
+    it("should generate consistent embeddings for same text", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
+      const params: EmbedParams = { text: "Consistent" };
 
       const result1 = await embedModel.embed(params);
       const result2 = await embedModel.embed(params);
@@ -313,30 +313,30 @@ describe('InMemoryLlmModel', () => {
       expect(result1.embedding).toEqual(result2.embedding);
     });
 
-    it('should generate different embeddings for different texts', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
+    it("should generate different embeddings for different texts", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
 
-      const result1 = await embedModel.embed({ text: 'Text 1' });
-      const result2 = await embedModel.embed({ text: 'Text 2' });
+      const result1 = await embedModel.embed({ text: "Text 1" });
+      const result2 = await embedModel.embed({ text: "Text 2" });
 
       expect(result1.embedding).not.toEqual(result2.embedding);
     });
 
-    it('should return a defensive copy for cached embeddings', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
+    it("should return a defensive copy for cached embeddings", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
 
-      const first = await embedModel.embed({ text: 'Mutable' });
+      const first = await embedModel.embed({ text: "Mutable" });
       first.embedding[0] = 999;
 
-      const second = await embedModel.embed({ text: 'Mutable' });
+      const second = await embedModel.embed({ text: "Mutable" });
 
       expect(second.embedding[0]).not.toBe(999);
     });
 
-    it('should evict the oldest cached embedding when the cache limit is exceeded', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
+    it("should evict the oldest cached embedding when the cache limit is exceeded", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
       const getEmbeddingCache = (model: InMemoryLlmModel): Map<string, number[]> =>
-        Reflect.get(model, 'embeddingCache') as Map<string, number[]>;
+        Reflect.get(model, "embeddingCache") as Map<string, number[]>;
 
       for (let i = 0; i <= 1000; i++) {
         await embedModel.embed({ text: `text-${i}` });
@@ -345,16 +345,16 @@ describe('InMemoryLlmModel', () => {
       const embeddingCache = getEmbeddingCache(embedModel);
 
       expect(embeddingCache.size).toBe(1000);
-      expect(embeddingCache.has('text-0')).toBe(false);
-      expect(embeddingCache.has('text-1000')).toBe(true);
+      expect(embeddingCache.has("text-0")).toBe(false);
+      expect(embeddingCache.has("text-1000")).toBe(true);
     });
   });
 
-  describe('embedMany', () => {
-    it('should generate embeddings for multiple texts', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
+  describe("embedMany", () => {
+    it("should generate embeddings for multiple texts", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
       const params: EmbedManyParams = {
-        texts: ['Hello', 'World', 'Test'],
+        texts: ["Hello", "World", "Test"],
       };
 
       const result = await embedModel.embedMany(params);
@@ -363,8 +363,8 @@ describe('InMemoryLlmModel', () => {
       expect(result.usage.totalTokens).toBeGreaterThan(0);
     });
 
-    it('should handle empty array', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
+    it("should handle empty array", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
       const params: EmbedManyParams = { texts: [] };
 
       const result = await embedModel.embedMany(params);
@@ -373,9 +373,9 @@ describe('InMemoryLlmModel', () => {
       expect(result.usage.totalTokens).toBe(0);
     });
 
-    it('should generate consistent embeddings', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
-      const params: EmbedManyParams = { texts: ['A', 'B'] };
+    it("should generate consistent embeddings", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
+      const params: EmbedManyParams = { texts: ["A", "B"] };
 
       const result1 = await embedModel.embedMany(params);
       const result2 = await embedModel.embedMany(params);
@@ -383,23 +383,23 @@ describe('InMemoryLlmModel', () => {
       expect(result1.embeddings).toEqual(result2.embeddings);
     });
 
-    it('should return defensive copies for batch embeddings', async () => {
-      const embedModel = new InMemoryLlmModel('embed-model');
+    it("should return defensive copies for batch embeddings", async () => {
+      const embedModel = new InMemoryLlmModel("embed-model");
 
-      const first = await embedModel.embedMany({ texts: ['A'] });
+      const first = await embedModel.embedMany({ texts: ["A"] });
       const [firstEmbedding] = first.embeddings;
 
       if (!firstEmbedding) {
-        throw new Error('Expected a batch embedding result');
+        throw new Error("Expected a batch embedding result");
       }
 
       firstEmbedding[0] = 999;
 
-      const second = await embedModel.embedMany({ texts: ['A'] });
+      const second = await embedModel.embedMany({ texts: ["A"] });
       const [secondEmbedding] = second.embeddings;
 
       if (!secondEmbedding) {
-        throw new Error('Expected a batch embedding result');
+        throw new Error("Expected a batch embedding result");
       }
 
       expect(secondEmbedding[0]).not.toBe(999);

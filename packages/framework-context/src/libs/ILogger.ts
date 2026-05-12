@@ -1,4 +1,4 @@
-import { Token } from 'typedi';
+import { Token } from "typedi";
 
 export interface ILogger {
   debug(message: string, context?: Record<string, unknown>): void;
@@ -11,4 +11,4 @@ export interface ILogger {
 /**
  * Croco 전역 로거 인스턴스를 등록하고 조회할 때 사용하는 DI 토큰입니다.
  */
-export const LOGGER_TOKEN = new Token<ILogger>('ILogger');
+export const LOGGER_TOKEN = new Token<ILogger>("ILogger");

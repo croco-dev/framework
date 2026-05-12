@@ -1,4 +1,4 @@
-import { MembershipConstraintProblem } from './MembershipConstraintProblem';
+import { MembershipConstraintProblem } from "./MembershipConstraintProblem";
 
 export class LastOwnerCannotBeRemovedProblem extends MembershipConstraintProblem {
   constructor(tenantId: string, userId: string) {
@@ -7,9 +7,9 @@ export class LastOwnerCannotBeRemovedProblem extends MembershipConstraintProblem
       {
         tenantId,
         userId,
-        operation: 'remove',
+        operation: "remove",
       },
-      'LAST_OWNER_CANNOT_BE_REMOVED'
+      "LAST_OWNER_CANNOT_BE_REMOVED",
     );
   }
 }

@@ -1,7 +1,7 @@
 /**
  * Tenant status
  */
-export type TenantStatus = 'active' | 'inactive' | 'suspended' | 'trial' | 'expired';
+export type TenantStatus = "active" | "inactive" | "suspended" | "trial" | "expired";
 
 /**
  * Tenant context stored in AsyncLocalStorage
@@ -19,7 +19,7 @@ export type TenantContext = {
 /**
  * Tenant identification method
  */
-export type TenantIdentificationMethod = 'header' | 'subdomain' | 'jwt' | 'custom';
+export type TenantIdentificationMethod = "header" | "subdomain" | "jwt" | "custom";
 
 /**
  * Tenant resolution result

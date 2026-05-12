@@ -24,7 +24,7 @@ pnpm add @croco/events-core @croco/events-inmemory
 Create a class that extends `DomainEvent`.
 
 ```typescript
-import { DomainEvent } from '@croco/events-core';
+import { DomainEvent } from "@croco/events-core";
 
 export class UserCreatedEvent extends DomainEvent {
   constructor(public readonly userId: string) {
@@ -38,7 +38,7 @@ export class UserCreatedEvent extends DomainEvent {
 Use `AggregateRoot` to collect events and publish them transactionally.
 
 ```typescript
-import { AggregateRoot } from '@croco/events-core';
+import { AggregateRoot } from "@croco/events-core";
 
 class User extends AggregateRoot {
   create(id: string) {
@@ -48,7 +48,7 @@ class User extends AggregateRoot {
 }
 
 const user = new User();
-user.create('user-123');
+user.create("user-123");
 
 // Retrieve pending events
 const events = user.getDomainEvents();
@@ -60,7 +60,7 @@ user.clearDomainEvents();
 Register handlers using the `@RegisterEventHandler` decorator.
 
 ```typescript
-import { EventHandler, RegisterEventHandler } from '@croco/events-core';
+import { EventHandler, RegisterEventHandler } from "@croco/events-core";
 
 @RegisterEventHandler(UserCreatedEvent)
 class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
@@ -75,8 +75,8 @@ class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
 Configure the global `EventBus` instance.
 
 ```typescript
-import { EventBusConfig } from '@croco/events-core';
-import { InMemoryEventBus } from '@croco/events-inmemory';
+import { EventBusConfig } from "@croco/events-core";
+import { InMemoryEventBus } from "@croco/events-inmemory";
 
 const config = EventBusConfig.getInstance();
 config.setEventBus(new InMemoryEventBus());
@@ -90,10 +90,10 @@ await config.start({ handlers: [UserCreatedHandler] });
 Use `EventPublisher` to dispatch events to the configured bus.
 
 ```typescript
-import { EventPublisher } from '@croco/events-core';
+import { EventPublisher } from "@croco/events-core";
 
 const publisher = new EventPublisher();
 
-await publisher.publish(new UserCreatedEvent('user-123'));
+await publisher.publish(new UserCreatedEvent("user-123"));
 await publisher.publishMany([event1, event2]);
 ```

@@ -7,14 +7,18 @@ import type {
   Percentage,
   Period,
   SubscriptionSnapshot,
-} from '../types';
-import type { CarryingCapacityCalculator, SimulationConfig, UserCCConfig } from './CarryingCapacityCalculator';
-import type { GrowthCalculator } from './GrowthCalculator';
-import type { PlanProvider } from './interfaces/PlanProvider';
-import type { LtvCalculator, LtvConfig } from './LtvCalculator';
-import type { MrrCalculator } from './MrrCalculator';
-import type { RetentionCalculator } from './RetentionCalculator';
-import type { SnapshotInput, SnapshotScheduler } from './SnapshotScheduler';
+} from "../types";
+import type {
+  CarryingCapacityCalculator,
+  SimulationConfig,
+  UserCCConfig,
+} from "./CarryingCapacityCalculator";
+import type { GrowthCalculator } from "./GrowthCalculator";
+import type { PlanProvider } from "./interfaces/PlanProvider";
+import type { LtvCalculator, LtvConfig } from "./LtvCalculator";
+import type { MrrCalculator } from "./MrrCalculator";
+import type { RetentionCalculator } from "./RetentionCalculator";
+import type { SnapshotInput, SnapshotScheduler } from "./SnapshotScheduler";
 
 /**
  * MetricsEngine - Facade service for all metrics calculations.
@@ -37,7 +41,7 @@ export class MetricsEngine {
     private readonly growthCalculator: GrowthCalculator,
     private readonly ccCalculator: CarryingCapacityCalculator,
     private readonly ltvCalculator: LtvCalculator,
-    private readonly snapshotScheduler: SnapshotScheduler
+    private readonly snapshotScheduler: SnapshotScheduler,
   ) {}
 
   // ========== MRR Methods ==========
@@ -49,7 +53,10 @@ export class MetricsEngine {
    * @param planRegistry - Registry to look up plan pricing details
    * @returns Total MRR as Money value
    */
-  async calculateMRR(subscriptions: SubscriptionSnapshot[], planProvider: PlanProvider): Promise<Money> {
+  async calculateMRR(
+    subscriptions: SubscriptionSnapshot[],
+    planProvider: PlanProvider,
+  ): Promise<Money> {
     return this.mrrCalculator.calculateMRR(subscriptions, planProvider);
   }
 
@@ -66,14 +73,23 @@ export class MetricsEngine {
     hasPreviousSubscription: boolean,
     wasChurned: boolean,
     previousAmount: number | null,
-    newAmount: number
+    newAmount: number,
   ): MRRMovementType {
-    return this.mrrCalculator.classifyMRRMovement(hasPreviousSubscription, wasChurned, previousAmount, newAmount);
+    return this.mrrCalculator.classifyMRRMovement(
+      hasPreviousSubscription,
+      wasChurned,
+      previousAmount,
+      newAmount,
+    );
   }
 
   // ========== Retention Methods ==========
 
-  async calculateChurn(startingMRR: number, movement: MRRMovement, type: 'revenue'): Promise<Percentage | null> {
+  async calculateChurn(
+    startingMRR: number,
+    movement: MRRMovement,
+    type: "revenue",
+  ): Promise<Percentage | null> {
     return this.retentionCalculator.calculateChurn(startingMRR, movement, type);
   }
 

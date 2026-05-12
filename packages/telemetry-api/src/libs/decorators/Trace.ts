@@ -1,6 +1,6 @@
-import { type Attributes, context, type Span, trace } from '@opentelemetry/api';
-import { recordError } from '../span.js';
-import { getTracer } from '../tracer.js';
+import { type Attributes, context, type Span, trace } from "@opentelemetry/api";
+import { recordError } from "../span.js";
+import { getTracer } from "../tracer.js";
 
 export type TraceDecoratorOptions = {
   name?: string;
@@ -10,13 +10,18 @@ export type TraceDecoratorOptions = {
 const traceOptionsStore = new WeakMap<object, Map<string | symbol, TraceDecoratorOptions>>();
 
 type TraceableReturn<ReturnType> = Promise<ReturnType> | AsyncIterable<ReturnType>;
-type TraceableMethod<Args extends unknown[], ReturnType> = (...args: Args) => TraceableReturn<ReturnType>;
+type TraceableMethod<Args extends unknown[], ReturnType> = (
+  ...args: Args
+) => TraceableReturn<ReturnType>;
 
 function isAsyncIterable<ReturnType>(value: unknown): value is AsyncIterable<ReturnType> {
-  return typeof value === 'object' && value !== null && Symbol.asyncIterator in value;
+  return typeof value === "object" && value !== null && Symbol.asyncIterator in value;
 }
 
-function traceAsyncIterable<ReturnType>(iterable: AsyncIterable<ReturnType>, span: Span): AsyncIterable<ReturnType> {
+function traceAsyncIterable<ReturnType>(
+  iterable: AsyncIterable<ReturnType>,
+  span: Span,
+): AsyncIterable<ReturnType> {
   return (async function* () {
     try {
       for await (const item of iterable) {
@@ -38,7 +43,11 @@ function cloneOptions(options: TraceDecoratorOptions): TraceDecoratorOptions {
   };
 }
 
-function setTraceOptions(target: object, propertyKey: string | symbol, options: TraceDecoratorOptions): void {
+function setTraceOptions(
+  target: object,
+  propertyKey: string | symbol,
+  options: TraceDecoratorOptions,
+): void {
   const existing = traceOptionsStore.get(target);
 
   if (existing) {
@@ -55,8 +64,12 @@ function setTraceOptions(target: object, propertyKey: string | symbol, options: 
  * 비동기 메서드 실행을 Span으로 감싸는 데코레이터입니다.
  */
 export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
-  options: TraceDecoratorOptions = {}
-): (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => PropertyDescriptor | undefined {
+  options: TraceDecoratorOptions = {},
+): (
+  _target: object,
+  propertyKey: string | symbol,
+  descriptor: PropertyDescriptor,
+) => PropertyDescriptor | undefined {
   return (_target, propertyKey, descriptor) => {
     const originalMethod = descriptor.value as TraceableMethod<Args, ReturnType> | undefined;
 
@@ -72,7 +85,7 @@ export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
       const spanContext = trace.setSpan(context.active(), span);
 
       for (const [key, value] of Object.entries(spanAttributes)) {
-        span.setAttribute(key, value as Parameters<Span['setAttribute']>[1]);
+        span.setAttribute(key, value as Parameters<Span["setAttribute"]>[1]);
       }
 
       return context.with(spanContext, () => {
@@ -106,8 +119,11 @@ export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
 /**
  * 대상 메서드에 등록된 Trace 옵션을 조회합니다.
  */
-export function getTraceOptions(_target: unknown, _propertyKey: string | symbol): TraceDecoratorOptions | undefined {
-  if (typeof _target !== 'object' || _target === null) {
+export function getTraceOptions(
+  _target: unknown,
+  _propertyKey: string | symbol,
+): TraceDecoratorOptions | undefined {
+  if (typeof _target !== "object" || _target === null) {
     return undefined;
   }
 
@@ -118,7 +134,7 @@ export function getTraceOptions(_target: unknown, _propertyKey: string | symbol)
   }
 
   const prototype = Object.getPrototypeOf(target);
-  if (!prototype || typeof prototype !== 'object') {
+  if (!prototype || typeof prototype !== "object") {
     return undefined;
   }
 

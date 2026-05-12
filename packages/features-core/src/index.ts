@@ -91,4 +91,4 @@
  * }
  * ```
  */
-export { FeatureManager } from './libs/FeatureManager';
+export { FeatureManager } from "./libs/FeatureManager";

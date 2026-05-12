@@ -1,4 +1,4 @@
-import type { CrocoPreset, CrocoPresetConfig, HookMap } from './types';
+import type { CrocoPreset, CrocoPresetConfig, HookMap } from "./types";
 
 const EMPTY_HOOKS: Readonly<HookMap> = Object.freeze({});
 
@@ -28,4 +28,4 @@ export function defineCrocoPreset(config: CrocoPresetConfig): CrocoPreset {
   });
 }
 
-export type { CrocoPreset, CrocoPresetConfig, HookMap } from './types';
+export type { CrocoPreset, CrocoPresetConfig, HookMap } from "./types";

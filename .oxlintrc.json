@@ -23,11 +23,22 @@
   },
   "overrides": [
     {
-      "files": ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
+      "files": ["**/*.hbs"],
+      "rules": {}
+    },
+    {
+      "files": [
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/__tests__/**"
+      ],
       "rules": {
         "no-explicit-any": "off",
         "no-unused-vars": "off",
         "typescript/no-unused-vars": "off",
+        "typescript/no-non-null-assertion": "off",
         "jest/no-conditional-expect": "off",
         "jest/valid-expect": "off",
         "jest/no-standalone-expect": "off",

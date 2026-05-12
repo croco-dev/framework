@@ -1,15 +1,15 @@
 {
   "name": "@croco-example/quick-start-lambda",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/transports-http": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
+    "@croco/transports-http": "workspace:*",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

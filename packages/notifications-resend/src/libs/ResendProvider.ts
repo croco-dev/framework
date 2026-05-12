@@ -1,38 +1,38 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
-import { Component } from '@croco/framework-context';
+import { Component } from "@croco/framework-context";
 import {
   NotificationChannel,
   type NotificationPayload,
   type NotificationProvider,
   type NotificationResult,
   type NotificationSendOptions,
-} from '@croco/notifications-core';
-import { type RetryPolicy, RetryTemplate } from '@croco/retry-core';
-import { type CreateEmailOptions, type CreateEmailResponse, Resend } from 'resend';
-import { ResendNotificationProblem } from './problems/ResendNotificationProblem';
+} from "@croco/notifications-core";
+import { type RetryPolicy, RetryTemplate } from "@croco/retry-core";
+import { type CreateEmailOptions, type CreateEmailResponse, Resend } from "resend";
+import { ResendNotificationProblem } from "./problems/ResendNotificationProblem";
 
 const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const TRANSIENT_ERROR_NAMES = new Set([
-  'application_error',
-  'concurrent_idempotent_requests',
-  'internal_server_error',
-  'rate_limit_exceeded',
+  "application_error",
+  "concurrent_idempotent_requests",
+  "internal_server_error",
+  "rate_limit_exceeded",
 ]);
 const TRANSIENT_ERROR_CODES = new Set([
-  'ECONNABORTED',
-  'ECONNREFUSED',
-  'ECONNRESET',
-  'EAI_AGAIN',
-  'ENETDOWN',
-  'ENETRESET',
-  'ENETUNREACH',
-  'ENOTFOUND',
-  'ETIMEDOUT',
-  'UND_ERR_BODY_TIMEOUT',
-  'UND_ERR_CONNECT_TIMEOUT',
-  'UND_ERR_HEADERS_TIMEOUT',
-  'UND_ERR_SOCKET',
+  "ECONNABORTED",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "EAI_AGAIN",
+  "ENETDOWN",
+  "ENETRESET",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_SOCKET",
 ]);
 
 const RESEND_ERROR_STATUS_BY_NAME: Record<string, number> = {
@@ -90,7 +90,7 @@ function getErrorCode(error: unknown): string | undefined {
 function normalizeResendError(
   error: unknown,
   fallbackMessage: string,
-  providerResponse?: CreateEmailResponse
+  providerResponse?: CreateEmailResponse,
 ): ResendError {
   if (error instanceof Error) {
     const resendError = error as ResendError;
@@ -106,23 +106,24 @@ function normalizeResendError(
     return resendError;
   }
 
-  const errorRecord = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : undefined;
-  const message = typeof errorRecord?.message === 'string' ? errorRecord.message : fallbackMessage;
+  const errorRecord =
+    typeof error === "object" && error !== null ? (error as Record<string, unknown>) : undefined;
+  const message = typeof errorRecord?.message === "string" ? errorRecord.message : fallbackMessage;
   const resendError = new Error(message) as ResendError;
 
-  if (typeof errorRecord?.name === 'string') {
+  if (typeof errorRecord?.name === "string") {
     resendError.code = errorRecord.name;
   }
 
-  if (typeof errorRecord?.statusCode === 'number') {
+  if (typeof errorRecord?.statusCode === "number") {
     resendError.status = errorRecord.statusCode;
-  } else if (typeof errorRecord?.status === 'number') {
+  } else if (typeof errorRecord?.status === "number") {
     resendError.status = errorRecord.status;
-  } else if (typeof errorRecord?.name === 'string') {
+  } else if (typeof errorRecord?.name === "string") {
     resendError.status = RESEND_ERROR_STATUS_BY_NAME[errorRecord.name];
   }
 
-  if (typeof errorRecord?.retryAfter === 'string') {
+  if (typeof errorRecord?.retryAfter === "string") {
     resendError.retryAfter = errorRecord.retryAfter;
   }
 
@@ -175,14 +176,17 @@ export class ResendProvider implements NotificationProvider {
   }
 
   getName(): string {
-    return 'resend';
+    return "resend";
   }
 
   getChannel(): NotificationChannel {
     return NotificationChannel.EMAIL;
   }
 
-  async send(payload: NotificationPayload, options?: NotificationSendOptions): Promise<NotificationResult> {
+  async send(
+    payload: NotificationPayload,
+    options?: NotificationSendOptions,
+  ): Promise<NotificationResult> {
     try {
       const { to, subject, content } = payload;
       // 직접 호출에서 안정 키가 없을 때의 호환 경로이며, retry-dedupe를 보장하지 않는다.
@@ -191,7 +195,7 @@ export class ResendProvider implements NotificationProvider {
       const emailOptions: CreateEmailOptions = {
         from: this.config.from,
         to,
-        subject: subject || 'No Subject',
+        subject: subject || "No Subject",
         html: content,
       };
 
@@ -199,7 +203,11 @@ export class ResendProvider implements NotificationProvider {
         const response = await this.client.emails.send(emailOptions, { idempotencyKey });
 
         if (response.error) {
-          const resendError = normalizeResendError(response.error, response.error.message, response);
+          const resendError = normalizeResendError(
+            response.error,
+            response.error.message,
+            response,
+          );
 
           if (isRetryableResendError(resendError)) {
             throw resendError;
@@ -223,7 +231,7 @@ export class ResendProvider implements NotificationProvider {
         providerResponse: data,
       };
     } catch (error: unknown) {
-      const cause = normalizeResendError(error, 'Unknown Resend error');
+      const cause = normalizeResendError(error, "Unknown Resend error");
 
       return {
         success: false,

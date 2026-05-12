@@ -1,10 +1,13 @@
-import { Component } from '@croco/framework-context';
-import type { MembershipRole } from '@croco/membership-core';
-import type { InvitationManager } from './InvitationManager';
-import type { InvitationStore } from './InvitationStore';
-import { BatchSizeExceededProblem } from './problems/BatchInviteProblems';
-import { DuplicateInvitationProblem, InvitationRateLimitExceededProblem } from './problems/RateLimitProblems';
-import type { BatchInviteOptions, BatchInviteResult, RateLimitConfig } from './types';
+import { Component } from "@croco/framework-context";
+import type { MembershipRole } from "@croco/membership-core";
+import type { InvitationManager } from "./InvitationManager";
+import type { InvitationStore } from "./InvitationStore";
+import { BatchSizeExceededProblem } from "./problems/BatchInviteProblems";
+import {
+  DuplicateInvitationProblem,
+  InvitationRateLimitExceededProblem,
+} from "./problems/RateLimitProblems";
+import type { BatchInviteOptions, BatchInviteResult, RateLimitConfig } from "./types";
 
 type CreateEmailInvitationInput = {
   tenantId: string;
@@ -31,7 +34,7 @@ export class RateLimitedInvitationService {
   constructor(
     private readonly manager: InvitationManager,
     private readonly store: InvitationStore,
-    private readonly config?: RateLimitConfig
+    private readonly config?: RateLimitConfig,
   ) {}
 
   async checkRateLimit(tenantId: string): Promise<void> {
@@ -58,7 +61,7 @@ export class RateLimitedInvitationService {
     const normalizedEmail = input.email.trim().toLowerCase();
     const existing = await this.store.findByTenantAndEmail(input.tenantId, normalizedEmail);
 
-    if (existing && existing.status === 'pending') {
+    if (existing && existing.status === "pending") {
       throw new DuplicateInvitationProblem(input.tenantId, normalizedEmail);
     }
 
@@ -74,7 +77,11 @@ export class RateLimitedInvitationService {
     return this.manager.createLinkInvitation(input);
   }
 
-  async batchInvite(tenantId: string, emails: string[], options: BatchInviteOptions = {}): Promise<BatchInviteResult> {
+  async batchInvite(
+    tenantId: string,
+    emails: string[],
+    options: BatchInviteOptions = {},
+  ): Promise<BatchInviteResult> {
     const maxBatchSize = options.maxBatchSize ?? 50;
 
     if (emails.length > maxBatchSize) {
@@ -93,19 +100,19 @@ export class RateLimitedInvitationService {
         const normalizedEmail = email.trim().toLowerCase();
         const existing = await this.store.findByTenantAndEmail(tenantId, normalizedEmail);
 
-        if (existing && existing.status === 'pending') {
+        if (existing && existing.status === "pending") {
           result.failed.push({
             email: normalizedEmail,
-            error: 'Invitation already pending',
+            error: "Invitation already pending",
           });
           continue;
         }
 
         const token = await this.manager.createEmailInvitation({
           tenantId,
-          inviterId: 'system',
+          inviterId: "system",
           email: normalizedEmail,
-          role: 'member' as const,
+          role: "member" as const,
           expiresInDays: options.expiresInDays,
         });
 
@@ -116,7 +123,7 @@ export class RateLimitedInvitationService {
       } catch (error) {
         result.failed.push({
           email: email.trim().toLowerCase(),
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     }

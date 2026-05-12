@@ -1,5 +1,5 @@
-import { DomainPolicyStore } from './DomainPolicyStore';
-import type { DomainPolicy } from './types';
+import { DomainPolicyStore } from "./DomainPolicyStore";
+import type { DomainPolicy } from "./types";
 
 export class InMemoryDomainPolicyStore extends DomainPolicyStore {
   private readonly storage = new Map<string, DomainPolicy>();

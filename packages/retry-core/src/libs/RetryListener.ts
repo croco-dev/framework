@@ -1,4 +1,4 @@
-import type { RetryContext } from './RetryContext';
+import type { RetryContext } from "./RetryContext";
 
 /**
  * Listener interface for retry lifecycle events.
@@ -72,7 +72,7 @@ export class CompositeRetryListener implements RetryListener {
  * Simple logging listener for debugging.
  */
 export class LoggingRetryListener implements RetryListener {
-  constructor(private readonly logger: Pick<Console, 'log' | 'warn' | 'error'> = console) {}
+  constructor(private readonly logger: Pick<Console, "log" | "warn" | "error"> = console) {}
 
   onStart(context: RetryContext): boolean {
     this.logger.log(`[Retry] Starting ${context.methodName}, max attempts: ${context.maxAttempts}`);
@@ -80,7 +80,9 @@ export class LoggingRetryListener implements RetryListener {
   }
 
   onError(context: RetryContext, error: Error): void {
-    this.logger.warn(`[Retry] ${context.methodName} attempt ${context.attempt} failed: ${error.message}`);
+    this.logger.warn(
+      `[Retry] ${context.methodName} attempt ${context.attempt} failed: ${error.message}`,
+    );
   }
 
   onSuccess(context: RetryContext): void {

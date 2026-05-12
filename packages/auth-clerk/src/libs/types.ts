@@ -29,21 +29,23 @@ export type ClerkMembershipEvent = {
 };
 
 export type WebhookEventType =
-  | 'user.created'
-  | 'user.updated'
-  | 'user.deleted'
-  | 'organization.created'
-  | 'organization.updated'
-  | 'organization.deleted'
-  | 'organizationMembership.created'
-  | 'organizationMembership.deleted';
+  | "user.created"
+  | "user.updated"
+  | "user.deleted"
+  | "organization.created"
+  | "organization.updated"
+  | "organization.deleted"
+  | "organizationMembership.created"
+  | "organizationMembership.deleted";
 
 export type WebhookHandlerOptions = {
   signingSecret: string;
 };
 
 export type WebhookEventHandler = {
-  [K in WebhookEventType]?: (data: ClerkUserEvent | ClerkOrgEvent | ClerkMembershipEvent) => Promise<void>;
+  [K in WebhookEventType]?: (
+    data: ClerkUserEvent | ClerkOrgEvent | ClerkMembershipEvent,
+  ) => Promise<void>;
 };
 
 export type AuthorizationHeaderCarrier = {

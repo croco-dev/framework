@@ -1,2 +1,2 @@
-export { AbstractCacheStoreAdapter } from './abstractAdapter';
-export { RedisCacheStoreAdapter } from './redisAdapter';
+export { AbstractCacheStoreAdapter } from "./abstractAdapter";
+export { RedisCacheStoreAdapter } from "./redisAdapter";

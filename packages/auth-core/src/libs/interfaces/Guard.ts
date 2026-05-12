@@ -1,5 +1,5 @@
-import type { Guard } from '@croco/framework-context';
-import type { AuthRequest } from './AuthRequest';
+import type { Guard } from "@croco/framework-context";
+import type { AuthRequest } from "./AuthRequest";
 
 export type { Guard };
 

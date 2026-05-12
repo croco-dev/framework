@@ -1,33 +1,42 @@
-import type { ConfigService } from '@croco/framework-config';
-import type { ILogger } from '@croco/framework-context';
-import { Component, Context } from '@croco/framework-context';
-import { trace } from '@opentelemetry/api';
-import pino, { type Logger as PinoLogger } from 'pino';
-import { LogLevel } from './LogLevel';
-import type { LogContext } from './types';
+import type { ConfigService } from "@croco/framework-config";
+import type { ILogger } from "@croco/framework-context";
+import { Component, Context } from "@croco/framework-context";
+import { trace } from "@opentelemetry/api";
+import pino, { type Logger as PinoLogger } from "pino";
+import { LogLevel } from "./LogLevel";
+import type { LogContext } from "./types";
 
-@Component({ scope: 'singleton' })
+@Component({ scope: "singleton" })
 export class Logger implements ILogger {
   private logger: PinoLogger;
 
   constructor(private readonly config: ConfigService) {
     const isProduction = this.config.isProduction;
-    const level = this.config.get('LOG_LEVEL') || LogLevel.INFO;
+    const level = this.config.get("LOG_LEVEL") || LogLevel.INFO;
 
     this.logger = pino({
       level,
       transport: isProduction
         ? undefined
         : {
-            target: 'pino-pretty',
+            target: "pino-pretty",
             options: {
               colorize: true,
-              translateTime: 'HH:MM:ss Z',
-              ignore: 'pid,hostname',
+              translateTime: "HH:MM:ss Z",
+              ignore: "pid,hostname",
             },
           },
       redact: {
-        paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret', 'authorization', 'cookie'],
+        paths: [
+          "password",
+          "token",
+          "secret",
+          "*.password",
+          "*.token",
+          "*.secret",
+          "authorization",
+          "cookie",
+        ],
         remove: true,
       },
       base: isProduction ? undefined : { pid: process.pid },

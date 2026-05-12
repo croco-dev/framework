@@ -1,1 +1,1 @@
-export const sampleDomainPageTitle = 'Users';
+export const sampleDomainPageTitle = "Users";

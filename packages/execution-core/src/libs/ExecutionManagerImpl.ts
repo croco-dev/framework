@@ -1,7 +1,13 @@
-import { ExecutionProblems } from './ExecutionProblem';
-import type { ExecutionManager } from './interfaces/ExecutionManager';
-import type { ExecutionStore } from './interfaces/ExecutionStore';
-import type { CreateExecutionParams, Execution, ExecutionError, ExecutionStatus, ProgressInfo } from './types';
+import { ExecutionProblems } from "./ExecutionProblem";
+import type { ExecutionManager } from "./interfaces/ExecutionManager";
+import type { ExecutionStore } from "./interfaces/ExecutionStore";
+import type {
+  CreateExecutionParams,
+  Execution,
+  ExecutionError,
+  ExecutionStatus,
+  ProgressInfo,
+} from "./types";
 
 /**
  * State transition rules for ExecutionStatus.
@@ -17,13 +23,13 @@ import type { CreateExecutionParams, Execution, ExecutionError, ExecutionStatus,
  * - completed, cancelled, failed (when max retries exhausted)
  */
 const ALLOWED_TRANSITIONS: Record<ExecutionStatus, ExecutionStatus[]> = {
-  pending: ['running', 'cancelled'],
-  running: ['completed', 'failed', 'timed_out', 'cancelled', 'retrying'],
+  pending: ["running", "cancelled"],
+  running: ["completed", "failed", "timed_out", "cancelled", "retrying"],
   completed: [],
-  failed: ['retrying'],
+  failed: ["retrying"],
   cancelled: [],
-  retrying: ['running', 'failed'],
-  timed_out: ['retrying'],
+  retrying: ["running", "failed"],
+  timed_out: ["retrying"],
 };
 
 /**
@@ -88,7 +94,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
     }
 
     // Allow: pending → running, retrying → running
-    const targetStatus: ExecutionStatus = 'running';
+    const targetStatus: ExecutionStatus = "running";
     validateTransition(execution.status, targetStatus);
 
     const startedAt = new Date();
@@ -108,10 +114,10 @@ export class ExecutionManagerImpl implements ExecutionManager {
       throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
 
-    validateTransition(execution.status, 'completed');
+    validateTransition(execution.status, "completed");
 
     return this.store.update(id, {
-      status: 'completed',
+      status: "completed",
       result,
       completedAt: new Date(),
     });
@@ -127,16 +133,16 @@ export class ExecutionManagerImpl implements ExecutionManager {
     // Check if should retry
     if (error.retryable && execution.attempts < execution.maxAttempts) {
       return this.store.update(id, {
-        status: 'retrying',
+        status: "retrying",
         error,
       });
     }
 
     // Max attempts exhausted or not retryable
-    validateTransition(execution.status, 'failed');
+    validateTransition(execution.status, "failed");
 
     return this.store.update(id, {
-      status: 'failed',
+      status: "failed",
       error,
       completedAt: new Date(),
     });
@@ -149,12 +155,14 @@ export class ExecutionManagerImpl implements ExecutionManager {
       throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
 
-    validateTransition(execution.status, 'cancelled');
+    validateTransition(execution.status, "cancelled");
 
-    const metadata = reason ? { ...(execution.metadata ?? {}), cancellationReason: reason } : execution.metadata;
+    const metadata = reason
+      ? { ...(execution.metadata ?? {}), cancellationReason: reason }
+      : execution.metadata;
 
     return this.store.update(id, {
-      status: 'cancelled',
+      status: "cancelled",
       completedAt: new Date(),
       metadata,
     });
@@ -168,11 +176,11 @@ export class ExecutionManagerImpl implements ExecutionManager {
     }
 
     if (execution.attempts >= execution.maxAttempts) {
-      throw ExecutionProblems.maxRetriesExceeded('Maximum retry attempts exceeded');
+      throw ExecutionProblems.maxRetriesExceeded("Maximum retry attempts exceeded");
     }
 
     // Allow: failed → retrying, timed_out → retrying
-    const targetStatus: ExecutionStatus = 'retrying';
+    const targetStatus: ExecutionStatus = "retrying";
     validateTransition(execution.status, targetStatus);
 
     return this.store.update(id, {
@@ -220,13 +228,13 @@ export class ExecutionManagerImpl implements ExecutionManager {
       throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
 
-    validateTransition(execution.status, 'timed_out');
+    validateTransition(execution.status, "timed_out");
 
     return this.store.update(id, {
-      status: 'timed_out',
+      status: "timed_out",
       completedAt: new Date(),
       error: {
-        message: 'Execution timed out',
+        message: "Execution timed out",
         retryable: true,
       },
     });

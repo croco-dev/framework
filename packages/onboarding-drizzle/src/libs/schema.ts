@@ -1,22 +1,22 @@
-import type { OnboardingState } from '@croco/onboarding-core';
-import { boolean, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
+import type { OnboardingState } from "@croco/onboarding-core";
+import { boolean, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
  * 온보딩 상태를 저장하는 PostgreSQL 스키마입니다.
  */
 export const onboardingStates = pgTable(
-  'onboarding_states',
+  "onboarding_states",
   {
-    tenantId: text('tenant_id').notNull(),
-    userId: text('user_id').notNull(),
-    onboardingId: text('onboarding_id').notNull(),
+    tenantId: text("tenant_id").notNull(),
+    userId: text("user_id").notNull(),
+    onboardingId: text("onboarding_id").notNull(),
 
-    steps: jsonb('steps').$type<OnboardingState['steps']>().notNull().default({}),
-    isCompleted: boolean('is_completed').notNull().default(false),
-    completedAt: timestamp('completed_at'),
+    steps: jsonb("steps").$type<OnboardingState["steps"]>().notNull().default({}),
+    isCompleted: boolean("is_completed").notNull().default(false),
+    completedAt: timestamp("completed_at"),
 
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (t) => [primaryKey({ columns: [t.tenantId, t.userId, t.onboardingId] })]
+  (t) => [primaryKey({ columns: [t.tenantId, t.userId, t.onboardingId] })],
 );

@@ -78,9 +78,9 @@
  * });
  * ```
  */
-export { BatchLoaderFactory, registerBatchLoaderFactory } from './libs/BatchLoaderFactory';
-export { createBatchLoader } from './libs/createBatchLoader';
-export { BatchResultLengthMismatchProblem } from './libs/problems/BatchLoaderProblems';
+export { BatchLoaderFactory, registerBatchLoaderFactory } from "./libs/BatchLoaderFactory";
+export { createBatchLoader } from "./libs/createBatchLoader";
+export { BatchResultLengthMismatchProblem } from "./libs/problems/BatchLoaderProblems";
 /**
  * Batch function type for loading multiple values.
  *
@@ -146,4 +146,4 @@ export { BatchResultLengthMismatchProblem } from './libs/problems/BatchLoaderPro
  * };
  * ```
  */
-export type { BatchFn, BatchLoader, BatchLoaderOptions } from './libs/types';
+export type { BatchFn, BatchLoader, BatchLoaderOptions } from "./libs/types";

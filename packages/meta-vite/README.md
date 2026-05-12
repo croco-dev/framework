@@ -26,28 +26,30 @@ Requires Vite 6+ and React 19+.
 ### 1. Define routes
 
 ```typescript
-import { defineRoute, RouteRegistry } from '@croco/meta-vite';
-import { RenderServer } from '@croco/meta-vite';
+import { defineRoute, RouteRegistry } from "@croco/meta-vite";
+import { RenderServer } from "@croco/meta-vite";
 
 const registry = new RouteRegistry();
-registry.register(defineRoute({
-  path: '/',
-  component: HomePage,
-  mode: 'ssr',
-}));
+registry.register(
+  defineRoute({
+    path: "/",
+    component: HomePage,
+    mode: "ssr",
+  }),
+);
 ```
 
 ### 2. Compile and render
 
 ```typescript
 const server = new RenderServer(registry.compile());
-const response = await server.handle(new Request('https://example.com/'));
+const response = await server.handle(new Request("https://example.com/"));
 ```
 
 ### 3. Deploy
 
 ```typescript
-import { createMetaFetchHandler } from '@croco/meta-vite';
+import { createMetaFetchHandler } from "@croco/meta-vite";
 
 const handler = createMetaFetchHandler({
   pageHandler: server,
@@ -61,31 +63,39 @@ const handler = createMetaFetchHandler({
 ### 4. SSR Page + API Route (combined)
 
 ```typescript
-import { defineRoute, defineApiRoute, RouteRegistry, RenderServer, createMetaFetchHandler } from '@croco/meta-vite';
+import {
+  defineRoute,
+  defineApiRoute,
+  RouteRegistry,
+  RenderServer,
+  createMetaFetchHandler,
+} from "@croco/meta-vite";
 
 // Page route
 const registry = new RouteRegistry();
-registry.register(defineRoute({
-  path: '/',
-  component: HomePage,
-  mode: 'ssr',
-}));
+registry.register(
+  defineRoute({
+    path: "/",
+    component: HomePage,
+    mode: "ssr",
+  }),
+);
 
 // API routes
 const apiRoutes = [
   defineApiRoute({
-    path: '/api/hello',
-    method: 'GET',
+    path: "/api/hello",
+    method: "GET",
     handler: async (request: Request): Promise<Response> => {
-      return new Response(JSON.stringify({ message: 'Hello from API!' }), {
+      return new Response(JSON.stringify({ message: "Hello from API!" }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       });
     },
   }),
   defineApiRoute({
-    path: '/api/users',
-    method: 'POST',
+    path: "/api/users",
+    method: "POST",
     handler: async (request: Request): Promise<Response> => {
       const body = await request.json();
       return new Response(JSON.stringify({ created: body }), { status: 201 });
@@ -101,17 +111,17 @@ const handler = createMetaFetchHandler({
 });
 
 // /api/* → API routes, /* → SSR pages
-const response = await handler(new Request('https://example.com/api/hello'));
+const response = await handler(new Request("https://example.com/api/hello"));
 ```
 
 ## Route Modes
 
-| Mode | Description | Revalidate |
-|------|-------------|------------|
-| ssr  | Server-side render every request | N/A |
-| ssg  | Static pre-render at build time | N/A |
-| isr  | TTL-based revalidation with CacheStore | `revalidate` (seconds) |
-| rsc  | React Server Components with Flight payload | N/A |
+| Mode | Description                                 | Revalidate             |
+| ---- | ------------------------------------------- | ---------------------- |
+| ssr  | Server-side render every request            | N/A                    |
+| ssg  | Static pre-render at build time             | N/A                    |
+| isr  | TTL-based revalidation with CacheStore      | `revalidate` (seconds) |
+| rsc  | React Server Components with Flight payload | N/A                    |
 
 ## Provider Adapters
 
@@ -142,80 +152,80 @@ Common errors and their diagnostics:
 
 ### Route Definitions
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `defineRoute` | function | Register a flat code-based page route. Returns the same definition for build plugin consumption. |
-| `RouteRegistry` | class | Stores route definitions and compiles them into render-ready intermediate representation. |
-| `head` | function | Define page-level head metadata (title, description, canonical URL). |
+| Export          | Type     | Description                                                                                      |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `defineRoute`   | function | Register a flat code-based page route. Returns the same definition for build plugin consumption. |
+| `RouteRegistry` | class    | Stores route definitions and compiles them into render-ready intermediate representation.        |
+| `head`          | function | Define page-level head metadata (title, description, canonical URL).                             |
 
 ### Render Core
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `RenderServer` | class | Core SSR/RSC render engine. Accepts compiled routes and a Web Fetch Request, returns a Response. |
-| `createMetaFetchHandler` | function | Fetch-based handler factory with API-first fallback composition. |
-| `CrocoFetchHandler` | type | `(request: Request, context?: RuntimeContext) => Promise<Response>` |
-| `RuntimeContext` | type | Provider-neutral context with `platform`, `env`, `executionContext`, `event`, `lambdaContext`. |
+| Export                   | Type     | Description                                                                                      |
+| ------------------------ | -------- | ------------------------------------------------------------------------------------------------ |
+| `RenderServer`           | class    | Core SSR/RSC render engine. Accepts compiled routes and a Web Fetch Request, returns a Response. |
+| `createMetaFetchHandler` | function | Fetch-based handler factory with API-first fallback composition.                                 |
+| `CrocoFetchHandler`      | type     | `(request: Request, context?: RuntimeContext) => Promise<Response>`                              |
+| `RuntimeContext`         | type     | Provider-neutral context with `platform`, `env`, `executionContext`, `event`, `lambdaContext`.   |
 
 ### ISR
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `createIsrMiddleware` | function | CacheStore-backed ISR middleware wrapping a fetch-style render function. |
-| `createIsrHandler` | function | Legacy ISR handler with string-based API and `IsrCacheAdapter`. |
-| `IsrCacheAdapter` | type | Cache adapter contract with `getOrSet` and `invalidate`. |
-| `IsrCacheStore` | type | `CacheStore<string, Response>` subset for ISR middleware. |
-| `AbstractCacheStoreAdapter` | class | Abstract base class implementing `IsrCacheStore.getOrSet`. Subclasses implement `_get`, `_set`, `_delete`. |
-| `RedisCacheStoreAdapter` | class | Redis-backed ISR cache adapter extending `AbstractCacheStoreAdapter`. Uses ioredis, supports TTL and pattern-based `invalidatePattern()`. |
+| Export                      | Type     | Description                                                                                                                               |
+| --------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `createIsrMiddleware`       | function | CacheStore-backed ISR middleware wrapping a fetch-style render function.                                                                  |
+| `createIsrHandler`          | function | Legacy ISR handler with string-based API and `IsrCacheAdapter`.                                                                           |
+| `IsrCacheAdapter`           | type     | Cache adapter contract with `getOrSet` and `invalidate`.                                                                                  |
+| `IsrCacheStore`             | type     | `CacheStore<string, Response>` subset for ISR middleware.                                                                                 |
+| `AbstractCacheStoreAdapter` | class    | Abstract base class implementing `IsrCacheStore.getOrSet`. Subclasses implement `_get`, `_set`, `_delete`.                                |
+| `RedisCacheStoreAdapter`    | class    | Redis-backed ISR cache adapter extending `AbstractCacheStoreAdapter`. Uses ioredis, supports TTL and pattern-based `invalidatePattern()`. |
 
 ### API Routes
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `defineApiRoute` | function | Register an API route with path, HTTP method, and fetch-style handler. Returns the same definition for build plugin consumption. |
-| `ApiRouteDefinition` | type | `{ path: string; method?: ApiMethod; handler: (request: Request) => Promise<Response> }` |
-| `ApiMethod` | type | `'GET' \| 'POST' \| 'PUT' \| 'DELETE' \| 'PATCH'` |
+| Export               | Type     | Description                                                                                                                      |
+| -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `defineApiRoute`     | function | Register an API route with path, HTTP method, and fetch-style handler. Returns the same definition for build plugin consumption. |
+| `ApiRouteDefinition` | type     | `{ path: string; method?: ApiMethod; handler: (request: Request) => Promise<Response> }`                                         |
+| `ApiMethod`          | type     | `'GET' \| 'POST' \| 'PUT' \| 'DELETE' \| 'PATCH'`                                                                                |
 
 ### Server Actions
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `createServerAction` | function | Register a server action with name, optional Zod schema, and handler. Throws on duplicate name. |
-| `createServerActionHandler` | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Integrates with `apiRoutes` dispatch. |
-| `dispatchServerAction` | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Returns 404 or 400 JSON on failure. |
-| `ServerActionConfig` | type | `{ name: string; schema?: ZodSchema<T>; handler: (data: T, context?: RuntimeContext) => Promise<Response> \| Response }` |
+| Export                      | Type     | Description                                                                                                                                     |
+| --------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createServerAction`        | function | Register a server action with name, optional Zod schema, and handler. Throws on duplicate name.                                                 |
+| `createServerActionHandler` | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Integrates with `apiRoutes` dispatch.                               |
+| `dispatchServerAction`      | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Returns 404 or 400 JSON on failure. |
+| `ServerActionConfig`        | type     | `{ name: string; schema?: ZodSchema<T>; handler: (data: T, context?: RuntimeContext) => Promise<Response> \| Response }`                        |
 
 ### SSG
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `prerenderSsgRoutes` | function | Filter and pre-render all `mode: 'ssg'` routes at build time. |
+| Export                | Type     | Description                                                          |
+| --------------------- | -------- | -------------------------------------------------------------------- |
+| `prerenderSsgRoutes`  | function | Filter and pre-render all `mode: 'ssg'` routes at build time.        |
 | `renderRouteToString` | function | Default render function: loads component and calls `renderToString`. |
 
 ### Vite Plugin
 
-| Export | Type | Description |
-|--------|------|-------------|
+| Export                | Type     | Description                                                                    |
+| --------------------- | -------- | ------------------------------------------------------------------------------ |
 | `crocoMetaVitePlugin` | function | Vite 6 plugin that configures client/ssr/rsc environments and virtual modules. |
 
 ### Output Contract
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `createMetaOutputContract` | function | Create an output contract for meta-framework build artifacts. |
-| `MetaDeployTarget` | type | Deploy target descriptor. |
-| `MetaOutputContractOptions` | type | Options for output contract creation. |
+| Export                      | Type     | Description                                                   |
+| --------------------------- | -------- | ------------------------------------------------------------- |
+| `createMetaOutputContract`  | function | Create an output contract for meta-framework build artifacts. |
+| `MetaDeployTarget`          | type     | Deploy target descriptor.                                     |
+| `MetaOutputContractOptions` | type     | Options for output contract creation.                         |
 
 ### Provider Adapters
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `createCloudflareHandler` | function | Cloudflare Workers adapter (single handler). |
+| Export                            | Type     | Description                                        |
+| --------------------------------- | -------- | -------------------------------------------------- |
+| `createCloudflareHandler`         | function | Cloudflare Workers adapter (single handler).       |
 | `createCloudflareComposedHandler` | function | Cloudflare Workers adapter with API-first routing. |
-| `createLambdaHandler` | function | AWS Lambda adapter (single handler). |
-| `createLambdaComposedHandler` | function | AWS Lambda adapter with API-first routing. |
-| `createNodeHandler` | function | Node.js adapter returning `{ fetch }`. |
-| `createNodeComposedHandler` | function | Node.js adapter with API-first routing. |
+| `createLambdaHandler`             | function | AWS Lambda adapter (single handler).               |
+| `createLambdaComposedHandler`     | function | AWS Lambda adapter with API-first routing.         |
+| `createNodeHandler`               | function | Node.js adapter returning `{ fetch }`.             |
+| `createNodeComposedHandler`       | function | Node.js adapter with API-first routing.            |
 
 ## Development
 

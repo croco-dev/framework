@@ -1,26 +1,29 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
-import { InvalidWebhookPayloadProblem, InvalidWebhookSignatureProblem } from './problems/WebhookProblems';
+import { createHmac, timingSafeEqual } from "node:crypto";
+import {
+  InvalidWebhookPayloadProblem,
+  InvalidWebhookSignatureProblem,
+} from "./problems/WebhookProblems";
 import type {
   BetterAuthSession,
   BetterAuthSessionProvider,
   BetterAuthWebhookHandler,
   BetterAuthWebhookOptions,
-} from './types';
+} from "./types";
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 /**
  * Better Auth 웹훅 서명 검증과 이벤트 분기를 담당하는 처리기입니다.
  */
 export class BetterAuthWebhookProcessor {
-  private static readonly SIGNATURE_HEADER = 'x-better-auth-signature';
+  private static readonly SIGNATURE_HEADER = "x-better-auth-signature";
 
   constructor(
     private options: BetterAuthWebhookOptions,
     private handlers: BetterAuthWebhookHandler,
-    _sessionProvider: BetterAuthSessionProvider
+    _sessionProvider: BetterAuthSessionProvider,
   ) {}
 
   private verifySignature(rawBody: string, signature: string): boolean {
@@ -28,7 +31,7 @@ export class BetterAuthWebhookProcessor {
       return false;
     }
 
-    const expectedSignature = `sha256=${createHmac('sha256', this.options.signingSecret).update(rawBody).digest('hex')}`;
+    const expectedSignature = `sha256=${createHmac("sha256", this.options.signingSecret).update(rawBody).digest("hex")}`;
     const actualSignatureBuffer = Buffer.from(signature);
     const expectedSignatureBuffer = Buffer.from(expectedSignature);
 
@@ -40,7 +43,7 @@ export class BetterAuthWebhookProcessor {
   }
 
   async processWebhook(request: { headers: Headers; text: () => Promise<string> }): Promise<void> {
-    const signature = request.headers.get(BetterAuthWebhookProcessor.SIGNATURE_HEADER) ?? '';
+    const signature = request.headers.get(BetterAuthWebhookProcessor.SIGNATURE_HEADER) ?? "";
     const rawBody = await request.text();
 
     if (!this.verifySignature(rawBody, signature)) {
@@ -55,7 +58,7 @@ export class BetterAuthWebhookProcessor {
       throw new InvalidWebhookPayloadProblem();
     }
 
-    if (!isObjectRecord(body) || typeof body.type !== 'string') {
+    if (!isObjectRecord(body) || typeof body.type !== "string") {
       throw new InvalidWebhookPayloadProblem();
     }
 
@@ -63,20 +66,20 @@ export class BetterAuthWebhookProcessor {
     const data = isObjectRecord(body.data) ? body.data : {};
 
     switch (eventType) {
-      case 'user.created':
-        await this.handlers['user.created']?.(data);
+      case "user.created":
+        await this.handlers["user.created"]?.(data);
         break;
-      case 'user.updated':
-        await this.handlers['user.updated']?.(data);
+      case "user.updated":
+        await this.handlers["user.updated"]?.(data);
         break;
-      case 'user.deleted':
-        await this.handlers['user.deleted']?.(data);
+      case "user.deleted":
+        await this.handlers["user.deleted"]?.(data);
         break;
-      case 'session.created':
-        await this.handlers['session.created']?.(data);
+      case "session.created":
+        await this.handlers["session.created"]?.(data);
         break;
-      case 'session.revoked':
-        await this.handlers['session.revoked']?.(data);
+      case "session.revoked":
+        await this.handlers["session.revoked"]?.(data);
         break;
       default:
         break;
@@ -87,4 +90,9 @@ export class BetterAuthWebhookProcessor {
 /**
  * Better Auth 웹훅 처리에 사용하는 공개 타입들입니다.
  */
-export type { BetterAuthSession, BetterAuthSessionProvider, BetterAuthWebhookHandler, BetterAuthWebhookOptions };
+export type {
+  BetterAuthSession,
+  BetterAuthSessionProvider,
+  BetterAuthWebhookHandler,
+  BetterAuthWebhookOptions,
+};

@@ -1,5 +1,5 @@
-import type { Constructor } from '@croco/framework-context';
-import type { DomainEvent } from '../DomainEvent';
+import type { Constructor } from "@croco/framework-context";
+import type { DomainEvent } from "../DomainEvent";
 
 interface EventHandler<T extends DomainEvent = DomainEvent> {
   handle(event: T): Promise<void> | void;

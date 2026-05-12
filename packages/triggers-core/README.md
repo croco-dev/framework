@@ -21,23 +21,22 @@ pnpm add @croco/triggers-core
 메서드를 주기적으로 실행하도록 예약합니다.
 
 ```typescript
-import { Cron } from '@croco/triggers-core';
-import { Component } from '@croco/framework-context';
+import { Cron } from "@croco/triggers-core";
+import { Component } from "@croco/framework-context";
 
 @Component()
 export class ReportScheduler {
-  
   // 매일 자정에 실행
-  @Cron('0 0 * * *', { name: 'daily-report' })
+  @Cron("0 0 * * *", { name: "daily-report" })
   async generateDailyReport() {
-    console.log('Generating daily report...');
+    console.log("Generating daily report...");
     // ... 리포트 생성 로직
   }
 
   // 5분마다 실행
-  @Cron('*/5 * * * *')
+  @Cron("*/5 * * * *")
   async healthCheck() {
-    console.log('System health check...');
+    console.log("System health check...");
   }
 }
 ```
@@ -47,10 +46,10 @@ export class ReportScheduler {
 `triggerRegistry`를 통해 등록된 모든 트리거 정보를 조회할 수 있습니다. 이는 인프라(EventBridge Scheduler 등) 프로비저닝 시 유용합니다.
 
 ```typescript
-import { triggerRegistry } from '@croco/triggers-core';
+import { triggerRegistry } from "@croco/triggers-core";
 
 const triggers = triggerRegistry.getAll();
-triggers.forEach(trigger => {
+triggers.forEach((trigger) => {
   console.log(`Registered trigger: ${trigger.methodName} (${trigger.expression})`);
 });
 ```

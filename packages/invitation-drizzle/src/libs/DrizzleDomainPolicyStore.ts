@@ -1,10 +1,10 @@
-import { Component, Inject, Token } from '@croco/framework-context';
-import { type DomainPolicy, DomainPolicyStore } from '@croco/invitation-core';
-import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
-import { and, eq } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { domainPolicies } from './schema';
+import { Component, Inject, Token } from "@croco/framework-context";
+import { type DomainPolicy, DomainPolicyStore } from "@croco/invitation-core";
+import type { TxManager } from "@croco/tx-core";
+import type { DrizzleDb } from "@croco/tx-drizzle";
+import { and, eq } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { domainPolicies } from "./schema";
 
 type DrizzleDomainPolicyClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
@@ -12,7 +12,7 @@ interface DomainPolicyRow {
   id: string;
   tenantId: string;
   domain: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: "owner" | "admin" | "member" | "viewer";
   enabled: boolean;
   createdAt: Date;
 }
@@ -20,7 +20,9 @@ interface DomainPolicyRow {
 /**
  * 도메인 정책 저장소용 Drizzle 클라이언트 주입 토큰입니다.
  */
-export const DRIZZLE_DOMAIN_POLICY_TOKEN = new Token<DrizzleDomainPolicyClient>('DRIZZLE_DOMAIN_POLICY_TOKEN');
+export const DRIZZLE_DOMAIN_POLICY_TOKEN = new Token<DrizzleDomainPolicyClient>(
+  "DRIZZLE_DOMAIN_POLICY_TOKEN",
+);
 
 /**
  * 도메인 정책 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
@@ -37,7 +39,7 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
    */
   constructor(
     @Inject(DRIZZLE_DOMAIN_POLICY_TOKEN) private readonly db: DrizzleDomainPolicyClient,
-    private readonly txManager: TxManager<DrizzleDomainPolicyClient>
+    private readonly txManager: TxManager<DrizzleDomainPolicyClient>,
   ) {
     super();
   }

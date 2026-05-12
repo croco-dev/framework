@@ -4,6 +4,6 @@ export default async function data() {
   // const data = await response.json();
 
   return {
-    message: 'Hello from {{projectName}}!',
+    message: "Hello from {{projectName}}!",
   };
 }

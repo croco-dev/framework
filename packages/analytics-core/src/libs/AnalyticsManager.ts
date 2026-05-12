@@ -1,7 +1,7 @@
-import { Token } from '@croco/framework-context';
+import { Token } from "@croco/framework-context";
 
 export abstract class AnalyticsManager {
-  static readonly token = new Token<AnalyticsManager>('AnalyticsManager');
+  static readonly token = new Token<AnalyticsManager>("AnalyticsManager");
 
   /**
    * Capture an event.

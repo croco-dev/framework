@@ -1,5 +1,5 @@
-import type { Redis } from 'ioredis';
-import { AbstractCacheStoreAdapter } from './abstractAdapter';
+import type { Redis } from "ioredis";
+import { AbstractCacheStoreAdapter } from "./abstractAdapter";
 
 type SerializedEntry = {
   status: number;
@@ -10,7 +10,7 @@ type SerializedEntry = {
 export class RedisCacheStoreAdapter extends AbstractCacheStoreAdapter {
   constructor(
     private readonly redis: Redis,
-    private readonly prefix = 'isr:'
+    private readonly prefix = "isr:",
   ) {
     super();
   }
@@ -61,18 +61,18 @@ export class RedisCacheStoreAdapter extends AbstractCacheStoreAdapter {
     let keyCount = 0;
 
     await new Promise<void>((resolve, reject) => {
-      stream.on('data', (keys: string[]) => {
+      stream.on("data", (keys: string[]) => {
         for (const key of keys) {
           pipeline.del(key);
           keyCount++;
         }
       });
 
-      stream.on('end', () => {
+      stream.on("end", () => {
         resolve();
       });
 
-      stream.on('error', (err: Error) => {
+      stream.on("error", (err: Error) => {
         reject(err);
       });
     });

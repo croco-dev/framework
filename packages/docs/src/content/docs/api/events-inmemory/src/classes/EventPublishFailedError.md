@@ -41,19 +41,19 @@ title: "EventPublishFailedError"
 
 > `readonly` `optional` **cause**: `Error`
 
-***
+---
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### failures
 
 > `readonly` **failures**: [`EventPublishFailure`](/api/events-inmemory/src/type-aliases/eventpublishfailure/)[]
 
-***
+---
 
 ### message
 
@@ -63,7 +63,7 @@ title: "EventPublishFailedError"
 
 `Error.message`
 
-***
+---
 
 ### name
 
@@ -73,7 +73,7 @@ title: "EventPublishFailedError"
 
 `Error.name`
 
-***
+---
 
 ### stack?
 
@@ -83,7 +83,7 @@ title: "EventPublishFailedError"
 
 `Error.stack`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -116,7 +116,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -171,7 +171,7 @@ a();
 
 `Error.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

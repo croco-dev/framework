@@ -1,5 +1,5 @@
-import { router } from '../trpc.js';
-import { healthRouter } from './health.js';
+import { router } from "../trpc.js";
+import { healthRouter } from "./health.js";
 
 export const appRouter = router({
   health: healthRouter,

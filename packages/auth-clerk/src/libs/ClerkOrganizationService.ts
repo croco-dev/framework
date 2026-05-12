@@ -1,5 +1,5 @@
-import { type ClerkClient, createClerkClient } from '@clerk/backend';
-import type { ClerkAuthOptions } from './ClerkAuthProvider';
+import { type ClerkClient, createClerkClient } from "@clerk/backend";
+import type { ClerkAuthOptions } from "./ClerkAuthProvider";
 
 export type ClerkOrganization = {
   id: string;
@@ -27,7 +27,7 @@ export type ClerkOrganizationInvitation = {
   organizationId: string;
   emailAddress: string;
   role: string;
-  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  status: "pending" | "accepted" | "revoked" | "expired";
   createdAt: Date;
   updatedAt: Date;
 };
@@ -52,7 +52,7 @@ export type UpdateOrganizationInput = {
 export type OrganizationListOptions = {
   limit?: number;
   offset?: number;
-  orderBy?: '-created_at' | 'created_at' | '-updated_at' | 'updated_at';
+  orderBy?: "-created_at" | "created_at" | "-updated_at" | "updated_at";
   query?: string;
 };
 
@@ -127,7 +127,9 @@ export class ClerkOrganizationService {
     }
   }
 
-  async getOrganizationList(options: OrganizationListOptions = {}): Promise<OrganizationListResult> {
+  async getOrganizationList(
+    options: OrganizationListOptions = {},
+  ): Promise<OrganizationListResult> {
     const params: Record<string, string | number> = {};
 
     if (options.limit !== undefined) {
@@ -164,11 +166,16 @@ export class ClerkOrganizationService {
     return mapClerkOrganization(org);
   }
 
-  async updateOrganization(organizationId: string, input: UpdateOrganizationInput): Promise<ClerkOrganization> {
+  async updateOrganization(
+    organizationId: string,
+    input: UpdateOrganizationInput,
+  ): Promise<ClerkOrganization> {
     const org = await this.clerkClient.organizations.updateOrganization(organizationId, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.slug !== undefined && { slug: input.slug }),
-      ...(input.maxAllowedMemberships !== undefined && { maxAllowedMemberships: input.maxAllowedMemberships }),
+      ...(input.maxAllowedMemberships !== undefined && {
+        maxAllowedMemberships: input.maxAllowedMemberships,
+      }),
       ...(input.publicMetadata !== undefined && { publicMetadata: input.publicMetadata }),
       ...(input.privateMetadata !== undefined && { privateMetadata: input.privateMetadata }),
     });
@@ -182,7 +189,7 @@ export class ClerkOrganizationService {
 
   async getOrganizationMembershipList(
     organizationId: string,
-    options?: { limit?: number; offset?: number }
+    _options?: { limit?: number; offset?: number },
   ): Promise<{
     memberships: ClerkOrganizationMembership[];
     totalCount: number;
@@ -194,10 +201,10 @@ export class ClerkOrganizationService {
     const memberships = response.data
       .filter(
         (
-          membership
+          membership,
         ): membership is typeof membership & {
           publicUserData: Exclude<typeof membership.publicUserData, null | undefined>;
-        } => membership.publicUserData != null
+        } => membership.publicUserData != null,
       )
       .map((membership) => ({
         id: membership.id,
@@ -214,7 +221,9 @@ export class ClerkOrganizationService {
     };
   }
 
-  async createOrganizationMembership(input: CreateMembershipInput): Promise<ClerkOrganizationMembership> {
+  async createOrganizationMembership(
+    input: CreateMembershipInput,
+  ): Promise<ClerkOrganizationMembership> {
     const membership = await this.clerkClient.organizations.createOrganizationMembership({
       organizationId: input.organizationId,
       userId: input.userId,
@@ -222,7 +231,7 @@ export class ClerkOrganizationService {
     });
 
     if (membership.publicUserData == null) {
-      throw new Error('publicUserData is null');
+      throw new Error("publicUserData is null");
     }
 
     return {
@@ -238,7 +247,7 @@ export class ClerkOrganizationService {
   async updateOrganizationMembership(
     organizationId: string,
     userId: string,
-    role: string
+    role: string,
   ): Promise<ClerkOrganizationMembership> {
     const membership = await this.clerkClient.organizations.updateOrganizationMembership({
       organizationId,
@@ -247,7 +256,7 @@ export class ClerkOrganizationService {
     });
 
     if (membership.publicUserData == null) {
-      throw new Error('publicUserData is null');
+      throw new Error("publicUserData is null");
     }
 
     return {
@@ -267,7 +276,9 @@ export class ClerkOrganizationService {
     });
   }
 
-  async createOrganizationInvitation(input: CreateInvitationInput): Promise<ClerkOrganizationInvitation> {
+  async createOrganizationInvitation(
+    input: CreateInvitationInput,
+  ): Promise<ClerkOrganizationInvitation> {
     const invitation = await this.clerkClient.organizations.createOrganizationInvitation({
       organizationId: input.organizationId,
       emailAddress: input.emailAddress,
@@ -281,7 +292,7 @@ export class ClerkOrganizationService {
       organizationId: invitation.organizationId,
       emailAddress: invitation.emailAddress,
       role: invitation.role,
-      status: (invitation.status ?? 'revoked') as 'pending' | 'accepted' | 'revoked' | 'expired',
+      status: (invitation.status ?? "revoked") as "pending" | "accepted" | "revoked" | "expired",
       createdAt: new Date(invitation.createdAt),
       updatedAt: new Date(invitation.updatedAt),
     };
@@ -301,7 +312,7 @@ export class ClerkOrganizationService {
         organizationId: invitation.organizationId,
         emailAddress: invitation.emailAddress,
         role: invitation.role,
-        status: invitation.status as 'pending' | 'accepted' | 'revoked' | 'expired',
+        status: invitation.status as "pending" | "accepted" | "revoked" | "expired",
         createdAt: new Date(invitation.createdAt),
         updatedAt: new Date(invitation.updatedAt),
       })),
@@ -311,7 +322,7 @@ export class ClerkOrganizationService {
 
   async revokeOrganizationInvitation(
     organizationId: string,
-    invitationId: string
+    invitationId: string,
   ): Promise<ClerkOrganizationInvitation> {
     const invitation = await this.clerkClient.organizations.revokeOrganizationInvitation({
       organizationId,
@@ -323,7 +334,7 @@ export class ClerkOrganizationService {
       organizationId: invitation.organizationId,
       emailAddress: invitation.emailAddress,
       role: invitation.role,
-      status: (invitation.status ?? 'revoked') as 'pending' | 'accepted' | 'revoked' | 'expired',
+      status: (invitation.status ?? "revoked") as "pending" | "accepted" | "revoked" | "expired",
       createdAt: new Date(invitation.createdAt),
       updatedAt: new Date(invitation.updatedAt),
     };

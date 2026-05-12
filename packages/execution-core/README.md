@@ -47,7 +47,12 @@ timed_out → retrying
 실행 상태를 영속화하기 위한 추상 인터페이스입니다. 애플리케이션 요구사항에 맞는 저장소를 구현하여 주입해야 합니다.
 
 ```typescript
-import type { ExecutionStore, Execution, CreateExecutionParams, ListExecutionsOptions } from '@croco/execution-core';
+import type {
+  ExecutionStore,
+  Execution,
+  CreateExecutionParams,
+  ListExecutionsOptions,
+} from "@croco/execution-core";
 
 export class MyDynamoExecutionStore extends ExecutionStore {
   async create(params: CreateExecutionParams): Promise<Execution> {
@@ -81,16 +86,16 @@ export class MyDynamoExecutionStore extends ExecutionStore {
 ### 기본 실행 흐름
 
 ```typescript
-import { ExecutionManagerImpl } from '@croco/execution-core';
-import { MyDynamoExecutionStore } from './MyDynamoExecutionStore';
+import { ExecutionManagerImpl } from "@croco/execution-core";
+import { MyDynamoExecutionStore } from "./MyDynamoExecutionStore";
 
 const store = new MyDynamoExecutionStore();
 const manager = new ExecutionManagerImpl(store);
 
 // 1. 실행 생성
 const execution = await manager.create({
-  type: 'my-task',
-  payload: { userId: '123' },
+  type: "my-task",
+  payload: { userId: "123" },
   maxAttempts: 3,
   timeout: 30000, // 30초 타임아웃
 });
@@ -102,7 +107,7 @@ try {
   // ... 작업 수행 ...
 
   // 3. 성공 처리
-  await manager.complete(execution.id, { result: 'success' });
+  await manager.complete(execution.id, { result: "success" });
 } catch (error) {
   // 4. 실패 처리 (자동으로 재시도 여부 판단)
   await manager.fail(execution.id, {
@@ -119,7 +124,7 @@ try {
 await manager.updateProgress(execution.id, {
   current: 50,
   total: 100,
-  message: 'Processing items',
+  message: "Processing items",
 });
 
 // 수동으로 percent 지정도 가능
@@ -139,7 +144,7 @@ for (let i = 0; i < items.length; i++) {
 
   // 매 10개마다 체크포인트
   if (i % 10 === 0) {
-    await manager.checkpoint(execution.id, 'lastIndex', i);
+    await manager.checkpoint(execution.id, "lastIndex", i);
   }
 }
 
@@ -153,14 +158,14 @@ const lastIndex = execution.checkpoints?.lastIndex ?? 0;
 ```typescript
 // 같은 idempotency key로 생성 시도하면 기존 실행 반환
 const first = await manager.create({
-  type: 'payment',
-  idempotencyKey: 'order-123-payment',
+  type: "payment",
+  idempotencyKey: "order-123-payment",
   payload: { amount: 10000 },
 });
 
 const second = await manager.create({
-  type: 'payment',
-  idempotencyKey: 'order-123-payment', // 동일한 key
+  type: "payment",
+  idempotencyKey: "order-123-payment", // 동일한 key
   payload: { amount: 10000 },
 });
 
@@ -195,7 +200,7 @@ try {
 ```typescript
 // 실행 생성 시 타임아웃 설정
 const execution = await manager.create({
-  type: 'long-task',
+  type: "long-task",
   timeout: 60000, // 60초
 });
 
@@ -211,7 +216,7 @@ await manager.start(execution.id);
 
 ```typescript
 // 취소 사유와 함께 실행 취소
-await manager.cancel(execution.id, 'User requested cancellation');
+await manager.cancel(execution.id, "User requested cancellation");
 
 // 취소 사유는 metadata.cancellationReason에 저장됨
 const execution = await store.findById(execution.id);
@@ -222,22 +227,29 @@ console.log(execution.metadata?.cancellationReason); // 'User requested cancella
 
 ### ExecutionManager
 
-| 메서드 | 설명 |
-|--------|------|
-| `create(params)` | 새 실행 생성. idempotencyKey 제공 시 중복 방지 |
-| `start(id)` | 실행 시작 (`running` 상태 전이). attempts 증가 |
-| `complete(id, result?)` | 실행 완료 (`completed` 상태 전이) |
-| `fail(id, error)` | 실행 실패. `error.retryable`과 `maxAttempts`에 따라 `failed` 또는 `retrying` 상태 전이 |
-| `cancel(id, reason?)` | 실행 취소 (`cancelled` 상태 전이) |
-| `retry(id)` | 재시도 상태 전이 (`retrying`). 최대 시도 횟수 초과 시 에러 |
-| `updateProgress(id, progress)` | 진행률 업데이트. percent 자동 계산 |
-| `checkpoint(id, key, value)` | 체크포인트 저장 |
-| `timeout(id)` | 타임아웃 상태 전이 (`timed_out`) |
+| 메서드                         | 설명                                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `create(params)`               | 새 실행 생성. idempotencyKey 제공 시 중복 방지                                         |
+| `start(id)`                    | 실행 시작 (`running` 상태 전이). attempts 증가                                         |
+| `complete(id, result?)`        | 실행 완료 (`completed` 상태 전이)                                                      |
+| `fail(id, error)`              | 실행 실패. `error.retryable`과 `maxAttempts`에 따라 `failed` 또는 `retrying` 상태 전이 |
+| `cancel(id, reason?)`          | 실행 취소 (`cancelled` 상태 전이)                                                      |
+| `retry(id)`                    | 재시도 상태 전이 (`retrying`). 최대 시도 횟수 초과 시 에러                             |
+| `updateProgress(id, progress)` | 진행률 업데이트. percent 자동 계산                                                     |
+| `checkpoint(id, key, value)`   | 체크포인트 저장                                                                        |
+| `timeout(id)`                  | 타임아웃 상태 전이 (`timed_out`)                                                       |
 
 ### 타입
 
 ```typescript
-type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'retrying' | 'timed_out';
+type ExecutionStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "retrying"
+  | "timed_out";
 
 interface ExecutionError {
   message: string;
@@ -279,16 +291,16 @@ interface Execution {
 `ExecutionProblem`을 통한 구조화된 에러 처리를 제공합니다:
 
 ```typescript
-import { ExecutionProblems, ExecutionProblemCode } from '@croco/execution-core';
+import { ExecutionProblems, ExecutionProblemCode } from "@croco/execution-core";
 
 // 에러 코드
-ExecutionProblemCode.NOT_FOUND                 // 실행을 찾을 수 없음
-ExecutionProblemCode.MAX_RETRIES_EXCEEDED      // 최대 재시도 횟수 초과
-ExecutionProblemCode.INVALID_STATE_TRANSITION  // 잘못된 상태 전이
+ExecutionProblemCode.NOT_FOUND; // 실행을 찾을 수 없음
+ExecutionProblemCode.MAX_RETRIES_EXCEEDED; // 최대 재시도 횟수 초과
+ExecutionProblemCode.INVALID_STATE_TRANSITION; // 잘못된 상태 전이
 
 // 사용 예
 throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-throw ExecutionProblems.maxRetriesExceeded('Maximum retry attempts exceeded');
+throw ExecutionProblems.maxRetriesExceeded("Maximum retry attempts exceeded");
 throw ExecutionProblems.invalidStateTransition(`Cannot transition from '${from}' to '${to}'`);
 ```
 
@@ -297,7 +309,7 @@ throw ExecutionProblems.invalidStateTransition(`Cannot transition from '${from}'
 ### 커스텀 ExecutionStore 구현
 
 ```typescript
-import type { ExecutionStore, Execution, CreateExecutionParams } from '@croco/execution-core';
+import type { ExecutionStore, Execution, CreateExecutionParams } from "@croco/execution-core";
 
 export class RedisExecutionStore extends ExecutionStore {
   constructor(private readonly redis: Redis) {
@@ -307,7 +319,7 @@ export class RedisExecutionStore extends ExecutionStore {
   async create(params: CreateExecutionParams): Promise<Execution> {
     const execution: Execution = {
       id: generateId(),
-      status: 'pending',
+      status: "pending",
       attempts: 0,
       createdAt: new Date(),
       ...params,
@@ -316,7 +328,7 @@ export class RedisExecutionStore extends ExecutionStore {
     await this.redis.setex(
       `execution:${execution.id}`,
       86400, // 24시간 TTL
-      JSON.stringify(execution)
+      JSON.stringify(execution),
     );
 
     return execution;

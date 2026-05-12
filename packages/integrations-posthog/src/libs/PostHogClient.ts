@@ -1,6 +1,6 @@
-import { Component } from '@croco/framework-context';
-import { PostHog } from 'posthog-node';
-import { PostHogConfigProblem } from './problems/PostHogProblems';
+import { Component } from "@croco/framework-context";
+import { PostHog } from "posthog-node";
+import { PostHogConfigProblem } from "./problems/PostHogProblems";
 
 export interface PostHogConfig {
   apiKey: string;
@@ -17,16 +17,16 @@ export class PostHogClient {
 
     if (!host) {
       throw new PostHogConfigProblem(
-        '[PostHogClient] PostHog host is required for data residency compliance. ' +
-          'Set host in config or POSTHOG_HOST env var. ' +
-          'Default (app.posthog.com) routes data to US servers.'
+        "[PostHogClient] PostHog host is required for data residency compliance. " +
+          "Set host in config or POSTHOG_HOST env var. " +
+          "Default (app.posthog.com) routes data to US servers.",
       );
     }
 
     if (!config.host && envHost) {
       console.warn(
-        '[PostHogClient] POSTHOG_HOST env var is used for PostHog host. ' +
-          'Set host explicitly in config to confirm data residency compliance.'
+        "[PostHogClient] POSTHOG_HOST env var is used for PostHog host. " +
+          "Set host explicitly in config to confirm data residency compliance.",
       );
     }
 

@@ -1,4 +1,8 @@
-import type { GraphQLCallHandler, GraphQLInterceptor, GraphQLInterceptorContext } from '../types/InterceptorTypes';
+import type {
+  GraphQLCallHandler,
+  GraphQLInterceptor,
+  GraphQLInterceptorContext,
+} from "../types/InterceptorTypes";
 
 export class InterceptorChain {
   private readonly interceptors: GraphQLInterceptor[];
@@ -31,7 +35,7 @@ export class InterceptorChain {
   static async execute<T>(
     interceptors: GraphQLInterceptor[],
     context: GraphQLInterceptorContext,
-    finalHandler: () => Promise<T>
+    finalHandler: () => Promise<T>,
   ): Promise<T> {
     const chain = new InterceptorChain(interceptors);
     return chain.execute(context, finalHandler);

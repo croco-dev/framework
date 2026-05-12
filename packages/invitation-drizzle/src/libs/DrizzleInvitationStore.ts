@@ -1,10 +1,10 @@
-import { Component, Inject, Token } from '@croco/framework-context';
-import { type Invitation, type InvitationStatus, InvitationStore } from '@croco/invitation-core';
-import type { TxManager } from '@croco/tx-core';
-import type { DrizzleDb } from '@croco/tx-drizzle';
-import { and, count, eq, gte } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { invitations } from './schema';
+import { Component, Inject, Token } from "@croco/framework-context";
+import { type Invitation, type InvitationStatus, InvitationStore } from "@croco/invitation-core";
+import type { TxManager } from "@croco/tx-core";
+import type { DrizzleDb } from "@croco/tx-drizzle";
+import { and, count, eq, gte } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { invitations } from "./schema";
 
 type DrizzleInvitationClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
@@ -14,9 +14,9 @@ interface InvitationRow {
   inviterId: string;
   email: string | null;
   tokenHash: string;
-  type: 'email' | 'link';
-  role: 'owner' | 'admin' | 'member' | 'viewer';
-  status: 'pending' | 'accepted' | 'expired' | 'revoked' | 'declined';
+  type: "email" | "link";
+  role: "owner" | "admin" | "member" | "viewer";
+  status: "pending" | "accepted" | "expired" | "revoked" | "declined";
   expiresAt: Date;
   acceptedAt: Date | null;
   revokedAt: Date | null;
@@ -26,7 +26,9 @@ interface InvitationRow {
 /**
  * 초대 저장소용 Drizzle 클라이언트 주입 토큰입니다.
  */
-export const DRIZZLE_INVITATION_TOKEN = new Token<DrizzleInvitationClient>('DRIZZLE_INVITATION_TOKEN');
+export const DRIZZLE_INVITATION_TOKEN = new Token<DrizzleInvitationClient>(
+  "DRIZZLE_INVITATION_TOKEN",
+);
 
 /**
  * 초대 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
@@ -43,7 +45,7 @@ export class DrizzleInvitationStore extends InvitationStore {
    */
   constructor(
     @Inject(DRIZZLE_INVITATION_TOKEN) private readonly db: DrizzleInvitationClient,
-    private readonly txManager: TxManager<DrizzleInvitationClient>
+    private readonly txManager: TxManager<DrizzleInvitationClient>,
   ) {
     super();
   }
@@ -54,7 +56,11 @@ export class DrizzleInvitationStore extends InvitationStore {
   async findById(id: string): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
-    const result = (await client.select().from(invitations).where(eq(invitations.id, id)).limit(1)) as InvitationRow[];
+    const result = (await client
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, id))
+      .limit(1)) as InvitationRow[];
     if (result.length === 0) {
       return null;
     }
@@ -158,14 +164,26 @@ export class DrizzleInvitationStore extends InvitationStore {
   /**
    * 초대 상태를 변경하고 변경된 초대를 반환합니다.
    */
-  async updateStatus(tenantId: string, id: string, status: InvitationStatus): Promise<Invitation | null> {
+  async updateStatus(
+    tenantId: string,
+    id: string,
+    status: InvitationStatus,
+  ): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
     const whereClause =
-      status === 'accepted'
-        ? and(eq(invitations.tenantId, tenantId), eq(invitations.id, id), eq(invitations.status, 'pending'))
+      status === "accepted"
+        ? and(
+            eq(invitations.tenantId, tenantId),
+            eq(invitations.id, id),
+            eq(invitations.status, "pending"),
+          )
         : and(eq(invitations.tenantId, tenantId), eq(invitations.id, id));
 
-    const result = (await client.update(invitations).set({ status }).where(whereClause).returning()) as InvitationRow[];
+    const result = (await client
+      .update(invitations)
+      .set({ status })
+      .where(whereClause)
+      .returning()) as InvitationRow[];
 
     if (result.length === 0) {
       return null;
@@ -179,7 +197,7 @@ export class DrizzleInvitationStore extends InvitationStore {
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
-    meta: { acceptedAt?: Date; rejectedAt?: Date } = {}
+    meta: { acceptedAt?: Date; rejectedAt?: Date } = {},
   ): Promise<Invitation | null> {
     const client = this.txManager.getClient() ?? this.db;
 
@@ -189,7 +207,13 @@ export class DrizzleInvitationStore extends InvitationStore {
         status: desired,
         acceptedAt: meta.acceptedAt,
       })
-      .where(and(eq(invitations.tenantId, tenantId), eq(invitations.id, id), eq(invitations.status, expected)))
+      .where(
+        and(
+          eq(invitations.tenantId, tenantId),
+          eq(invitations.id, id),
+          eq(invitations.status, expected),
+        ),
+      )
       .returning()) as InvitationRow[];
 
     if (result.length === 0) {
@@ -209,7 +233,11 @@ export class DrizzleInvitationStore extends InvitationStore {
       .select({ total: count() })
       .from(invitations)
       .where(
-        and(eq(invitations.tenantId, tenantId), eq(invitations.status, 'pending'), gte(invitations.createdAt, since))
+        and(
+          eq(invitations.tenantId, tenantId),
+          eq(invitations.status, "pending"),
+          gte(invitations.createdAt, since),
+        ),
       )) as { total: number }[];
 
     return Number(result[0]?.total ?? 0);

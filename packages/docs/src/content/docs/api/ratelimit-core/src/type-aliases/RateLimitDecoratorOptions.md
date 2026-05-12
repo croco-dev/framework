@@ -15,7 +15,7 @@ title: "RateLimitDecoratorOptions"
 
 > `optional` **algorithm**: [`RateLimitAlgorithm`](/api/ratelimit-core/src/type-aliases/ratelimitalgorithm/)
 
-***
+---
 
 ### key()?
 
@@ -31,19 +31,19 @@ title: "RateLimitDecoratorOptions"
 
 `string`
 
-***
+---
 
 ### limit?
 
 > `optional` **limit**: `number`
 
-***
+---
 
 ### policy?
 
 > `optional` **policy**: `string`
 
-***
+---
 
 ### window?
 

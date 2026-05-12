@@ -1,9 +1,9 @@
-import { type BackoffOptions, type BackoffPolicy, ExponentialBackoff } from './BackoffPolicy';
-import { RetryExhaustedProblem } from './errors/RetryExhaustedProblem';
-import { RetryContext } from './RetryContext';
-import { executeRetryLoop } from './RetryEngine';
-import { CompositeRetryListener, type RetryListener } from './RetryListener';
-import { DefaultRetryPolicy, type RetryPolicy, type RetryPolicyOptions } from './RetryPolicy';
+import { type BackoffOptions, type BackoffPolicy, ExponentialBackoff } from "./BackoffPolicy";
+import { RetryExhaustedProblem } from "./errors/RetryExhaustedProblem";
+import { RetryContext } from "./RetryContext";
+import { executeRetryLoop } from "./RetryEngine";
+import { CompositeRetryListener, type RetryListener } from "./RetryListener";
+import { DefaultRetryPolicy, type RetryPolicy, type RetryPolicyOptions } from "./RetryPolicy";
 
 export type RetryOrchestratorOptions = RetryPolicyOptions & {
   maxAttempts?: number;
@@ -30,13 +30,15 @@ export class RetryOrchestrator {
       onExhausted?: (err: Error, ctx: RetryContext) => void | Promise<void>;
       beforeWait?: (delay: number, ctx: RetryContext) => boolean | Promise<boolean>;
     },
-    recovery?: (context: RetryContext) => T | Promise<T>
+    recovery?: (context: RetryContext) => T | Promise<T>,
   ): Promise<T> {
     const maxAttempts = options.maxAttempts ?? 3;
     const retryPolicy = options.retryPolicy ?? new DefaultRetryPolicy({ ...options });
     const backoffPolicy = options.backoffPolicy ?? new ExponentialBackoff(options.backoff);
     const listener =
-      options.listeners && options.listeners.length > 0 ? new CompositeRetryListener(options.listeners) : null;
+      options.listeners && options.listeners.length > 0
+        ? new CompositeRetryListener(options.listeners)
+        : null;
     const context = new RetryContext(methodName, args, maxAttempts);
 
     const hooks = {
@@ -93,7 +95,7 @@ export class RetryOrchestrator {
           backoffPolicy,
           context,
         },
-        hooks
+        hooks,
       );
     } catch (error) {
       const retryError = error instanceof Error ? error : new Error(String(error));
@@ -109,7 +111,7 @@ export class RetryOrchestrator {
       if (options.wrapExhausted) {
         throw new RetryExhaustedProblem(
           `Retry exhausted: ${methodName} failed after ${maxAttempts} attempts`,
-          context.lastError
+          context.lastError,
         );
       }
 

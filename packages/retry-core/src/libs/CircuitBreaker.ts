@@ -1,7 +1,11 @@
-import { type CircuitBreakerStateStore, CircuitState, InMemoryCircuitBreakerStateStore } from './CircuitBreakerState';
-import { CircuitBreakerOpenProblem } from './errors/CircuitBreakerOpenProblem';
-import { InvalidRetryConfigurationError } from './errors/RetryInfrastructureProblem';
-import { CircuitBreakerUnexpectedStateProblem } from './problems/CircuitBreakerProblems';
+import {
+  type CircuitBreakerStateStore,
+  CircuitState,
+  InMemoryCircuitBreakerStateStore,
+} from "./CircuitBreakerState";
+import { CircuitBreakerOpenProblem } from "./errors/CircuitBreakerOpenProblem";
+import { InvalidRetryConfigurationError } from "./errors/RetryInfrastructureProblem";
+import { CircuitBreakerUnexpectedStateProblem } from "./problems/CircuitBreakerProblems";
 
 export interface CircuitBreakerOptions {
   circuitId: string;
@@ -34,10 +38,14 @@ export class CircuitBreaker {
     const openDuration = options.openDuration ?? 30000;
 
     if (!Number.isInteger(failureThreshold) || failureThreshold <= 0) {
-      throw new InvalidRetryConfigurationError(`failureThreshold must be a positive integer, got ${failureThreshold}`);
+      throw new InvalidRetryConfigurationError(
+        `failureThreshold must be a positive integer, got ${failureThreshold}`,
+      );
     }
     if (!Number.isFinite(openDuration) || openDuration <= 0) {
-      throw new InvalidRetryConfigurationError(`openDuration must be a positive number, got ${openDuration}`);
+      throw new InvalidRetryConfigurationError(
+        `openDuration must be a positive number, got ${openDuration}`,
+      );
     }
 
     this.circuitId = options.circuitId;

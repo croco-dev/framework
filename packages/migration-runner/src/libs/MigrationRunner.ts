@@ -1,9 +1,9 @@
-import type { DatabaseClient } from './db-types';
-import { MigrationScanner } from './MigrationScanner';
-import { MigrationStore } from './MigrationStore';
-import { MissingDownFunctionProblem } from './problems/MissingDownFunctionProblem';
-import { MissingUpFunctionProblem } from './problems/MissingUpFunctionProblem';
-import type { MigrationFile, MigrationStatus } from './types';
+import type { DatabaseClient } from "./db-types";
+import { MigrationScanner } from "./MigrationScanner";
+import { MigrationStore } from "./MigrationStore";
+import { MissingDownFunctionProblem } from "./problems/MissingDownFunctionProblem";
+import { MissingUpFunctionProblem } from "./problems/MissingUpFunctionProblem";
+import type { MigrationFile, MigrationStatus } from "./types";
 
 export class MigrationRunner {
   private readonly scanner: MigrationScanner;
@@ -49,7 +49,7 @@ export class MigrationRunner {
     const runIds: string[] = [];
 
     for (const file of toRun) {
-      if (typeof file.up !== 'function') {
+      if (typeof file.up !== "function") {
         throw new MissingUpFunctionProblem(file.id, file.name);
       }
 
@@ -91,7 +91,7 @@ export class MigrationRunner {
     const revertedIds: string[] = [];
 
     for (const file of toRevert) {
-      if (typeof file.down !== 'function') {
+      if (typeof file.down !== "function") {
         throw new MissingDownFunctionProblem(file.id, file.name);
       }
 

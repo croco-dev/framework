@@ -1,7 +1,7 @@
-import type { AbstractRoleRegistry, RoleDefinition } from '@croco/auth-core';
-import type { SQL } from 'drizzle-orm';
-import { and, eq } from 'drizzle-orm';
-import type { userRoles as userRolesSchema } from '../schema';
+import type { AbstractRoleRegistry, RoleDefinition } from "@croco/auth-core";
+import type { SQL } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import type { userRoles as userRolesSchema } from "../schema";
 
 interface DrizzleDb {
   insert: (table: unknown) => {
@@ -28,15 +28,15 @@ interface UserRoleRow {
 }
 
 function assertUserRoleRow(row: unknown): row is UserRoleRow {
-  if (!row || typeof row !== 'object') {
+  if (!row || typeof row !== "object") {
     return false;
   }
   const record = row as Record<string, unknown>;
   return (
-    typeof record.id === 'string' &&
-    typeof record.userId === 'string' &&
-    typeof record.tenantId === 'string' &&
-    typeof record.role === 'string' &&
+    typeof record.id === "string" &&
+    typeof record.userId === "string" &&
+    typeof record.tenantId === "string" &&
+    typeof record.role === "string" &&
     record.createdAt instanceof Date
   );
 }
@@ -52,7 +52,7 @@ export class DrizzleRoleRegistry implements AbstractRoleRegistry {
    */
   constructor(
     private readonly db: DrizzleDb,
-    private readonly schema: { userRoles: typeof userRolesSchema }
+    private readonly schema: { userRoles: typeof userRolesSchema },
   ) {}
 
   /**
@@ -82,7 +82,10 @@ export class DrizzleRoleRegistry implements AbstractRoleRegistry {
    */
   async getUserRoles(userId: string, tenantId: string): Promise<string[]> {
     const rows = await this.db.query.userRoles.findMany({
-      where: and(eq(this.schema.userRoles.userId, userId), eq(this.schema.userRoles.tenantId, tenantId)),
+      where: and(
+        eq(this.schema.userRoles.userId, userId),
+        eq(this.schema.userRoles.tenantId, tenantId),
+      ),
     });
 
     const roles: string[] = [];
@@ -116,7 +119,7 @@ export class DrizzleRoleRegistry implements AbstractRoleRegistry {
     const condition = and(
       eq(this.schema.userRoles.userId, userId),
       eq(this.schema.userRoles.tenantId, tenantId),
-      eq(this.schema.userRoles.role, role)
+      eq(this.schema.userRoles.role, role),
     );
 
     if (condition) {

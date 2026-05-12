@@ -20,29 +20,29 @@ import {
   sessions,
   tenantMappings,
   userRoles,
-} from '@croco/auth-drizzle';
+} from "@croco/auth-drizzle";
 
 const apiKeyStore = new DrizzleApiKeyStore(db, { apiKeys });
 const sessionProvider = new DrizzleSessionProvider(db, { sessions });
 const tenantMappingProvider = new DrizzleTenantMappingProvider(db, { tenantMappings });
 const roleRegistry = new DrizzleRoleRegistry(db, { userRoles });
 
-await tenantMappingProvider.register('org-1', 'tenant-1');
+await tenantMappingProvider.register("org-1", "tenant-1");
 await apiKeyStore.save({
-  prefix: 'pk_live',
-  shortToken: 'abc123',
-  hash: 'hashed-token',
-  permissions: ['users:read'],
-  name: 'server',
-  tenantId: 'tenant-1',
-  createdBy: 'user-1',
+  prefix: "pk_live",
+  shortToken: "abc123",
+  hash: "hashed-token",
+  permissions: ["users:read"],
+  name: "server",
+  tenantId: "tenant-1",
+  createdBy: "user-1",
   expiresAt: null,
   revokedAt: null,
   lastUsedAt: null,
 });
-roleRegistry.registerRole('admin', { permissions: ['users:read', 'users:write'] });
-await roleRegistry.assignRole('user-1', 'tenant-1', 'admin');
-const activeSessions = await sessionProvider.listSessions({ userId: 'user-1', status: 'active' });
+roleRegistry.registerRole("admin", { permissions: ["users:read", "users:write"] });
+await roleRegistry.assignRole("user-1", "tenant-1", "admin");
+const activeSessions = await sessionProvider.listSessions({ userId: "user-1", status: "active" });
 ```
 
 ## API 레퍼런스

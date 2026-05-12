@@ -11,21 +11,21 @@ pnpm add @croco/membership-drizzle @croco/membership-core drizzle-orm
 ## 사용법
 
 ```typescript
-import { DrizzleMembershipStore } from '@croco/membership-drizzle';
-import { TxManager } from '@croco/tx-core';
+import { DrizzleMembershipStore } from "@croco/membership-drizzle";
+import { TxManager } from "@croco/tx-core";
 
-const txManager = new TxManager(adapter, { defaultNesting: 'join' });
+const txManager = new TxManager(adapter, { defaultNesting: "join" });
 const store = new DrizzleMembershipStore(db, txManager);
 
 await store.save({
-  id: 'mem-1',
-  tenantId: 'tenant-1',
-  userId: 'user-1',
-  role: 'admin',
+  id: "mem-1",
+  tenantId: "tenant-1",
+  userId: "user-1",
+  role: "admin",
 });
 
-const members = await store.findAllByTenant('tenant-1');
-const adminCount = await store.countByRole('tenant-1', 'admin');
+const members = await store.findAllByTenant("tenant-1");
+const adminCount = await store.countByRole("tenant-1", "admin");
 ```
 
 ## API 레퍼런스

@@ -1,6 +1,6 @@
-import type { z } from 'zod';
-import type { ArgumentMetadata, PipeTransform } from '../interfaces/PipeTransform';
-import { RequestValidationProblem } from './ValidationProblem';
+import type { z } from "zod";
+import type { ArgumentMetadata, PipeTransform } from "../interfaces/PipeTransform";
+import { RequestValidationProblem } from "./ValidationProblem";
 
 /**
  * 파라미터 값을 Zod 스키마로 검증하는 기본 Pipe 구현체입니다.
@@ -13,7 +13,7 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
 
     if (!result.success) {
       const issues = result.error.issues.map((issue) => ({
-        path: issue.path.join('.') || 'value',
+        path: issue.path.join(".") || "value",
         message: issue.message,
       }));
 
@@ -24,18 +24,20 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
     return result.data;
   }
 
-  private mapMetadataTypeToSource(type: ArgumentMetadata['type']): 'body' | 'query' | 'params' | 'headers' {
+  private mapMetadataTypeToSource(
+    type: ArgumentMetadata["type"],
+  ): "body" | "query" | "params" | "headers" {
     switch (type) {
-      case 'body':
-        return 'body';
-      case 'query':
-        return 'query';
-      case 'param':
-        return 'params';
-      case 'header':
-        return 'headers';
+      case "body":
+        return "body";
+      case "query":
+        return "query";
+      case "param":
+        return "params";
+      case "header":
+        return "headers";
       default:
-        return 'body';
+        return "body";
     }
   }
 }

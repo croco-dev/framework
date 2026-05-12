@@ -11,13 +11,13 @@ pnpm add @croco/onboarding-drizzle @croco/onboarding-core drizzle-orm
 ## 사용법
 
 ```typescript
-import { DrizzleOnboardingStore } from '@croco/onboarding-drizzle';
-import { TxManager } from '@croco/tx-core';
+import { DrizzleOnboardingStore } from "@croco/onboarding-drizzle";
+import { TxManager } from "@croco/tx-core";
 
-const txManager = new TxManager(adapter, { defaultNesting: 'join' });
+const txManager = new TxManager(adapter, { defaultNesting: "join" });
 const store = new DrizzleOnboardingStore(db, txManager);
 
-await store.saveState('tenant-1', 'user-1', 'welcome-tour', {
+await store.saveState("tenant-1", "user-1", "welcome-tour", {
   steps: {
     welcome: { completed: true, completedAt: new Date() },
     profile: { completed: false },
@@ -25,7 +25,7 @@ await store.saveState('tenant-1', 'user-1', 'welcome-tour', {
   isCompleted: false,
 });
 
-const state = await store.getState('tenant-1', 'user-1', 'welcome-tour');
+const state = await store.getState("tenant-1", "user-1", "welcome-tour");
 ```
 
 ## API 레퍼런스

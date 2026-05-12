@@ -1,6 +1,9 @@
 {
   "name": "@croco/impersonation-core",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -18,29 +21,7 @@
       ]
     }
   },
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint ."
-  },
-  "dependencies": {
-    "@croco/framework-context": "workspace:*",
-    "@croco/auth-core": "workspace:*",
-    "@croco/audit-core": "workspace:*",
-    "@croco/problems-core": "workspace:*",
-    "@croco/events-core": "workspace:*",
-    "@croco/gid-core": "workspace:*",
-    "reflect-metadata": "^0.2.2"
-  },
-  "devDependencies": {
-    "@croco/events-inmemory": "workspace:*",
-    "tsup": "^8.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "4.0.16"
-  },
   "publishConfig": {
-    "access": "public",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -49,9 +30,28 @@
         "require": "./dist/index.cjs",
         "types": "./dist/index.d.ts"
       }
-    }
+    },
+    "access": "public"
   },
-  "files": [
-    "dist"
-  ]
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint ."
+  },
+  "dependencies": {
+    "@croco/audit-core": "workspace:*",
+    "@croco/auth-core": "workspace:*",
+    "@croco/events-core": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/gid-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@croco/events-inmemory": "workspace:*",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "4.0.16"
+  }
 }

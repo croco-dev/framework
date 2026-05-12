@@ -1,1 +1,1 @@
-export * from './SearchEvents';
+export * from "./SearchEvents";

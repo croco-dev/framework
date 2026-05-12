@@ -1,4 +1,4 @@
-import type { TenantResolver } from '../TenantResolver';
+import type { TenantResolver } from "../TenantResolver";
 
 export type HeaderRequest = {
   headers?: Record<string, string | string[] | undefined>;
@@ -14,7 +14,7 @@ export class HeaderTenantResolver implements TenantResolver<HeaderRequest> {
   private readonly required: boolean;
 
   constructor(options: HeaderTenantResolverOptions = {}) {
-    this.headerName = options.headerName ?? 'x-tenant-id';
+    this.headerName = options.headerName ?? "x-tenant-id";
     this.required = options.required ?? false;
   }
 

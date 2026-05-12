@@ -18,8 +18,8 @@ pnpm add @croco/health-core
 ## Quick Start
 
 ```typescript
-import { HealthCheckService } from '@croco/health-core';
-import type { HealthIndicator, HealthIndicatorResult } from '@croco/health-core';
+import { HealthCheckService } from "@croco/health-core";
+import type { HealthIndicator, HealthIndicatorResult } from "@croco/health-core";
 
 const healthService = new HealthCheckService({ timeout: 5000 });
 
@@ -29,17 +29,17 @@ class DatabaseHealthIndicator implements HealthIndicator {
       await this.db.ping();
 
       return {
-        name: 'database',
-        status: 'up',
+        name: "database",
+        status: "up",
         details: { latency: 15, connections: 5 },
       };
     } catch (error) {
       return {
-        name: 'database',
-        status: 'down',
+        name: "database",
+        status: "down",
         details: {
           error: error instanceof Error ? error.message : String(error),
-          code: 'DB_CONNECTION_ERROR',
+          code: "DB_CONNECTION_ERROR",
         },
       };
     }
@@ -72,7 +72,7 @@ Result type returned by health checks.
 ```typescript
 type HealthIndicatorResult = {
   name: string;
-  status: 'up' | 'down';
+  status: "up" | "down";
   details?: HealthIndicatorErrorDetails | HealthIndicatorSuccessDetails;
 };
 ```
@@ -123,19 +123,19 @@ class PostgresHealthIndicator implements HealthIndicator {
   async check(): Promise<HealthIndicatorResult> {
     try {
       const start = Date.now();
-      await this.pool.query('SELECT 1');
+      await this.pool.query("SELECT 1");
       const latency = Date.now() - start;
 
       return {
-        name: 'postgres',
-        status: 'up',
+        name: "postgres",
+        status: "up",
         details: { latency, idleCount: this.pool.idleCount },
       };
     } catch (error) {
       return {
-        name: 'postgres',
-        status: 'down',
-        details: { error: String(error), code: 'POSTGRES_ERROR' },
+        name: "postgres",
+        status: "down",
+        details: { error: String(error), code: "POSTGRES_ERROR" },
       };
     }
   }
@@ -155,14 +155,14 @@ class RedisHealthIndicator implements HealthIndicator {
       const latency = Date.now() - start;
 
       return {
-        name: 'redis',
-        status: 'up',
-        details: { latency, connectedClients: await this.redis.client('LIST') },
+        name: "redis",
+        status: "up",
+        details: { latency, connectedClients: await this.redis.client("LIST") },
       };
     } catch (error) {
       return {
-        name: 'redis',
-        status: 'down',
+        name: "redis",
+        status: "down",
         details: { error: String(error) },
       };
     }
@@ -176,14 +176,14 @@ class RedisHealthIndicator implements HealthIndicator {
 class ApiHealthIndicator implements HealthIndicator {
   async check(signal?: AbortSignal): Promise<HealthIndicatorResult> {
     try {
-      const response = await fetch('https://api.example.com/health', {
+      const response = await fetch("https://api.example.com/health", {
         signal,
       });
 
       if (!response.ok) {
         return {
-          name: 'external-api',
-          status: 'down',
+          name: "external-api",
+          status: "down",
           details: {
             error: `HTTP ${response.status}`,
             code: String(response.status),
@@ -192,14 +192,14 @@ class ApiHealthIndicator implements HealthIndicator {
       }
 
       return {
-        name: 'external-api',
-        status: 'up',
-        details: { latency: response.headers.get('X-Response-Time') },
+        name: "external-api",
+        status: "up",
+        details: { latency: response.headers.get("X-Response-Time") },
       };
     } catch (error) {
       return {
-        name: 'external-api',
-        status: 'down',
+        name: "external-api",
+        status: "down",
         details: { error: String(error) },
       };
     }
@@ -210,8 +210,8 @@ class ApiHealthIndicator implements HealthIndicator {
 ## Integration with HTTP Endpoints
 
 ```typescript
-import { Hono } from 'hono';
-import { HealthCheckService } from '@croco/health-core';
+import { Hono } from "hono";
+import { HealthCheckService } from "@croco/health-core";
 
 const app = new Hono();
 const healthService = new HealthCheckService();
@@ -219,9 +219,9 @@ const healthService = new HealthCheckService();
 healthService.register(new DatabaseHealthIndicator(db));
 healthService.register(new RedisHealthIndicator(redis));
 
-app.get('/health', async (c) => {
+app.get("/health", async (c) => {
   const result = await healthService.check();
-  return c.json(result, result.status === 'up' ? 200 : 503);
+  return c.json(result, result.status === "up" ? 200 : 503);
 });
 ```
 

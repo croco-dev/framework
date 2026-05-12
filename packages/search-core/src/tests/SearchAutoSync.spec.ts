@@ -1,12 +1,16 @@
-import type { Constructor } from '@croco/framework-context';
-import { Container, MetadataStorage } from '@croco/framework-context';
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
-import type { SearchableMetadata } from '../libs/decorators/Searchable';
-import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from '../libs/events/SearchEvents';
-import { SearchEngine } from '../libs/SearchEngine';
-import { SearchAutoSync, type SearchSyncFailedEventPublisher } from '../libs/sync/SearchAutoSync';
+import type { Constructor } from "@croco/framework-context";
+import { Container, MetadataStorage } from "@croco/framework-context";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import type { SearchableMetadata } from "../libs/decorators/Searchable";
+import {
+  DocumentDeletedEvent,
+  DocumentIndexedEvent,
+  SearchSyncFailedEvent,
+} from "../libs/events/SearchEvents";
+import { SearchEngine } from "../libs/SearchEngine";
+import { SearchAutoSync, type SearchSyncFailedEventPublisher } from "../libs/sync/SearchAutoSync";
 
-describe('SearchAutoSync', () => {
+describe("SearchAutoSync", () => {
   let searchAutoSync!: SearchAutoSync;
   let searchEngine!: SearchEngine;
   let eventBusMock!: {
@@ -31,11 +35,11 @@ describe('SearchAutoSync', () => {
     searchAutoSync = new SearchAutoSync(eventBusMock as SearchSyncFailedEventPublisher);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(searchAutoSync).not.toBeNull();
   });
 
-  it('should register both index and delete events with domain event names', async () => {
+  it("should register both index and delete events with domain event names", async () => {
     const subscribeCalls: string[] = [];
     subscribeCalls.push(DocumentIndexedEvent.eventName, DocumentDeletedEvent.eventName);
 
@@ -43,62 +47,62 @@ describe('SearchAutoSync', () => {
     expect(subscribeCalls).toContain(DocumentDeletedEvent.eventName);
   });
 
-  describe('handle DocumentIndexedEvent', () => {
-    it('should index document when autoSync is true', async () => {
-      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+  describe("handle DocumentIndexedEvent", () => {
+    it("should index document when autoSync is true", async () => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
         {
           target: class User {},
           value: {
-            index: 'users',
+            index: "users",
             autoSync: true,
             target: class User {},
           } as SearchableMetadata,
         },
       ]);
 
-      const event = new DocumentIndexedEvent('users', 'user-1', 'tenant-1', { name: 'John' });
+      const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
 
       await searchAutoSync.handle(event);
 
-      expect(searchEngine.indexDocument).toHaveBeenCalledWith('users', {
-        id: 'user-1',
-        tenantId: 'tenant-1',
-        name: 'John',
+      expect(searchEngine.indexDocument).toHaveBeenCalledWith("users", {
+        id: "user-1",
+        tenantId: "tenant-1",
+        name: "John",
       });
     });
 
-    it('should NOT index document when autoSync is false', async () => {
-      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+    it("should NOT index document when autoSync is false", async () => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
         {
           target: class Product {},
           value: {
-            index: 'products',
+            index: "products",
             autoSync: false,
             target: class Product {},
           } as SearchableMetadata,
         },
       ]);
 
-      const event = new DocumentIndexedEvent('products', 'prod-1', 'tenant-1', { name: 'Widget' });
+      const event = new DocumentIndexedEvent("products", "prod-1", "tenant-1", { name: "Widget" });
 
       await searchAutoSync.handle(event);
 
       expect(searchEngine.indexDocument).not.toHaveBeenCalled();
     });
 
-    it('should ignore duplicate events', async () => {
-      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+    it("should ignore duplicate events", async () => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
         {
           target: class User {},
           value: {
-            index: 'users',
+            index: "users",
             autoSync: true,
             target: class User {},
           } as SearchableMetadata,
         },
       ]);
 
-      const event = new DocumentIndexedEvent('users', 'user-1', 'tenant-1', { name: 'John' });
+      const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
 
       await searchAutoSync.handle(event);
       await searchAutoSync.handle(event);
@@ -106,94 +110,94 @@ describe('SearchAutoSync', () => {
       expect(searchEngine.indexDocument).toHaveBeenCalledTimes(1);
     });
 
-    it('should publish SearchSyncFailedEvent on error', async () => {
-      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+    it("should publish SearchSyncFailedEvent on error", async () => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
         {
           target: class User {},
           value: {
-            index: 'users',
+            index: "users",
             autoSync: true,
             target: class User {},
           } as SearchableMetadata,
         },
       ]);
 
-      const error = new Error('Indexing failed');
+      const error = new Error("Indexing failed");
       (searchEngine.indexDocument as Mock).mockRejectedValue(error);
 
-      const event = new DocumentIndexedEvent('users', 'user-1', 'tenant-1', { name: 'John' });
+      const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
 
       await searchAutoSync.handle(event);
 
       expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
       const failedEvent = eventBusMock.publish.mock.calls[0][0];
       expect(failedEvent.error).toBe(error);
-      expect(failedEvent.operation).toBe('index');
+      expect(failedEvent.operation).toBe("index");
     });
   });
 
-  describe('handle DocumentDeletedEvent', () => {
-    it('should delete document when autoSync is true', async () => {
-      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+  describe("handle DocumentDeletedEvent", () => {
+    it("should delete document when autoSync is true", async () => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
         {
           target: class User {},
           value: {
-            index: 'users',
+            index: "users",
             autoSync: true,
             target: class User {},
           } as SearchableMetadata,
         },
       ]);
 
-      const event = new DocumentDeletedEvent('users', 'user-1', 'tenant-1');
+      const event = new DocumentDeletedEvent("users", "user-1", "tenant-1");
 
       await searchAutoSync.handle(event);
 
-      expect(searchEngine.deleteDocument).toHaveBeenCalledWith('users', 'user-1');
+      expect(searchEngine.deleteDocument).toHaveBeenCalledWith("users", "user-1");
     });
 
-    it('should publish SearchSyncFailedEvent on delete error', async () => {
-      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+    it("should publish SearchSyncFailedEvent on delete error", async () => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
         {
           target: class User {},
           value: {
-            index: 'users',
+            index: "users",
             autoSync: true,
             target: class User {},
           } as SearchableMetadata,
         },
       ]);
 
-      const error = new Error('Delete failed');
+      const error = new Error("Delete failed");
       (searchEngine.deleteDocument as Mock).mockRejectedValue(error);
 
-      const event = new DocumentDeletedEvent('users', 'user-1', 'tenant-1');
+      const event = new DocumentDeletedEvent("users", "user-1", "tenant-1");
 
       await searchAutoSync.handle(event);
 
       expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
       const failedEvent = eventBusMock.publish.mock.calls[0][0];
-      expect(failedEvent.operation).toBe('delete');
+      expect(failedEvent.operation).toBe("delete");
     });
 
-    it('should skip publishing when no failed event publisher is configured', async () => {
-      vi.spyOn(MetadataStorage, 'getAll').mockReturnValue([
+    it("should skip publishing when no failed event publisher is configured", async () => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
         {
           target: class User {},
           value: {
-            index: 'users',
+            index: "users",
             autoSync: true,
             target: class User {},
           } as SearchableMetadata,
         },
       ]);
 
-      const error = new Error('Delete failed');
+      const error = new Error("Delete failed");
       (searchEngine.deleteDocument as Mock).mockRejectedValue(error);
       searchAutoSync = new SearchAutoSync();
 
       await expect(
-        searchAutoSync.handle(new DocumentDeletedEvent('users', 'user-1', 'tenant-1'))
+        searchAutoSync.handle(new DocumentDeletedEvent("users", "user-1", "tenant-1")),
       ).resolves.toBeUndefined();
       expect(eventBusMock.publish).not.toHaveBeenCalled();
     });

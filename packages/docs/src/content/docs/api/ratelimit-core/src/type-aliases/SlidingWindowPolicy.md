@@ -15,19 +15,19 @@ title: "SlidingWindowPolicy"
 
 > **algorithm**: `"sliding"`
 
-***
+---
 
 ### limit
 
 > **limit**: `number`
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### windowMs
 
