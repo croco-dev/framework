@@ -49,7 +49,7 @@ title: "LlmService"
 
 `Promise`\<[`ToolCallResult`](/api/llm-core/src/type-aliases/toolcallresult/)\>
 
----
+***
 
 ### embed()
 
@@ -65,7 +65,7 @@ title: "LlmService"
 
 `Promise`\<[`EmbedResult`](/api/llm-core/src/type-aliases/embedresult/)\>
 
----
+***
 
 ### embedMany()
 
@@ -81,7 +81,7 @@ title: "LlmService"
 
 `Promise`\<[`EmbedManyResult`](/api/llm-core/src/type-aliases/embedmanyresult/)\>
 
----
+***
 
 ### generate()
 
@@ -97,7 +97,7 @@ title: "LlmService"
 
 `Promise`\<[`GenerateResult`](/api/llm-core/src/type-aliases/generateresult/)\>
 
----
+***
 
 ### generateObject()
 
@@ -119,7 +119,7 @@ title: "LlmService"
 
 `Promise`\<`T`\>
 
----
+***
 
 ### stream()
 

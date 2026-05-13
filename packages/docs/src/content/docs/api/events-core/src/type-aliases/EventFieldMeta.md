@@ -15,7 +15,7 @@ title: "EventFieldMeta"
 
 > **propertyKey**: `string`
 
----
+***
 
 ### serializedKey
 

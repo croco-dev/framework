@@ -33,7 +33,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### findById()
 
@@ -49,7 +49,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
 
----
+***
 
 ### findByShortToken()
 
@@ -65,7 +65,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
 
----
+***
 
 ### listByTenant()
 
@@ -81,7 +81,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)[]\>
 
----
+***
 
 ### revoke()
 
@@ -97,7 +97,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### save()
 
@@ -113,7 +113,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
 
----
+***
 
 ### updateLastUsed()
 

@@ -33,7 +33,7 @@ new 연산자로 직접 핸들러 인스턴스를 생성합니다.
 
 ##### T
 
-`T` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 

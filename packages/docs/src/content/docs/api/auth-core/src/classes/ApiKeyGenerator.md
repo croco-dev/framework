@@ -37,7 +37,7 @@ title: "ApiKeyGenerator"
 
 ##### prefix?
 
-`string` = `'sk'`
+`string` = `"sk"`
 
 #### Returns
 
@@ -59,7 +59,7 @@ title: "ApiKeyGenerator"
 
 > **shortToken**: `string`
 
----
+***
 
 ### parse()
 

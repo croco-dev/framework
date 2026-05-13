@@ -27,7 +27,7 @@ title: "AggregateRoot"
 
 `void`
 
----
+***
 
 ### getDomainEvents()
 
@@ -37,7 +37,7 @@ title: "AggregateRoot"
 
 readonly [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
----
+***
 
 ### hasDomainEvents()
 
@@ -47,7 +47,7 @@ readonly [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
 `boolean`
 
----
+***
 
 ### pullDomainEvents()
 

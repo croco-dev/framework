@@ -27,7 +27,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### getEventBus()
 
@@ -37,7 +37,7 @@ title: "EventBusConfig"
 
 [`EventBus`](/api/events-core/src/interfaces/eventbus/)
 
----
+***
 
 ### setEventBus()
 
@@ -53,7 +53,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### start()
 
@@ -69,7 +69,7 @@ title: "EventBusConfig"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### subscribe()
 
@@ -85,7 +85,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### unsubscribe()
 
@@ -101,7 +101,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### getInstance()
 
@@ -111,7 +111,7 @@ title: "EventBusConfig"
 
 `EventBusConfig`
 
----
+***
 
 ### setInstance()
 

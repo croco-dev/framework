@@ -16,7 +16,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 잘못된 요청 형식 또는 파라미터 문제를 나타냅니다. (400)
 
----
+***
 
 ### BusinessRuleViolation
 
@@ -24,7 +24,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 비즈니스 규칙 위반을 나타냅니다. (422)
 
----
+***
 
 ### Conflict
 
@@ -32,7 +32,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 리소스 충돌을 나타냅니다. (409)
 
----
+***
 
 ### Forbidden
 
@@ -40,7 +40,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 권한이 부족한 접근을 나타냅니다. (403)
 
----
+***
 
 ### Gone
 
@@ -48,7 +48,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 더 이상 사용되지 않는 리소스를 나타냅니다. (410)
 
----
+***
 
 ### InternalServerError
 
@@ -56,7 +56,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 서버 내부 오류를 나타냅니다. (500)
 
----
+***
 
 ### NotFound
 
@@ -64,7 +64,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 요청한 리소스를 찾을 수 없는 상태를 나타냅니다. (404)
 
----
+***
 
 ### NotImplemented
 
@@ -72,7 +72,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 구현되지 않은 기능을 나타냅니다. (501)
 
----
+***
 
 ### TooManyRequests
 
@@ -80,7 +80,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 요청 빈도 제한 초과를 나타냅니다. (429)
 
----
+***
 
 ### Unauthorized
 
@@ -88,7 +88,7 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 인증이 필요한 리소스에 대한 접근을 나타냅니다. (401)
 
----
+***
 
 ### ValidationError
 

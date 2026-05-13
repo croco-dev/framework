@@ -29,7 +29,7 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
 `string` \| `undefined`
 
----
+***
 
 ### metadataExtractor()?
 
@@ -49,13 +49,13 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
----
+***
 
 ### meterId
 
 > **meterId**: `string`
 
----
+***
 
 ### valueExtractor()?
 

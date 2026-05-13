@@ -15,13 +15,13 @@ title: "RateLimitEntry"
 
 > **count**: `number`
 
----
+***
 
 ### windowMs
 
 > **windowMs**: `number`
 
----
+***
 
 ### windowStart
 

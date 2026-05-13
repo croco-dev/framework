@@ -35,7 +35,7 @@ Clear all middlewares
 
 `void`
 
----
+***
 
 ### execute()
 
@@ -63,7 +63,7 @@ Execute middleware chain in onion pattern
 
 `Promise`\<`T`\>
 
----
+***
 
 ### use()
 

@@ -27,7 +27,7 @@ title: "TenantMappingProvider"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### remove()
 
@@ -43,7 +43,7 @@ title: "TenantMappingProvider"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### resolve()
 

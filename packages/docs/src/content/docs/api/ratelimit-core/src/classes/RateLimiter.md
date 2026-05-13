@@ -63,7 +63,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
----
+***
 
 ### checkWithKey()
 
@@ -83,7 +83,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
----
+***
 
 ### getStats()
 

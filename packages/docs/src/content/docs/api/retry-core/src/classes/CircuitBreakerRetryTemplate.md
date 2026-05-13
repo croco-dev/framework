@@ -13,13 +13,13 @@ Circuit Breaker로 회로가 닫혀 있을 때만 Retry를 수행합니다.
 
 ```typescript
 const template = new CircuitBreakerRetryTemplate(
-  new CircuitBreaker({ circuitId: "api-service" }),
-  new RetryTemplate({ maxAttempts: 3 }),
+  new CircuitBreaker({ circuitId: 'api-service' }),
+  new RetryTemplate({ maxAttempts: 3 })
 );
 
 const result = await template.execute(
   async (ctx) => await riskyOperation(),
-  async (ctx) => fallbackValue,
+  async (ctx) => fallbackValue
 );
 ```
 
@@ -77,7 +77,7 @@ Circuit Breaker로 보호하며 재시도 로직을 적용하여 작업을 실�
 
 작업 결과
 
----
+***
 
 ### getCircuitBreaker()
 
@@ -89,7 +89,7 @@ Circuit Breaker 인스턴스를 반환합니다.
 
 [`CircuitBreaker`](/api/retry-core/src/classes/circuitbreaker/)
 
----
+***
 
 ### getRetryTemplate()
 
@@ -101,7 +101,7 @@ RetryTemplate 인스턴스를 반환합니다.
 
 [`RetryTemplate`](/api/retry-core/src/classes/retrytemplate/)
 
----
+***
 
 ### withOptions()
 

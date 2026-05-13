@@ -17,7 +17,7 @@ title: "ReplayOptions"
 
 배치 크기
 
----
+***
 
 ### eventTypes?
 
@@ -25,7 +25,7 @@ title: "ReplayOptions"
 
 특정 이벤트 타입만 리플레이
 
----
+***
 
 ### from?
 
@@ -33,7 +33,7 @@ title: "ReplayOptions"
 
 시작 시간
 
----
+***
 
 ### mode?
 
@@ -41,7 +41,7 @@ title: "ReplayOptions"
 
 리플레이 모드 (fast: 속도 우선, accurate: 정확성 우선)
 
----
+***
 
 ### onProgress()?
 
@@ -63,7 +63,7 @@ title: "ReplayOptions"
 
 `void`
 
----
+***
 
 ### partitionKeys?
 
@@ -71,7 +71,7 @@ title: "ReplayOptions"
 
 특정 파티션 키만 리플레이
 
----
+***
 
 ### to?
 

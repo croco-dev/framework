@@ -11,8 +11,8 @@ Gauges are useful for measuring values that can go up and down, like queue depth
 ## Example
 
 ```typescript
-const gauge = metrics.createGauge({ name: "queue.size" });
-gauge.record(42, { queue: "orders" });
+const gauge = metrics.createGauge({ name: 'queue.size' });
+gauge.record(42, { queue: 'orders' });
 ```
 
 ## Methods

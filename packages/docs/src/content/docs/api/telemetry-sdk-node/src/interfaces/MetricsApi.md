@@ -13,9 +13,9 @@ This is a Croco abstraction over OpenTelemetry Metrics API.
 ```typescript
 const metrics = TelemetryRuntime.getInstance().getMetrics();
 
-const counter = metrics.createCounter({ name: "requests.total" });
-const histogram = metrics.createHistogram({ name: "request.duration_ms" });
-const gauge = metrics.createGauge({ name: "active.connections" });
+const counter = metrics.createCounter({ name: 'requests.total' });
+const histogram = metrics.createHistogram({ name: 'request.duration_ms' });
+const gauge = metrics.createGauge({ name: 'active.connections' });
 ```
 
 ## Methods
@@ -40,7 +40,7 @@ Configuration options for the counter
 
 A Counter instance
 
----
+***
 
 ### createGauge()
 
@@ -62,7 +62,7 @@ Configuration options for the gauge
 
 A Gauge instance
 
----
+***
 
 ### createHistogram()
 

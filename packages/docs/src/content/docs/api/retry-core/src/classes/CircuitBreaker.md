@@ -45,7 +45,7 @@ title: "CircuitBreaker"
 
 `Promise`\<`T`\>
 
----
+***
 
 ### forceClose()
 
@@ -55,7 +55,7 @@ title: "CircuitBreaker"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### forceOpen()
 
@@ -65,7 +65,7 @@ title: "CircuitBreaker"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### getFailureCount()
 
@@ -75,7 +75,7 @@ title: "CircuitBreaker"
 
 `Promise`\<`number`\>
 
----
+***
 
 ### getLastFailureTime()
 
@@ -85,7 +85,7 @@ title: "CircuitBreaker"
 
 `Promise`\<`number`\>
 
----
+***
 
 ### getState()
 
@@ -95,7 +95,7 @@ title: "CircuitBreaker"
 
 `Promise`\<[`CircuitState`](/api/retry-core/src/enumerations/circuitstate/)\>
 
----
+***
 
 ### reset()
 

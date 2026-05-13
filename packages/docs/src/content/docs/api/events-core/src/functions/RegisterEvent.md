@@ -17,7 +17,7 @@ title: "RegisterEvent"
 
 #### T
 
-`T` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ### Parameters
 

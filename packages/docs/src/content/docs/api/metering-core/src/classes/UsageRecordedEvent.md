@@ -14,15 +14,13 @@ title: "UsageRecordedEvent"
 ## Example
 
 ```typescript
-eventBus.publish(
-  new UsageRecordedEvent({
-    tenantId: "tenant-123",
-    meterId: "api_calls",
-    value: 1,
-    recordedAt: new Date(),
-    metadata: { endpoint: "/api/users" },
-  }),
-);
+eventBus.publish(new UsageRecordedEvent({
+  tenantId: 'tenant-123',
+  meterId: 'api_calls',
+  value: 1,
+  recordedAt: new Date(),
+  metadata: { endpoint: '/api/users' },
+}));
 ```
 
 ## Extends
@@ -75,7 +73,7 @@ eventBus.publish(
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -85,13 +83,13 @@ eventBus.publish(
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
----
+***
 
 ### metadata
 
@@ -101,19 +99,19 @@ eventBus.publish(
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### meterId
 
 > `readonly` **meterId**: `string`
 
----
+***
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
----
+***
 
 ### timestamp
 
@@ -123,17 +121,17 @@ eventBus.publish(
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### value
 
 > `readonly` **value**: `number`
 
----
+***
 
 ### eventName
 
-> `static` **eventName**: `string` = `'metering.usage_recorded'`
+> `static` **eventName**: `string` = `"metering.usage_recorded"`
 
 #### Overrides
 

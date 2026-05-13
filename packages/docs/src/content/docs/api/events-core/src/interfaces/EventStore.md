@@ -20,7 +20,7 @@ title: "EventStore"
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -34,7 +34,7 @@ title: "EventStore"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### appendMany()
 
@@ -46,7 +46,7 @@ title: "EventStore"
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -60,7 +60,7 @@ title: "EventStore"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### count()
 
@@ -72,7 +72,7 @@ title: "EventStore"
 
 `Promise`\<`number`\>
 
----
+***
 
 ### getById()
 
@@ -84,7 +84,7 @@ title: "EventStore"
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -100,7 +100,7 @@ title: "EventStore"
 
 이벤트 또는 undefined
 
----
+***
 
 ### read()
 
@@ -112,7 +112,7 @@ title: "EventStore"
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 

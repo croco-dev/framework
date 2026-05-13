@@ -19,7 +19,7 @@ title: "AtomicQuotaCheckResult"
 
 > **exceeded**: `boolean`
 
----
+***
 
 ### newUsage
 

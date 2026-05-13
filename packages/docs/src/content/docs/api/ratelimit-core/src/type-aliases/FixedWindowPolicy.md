@@ -15,19 +15,19 @@ title: "FixedWindowPolicy"
 
 > **algorithm**: `"fixed"`
 
----
+***
 
 ### limit
 
 > **limit**: `number`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### windowMs
 

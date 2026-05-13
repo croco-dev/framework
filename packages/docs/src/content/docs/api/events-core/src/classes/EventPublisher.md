@@ -25,26 +25,6 @@ title: "EventPublisher"
 
 ## Methods
 
-### ~~publish()~~
-
-> **publish**(`event`): `Promise`\<`void`\>
-
-:::caution[Deprecated]
-Use publishNow() for immediate publication or publishAfterCommit() for explicit after-commit scheduling.
-:::
-
-#### Parameters
-
-##### event
-
-[`DomainEvent`](/api/events-core/src/classes/domainevent/)
-
-#### Returns
-
-`Promise`\<`void`\>
-
----
-
 ### publishAfterCommit()
 
 > **publishAfterCommit**(`event`): `void`
@@ -59,7 +39,7 @@ Use publishNow() for immediate publication or publishAfterCommit() for explicit 
 
 `void`
 
----
+***
 
 ### publishMany()
 
@@ -75,7 +55,7 @@ Use publishNow() for immediate publication or publishAfterCommit() for explicit 
 
 `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
----
+***
 
 ### publishManyParallel()
 
@@ -91,7 +71,7 @@ Use publishNow() for immediate publication or publishAfterCommit() for explicit 
 
 `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
----
+***
 
 ### publishNow()
 

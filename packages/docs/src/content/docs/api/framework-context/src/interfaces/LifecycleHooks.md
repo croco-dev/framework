@@ -10,7 +10,7 @@ title: "LifecycleHooks"
 ## Example
 
 ```typescript
-import type { LifecycleHooks } from "@croco/framework-context";
+import type { LifecycleHooks } from '@croco/framework-context';
 
 const hooks: LifecycleHooks = {
   onRequestStart: async (ctx) => {
@@ -47,7 +47,7 @@ const hooks: LifecycleHooks = {
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### onRequestError()?
 
@@ -69,7 +69,7 @@ const hooks: LifecycleHooks = {
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### onRequestStart()?
 

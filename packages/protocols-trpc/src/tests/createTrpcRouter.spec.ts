@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { RouteIR } from "@croco/protocols-core";
 import type { AnyRouter } from "@trpc/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createTrpcRouter } from "../libs/createTrpcRouter";
 
@@ -37,21 +37,15 @@ const mocked = vi.hoisted(() => ({
   extractRouteIR: undefined as ((controller: Function) => RouteIR[]) | undefined,
 }));
 
-vi.mock("@croco/protocols-core", async (importActual) => {
-  const actual =
-    await importActual<
-      Parameters<typeof vi.mock>[1] extends (v: infer F) => Promise<unknown> ? F : never
-    >();
-
-  return {
-    ...actual,
-    extractRouteIR: (controller: Function) =>
-      mocked.extractRouteIR?.(controller) ??
-      actual.extractRouteIR(controller as Parameters<typeof actual.extractRouteIR>[0]),
-  };
-});
+vi.mock("@croco/protocols-core", () => ({
+  extractRouteIR: (controller: Function) => mocked.extractRouteIR?.(controller) ?? [],
+}));
 
 describe("createTrpcRouter", () => {
+  beforeEach(() => {
+    mocked.extractRouteIR = extractTestRouteIR;
+  });
+
   afterEach(() => {
     mocked.extractRouteIR = undefined;
   });
@@ -162,6 +156,31 @@ function getProcedureType(router: AnyRouter, domain: string, procedureName: stri
   const procedure = procedures[procedureName] as { readonly _def: { readonly type: string } };
 
   return procedure._def.type;
+}
+
+function extractTestRouteIR(controllerCtor: Function): RouteIR[] {
+  const controllerMeta = Reflect.getMetadata(REST_CONTROLLER_KEY, controllerCtor) as
+    | ControllerMetadata
+    | undefined;
+  const routesMeta = Reflect.getMetadata(REST_ROUTES_KEY, controllerCtor) as
+    | RouteMetadata[]
+    | undefined;
+
+  if (!controllerMeta || !routesMeta) {
+    return [];
+  }
+
+  return routesMeta.map((routeMeta) => ({
+    controllerName: controllerCtor.name,
+    methodName: String(routeMeta.methodName),
+    httpMethod: routeMeta.method,
+    path: `${controllerMeta.path}${routeMeta.path}`,
+    params: [],
+    inputSchema: null,
+    inputSchemas: { body: null, path: null, query: null },
+    outputSchema: null,
+    domain: null,
+  }));
 }
 
 function Controller(path: string = ""): ClassDecorator {

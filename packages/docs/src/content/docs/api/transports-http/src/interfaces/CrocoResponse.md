@@ -11,7 +11,7 @@ title: "CrocoResponse"
 
 > **headers**: `Record`\<`string`, `string`\>
 
----
+***
 
 ### status
 

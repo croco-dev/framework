@@ -1,7 +1,6 @@
 {
   "name": "@croco/cli",
   "version": "0.0.1",
-  "private": true,
   "bin": {
     "croco": "./dist/bin/croco.js"
   },
@@ -10,7 +9,7 @@
   ],
   "type": "module",
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
   "scripts": {
     "build": "tsup",

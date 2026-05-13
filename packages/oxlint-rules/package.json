@@ -8,7 +8,11 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "lint": "oxlint ."
+    "lint": "oxlint .",
+    "test": "vitest run"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "vitest": "4.0.16"
+  }
 }

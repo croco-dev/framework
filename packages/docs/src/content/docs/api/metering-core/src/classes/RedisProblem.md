@@ -17,7 +17,7 @@ Redis 연결 실패 또는 운영 중 오류가 발생한 경우 사용됩니다
 try {
   await redisClient.set(key, value);
 } catch (error) {
-  throw new RedisProblem("Redis 연결 실패", error);
+  throw new RedisProblem('Redis 연결 실패', error);
 }
 ```
 
@@ -59,7 +59,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
----
+***
 
 ### cause?
 
@@ -69,7 +69,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
----
+***
 
 ### code
 
@@ -79,7 +79,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
----
+***
 
 ### detail?
 
@@ -89,7 +89,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
----
+***
 
 ### extensions?
 
@@ -99,7 +99,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
----
+***
 
 ### instance?
 
@@ -109,7 +109,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
----
+***
 
 ### message
 
@@ -119,7 +119,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
----
+***
 
 ### name
 
@@ -129,7 +129,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
----
+***
 
 ### stack?
 
@@ -139,7 +139,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
----
+***
 
 ### type
 
@@ -149,7 +149,7 @@ try {
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
----
+***
 
 ### stackTraceLimit
 
@@ -185,7 +185,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
----
+***
 
 ### title
 
@@ -215,7 +215,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
----
+***
 
 ### captureStackTrace()
 
@@ -228,7 +228,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -283,7 +283,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
----
+***
 
 ### prepareStackTrace()
 

@@ -15,31 +15,31 @@ title: "RateLimitResult"
 
 > `optional` **degraded**: `boolean`
 
----
+***
 
 ### limit
 
 > **limit**: `number`
 
----
+***
 
 ### policyName?
 
 > `optional` **policyName**: `string`
 
----
+***
 
 ### remaining
 
 > **remaining**: `number`
 
----
+***
 
 ### resetAtMs
 
 > **resetAtMs**: `number`
 
----
+***
 
 ### success
 

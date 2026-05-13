@@ -10,7 +10,6 @@ Usage 배치 집계 및 DB 저장
 ## Description
 
 Redis의 실시간 Usage 데이터를 주기적으로 DB에 영구 저장합니다.
-
 - Lambda 환경에서는 즉시 flush하므로 배치 집계는 선택적
 - 장기 보관 및 분석을 위한 DB 저장
 
@@ -48,7 +47,7 @@ Redis의 실시간 Usage 데이터를 주기적으로 DB에 영구 저장합니�
 
 `Promise`\<[`FlushResult`](/api/metering-core/src/type-aliases/flushresult/)\>
 
----
+***
 
 ### flushUsageToDB()
 
@@ -72,7 +71,7 @@ Meter ID
 
 ##### period?
 
-[`AggregationPeriod`](/api/metering-core/src/type-aliases/aggregationperiod/) = `'billing_cycle'`
+[`AggregationPeriod`](/api/metering-core/src/type-aliases/aggregationperiod/) = `"billing_cycle"`
 
 집계 기간
 
@@ -82,7 +81,7 @@ Meter ID
 
 저장된 레코드 수
 
----
+***
 
 ### getAggregatedUsage()
 

@@ -15,7 +15,7 @@ Options for creating a Gauge instrument.
 
 Optional description of the gauge
 
----
+***
 
 ### name
 
@@ -23,7 +23,7 @@ Optional description of the gauge
 
 The name of the gauge
 
----
+***
 
 ### unit?
 

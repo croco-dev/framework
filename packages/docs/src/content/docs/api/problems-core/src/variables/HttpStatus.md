@@ -15,13 +15,13 @@ HTTP 상태 코드 상수입니다.
 
 > `readonly` **ACCEPTED**: `202` = `202`
 
-### BAD_GATEWAY
+### BAD\_GATEWAY
 
-> `readonly` **BAD_GATEWAY**: `502` = `502`
+> `readonly` **BAD\_GATEWAY**: `502` = `502`
 
-### BAD_REQUEST
+### BAD\_REQUEST
 
-> `readonly` **BAD_REQUEST**: `400` = `400`
+> `readonly` **BAD\_REQUEST**: `400` = `400`
 
 ### CONFLICT
 
@@ -35,17 +35,17 @@ HTTP 상태 코드 상수입니다.
 
 > `readonly` **CREATED**: `201` = `201`
 
-### EARLY_HINTS
+### EARLY\_HINTS
 
-> `readonly` **EARLY_HINTS**: `103` = `103`
+> `readonly` **EARLY\_HINTS**: `103` = `103`
 
-### EXPECTATION_FAILED
+### EXPECTATION\_FAILED
 
-> `readonly` **EXPECTATION_FAILED**: `417` = `417`
+> `readonly` **EXPECTATION\_FAILED**: `417` = `417`
 
-### FAILED_DEPENDENCY
+### FAILED\_DEPENDENCY
 
-> `readonly` **FAILED_DEPENDENCY**: `424` = `424`
+> `readonly` **FAILED\_DEPENDENCY**: `424` = `424`
 
 ### FORBIDDEN
 
@@ -55,194 +55,194 @@ HTTP 상태 코드 상수입니다.
 
 > `readonly` **FOUND**: `302` = `302`
 
-### GATEWAY_TIMEOUT
+### GATEWAY\_TIMEOUT
 
-> `readonly` **GATEWAY_TIMEOUT**: `504` = `504`
+> `readonly` **GATEWAY\_TIMEOUT**: `504` = `504`
 
 ### GONE
 
 > `readonly` **GONE**: `410` = `410`
 
-### HTTP_VERSION_NOT_SUPPORTED
+### HTTP\_VERSION\_NOT\_SUPPORTED
 
-> `readonly` **HTTP_VERSION_NOT_SUPPORTED**: `505` = `505`
+> `readonly` **HTTP\_VERSION\_NOT\_SUPPORTED**: `505` = `505`
 
-### IM_A_TEAPOT
+### IM\_A\_TEAPOT
 
-> `readonly` **IM_A_TEAPOT**: `418` = `418`
+> `readonly` **IM\_A\_TEAPOT**: `418` = `418`
 
-### INSUFFICIENT_STORAGE
+### INSUFFICIENT\_STORAGE
 
-> `readonly` **INSUFFICIENT_STORAGE**: `507` = `507`
+> `readonly` **INSUFFICIENT\_STORAGE**: `507` = `507`
 
-### INTERNAL_SERVER_ERROR
+### INTERNAL\_SERVER\_ERROR
 
-> `readonly` **INTERNAL_SERVER_ERROR**: `500` = `500`
+> `readonly` **INTERNAL\_SERVER\_ERROR**: `500` = `500`
 
-### LENGTH_REQUIRED
+### LENGTH\_REQUIRED
 
-> `readonly` **LENGTH_REQUIRED**: `411` = `411`
+> `readonly` **LENGTH\_REQUIRED**: `411` = `411`
 
 ### LOCKED
 
 > `readonly` **LOCKED**: `423` = `423`
 
-### LOOP_DETECTED
+### LOOP\_DETECTED
 
-> `readonly` **LOOP_DETECTED**: `508` = `508`
+> `readonly` **LOOP\_DETECTED**: `508` = `508`
 
-### METHOD_NOT_ALLOWED
+### METHOD\_NOT\_ALLOWED
 
-> `readonly` **METHOD_NOT_ALLOWED**: `405` = `405`
+> `readonly` **METHOD\_NOT\_ALLOWED**: `405` = `405`
 
-### MOVED_PERMANENTLY
+### MOVED\_PERMANENTLY
 
-> `readonly` **MOVED_PERMANENTLY**: `301` = `301`
+> `readonly` **MOVED\_PERMANENTLY**: `301` = `301`
 
-### MULTIPLE_CHOICES
+### MULTIPLE\_CHOICES
 
-> `readonly` **MULTIPLE_CHOICES**: `300` = `300`
+> `readonly` **MULTIPLE\_CHOICES**: `300` = `300`
 
-### NETWORK_AUTHENTICATION_REQUIRED
+### NETWORK\_AUTHENTICATION\_REQUIRED
 
-> `readonly` **NETWORK_AUTHENTICATION_REQUIRED**: `511` = `511`
+> `readonly` **NETWORK\_AUTHENTICATION\_REQUIRED**: `511` = `511`
 
-### NO_CONTENT
+### NO\_CONTENT
 
-> `readonly` **NO_CONTENT**: `204` = `204`
+> `readonly` **NO\_CONTENT**: `204` = `204`
 
-### NON_AUTHORITATIVE_INFORMATION
+### NON\_AUTHORITATIVE\_INFORMATION
 
-> `readonly` **NON_AUTHORITATIVE_INFORMATION**: `203` = `203`
+> `readonly` **NON\_AUTHORITATIVE\_INFORMATION**: `203` = `203`
 
-### NOT_ACCEPTABLE
+### NOT\_ACCEPTABLE
 
-> `readonly` **NOT_ACCEPTABLE**: `406` = `406`
+> `readonly` **NOT\_ACCEPTABLE**: `406` = `406`
 
-### NOT_EXTENDED
+### NOT\_EXTENDED
 
-> `readonly` **NOT_EXTENDED**: `510` = `510`
+> `readonly` **NOT\_EXTENDED**: `510` = `510`
 
-### NOT_FOUND
+### NOT\_FOUND
 
-> `readonly` **NOT_FOUND**: `404` = `404`
+> `readonly` **NOT\_FOUND**: `404` = `404`
 
-### NOT_IMPLEMENTED
+### NOT\_IMPLEMENTED
 
-> `readonly` **NOT_IMPLEMENTED**: `501` = `501`
+> `readonly` **NOT\_IMPLEMENTED**: `501` = `501`
 
-### NOT_MODIFIED
+### NOT\_MODIFIED
 
-> `readonly` **NOT_MODIFIED**: `304` = `304`
+> `readonly` **NOT\_MODIFIED**: `304` = `304`
 
 ### OK
 
 > `readonly` **OK**: `200` = `200`
 
-### PARTIAL_CONTENT
+### PARTIAL\_CONTENT
 
-> `readonly` **PARTIAL_CONTENT**: `206` = `206`
+> `readonly` **PARTIAL\_CONTENT**: `206` = `206`
 
-### PAYLOAD_TOO_LARGE
+### PAYLOAD\_TOO\_LARGE
 
-> `readonly` **PAYLOAD_TOO_LARGE**: `413` = `413`
+> `readonly` **PAYLOAD\_TOO\_LARGE**: `413` = `413`
 
-### PAYMENT_REQUIRED
+### PAYMENT\_REQUIRED
 
-> `readonly` **PAYMENT_REQUIRED**: `402` = `402`
+> `readonly` **PAYMENT\_REQUIRED**: `402` = `402`
 
-### PERMANENT_REDIRECT
+### PERMANENT\_REDIRECT
 
-> `readonly` **PERMANENT_REDIRECT**: `308` = `308`
+> `readonly` **PERMANENT\_REDIRECT**: `308` = `308`
 
-### PRECONDITION_FAILED
+### PRECONDITION\_FAILED
 
-> `readonly` **PRECONDITION_FAILED**: `412` = `412`
+> `readonly` **PRECONDITION\_FAILED**: `412` = `412`
 
-### PRECONDITION_REQUIRED
+### PRECONDITION\_REQUIRED
 
-> `readonly` **PRECONDITION_REQUIRED**: `428` = `428`
+> `readonly` **PRECONDITION\_REQUIRED**: `428` = `428`
 
 ### PROCESSING
 
 > `readonly` **PROCESSING**: `102` = `102`
 
-### PROXY_AUTHENTICATION_REQUIRED
+### PROXY\_AUTHENTICATION\_REQUIRED
 
-> `readonly` **PROXY_AUTHENTICATION_REQUIRED**: `407` = `407`
+> `readonly` **PROXY\_AUTHENTICATION\_REQUIRED**: `407` = `407`
 
-### RANGE_NOT_SATISFIABLE
+### RANGE\_NOT\_SATISFIABLE
 
-> `readonly` **RANGE_NOT_SATISFIABLE**: `416` = `416`
+> `readonly` **RANGE\_NOT\_SATISFIABLE**: `416` = `416`
 
-### REQUEST_HEADER_FIELDS_TOO_LARGE
+### REQUEST\_HEADER\_FIELDS\_TOO\_LARGE
 
-> `readonly` **REQUEST_HEADER_FIELDS_TOO_LARGE**: `431` = `431`
+> `readonly` **REQUEST\_HEADER\_FIELDS\_TOO\_LARGE**: `431` = `431`
 
-### REQUEST_TIMEOUT
+### REQUEST\_TIMEOUT
 
-> `readonly` **REQUEST_TIMEOUT**: `408` = `408`
+> `readonly` **REQUEST\_TIMEOUT**: `408` = `408`
 
-### RESET_CONTENT
+### RESET\_CONTENT
 
-> `readonly` **RESET_CONTENT**: `205` = `205`
+> `readonly` **RESET\_CONTENT**: `205` = `205`
 
-### SEE_OTHER
+### SEE\_OTHER
 
-> `readonly` **SEE_OTHER**: `303` = `303`
+> `readonly` **SEE\_OTHER**: `303` = `303`
 
-### SERVICE_UNAVAILABLE
+### SERVICE\_UNAVAILABLE
 
-> `readonly` **SERVICE_UNAVAILABLE**: `503` = `503`
+> `readonly` **SERVICE\_UNAVAILABLE**: `503` = `503`
 
-### SWITCHING_PROTOCOLS
+### SWITCHING\_PROTOCOLS
 
-> `readonly` **SWITCHING_PROTOCOLS**: `101` = `101`
+> `readonly` **SWITCHING\_PROTOCOLS**: `101` = `101`
 
-### TEMPORARY_REDIRECT
+### TEMPORARY\_REDIRECT
 
-> `readonly` **TEMPORARY_REDIRECT**: `307` = `307`
+> `readonly` **TEMPORARY\_REDIRECT**: `307` = `307`
 
-### TOO_EARLY
+### TOO\_EARLY
 
-> `readonly` **TOO_EARLY**: `425` = `425`
+> `readonly` **TOO\_EARLY**: `425` = `425`
 
-### TOO_MANY_REQUESTS
+### TOO\_MANY\_REQUESTS
 
-> `readonly` **TOO_MANY_REQUESTS**: `429` = `429`
+> `readonly` **TOO\_MANY\_REQUESTS**: `429` = `429`
 
 ### UNAUTHORIZED
 
 > `readonly` **UNAUTHORIZED**: `401` = `401`
 
-### UNAVAILABLE_FOR_LEGAL_REASONS
+### UNAVAILABLE\_FOR\_LEGAL\_REASONS
 
-> `readonly` **UNAVAILABLE_FOR_LEGAL_REASONS**: `451` = `451`
+> `readonly` **UNAVAILABLE\_FOR\_LEGAL\_REASONS**: `451` = `451`
 
-### UNPROCESSABLE_ENTITY
+### UNPROCESSABLE\_ENTITY
 
-> `readonly` **UNPROCESSABLE_ENTITY**: `422` = `422`
+> `readonly` **UNPROCESSABLE\_ENTITY**: `422` = `422`
 
-### UNSUPPORTED_MEDIA_TYPE
+### UNSUPPORTED\_MEDIA\_TYPE
 
-> `readonly` **UNSUPPORTED_MEDIA_TYPE**: `415` = `415`
+> `readonly` **UNSUPPORTED\_MEDIA\_TYPE**: `415` = `415`
 
-### UPGRADE_REQUIRED
+### UPGRADE\_REQUIRED
 
-> `readonly` **UPGRADE_REQUIRED**: `426` = `426`
+> `readonly` **UPGRADE\_REQUIRED**: `426` = `426`
 
-### URI_TOO_LONG
+### URI\_TOO\_LONG
 
-> `readonly` **URI_TOO_LONG**: `414` = `414`
+> `readonly` **URI\_TOO\_LONG**: `414` = `414`
 
-### VARIANT_ALSO_NEGOTIATES
+### VARIANT\_ALSO\_NEGOTIATES
 
-> `readonly` **VARIANT_ALSO_NEGOTIATES**: `506` = `506`
+> `readonly` **VARIANT\_ALSO\_NEGOTIATES**: `506` = `506`
 
 ## Example
 
 ```typescript
-import { HttpStatus } from "@croco/problems-core";
+import { HttpStatus } from '@croco/problems-core';
 
 if (response.status === HttpStatus.PAYLOAD_TOO_LARGE) {
   // 처리 로직

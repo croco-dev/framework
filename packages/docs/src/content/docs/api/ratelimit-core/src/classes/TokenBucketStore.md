@@ -53,7 +53,7 @@ title: "TokenBucketStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`check`](/api/ratelimit-core/src/classes/distributedratelimitstore/#check)
 
----
+***
 
 ### checkTokenBucket()
 
@@ -73,7 +73,7 @@ title: "TokenBucketStore"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
----
+***
 
 ### expire()
 
@@ -97,7 +97,7 @@ title: "TokenBucketStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`expire`](/api/ratelimit-core/src/classes/distributedratelimitstore/#expire)
 
----
+***
 
 ### getCount()
 
@@ -117,7 +117,7 @@ title: "TokenBucketStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`getCount`](/api/ratelimit-core/src/classes/distributedratelimitstore/#getcount)
 
----
+***
 
 ### getStats()
 
@@ -137,7 +137,7 @@ title: "TokenBucketStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`getStats`](/api/ratelimit-core/src/classes/distributedratelimitstore/#getstats)
 
----
+***
 
 ### increment()
 
@@ -161,7 +161,7 @@ title: "TokenBucketStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`increment`](/api/ratelimit-core/src/classes/distributedratelimitstore/#increment)
 
----
+***
 
 ### pruneExpired()
 
@@ -175,7 +175,7 @@ title: "TokenBucketStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/distributedratelimitstore/#pruneexpired)
 
----
+***
 
 ### reset()
 

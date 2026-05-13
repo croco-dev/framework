@@ -61,7 +61,7 @@ LLM 모델 인스턴스
 
 [`LlmRegistry`](/api/llm-core/src/classes/llmregistry/).[`getModel`](/api/llm-core/src/classes/llmregistry/#getmodel)
 
----
+***
 
 ### listModels()
 
@@ -79,7 +79,7 @@ LLM 모델 인스턴스
 
 [`LlmRegistry`](/api/llm-core/src/classes/llmregistry/).[`listModels`](/api/llm-core/src/classes/llmregistry/#listmodels)
 
----
+***
 
 ### registerProvider()
 

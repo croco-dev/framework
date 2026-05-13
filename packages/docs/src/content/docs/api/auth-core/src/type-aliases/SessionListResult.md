@@ -15,7 +15,7 @@ title: "SessionListResult"
 
 > **sessions**: [`Session`](/api/auth-core/src/type-aliases/session/)[]
 
----
+***
 
 ### totalCount
 
