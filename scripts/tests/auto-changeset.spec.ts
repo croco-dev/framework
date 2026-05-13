@@ -41,9 +41,12 @@ describe("auto-changeset.mts", () => {
       repo,
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(result.stdout).toContain("auto-changeset: created and committed");
-    expect(readOnlyChangeset(repo)).toContain("'@croco/*': minor");
+    expect(result.stdout).toContain(
+      "auto-changeset: push aborted — run 'git push' again to include the changeset",
+    );
+    expect(readOnlyChangeset(repo)).toContain("'@croco/framework-context': minor");
     expect(git(repo, ["log", "-1", "--format=%s"])).toBe("chore: add changeset [skip ci]");
   });
 
@@ -54,9 +57,12 @@ describe("auto-changeset.mts", () => {
 
     const result = runScript(newBranchStdin("fix/patch", git(repo, ["rev-parse", "HEAD"])), repo);
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(result.stdout).toContain("auto-changeset: created and committed");
-    expect(readOnlyChangeset(repo)).toContain("'@croco/*': patch");
+    expect(result.stdout).toContain(
+      "auto-changeset: push aborted — run 'git push' again to include the changeset",
+    );
+    expect(readOnlyChangeset(repo)).toContain("'@croco/framework-context': patch");
   });
 
   it("detects feat! → major bump (BREAKING CHANGE from title)", () => {
@@ -69,9 +75,12 @@ describe("auto-changeset.mts", () => {
       repo,
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(result.stdout).toContain("auto-changeset: created and committed");
-    expect(readOnlyChangeset(repo)).toContain("'@croco/*': major");
+    expect(result.stdout).toContain(
+      "auto-changeset: push aborted — run 'git push' again to include the changeset",
+    );
+    expect(readOnlyChangeset(repo)).toContain("'@croco/framework-context': major");
   });
 
   it("detects BREAKING CHANGE from body footer → major bump", () => {
@@ -90,9 +99,12 @@ describe("auto-changeset.mts", () => {
       repo,
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(result.stdout).toContain("auto-changeset: created and committed");
-    expect(readOnlyChangeset(repo)).toContain("'@croco/*': major");
+    expect(result.stdout).toContain(
+      "auto-changeset: push aborted — run 'git push' again to include the changeset",
+    );
+    expect(readOnlyChangeset(repo)).toContain("'@croco/framework-context': major");
   });
 
   it("skips when changeset already exists", () => {
@@ -124,9 +136,12 @@ describe("auto-changeset.mts", () => {
       repo,
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(result.stdout).toContain("auto-changeset: created and committed");
-    expect(readOnlyChangeset(repo)).toContain("'@croco/*': minor");
+    expect(result.stdout).toContain(
+      "auto-changeset: push aborted — run 'git push' again to include the changeset",
+    );
+    expect(readOnlyChangeset(repo)).toContain("'@croco/framework-context': minor");
   });
 });
 
