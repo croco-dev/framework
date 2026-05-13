@@ -11,6 +11,8 @@ pre-commit:
 
 pre-push:
   commands:
+    auto-changeset:
+      run: node --experimental-strip-types scripts/auto-changeset.mts
     test:
       run: pnpm exec turbo run test --output-logs=errors-only --ui=stream --log-order=grouped
     typecheck:
