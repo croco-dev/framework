@@ -121,7 +121,7 @@ describe("EventBus benchmarks", () => {
     );
   });
 
-  describe("EventPublisher.publish single event", () => {
+  describe("EventPublisher.publishNow single event", () => {
     bench(
       "should publish single event",
       async () => {

@@ -14,7 +14,6 @@ import {
   InvalidRoleProblem,
   MembershipNotFoundProblem,
   OwnershipTransferRequiredProblem,
-  RoleHierarchyViolationProblem,
   SeatLimitExceededProblem,
 } from "../libs/problems/MembershipProblems";
 import type { SeatLimitChecker } from "../libs/SeatLimitChecker";
@@ -23,7 +22,7 @@ import type { MembershipCreateInput, MembershipRole } from "../libs/types";
 describe("MembershipManager", () => {
   let manager!: MembershipManager;
   let store!: InMemoryMembershipStore;
-  let publish!: ReturnType<typeof vi.fn>;
+  let publishNow!: ReturnType<typeof vi.fn>;
 
   const createInput = (overrides: Partial<MembershipCreateInput> = {}): MembershipCreateInput => {
     return {
@@ -42,10 +41,10 @@ describe("MembershipManager", () => {
     Container.reset();
 
     store = new InMemoryMembershipStore();
-    publish = vi.fn();
+    publishNow = vi.fn();
 
     manager = new MembershipManager(store, {
-      publish,
+      publishNow,
       publishMany: vi.fn(),
     } as unknown as EventPublisher);
   });
@@ -57,9 +56,9 @@ describe("MembershipManager", () => {
       expect(membership.tenantId).toBe("tenant-1");
       expect(membership.userId).toBe("user-1");
       expect(membership.role).toBe("member");
-      expect(publish).toHaveBeenCalledWith(expect.any(MembershipCreatedEvent));
+      expect(publishNow).toHaveBeenCalledWith(expect.any(MembershipCreatedEvent));
 
-      const [event] = publish.mock.calls[0] as [MembershipCreatedEvent];
+      const [event] = publishNow.mock.calls[0] as [MembershipCreatedEvent];
       expect(event.data).toEqual({ tenantId: "tenant-1", userId: "user-1", role: "member" });
     });
 
@@ -78,7 +77,7 @@ describe("MembershipManager", () => {
     });
 
     it("should propagate event publication failures", async () => {
-      publish.mockRejectedValueOnce(new Error("publish failed"));
+      publishNow.mockRejectedValueOnce(new Error("publish failed"));
 
       await expect(manager.addMember("tenant-1", "user-1", "member")).rejects.toThrow(
         "publish failed",
@@ -101,7 +100,7 @@ describe("MembershipManager", () => {
 
       manager = new MembershipManager(
         store,
-        { publish, publishMany: vi.fn() } as unknown as EventPublisher,
+        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -124,7 +123,7 @@ describe("MembershipManager", () => {
 
       manager = new MembershipManager(
         store,
-        { publish, publishMany: vi.fn() } as unknown as EventPublisher,
+        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -141,9 +140,9 @@ describe("MembershipManager", () => {
 
       const membership = await store.findByTenantAndUser("tenant-1", "user-1");
       expect(membership).toBeNull();
-      expect(publish).toHaveBeenCalledWith(expect.any(MembershipRemovedEvent));
+      expect(publishNow).toHaveBeenCalledWith(expect.any(MembershipRemovedEvent));
 
-      const [event] = publish.mock.calls[0] as [MembershipRemovedEvent];
+      const [event] = publishNow.mock.calls[0] as [MembershipRemovedEvent];
       expect(event.data).toEqual({ tenantId: "tenant-1", userId: "user-1", role: "member" });
     });
 
@@ -173,9 +172,9 @@ describe("MembershipManager", () => {
       const membership = await manager.updateRole("tenant-1", "user-1", "admin");
 
       expect(membership.role).toBe("admin");
-      expect(publish).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
+      expect(publishNow).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
 
-      const [event] = publish.mock.calls[0] as [MembershipUpdatedEvent];
+      const [event] = publishNow.mock.calls[0] as [MembershipUpdatedEvent];
       expect(event.data).toEqual({
         tenantId: "tenant-1",
         userId: "user-1",
@@ -190,7 +189,7 @@ describe("MembershipManager", () => {
       const membership = await manager.updateRole("tenant-1", "user-1", "member");
 
       expect(membership.role).toBe("member");
-      expect(publish).not.toHaveBeenCalled();
+      expect(publishNow).not.toHaveBeenCalled();
     });
 
     it("should prevent demoting the last owner", async () => {
@@ -261,14 +260,14 @@ describe("MembershipManager", () => {
       expect(toMembership?.role).toBe("owner");
     });
 
-    it("should publish events for both users", async () => {
+    it("should publishNow events for both users", async () => {
       await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
       await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
 
       await manager.transferOwnership("tenant-1", "user-1", "user-2");
 
-      expect(publish).toHaveBeenCalledTimes(2);
-      expect(publish).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
+      expect(publishNow).toHaveBeenCalledTimes(2);
+      expect(publishNow).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
     });
 
     it("should throw OwnershipTransferRequiredProblem when from user is not owner", async () => {

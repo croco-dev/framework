@@ -94,7 +94,7 @@ export class CustomerHealthService {
     }
 
     if (previous.status !== score.status) {
-      await eventPublisher.publish(
+      await eventPublisher.publishNow(
         new HealthStatusChangedEvent(
           score.tenantId,
           previous.status,
@@ -106,7 +106,7 @@ export class CustomerHealthService {
 
     const dropPercentage = this.calculateDropPercentage(previous.overallScore, score.overallScore);
     if (dropPercentage >= SCORE_DROP_EVENT_THRESHOLD_PERCENT) {
-      await eventPublisher.publish(
+      await eventPublisher.publishNow(
         new HealthScoreDroppedEvent(
           score.tenantId,
           previous.overallScore,

@@ -21,8 +21,6 @@ function createMockStore(): BillingStore {
     reserveWebhook: vi.fn(),
     completeWebhook: vi.fn(),
     failWebhook: vi.fn(),
-    isWebhookProcessed: vi.fn(),
-    markWebhookProcessed: vi.fn(),
   };
 }
 
@@ -73,31 +71,7 @@ describe("PolarWebhookHandler", () => {
   });
 
   describe("이미 처리된 이벤트는 스킵 (멱등성)", () => {
-    it("이미 처리된 webhook 이벤트는 다시 처리하지 않음", async () => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(true);
-
-      const eventData = {
-        id: "evt-123",
-        type: "subscription.created",
-        data: {},
-      };
-
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
-
-      const body = JSON.stringify(eventData);
-      const headers = { "webhook-id": "evt-123", "webhook-signature": "sig-123" };
-
-      const result = await handler.handle(body, headers);
-
-      expect(result.success).toBe(true);
-      expect(result.eventId).toBe("evt-123");
-      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
-      expect(mockEventPublisher.publish).not.toHaveBeenCalled();
-      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
-    });
-
     it("should process webhook only once for concurrent requests", async () => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
       vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
@@ -145,7 +119,6 @@ describe("PolarWebhookHandler", () => {
     });
 
     it("reserveWebhook에서 중복 충돌이 나면 이미 처리된 이벤트로 간주하고 스킵", async () => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.reserveWebhook).mockRejectedValue(
         new Error(
           'duplicate key value violates unique constraint "processed_webhooks_event_id_key"',
@@ -175,7 +148,7 @@ describe("PolarWebhookHandler", () => {
       expect(result.success).toBe(true);
       expect(result.eventId).toBe("evt-dup-conflict");
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
-      expect(mockEventPublisher.publish).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
       expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
       expect(mockStore.completeWebhook).not.toHaveBeenCalled();
     });
@@ -183,7 +156,6 @@ describe("PolarWebhookHandler", () => {
 
   describe("subscription 이벤트 처리", () => {
     beforeEach(() => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.failWebhook).mockResolvedValue(undefined);
@@ -315,7 +287,6 @@ describe("PolarWebhookHandler", () => {
 
   describe("order 이벤트 처리", () => {
     beforeEach(() => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
     });
@@ -358,8 +329,6 @@ describe("PolarWebhookHandler", () => {
 
   describe("webhook 검증 실패", () => {
     it("잘못된 서명으로 인해 검증 실패", async () => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
-
       const body = JSON.stringify({ id: "evt-789", type: "subscription.created" });
       const headers = { "webhook-id": "evt-789", "webhook-signature": "invalid-signature" };
 
@@ -380,12 +349,10 @@ describe("PolarWebhookHandler", () => {
         detail: "Webhook validation failed: Invalid signature",
       });
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
-      expect(mockEventPublisher.publish).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
     });
 
     it("이벤트 ID 또는 타입 누락 시 실패", async () => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
-
       const body = JSON.stringify({});
       const headers = { "webhook-id": "evt-999" };
 
@@ -400,7 +367,6 @@ describe("PolarWebhookHandler", () => {
 
   describe("처리 완료 후 completeWebhook 호출", () => {
     it("성공적인 이벤트 처리 후 webhook 처리 기록 저장", async () => {
-      vi.mocked(mockStore.isWebhookProcessed).mockResolvedValue(false);
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
       vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);

@@ -24,7 +24,6 @@ export { CircuitBreaker } from "./libs/CircuitBreaker";
 export { CircuitBreakerRetryTemplate } from "./libs/CircuitBreakerRetryTemplate";
 export type {
   CircuitStateTransition,
-  DistributedCircuitBreakerStateStore,
   InMemoryCircuitBreakerStateStoreOptions,
 } from "./libs/CircuitBreakerState";
 /**
@@ -34,7 +33,6 @@ export {
   CircuitBreakerStateStore,
   CircuitState,
   InMemoryCircuitBreakerStateStore,
-  isDistributedStore,
 } from "./libs/CircuitBreakerState";
 
 /**

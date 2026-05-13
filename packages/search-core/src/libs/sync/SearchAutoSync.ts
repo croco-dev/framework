@@ -34,7 +34,7 @@ class LRUCache<T> {
 import { SearchEngine } from "../SearchEngine";
 
 export type SearchSyncFailedEventPublisher = {
-  publish(event: SearchSyncFailedEvent): Promise<void>;
+  publishNow(event: SearchSyncFailedEvent): Promise<void>;
 };
 
 @RegisterEventHandler(DocumentDeletedEvent)
@@ -89,7 +89,7 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
     }
 
     try {
-      await this.failedEventPublisher.publish(event);
+      await this.failedEventPublisher.publishNow(event);
     } catch (error) {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
       try {

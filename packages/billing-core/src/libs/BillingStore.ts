@@ -1,4 +1,4 @@
-import type { BillingAccount, Order, ProcessedWebhook, Subscription } from "../types";
+import type { BillingAccount, Order, Subscription } from "../types";
 
 /**
  * Abstract storage for billing data.
@@ -27,10 +27,4 @@ export abstract class BillingStore {
   abstract reserveWebhook(eventId: string, eventType: string): Promise<void>;
   abstract completeWebhook(eventId: string): Promise<void>;
   abstract failWebhook(eventId: string): Promise<void>;
-
-  /** @deprecated Use reserveWebhook and completeWebhook instead. */
-  abstract isWebhookProcessed(eventId: string): Promise<boolean>;
-
-  /** @deprecated Use reserveWebhook and completeWebhook instead. */
-  abstract markWebhookProcessed(webhook: ProcessedWebhook): Promise<void>;
 }

@@ -420,7 +420,7 @@ describe("BillingService", () => {
 
     it("should publish SubscriptionCanceledEvent when eventPublisher is provided", async () => {
       const mockEventPublisher = {
-        publish: vi.fn(),
+        publishNow: vi.fn(),
         publishMany: vi.fn(),
       };
 
@@ -446,7 +446,7 @@ describe("BillingService", () => {
 
       await serviceWithPublisher.cancelSubscription("tenant-1", false);
 
-      expect(mockEventPublisher.publish).toHaveBeenCalledWith(
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId: "tenant-1",
           externalSubscriptionId: "ext-sub-1",

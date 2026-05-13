@@ -9,10 +9,7 @@ import { DomainEvent } from "../libs/DomainEvent";
 import type { EventBus } from "../libs/EventBus";
 import { EventBusConfig } from "../libs/EventBusConfig";
 import { EventPublisher } from "../libs/EventPublisher";
-import {
-  EventAfterCommitRequiresActiveTransactionProblem,
-  EventTransactionContextUnavailableProblem,
-} from "../libs/problems/EventsProblems";
+import { EventAfterCommitRequiresActiveTransactionProblem } from "../libs/problems/EventsProblems";
 
 class TestEvent extends DomainEvent {
   static eventName = "TestEvent";
@@ -64,11 +61,11 @@ describe("EventPublisher", () => {
     publisher = new EventPublisher(config);
   });
 
-  describe("publish", () => {
+  describe("publishNow", () => {
     it("should publish event through event bus", async () => {
       const event = new TestEvent("test-data");
 
-      await publisher.publish(event);
+      await publisher.publishNow(event);
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(event);
@@ -78,8 +75,8 @@ describe("EventPublisher", () => {
       const event1 = new TestEvent("first");
       const event2 = new TestEvent("second");
 
-      await publisher.publish(event1);
-      await publisher.publish(event2);
+      await publisher.publishNow(event1);
+      await publisher.publishNow(event2);
 
       expect(mockEventBus.publishedEvents).toHaveLength(2);
       expect(mockEventBus.publishedEvents[0]).toBe(event1);
@@ -101,7 +98,7 @@ describe("EventPublisher", () => {
 
       config.setEventBus(asyncMockEventBus);
 
-      const publishPromise = publisher.publish(new TestEvent("async"));
+      const publishPromise = publisher.publishNow(new TestEvent("async"));
 
       expect(publishPromise).toBeInstanceOf(Promise);
 
@@ -121,10 +118,10 @@ describe("EventPublisher", () => {
 
       config.setEventBus(errorEventBus);
 
-      await expect(publisher.publish(new TestEvent("error"))).rejects.toThrow("Event bus error");
+      await expect(publisher.publishNow(new TestEvent("error"))).rejects.toThrow("Event bus error");
     });
 
-    it("should keep deprecated tx-aware publish behavior inside transactions", async () => {
+    it("should keep tx-aware behavior inside transactions (via publishAfterCommit)", async () => {
       let registeredHook: (() => void | Promise<void>) | undefined;
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
@@ -137,7 +134,7 @@ describe("EventPublisher", () => {
 
       const event = new TestEvent("deprecated-with-tx");
 
-      await publisher.publish(event);
+      publisher.publishAfterCommit(event);
 
       expect(mockEventBus.publishedEvents).toHaveLength(0);
       expect(registeredHook).not.toBeUndefined();
@@ -378,7 +375,7 @@ describe("EventPublisher", () => {
     it("should use event bus from config", async () => {
       const event = new TestEvent("config-test");
 
-      await publisher.publish(event);
+      await publisher.publishNow(event);
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);
     });
@@ -388,10 +385,10 @@ describe("EventPublisher", () => {
       const secondEventBus = new MockEventBus();
 
       config.setEventBus(firstEventBus);
-      await publisher.publish(new TestEvent("first"));
+      await publisher.publishNow(new TestEvent("first"));
 
       config.setEventBus(secondEventBus);
-      await publisher.publish(new TestEvent("second"));
+      await publisher.publishNow(new TestEvent("second"));
 
       expect(firstEventBus.publishedEvents).toHaveLength(1);
       expect(secondEventBus.publishedEvents).toHaveLength(1);
@@ -403,7 +400,7 @@ describe("EventPublisher", () => {
     it("트랜잭션 컨텍스트가 없으면 즉시 발행한다", async () => {
       const event = new TestEvent("no-tx");
 
-      await publisher.publish(event);
+      await publisher.publishNow(event);
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(event);
@@ -419,31 +416,19 @@ describe("EventPublisher", () => {
       );
 
       const event = new TestEvent("inactive-tx");
-      await publisher.publish(event);
+      await publisher.publishNow(event);
 
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(event);
     });
 
     it("등록된 트랜잭션 컨텍스트 조회 실패 시 명시적 오류를 던진다", async () => {
-      Container.set(
-        TRANSACTION_CONTEXT_TOKEN as never,
-        {
-          isInTransaction: () => false,
-          onAfterCommit: () => {},
-        } satisfies TransactionContext as never,
-      );
-
-      vi.spyOn(Container, "get").mockImplementation(() => {
-        throw new Error("Broken transaction context");
-      });
+      // Ensure no transaction context is registered
+      Container.remove(TRANSACTION_CONTEXT_TOKEN as never);
 
       const event = new TestEvent("no-tx");
-      await expect(publisher.publish(event)).rejects.toThrow(
-        EventTransactionContextUnavailableProblem,
-      );
-      await expect(publisher.publish(event)).rejects.toThrow(
-        "Transaction context unavailable during event publication: Broken transaction context",
+      expect(() => publisher.publishAfterCommit(event)).toThrow(
+        EventAfterCommitRequiresActiveTransactionProblem,
       );
 
       expect(mockEventBus.publishedEvents).toHaveLength(0);
@@ -461,7 +446,7 @@ describe("EventPublisher", () => {
       Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
 
       const event = new TestEvent("with-tx");
-      await publisher.publish(event);
+      publisher.publishAfterCommit(event);
 
       // Should not be published immediately
       expect(mockEventBus.publishedEvents).toHaveLength(0);
@@ -486,7 +471,7 @@ describe("EventPublisher", () => {
       Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
 
       const event = new TestEvent("rollback-tx");
-      await publisher.publish(event);
+      publisher.publishAfterCommit(event);
 
       // Even after waiting, it should not be published
       expect(mockEventBus.publishedEvents).toHaveLength(0);

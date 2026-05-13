@@ -85,8 +85,6 @@ describe("BillingEventHandler", () => {
       saveSubscription: vi.fn(),
       saveOrder: vi.fn(),
       findOrdersByAccount: vi.fn(),
-      isWebhookProcessed: vi.fn(),
-      markWebhookProcessed: vi.fn(),
     } as unknown as BillingStore;
 
     metricsRepository = createMetricsRepository();

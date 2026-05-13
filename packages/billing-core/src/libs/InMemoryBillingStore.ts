@@ -1,4 +1,4 @@
-import type { BillingAccount, Order, ProcessedWebhook, Subscription } from "../types";
+import type { BillingAccount, Order, Subscription } from "../types";
 import { BillingStore } from "./BillingStore";
 import { WebhookAlreadyProcessedProblem } from "./problems/BillingProblems";
 
@@ -90,15 +90,6 @@ export class InMemoryBillingStore extends BillingStore {
 
   async findOrdersByAccount(billingAccountId: string): Promise<Order[]> {
     return this.orders.get(billingAccountId) ?? [];
-  }
-
-  async isWebhookProcessed(eventId: string): Promise<boolean> {
-    return this.processedWebhooks.get(eventId) === "COMPLETED";
-  }
-
-  async markWebhookProcessed(webhook: ProcessedWebhook): Promise<void> {
-    await this.reserveWebhook(webhook.eventId, webhook.eventType);
-    await this.completeWebhook(webhook.eventId);
   }
 
   async reserveWebhook(eventId: string, _eventType: string): Promise<void> {

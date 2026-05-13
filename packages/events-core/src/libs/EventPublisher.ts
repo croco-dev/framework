@@ -56,18 +56,6 @@ export class EventPublisher {
     txContext.onAfterCommit(() => this.eventBus.publish(event));
   }
 
-  /**
-   * @deprecated Use publishNow() for immediate publication or publishAfterCommit() for explicit after-commit scheduling.
-   */
-  async publish(event: DomainEvent): Promise<void> {
-    const txContext = this.tryGetTransactionContext();
-    if (txContext?.isInTransaction()) {
-      this.publishAfterCommit(event);
-    } else {
-      await this.publishNow(event);
-    }
-  }
-
   async publishMany(events: DomainEvent[]): Promise<PublishResult<DomainEvent>[]> {
     const results: PublishResult<DomainEvent>[] = [];
     for (const event of events) {

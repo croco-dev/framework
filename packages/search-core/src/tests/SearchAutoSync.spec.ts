@@ -14,7 +14,7 @@ describe("SearchAutoSync", () => {
   let searchAutoSync!: SearchAutoSync;
   let searchEngine!: SearchEngine;
   let eventBusMock!: {
-    publish: ReturnType<typeof vi.fn>;
+    publishNow: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -29,7 +29,7 @@ describe("SearchAutoSync", () => {
     Container.set(SearchEngine.token as unknown as Constructor<SearchEngine>, searchEngine);
 
     eventBusMock = {
-      publish: vi.fn(),
+      publishNow: vi.fn(),
     };
 
     searchAutoSync = new SearchAutoSync(eventBusMock as SearchSyncFailedEventPublisher);
@@ -129,8 +129,8 @@ describe("SearchAutoSync", () => {
 
       await searchAutoSync.handle(event);
 
-      expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
-      const failedEvent = eventBusMock.publish.mock.calls[0][0];
+      expect(eventBusMock.publishNow).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
+      const failedEvent = eventBusMock.publishNow.mock.calls[0][0];
       expect(failedEvent.error).toBe(error);
       expect(failedEvent.operation).toBe("index");
     });
@@ -175,8 +175,8 @@ describe("SearchAutoSync", () => {
 
       await searchAutoSync.handle(event);
 
-      expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
-      const failedEvent = eventBusMock.publish.mock.calls[0][0];
+      expect(eventBusMock.publishNow).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
+      const failedEvent = eventBusMock.publishNow.mock.calls[0][0];
       expect(failedEvent.operation).toBe("delete");
     });
 
@@ -199,7 +199,7 @@ describe("SearchAutoSync", () => {
       await expect(
         searchAutoSync.handle(new DocumentDeletedEvent("users", "user-1", "tenant-1")),
       ).resolves.toBeUndefined();
-      expect(eventBusMock.publish).not.toHaveBeenCalled();
+      expect(eventBusMock.publishNow).not.toHaveBeenCalled();
     });
   });
 });

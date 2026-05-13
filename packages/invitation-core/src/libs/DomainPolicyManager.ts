@@ -122,6 +122,6 @@ export class DomainPolicyManager {
   private async publishSafely(
     event: DomainPolicyAddedEvent | DomainPolicyRemovedEvent | DomainAutoJoinedEvent,
   ): Promise<void> {
-    await this.eventPublisher.publish(event);
+    await this.eventPublisher.publishNow(event);
   }
 }

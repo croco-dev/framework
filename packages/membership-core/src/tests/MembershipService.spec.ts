@@ -3,26 +3,23 @@ import type { EntitlementQuotaStatus } from "@croco/entitlements-core";
 import type { EventPublisher } from "@croco/events-core";
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MembershipCreatedEvent } from "../libs/events/MembershipCreatedEvent";
-import { MembershipRemovedEvent } from "../libs/events/MembershipRemovedEvent";
 import { MembershipUpdatedEvent } from "../libs/events/MembershipUpdatedEvent";
 import { InMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
 import { MembershipService } from "../libs/MembershipService";
 import { LastOwnerCannotBeRemovedProblem } from "../libs/problems/LastOwnerCannotBeRemovedProblem";
 import {
-  AlreadyMemberProblem,
   InvalidRoleProblem,
   MembershipNotFoundProblem,
   OwnershipTransferRequiredProblem,
   SeatLimitExceededProblem,
 } from "../libs/problems/MembershipProblems";
 import type { SeatLimitChecker } from "../libs/SeatLimitChecker";
-import type { MembershipCreateInput, MembershipRole } from "../libs/types";
+import type { MembershipCreateInput } from "../libs/types";
 
 describe("MembershipService", () => {
   let service!: MembershipService;
   let store!: InMemoryMembershipStore;
-  let publish!: ReturnType<typeof vi.fn>;
+  let publishNow!: ReturnType<typeof vi.fn>;
 
   const createInput = (overrides: Partial<MembershipCreateInput> = {}): MembershipCreateInput => {
     return {
@@ -41,17 +38,17 @@ describe("MembershipService", () => {
     Container.reset();
 
     store = new InMemoryMembershipStore();
-    publish = vi.fn();
+    publishNow = vi.fn();
 
     service = new MembershipService(store, {
-      publish,
+      publishNow,
       publishMany: vi.fn(),
     } as unknown as EventPublisher);
   });
 
   describe("addMember", () => {
     it("should propagate event publication failures when adding a member", async () => {
-      publish.mockRejectedValueOnce(new Error("publish failed"));
+      publishNow.mockRejectedValueOnce(new Error("publish failed"));
 
       await expect(service.addMember("tenant-1", "user-1", "member")).rejects.toThrow(
         "publish failed",
@@ -88,7 +85,7 @@ describe("MembershipService", () => {
 
       service = new MembershipService(
         store,
-        { publish, publishMany: vi.fn() } as unknown as EventPublisher,
+        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -111,7 +108,7 @@ describe("MembershipService", () => {
 
       service = new MembershipService(
         store,
-        { publish, publishMany: vi.fn() } as unknown as EventPublisher,
+        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -212,14 +209,14 @@ describe("MembershipService", () => {
       ).rejects.toBeInstanceOf(MembershipNotFoundProblem);
     });
 
-    it("should publish events for both users", async () => {
+    it("should publishNow events for both users", async () => {
       await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
       await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
 
       await service.transferOwnership("tenant-1", "user-1", "user-2");
 
-      expect(publish).toHaveBeenCalledTimes(2);
-      expect(publish).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
+      expect(publishNow).toHaveBeenCalledTimes(2);
+      expect(publishNow).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
     });
   });
 

@@ -61,7 +61,7 @@ export class ImpersonationService {
 
     await this.store.save(session);
 
-    await this.eventPublisher.publish(new ImpersonationStartedEvent(session));
+    await this.eventPublisher.publishNow(new ImpersonationStartedEvent(session));
 
     return session;
   }
@@ -74,7 +74,7 @@ export class ImpersonationService {
 
     await this.store.revoke(sessionId);
 
-    await this.eventPublisher.publish(new ImpersonationEndedEvent(session));
+    await this.eventPublisher.publishNow(new ImpersonationEndedEvent(session));
   }
 
   isImpersonating(context: RequestContext): context is ImpersonationContext {

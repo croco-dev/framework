@@ -190,6 +190,6 @@ export class MembershipManager implements AbstractMembershipManager {
   private async publishSafely(
     event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent,
   ): Promise<void> {
-    await this.eventPublisher.publish(event);
+    await this.eventPublisher.publishNow(event);
   }
 }

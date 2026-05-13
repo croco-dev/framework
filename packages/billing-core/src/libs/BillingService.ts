@@ -151,7 +151,7 @@ export class BillingService {
     }
 
     if (this.eventPublisher) {
-      await this.eventPublisher.publish(
+      await this.eventPublisher.publishNow(
         new SubscriptionCanceledEvent(tenantId, subscription.externalSubscriptionId, !immediate),
       );
     }

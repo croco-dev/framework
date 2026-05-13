@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
 import { WebhookAlreadyProcessedProblem } from "../libs/problems/BillingProblems";
-import type { BillingAccount, Order, ProcessedWebhook, Subscription } from "../types";
+import type { BillingAccount, Order, Subscription } from "../types";
 
 describe("InMemoryBillingStore", () => {
   let store!: InMemoryBillingStore;
@@ -224,41 +224,6 @@ describe("InMemoryBillingStore", () => {
     });
   });
 
-  describe("isWebhookProcessed and markWebhookProcessed", () => {
-    it("should return false before webhook is processed", async () => {
-      const result = await store.isWebhookProcessed("event-1");
-      expect(result).toBe(false);
-    });
-
-    it("should return true after webhook is processed", async () => {
-      const webhook: ProcessedWebhook = {
-        eventId: "event-1",
-        eventType: "subscription.created",
-        processedAt: new Date(),
-      };
-      await store.markWebhookProcessed(webhook);
-
-      const result = await store.isWebhookProcessed("event-1");
-      expect(result).toBe(true);
-    });
-
-    it("should reject duplicate webhook claims", async () => {
-      const webhook: ProcessedWebhook = {
-        eventId: "event-1",
-        eventType: "subscription.created",
-        processedAt: new Date(),
-      };
-
-      await store.markWebhookProcessed(webhook);
-      await expect(store.markWebhookProcessed(webhook)).rejects.toBeInstanceOf(
-        WebhookAlreadyProcessedProblem,
-      );
-
-      const result = await store.isWebhookProcessed("event-1");
-      expect(result).toBe(true);
-    });
-  });
-
   describe("webhook reservation lifecycle", () => {
     it("should reject a completed webhook when reserving the same event again", async () => {
       await store.reserveWebhook("event-1", "subscription.created");
@@ -267,7 +232,6 @@ describe("InMemoryBillingStore", () => {
       await expect(store.reserveWebhook("event-1", "subscription.created")).rejects.toBeInstanceOf(
         WebhookAlreadyProcessedProblem,
       );
-      expect(await store.isWebhookProcessed("event-1")).toBe(true);
     });
 
     it("should allow reserving the same event after a failed reservation", async () => {
@@ -277,19 +241,12 @@ describe("InMemoryBillingStore", () => {
       await expect(
         store.reserveWebhook("event-1", "subscription.created"),
       ).resolves.toBeUndefined();
-      expect(await store.isWebhookProcessed("event-1")).toBe(false);
     });
 
     it("should reject completion when the webhook was not reserved", async () => {
       await expect(store.completeWebhook("event-1")).rejects.toBeInstanceOf(
         WebhookAlreadyProcessedProblem,
       );
-    });
-
-    it("should return false while a webhook is reserved but not completed", async () => {
-      await store.reserveWebhook("event-1", "subscription.created");
-
-      expect(await store.isWebhookProcessed("event-1")).toBe(false);
     });
 
     it("should reject duplicate webhook reservations", async () => {
@@ -329,16 +286,11 @@ describe("InMemoryBillingStore", () => {
         reason: "subscription_cycle",
         paidAt: new Date(),
       };
-      const webhook: ProcessedWebhook = {
-        eventId: "event-1",
-        eventType: "subscription.created",
-        processedAt: new Date(),
-      };
-
       await store.saveAccount(account);
       await store.saveSubscription(subscription);
       await store.saveOrder(order);
-      await store.markWebhookProcessed(webhook);
+      await store.reserveWebhook("event-1", "subscription.created");
+      await store.completeWebhook("event-1");
 
       store.reset();
 
@@ -347,7 +299,9 @@ describe("InMemoryBillingStore", () => {
       expect(await store.findSubscription("tenant-1")).toBeNull();
       expect(await store.findSubscriptionByExternalId("ext-sub-1")).toBeNull();
       expect(await store.findOrdersByAccount("tenant-1")).toEqual([]);
-      expect(await store.isWebhookProcessed("event-1")).toBe(false);
+      await expect(
+        store.reserveWebhook("event-1", "subscription.created"),
+      ).resolves.toBeUndefined();
     });
   });
 });

@@ -42,7 +42,7 @@ describe("CustomerHealthService", () => {
     mockRegistry = new MockSignalProvider();
     calculator = new HealthScoreCalculator();
     mockEventPublisher = {
-      publish: vi.fn().mockResolvedValue(undefined),
+      publishNow: vi.fn().mockResolvedValue(undefined),
     } as unknown as EventPublisher;
 
     Container.set(EventPublisher, mockEventPublisher);
@@ -81,7 +81,7 @@ describe("CustomerHealthService", () => {
     const stored = await store.findLatest("tenant-1");
     expect(stored).not.toBeNull();
     expect(stored?.overallScore).toBe(80);
-    expect(mockEventPublisher.publish).not.toHaveBeenCalled();
+    expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
   });
 
   it("should detect status change from healthy to at_risk and publish event", async () => {
@@ -128,10 +128,12 @@ describe("CustomerHealthService", () => {
     expect(result.status).toBe("at_risk");
     expect(result.previousScore).toBe(85);
     expect(result.trend).toBe("declining");
-    expect(mockEventPublisher.publish).toHaveBeenCalledWith(expect.any(HealthStatusChangedEvent));
+    expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
+      expect.any(HealthStatusChangedEvent),
+    );
 
     const statusChangedEvent = vi
-      .mocked(mockEventPublisher.publish)
+      .mocked(mockEventPublisher.publishNow)
       .mock.calls.find(([event]) => event instanceof HealthStatusChangedEvent)?.[0];
 
     expect(statusChangedEvent).toMatchObject({
@@ -186,10 +188,10 @@ describe("CustomerHealthService", () => {
     expect(result.overallScore).toBe(70);
     expect(result.previousScore).toBe(90);
     expect(result.trend).toBe("declining");
-    expect(mockEventPublisher.publish).toHaveBeenCalledWith(expect.any(HealthScoreDroppedEvent));
+    expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(expect.any(HealthScoreDroppedEvent));
 
     const scoreDroppedEvent = vi
-      .mocked(mockEventPublisher.publish)
+      .mocked(mockEventPublisher.publishNow)
       .mock.calls.find(([event]) => event instanceof HealthScoreDroppedEvent)?.[0];
 
     expect(scoreDroppedEvent).toMatchObject({
@@ -222,7 +224,7 @@ describe("CustomerHealthService", () => {
     };
 
     await service.calculateAndStore("tenant-1", profile);
-    vi.mocked(mockEventPublisher.publish).mockClear();
+    vi.mocked(mockEventPublisher.publishNow).mockClear();
 
     const slightlyLowerSignals: HealthSignal[] = [
       {
@@ -253,7 +255,7 @@ describe("CustomerHealthService", () => {
     expect(result.overallScore).toBe(74.5);
     expect(result.previousScore).toBe(85);
     expect(result.trend).toBe("declining");
-    expect(mockEventPublisher.publish).not.toHaveBeenCalledWith(
+    expect(mockEventPublisher.publishNow).not.toHaveBeenCalledWith(
       expect.any(HealthScoreDroppedEvent),
     );
   });
@@ -304,7 +306,7 @@ describe("CustomerHealthService", () => {
 
     expect(result.status).toBe("at_risk");
     expect(result.previousScore).toBe(85);
-    expect(vi.mocked(mockEventPublisher.publish)).not.toHaveBeenCalled();
+    expect(vi.mocked(mockEventPublisher.publishNow)).not.toHaveBeenCalled();
   });
 
   it("should resolve from Container with optional event publisher wiring intact", () => {

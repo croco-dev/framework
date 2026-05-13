@@ -18,19 +18,19 @@ import {
 describe("DomainPolicyManager", () => {
   let manager!: DomainPolicyManager;
   let store!: InMemoryDomainPolicyStore;
-  let publish!: ReturnType<typeof vi.fn>;
+  let publishNow!: ReturnType<typeof vi.fn>;
   let addMember!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     store = new InMemoryDomainPolicyStore();
-    publish = vi.fn();
+    publishNow = vi.fn();
     addMember = vi.fn();
 
     manager = new DomainPolicyManager(
       store,
       { addMember } as unknown as MembershipManager,
       {
-        publish,
+        publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher,
     );
@@ -43,14 +43,14 @@ describe("DomainPolicyManager", () => {
     expect(policy.domain).toBe("croco.dev");
     expect(policy.role).toBe("member");
     expect(policy.enabled).toBe(true);
-    expect(publish).toHaveBeenCalledWith(expect.any(DomainPolicyAddedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(DomainPolicyAddedEvent));
 
-    const [event] = publish.mock.calls[0] as [DomainPolicyAddedEvent];
+    const [event] = publishNow.mock.calls[0] as [DomainPolicyAddedEvent];
     expect(event.data).toEqual({ tenantId: "tenant-1", domain: "croco.dev", role: "member" });
   });
 
   it("should propagate event publication failures when adding domain policy", async () => {
-    publish.mockRejectedValueOnce(new Error("publish failed"));
+    publishNow.mockRejectedValueOnce(new Error("publish failed"));
 
     await expect(manager.addDomainPolicy("tenant-1", "croco.dev", "member")).rejects.toThrow(
       "publish failed",
@@ -91,7 +91,7 @@ describe("DomainPolicyManager", () => {
 
     const policy = await store.findByTenantAndDomain("tenant-1", "croco.dev");
     expect(policy).toBeNull();
-    expect(publish).toHaveBeenCalledWith(expect.any(DomainPolicyRemovedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(DomainPolicyRemovedEvent));
   });
 
   it("should auto-join member when email domain matches policy", async () => {
@@ -111,7 +111,7 @@ describe("DomainPolicyManager", () => {
 
     expect(addMember).toHaveBeenCalledWith("tenant-1", "user-1", "member");
     expect(result).toEqual(membership);
-    expect(publish).toHaveBeenCalledWith(expect.any(DomainAutoJoinedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(DomainAutoJoinedEvent));
   });
 
   it("should propagate event publication failures after auto-join", async () => {
@@ -127,8 +127,8 @@ describe("DomainPolicyManager", () => {
     };
 
     addMember.mockResolvedValue(membership);
-    publish.mockClear();
-    publish.mockRejectedValueOnce(new Error("auto join publish failed"));
+    publishNow.mockClear();
+    publishNow.mockRejectedValueOnce(new Error("auto join publish failed"));
 
     await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).rejects.toThrow(
       "auto join publish failed",

@@ -23,9 +23,6 @@ export interface CircuitBreakerConfig {
 
   /** OPEN 상태 유지 시간 (밀리초) */
   timeout?: number;
-
-  /** @deprecated successThreshold를 사용하세요 */
-  halfOpenAttempts?: number;
 }
 
 /**
@@ -110,8 +107,7 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
           defaultCircuitId,
         }) ?? defaultCircuitId;
 
-      const halfOpenRequests =
-        options.circuitBreaker?.successThreshold ?? options.circuitBreaker?.halfOpenAttempts;
+      const halfOpenRequests = options.circuitBreaker?.successThreshold;
       const circuitBreaker =
         options.circuitBreaker !== undefined
           ? new CircuitBreaker({

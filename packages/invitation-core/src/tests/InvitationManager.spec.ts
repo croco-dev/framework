@@ -25,7 +25,7 @@ import type { Invitation } from "../libs/types";
 describe("InvitationManager", () => {
   let manager!: InvitationManager;
   let store!: InMemoryInvitationStore;
-  let publish!: ReturnType<typeof vi.fn>;
+  let publishNow!: ReturnType<typeof vi.fn>;
   let addMember!: ReturnType<typeof vi.fn>;
   let send!: ReturnType<typeof vi.fn>;
   let txManager!: Pick<TxManager<unknown>, "run" | "onAfterCommit">;
@@ -56,7 +56,7 @@ describe("InvitationManager", () => {
 
   beforeEach(() => {
     store = new InMemoryInvitationStore();
-    publish = vi.fn();
+    publishNow = vi.fn();
     addMember = vi.fn();
     send = vi.fn();
     afterCommitHooks = [];
@@ -80,7 +80,7 @@ describe("InvitationManager", () => {
       { addMember } as unknown as MembershipManager,
       { send } as unknown as NotificationService,
       {
-        publish,
+        publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher,
       txManager as TxManager<unknown>,
@@ -106,12 +106,12 @@ describe("InvitationManager", () => {
         to: "member@croco.dev",
       }),
     );
-    expect(publish).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
   });
 
   it("should propagate event publication failures when creating email invitation", async () => {
     send.mockResolvedValue(undefined);
-    publish.mockRejectedValueOnce(new Error("publish failed"));
+    publishNow.mockRejectedValueOnce(new Error("publish failed"));
 
     await expect(
       manager.createEmailInvitation({
@@ -160,7 +160,7 @@ describe("InvitationManager", () => {
     expect(addMember).toHaveBeenCalledWith("tenant-1", "user-1", "member");
     expect(accepted.status).toBe("accepted");
     expect(accepted.acceptedAt).not.toBeNull();
-    expect(publish).toHaveBeenCalledWith(expect.any(InvitationAcceptedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationAcceptedEvent));
   });
 
   it("should propagate event publication failures when accepting invitation", async () => {
@@ -176,7 +176,7 @@ describe("InvitationManager", () => {
     };
 
     addMember.mockResolvedValue(membership);
-    publish.mockRejectedValueOnce(new Error("accept publish failed"));
+    publishNow.mockRejectedValueOnce(new Error("accept publish failed"));
 
     await expect(
       manager.acceptInvitation({
@@ -330,7 +330,7 @@ describe("InvitationManager", () => {
     const declined = await manager.declineInvitation("decline-token");
 
     expect(declined.status).toBe("declined");
-    expect(publish).toHaveBeenCalledWith(expect.any(InvitationDeclinedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationDeclinedEvent));
   });
 
   it("should revoke invitation by id", async () => {
@@ -340,7 +340,7 @@ describe("InvitationManager", () => {
 
     expect(revoked.status).toBe("revoked");
     expect(revoked.revokedAt).not.toBeNull();
-    expect(publish).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
   });
 
   it("should resend invitation by revoking old one and issuing a new token", async () => {
@@ -359,8 +359,8 @@ describe("InvitationManager", () => {
         to: "member@croco.dev",
       }),
     );
-    expect(publish).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
-    expect(publish).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
   });
 
   it("should throw InvitationInvalidStatusProblem when resending accepted invitation", async () => {

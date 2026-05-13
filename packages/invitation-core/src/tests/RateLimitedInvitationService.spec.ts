@@ -18,7 +18,7 @@ describe("RateLimitedInvitationService", () => {
   let service!: RateLimitedInvitationService;
   let manager!: InvitationManager;
   let store!: InMemoryInvitationStore;
-  let publish!: ReturnType<typeof vi.fn>;
+  let publishNow!: ReturnType<typeof vi.fn>;
   let send!: ReturnType<typeof vi.fn>;
   let txManager!: Pick<TxManager<unknown>, "run" | "onAfterCommit">;
   let afterCommitHooks!: Array<() => void | Promise<void>>;
@@ -46,7 +46,7 @@ describe("RateLimitedInvitationService", () => {
 
   beforeEach(() => {
     store = new InMemoryInvitationStore();
-    publish = vi.fn();
+    publishNow = vi.fn();
     send = vi.fn();
     afterCommitHooks = [];
     txManager = {
@@ -68,7 +68,7 @@ describe("RateLimitedInvitationService", () => {
       { addMember: vi.fn() } as unknown as MembershipManager,
       { send } as unknown as NotificationService,
       {
-        publish,
+        publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher,
       txManager as TxManager<unknown>,
@@ -168,7 +168,7 @@ describe("RateLimitedInvitationService", () => {
       });
 
       expect(token).toBeDefined();
-      expect(publish).toHaveBeenCalled();
+      expect(publishNow).toHaveBeenCalled();
     });
 
     it("should throw when rate limit exceeded", async () => {
@@ -298,7 +298,7 @@ describe("RateLimitedInvitationService", () => {
       });
 
       expect(token).toBeDefined();
-      expect(publish).toHaveBeenCalled();
+      expect(publishNow).toHaveBeenCalled();
     });
 
     it("should throw when rate limit exceeded", async () => {

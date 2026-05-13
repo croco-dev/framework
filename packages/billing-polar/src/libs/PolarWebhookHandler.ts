@@ -99,10 +99,6 @@ export class PolarWebhookHandler {
       return { success: false, error: "Missing event ID or type" };
     }
 
-    if (await this.isWebhookCompleted(eventId)) {
-      return { success: true, eventId };
-    }
-
     const inFlightEvent = PolarWebhookHandler.inFlightEvents.get(eventId);
     if (inFlightEvent) {
       return inFlightEvent;
@@ -164,15 +160,6 @@ export class PolarWebhookHandler {
       }
       throw error;
     }
-  }
-
-  private async isWebhookCompleted(eventId: string): Promise<boolean> {
-    const isWebhookProcessed = Reflect.get(this.store, "isWebhookProcessed");
-    if (typeof isWebhookProcessed !== "function") {
-      return false;
-    }
-
-    return isWebhookProcessed.call(this.store, eventId);
   }
 
   private async processParsedEvent(event: ParsedWebhookEvent): Promise<void> {

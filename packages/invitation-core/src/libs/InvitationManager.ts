@@ -384,6 +384,6 @@ export class InvitationManager {
       | InvitationRevokedEvent
       | InvitationDeclinedEvent,
   ): Promise<void> {
-    await this.eventPublisher.publish(event);
+    await this.eventPublisher.publishNow(event);
   }
 }
