@@ -6,7 +6,7 @@ import type {
 } from "@croco/transports-http";
 import { CrocoLambdaAdapter } from "@croco/transports-http";
 import { Hono } from "hono";
-import type { LambdaPresetOptions } from "./index";
+import type { LambdaPresetOptions } from "./types";
 
 export type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse };
 

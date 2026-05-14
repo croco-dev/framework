@@ -4,10 +4,9 @@ import {
   defineCrocoPreset,
 } from "@croco/framework-preset";
 
-export type LambdaPresetOptions = {
-  readonly region?: string;
-  readonly timeout?: number;
-};
+import type { LambdaPresetOptions } from "./types";
+
+export type { LambdaPresetOptions };
 
 export function createLambdaPreset(options?: LambdaPresetOptions): CrocoPreset {
   void options;
