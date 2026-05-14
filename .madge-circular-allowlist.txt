@@ -8,9 +8,3 @@
 # 3. Quarterly review of all entries
 #
 # See CONTRIBUTING.md for details.
-
-problems-core/src/libs/Problem.ts > problems-core/src/libs/ProblemExtensions.ts > problems-core/src/libs/problems/InvalidExtensionsProblem.ts
-events-core/src/libs/EventBus.ts > events-core/src/libs/EventHandler.ts
-events-core/src/libs/EventBus.ts > events-core/src/libs/interfaces/EventSubscribing.ts
-auth-core/src/libs/interfaces/AbstractRoleRegistry.ts > auth-core/src/libs/rbac/Role.ts
-migration-runner/src/libs/types.ts > migration-runner/src/libs/MigrationStore.ts
