@@ -6,7 +6,7 @@
     "build": "turbo build",
     "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
-    "check": "oxlint . && oxfmt --check .",
+    "check": "pnpm architecture:check:circular && oxlint . && oxfmt --check .",
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
