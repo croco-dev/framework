@@ -26,16 +26,154 @@ import { createApp } from "@croco/transports-http";
 class HealthController {
   @Get("/health")
   health() {
-    return { status: "ok", timestamp: new Date().toISOString() };
+    return { status: "ok" };
   }
 }
 ```
+
+## Add Authentication
+
+Protect endpoints with `@croco/auth-core`. First, create an `AuthProvider` that validates incoming requests:
+
+```typescript
+import type { AuthProvider, AuthRequest, AuthUser } from "@croco/auth-core";
+import { getHeaderValue } from "@croco/auth-core";
+import { Component } from "@croco/framework-context";
+
+@Component()
+class TestAuthProvider implements AuthProvider<AuthRequest> {
+  async authenticate(request: AuthRequest): Promise<AuthUser | null> {
+    if (getHeaderValue(request, "x-api-key") !== "test-key") {
+      return null;
+    }
+
+    return {
+      id: "test-user",
+      tenantId: "test",
+      roles: [],
+      permissions: [],
+      metadata: { tenantId: "test" },
+    };
+  }
+}
+```
+
+Then register the guard and apply it to controllers:
+
+```typescript
+import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
+import { Container } from "@croco/framework-context";
+import { Controller, Get, Post, UseGuards } from "@croco/protocols-rest";
+
+Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
+Container.set(AuthGuard, new AuthGuard());
+
+@Controller("/api/users")
+class UserController {
+  @Get()
+  @UseGuards(AuthGuard)
+  list() {
+    return [{ id: "1", name: "Alice" }];
+  }
+}
+```
+
+## Add Business Logic
+
+Use `@Component()` to define injectable services and keep controllers thin:
+
+```typescript
+import { Component } from "@croco/framework-context";
+
+export type User = {
+  readonly id: string;
+  readonly name: string;
+};
+
+export type CreateUserBody = {
+  readonly name: string;
+};
+
+@Component()
+class UserService {
+  private users: User[] = [
+    { id: "1", name: "Alice" },
+    { id: "2", name: "Bob" },
+  ];
+
+  list(): readonly User[] {
+    return [...this.users];
+  }
+
+  create(body: CreateUserBody): User {
+    const user = { id: String(this.users.length + 1), name: body.name };
+    this.users = [...this.users, user];
+    return user;
+  }
+}
+```
+
+Inject the service into a controller through the constructor:
+
+```typescript
+@Controller("/api/users")
+class UserController {
+  private readonly users: UserService;
+
+  constructor() {
+    this.users = Container.get(UserService);
+  }
+
+  @Get()
+  @UseGuards(AuthGuard)
+  list() {
+    return this.users.list();
+  }
+
+  @Post()
+  @UseGuards(AuthGuard)
+  create(@Body() body: CreateUserBody) {
+    return this.users.create(body);
+  }
+}
+```
+
+## Add Metering
+
+Track usage with `@croco/metering-core`. Register a meter, then annotate the methods you want to measure:
+
+```typescript
+import { Meter, Metered, MeteringService, MeterRegistry, MeterRepository, setMeteringService } from "@croco/metering-core";
+
+// Configure the metering service with your storage and registry
+const meteringService = new MeteringService({
+  meterRegistry: new MeterRegistry(/* ... */),
+  usageStorage: /* ... */,
+  idempotencyManager: /* ... */,
+});
+setMeteringService(meteringService);
+
+// Register the meter on the controller
+@Meter({ meterId: "api_user_create" })
+@Controller("/api/users")
+class UserController {
+  @Post()
+  @UseGuards(AuthGuard)
+  @Metered({ meterId: "api_user_create" })
+  create(@Body() body: CreateUserBody) {
+    return this.users.create(body);
+  }
+}
+```
+
+Every call to `POST /api/users` will now record usage against `api_user_create`.
 
 ## Create the App
 
 ```typescript
 const app = createApp({
-  controllers: [HealthController],
+  controllers: [HealthController, UserController],
+  securityValidation: "off",
 });
 ```
 
@@ -66,13 +204,30 @@ Expected response:
 
 ```json
 {
-  "status": "ok",
-  "timestamp": "2026-01-15T10:30:00.000Z"
+  "status": "ok"
 }
 ```
+
+## Complete Example
+
+A fully working SaaS demo that combines authentication, DI services, and metering is available in the repository:
+
+```bash
+git clone https://github.com/croco-dev/croco-framework.git
+cd croco-framework/examples/quick-start-lambda
+pnpm install
+pnpm dev
+```
+
+The demo runs a local server at `http://localhost:3000/api` and includes:
+
+- `POST /api/users` — creates a user (requires `x-api-key: test-key`)
+- `GET /api/users` — lists users (requires `x-api-key: test-key`)
+- `GET /api/health` — public health check
 
 ## Next Steps
 
 - [Architecture Overview](/en/guides/architecture/) — Understand the 4-layer structure
 - [Events Guide](/en/guides/events-core/) — Add domain event-driven patterns
 - [Retry Guide](/en/guides/retry-core/) — Add resilience with retry policies
+- [quick-start-lambda example](https://github.com/croco-dev/croco-framework/tree/trunk/examples/quick-start-lambda) — Full SaaS starter with auth, DI, and metering

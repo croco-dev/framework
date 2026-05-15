@@ -8,6 +8,9 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/auth-core": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/metering-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/transports-http": "workspace:*",
     "reflect-metadata": "^0.2.2"

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "root": false,
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  }
+}

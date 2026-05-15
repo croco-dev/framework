@@ -1,7 +1,8 @@
 import "reflect-metadata";
+import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AUTH_PUBLIC_KEY } from "../libs/constants";
-import { AuthGuard } from "../libs/guards/AuthGuard";
+import { AUTH_PROVIDER_TOKEN, AuthGuard } from "../libs/guards/AuthGuard";
 import type { AuthProvider } from "../libs/interfaces/AuthProvider";
 import type { AuthRequest } from "../libs/interfaces/AuthRequest";
 import type { AuthUser } from "../libs/interfaces/AuthUser";
@@ -28,10 +29,12 @@ describe("AuthGuard", () => {
   };
 
   beforeEach(() => {
+    Container.reset();
     mockAuthProvider = {
       authenticate: vi.fn(),
     };
-    authGuard = new AuthGuard(mockAuthProvider);
+    Container.set(AUTH_PROVIDER_TOKEN, mockAuthProvider);
+    authGuard = new AuthGuard();
   });
 
   it("should return true when route is public", async () => {

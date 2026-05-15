@@ -9,7 +9,7 @@ title: "EventDeserializationError"
 
 ## Extends
 
-- [`Problem`](/api/problems-core/src/classes/problem/)
+- `Problem`
 
 ## Constructors
 
@@ -39,11 +39,11 @@ title: "EventDeserializationError"
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: `InternalServerError` = `ProblemCategory.InternalServerError`
 
 #### Overrides
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
+`Problem.category`
 
 ***
 
@@ -53,7 +53,7 @@ title: "EventDeserializationError"
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
+`Problem.cause`
 
 ***
 
@@ -63,7 +63,7 @@ title: "EventDeserializationError"
 
 #### Overrides
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
+`Problem.code`
 
 ***
 
@@ -73,17 +73,17 @@ title: "EventDeserializationError"
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
+`Problem.detail`
 
 ***
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions**: `ProblemExtensions`
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
+`Problem.extensions`
 
 ***
 
@@ -93,7 +93,7 @@ title: "EventDeserializationError"
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
+`Problem.instance`
 
 ***
 
@@ -103,7 +103,7 @@ title: "EventDeserializationError"
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
+`Problem.message`
 
 ***
 
@@ -113,7 +113,7 @@ title: "EventDeserializationError"
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
+`Problem.name`
 
 ***
 
@@ -123,7 +123,7 @@ title: "EventDeserializationError"
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
+`Problem.stack`
 
 ***
 
@@ -133,7 +133,7 @@ title: "EventDeserializationError"
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
+`Problem.type`
 
 ***
 
@@ -153,7 +153,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`stackTraceLimit`](/api/problems-core/src/classes/problem/#stacktracelimit)
+`Problem.stackTraceLimit`
 
 ## Accessors
 
@@ -169,7 +169,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
+`Problem.status`
 
 ***
 
@@ -185,21 +185,21 @@ not capture any frames.
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`title`](/api/problems-core/src/classes/problem/#title)
+`Problem.title`
 
 ## Methods
 
 ### toJSON()
 
-> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+> **toJSON**(): `ProblemDetails`
 
 #### Returns
 
-[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+`ProblemDetails`
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
+`Problem.toJSON`
 
 ***
 
@@ -267,7 +267,7 @@ a();
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
+`Problem.captureStackTrace`
 
 ***
 
@@ -295,4 +295,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`prepareStackTrace`](/api/problems-core/src/classes/problem/#preparestacktrace)
+`Problem.prepareStackTrace`

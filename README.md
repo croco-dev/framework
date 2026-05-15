@@ -101,10 +101,10 @@ graph LR
 
 ## 🚀 Quick Start
 
-> Lambda 기반 REST API를 빠르게 시작하세요. 상세 가이드와 실행 가능한 예제는 작성 중입니다.
+> Lambda 기반 REST API를 빠르게 시작하세요. 상세 가이드와 실행 가능한 예제는 준비되어 있습니다.
 >
-> **문서**: Getting Started Guide (작성 중)
-> **예제**: Quick Start Example (작성 중)
+> **문서**: [Getting Started Guide](packages/docs/src/content/docs/en/guides/getting-started.mdx) - 인증, DI, Metering을 포함한 단계별 가이드
+> **예제**: [Quick Start Example](examples/quick-start-lambda/) - `pnpm dev`로 바로 실행 가능한 Lambda API 예제
 
 #### 패키지 성숙도 안내
 

@@ -67,7 +67,9 @@ export { ApiKeyGuard } from "./libs/guards/ApiKeyGuard";
 /**
  * 사용자 인증을 검사하는 기본 인증 가드입니다.
  */
-export { AuthGuard } from "./libs/guards/AuthGuard";
+export { AUTH_PROVIDER_TOKEN, AuthGuard } from "./libs/guards/AuthGuard";
+
+export { getHeaderValue } from "./libs/guards/headerUtils";
 
 /**
  * 권한 기반 인가를 수행하는 가드입니다.

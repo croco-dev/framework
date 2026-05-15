@@ -15,13 +15,7 @@ title: "AuthGuard"
 
 ### Constructor
 
-> **new AuthGuard**(`authProvider`): `AuthGuard`
-
-#### Parameters
-
-##### authProvider
-
-[`AuthProvider`](/api/auth-core/src/interfaces/authprovider/)
+> **new AuthGuard**(): `AuthGuard`
 
 #### Returns
 

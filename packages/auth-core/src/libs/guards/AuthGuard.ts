@@ -1,9 +1,12 @@
 import "reflect-metadata";
+import { Container, Token } from "@croco/framework-context";
 import { AUTH_PUBLIC_KEY } from "../constants";
 import type { AuthProvider } from "../interfaces/AuthProvider";
 import type { AuthRequest } from "../interfaces/AuthRequest";
 import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import { UnauthorizedProblem } from "../problems/AuthProblems";
+
+export const AUTH_PROVIDER_TOKEN = new Token<AuthProvider>("AuthProvider");
 
 function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
   const classTarget =
@@ -23,8 +26,6 @@ function isMetadataTarget(value: unknown): value is object {
 }
 
 export class AuthGuard implements Guard<RouteExecutionContext> {
-  constructor(private authProvider: AuthProvider) {}
-
   async canActivate(context: RouteExecutionContext): Promise<boolean> {
     const target = context.getClass();
     const handler = context.getHandler();
@@ -39,8 +40,14 @@ export class AuthGuard implements Guard<RouteExecutionContext> {
       return true;
     }
 
+    const authProvider = Container.getOptional(AUTH_PROVIDER_TOKEN);
+
+    if (!authProvider) {
+      throw new UnauthorizedProblem();
+    }
+
     const request = context.getRequest() as AuthRequest;
-    const user = await this.authProvider.authenticate(request);
+    const user = await authProvider.authenticate(request);
 
     if (!user) {
       throw new UnauthorizedProblem();
