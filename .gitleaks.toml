@@ -1,0 +1,12 @@
+title = "Croco gitleaks config"
+
+[extend]
+useDefault = true
+
+# Allowlist test fixtures: dummy API keys / idempotency keys under packages/*/src/tests/.
+# Scoped tightly to *.spec.ts so production code is still fully scanned.
+[allowlist]
+description = "Test fixture dummy keys (packages/*/src/tests/*.spec.ts)"
+paths = [
+  '''(^|/)packages/[^/]+/src/tests/.*\.spec\.ts$''',
+]
