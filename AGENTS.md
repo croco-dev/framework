@@ -171,6 +171,15 @@ packages/[name]/
 
 이 저장소의 기본 브랜치는 main이 아니라 trunk다. 브랜치 관련 예시와 기준은 trunk를 기준으로 해석한다.
 
+## Branching & Release
+
+- `trunk`는 보호 브랜치다. **직접 push 금지** — 모든 변경은 PR을 통해 머지한다.
+- 버전 bump와 npm publish는 changesets 흐름을 따른다:
+  1. 변경 사항이 있는 PR에는 `.changeset/*.md` 파일을 함께 포함한다 (`pnpm changeset`).
+  2. trunk 머지 후 `changesets/action`이 자동으로 "Version Packages" Release PR을 생성한다.
+  3. 그 Release PR을 머지하면 비로소 npm에 publish된다.
+- package.json 버전을 수기로 bump하거나 trunk에 release 커밋을 직접 push하지 않는다. 의도치 않은 publish의 원인이 된다.
+
 ## Telemetry & Tracing
 
 Croco는 OpenTelemetry 표준을 기반으로 한 분산 추적(Distributed Tracing)을 제공합니다.
