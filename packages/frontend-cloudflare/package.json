@@ -20,8 +20,6 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "wrangler dev",
-    "publish": "pnpm build && npx wrangler deploy",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
