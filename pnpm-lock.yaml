@@ -637,6 +637,8 @@ importers:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
+  packages/diagnostics-core: {}
+
   packages/docs:
     dependencies:
       '@astrojs/starlight':
@@ -726,6 +728,9 @@ importers:
 
   packages/events-core:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -853,6 +858,9 @@ importers:
 
   packages/framework-context:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -887,6 +895,9 @@ importers:
 
   packages/framework-module:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -2068,6 +2079,9 @@ importers:
 
   packages/telemetry-sdk-node:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -2153,6 +2167,9 @@ importers:
 
   packages/transports-http:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
