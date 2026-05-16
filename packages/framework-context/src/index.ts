@@ -52,6 +52,8 @@ export { Inject } from "typedi";
  */
 export { Container } from "./libs/Container";
 
+export { ContainerDiagnosticsProvider } from "./libs/diagnostics/ContainerDiagnosticsProvider";
+
 /**
  * TypeDI 컨테이너 인스턴스 타입입니다.
  *

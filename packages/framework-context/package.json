@@ -27,6 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "reflect-metadata": "0.2.2",
     "typedi": "0.10.0"

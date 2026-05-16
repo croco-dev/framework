@@ -213,6 +213,26 @@ export class Container {
     return MetadataStorage.get(COMPONENT_METADATA_KEY, target);
   }
 
+  static getDiagnosticsSnapshot(): {
+    isInitialized: boolean;
+    registeredServiceCount: number;
+    scopes: string[];
+  } {
+    const components = Container.getRegisteredComponents();
+    const scopes = new Set<string>();
+    for (const comp of components) {
+      const meta = Container.getComponentMetadata(comp);
+      if (meta?.scope) {
+        scopes.add(meta.scope);
+      }
+    }
+    return {
+      isInitialized: Container.validated,
+      registeredServiceCount: components.length,
+      scopes: Array.from(scopes),
+    };
+  }
+
   private static shouldResolveLazy<T>(token: TokenIdentifier<T>): boolean {
     return Container.lazyProviders.has(token) && !Container.hasRegisteredValue(token);
   }
