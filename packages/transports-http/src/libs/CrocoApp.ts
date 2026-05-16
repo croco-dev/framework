@@ -11,6 +11,9 @@ import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
 import { ErrorHandler } from "./ErrorHandler";
 import { HealthCheckRegistry } from "./HealthCheckRegistry";
 import { PipelineRunner } from "./PipelineRunner";
+import { DiagnosticsCollector } from "@croco/diagnostics-core";
+import { ContainerDiagnosticsProvider } from "@croco/framework-context";
+import { EventBusDiagnosticsProvider } from "@croco/events-core";
 
 import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
 import type {
@@ -165,6 +168,40 @@ export class CrocoApp {
       const result = await this.healthCheckRegistry.check();
       return c.json(result, result.status === "ok" ? 200 : 503);
     });
+
+    const diagnosticsEnabled = process.env.CROCO_DIAGNOSTICS_ENABLED === "true";
+    if (diagnosticsEnabled) {
+      const collector = new DiagnosticsCollector();
+      try {
+        collector.registerProvider(new ContainerDiagnosticsProvider());
+      } catch {
+        /* provider unavailable */
+      }
+      try {
+        collector.registerProvider(new EventBusDiagnosticsProvider());
+      } catch {
+        /* provider unavailable */
+      }
+
+      this.hono.get("/health/diagnostics", async (c) => {
+        const token = process.env.CROCO_DIAGNOSTICS_TOKEN;
+        if (token && c.req.header("X-Diagnostics-Token") !== token) {
+          return c.json({ error: "Forbidden" }, 403);
+        }
+        const report = await collector.getReport();
+        return c.json(
+          {
+            ...report,
+            recentErrors: report.recentErrors.map((e) => ({
+              timestamp: e.timestamp,
+              code: e.code,
+              message: e.message.slice(0, 100),
+            })),
+          },
+          200,
+        );
+      });
+    }
   }
 
   lambdaHandler(): LambdaHandler {
