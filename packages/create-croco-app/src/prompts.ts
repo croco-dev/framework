@@ -153,6 +153,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       cliArgs.backendDeploy ??
       (await p.select({
         message: "Backend deployment target:",
+        initialValue: "lambda",
         options: [
           { value: "docker", label: "Docker", hint: "Containerized deployment" },
           { value: "lambda", label: "AWS Lambda (SST v3)", hint: "Serverless" },

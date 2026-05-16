@@ -67,8 +67,10 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
-            // Each item here is one entry in the navigation menu.
-            { label: "Example Guide", slug: "guides/example" },
+            { label: "Getting Started", slug: "guides/getting-started" },
+            { label: "Architecture", slug: "guides/architecture" },
+            { label: "Events Core", slug: "guides/events-core" },
+            { label: "Retry Core", slug: "guides/retry-core" },
           ],
         },
         {

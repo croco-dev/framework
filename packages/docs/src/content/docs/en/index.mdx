@@ -1,35 +1,47 @@
 ---
 title: Croco Framework
-description: AWS Lambda 지향 opinionated TypeScript 프레임워크 — DDD, 트랜잭션, SaaS 지표/미터링을 하나의 타입 시스템으로 조합합니다.
+description: SaaS Backend Framework for AWS Lambda — Combines DDD, transactions, and SaaS primitives into a single type-safe system.
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-# Croco Framework
+# SaaS Backend Framework for AWS Lambda
 
-> AWS Lambda 지향 TypeScript 애플리케이션에서 HTTP 진입점, DDD 이벤트, 트랜잭션, SaaS 지표/미터링, 관찰 가능성을 하나의 일관된 데코레이터·타입 시스템으로 묶어 주는 opinionated framework.
+CROCO is an opinionated TypeScript framework that combines HTTP routing, DDD events, transactions, and **built-in SaaS primitives** (auth, billing, metering, tenant) into a single unified decorator and type system.
+
+> `npx create-croco-app my-saas-api` → 5 minutes to a production-ready SaaS backend.
+
+## Why Croco?
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:2rem;">
+
+**Built-in SaaS Primitives**
+Auth, billing, metering, tenant management — all included as first-class packages, not afterthoughts.
+
+**Decorator-First DI**
+`@Controller`, `@UseGuards`, `@Metered` — express SaaS logic declaratively with type-safe decorators powered by typedi.
+
+**Lambda-First, Not Lambda-Only**
+Every API exports as `app.lambdaHandler()`. Also runs on Docker, Cloudflare, and SST v3.
+
+</div>
 
 ## Quick Start
 
-Lambda 기반 REST API를 빠르게 시작하세요.
-
 <CardGrid stagger>
   <Card title="Getting Started" icon="rocket">
-    Croco를 설치하고 첫 Lambda API를 만드는 단계별 가이드입니다. [시작하기
-    →](/en/guides/getting-started/)
+    Create your first SaaS API with auth and metering in minutes. [Start now →](/en/guides/getting-started/)
   </Card>
   <Card title="Architecture" icon="diagram-project">
-    4계층 구조(Core → Protocols → Transports → Integrations)를 이해합니다. [아키텍처
-    →](/en/guides/architecture/)
+    Understand the 4-layer structure: Core → Protocols → Transports → Integrations. [Explore →](/en/guides/architecture/)
   </Card>
   <Card title="Package Catalog" icon="package">
-    88개 패키지를 상태별로 탐색합니다. 🟢 production, 🟡 beta, 🔴 alpha. [GitHub README
-    →](https://github.com/croco-dev/framework#readme)
+    98 packages organized by maturity: production, beta, alpha. [Browse →](https://github.com/croco-dev/framework#readme)
   </Card>
   <Card title="Events Core" icon="broadcast">
-    도메인 이벤트 발행/구독 패턴을 학습합니다. [Events Guide →](/en/guides/events-core/)
+    Publish/subscribe domain events with transactional consistency. [Learn more →](/en/guides/events-core/)
   </Card>
   <Card title="Retry Core" icon="restart">
-    재시도 정책, 지수 백오프, 서킷 브레이커를 설정합니다. [Retry Guide →](/en/guides/retry-core/)
+    Configure retry policies, exponential backoff, and circuit breakers. [Configure →](/en/guides/retry-core/)
   </Card>
 </CardGrid>

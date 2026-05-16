@@ -1,121 +1,137 @@
 ---
 title: Getting Started
-description: Build and deploy your first Lambda API with Croco in minutes
+description: Build and deploy a production-ready SaaS backend on AWS Lambda in 5 minutes with Croco.
 ---
 
-## Introduction
+import { Aside } from "@astrojs/starlight/components";
 
-Croco is an opinionated TypeScript framework optimized for AWS Lambda. It combines HTTP routing, DDD events, transactions, and SaaS metrics under one consistent decorator and type system.
+## 1. Introduction
 
-This guide walks you through creating a Lambda-ready REST API in under 5 minutes.
+Croco gives you a **SaaS backend in 5 minutes** — fully typed, Lambda-ready, with auth, metering, and billing built in from the first line of code. No glue code. No separate auth service. No metering SDK to bolt on later.
 
-## Install
+This guide takes you from zero to a deployed API: scaffold the project, add an authenticated endpoint, layer on metering, and export as a Lambda handler.
+
+<Aside type="tip" title="Want the full code?">
+The complete example lives at [`examples/quick-start-lambda`](https://github.com/croco-dev/framework/tree/trunk/examples/quick-start-lambda).
+</Aside>
+
+## 2. Quick Start
+
+Create a new project with the CLI. The `ddd-api` preset gives you a Lambda-first TypeScript scaffold:
 
 ```bash
-pnpm add @croco/transports-http @croco/protocols-rest reflect-metadata
+npx create-croco-app@latest my-saas-api
 ```
 
-## Create Your First Endpoint
+When prompted, choose `ddd-api` for the preset and `lambda` for the backend deploy target.
 
-```typescript
-import "reflect-metadata";
-import { Controller, Get } from "@croco/protocols-rest";
-import { createApp } from "@croco/transports-http";
+Then install dependencies and start the dev server:
 
-@Controller("/api")
-class HealthController {
-  @Get("/health")
-  health() {
-    return { status: "ok" };
-  }
-}
+```bash
+cd my-saas-api && pnpm install && pnpm dev
 ```
 
-## Add Authentication
+Your API is now running at `http://localhost:3000/api`. Let's add some SaaS features.
 
-Protect endpoints with `@croco/auth-core`. First, create an `AuthProvider` that validates incoming requests:
+## 3. Your First SaaS Endpoint
 
-```typescript
-import type { AuthProvider, AuthRequest, AuthUser } from "@croco/auth-core";
-import { getHeaderValue } from "@croco/auth-core";
-import { Component } from "@croco/framework-context";
+Croco treats auth as a first-class concern. Wrap any controller method with `@UseGuards(AuthGuard)` and authentication is handled before your code runs.
 
-@Component()
-class TestAuthProvider implements AuthProvider<AuthRequest> {
-  async authenticate(request: AuthRequest): Promise<AuthUser | null> {
-    if (getHeaderValue(request, "x-api-key") !== "test-key") {
-      return null;
-    }
-
-    return {
-      id: "test-user",
-      tenantId: "test",
-      roles: [],
-      permissions: [],
-      metadata: { tenantId: "test" },
-    };
-  }
-}
-```
-
-Then register the guard and apply it to controllers:
+First, register an auth provider and guard:
 
 ```typescript
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
 import { Container } from "@croco/framework-context";
-import { Controller, Get, Post, UseGuards } from "@croco/protocols-rest";
+import { TestAuthProvider } from "./AuthProvider";
 
 Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
 Container.set(AuthGuard, new AuthGuard());
+```
+
+Now create a controller with a protected endpoint:
+
+```typescript
+import { Controller, Get, UseGuards } from "@croco/protocols-rest";
 
 @Controller("/api/users")
 class UserController {
   @Get()
   @UseGuards(AuthGuard)
   list() {
-    return [{ id: "1", name: "Alice" }];
+    return this.users.list();
   }
 }
 ```
 
-## Add Business Logic
+Any request without a valid API key gets a `401 Unauthorized` automatically. No middleware to configure — the guard handles it.
 
-Use `@Component()` to define injectable services and keep controllers thin:
+## 4. Add Metering
+
+Track usage for billing with a single decorator. Croco's `@Metered` records every invocation against a named meter:
 
 ```typescript
-import { Component } from "@croco/framework-context";
+import { Meter, Metered, setMeteringService } from "@croco/metering-core";
+import { createMeteringService } from "./storage";
 
-export type User = {
-  readonly id: string;
-  readonly name: string;
-};
+// Wire up the metering infrastructure once, at app startup
+setMeteringService(createMeteringService());
 
-export type CreateUserBody = {
-  readonly name: string;
-};
-
-@Component()
-class UserService {
-  private users: User[] = [
-    { id: "1", name: "Alice" },
-    { id: "2", name: "Bob" },
-  ];
-
-  list(): readonly User[] {
-    return [...this.users];
-  }
-
-  create(body: CreateUserBody): User {
-    const user = { id: String(this.users.length + 1), name: body.name };
-    this.users = [...this.users, user];
-    return user;
+@Meter({ meterId: "api_user_create" })
+@Controller("/api/users")
+class UserController {
+  @Post()
+  @UseGuards(AuthGuard)
+  @Metered({ meterId: "api_user_create" })
+  create(@Body() body: CreateUserBody) {
+    return this.users.create(body);
   }
 }
 ```
 
-Inject the service into a controller through the constructor:
+Now every `POST /api/users` call increments the `api_user_create` meter — ready to drive billing, usage limits, or analytics.
+
+## 5. Deploy to Lambda
+
+Export your app as a Lambda handler with one line:
 
 ```typescript
+import { createApp } from "@croco/transports-http";
+
+const app = createApp({
+  controllers: [UserController],
+});
+
+export const handler = app.lambdaHandler();
+```
+
+That's it. `handler` is a standard AWS Lambda entrypoint — deploy it with SST, Terraform, CDK, or any Lambda-compatible platform.
+
+## 6. Complete Example
+
+Here's the full project structure from `quick-start-lambda`, bringing together auth, metering, and Lambda export in ~60 lines:
+
+```
+my-saas-api/
+├── src/
+│   ├── AuthProvider.ts    # Custom auth logic
+│   ├── UserService.ts     # Business logic
+│   ├── storage.ts          # Metering storage setup
+│   └── index.ts            # Controller + app wiring
+└── package.json
+```
+
+```typescript
+import "reflect-metadata";
+import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
+import { Container } from "@croco/framework-context";
+import { Meter, Metered, setMeteringService } from "@croco/metering-core";
+import { Body, Controller, Get, Post, UseGuards } from "@croco/protocols-rest";
+import { createApp } from "@croco/transports-http";
+import { TestAuthProvider } from "./AuthProvider";
+import { type CreateUserBody, UserService } from "./UserService";
+import { createMeteringService } from "./storage";
+
+@Meter({ meterId: "api_user_create" })
 @Controller("/api/users")
 class UserController {
   private readonly users: UserService;
@@ -132,102 +148,32 @@ class UserController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(@Body() body: CreateUserBody) {
-    return this.users.create(body);
-  }
-}
-```
-
-## Add Metering
-
-Track usage with `@croco/metering-core`. Register a meter, then annotate the methods you want to measure:
-
-```typescript
-import { Meter, Metered, MeteringService, MeterRegistry, MeterRepository, setMeteringService } from "@croco/metering-core";
-
-// Configure the metering service with your storage and registry
-const meteringService = new MeteringService({
-  meterRegistry: new MeterRegistry(/* ... */),
-  usageStorage: /* ... */,
-  idempotencyManager: /* ... */,
-});
-setMeteringService(meteringService);
-
-// Register the meter on the controller
-@Meter({ meterId: "api_user_create" })
-@Controller("/api/users")
-class UserController {
-  @Post()
-  @UseGuards(AuthGuard)
   @Metered({ meterId: "api_user_create" })
   create(@Body() body: CreateUserBody) {
     return this.users.create(body);
   }
 }
-```
 
-Every call to `POST /api/users` will now record usage against `api_user_create`.
+setMeteringService(createMeteringService());
+Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
+Container.set(AuthGuard, new AuthGuard());
 
-## Create the App
+Container.set(UserController, new UserController());
 
-```typescript
 const app = createApp({
-  controllers: [HealthController, UserController],
+  controllers: [UserController],
   securityValidation: "off",
 });
-```
 
-## Export Lambda Handler
-
-```typescript
 export const handler = app.lambdaHandler();
 ```
 
-That's it — `handler` is your AWS Lambda entry point. No additional configuration needed.
+## 7. Next Steps
 
-## Run Locally (Optional)
+Now that you have a running SaaS API, explore what Croco can do:
 
-For local testing without Lambda:
-
-```typescript
-await app.listen(3000);
-console.log("Server running at http://localhost:3000");
-```
-
-Then test with curl:
-
-```bash
-curl http://localhost:3000/api/health
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-## Complete Example
-
-A fully working SaaS demo that combines authentication, DI services, and metering is available in the repository:
-
-```bash
-git clone https://github.com/croco-dev/croco-framework.git
-cd croco-framework/examples/quick-start-lambda
-pnpm install
-pnpm dev
-```
-
-The demo runs a local server at `http://localhost:3000/api` and includes:
-
-- `POST /api/users` — creates a user (requires `x-api-key: test-key`)
-- `GET /api/users` — lists users (requires `x-api-key: test-key`)
-- `GET /api/health` — public health check
-
-## Next Steps
-
-- [Architecture Overview](/en/guides/architecture/) — Understand the 4-layer structure
-- [Events Guide](/en/guides/events-core/) — Add domain event-driven patterns
-- [Retry Guide](/en/guides/retry-core/) — Add resilience with retry policies
-- [quick-start-lambda example](https://github.com/croco-dev/croco-framework/tree/trunk/examples/quick-start-lambda) — Full SaaS starter with auth, DI, and metering
+- **[Architecture Guide](/en/guides/architecture/)** — Understand the 4-layer structure and dependency injection.
+- **[Events Core](/en/guides/events-core/)** — Build event-driven workflows with transactional consistency.
+- **[Retry Core](/en/guides/retry-core/)** — Add resilience with retries, backoff, and circuit breakers.
+- **[CLI & Generators](https://github.com/croco-dev/framework/tree/trunk/packages/create-croco-app)** — Scaffold new projects with presets for DDD API, fullstack, and more.
+- **[Package Catalog](https://github.com/croco-dev/framework#readme)** — Browse all 98 packages by domain and maturity.
