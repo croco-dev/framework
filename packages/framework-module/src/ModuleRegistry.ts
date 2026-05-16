@@ -42,6 +42,13 @@ export function isModuleInitialized(): boolean {
   return isInitialized;
 }
 
+export function getRegisteredModules(): ReadonlyArray<{ name: string; initialized: boolean }> {
+  return Array.from(registeredModules.entries()).map(([name]) => ({
+    name,
+    initialized: isInitialized,
+  }));
+}
+
 function validateModule(module: ModuleOptions): void {
   if (typeof module.name !== "string" || module.name.trim().length === 0) {
     throw new Error("Module name must be a non-empty string.");
