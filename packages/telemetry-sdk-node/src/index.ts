@@ -49,7 +49,5 @@ export { OtlpEndpointRequiredProblem, SamplerProblem } from "./libs/problems/Tel
 export { ProbabilitySampler } from "./libs/samplers/ProbabilitySampler";
 export type { ForceFlushResult } from "./runtime";
 
-/**
- * OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 싱글턴입니다.
- */
 export { TelemetryRuntime } from "./runtime";
+export { TelemetryDiagnosticsProvider } from "./libs/diagnostics/TelemetryDiagnosticsProvider";

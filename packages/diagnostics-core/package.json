@@ -1,5 +1,5 @@
 {
-  "name": "@croco/framework-module",
+  "name": "@croco/diagnostics-core",
   "version": "0.0.1",
   "files": [
     "dist"
@@ -20,20 +20,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "oxlint .",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint ."
+    "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@croco/diagnostics-core": "workspace:*",
-    "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*",
-    "reflect-metadata": "0.2.2",
-    "typedi": "0.10.0"
-  },
-  "devDependencies": {
-    "tsup": "8.5.1",
-    "vitest": "4.0.16"
-  }
+  "dependencies": {},
+  "devDependencies": {}
 }

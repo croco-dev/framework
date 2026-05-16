@@ -4,7 +4,7 @@ import type {
   EventHandlerClass,
   EventSubscription,
 } from "@croco/events-core";
-import { EventSubscriptionIndex } from "@croco/events-core";
+import { EventBusConfig, EventSubscriptionIndex } from "@croco/events-core";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import type { TraceInfo } from "@croco/telemetry-api";
@@ -111,6 +111,7 @@ export class InMemoryEventBus<
     try {
       await this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
       publishSpan.setStatus({ code: SpanStatusCode.OK });
+      EventBusConfig.getStats()?.publish(false);
     } catch (error) {
       const normalizedError = this.normalizeError(error);
       publishSpan.recordException(normalizedError);
@@ -118,6 +119,7 @@ export class InMemoryEventBus<
         code: SpanStatusCode.ERROR,
         message: normalizedError.message,
       });
+      EventBusConfig.getStats()?.publish(true);
       throw normalizedError;
     } finally {
       publishSpan.end();
