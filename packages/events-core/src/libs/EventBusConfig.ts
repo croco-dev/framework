@@ -4,6 +4,7 @@ import type { HandlerResolver } from "./HandlerResolver";
 import { DefaultHandlerResolver } from "./HandlerResolver";
 import { EventBusNotSetProblem } from "./problems/EventsProblems";
 import type { EventSubscription } from "./types/EventSubscription";
+import type { EventBusStats } from "./EventBusStats";
 
 export interface EventBusStartOptions {
   handlers: EventHandlerClass[];
@@ -19,6 +20,7 @@ type StartedSubscription = EventSubscription & {
  */
 export class EventBusConfig {
   private static instance?: EventBusConfig;
+  private static stats?: EventBusStats;
   private readonly subscriptions: Set<EventSubscription> = new Set();
   private readonly startedSubscriptions: Map<string, StartedSubscription> = new Map();
   private eventBus?: EventBus;
@@ -32,6 +34,18 @@ export class EventBusConfig {
 
   public static setInstance(config: EventBusConfig): void {
     EventBusConfig.instance = config;
+  }
+
+  public static getStats(): EventBusStats | undefined {
+    return EventBusConfig.stats;
+  }
+
+  public static setStats(stats: EventBusStats): void {
+    EventBusConfig.stats = stats;
+  }
+
+  public getSubscriptions(): ReadonlySet<EventSubscription> {
+    return this.subscriptions;
   }
 
   public getEventBus(): EventBus {

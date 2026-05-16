@@ -34,6 +34,8 @@ export { EventSubscriptionIndex } from "./libs/EventBus";
  * 전역 EventBus 설정과 핸들러 등록 초기화를 관리합니다.
  */
 export { EventBusConfig } from "./libs/EventBusConfig";
+export { EventBusStats } from "./libs/EventBusStats";
+export { EventBusDiagnosticsProvider } from "./libs/diagnostics/EventBusDiagnosticsProvider";
 /**
  * 이벤트 핸들러 계약 타입과 핸들러 클래스 타입입니다.
  */
