@@ -5,8 +5,7 @@ import { validateConfig } from "../validateConfig";
 
 const CONFIG_SCHEMA_KEY = Symbol("config:schema");
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Constructor = new (...args: any[]) => any;
+type Constructor = abstract new (...args: unknown[]) => unknown;
 
 export function ConfigSchema(schema: z.ZodType): (target: Constructor) => void {
   return (target: Constructor): void => {
@@ -15,7 +14,8 @@ export function ConfigSchema(schema: z.ZodType): (target: Constructor) => void {
 }
 
 export function getConfigSchema(target: Constructor): z.ZodType | undefined {
-  return Reflect.getMetadata(CONFIG_SCHEMA_KEY, target) as z.ZodType | undefined;
+  const metadata: unknown = Reflect.getMetadata(CONFIG_SCHEMA_KEY, target);
+  return metadata as z.ZodType | undefined;
 }
 
 export function bootstrapConfig<T>(
