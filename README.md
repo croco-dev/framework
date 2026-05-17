@@ -101,10 +101,18 @@ graph LR
 
 ## 🚀 Quick Start
 
-> Lambda 기반 REST API를 빠르게 시작하세요. 상세 가이드와 실행 가능한 예제는 준비되어 있습니다.
+> Lambda 기반 REST API를 빠르게 시작하세요.
 >
-> **문서**: [Getting Started Guide](packages/docs/src/content/docs/en/guides/getting-started.mdx) - 인증, DI, Metering을 포함한 단계별 가이드
-> **예제**: [Quick Start Example](examples/quick-start-lambda/) - `pnpm dev`로 바로 실행 가능한 Lambda API 예제
+> **첫 번째 프로젝트 생성**:
+>
+> ```bash
+> npx create-croco-app@latest my-project --preset ddd-api --backend-deploy lambda
+> cd my-project && pnpm install && pnpm dev
+> ```
+>
+> **Route A (Scaffold)**: [Getting Started Guide](packages/docs/src/content/docs/en/guides/getting-started.mdx)에서 scaffold부터 Auth, Metering, Lambda 배포까지 단계별로 SaaS API를 구축하세요.
+>
+> **Route B (Example)**: [Quick Start Example](examples/quick-start-lambda/)에서 Auth와 Metering이 포함된 완성된 Lambda API를 `pnpm dev`로 바로 실행하세요.
 
 #### 패키지 성숙도 안내
 

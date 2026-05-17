@@ -2,6 +2,8 @@
 
 Croco CLI is a code generator and project scaffolding tool for Croco framework workspaces. It creates controllers, entities, events, pages, domain modules, and generates RPC clients or OpenAPI specs.
 
+> **New to Croco?** Start with [`npx create-croco-app`](https://github.com/croco-dev/framework/tree/trunk/packages/create-croco-app) to scaffold your first SaaS API, then follow the [Getting Started guide](https://github.com/croco-dev/framework/tree/trunk/packages/docs/src/content/docs/en/guides/getting-started.mdx).
+
 ## Quick Start
 
 ```bash

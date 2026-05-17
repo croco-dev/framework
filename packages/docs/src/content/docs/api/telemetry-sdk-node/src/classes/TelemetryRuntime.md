@@ -5,8 +5,6 @@ prev: false
 title: "TelemetryRuntime"
 ---
 
-OpenTelemetry SDK를 초기화하고 flush, shutdown을 관리하는 런타임 싱글턴입니다.
-
 ## Methods
 
 ### forceFlush()

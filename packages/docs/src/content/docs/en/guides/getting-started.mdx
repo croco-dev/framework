@@ -7,20 +7,20 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## 1. Introduction
 
-Croco gives you a **SaaS backend in 5 minutes** — fully typed, Lambda-ready, with auth, metering, and billing built in from the first line of code. No glue code. No separate auth service. No metering SDK to bolt on later.
+Croco provides a **SaaS backend toolkit** — fully typed, Lambda-ready, with auth, metering, and billing built into the framework. The `ddd-api` preset gives you a basic DDD skeleton to start from; for a complete SaaS example with all primitives wired together, skip straight to the Quick Start Lambda example.
 
 This guide takes you from zero to a deployed API: scaffold the project, add an authenticated endpoint, layer on metering, and export as a Lambda handler.
 
-<Aside type="tip" title="Want the full code?">
-The complete example lives at [`examples/quick-start-lambda`](https://github.com/croco-dev/framework/tree/trunk/examples/quick-start-lambda).
+<Aside type="tip" title="Prefer a fully working example?">
+Jump straight to [`examples/quick-start-lambda`](https://github.com/croco-dev/framework/tree/trunk/examples/quick-start-lambda) — a complete, runnable SaaS backend with auth, metering, Lambda export, and DI wiring already in place.
 </Aside>
 
 ## 2. Quick Start
 
-Create a new project with the CLI. The `ddd-api` preset gives you a Lambda-first TypeScript scaffold:
+Create a new project with the CLI. The `ddd-api` preset generates a basic DDD skeleton (Drizzle ORM + env config) — a clean foundation to build on:
 
 ```bash
-npx create-croco-app@latest my-saas-api
+npx create-croco-app@latest my-project --preset ddd-api --backend-deploy lambda
 ```
 
 When prompted, choose `ddd-api` for the preset and `lambda` for the backend deploy target.
@@ -28,7 +28,7 @@ When prompted, choose `ddd-api` for the preset and `lambda` for the backend depl
 Then install dependencies and start the dev server:
 
 ```bash
-cd my-saas-api && pnpm install && pnpm dev
+cd my-project && pnpm install && pnpm dev
 ```
 
 Your API is now running at `http://localhost:3000/api`. Let's add some SaaS features.
@@ -107,6 +107,8 @@ export const handler = app.lambdaHandler();
 That's it. `handler` is a standard AWS Lambda entrypoint — deploy it with SST, Terraform, CDK, or any Lambda-compatible platform.
 
 ## 6. Complete Example
+
+The quick-start-lambda example above is the **complete, runnable reference** for everything covered in this guide.
 
 Here's the full project structure from `quick-start-lambda`, bringing together auth, metering, and Lambda export in ~60 lines:
 
