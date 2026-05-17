@@ -144,6 +144,9 @@ jobs:
             echo "Circular dependency check passed (no allowlist, no violations)"
           fi
 
+      - name: First-Success Contract Verify
+        run: pnpm first-success:verify
+
       - name: Lint & Format Check
         run: pnpm check
 

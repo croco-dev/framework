@@ -1,6 +1,6 @@
 # Quick Start Lambda Example
 
-Minimal Lambda-ready REST API using Croco Framework.
+Croco SaaS Backend Demo — Auth + Metering on AWS Lambda, wired with `@croco/auth-core`, `@croco/metering-core`, `@croco/protocols-rest`, and `@croco/transports-http`.
 
 ## Run Locally
 
@@ -9,18 +9,41 @@ pnpm install
 pnpm dev
 ```
 
-Then test:
+Then test the endpoints:
 
+**Health check (no auth required):**
 ```bash
 curl http://localhost:3000/api/health
 ```
 
 Expected response:
-
 ```json
-{ "status": "ok", "message": "Croco Quick Start is running!" }
+{ "status": "ok" }
 ```
+
+**List users (requires auth header):**
+```bash
+curl -H "x-api-key: test-key" http://localhost:3000/api/users
+```
+
+Expected response: `200` with user list.
+
+**Create user (requires auth header, triggers metering):**
+```bash
+curl -X POST -H "x-api-key: test-key" -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@example.com"}' \
+  http://localhost:3000/api/users
+```
+
+Expected response: `200` with created user. The `api_user_create` meter records the event.
+
+> **Auth note**: Endpoints without `x-api-key: test-key` return `401`.
 
 ## Deploy
 
 Export the `handler` from `src/index.ts` as your AWS Lambda entry point.
+
+## Prerequisites
+
+- Node.js >= 18
+- pnpm (install via `corepack enable && corepack prepare pnpm@latest --activate`)

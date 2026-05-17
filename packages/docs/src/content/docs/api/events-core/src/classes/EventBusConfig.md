@@ -39,6 +39,16 @@ title: "EventBusConfig"
 
 ***
 
+### getSubscriptions()
+
+> **getSubscriptions**(): `ReadonlySet`\<[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>\>
+
+#### Returns
+
+`ReadonlySet`\<[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>\>
+
+***
+
 ### setEventBus()
 
 > **setEventBus**(`eventBus`): `void`
@@ -113,6 +123,16 @@ title: "EventBusConfig"
 
 ***
 
+### getStats()
+
+> `static` **getStats**(): [`EventBusStats`](/api/events-core/src/classes/eventbusstats/)
+
+#### Returns
+
+[`EventBusStats`](/api/events-core/src/classes/eventbusstats/)
+
+***
+
 ### setInstance()
 
 > `static` **setInstance**(`config`): `void`
@@ -122,6 +142,22 @@ title: "EventBusConfig"
 ##### config
 
 `EventBusConfig`
+
+#### Returns
+
+`void`
+
+***
+
+### setStats()
+
+> `static` **setStats**(`stats`): `void`
+
+#### Parameters
+
+##### stats
+
+[`EventBusStats`](/api/events-core/src/classes/eventbusstats/)
 
 #### Returns
 

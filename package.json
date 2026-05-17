@@ -22,7 +22,8 @@
     "typecheck": "turbo typecheck",
     "version-packages": "changeset version",
     "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",
-    "bench:update": "node --experimental-strip-types scripts/bench-threshold-check.mts --update-baseline"
+    "bench:update": "node --experimental-strip-types scripts/bench-threshold-check.mts --update-baseline",
+    "first-success:verify": "node --experimental-strip-types scripts/first-success-verify.mts"
   },
   "dependencies": {
     "@vitejs/plugin-rsc": "0.5.26"

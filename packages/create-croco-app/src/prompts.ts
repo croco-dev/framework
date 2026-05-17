@@ -46,7 +46,11 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       message: "Select a project preset:",
       options: [
         { value: "blank", label: "Blank", hint: "Empty monorepo structure" },
-        { value: "ddd-api", label: "DDD API", hint: "API only (no web frontend)" },
+        {
+          value: "ddd-api",
+          label: "DDD API",
+          hint: "Basic DDD skeleton (Drizzle ORM + env utils)",
+        },
         { value: "ddd-fullstack", label: "DDD Fullstack", hint: "API + Web frontend" },
         {
           value: "ddd-vike-fullstack",
