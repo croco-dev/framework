@@ -2,8 +2,9 @@ import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type DrizzleDb, DrizzleMeterRepository } from "../libs/DrizzleMeterRepository";
+import type { ILogger } from "@croco/framework-context";
 import { metersSqlite, usageRecordsSqlite } from "../libs/schema";
 
 describe("DrizzleMeterRepository", () => {
@@ -354,6 +355,57 @@ describe("DrizzleMeterRepository", () => {
         .prepare("SELECT recorded_at, value FROM usage_records WHERE idempotency_key = ?")
         .all("idem-1") as Array<{ recorded_at: number; value: number }>;
       expect(result).toEqual([{ recorded_at: 3000, value: 2 }]);
+    });
+  });
+
+  describe("deserializeMetadata JSON parse failure", () => {
+    it("should log warn and return undefined on invalid JSON", async () => {
+      const logger = { warn: vi.fn() } as unknown as ILogger;
+      const repoWithLogger = new DrizzleMeterRepository(
+        db,
+        txManager,
+        {
+          meterTable: metersSqlite,
+          meterSchema: {
+            id: metersSqlite.id,
+            tenantId: metersSqlite.tenantId,
+            meterId: metersSqlite.meterId,
+            type: metersSqlite.type,
+            quota: metersSqlite.quota,
+            allowOverQuota: metersSqlite.allowOverQuota,
+            metadata: metersSqlite.metadata,
+            createdAt: metersSqlite.createdAt,
+            updatedAt: metersSqlite.updatedAt,
+          },
+          usageRecordTable: usageRecordsSqlite,
+          usageRecordSchema: {
+            id: usageRecordsSqlite.id,
+            tenantId: usageRecordsSqlite.tenantId,
+            meterId: usageRecordsSqlite.meterId,
+            value: usageRecordsSqlite.value,
+            recordedAt: usageRecordsSqlite.recordedAt,
+            metadata: usageRecordsSqlite.metadata,
+            idempotencyKey: usageRecordsSqlite.idempotencyKey,
+          },
+        },
+        logger,
+      );
+
+      sqlite
+        .prepare(
+          `INSERT INTO meters (tenant_id, meter_id, type, quota, allow_over_quota, metadata, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run("tenant-1", "bad_json", "COUNT", null, 0, "{invalid json}", Date.now(), Date.now());
+
+      const result = await repoWithLogger.findByMeterIdAndTenant("bad_json", "tenant-1");
+
+      expect(result).not.toBeNull();
+      expect(result!.meterId).toBe("bad_json");
+      expect(result!.metadata).toBeUndefined();
+      expect(logger.warn).toHaveBeenCalledWith("Failed to deserialize metadata JSON", {
+        error: expect.any(SyntaxError),
+      });
     });
   });
 
