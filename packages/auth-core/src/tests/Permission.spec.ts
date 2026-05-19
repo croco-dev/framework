@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   formatPermission,
   getResourcePermissions,
@@ -10,6 +10,16 @@ import {
 } from "../libs/rbac/Permission";
 
 describe("Permission", () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
   describe("parsePermission", () => {
     it("should parse valid permission string", () => {
       const result = parsePermission("billing:write");
@@ -70,9 +80,10 @@ describe("Permission", () => {
       expect(hasPermission(userPermissions, "billing:write")).toBe(false);
     });
 
-    it("should handle invalid permissions in user list gracefully", () => {
-      const userPermissions = ["invalid:permission", "billing:write"];
-      expect(hasPermission(userPermissions, "billing:write")).toBe(true);
+    it("should warn and handle invalid permissions in user list gracefully", () => {
+      const userPermissions = ["invalid-format", "billing:manage"];
+      expect(hasPermission(userPermissions, "billing:read")).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith("Malformed permission string:", "invalid-format");
     });
 
     describe("resource level permissions", () => {
@@ -130,6 +141,13 @@ describe("Permission", () => {
       const userPermissions = ["users:manage"];
       const result = getResourcePermissions(userPermissions, "posts");
       expect(result).toEqual([]);
+    });
+
+    it("should warn for malformed permission strings in getResourcePermissions", () => {
+      const userPermissions = ["posts:read", "bad-permission"];
+      const result = getResourcePermissions(userPermissions, "posts");
+      expect(result).toEqual([{ action: "read" }]);
+      expect(warnSpy).toHaveBeenCalledWith("Malformed permission string:", "bad-permission");
     });
   });
 
