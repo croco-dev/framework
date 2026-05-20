@@ -1,4 +1,4 @@
-import { Component } from "@croco/framework-context";
+import { Component, Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { PostHog } from "posthog-node";
 import { PostHogConfigProblem } from "./problems/PostHogProblems";
 
@@ -24,7 +24,8 @@ export class PostHogClient {
     }
 
     if (!config.host && envHost) {
-      console.warn(
+      const logger = Container.get(LOGGER_TOKEN) as ILogger;
+      logger.warn(
         "[PostHogClient] POSTHOG_HOST env var is used for PostHog host. " +
           "Set host explicitly in config to confirm data residency compliance.",
       );

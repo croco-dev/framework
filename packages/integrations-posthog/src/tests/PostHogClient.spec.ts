@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { Container } from "@croco/framework-context";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import type { ILogger } from "@croco/framework-context";
 import { PostHog } from "posthog-node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PostHogClient } from "../libs/PostHogClient";
@@ -20,19 +21,19 @@ const HOST_REQUIRED_MESSAGE =
 
 describe("PostHogClient", () => {
   let client!: PostHogClient;
-  let warnSpy!: ReturnType<typeof vi.spyOn>;
+  let loggerMock: { warn: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     Container.reset();
     vi.clearAllMocks();
-    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    loggerMock = { warn: vi.fn() };
+    Container.set(LOGGER_TOKEN, loggerMock as unknown as ILogger);
     vi.stubEnv("POSTHOG_HOST", "https://test.posthog.com");
     client = new PostHogClient({ apiKey: "test-key" });
-    warnSpy.mockClear();
+    loggerMock.warn.mockClear();
   });
 
   afterEach(() => {
-    warnSpy.mockRestore();
     vi.unstubAllEnvs();
   });
 
@@ -65,7 +66,9 @@ describe("PostHogClient", () => {
     expect(PostHog).toHaveBeenLastCalledWith("custom-key", {
       host: "https://custom.posthog.com",
     });
-    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("data residency compliance"));
+    expect(loggerMock.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining("data residency compliance"),
+    );
   });
 
   it("should fallback to POSTHOG_HOST with a data residency warning when host is not provided", () => {
@@ -76,7 +79,7 @@ describe("PostHogClient", () => {
     expect(PostHog).toHaveBeenLastCalledWith("env-key", {
       host: "https://env.posthog.example",
     });
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(loggerMock.warn).toHaveBeenCalledWith(
       "[PostHogClient] POSTHOG_HOST env var is used for PostHog host. " +
         "Set host explicitly in config to confirm data residency compliance.",
     );
