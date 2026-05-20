@@ -1,5 +1,7 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import type { ILogger } from "@croco/framework-context";
 import {
   clearMeteringService,
   getMeteredMetadata,
@@ -156,7 +158,46 @@ describe("@Metered decorator", () => {
   });
 
   describe("fail-safe behavior", () => {
-    it("should return result even if metering fails", async () => {
+    let mockLogger: ILogger;
+
+    beforeEach(() => {
+      Container.reset();
+      mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      };
+      Container.set(LOGGER_TOKEN, mockLogger);
+    });
+
+    it("should return result even if metering fails and log via DI logger", async () => {
+      vi.mocked(mockService.record).mockRejectedValue(new Error("Metering error"));
+
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({ meterId: "api_calls" })
+        async doSomething(): Promise<string> {
+          return "success";
+        }
+      }
+
+      const service = new TestService();
+      const result = await service.doSomething();
+
+      expect(result).toBe("success");
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it("should fallback to console.error if DI logger fails", async () => {
+      vi.spyOn(Container, "get").mockImplementationOnce((token) => {
+        if (token === LOGGER_TOKEN) {
+          throw new Error("ServiceNotFoundError");
+        }
+        return Container.get(token);
+      });
       vi.mocked(mockService.record).mockRejectedValue(new Error("Metering error"));
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
