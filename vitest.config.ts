@@ -8,6 +8,8 @@ export const CORE_COVERAGE_PACKAGES = [
   "@croco/telemetry-api",
 ];
 
+export const CORE_COVERAGE_BASELINE_PATH = "ci-reports/coverage/core-baseline.txt";
+
 export const CORE_COVERAGE_THRESHOLDS = {
   lines: 60,
   branches: 60,

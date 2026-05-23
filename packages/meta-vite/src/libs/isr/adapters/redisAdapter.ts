@@ -38,7 +38,7 @@ export class RedisCacheStoreAdapter extends AbstractCacheStoreAdapter {
       body,
     };
     const serialized = JSON.stringify(entry);
-    if (ttlMs) {
+    if (ttlMs != null && ttlMs > 0) {
       await this.redis.setex(prefixedKey, Math.ceil(ttlMs / 1000), serialized);
     } else {
       await this.redis.set(prefixedKey, serialized);

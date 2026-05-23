@@ -1,0 +1,7 @@
+| Package | Statements | Branches | Functions | Lines |
+|---------|-----------:|---------:|----------:|------:|
+| `@croco/framework-context` | 0 | 0 | 0 | 0 |
+| `@croco/retry-core` | 0 | 0 | 0 | 0 |
+| `@croco/events-core` | 0 | 0 | 0 | 0 |
+| `@croco/auth-core` | 0 | 0 | 0 | 0 |
+| `@croco/telemetry-api` | 0 | 0 | 0 | 0 |

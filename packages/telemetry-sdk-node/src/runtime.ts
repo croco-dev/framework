@@ -138,22 +138,17 @@ class TelemetryRuntime {
 
     try {
       const flushPromise = this.processor.forceFlush();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () =>
+            reject(
+              new TelemetryRuntimeProblem("forceFlush", `timed out after ${effectiveTimeout}ms`),
+            ),
+          effectiveTimeout,
+        );
+      });
 
-      if (timeoutMillis !== undefined) {
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(
-            () =>
-              reject(
-                new TelemetryRuntimeProblem("forceFlush", `timed out after ${effectiveTimeout}ms`),
-              ),
-            effectiveTimeout,
-          );
-        });
-
-        await Promise.race([flushPromise, timeoutPromise]);
-      } else {
-        await flushPromise;
-      }
+      await Promise.race([flushPromise, timeoutPromise]);
 
       return {
         success: true,

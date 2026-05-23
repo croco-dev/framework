@@ -47,6 +47,35 @@ describe("TelemetryRuntime", () => {
     await runtime.forceFlush();
   });
 
+  it("should timeout with default 30000ms when no timeoutMillis arg given", async () => {
+    vi.useFakeTimers();
+    const processor = {
+      forceFlush: vi.fn(() => new Promise<void>(() => {})),
+    };
+
+    Object.assign(runtime, { processor });
+
+    const resultPromise = runtime.forceFlush();
+    await vi.advanceTimersByTimeAsync(30000);
+    const result = await resultPromise;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
+    expect(result.error?.message).toContain("timed out after");
+    vi.useRealTimers();
+  });
+
+  it("should resolve when processor completes quickly even without timeout arg", async () => {
+    const processor = {
+      forceFlush: vi.fn().mockResolvedValue(undefined),
+    };
+
+    Object.assign(runtime, { processor });
+
+    const result = await runtime.forceFlush();
+    expect(result.success).toBe(true);
+  });
+
   it("should handle shutdown without error", async () => {
     await runtime.shutdown();
   });

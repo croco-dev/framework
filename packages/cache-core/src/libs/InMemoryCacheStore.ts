@@ -39,6 +39,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
     evictions: 0,
   };
   private readonly cleanupTimer?: ReturnType<typeof setInterval>;
+  private generation = 0;
 
   constructor(
     options: InMemoryCacheStoreOptions = { maxEntries: DEFAULT_MAX_ENTRIES },
@@ -88,7 +89,15 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async delete(key: string): Promise<void> {
+    this.generation++;
+    const inFlight = this.inFlightLoads.get(key);
+    if (inFlight !== undefined) {
+      inFlight.catch(() => {
+        // inFlight 가 reject 되어도 inFlightLoads 에서 제거
+      });
+    }
     this.store.delete(key);
+    this.inFlightLoads.delete(key);
   }
 
   async has(key: string): Promise<boolean> {
@@ -108,7 +117,9 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async clear(): Promise<void> {
+    this.generation++;
     this.store.clear();
+    this.inFlightLoads.clear();
   }
 
   close(): void {
@@ -118,16 +129,45 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async invalidatePattern(pattern: CachePattern): Promise<number> {
+    this.generation++;
     const matcher = createPatternRegex(pattern);
     let deletedCount = 0;
+
+    const inFlightToRemove = new Set<string>();
+    for (const key of this.store.keys()) {
+      if (!matcher.test(key)) {
+        continue;
+      }
+      inFlightToRemove.add(key);
+    }
+
+    // Also clean inFlightLoads entries that match the pattern but aren't in the store yet
+    for (const key of this.inFlightLoads.keys()) {
+      if (!matcher.test(key)) {
+        continue;
+      }
+      inFlightToRemove.add(key);
+    }
 
     for (const key of this.store.keys()) {
       if (!matcher.test(key)) {
         continue;
       }
 
+      const inFlight = this.inFlightLoads.get(key);
+      if (inFlight !== undefined) {
+        inFlightToRemove.add(key);
+        inFlight.catch(() => {
+          // inFlight 가 reject 되어도 inFlightLoads 에서 제거
+        });
+      }
+
       this.deleteEntry(key);
       deletedCount++;
+    }
+
+    for (const key of inFlightToRemove) {
+      this.inFlightLoads.delete(key);
     }
 
     return deletedCount;
@@ -152,11 +192,25 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
       return pending;
     }
 
+    const gen = this.generation;
+
     const loadPromise = (async () => {
       try {
         const loadedValue = await loader();
 
         if (loadedValue !== undefined) {
+          // Store was cleared/deleted during load — don't restore
+          if (this.generation !== gen) {
+            return undefined;
+          }
+
+          // 현재 캐시 값을 먼저 확인하여 늦은 loader 결과가 새 값으로 덮어쓰는지 확인
+          const currentEntry = this.store.get(key);
+          if (currentEntry !== undefined) {
+            // 현재 캐시에 값이 있다면 저장하지 않음 (다른 set() 이 중간에 호출됨)
+            return currentEntry.value;
+          }
+
           await this.set(key, loadedValue, options.ttlMs);
         }
 
