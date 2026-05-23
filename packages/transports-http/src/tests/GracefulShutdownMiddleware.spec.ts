@@ -102,8 +102,43 @@ describe("GracefulShutdownMiddleware", () => {
         });
       });
 
-      expect(secondRequestCount).toBe(1);
+      expect(secondRequestCount).toBe(2);
       expect(getActiveRequestCount()).toBe(0);
+    });
+
+    it("should aggregate active request count across middleware instances", async () => {
+      resetShutdownState();
+      const mw1 = gracefulShutdownMiddleware();
+      gracefulShutdownMiddleware();
+
+      const ctx = {
+        req: { method: "GET", path: "/test", headers: {}, url: "http://localhost/test" },
+        res: { status: 200, headers: {} },
+        raw: { header: () => {}, json: () => new Response() },
+      } as unknown as Parameters<typeof mw1>[0];
+
+      let countDuring = 0;
+      await mw1(ctx, async () => {
+        countDuring = getActiveRequestCount();
+      });
+
+      expect(countDuring).toBe(1);
+      expect(getActiveRequestCount()).toBe(0);
+    });
+
+    it("should report shutting down when any middleware instance is shutting down (aggregate)", async () => {
+      resetShutdownState();
+      const shutdown = setupGracefulShutdown();
+      gracefulShutdownMiddleware();
+
+      expect(isShuttingDown()).toBe(false);
+
+      await shutdown();
+
+      expect(isShuttingDown()).toBe(true);
+
+      resetShutdownState();
+      expect(isShuttingDown()).toBe(false);
     });
   });
 

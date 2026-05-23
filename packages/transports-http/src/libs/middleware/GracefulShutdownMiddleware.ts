@@ -34,7 +34,7 @@ function createMiddlewareState(): ShutdownState {
 }
 
 const states = new Set<ShutdownState>();
-let currentState = createMiddlewareState();
+createMiddlewareState();
 
 function isRunningInLambda(): boolean {
   return !!(process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AWS_EXECUTION_ENV);
@@ -57,7 +57,6 @@ export const gracefulShutdownMiddleware = (
   options: GracefulShutdownOptions = {},
 ): MiddlewareFunction => {
   const state = createMiddlewareState();
-  currentState = state;
   const {
     timeoutMs = DEFAULT_TIMEOUT_MS,
     onShutdown,
@@ -118,7 +117,6 @@ export function setupGracefulShutdown(options: GracefulShutdownOptions = {}): ()
   } = options;
 
   const state = createMiddlewareState();
-  currentState = state;
 
   return () =>
     performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
@@ -280,14 +278,23 @@ function generateRequestId(): string {
  * 현재 처리 중인 활성 요청 수를 반환합니다.
  */
 export function getActiveRequestCount(): number {
-  return currentState.activeRequests.size;
+  let total = 0;
+  for (const state of states) {
+    total += state.activeRequests.size;
+  }
+  return total;
 }
 
 /**
  * 현재 프로세스가 shutdown 단계인지 반환합니다.
  */
 export function isShuttingDown(): boolean {
-  return currentState.isShuttingDown;
+  for (const state of states) {
+    if (state.isShuttingDown) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -307,5 +314,5 @@ export function resetShutdownState(): void {
   }
 
   states.clear();
-  currentState = createMiddlewareState();
+  createMiddlewareState();
 }
