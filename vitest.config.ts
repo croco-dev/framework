@@ -11,13 +11,22 @@ export const CORE_COVERAGE_PACKAGES = [
 export const CORE_COVERAGE_BASELINE_PATH = "ci-reports/coverage/core-baseline.txt";
 
 export const CORE_COVERAGE_THRESHOLDS = {
-  statements: 0,
-  branches: 0,
-  functions: 0,
-  lines: 0,
+  lines: 60,
+  branches: 60,
+  functions: 60,
+  statements: 60,
 };
 
-const coverageThresholds = undefined;
+const isCoreCoverageRun = process.env.CORE_COVERAGE === "true";
+const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map((packageName) =>
+  packageName.replace("@croco/", "packages/"),
+);
+const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
+const shouldApplyCoreCoverageThresholds =
+  isCoreCoverageRun &&
+  coreCoveragePackagePaths.some((packagePath) => currentWorkingDirectory.endsWith(packagePath));
+
+const coverageThresholds = shouldApplyCoreCoverageThresholds ? CORE_COVERAGE_THRESHOLDS : undefined;
 
 export default defineConfig({
   test: {
