@@ -98,6 +98,15 @@ describe("RedisCacheStoreAdapter", () => {
       expect(mockRedis.set).toHaveBeenCalledWith("isr:/test", expect.any(String));
       expect(mockRedis.setex).not.toHaveBeenCalled();
     });
+
+    it("ttlMs=0 uses set(), not setex()", async () => {
+      vi.mocked(mockRedis.set).mockResolvedValue("OK");
+
+      await adapter._set("/test", new Response("no-ttl"), 0);
+
+      expect(mockRedis.set).toHaveBeenCalledWith("isr:/test", expect.any(String));
+      expect(mockRedis.setex).not.toHaveBeenCalled();
+    });
   });
 
   describe("_delete", () => {
