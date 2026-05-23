@@ -196,6 +196,40 @@ describe("bootstrapConfig", () => {
     expect(result).toEqual({ API_KEY: "test-api-key" });
   });
 
+  // README-style: coerce.number().default() with explicit generic (T4 scope guard)
+  it("should coerce number from string and apply default (README style)", () => {
+    const schema = z.object({
+      API_KEY: z.string(),
+      TIMEOUT: z.coerce.number().default(5000),
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    class AppConfig {}
+    ConfigSchema(schema)(AppConfig);
+
+    const config = bootstrapConfig<AppConfig>(AppConfig, {
+      API_KEY: "sk_test",
+      TIMEOUT: "3000",
+    });
+    expect(config).toEqual({ API_KEY: "sk_test", TIMEOUT: 3000 });
+  });
+
+  it("should apply default value when optional coerce field is missing", () => {
+    const schema = z.object({
+      API_KEY: z.string(),
+      TIMEOUT: z.coerce.number().default(5000),
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    class AppConfig {}
+    ConfigSchema(schema)(AppConfig);
+
+    const config = bootstrapConfig<AppConfig>(AppConfig, {
+      API_KEY: "sk_test",
+    });
+    expect(config).toEqual({ API_KEY: "sk_test", TIMEOUT: 5000 });
+  });
+
   it("should throw error for class without decorator", () => {
     class PlainConfig {}
 
