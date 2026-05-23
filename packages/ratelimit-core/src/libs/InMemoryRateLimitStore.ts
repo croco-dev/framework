@@ -123,6 +123,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
 
 export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   private readonly windows = new Map<string, { timestamps: number[]; windowMs: number }>();
+  private readonly _windowMsCache = new Map<string, number>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly pruneTimer?: ReturnType<typeof setInterval>;
 
@@ -157,7 +158,9 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     remaining: number;
     resetAtMs: number;
   }> {
+    this._windowMsCache.set(key, policy.windowMs);
     const result = await this.checkSlidingWindow(key, policy);
+    this._windowMsCache.delete(key);
 
     if (result.success) {
       this.globalStats.allowed++;
@@ -172,8 +175,8 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   protected async addTimestamp(key: string, timestamp: number): Promise<void> {
     let entry = this.windows.get(key);
     if (!entry) {
-      const policy = this.windows.get(key);
-      entry = { timestamps: [], windowMs: policy?.windowMs ?? 60000 };
+      const windowMs = this._windowMsCache.get(key) ?? 60000;
+      entry = { timestamps: [], windowMs };
     }
     entry.timestamps.push(timestamp);
     this.windows.set(key, entry);
@@ -313,12 +316,12 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     return 0;
   }
 
-  async reset(): Promise<void> {
-    return;
+  async reset(key: string): Promise<void> {
+    this.buckets.delete(key);
   }
 
-  async expire(): Promise<void> {
-    return;
+  async expire(key: string, _ttlMs: number): Promise<void> {
+    this.buckets.delete(key);
   }
 
   async pruneExpired(): Promise<number> {

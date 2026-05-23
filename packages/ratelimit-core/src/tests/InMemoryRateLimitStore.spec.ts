@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FixedWindowInMemoryStore,
   InMemoryRateLimitStore,
+  SlidingWindowInMemoryStore,
   TokenBucketInMemoryStore,
 } from "../libs/InMemoryRateLimitStore";
 import type { FixedWindowPolicy, SlidingWindowPolicy, TokenBucketPolicy } from "../libs/types";
@@ -162,5 +163,97 @@ describe("InMemoryRateLimitStore", () => {
 
     tokenStore.close();
     vi.useRealTimers();
+  });
+
+  describe("SlidingWindowInMemoryStore custom windowMs", () => {
+    let slidingStore!: SlidingWindowInMemoryStore;
+    const customWindowPolicy: SlidingWindowPolicy = {
+      name: "custom-window",
+      algorithm: "sliding",
+      limit: 5,
+      windowMs: 5000,
+    };
+
+    beforeEach(() => {
+      slidingStore = new SlidingWindowInMemoryStore({ pruneIntervalMs: 0 });
+    });
+
+    afterEach(() => {
+      slidingStore.close();
+    });
+
+    it("should use custom windowMs (5000ms) for pruning", async () => {
+      vi.useFakeTimers();
+      const baseTime = Date.now();
+      vi.setSystemTime(baseTime);
+
+      // Make 5 requests within the custom 5000ms window
+      for (let i = 0; i < 5; i++) {
+        const r = await slidingStore.check("key-a", customWindowPolicy);
+        expect(r.success).toBe(true);
+      }
+
+      // Advance past 5000ms custom window but still within default 60000ms
+      vi.advanceTimersByTime(6000);
+
+      // pruneExpired uses stored entry.windowMs — with bug (60000) nothing pruned,
+      // with fix (5000) all 5 entries get pruned
+      const deleted = await slidingStore.pruneExpired();
+      expect(deleted).toBe(5);
+
+      // After prune, fresh entry with full capacity
+      const result = await slidingStore.check("key-a", customWindowPolicy);
+      expect(result.remaining).toBe(4);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe("TokenBucketInMemoryStore reset and expire", () => {
+    let tokenStore!: TokenBucketInMemoryStore;
+    const tokenPolicy: TokenBucketPolicy = {
+      name: "token-test",
+      algorithm: "token-bucket",
+      capacity: 3,
+      refillRate: 1,
+      refillIntervalMs: 1000,
+    };
+
+    beforeEach(() => {
+      tokenStore = new TokenBucketInMemoryStore({ pruneIntervalMs: 0 });
+    });
+
+    afterEach(() => {
+      tokenStore.close();
+    });
+
+    it("should delete bucket on reset(key)", async () => {
+      // Consume all tokens
+      for (let i = 0; i < 3; i++) {
+        await tokenStore.check("user:reset", tokenPolicy);
+      }
+      let result = await tokenStore.check("user:reset", tokenPolicy);
+      expect(result.success).toBe(false);
+
+      // Reset the key
+      await tokenStore.reset("user:reset");
+
+      // Should be a fresh bucket with full capacity
+      result = await tokenStore.check("user:reset", tokenPolicy);
+      expect(result.success).toBe(true);
+      expect(result.remaining).toBe(2);
+    });
+
+    it("should delete bucket on expire(key, ttlMs)", async () => {
+      await tokenStore.check("user:expire", tokenPolicy);
+
+      // Expire the bucket
+      await tokenStore.expire("user:expire", 0);
+
+      // After expire, next check should create a fresh bucket
+      const result = await tokenStore.check("user:expire", tokenPolicy);
+      expect(result.success).toBe(true);
+      expect(result.remaining).toBe(2);
+    });
   });
 });
