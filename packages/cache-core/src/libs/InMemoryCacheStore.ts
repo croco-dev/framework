@@ -141,6 +141,14 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
       inFlightToRemove.add(key);
     }
 
+    // Also clean inFlightLoads entries that match the pattern but aren't in the store yet
+    for (const key of this.inFlightLoads.keys()) {
+      if (!matcher.test(key)) {
+        continue;
+      }
+      inFlightToRemove.add(key);
+    }
+
     for (const key of this.store.keys()) {
       if (!matcher.test(key)) {
         continue;

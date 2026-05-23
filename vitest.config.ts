@@ -10,6 +10,13 @@ export const CORE_COVERAGE_PACKAGES = [
 
 export const CORE_COVERAGE_BASELINE_PATH = "ci-reports/coverage/core-baseline.txt";
 
+export const CORE_COVERAGE_THRESHOLDS = {
+  statements: 0,
+  branches: 0,
+  functions: 0,
+  lines: 0,
+};
+
 const coverageThresholds = undefined;
 
 export default defineConfig({
