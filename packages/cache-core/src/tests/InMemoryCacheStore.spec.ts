@@ -302,7 +302,7 @@ describe("InMemoryCacheStore", () => {
       const result = await pendingPromise;
 
       // clear() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
-      expect(result).toBe("loaded-value");
+      expect(result).toBeUndefined();
     });
 
     it("delete() during getOrSet load: loader completes but value not stored", async () => {
@@ -320,7 +320,7 @@ describe("InMemoryCacheStore", () => {
       const result = await pendingPromise;
 
       // delete() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
-      expect(result).toBe("loaded-value");
+      expect(result).toBeUndefined();
     });
 
     it("invalidatePattern() during getOrSet load: loader completes but value not stored", async () => {
@@ -338,7 +338,7 @@ describe("InMemoryCacheStore", () => {
       const result = await pendingPromise;
 
       // invalidatePattern() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
-      expect(result).toBe("loaded-value");
+      expect(result).toBeUndefined();
     });
   });
 

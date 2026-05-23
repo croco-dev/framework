@@ -39,6 +39,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
     evictions: 0,
   };
   private readonly cleanupTimer?: ReturnType<typeof setInterval>;
+  private generation = 0;
 
   constructor(
     options: InMemoryCacheStoreOptions = { maxEntries: DEFAULT_MAX_ENTRIES },
@@ -88,6 +89,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async delete(key: string): Promise<void> {
+    this.generation++;
     const inFlight = this.inFlightLoads.get(key);
     if (inFlight !== undefined) {
       inFlight.catch(() => {
@@ -115,6 +117,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async clear(): Promise<void> {
+    this.generation++;
     this.store.clear();
     this.inFlightLoads.clear();
   }
@@ -126,6 +129,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async invalidatePattern(pattern: CachePattern): Promise<number> {
+    this.generation++;
     const matcher = createPatternRegex(pattern);
     let deletedCount = 0;
 
@@ -180,11 +184,18 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
       return pending;
     }
 
+    const gen = this.generation;
+
     const loadPromise = (async () => {
       try {
         const loadedValue = await loader();
 
         if (loadedValue !== undefined) {
+          // Store was cleared/deleted during load — don't restore
+          if (this.generation !== gen) {
+            return undefined;
+          }
+
           // 현재 캐시 값을 먼저 확인하여 늦은 loader 결과가 새 값으로 덮어쓰는지 확인
           const currentEntry = this.store.get(key);
           if (currentEntry !== undefined) {
