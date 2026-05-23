@@ -340,6 +340,46 @@ describe("InMemoryCacheStore", () => {
       // invalidatePattern() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
       expect(result).toBeUndefined();
     });
+
+    it("getOrSet stale overwrite: set before loader completes", async () => {
+      const loader = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return "loaded-value";
+      });
+
+      const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await Promise.resolve();
+
+      await cache.set("key1", "newValue");
+
+      const result = await pendingPromise;
+
+      // getOrSet 의 loader 완료 후 현재 캐시 값을 확인하는 로직에 의해 새 값이 유지되어야 함
+      expect(result).toBe("newValue");
+      expect(await cache.get("key1")).toBe("newValue");
+    });
+
+    it("getOrSet stale overwrite: set after clear", async () => {
+      const loader = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return "loaded-value";
+      });
+
+      const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await Promise.resolve();
+
+      await cache.clear();
+      await cache.set("key1", "newValue");
+
+      const result = await pendingPromise;
+
+      // clear() 가 generation 을 증가시켰으므로 loader 결과는 저장되지 않음
+      expect(result).toBeUndefined();
+      // set() 으로 저장한 값은 유지되어야 함
+      expect(await cache.get("key1")).toBe("newValue");
+    });
   });
 
   describe("warmup", () => {
