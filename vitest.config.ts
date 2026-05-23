@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export const CORE_COVERAGE_PACKAGES = [
@@ -14,6 +15,8 @@ export const CORE_COVERAGE_THRESHOLDS = {
   functions: 60,
   statements: 60,
 };
+
+export const CORE_COVERAGE_BASELINE_PATH = resolve("ci-reports", "coverage", "core-baseline.txt");
 
 const isCoreCoverageRun = process.env.CORE_COVERAGE === "true";
 const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map((packageName) =>
