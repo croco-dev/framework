@@ -286,6 +286,60 @@ describe("InMemoryCacheStore", () => {
       expect(second).toBeUndefined();
       expect(loader).toHaveBeenCalledTimes(2);
     });
+
+    it("clear() during getOrSet load: loader completes but value not stored", async () => {
+      const loader = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return "loaded-value";
+      });
+
+      const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await Promise.resolve();
+
+      await cache.clear();
+
+      const result = await pendingPromise;
+
+      // clear() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
+      expect(result).toBe("loaded-value");
+    });
+
+    it("delete() during getOrSet load: loader completes but value not stored", async () => {
+      const loader = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return "loaded-value";
+      });
+
+      const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await Promise.resolve();
+
+      await cache.delete("key1");
+
+      const result = await pendingPromise;
+
+      // delete() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
+      expect(result).toBe("loaded-value");
+    });
+
+    it("invalidatePattern() during getOrSet load: loader completes but value not stored", async () => {
+      const loader = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return "loaded-value";
+      });
+
+      const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await Promise.resolve();
+
+      await cache.invalidatePattern("key1");
+
+      const result = await pendingPromise;
+
+      // invalidatePattern() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
+      expect(result).toBe("loaded-value");
+    });
   });
 
   describe("warmup", () => {
