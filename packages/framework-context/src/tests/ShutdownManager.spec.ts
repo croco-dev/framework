@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../libs/Container";
+import { type ILogger, LOGGER_TOKEN } from "../libs/ILogger";
 import { OnShutdown } from "../libs/decorators/OnShutdown";
 import { ShutdownTimeoutProblem } from "../libs/problems/ShutdownProblems";
 import { ShutdownManager } from "../libs/ShutdownManager";
@@ -36,9 +37,10 @@ describe("ShutdownManager", () => {
     it("should reconfigure singleton timeout on later calls", async () => {
       vi.useFakeTimers();
 
-      const manager = ShutdownManager.getInstance(1000);
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      Container.set(LOGGER_TOKEN, mockLogger);
 
+      const manager = ShutdownManager.getInstance(1000);
       ShutdownManager.getInstance(50);
 
       manager.register({
@@ -55,8 +57,9 @@ describe("ShutdownManager", () => {
 
       await rejected;
 
+      expect(mockLogger.error).toHaveBeenCalledWith("[ShutdownManager] Shutdown timeout exceeded.");
+
       vi.useRealTimers();
-      errorSpy.mockRestore();
     });
   });
 
@@ -159,9 +162,11 @@ describe("ShutdownManager", () => {
     });
 
     it("should continue executing hooks even if one fails", async () => {
+      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      Container.set(LOGGER_TOKEN, mockLogger);
+
       const manager = ShutdownManager.getInstance();
       const order: string[] = [];
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const hook1: ShutdownHook = {
         onShutdown: async () => {
@@ -186,12 +191,10 @@ describe("ShutdownManager", () => {
       await manager.shutdown();
 
       expect(order).toEqual(["hook3", "hook1"]);
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         "[ShutdownManager] Hook execution failed:",
         expect.any(Error),
       );
-
-      errorSpy.mockRestore();
     });
 
     it("should not execute shutdown twice", async () => {
@@ -210,9 +213,11 @@ describe("ShutdownManager", () => {
     it("should reject with timeout problem after timeout", async () => {
       vi.useFakeTimers();
 
+      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      Container.set(LOGGER_TOKEN, mockLogger);
+
       const manager = ShutdownManager.getInstance(100);
       const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const hook: ShutdownHook = {
         onShutdown: async () => {
@@ -228,11 +233,10 @@ describe("ShutdownManager", () => {
       await vi.advanceTimersByTimeAsync(100);
 
       await rejected;
-      expect(errorSpy).toHaveBeenCalledWith("[ShutdownManager] Shutdown timeout exceeded.");
+      expect(mockLogger.error).toHaveBeenCalledWith("[ShutdownManager] Shutdown timeout exceeded.");
       expect(exitSpy).not.toHaveBeenCalled();
 
       vi.useRealTimers();
-      errorSpy.mockRestore();
       exitSpy.mockRestore();
     });
 

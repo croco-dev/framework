@@ -5,8 +5,8 @@ import type {
   EventSubscription,
 } from "@croco/events-core";
 import { EventBusConfig, EventSubscriptionIndex } from "@croco/events-core";
-import { Container } from "@croco/framework-context";
-import { Logger } from "@croco/framework-logger";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import type { ILogger } from "@croco/framework-context";
 import type { TraceInfo } from "@croco/telemetry-api";
 import { getActiveTraceInfo, getTracer } from "@croco/telemetry-api";
 import { type Context, context, type Span, SpanStatusCode, trace } from "@opentelemetry/api";
@@ -333,7 +333,7 @@ export class InMemoryEventBus<
             });
 
             try {
-              const logger = Container.get(Logger);
+              const logger = Container.get(LOGGER_TOKEN) as ILogger;
               logger.error(`EventHandler error (${eventName}):`, normalizedError);
             } catch {
               // Fallback when DI container cannot resolve Logger.

@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import type { ILogger } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetterAuthSessionManager } from "../libs/BetterAuthSessionManager";
 import { BetterAuthSessionNotFoundProblem } from "../libs/problems/AuthProblems";
@@ -225,6 +226,43 @@ describe("BetterAuthSessionManager", () => {
       expect(result).not.toBeNull();
       expect(result?.ipAddress).toBeUndefined();
       expect(result?.userAgent).toBeUndefined();
+    });
+
+    it("should return null and log warning when listSessions throws", async () => {
+      const warnSpy = vi.fn();
+      const logger: ILogger = { warn: warnSpy } as unknown as ILogger;
+      const errorFactory = {
+        getAuth: () => ({
+          api: {
+            listSessions: vi.fn().mockRejectedValue(new Error("Network error")),
+            revokeSession: vi.fn(),
+            revokeUserSessions: vi.fn(),
+          },
+        }),
+      };
+
+      sessionManager = new BetterAuthSessionManager(
+        errorFactory as unknown as {
+          getAuth: () => {
+            api: {
+              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
+              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
+              revokeUserSessions: (args: {
+                headers: Headers;
+                body: { userId: string };
+              }) => Promise<void>;
+            };
+          };
+        },
+        logger,
+      );
+
+      const result = await sessionManager.getSession("any-token");
+
+      expect(result).toBeNull();
+      expect(warnSpy).toHaveBeenCalledWith("BetterAuthSessionManager.getSession() failed", {
+        error: expect.any(Error),
+      });
     });
   });
 

@@ -1,6 +1,7 @@
 import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
 import { MeterRepository } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
+import type { ILogger } from "@croco/framework-context";
 import type { TxManager } from "@croco/tx-core";
 import { and, eq, getTableColumns } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -69,6 +70,7 @@ export class DrizzleMeterRepository extends MeterRepository {
     private readonly db: DrizzleDb,
     private readonly txManager: TxManager<DrizzleDb>,
     config: DrizzleMeterRepositoryConfig,
+    private readonly logger?: ILogger,
   ) {
     super();
     this.meterTable = config.meterTable;
@@ -222,7 +224,8 @@ export class DrizzleMeterRepository extends MeterRepository {
       try {
         const parsed = this.deserializeJson(value) as Record<string, unknown>;
         return Object.keys(parsed).length === 0 ? undefined : parsed;
-      } catch {
+      } catch (error) {
+        this.logger?.warn("Failed to deserialize metadata JSON", { error });
         return undefined;
       }
     }

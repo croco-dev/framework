@@ -44,6 +44,7 @@
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@croco/framework-context": "workspace:*",
     "@croco/migration-runner": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",

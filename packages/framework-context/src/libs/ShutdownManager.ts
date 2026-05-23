@@ -74,10 +74,10 @@ export class ShutdownManager {
           await hook.onShutdown(controller.signal);
         } catch (error) {
           const normalizedError = error instanceof Error ? error : new Error(String(error));
-          try {
+          if (Container.has(LOGGER_TOKEN)) {
             const logger = Container.get(LOGGER_TOKEN) as ILogger;
             logger.error("[ShutdownManager] Hook execution failed:", normalizedError);
-          } catch {
+          } else {
             // eslint-disable-next-line no-console
             console.error("[ShutdownManager] Hook execution failed:", normalizedError);
           }
@@ -89,10 +89,10 @@ export class ShutdownManager {
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
         controller.abort();
-        try {
+        if (Container.has(LOGGER_TOKEN)) {
           const logger = Container.get(LOGGER_TOKEN) as ILogger;
           logger.error("[ShutdownManager] Shutdown timeout exceeded.");
-        } catch {
+        } else {
           // eslint-disable-next-line no-console
           console.error("[ShutdownManager] Shutdown timeout exceeded.");
         }

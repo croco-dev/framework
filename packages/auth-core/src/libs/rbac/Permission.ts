@@ -68,6 +68,7 @@ export function hasPermission(userPermissions: string[], required: string): bool
       }
       return true;
     } catch {
+      console.warn("Malformed permission string:", p);
       return false;
     }
   });
@@ -96,7 +97,7 @@ export function getResourcePermissions(
         result.push({ action: perm.action, resourceId: perm.resourceId });
       }
     } catch {
-      // Intentionally ignored: skip malformed permission strings
+      console.warn("Malformed permission string:", p);
     }
   }
 

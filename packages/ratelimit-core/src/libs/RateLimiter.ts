@@ -56,7 +56,8 @@ export class RateLimiter<TContext = KeyContext> {
   async getStats(key?: string): Promise<RateLimitStats> {
     try {
       return await this.store.getStats(key);
-    } catch {
+    } catch (error) {
+      this.onStoreError?.(error as Error);
       return { allowed: 0, denied: 0, total: 0 };
     }
   }

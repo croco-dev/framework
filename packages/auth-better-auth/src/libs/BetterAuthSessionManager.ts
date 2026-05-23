@@ -1,3 +1,4 @@
+import type { ILogger } from "@croco/framework-context";
 import { BetterAuthSessionNotFoundProblem } from "./problems/AuthProblems";
 import type { BetterAuthSession, BetterAuthSessionProvider } from "./types";
 
@@ -18,6 +19,7 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
         };
       };
     },
+    private readonly logger?: ILogger,
   ) {}
 
   async getSession(token: string): Promise<BetterAuthSession | null> {
@@ -39,7 +41,8 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
       }
 
       return this.mapToBetterAuthSession(session);
-    } catch {
+    } catch (error) {
+      this.logger?.warn("BetterAuthSessionManager.getSession() failed", { error });
       return null;
     }
   }

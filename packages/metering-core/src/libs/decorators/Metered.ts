@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import "reflect-metadata";
-import { Container } from "@croco/framework-context";
-import { Logger } from "@croco/framework-logger";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import type { ILogger } from "@croco/framework-context";
 import type { MeteringService } from "../MeteringService";
 
 export const METERED_METADATA_KEY = Symbol("meter:metered");
@@ -113,7 +113,7 @@ export function Metered(options: MeteredOptions): MethodDecorator {
         } catch (error) {
           // 계량 실패해도 원본 결과는 반환 (fail-safe)
           try {
-            const logger = Container.get(Logger);
+            const logger = Container.get(LOGGER_TOKEN) as ILogger;
             logger.error(`Metering failed for ${String(propertyKey)}:`, error as Error);
           } catch {
             console.error(`Metering failed for ${String(propertyKey)}:`, error);
