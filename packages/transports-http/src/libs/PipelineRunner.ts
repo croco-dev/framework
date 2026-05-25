@@ -1,4 +1,4 @@
-import type { Guard, ILogger } from "@croco/framework-context";
+import type { Guard } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import type {
   CallHandler,
@@ -36,10 +36,7 @@ export interface PipelineConfig {
  * Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행합니다.
  */
 export class PipelineRunner {
-  constructor(
-    private readonly errorHandler: ErrorHandler,
-    private readonly logger: ILogger,
-  ) {}
+  constructor(private readonly errorHandler: ErrorHandler) {}
 
   async run(
     execContext: HttpExecutionContext,
@@ -114,14 +111,8 @@ export class PipelineRunner {
           return response;
         }
         return result;
-      } catch (caughtError) {
-        this.logger.warn(
-          "Exception filter threw while handling an error; preserving original error",
-          {
-            originalError: nextError instanceof Error ? nextError.message : String(nextError),
-            filterError: caughtError instanceof Error ? caughtError.message : String(caughtError),
-          },
-        );
+      } catch {
+        // Filter 실패 시 무시하고 다음 필터로 넘어감
       }
     }
 

@@ -105,6 +105,22 @@ export class NotificationProviderNotFoundProblem extends Problem {
   }
 }
 
+export class NotificationSendMaxAttemptsInvalidProblem extends Problem {
+  constructor(value: string) {
+    super(
+      "notifications-core/send-max-attempts-invalid",
+      ProblemCategory.InternalServerError,
+      `Invalid NOTIFICATIONS_SEND_MAX_ATTEMPTS value '${value}'. Must be an integer between 1 and 10.`,
+      {
+        extensions: {
+          value,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 export class NotificationDeliveryFailedProblem extends Problem {
   constructor(providerName: string) {
     super(

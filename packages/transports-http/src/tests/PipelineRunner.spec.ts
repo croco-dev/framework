@@ -63,8 +63,7 @@ describe("PipelineRunner", () => {
   };
 
   function createRunner(): PipelineRunner {
-    const typedLogger = logger as unknown as Logger;
-    return new PipelineRunner(Container.get(ErrorHandler), typedLogger);
+    return new PipelineRunner(Container.get(ErrorHandler));
   }
 
   beforeEach(() => {
@@ -207,12 +206,5 @@ describe("PipelineRunner", () => {
       detail: "original business error",
       status: 400,
     });
-    expect(logger.warn).toHaveBeenCalledWith(
-      "Exception filter threw while handling an error; preserving original error",
-      {
-        originalError: "original business error",
-        filterError: "filter failure",
-      },
-    );
   });
 });

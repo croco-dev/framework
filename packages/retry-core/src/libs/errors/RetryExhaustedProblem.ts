@@ -13,13 +13,14 @@ export class RetryExhaustedProblem extends Problem {
     public readonly attempts: number = 0,
     public readonly methodName?: string,
   ) {
-    super("RETRY_EXHAUSTED", ProblemCategory.InternalServerError, message);
+    super(
+      "RETRY_EXHAUSTED",
+      ProblemCategory.InternalServerError,
+      message,
+      lastError ? { cause: lastError } : undefined,
+    );
 
     Object.setPrototypeOf(this, RetryExhaustedProblem.prototype);
-
-    if (lastError?.stack) {
-      this.stack = `${this.stack}\n\nCaused by: ${lastError.stack}`;
-    }
   }
 
   static fromContext(

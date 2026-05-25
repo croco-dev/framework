@@ -14,13 +14,20 @@ export class RedisUsageStorage implements UsageStorage {
   private static readonly USAGE_KEY_PREFIX = "usage";
   private static readonly IDEM_KEY_PREFIX = "idem";
   private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
-  private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
+  private readonly recordedRecordKeys = new Map<string, number>();
+
+  private static buildCheckAndRecordWithinQuotaScript(dedupeKey: string): string {
+    const dedupeKeyLiteral = RedisUsageStorage.toLuaLongString(dedupeKey);
+
+    return `
 local usageKey = KEYS[1]
+local dedupeKey = ${dedupeKeyLiteral}
 local quota = tonumber(ARGV[1])
 local value = tonumber(ARGV[2])
 local score = tonumber(ARGV[3])
 local member = ARGV[4]
 local allowOverQuota = ARGV[5] == '1'
+local ttlSeconds = ${RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS}
 local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
 local currentUsage = 0
 
@@ -31,15 +38,31 @@ for _, existingMember in ipairs(records) do
   end
 end
 
+if redis.call('EXISTS', dedupeKey) == 1 then
+  return { 0, currentUsage }
+end
+
 local newUsage = currentUsage + value
 local exceeded = newUsage > quota
 
 if (not exceeded) or allowOverQuota then
   redis.call('ZADD', usageKey, score, member)
+  redis.call('SET', dedupeKey, '1', 'EX', ttlSeconds)
 end
 
 return { exceeded and 1 or 0, newUsage }
 `;
+  }
+
+  private static toLuaLongString(value: string): string {
+    let delimiter = "=";
+
+    while (value.includes(`]${delimiter}]`)) {
+      delimiter += "=";
+    }
+
+    return `[${delimiter}[${value}]${delimiter}]`;
+  }
 
   constructor(private readonly redis: RedisClient) {}
 
@@ -118,15 +141,7 @@ return { exceeded and 1 or 0, newUsage }
       );
       const score = options.usageRecord.timestamp.getTime();
       const member = this.serializeUsageMember(options.usageRecord);
-      const acquired = await this.redis.set(
-        dedupeKey,
-        "1",
-        "NX",
-        "EX",
-        RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS,
-      );
-
-      if (acquired !== "OK") {
+      if (this.hasRecordedRecordKey(dedupeKey)) {
         const records = await this.redis.zrangebyscore(
           key,
           Number.NEGATIVE_INFINITY,
@@ -141,10 +156,14 @@ return { exceeded and 1 or 0, newUsage }
       }
 
       const [exceeded, newUsage] = await this.redis.eval<[number, number]>(
-        RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
+        RedisUsageStorage.buildCheckAndRecordWithinQuotaScript(dedupeKey),
         [key],
         [options.quota, options.value, score, member, options.allowOverQuota ? 1 : 0],
       );
+
+      if (exceeded !== 1 || options.allowOverQuota) {
+        this.rememberRecordIdempotencyKey(dedupeKey);
+      }
 
       return {
         exceeded: exceeded === 1,
@@ -230,6 +249,25 @@ return { exceeded and 1 or 0, newUsage }
     return `${RedisUsageStorage.IDEM_KEY_PREFIX}:${tenantId}:${meterId}:${idempotencyKey}`;
   }
 
+  private hasRecordedRecordKey(dedupeKey: string): boolean {
+    const expiresAt = this.recordedRecordKeys.get(dedupeKey);
+
+    if (expiresAt === undefined) {
+      return false;
+    }
+
+    if (expiresAt > Date.now()) {
+      return true;
+    }
+
+    this.recordedRecordKeys.delete(dedupeKey);
+    return false;
+  }
+
+  private rememberRecordIdempotencyKey(dedupeKey: string): void {
+    const ttlMilliseconds = RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS * 1000;
+    this.recordedRecordKeys.set(dedupeKey, Date.now() + ttlMilliseconds);
+  }
   private serializeUsageMember(usage: Pick<UsageRecord, "id" | "value" | "metadata">): string {
     const base = `${usage.id}:${usage.value}`;
 

@@ -31,6 +31,7 @@ export class TelemetryRuntimeProblem extends Problem {
 
   constructor(phase: "init" | "forceFlush" | "shutdown", cause: unknown) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    super(`Telemetry ${phase} failed: ${detail}`);
+    const causeError = cause instanceof Error ? cause : new Error(String(cause));
+    super(`Telemetry ${phase} failed: ${detail}`, undefined, undefined, { cause: causeError });
   }
 }

@@ -226,7 +226,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     for (const [key, entry] of this.windows.entries()) {
       const windowStart = now - entry.windowMs;
       const originalLength = entry.timestamps.length;
-      entry.timestamps = entry.timestamps.filter((ts) => ts > windowStart);
+      entry.timestamps = entry.timestamps.filter((ts) => ts >= windowStart);
 
       if (entry.timestamps.length === 0) {
         this.windows.delete(key);

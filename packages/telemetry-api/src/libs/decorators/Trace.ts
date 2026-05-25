@@ -23,14 +23,29 @@ function traceAsyncIterable<ReturnType>(
   span: Span,
 ): AsyncIterable<ReturnType> {
   return (async function* () {
+    const spanContext = trace.setSpan(context.active(), span);
+    const iterator = iterable[Symbol.asyncIterator]();
+    let isDone = false;
+
     try {
-      for await (const item of iterable) {
-        yield item;
+      while (true) {
+        const result = await context.with(spanContext, () => iterator.next());
+
+        if (result.done) {
+          isDone = true;
+          return;
+        }
+
+        yield await context.with(spanContext, async () => result.value);
       }
     } catch (error) {
       recordError(error, span);
       throw error;
     } finally {
+      if (!isDone && iterator.return) {
+        await context.with(spanContext, () => iterator.return?.());
+      }
+
       span.end();
     }
   })();

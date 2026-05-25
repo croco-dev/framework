@@ -11,7 +11,7 @@ describe("Problems", () => {
       const problem = new QuotaExceededProblem("api_calls", 150, 100);
 
       expect(problem.code).toBe("metering/quota-exceeded");
-      expect(problem.status).toBe(403);
+      expect(problem.status).toBe(429);
       expect(problem.detail).toContain("Quota exceeded");
       expect(problem.detail).toContain("api_calls");
 

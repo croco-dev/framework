@@ -128,17 +128,14 @@ describe("crocoPlugin", () => {
       plugin.setup(mockBuildContext);
 
       const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
+      onStartCallback?.();
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const result = onLoadCallback(onLoadArgs) as esbuild.OnLoadResult;
-        const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const result = onLoadCallback(onLoadArgs) as esbuild.OnLoadResult;
+      const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult?.contents).toContain("import './DefaultComponent';");
-      }
+      expect(actualResult?.contents).toContain("import './DefaultComponent';");
     });
 
     it("should generate entry-specific auto-imports for multi-entry builds in different directories", async () => {
@@ -168,35 +165,32 @@ describe("crocoPlugin", () => {
       const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
       onStartCallback?.();
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const appResult = onLoadCallback({
-          path: appEntryPath,
-          namespace: "",
-          suffix: "",
-          pluginData: {},
-          with: {},
-        }) as esbuild.OnLoadResult;
-        const adminResult = onLoadCallback({
-          path: adminEntryPath,
-          namespace: "",
-          suffix: "",
-          pluginData: {},
-          with: {},
-        }) as esbuild.OnLoadResult;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const appResult = onLoadCallback({
+        path: appEntryPath,
+        namespace: "",
+        suffix: "",
+        pluginData: {},
+        with: {},
+      }) as esbuild.OnLoadResult;
+      const adminResult = onLoadCallback({
+        path: adminEntryPath,
+        namespace: "",
+        suffix: "",
+        pluginData: {},
+        with: {},
+      }) as esbuild.OnLoadResult;
 
-        const resolvedAppResult =
-          typeof appResult === "object" && "then" in appResult ? await appResult : appResult;
-        const resolvedAdminResult =
-          typeof adminResult === "object" && "then" in adminResult
-            ? await adminResult
-            : adminResult;
+      const resolvedAppResult =
+        typeof appResult === "object" && "then" in appResult ? await appResult : appResult;
+      const resolvedAdminResult =
+        typeof adminResult === "object" && "then" in adminResult ? await adminResult : adminResult;
 
-        expect(resolvedAppResult?.contents).toContain("import './AppComponent';");
-        expect(resolvedAppResult?.contents).toContain("import '../admin/AdminComponent';");
-        expect(resolvedAdminResult?.contents).toContain("import './AdminComponent';");
-        expect(resolvedAdminResult?.contents).toContain("import '../app/AppComponent';");
-      }
+      expect(resolvedAppResult?.contents).toContain("import './AppComponent';");
+      expect(resolvedAppResult?.contents).toContain("import '../admin/AdminComponent';");
+      expect(resolvedAdminResult?.contents).toContain("import './AdminComponent';");
+      expect(resolvedAdminResult?.contents).toContain("import '../app/AppComponent';");
     });
 
     it("should resolve object entry points from absWorkingDir", async () => {
@@ -222,19 +216,18 @@ describe("crocoPlugin", () => {
       const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
       onStartCallback?.();
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const result = onLoadCallback({
-          path: entryFilePath,
-          namespace: "",
-          suffix: "",
-          pluginData: {},
-          with: {},
-        }) as esbuild.OnLoadResult;
-        const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const result = onLoadCallback({
+        path: entryFilePath,
+        namespace: "",
+        suffix: "",
+        pluginData: {},
+        with: {},
+      }) as esbuild.OnLoadResult;
+      const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult?.contents).toContain("import './ObjectEntryComponent';");
-      }
+      expect(actualResult?.contents).toContain("import './ObjectEntryComponent';");
     });
 
     it("should surface scan failures as build errors", () => {
@@ -303,13 +296,12 @@ describe("crocoPlugin", () => {
         onStartCallback();
       }
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-        const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
+      const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult?.contents).toContain("import 'reflect-metadata';");
-      }
+      expect(actualResult?.contents).toContain("import 'reflect-metadata';");
     });
 
     it("should prepend auto-import for component files", async () => {
@@ -331,13 +323,12 @@ describe("crocoPlugin", () => {
         onStartCallback();
       }
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-        const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
+      const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult?.contents).toContain("@croco/auto-import");
-      }
+      expect(actualResult?.contents).toContain("@croco/auto-import");
     });
 
     it("should not modify non-entry-point files", async () => {
@@ -357,16 +348,13 @@ describe("crocoPlugin", () => {
         onStartCallback();
       }
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const result = onLoadCallback(createMockOnLoadArgs(nonEntryFilePath));
-        if (!result) {
-          return;
-        }
-        const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const result = onLoadCallback(createMockOnLoadArgs(nonEntryFilePath));
+      const actualResult =
+        result != null && typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult).toBeUndefined();
-      }
+      expect(actualResult).toBeUndefined();
     });
 
     it("should return undefined when no prepend needed", async () => {
@@ -384,16 +372,13 @@ describe("crocoPlugin", () => {
         onStartCallback();
       }
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const result = onLoadCallback(createMockOnLoadArgs(nonEntryFilePath));
-        if (!result) {
-          return;
-        }
-        const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const result = onLoadCallback(createMockOnLoadArgs(nonEntryFilePath));
+      const actualResult =
+        result != null && typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult).toBeUndefined();
-      }
+      expect(actualResult).toBeUndefined();
     });
 
     it("should disable reflect-metadata when config is false", async () => {
@@ -413,13 +398,12 @@ describe("crocoPlugin", () => {
         onStartCallback();
       }
 
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1];
-      if (onLoadCallback) {
-        const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-        const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
+      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
+      const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
+      const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
-        expect(actualResult?.contents).not.toContain("import 'reflect-metadata';");
-      }
+      expect(actualResult?.contents).not.toContain("import 'reflect-metadata';");
     });
   });
 

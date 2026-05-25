@@ -1,4 +1,5 @@
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
 
 export type ClerkOrganization = {
@@ -75,6 +76,49 @@ export type CreateInvitationInput = {
   redirectUrl?: string;
 };
 
+class ClerkOrganizationLookupProblem extends Problem {
+  constructor(cause: Error) {
+    super(
+      "auth-clerk/organization-lookup-failed",
+      ProblemCategory.InternalServerError,
+      "Clerk organization lookup failed",
+      { cause },
+    );
+  }
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getClerkErrorStatus(error: unknown): number | undefined {
+  if (!isObjectRecord(error)) {
+    return undefined;
+  }
+
+  const status = error.status;
+  if (typeof status === "number") {
+    return status;
+  }
+
+  const statusCode = error.statusCode;
+  return typeof statusCode === "number" ? statusCode : undefined;
+}
+
+function isMissingOrganizationError(error: unknown): boolean {
+  const status = getClerkErrorStatus(error);
+  if (status === 401 || status === 403 || status === 404) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message : undefined;
+  return message?.toLowerCase().includes("not found") === true;
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error("Unknown Clerk organization lookup failure");
+}
+
 function mapClerkOrganization(org: {
   id: string;
   name: string;
@@ -113,8 +157,12 @@ export class ClerkOrganizationService {
     try {
       const org = await this.clerkClient.organizations.getOrganization({ organizationId });
       return mapClerkOrganization(org);
-    } catch {
-      return null;
+    } catch (error) {
+      if (isMissingOrganizationError(error)) {
+        return null;
+      }
+
+      throw new ClerkOrganizationLookupProblem(toError(error));
     }
   }
 
@@ -122,8 +170,12 @@ export class ClerkOrganizationService {
     try {
       const org = await this.clerkClient.organizations.getOrganization({ slug });
       return mapClerkOrganization(org);
-    } catch {
-      return null;
+    } catch (error) {
+      if (isMissingOrganizationError(error)) {
+        return null;
+      }
+
+      throw new ClerkOrganizationLookupProblem(toError(error));
     }
   }
 

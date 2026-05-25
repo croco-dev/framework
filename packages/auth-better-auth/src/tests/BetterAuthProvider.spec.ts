@@ -5,20 +5,20 @@ import type { BetterAuthFactory } from "../libs/BetterAuthFactory";
 import { BetterAuthProvider } from "../libs/BetterAuthProvider";
 import { BetterAuthInvalidSessionProblem } from "../libs/problems/BetterAuthInvalidSessionProblem";
 
-function createMockBetterAuthFactory(session: any): BetterAuthFactory {
+function createMockBetterAuthFactory(session: Record<string, unknown> | null): BetterAuthFactory {
   return {
     getAuth: () => ({
       api: {
-        getSession: vi.fn().mockResolvedValue(session),
+        getSession: vi
+          .fn<(args: { headers: Headers }) => Promise<Record<string, unknown> | null>>()
+          .mockResolvedValue(session),
       },
     }),
   } as unknown as BetterAuthFactory;
 }
 
 function createMockRequest(headers: Record<string, string> = {}): Request {
-  return {
-    headers: new Headers(headers),
-  } as unknown as Request;
+  return new Request("http://localhost", { headers });
 }
 
 describe("BetterAuthProvider", () => {
@@ -116,7 +116,9 @@ describe("BetterAuthProvider", () => {
         },
       };
 
-      const getSessionSpy = vi.fn().mockResolvedValue(mockSession);
+      const getSessionSpy = vi
+        .fn<(args: { headers: Headers }) => Promise<Record<string, unknown> | null>>()
+        .mockResolvedValue(mockSession);
       const mockAuth = {
         api: {
           getSession: getSessionSpy,
@@ -256,7 +258,9 @@ describe("BetterAuthProvider", () => {
       const errorFactory = {
         getAuth: () => ({
           api: {
-            getSession: vi.fn().mockRejectedValue(mockError),
+            getSession: vi
+              .fn<(args: { headers: Headers }) => Promise<Record<string, unknown> | null>>()
+              .mockRejectedValue(mockError),
           },
         }),
       } as unknown as BetterAuthFactory;
@@ -298,8 +302,8 @@ describe("BetterAuthProvider", () => {
       mockFactory = createMockBetterAuthFactory(null);
       provider = new BetterAuthProvider(mockFactory);
 
-      const factory = (provider as unknown as { factory: BetterAuthFactory }).factory;
-      expect(factory).toBe(mockFactory);
+      const providerWithFactory = provider as unknown as { factory: BetterAuthFactory };
+      expect(providerWithFactory.factory).toBe(mockFactory);
     });
   });
 

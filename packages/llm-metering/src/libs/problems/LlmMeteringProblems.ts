@@ -2,15 +2,17 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class LlmMeteringRecordFailedProblem extends Problem {
   constructor(operation: string, meterIds: string[], cause: unknown) {
+    const causeError = cause instanceof Error ? cause : new Error(String(cause));
+
     super(
       "llm-metering/record-failed",
       ProblemCategory.InternalServerError,
       `Failed to record LLM metering for operation '${operation}'`,
       {
+        cause: causeError,
         extensions: {
           operation,
           meterIds,
-          cause: cause instanceof Error ? cause.message : String(cause),
         },
       },
     );

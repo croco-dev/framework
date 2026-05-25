@@ -42,8 +42,9 @@ export class LambdaTimeoutProblem extends Problem {
 /**
  * 재시도 관련 설정값이 유효하지 않을 때 발생하는 구성 오류입니다.
  */
-export class InvalidRetryConfigurationError extends Error {
-  readonly name = "InvalidRetryConfigurationError";
+export class InvalidRetryConfigurationError extends Problem {
+  readonly code = "INVALID_RETRY_CONFIGURATION";
+  readonly category = ProblemCategory.InternalServerError;
 
   constructor(message: string) {
     super(`Invalid retry configuration: ${message}`);

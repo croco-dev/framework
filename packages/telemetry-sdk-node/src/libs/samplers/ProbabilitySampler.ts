@@ -16,7 +16,7 @@ class ProbabilitySampler implements Sampler {
       throw new SamplerProblem("Probability must be between 0 and 1");
     }
     this.probability = options.probability;
-    this.threshold = Math.floor(options.probability * 0xffffffff);
+    this.threshold = Math.floor(options.probability * (0xffffffff + 1));
   }
 
   shouldSample(

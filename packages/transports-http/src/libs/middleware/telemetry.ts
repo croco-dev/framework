@@ -45,11 +45,21 @@ export function parseTraceParent(header: string | null): TraceParent | null {
   };
 }
 
+type HeaderCarrier = Headers | Record<string, string>;
+
 const headerGetter = {
-  keys(carrier: Record<string, string>): string[] {
+  keys(carrier: HeaderCarrier): string[] {
+    if (carrier instanceof Headers) {
+      return [...carrier.keys()];
+    }
+
     return Object.keys(carrier);
   },
-  get(carrier: Record<string, string>, key: string): string | undefined {
+  get(carrier: HeaderCarrier, key: string): string | undefined {
+    if (carrier instanceof Headers) {
+      return carrier.get(key) ?? undefined;
+    }
+
     return carrier[key] ?? carrier[key.toLowerCase()];
   },
 };

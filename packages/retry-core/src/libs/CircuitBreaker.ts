@@ -182,6 +182,8 @@ export class CircuitBreaker {
       }
 
       await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
+      const activeCount = await this.getHalfOpenActiveCount();
+      await this.setHalfOpenActiveCount(Math.max(0, activeCount - 1));
       await this.setCircuitState(CircuitState.OPEN);
     });
   }

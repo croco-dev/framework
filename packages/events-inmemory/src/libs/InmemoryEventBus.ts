@@ -10,6 +10,7 @@ import type { ILogger } from "@croco/framework-context";
 import type { TraceInfo } from "@croco/telemetry-api";
 import { getActiveTraceInfo, getTracer } from "@croco/telemetry-api";
 import { type Context, context, type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   BackpressureExceededProblem,
   BackpressureTimeoutProblem,
@@ -23,27 +24,29 @@ export type EventPublishFailure = {
 /**
  * 하나 이상의 이벤트 핸들러 실행이 실패했을 때 집계 결과를 담아 반환하는 에러입니다.
  */
-export class EventPublishFailedError extends Error {
-  readonly name = "EventPublishFailedError";
-  readonly cause?: Error;
+export class EventPublishFailedError extends Problem {
+  readonly code = "events-inmemory/publish-failed";
+  readonly category = ProblemCategory.InternalServerError;
 
   constructor(
     readonly eventName: string,
     readonly failures: EventPublishFailure[],
   ) {
-    super(`${failures.length} event handler(s) failed while publishing ${eventName}`);
-    this.cause = failures[0]?.error;
+    const detail = `${failures.length} event handler(s) failed while publishing ${eventName}`;
+    const cause = failures[0]?.error;
+    super(undefined, undefined, detail, cause ? { cause } : undefined);
   }
 }
 
 /**
  * 이벤트 버스 옵션이 유효하지 않을 때 발생하는 구성 오류입니다.
  */
-export class InvalidEventBusConfigurationError extends Error {
-  readonly name = "InvalidEventBusConfigurationError";
+export class InvalidEventBusConfigurationError extends Problem {
+  readonly code = "events-inmemory/invalid-configuration";
+  readonly category = ProblemCategory.InternalServerError;
 
   constructor(message: string) {
-    super(`Invalid EventBus configuration: ${message}`);
+    super(undefined, undefined, `Invalid EventBus configuration: ${message}`);
   }
 }
 

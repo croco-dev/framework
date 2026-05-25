@@ -98,10 +98,10 @@ export class RenderServer {
   }
 
   private createRscErrorResponse(error: unknown, routePath: string): Response {
-    const message = error instanceof Error ? error.message : String(error);
+    const detail = error instanceof Error ? "An internal server error occurred" : String(error);
 
     return new Response(
-      JSON.stringify({ error: "RSC rendering failed", route: routePath, detail: message }),
+      JSON.stringify({ error: "RSC rendering failed", route: routePath, detail }),
       {
         status: 500,
         headers: JSON_HEADERS,

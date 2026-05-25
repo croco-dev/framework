@@ -106,6 +106,7 @@ export class ShutdownManager {
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId);
       }
+      this.removeAllListeners();
     }
   }
 

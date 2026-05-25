@@ -1,11 +1,21 @@
 import { ProblemCategory } from "./ProblemCategory";
 
-/**
- * ProblemCategory를 HTTP 상태 코드로 변환합니다.
- * @param category - 변환할 ProblemCategory
- * @returns 해당 카테고리에 해당하는 HTTP 상태 코드
- * @throws {Error} 처리되지 않은 카테고리인 경우
- */
+function throwUnhandledCategory(categoryValue: string): never {
+  // Use runtime require to avoid circular dependency:
+  // Problem.ts imports ProblemCategoryMapper, so any module-level
+  // import of Problem here creates a module cycle.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { Problem: ProblemClass } = require("./Problem");
+  class UnhandledCategoryProblem extends ProblemClass {
+    readonly code = "problems-core/unhandled-category";
+    readonly category = ProblemCategory.InternalServerError;
+    constructor(v: string) {
+      super(undefined, undefined, `Unhandled ProblemCategory: ${v}`);
+    }
+  }
+  throw new UnhandledCategoryProblem(categoryValue);
+}
+
 export function toHttpStatus(category: ProblemCategory): number {
   switch (category) {
     case ProblemCategory.BadRequest:
@@ -32,17 +42,11 @@ export function toHttpStatus(category: ProblemCategory): number {
       return 501;
     default: {
       const _exhaustiveCheck: never = category;
-      throw new Error(`Unhandled ProblemCategory: ${String(_exhaustiveCheck)}`);
+      throwUnhandledCategory(String(_exhaustiveCheck));
     }
   }
 }
 
-/**
- * ProblemCategory를 사람이 읽을 수 있는 제목으로 변환합니다.
- * @param category - 변환할 ProblemCategory
- * @returns 해당 카테고리의 제목 문자열
- * @throws {Error} 처리되지 않은 카테고리인 경우
- */
 export function toTitle(category: ProblemCategory): string {
   switch (category) {
     case ProblemCategory.BadRequest:
@@ -69,15 +73,11 @@ export function toTitle(category: ProblemCategory): string {
       return "Not Implemented";
     default: {
       const _exhaustiveCheck: never = category;
-      throw new Error(`Unhandled ProblemCategory: ${String(_exhaustiveCheck)}`);
+      throwUnhandledCategory(String(_exhaustiveCheck));
     }
   }
 }
 
-/**
- * ProblemCategory와 HTTP 상태 코드 및 제목 간의 매핑을 제공합니다.
- * RFC 7807 Problem Details 형식과 호환됩니다.
- */
 export const ProblemCategoryMapper = {
   toHttpStatus,
   toTitle,

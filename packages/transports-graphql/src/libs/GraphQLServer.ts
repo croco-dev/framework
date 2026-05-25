@@ -97,6 +97,9 @@ export class GraphQLServer {
           if (error instanceof Problem) {
             res.statusCode = error.status;
             res.setHeader("content-type", "application/problem+json");
+            if (error instanceof GraphQLRequestBodyTooLargeProblem) {
+              res.setHeader("connection", "close");
+            }
             res.end(JSON.stringify(error.toJSON()));
             return;
           }

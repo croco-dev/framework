@@ -7,6 +7,7 @@ import {
   BetterAuthUserNotFoundProblem,
 } from "../libs/problems/AuthProblems";
 import { BetterAuthInvalidSessionProblem } from "../libs/problems/BetterAuthInvalidSessionProblem";
+import { BetterAuthSessionLookupProblem } from "../libs/problems/BetterAuthSessionLookupProblem";
 import {
   InvalidWebhookPayloadProblem,
   InvalidWebhookSignatureProblem,
@@ -30,6 +31,29 @@ describe("BetterAuthInvalidSessionProblem", () => {
 
   it("should return 500 status", () => {
     const problem = new BetterAuthInvalidSessionProblem();
+    expect(problem.status).toBe(500);
+  });
+});
+
+describe("BetterAuthSessionLookupProblem", () => {
+  it("should have correct code", () => {
+    const problem = new BetterAuthSessionLookupProblem(new Error("upstream failed"));
+    expect(problem.code).toBe("auth-better-auth/session-lookup-failed");
+  });
+
+  it("should have correct category", () => {
+    const problem = new BetterAuthSessionLookupProblem(new Error("upstream failed"));
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+  });
+
+  it("should preserve cause", () => {
+    const cause = new Error("upstream failed");
+    const problem = new BetterAuthSessionLookupProblem(cause);
+    expect(problem.cause).toBe(cause);
+  });
+
+  it("should return 500 status", () => {
+    const problem = new BetterAuthSessionLookupProblem(new Error("upstream failed"));
     expect(problem.status).toBe(500);
   });
 });

@@ -65,8 +65,7 @@ export class ErrorHandler {
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
-        detail:
-          process.env.NODE_ENV === "production" ? "An internal error occurred" : error.message,
+        detail: "An internal error occurred",
       },
       500,
     );
