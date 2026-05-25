@@ -38,6 +38,24 @@ describe("RedisUsageStorage", () => {
       );
     });
 
+    it("should skip duplicate records with the same idempotency key", async () => {
+      vi.mocked(mockRedis.set).mockResolvedValueOnce("OK").mockResolvedValueOnce(null);
+
+      const usage: UsageRecord = {
+        id: "usage-123",
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 5,
+        timestamp: new Date("2024-01-15T10:30:00Z"),
+        idempotencyKey: "key-123",
+      };
+
+      await storage.record(usage);
+      await storage.record({ ...usage, id: "usage-456" });
+
+      expect(mockRedis.zadd).toHaveBeenCalledTimes(1);
+    });
+
     it("should throw RedisProblem on error", async () => {
       vi.mocked(mockRedis.zadd).mockRejectedValue(new Error("Connection refused"));
 
@@ -71,6 +89,36 @@ describe("RedisUsageStorage", () => {
       expect(result).toBe(10);
     });
 
+    it("should query the requested period before falling back", async () => {
+      vi.mocked(mockRedis.zrangebyscore)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(["usage-1:5"]);
+
+      const options: UsageQueryOptions = {
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-15T00:00:00Z"),
+        endDate: new Date("2024-01-15T23:59:59Z"),
+      };
+
+      const result = await storage.getUsage(options);
+
+      expect(result).toBe(5);
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        1,
+        "usage:tenant-1:api_calls:2024-01-15",
+        expect.any(Number),
+        expect.any(Number),
+      );
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        2,
+        "usage:tenant-1:api_calls:2024-01",
+        expect.any(Number),
+        expect.any(Number),
+      );
+    });
+
     it("should return 0 for empty result", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([]);
 
@@ -83,6 +131,34 @@ describe("RedisUsageStorage", () => {
       const result = await storage.getUsage(options);
 
       expect(result).toBe(0);
+    });
+
+    it("should fall back to billing cycle data when a period-specific key is empty", async () => {
+      vi.mocked(mockRedis.zrangebyscore)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(["usage-1:5"]);
+
+      const result = await storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-15T00:00:00Z"),
+        endDate: new Date("2024-01-15T23:59:59Z"),
+      });
+
+      expect(result).toBe(5);
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        1,
+        "usage:tenant-1:api_calls:2024-01-15",
+        new Date("2024-01-15T00:00:00Z").getTime(),
+        new Date("2024-01-15T23:59:59Z").getTime(),
+      );
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        2,
+        "usage:tenant-1:api_calls:2024-01",
+        new Date("2024-01-15T00:00:00Z").getTime(),
+        new Date("2024-01-15T23:59:59Z").getTime(),
+      );
     });
 
     it("should throw RedisProblem on error", async () => {
@@ -152,6 +228,39 @@ describe("RedisUsageStorage", () => {
       expect(result[1].value).toBe(3);
     });
 
+    it("should preserve metadata when fetching usage records", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
+        "usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%2C%22nested%22%3A%7B%22active%22%3Atrue%7D%7D",
+      ]);
+
+      const result = await storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].metadata).toEqual({
+        endpoint: "/users",
+        nested: { active: true },
+      });
+    });
+
+    it("should preserve metadata when records are fetched", async () => {
+      const metadata = encodeURIComponent(JSON.stringify({ source: "api", version: "v2" }));
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([`usage-1:5:${metadata}`]);
+
+      const result = await storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-15T00:00:00Z"),
+        endDate: new Date("2024-01-15T23:59:59Z"),
+      });
+
+      expect(result[0].metadata).toEqual({ source: "api", version: "v2" });
+    });
+
     it("should return empty array when no records", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([]);
 
@@ -164,6 +273,39 @@ describe("RedisUsageStorage", () => {
       const result = await storage.fetchUsageRecords(options);
 
       expect(result).toEqual([]);
+    });
+
+    it("should remove flushed records from Redis", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1]);
+
+      const records: UsageRecord[] = [
+        {
+          id: "usage-1",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+          timestamp: new Date("2024-01-15T10:30:00Z"),
+          idempotencyKey: "idem-1",
+          metadata: { endpoint: "/users" },
+        },
+      ];
+
+      await storage.deleteUsageRecords?.(
+        {
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "billing_cycle",
+          startDate: new Date("2024-01-15T00:00:00Z"),
+          endDate: new Date("2024-01-15T23:59:59Z"),
+        },
+        records,
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("ZREM"),
+        ["usage:tenant-1:api_calls:2024-01"],
+        ["usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%7D"],
+      );
     });
   });
 
@@ -219,6 +361,41 @@ describe("RedisUsageStorage", () => {
       expect(result).toEqual({ exceeded: true, newUsage: 12 });
     });
 
+    it("should not double count the same idempotency key", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValueOnce([0, 8]);
+      vi.mocked(mockRedis.set).mockResolvedValueOnce("OK").mockResolvedValueOnce(null);
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:5", "usage-2:3"]);
+
+      const usageRecord: UsageRecord = {
+        id: "usage-123",
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 5,
+        timestamp: new Date("2024-01-15T10:30:00Z"),
+        idempotencyKey: "key-123",
+      };
+
+      const first = await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord,
+      });
+      const second = await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord: { ...usageRecord, id: "usage-456" },
+      });
+
+      expect(first).toEqual({ exceeded: false, newUsage: 8 });
+      expect(second).toEqual({ exceeded: false, newUsage: 8 });
+    });
+
     it("should throw RedisProblem on eval error", async () => {
       vi.mocked(mockRedis.eval).mockRejectedValue(new Error("Script failed"));
 
@@ -239,6 +416,47 @@ describe("RedisUsageStorage", () => {
           },
         }),
       ).rejects.toThrow(RedisProblem);
+    });
+  });
+
+  describe("deleteUsageRecords", () => {
+    it("should remove flushed records from Redis", async () => {
+      const records: UsageRecord[] = [
+        {
+          id: "usage-1",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+          timestamp: new Date("2024-01-15T10:30:00Z"),
+          idempotencyKey: "key-1",
+          metadata: { source: "api" },
+        },
+        {
+          id: "usage-2",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 3,
+          timestamp: new Date("2024-01-15T11:30:00Z"),
+          idempotencyKey: "key-2",
+        },
+      ];
+
+      await storage.deleteUsageRecords(
+        {
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "day",
+          startDate: new Date("2024-01-15T00:00:00Z"),
+          endDate: new Date("2024-01-15T23:59:59Z"),
+        },
+        records,
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("ZREM"),
+        ["usage:tenant-1:api_calls:2024-01-15"],
+        ["usage-1:5:%7B%22source%22%3A%22api%22%7D", "usage-2:3"],
+      );
     });
   });
 

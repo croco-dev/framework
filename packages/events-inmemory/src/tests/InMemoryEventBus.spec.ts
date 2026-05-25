@@ -165,6 +165,40 @@ describe("InMemoryEventBus", () => {
         expect(callSequence).toEqual(["first", "second"]);
       });
 
+      it("should invoke three handlers in registration order", async () => {
+        const callSequence: string[] = [];
+
+        class FirstHandler implements EventHandler<TestEvent> {
+          async handle(): Promise<void> {
+            callSequence.push("first");
+          }
+        }
+
+        class SecondHandler implements EventHandler<TestEvent> {
+          async handle(): Promise<void> {
+            callSequence.push("second");
+          }
+        }
+
+        class ThirdHandler implements EventHandler<TestEvent> {
+          async handle(): Promise<void> {
+            callSequence.push("third");
+          }
+        }
+
+        Container.set(FirstHandler, new FirstHandler());
+        Container.set(SecondHandler, new SecondHandler());
+        Container.set(ThirdHandler, new ThirdHandler());
+
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: FirstHandler });
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: SecondHandler });
+        eventBus.subscribe({ eventName: "TestEvent", handlerClass: ThirdHandler });
+
+        await eventBus.publish(new TestEvent("characterization-order-3"));
+
+        expect(callSequence).toEqual(["first", "second", "third"]);
+      });
+
       it("should log handler errors and continue with remaining handlers", async () => {
         class SuccessHandler extends TestHandler {}
         class FailHandler extends FailingHandler {}

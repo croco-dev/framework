@@ -97,6 +97,8 @@ export class Container {
 
   static reset(): void {
     TypeDIContainer.reset();
+    // reset은 요청 처리가 없는 idle 시점에만 호출한다.
+    MetadataStorage.clear();
     Container.lazyProviders.clear();
     Container.symbolTokens.clear();
     Container.validated = false;

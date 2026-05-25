@@ -43,6 +43,21 @@ describe("ExponentialBackoff", () => {
 
     expect(sleepMock).toHaveBeenCalledWith(100);
   });
+
+  it("reuses the cached delay when wait follows getDelay", async () => {
+    const sleepMock = vi.fn().mockResolvedValue(undefined);
+    const backoff = new ExponentialBackoff(
+      { delay: 100, multiplier: 2, jitter: false },
+      { sleep: sleepMock },
+    );
+    const getDelaySpy = vi.spyOn(backoff, "getDelay");
+
+    expect(backoff.getDelay(1)).toBe(200);
+    await backoff.wait(1);
+
+    expect(getDelaySpy).toHaveBeenCalledTimes(1);
+    expect(sleepMock).toHaveBeenCalledWith(200);
+  });
 });
 
 describe("FixedBackoff", () => {

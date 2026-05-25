@@ -65,6 +65,7 @@ export class ExponentialBackoff implements BackoffPolicy {
   private readonly jitter: boolean;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly random: () => number;
+  private readonly computedDelays = new Map<number, number>();
 
   constructor(options: BackoffOptions = {}, deps: BackoffDependencies = {}) {
     this.delay = options.delay ?? DEFAULT_DELAY;
@@ -86,20 +87,17 @@ export class ExponentialBackoff implements BackoffPolicy {
   getDelay(attempt: number): number {
     const exponentialDelay = this.delay * this.multiplier ** attempt;
     const cappedDelay = Math.min(this.maxDelay, exponentialDelay);
+    const delayMs = this.jitter ? Math.floor(this.random() * cappedDelay) : cappedDelay;
 
-    if (this.jitter) {
-      // Full Jitter: uniform random in [0, cap]
-      return Math.floor(this.random() * cappedDelay);
-    }
-
-    return cappedDelay;
+    this.computedDelays.set(attempt, delayMs);
+    return delayMs;
   }
 
   /**
    * Wait for the calculated delay.
    */
   async wait(attempt: number): Promise<void> {
-    const delayMs = this.getDelay(attempt);
+    const delayMs = this.computedDelays.get(attempt) ?? this.getDelay(attempt);
     if (delayMs > 0) {
       await this.sleep(delayMs);
     }
@@ -109,7 +107,7 @@ export class ExponentialBackoff implements BackoffPolicy {
    * Reset (no-op for stateless implementation).
    */
   reset(): void {
-    // Stateless - nothing to reset
+    this.computedDelays.clear();
   }
 }
 
@@ -119,22 +117,27 @@ export class ExponentialBackoff implements BackoffPolicy {
 export class FixedBackoff implements BackoffPolicy {
   private readonly delayMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly computedDelays = new Map<number, number>();
 
   constructor(delayMs: number = DEFAULT_DELAY, deps: BackoffDependencies = {}) {
     this.delayMs = delayMs;
     this.sleep = deps.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
 
-  getDelay(_attempt: number): number {
+  getDelay(attempt: number): number {
+    this.computedDelays.set(attempt, this.delayMs);
     return this.delayMs;
   }
 
-  async wait(_attempt: number): Promise<void> {
-    await this.sleep(this.delayMs);
+  async wait(attempt: number): Promise<void> {
+    const delayMs = this.computedDelays.get(attempt) ?? this.delayMs;
+    if (delayMs > 0) {
+      await this.sleep(delayMs);
+    }
   }
 
   reset(): void {
-    // Stateless
+    this.computedDelays.clear();
   }
 }
 

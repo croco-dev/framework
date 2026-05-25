@@ -21,6 +21,8 @@ type StartedSubscription = EventSubscription & {
 export class EventBusConfig {
   private static instance?: EventBusConfig;
   private static stats?: EventBusStats;
+  private static readonly handlerIds = new WeakMap<EventHandlerClass, string>();
+  private static handlerIdCounter = 0;
   private readonly subscriptions: Set<EventSubscription> = new Set();
   private readonly startedSubscriptions: Map<string, StartedSubscription> = new Map();
   private eventBus?: EventBus;
@@ -56,7 +58,22 @@ export class EventBusConfig {
   }
 
   public setEventBus(eventBus: EventBus): void {
+    if (this.eventBus === eventBus) {
+      return;
+    }
+
+    if (this.eventBus) {
+      for (const subscription of this.startedSubscriptions.values()) {
+        this.eventBus.unsubscribe(subscription);
+      }
+    }
+
     this.eventBus = eventBus;
+
+    if (!this.eventBus) {
+      return;
+    }
+
     for (const subscription of this.startedSubscriptions.values()) {
       this.eventBus.subscribe(subscription);
     }
@@ -120,6 +137,17 @@ export class EventBusConfig {
   }
 
   private createSubscriptionKey(subscription: EventSubscription): string {
-    return `${subscription.eventName}:${subscription.handlerClass.name}`;
+    return `${subscription.eventName}:${EventBusConfig.getHandlerId(subscription.handlerClass)}`;
+  }
+
+  private static getHandlerId(handlerClass: EventHandlerClass): string {
+    const existing = EventBusConfig.handlerIds.get(handlerClass);
+    if (existing) {
+      return existing;
+    }
+
+    const handlerId = `${handlerClass.name}:${++EventBusConfig.handlerIdCounter}`;
+    EventBusConfig.handlerIds.set(handlerClass, handlerId);
+    return handlerId;
   }
 }

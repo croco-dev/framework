@@ -48,14 +48,14 @@ export async function executeRetryLoop<T>(
       const hasAttemptsLeft = attempt < maxAttempts;
       const isRetryable = retryPolicy.shouldRetry(retryError, attempt, maxAttempts);
 
-      if (!isRetryable && hasAttemptsLeft) {
-        throw retryError;
-      }
-
       if (!hasAttemptsLeft) {
-        const isNonRetryableOnLastAttempt =
-          !isRetryable && !retryPolicy.shouldRetry(retryError, attempt - 1, maxAttempts);
-        if (isNonRetryableOnLastAttempt) {
+        const wasRetryablePreviously = retryPolicy.shouldRetry(
+          retryError,
+          attempt - 1,
+          maxAttempts,
+        );
+
+        if (!isRetryable && !wasRetryablePreviously) {
           throw retryError;
         }
 
@@ -64,11 +64,16 @@ export async function executeRetryLoop<T>(
         throw retryError;
       }
 
-      const delay = backoffPolicy.getDelay(attempt - 1);
+      if (!isRetryable) {
+        throw retryError;
+      }
+
+      const retryAttempt = attempt - 1;
+      const delay = backoffPolicy.getDelay(retryAttempt);
       const shouldWait = (await retryHooks.beforeWait?.(delay, context)) ?? true;
 
       if (shouldWait) {
-        await backoffPolicy.wait(attempt - 1);
+        await backoffPolicy.wait(retryAttempt);
       }
     }
   }

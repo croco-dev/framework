@@ -13,6 +13,7 @@ import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } fr
 export class RedisUsageStorage implements UsageStorage {
   private static readonly USAGE_KEY_PREFIX = "usage";
   private static readonly IDEM_KEY_PREFIX = "idem";
+  private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
   private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
 local usageKey = KEYS[1]
 local quota = tonumber(ARGV[1])
@@ -24,7 +25,7 @@ local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
 local currentUsage = 0
 
 for _, existingMember in ipairs(records) do
-  local usageValue = string.match(existingMember, ':(%d+)$')
+  local usageValue = string.match(existingMember, '^[^:]+:(%d+):') or string.match(existingMember, '^[^:]+:(%d+)$')
   if usageValue then
     currentUsage = currentUsage + tonumber(usageValue)
   end
@@ -44,8 +45,30 @@ return { exceeded and 1 or 0, newUsage }
 
   async record(usage: UsageRecord): Promise<void> {
     try {
-      const key = this.buildUsageKey(usage.tenantId, usage.meterId, usage.timestamp);
-      const member = `${usage.id}:${usage.value}`;
+      const dedupeKey = this.buildRecordIdempotencyKey(
+        usage.tenantId,
+        usage.meterId,
+        usage.idempotencyKey,
+      );
+      const acquired = await this.redis.set(
+        dedupeKey,
+        "1",
+        "NX",
+        "EX",
+        RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS,
+      );
+
+      if (acquired !== "OK") {
+        return;
+      }
+
+      const key = this.buildUsageKey(
+        usage.tenantId,
+        usage.meterId,
+        usage.timestamp,
+        "billing_cycle",
+      );
+      const member = this.serializeUsageMember(usage);
       const score = usage.timestamp.getTime();
 
       await this.redis.zadd(key, score, member);
@@ -56,17 +79,8 @@ return { exceeded and 1 or 0, newUsage }
 
   async getUsage(options: UsageQueryOptions): Promise<number> {
     try {
-      const { tenantId, meterId, period, startDate, endDate } = options;
-      const { min, max } = this.getTimeRange(period, startDate, endDate);
-      const key = this.buildUsageKey(tenantId, meterId, new Date(min));
-
-      const members = await this.redis.zrangebyscore(key, min, max);
-
-      // member 형식: "usageId:value"
-      return members.reduce((total, member) => {
-        const value = this.parseValue(member);
-        return total + value;
-      }, 0);
+      const { members } = await this.readUsageMembers(options);
+      return this.sumUsageMembers(members);
     } catch (error) {
       throw new RedisProblem("ZRANGEBYSCORE", error instanceof Error ? error : undefined);
     }
@@ -95,9 +109,37 @@ return { exceeded and 1 or 0, newUsage }
         options.tenantId,
         options.meterId,
         options.usageRecord.timestamp,
+        "billing_cycle",
+      );
+      const dedupeKey = this.buildRecordIdempotencyKey(
+        options.tenantId,
+        options.meterId,
+        options.usageRecord.idempotencyKey,
       );
       const score = options.usageRecord.timestamp.getTime();
-      const member = `${options.usageRecord.id}:${options.usageRecord.value}`;
+      const member = this.serializeUsageMember(options.usageRecord);
+      const acquired = await this.redis.set(
+        dedupeKey,
+        "1",
+        "NX",
+        "EX",
+        RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS,
+      );
+
+      if (acquired !== "OK") {
+        const records = await this.redis.zrangebyscore(
+          key,
+          Number.NEGATIVE_INFINITY,
+          Number.POSITIVE_INFINITY,
+        );
+        const currentUsage = this.sumUsageMembers(records);
+
+        return {
+          exceeded: false,
+          newUsage: currentUsage,
+        };
+      }
+
       const [exceeded, newUsage] = await this.redis.eval<[number, number]>(
         RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
         [key],
@@ -115,21 +157,19 @@ return { exceeded and 1 or 0, newUsage }
 
   async fetchUsageRecords(options: UsageQueryOptions): Promise<UsageRecord[]> {
     try {
-      const { tenantId, meterId, period, startDate, endDate } = options;
-      const { min, max } = this.getTimeRange(period, startDate, endDate);
-      const key = this.buildUsageKey(tenantId, meterId, new Date(min));
-
-      const members = await this.redis.zrangebyscore(key, min, max);
+      const { members } = await this.readUsageMembers(options);
 
       return members.map((member) => {
-        const [id, valueStr] = member.split(":");
+        const parsed = this.parseUsageMember(member);
+
         return {
-          id,
-          tenantId,
-          meterId,
-          value: Number.parseInt(valueStr, 10),
+          id: parsed.id,
+          tenantId: options.tenantId,
+          meterId: options.meterId,
+          value: parsed.value,
           timestamp: new Date(), // Score에서 복원해야 하지만 단순화
-          idempotencyKey: id, // 단순화
+          idempotencyKey: parsed.id,
+          metadata: parsed.metadata,
         };
       });
     } catch (error) {
@@ -141,14 +181,96 @@ return { exceeded and 1 or 0, newUsage }
    * Usage 키 생성
    * 패턴: usage:{tenantId}:{meterId}:{period}
    */
-  private buildUsageKey(tenantId: string, meterId: string, date: Date): string {
-    const periodKey = this.getPeriodKey(date, "billing_cycle");
+  private buildUsageKey(
+    tenantId: string,
+    meterId: string,
+    date: Date,
+    period: AggregationPeriod,
+  ): string {
+    const periodKey = this.getPeriodKey(date, period);
     return `${RedisUsageStorage.USAGE_KEY_PREFIX}:${tenantId}:${meterId}:${periodKey}`;
   }
 
-  /**
-   * Period별 키 생성
-   */
+  private getUsageKeyCandidates(
+    tenantId: string,
+    meterId: string,
+    date: Date,
+    period: AggregationPeriod,
+  ): string[] {
+    const primaryKey = this.buildUsageKey(tenantId, meterId, date, period);
+    if (period === "billing_cycle") {
+      return [primaryKey];
+    }
+
+    return [primaryKey, this.buildUsageKey(tenantId, meterId, date, "billing_cycle")];
+  }
+
+  private async readUsageMembers(
+    options: UsageQueryOptions,
+  ): Promise<{ key: string; members: string[] }> {
+    const { tenantId, meterId, period, startDate, endDate } = options;
+    const { min, max } = this.getTimeRange(period, startDate, endDate);
+    const candidates = this.getUsageKeyCandidates(tenantId, meterId, new Date(min), period);
+
+    for (const key of candidates) {
+      const members = await this.redis.zrangebyscore(key, min, max);
+      if (members.length > 0) {
+        return { key, members };
+      }
+    }
+
+    return { key: candidates[0], members: [] };
+  }
+
+  private buildRecordIdempotencyKey(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+  ): string {
+    return `${RedisUsageStorage.IDEM_KEY_PREFIX}:${tenantId}:${meterId}:${idempotencyKey}`;
+  }
+
+  private serializeUsageMember(usage: Pick<UsageRecord, "id" | "value" | "metadata">): string {
+    const base = `${usage.id}:${usage.value}`;
+
+    if (usage.metadata === undefined) {
+      return base;
+    }
+
+    return `${base}:${encodeURIComponent(JSON.stringify(usage.metadata))}`;
+  }
+
+  private parseUsageMember(member: string): {
+    id: string;
+    value: number;
+    metadata?: Record<string, unknown>;
+  } {
+    const parts = member.split(":");
+    const id = parts[0] ?? "";
+    const value = Number.parseInt(parts[1] ?? "0", 10);
+    const metadataEncoded = parts.length > 2 ? parts.slice(2).join(":") : undefined;
+
+    return {
+      id,
+      value: Number.isNaN(value) ? 0 : value,
+      metadata: metadataEncoded ? this.decodeMetadata(metadataEncoded) : undefined,
+    };
+  }
+
+  private decodeMetadata(encodedMetadata: string): Record<string, unknown> | undefined {
+    try {
+      const decoded = decodeURIComponent(encodedMetadata);
+      const parsed = JSON.parse(decoded) as Record<string, unknown>;
+      return parsed;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private sumUsageMembers(members: string[]): number {
+    return members.reduce((total, member) => total + this.parseUsageMember(member).value, 0);
+  }
+
   private getPeriodKey(date: Date, period: AggregationPeriod): string {
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -207,23 +329,13 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   /**
-   * member에서 value 파싱
-   * 형식: "usageId:value"
-   */
-  private parseValue(member: string): number {
-    const parts = member.split(":");
-    const value = Number.parseInt(parts[parts.length - 1], 10);
-    return Number.isNaN(value) ? 0 : value;
-  }
-
-  /**
    * 빌링 주기 리셋
    * 현재 빌링 주기의 모든 usage 데이터를 삭제합니다.
    */
   async resetBillingCycle(tenantId: string, meterId?: string): Promise<void> {
     try {
       if (meterId) {
-        const key = this.buildUsageKey(tenantId, meterId, new Date());
+        const key = this.buildUsageKey(tenantId, meterId, new Date(), "billing_cycle");
         await this.redis.eval<[number]>('return redis.call("DEL", KEYS[1])', [key], []);
       } else {
         const now = new Date();
@@ -244,6 +356,37 @@ return { exceeded and 1 or 0, newUsage }
       }
     } catch (error) {
       throw new RedisProblem("DEL", error instanceof Error ? error : undefined);
+    }
+  }
+
+  async deleteUsageRecords(options: UsageQueryOptions, records: UsageRecord[]): Promise<void> {
+    if (records.length === 0) {
+      return;
+    }
+
+    const members = records.map((record) => this.serializeUsageMember(record));
+    const { min } = this.getTimeRange(options.period, options.startDate, options.endDate);
+    const keys = this.getUsageKeyCandidates(
+      options.tenantId,
+      options.meterId,
+      new Date(min),
+      options.period,
+    );
+    const script = `
+local removed = 0
+local usageKey = KEYS[1]
+for _, member in ipairs(ARGV) do
+  removed = removed + redis.call('ZREM', usageKey, member)
+end
+return removed
+`;
+
+    try {
+      for (const key of keys) {
+        await this.redis.eval<[number]>(script, [key], members);
+      }
+    } catch (error) {
+      throw new RedisProblem("ZREM", error instanceof Error ? error : undefined);
     }
   }
 }

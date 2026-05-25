@@ -104,6 +104,29 @@ describe("UsageAggregator", () => {
       expect(callOrder).toEqual(["fetch", "save", "delete"]);
     });
 
+    it("should remove flushed records from subsequent flushes", async () => {
+      const pendingRecords = [
+        createUsageRecord({ id: "usage-1", value: 5 }),
+        createUsageRecord({ id: "usage-2", value: 3 }),
+      ];
+
+      vi.mocked(mockStorage.fetchUsageRecords).mockImplementation(async () => [...pendingRecords]);
+      mockStorage.deleteUsageRecords = vi
+        .fn()
+        .mockImplementation(async (_options, flushedRecords: UsageRecord[]) => {
+          const flushedIds = new Set(flushedRecords.map((record) => record.id));
+          const remaining = pendingRecords.filter((record) => !flushedIds.has(record.id));
+          pendingRecords.splice(0, pendingRecords.length, ...remaining);
+        });
+
+      const first = await aggregator.flushUsageToDB("tenant-1", "api_calls");
+      const second = await aggregator.flushUsageToDB("tenant-1", "api_calls");
+
+      expect(first.recordsFlushed).toBe(2);
+      expect(second.recordsFlushed).toBe(0);
+      expect(mockRepository.saveUsageRecords).toHaveBeenCalledTimes(1);
+    });
+
     it("should keep records in storage when save fails", async () => {
       const records = [createUsageRecord({ id: "usage-1", value: 5 })];
       vi.mocked(mockStorage.fetchUsageRecords).mockResolvedValue(records);

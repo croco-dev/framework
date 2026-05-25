@@ -131,52 +131,30 @@ export class InMemoryEventBus<
     baseEvent: TEvent,
     eventName: string,
   ): Promise<void> {
-    if (this.maxConcurrency === Number.POSITIVE_INFINITY || handlerClasses.length === 0) {
-      const results = await Promise.allSettled(
-        handlerClasses.map((handlerClass) =>
-          this.executeSubscriber(handlerClass, baseEvent, eventName),
-        ),
-      );
-      const failures = this.collectFailures(results, handlerClasses);
-      if (failures.length > 0) {
-        throw new EventPublishFailedError(eventName, failures);
+    const failures: EventPublishFailure[] = [];
+
+    for (const handlerClass of handlerClasses) {
+      if (!this.hasAvailableSlot()) {
+        switch (this.backpressureStrategy) {
+          case "drop": {
+            return;
+          }
+          case "error": {
+            throw new BackpressureExceededProblem(this.runningHandlers.size);
+          }
+          case "block": {
+            await this.waitForSlot();
+            break;
+          }
+        }
       }
-      return;
-    }
 
-    const currentRunning = this.runningHandlers.size;
-    const availableSlots = this.maxConcurrency - currentRunning;
-
-    if (availableSlots <= 0) {
-      switch (this.backpressureStrategy) {
-        case "drop": {
-          return;
-        }
-        case "error": {
-          throw new BackpressureExceededProblem(currentRunning);
-        }
-        case "block": {
-          await this.waitForSlot();
-          return this.executeWithBackpressure(handlerClasses, baseEvent, eventName);
-        }
+      const failure = await this.executeSubscriberWithTracking(handlerClass, baseEvent, eventName);
+      if (failure) {
+        failures.push(failure);
       }
     }
 
-    const handlersToRun = handlerClasses.slice(0, availableSlots);
-    const remainingHandlers = handlerClasses.slice(availableSlots);
-
-    const results = await Promise.allSettled(
-      handlersToRun.map((handlerClass) =>
-        this.executeSubscriberWithTracking(handlerClass, baseEvent, eventName),
-      ),
-    );
-
-    if (remainingHandlers.length > 0) {
-      await this.waitForSlot();
-      await this.executeWithBackpressure(remainingHandlers, baseEvent, eventName);
-    }
-
-    const failures = this.collectFailures(results, handlersToRun);
     if (failures.length > 0) {
       throw new EventPublishFailedError(eventName, failures);
     }
@@ -236,8 +214,13 @@ export class InMemoryEventBus<
   }
 
   private notifySlotAvailable(): void {
-    for (const waiter of this.slotWaiters) {
-      waiter();
+    if (!this.hasAvailableSlot()) {
+      return;
+    }
+
+    const nextWaiter = this.slotWaiters.values().next().value as (() => void) | undefined;
+    if (nextWaiter) {
+      nextWaiter();
     }
   }
 

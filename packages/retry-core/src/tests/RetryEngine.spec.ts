@@ -246,6 +246,43 @@ describe("executeRetryLoop", () => {
     expect(stateContext.elapsedTimeMs).toBeGreaterThanOrEqual(0);
   });
 
+  it("should pass 1-based attempts to retry policy and 0-based attempts to backoff", async () => {
+    const policyAttempts: number[] = [];
+    const backoffAttempts: number[] = [];
+    const attemptPolicy: RetryPolicy = {
+      shouldRetry: vi.fn((_error: unknown, attempt: number, maxAttempts: number) => {
+        policyAttempts.push(attempt);
+        return attempt < maxAttempts;
+      }),
+    };
+    const attemptBackoff: BackoffPolicy = {
+      getDelay: vi.fn((attempt: number) => {
+        backoffAttempts.push(attempt);
+        return 0;
+      }),
+      wait: vi.fn(async (attempt: number) => {
+        backoffAttempts.push(attempt);
+      }),
+      reset: vi.fn(),
+    };
+    const callback = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("first"))
+      .mockRejectedValueOnce(new Error("second"))
+      .mockResolvedValue("ok");
+
+    const result = await executeRetryLoop(callback, {
+      maxAttempts: 3,
+      retryPolicy: attemptPolicy,
+      backoffPolicy: attemptBackoff,
+      context: new RetryContext("execute", [], 3),
+    });
+
+    expect(result).toBe("ok");
+    expect(policyAttempts).toEqual([1, 2]);
+    expect(backoffAttempts).toEqual([0, 0, 1, 1]);
+  });
+
   it("should surface RetryExhaustedProblem when maxAttempts is zero and no lastError exists", async () => {
     const zeroAttemptContext = new RetryContext("execute", [], 0);
 

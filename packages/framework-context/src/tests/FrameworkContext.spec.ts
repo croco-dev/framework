@@ -73,6 +73,20 @@ describe("Container", () => {
 
       expect(beforeReset).not.toBe(afterReset);
     });
+
+    it("should clear component metadata on reset", () => {
+      @Component()
+      class ResettableService {}
+
+      expect(Container.getComponentMetadata(ResettableService)).toEqual({
+        scope: "singleton",
+        target: ResettableService,
+      });
+
+      Container.reset();
+
+      expect(Container.getComponentMetadata(ResettableService)).toBeUndefined();
+    });
   });
 
   describe("remove", () => {

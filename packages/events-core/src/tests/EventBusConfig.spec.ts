@@ -102,6 +102,53 @@ describe("EventBusConfig", () => {
       expect(config.getEventBus()).toBe(secondBus);
     });
 
+    it("should keep subscriptions isolated for handlers with the same class name", async () => {
+      const config = EventBusConfig.getInstance();
+      const mockBus = new MockEventBus();
+      const firstHandler = class SharedHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {}
+      };
+      const secondHandler = class SharedHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {}
+      };
+
+      config.setEventBus(mockBus as EventBus);
+      config.subscribe({
+        eventName: "TestEvent",
+        handlerClass: firstHandler as EventHandlerClass,
+      });
+      config.subscribe({
+        eventName: "TestEvent",
+        handlerClass: secondHandler as EventHandlerClass,
+      });
+
+      await config.start({ handlers: [] });
+
+      expect(mockBus.subscriptions).toHaveLength(2);
+      expect(mockBus.subscriptions[0].handlerClass).toBe(firstHandler);
+      expect(mockBus.subscriptions[1].handlerClass).toBe(secondHandler);
+    });
+
+    it("should disconnect subscriptions from the previous bus when switching buses", async () => {
+      const config = EventBusConfig.getInstance();
+      const firstBus = new MockEventBus();
+      const secondBus = new MockEventBus();
+
+      config.setEventBus(firstBus as EventBus);
+      config.subscribe({
+        eventName: "TestEvent",
+        handlerClass: TestHandler as EventHandlerClass,
+      });
+      await config.start({ handlers: [] });
+
+      expect(firstBus.subscriptions).toHaveLength(1);
+
+      config.setEventBus(secondBus as EventBus);
+
+      expect(firstBus.subscriptions).toHaveLength(0);
+      expect(secondBus.subscriptions).toHaveLength(1);
+    });
+
     it("should reconnect started subscriptions when event bus is updated", async () => {
       const config = EventBusConfig.getInstance();
       const firstBus = new MockEventBus();
@@ -122,12 +169,53 @@ describe("EventBusConfig", () => {
 
       config.setEventBus(secondBus as EventBus);
 
+      expect(firstBus.subscriptions).toHaveLength(0);
       expect(secondBus.subscriptions).toHaveLength(1);
       expect(secondBus.subscriptions[0]).toMatchObject({
         eventName: "TestEvent",
         handlerClass: TestHandler,
         handler: customHandler,
       });
+    });
+
+    it("should keep handlers with the same class name separate", async () => {
+      const config = EventBusConfig.getInstance();
+      const mockBus = new MockEventBus();
+      const handlerA = new TestHandler();
+      const handlerB = new AnotherHandler();
+      const HandlerA = class CollisionHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {}
+      };
+      const HandlerB = class CollisionHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {}
+      };
+      const resolver = {
+        resolve(handlerClass: EventHandlerClass): EventHandler<TestEvent> {
+          if (handlerClass === HandlerA) {
+            return handlerA;
+          }
+
+          return handlerB;
+        },
+      };
+
+      config.setEventBus(mockBus as EventBus);
+      config.subscribe({
+        eventName: "CollisionEvent",
+        handlerClass: HandlerA as EventHandlerClass,
+      });
+      config.subscribe({
+        eventName: "CollisionEvent",
+        handlerClass: HandlerB as EventHandlerClass,
+      });
+
+      await config.start({ handlers: [], resolver: resolver as HandlerResolver });
+
+      const collisionSubs = mockBus.subscriptions.filter((s) => s.eventName === "CollisionEvent");
+      expect(collisionSubs).toHaveLength(2);
+      expect(collisionSubs[0].handlerClass.name).toBe("CollisionHandler");
+      expect(collisionSubs[1].handlerClass.name).toBe("CollisionHandler");
+      expect(new Set(collisionSubs.map((s) => s.handler)).size).toBe(2);
     });
   });
 
