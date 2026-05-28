@@ -5,6 +5,7 @@ import type { NotificationProviderRegistry } from "./NotificationProviderRegistr
 import {
   NotificationDeliveryFailedProblem,
   NotificationProviderNotFoundProblem,
+  NotificationSendMaxAttemptsInvalidProblem,
 } from "./problems/NotificationProblems";
 import type { NotificationJobPayload, NotificationProvider } from "./types";
 
@@ -14,9 +15,7 @@ function parseMaxAttempts(envValue: string | undefined, defaultValue: number): n
   const parsed = Number(envValue);
 
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
-    throw new Error(
-      `Invalid NOTIFICATIONS_SEND_MAX_ATTEMPTS value '${envValue}'. Must be an integer between 1 and 10.`,
-    );
+    throw new NotificationSendMaxAttemptsInvalidProblem(envValue);
   }
 
   return parsed;

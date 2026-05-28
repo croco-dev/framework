@@ -83,10 +83,7 @@ export class CrocoApp {
 
     this.registerSystemRoutes();
 
-    const compiler = new RouteCompiler(
-      this.logger,
-      new PipelineRunner(this.errorHandler, this.logger),
-    );
+    const compiler = new RouteCompiler(this.logger, new PipelineRunner(this.errorHandler));
     this.routes = compiler.compile(this.config.controllers, {
       ...options,
       container: options.container ?? createRouteCompileContainer(),

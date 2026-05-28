@@ -36,8 +36,6 @@ export class HttpExceptionFilter implements ExceptionFilter<unknown, ExecutionCo
       };
     }
 
-    const message = exception instanceof Error ? exception.message : "Internal Server Error";
-
     return {
       status: 500,
       headers: { "Content-Type": "application/problem+json" },
@@ -46,7 +44,7 @@ export class HttpExceptionFilter implements ExceptionFilter<unknown, ExecutionCo
         title: "Internal Server Error",
         status: 500,
         code: "INTERNAL_SERVER_ERROR",
-        detail: message,
+        detail: "An internal error occurred",
       },
     };
   }

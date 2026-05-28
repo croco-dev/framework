@@ -50,17 +50,10 @@ describe("HttpExceptionFilter", () => {
 
     const result = filter.catch(error, mockContext);
 
-    expect(result).toEqual({
-      status: 500,
-      headers: { "Content-Type": "application/problem+json" },
-      body: {
-        type: "about:blank",
-        title: "Internal Server Error",
-        status: 500,
-        code: "INTERNAL_SERVER_ERROR",
-        detail: "Something went wrong",
-      },
-    });
+    expect(result.status).toBe(500);
+    expect(result.body.code).toBe("INTERNAL_SERVER_ERROR");
+    // plain Error: detail should be generic, not the error message
+    expect(result.body.detail).toBe("An internal error occurred");
   });
 
   it("should set correct Content-Type header", () => {
@@ -97,7 +90,7 @@ describe("HttpExceptionFilter", () => {
 
     const result = filter.catch(error, mockContext);
 
-    expect(result.body.detail).toBe("Database connection failed");
+    expect(result.body.detail).toBe("An internal error occurred");
     expect(result.body.code).toBe("INTERNAL_SERVER_ERROR");
   });
 
@@ -107,21 +100,21 @@ describe("HttpExceptionFilter", () => {
     const result = filter.catch(exception, mockContext);
 
     expect(result.status).toBe(500);
-    expect(result.body.detail).toBe("Internal Server Error");
+    expect(result.body.detail).toBe("An internal error occurred");
   });
 
   it("should handle null exception", () => {
     const result = filter.catch(null, mockContext);
 
     expect(result.status).toBe(500);
-    expect(result.body.detail).toBe("Internal Server Error");
+    expect(result.body.detail).toBe("An internal error occurred");
   });
 
   it("should handle undefined exception", () => {
     const result = filter.catch(undefined, mockContext);
 
     expect(result.status).toBe(500);
-    expect(result.body.detail).toBe("Internal Server Error");
+    expect(result.body.detail).toBe("An internal error occurred");
   });
 
   it("should handle object without status property (non-Problem)", () => {
@@ -174,13 +167,13 @@ describe("HttpExceptionFilter", () => {
 
     const result = filter.catch(error, mockContext);
 
-    expect(result.body.detail).toBe("");
+    expect(result.body.detail).toBe("An internal error occurred");
   });
 
   it("should handle empty string error", () => {
     const result = filter.catch("", mockContext);
 
-    expect(result.body.detail).toBe("Internal Server Error");
+    expect(result.body.detail).toBe("An internal error occurred");
   });
 
   it("should return consistent response structure", () => {

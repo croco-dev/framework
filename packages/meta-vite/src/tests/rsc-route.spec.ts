@@ -157,7 +157,7 @@ describe("RSC route rendering", () => {
     expect(JSON.parse(body)).toEqual({
       error: "RSC rendering failed",
       route: "/rsc-broken",
-      detail: "rsc render failed",
+      detail: "An internal server error occurred",
     });
     expect(body).not.toContain("<html");
     expect(body).not.toContain("Internal Server Error");
@@ -259,8 +259,7 @@ describe("RSC route rendering", () => {
     expect(leakyDiagnostic).toEqual({
       error: "RSC rendering failed",
       route: "/rsc-leaky-client",
-      detail:
-        "Client boundary client-with-server-import.tsx imports server-only module(s): ./server-only-module",
+      detail: "An internal server error occurred",
     });
   });
 });

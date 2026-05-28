@@ -63,15 +63,18 @@ export class AuditErrorHandler {
         attempts,
         error: error.message,
       });
-    } catch {
-      // Empty catch block - logger unavailable, already recorded via telemetry
+    } catch (loggerError) {
+      console.error(
+        "[AuditErrorHandler] Failed to log audit failure (logger unavailable):",
+        loggerError,
+      );
     }
 
     if (this.config.onExhausted) {
       try {
         this.config.onExhausted(error, attempts);
-      } catch {
-        // Empty catch block - callback error suppressed to prevent cascading failures
+      } catch (callbackError) {
+        console.error("[AuditErrorHandler] onExhausted callback failed:", callbackError);
       }
     }
   }

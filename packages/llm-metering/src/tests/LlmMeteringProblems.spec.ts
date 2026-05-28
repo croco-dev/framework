@@ -78,7 +78,8 @@ describe("LlmMeteringProblems", () => {
       expect(problem.detail).toContain("operation 'generate'");
       expect(problem.extensions?.operation).toBe("generate");
       expect(problem.extensions?.meterIds).toEqual(["llm.prompt_tokens", "llm.cost_usd"]);
-      expect(problem.extensions?.cause).toBe("boom");
+      expect(problem.cause).toBeInstanceOf(Error);
+      expect((problem.cause as Error).message).toBe("boom");
     });
   });
 });

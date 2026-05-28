@@ -1,5 +1,6 @@
 import type { ILogger } from "@croco/framework-context";
 import { BetterAuthSessionNotFoundProblem } from "./problems/AuthProblems";
+import { BetterAuthSessionLookupProblem } from "./problems/BetterAuthSessionLookupProblem";
 import type { BetterAuthSession, BetterAuthSessionProvider } from "./types";
 
 /**
@@ -42,8 +43,13 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
 
       return this.mapToBetterAuthSession(session);
     } catch (error) {
-      this.logger?.warn("BetterAuthSessionManager.getSession() failed", { error });
-      return null;
+      if (isInvalidSessionLookupError(error)) {
+        return null;
+      }
+
+      const cause = toError(error);
+      this.logger?.warn("BetterAuthSessionManager.getSession() failed", { error: cause });
+      throw new BetterAuthSessionLookupProblem(cause);
     }
   }
 
@@ -94,4 +100,42 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function isInvalidSessionLookupError(error: unknown): boolean {
+  const statusCode = getNumericProperty(error, "statusCode") ?? getNumericProperty(error, "status");
+
+  if (statusCode !== undefined) {
+    return statusCode >= 400 && statusCode < 500;
+  }
+
+  const status = getStringProperty(error, "status");
+  return (
+    status === "UNAUTHORIZED" ||
+    status === "FORBIDDEN" ||
+    status === "NOT_FOUND" ||
+    status === "BAD_REQUEST"
+  );
+}
+
+function getNumericProperty(value: unknown, key: string): number | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const property = value[key];
+  return typeof property === "number" ? property : undefined;
+}
+
+function getStringProperty(value: unknown, key: string): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const property = value[key];
+  return typeof property === "string" ? property : undefined;
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }

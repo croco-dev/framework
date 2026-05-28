@@ -155,7 +155,6 @@ describe("LlmMeteringService", () => {
         extensions: {
           operation: "generate",
           meterIds: ["llm.prompt_tokens", "llm.cost_usd"],
-          cause: "Duplicate idempotency key",
         },
       });
     });

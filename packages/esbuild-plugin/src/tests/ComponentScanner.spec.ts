@@ -310,16 +310,37 @@ describe("ComponentScanner", () => {
 
   describe("clearCache", () => {
     it("should clear internal cache", () => {
-      scanner.scan(FIXTURES_DIR);
-      scanner.clearCache();
-      expect(true).toBe(true);
+      const fixtureScanner = new ComponentScanner({
+        scanDirs: [FIXTURES_DIR],
+      });
+
+      // Scan to populate cache
+      const results1 = fixtureScanner.scan();
+      expect(results1.length).toBeGreaterThan(0);
+
+      // Clear the cache
+      fixtureScanner.clearCache();
+
+      // After clearing cache, re-scanning should still produce the same results
+      const results2 = fixtureScanner.scan();
+      expect(results2).toEqual(results1);
     });
   });
 
   describe("invalidateCache", () => {
     it("should invalidate specific file cache", () => {
-      scanner.invalidateCache("/some/file.ts");
-      expect(true).toBe(true);
+      const withComponentPath = path.join(FIXTURES_DIR, "WithComponent.ts");
+
+      // Scan to populate cache
+      const result1 = scanner.scanFile(withComponentPath);
+      expect(result1.hasComponent).toBe(true);
+
+      // Invalidate cache for specific file
+      scanner.invalidateCache(withComponentPath);
+
+      // Re-scanning should still produce the same result (file hasn't changed)
+      const result2 = scanner.scanFile(withComponentPath);
+      expect(result2).toEqual(result1);
     });
   });
 });

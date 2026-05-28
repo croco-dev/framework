@@ -61,7 +61,13 @@ export async function executeRetryLoop<T>(
 
         context.setExhausted();
         await retryHooks.onExhausted?.(retryError, context);
-        throw retryError;
+        const exhaustedError = RetryExhaustedProblem.fromContext(
+          context.methodName,
+          attempt,
+          retryError,
+        );
+        exhaustedError.message = `${exhaustedError.message}: ${retryError.message}`;
+        throw exhaustedError;
       }
 
       if (!isRetryable) {

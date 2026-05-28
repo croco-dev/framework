@@ -3,16 +3,25 @@ import type { ILogger } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetterAuthSessionManager } from "../libs/BetterAuthSessionManager";
 import { BetterAuthSessionNotFoundProblem } from "../libs/problems/AuthProblems";
+import { BetterAuthSessionLookupProblem } from "../libs/problems/BetterAuthSessionLookupProblem";
 
 function createMockAuthFactory(sessions: unknown[] | null = [], revokeError = false) {
   return {
     getAuth: () => ({
       api: {
-        listSessions: vi.fn().mockResolvedValue(sessions),
+        listSessions: vi
+          .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
+          .mockResolvedValue(sessions as unknown[]),
         revokeSession: revokeError
-          ? vi.fn().mockRejectedValue(new Error("Session not found"))
-          : vi.fn().mockResolvedValue(undefined),
-        revokeUserSessions: vi.fn().mockResolvedValue(undefined),
+          ? vi
+              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
+              .mockRejectedValue(new Error("Session not found"))
+          : vi
+              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
+        revokeUserSessions: vi
+          .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
+          .mockResolvedValue(undefined),
       },
     }),
   };
@@ -25,20 +34,7 @@ describe("BetterAuthSessionManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFactory = createMockAuthFactory();
-    sessionManager = new BetterAuthSessionManager(
-      mockFactory as unknown as {
-        getAuth: () => {
-          api: {
-            listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-            revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-            revokeUserSessions: (args: {
-              headers: Headers;
-              body: { userId: string };
-            }) => Promise<void>;
-          };
-        };
-      },
-    );
+    sessionManager = new BetterAuthSessionManager(mockFactory);
   });
 
   describe("getSession", () => {
@@ -57,20 +53,7 @@ describe("BetterAuthSessionManager", () => {
       ];
 
       mockFactory = createMockAuthFactory(mockSessions);
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       const result = await sessionManager.getSession("valid-token");
 
@@ -93,20 +76,7 @@ describe("BetterAuthSessionManager", () => {
       ];
 
       mockFactory = createMockAuthFactory(mockSessions);
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       const result = await sessionManager.getSession("non-existent-token");
 
@@ -115,20 +85,7 @@ describe("BetterAuthSessionManager", () => {
 
     it("should return null when sessions is null", async () => {
       mockFactory = createMockAuthFactory(null);
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       const result = await sessionManager.getSession("any-token");
 
@@ -137,20 +94,7 @@ describe("BetterAuthSessionManager", () => {
 
     it("should return null when sessions is not an array", async () => {
       mockFactory = createMockAuthFactory({} as unknown[]);
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       const result = await sessionManager.getSession("any-token");
 
@@ -170,20 +114,7 @@ describe("BetterAuthSessionManager", () => {
       ];
 
       mockFactory = createMockAuthFactory(mockSessions);
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       const result = await sessionManager.getSession("valid-token");
 
@@ -206,20 +137,7 @@ describe("BetterAuthSessionManager", () => {
       ];
 
       mockFactory = createMockAuthFactory(mockSessions);
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       const result = await sessionManager.getSession("valid-token");
 
@@ -228,70 +146,110 @@ describe("BetterAuthSessionManager", () => {
       expect(result?.userAgent).toBeUndefined();
     });
 
-    it("should return null and log warning when listSessions throws", async () => {
-      const warnSpy = vi.fn();
-      const logger: ILogger = { warn: warnSpy } as unknown as ILogger;
+    it("should return null when listSessions rejects invalid session errors", async () => {
       const errorFactory = {
         getAuth: () => ({
           api: {
-            listSessions: vi.fn().mockRejectedValue(new Error("Network error")),
-            revokeSession: vi.fn(),
-            revokeUserSessions: vi.fn(),
+            listSessions: vi
+              .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
+              .mockRejectedValue({ statusCode: 401 }),
+            revokeSession: vi
+              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
+            revokeUserSessions: vi
+              .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
           },
         }),
       };
 
-      sessionManager = new BetterAuthSessionManager(
-        errorFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-        logger,
-      );
+      sessionManager = new BetterAuthSessionManager(errorFactory);
 
-      const result = await sessionManager.getSession("any-token");
+      const result = await sessionManager.getSession("expired-token");
 
       expect(result).toBeNull();
+    });
+
+    it("should throw lookup problem and log warning when listSessions fails unexpectedly", async () => {
+      const warnSpy = vi.fn();
+      const logger: ILogger = {
+        warn: warnSpy,
+        debug: vi.fn(),
+        info: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn(),
+      };
+      const errorFactory = {
+        getAuth: () => ({
+          api: {
+            listSessions: vi
+              .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
+              .mockRejectedValue(new Error("Network error")),
+            revokeSession: vi
+              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
+            revokeUserSessions: vi
+              .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
+          },
+        }),
+      };
+
+      sessionManager = new BetterAuthSessionManager(errorFactory, logger);
+
+      await expect(sessionManager.getSession("any-token")).rejects.toBeInstanceOf(
+        BetterAuthSessionLookupProblem,
+      );
+
       expect(warnSpy).toHaveBeenCalledWith("BetterAuthSessionManager.getSession() failed", {
         error: expect.any(Error),
       });
+    });
+
+    it("should throw lookup problem for 5xx lookup errors", async () => {
+      const errorFactory = {
+        getAuth: () => ({
+          api: {
+            listSessions: vi
+              .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
+              .mockRejectedValue({ status: 503 }),
+            revokeSession: vi
+              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
+            revokeUserSessions: vi
+              .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
+          },
+        }),
+      };
+
+      sessionManager = new BetterAuthSessionManager(errorFactory);
+
+      await expect(sessionManager.getSession("any-token")).rejects.toBeInstanceOf(
+        BetterAuthSessionLookupProblem,
+      );
     });
   });
 
   describe("revokeSession", () => {
     it("should revoke session successfully", async () => {
-      const revokeSpy = vi.fn().mockResolvedValue(undefined);
+      const revokeSpy = vi
+        .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
+        .mockResolvedValue(undefined);
       mockFactory = {
         getAuth: () => ({
           api: {
-            listSessions: vi.fn(),
+            listSessions: vi
+              .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
+              .mockResolvedValue([] as unknown[]),
             revokeSession: revokeSpy,
-            revokeUserSessions: vi.fn(),
+            revokeUserSessions: vi
+              .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
           },
         }),
       };
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       await sessionManager.revokeSession("session-token-123");
 
@@ -303,20 +261,7 @@ describe("BetterAuthSessionManager", () => {
 
     it("should throw BetterAuthSessionNotFoundProblem when revoke fails", async () => {
       mockFactory = createMockAuthFactory([], true);
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       await expect(sessionManager.revokeSession("invalid-session")).rejects.toBeInstanceOf(
         BetterAuthSessionNotFoundProblem,
@@ -326,30 +271,23 @@ describe("BetterAuthSessionManager", () => {
 
   describe("revokeUserSessions", () => {
     it("should revoke all user sessions", async () => {
-      const revokeUserSpy = vi.fn().mockResolvedValue(undefined);
+      const revokeUserSpy = vi
+        .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
+        .mockResolvedValue(undefined);
       mockFactory = {
         getAuth: () => ({
           api: {
-            listSessions: vi.fn(),
-            revokeSession: vi.fn(),
+            listSessions: vi
+              .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
+              .mockResolvedValue([] as unknown[]),
+            revokeSession: vi
+              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
+              .mockResolvedValue(undefined),
             revokeUserSessions: revokeUserSpy,
           },
         }),
       };
-      sessionManager = new BetterAuthSessionManager(
-        mockFactory as unknown as {
-          getAuth: () => {
-            api: {
-              listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-              revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
-              revokeUserSessions: (args: {
-                headers: Headers;
-                body: { userId: string };
-              }) => Promise<void>;
-            };
-          };
-        },
-      );
+      sessionManager = new BetterAuthSessionManager(mockFactory);
 
       await sessionManager.revokeUserSessions("user-123");
 

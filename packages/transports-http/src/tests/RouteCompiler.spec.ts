@@ -68,7 +68,7 @@ describe("RouteCompiler", () => {
   function createCompiler(): RouteCompiler {
     const logger = Container.get(Logger);
     const errorHandler = Container.get(ErrorHandler);
-    return new RouteCompiler(logger, new PipelineRunner(errorHandler, logger));
+    return new RouteCompiler(logger, new PipelineRunner(errorHandler));
   }
 
   beforeEach(() => {

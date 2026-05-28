@@ -4,6 +4,7 @@ export * from "./libs/BetterAuthSessionManager";
 export * from "./libs/BetterAuthWebhookProcessor";
 export * from "./libs/problems/AuthProblems";
 export * from "./libs/problems/BetterAuthInvalidSessionProblem";
+export * from "./libs/problems/BetterAuthSessionLookupProblem";
 export * from "./libs/problems/WebhookProblems";
 export * from "./libs/schema";
 export * from "./libs/types";
