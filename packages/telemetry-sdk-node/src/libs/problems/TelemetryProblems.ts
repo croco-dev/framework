@@ -7,9 +7,8 @@ export class SamplerProblem extends Problem {
   readonly code = "TELEMETRY_SAMPLER_INVALID_CONFIG";
   readonly category = ProblemCategory.BadRequest;
 
-  // biome-ignore lint/complexity/noUselessConstructor: Problem 클래스의 protected constructor 호출 필요
   constructor(detail: string) {
-    super(detail);
+    super("TELEMETRY_SAMPLER_INVALID_CONFIG", ProblemCategory.BadRequest, detail);
   }
 }
 
@@ -21,7 +20,11 @@ export class OtlpEndpointRequiredProblem extends Problem {
   readonly category = ProblemCategory.InternalServerError;
 
   constructor() {
-    super("OTLP endpoint is required for telemetry");
+    super(
+      "OTLP_ENDPOINT_REQUIRED",
+      ProblemCategory.InternalServerError,
+      "OTLP endpoint is required for telemetry",
+    );
   }
 }
 
@@ -32,6 +35,11 @@ export class TelemetryRuntimeProblem extends Problem {
   constructor(phase: "init" | "forceFlush" | "shutdown", cause: unknown) {
     const detail = cause instanceof Error ? cause.message : String(cause);
     const causeError = cause instanceof Error ? cause : new Error(String(cause));
-    super(`Telemetry ${phase} failed: ${detail}`, undefined, undefined, { cause: causeError });
+    super(
+      "TELEMETRY_RUNTIME_ERROR",
+      ProblemCategory.InternalServerError,
+      `Telemetry ${phase} failed: ${detail}`,
+      { cause: causeError },
+    );
   }
 }
