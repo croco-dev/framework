@@ -125,10 +125,11 @@ export class DefaultEventSerializer implements EventSerializer {
   ): T {
     try {
       return new EventClass();
-    } catch {
+    } catch (error: unknown) {
       throw new EventDeserializationError(
         EventClass.name,
         "Events with required constructor arguments must provide a static fromPayload() method for deserialization.",
+        { cause: error instanceof Error ? error : new Error(String(error)) },
       );
     }
   }

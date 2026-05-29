@@ -1,3 +1,4 @@
+import type { ProblemOptions } from "@croco/problems-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class WebhookVerificationProblem extends Problem {
@@ -43,6 +44,17 @@ export class DuplicateTenantMappingProblem extends Problem {
       undefined,
       undefined,
       `Clerk org '${externalOrgId}' is already mapped to tenant '${existingTenantId}' and cannot be remapped to '${nextTenantId}'`,
+    );
+  }
+}
+
+export class ClerkExternalServiceProblem extends Problem {
+  constructor(detail: string, options?: ProblemOptions) {
+    super(
+      "auth-clerk/external-service-error",
+      ProblemCategory.InternalServerError,
+      detail,
+      options,
     );
   }
 }

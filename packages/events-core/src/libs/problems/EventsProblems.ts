@@ -39,8 +39,8 @@ export class UnknownEventTypeProblem extends Problem {
 export class EventDeserializationError extends Problem {
   readonly code = "events-core/deserialization-error";
   readonly category = ProblemCategory.InternalServerError;
-  constructor(eventName: string, reason: string) {
-    super(undefined, undefined, `Cannot deserialize event '${eventName}': ${reason}`);
+  constructor(eventName: string, reason: string, options?: { cause?: Error }) {
+    super(undefined, undefined, `Cannot deserialize event '${eventName}': ${reason}`, options);
   }
 }
 

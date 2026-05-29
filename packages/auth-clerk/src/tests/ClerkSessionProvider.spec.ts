@@ -1,6 +1,7 @@
 import { createClerkClient } from "@clerk/backend";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ClerkSessionProvider } from "../libs/ClerkSessionProvider";
+import { ClerkExternalServiceProblem } from "../libs/problems/ClerkProblems";
 
 vi.mock("@clerk/backend", () => ({
   createClerkClient: vi.fn(),
@@ -61,14 +62,27 @@ describe("ClerkSessionProvider", () => {
       });
     });
 
-    it("should return null on error", async () => {
-      vi.mocked(mockClerkClient.sessions.getSession).mockRejectedValue(
-        new Error("Session not found"),
-      );
+    it("should return null on 404", async () => {
+      const clerkError = { status: 404, message: "Session not found" };
+      vi.mocked(mockClerkClient.sessions.getSession).mockRejectedValue(clerkError);
 
       const result = await provider.getSession("invalid-sess");
 
       expect(result).toBeNull();
+    });
+
+    it("should throw ClerkExternalServiceProblem on network error", async () => {
+      const networkError = new Error("Network connection failed");
+      vi.mocked(mockClerkClient.sessions.getSession).mockRejectedValue(networkError);
+
+      await expect(provider.getSession("sess_123")).rejects.toThrow(ClerkExternalServiceProblem);
+    });
+
+    it("should throw ClerkExternalServiceProblem on non-404 Clerk error", async () => {
+      const clerkError = { status: 500, message: "Internal server error" };
+      vi.mocked(mockClerkClient.sessions.getSession).mockRejectedValue(clerkError);
+
+      await expect(provider.getSession("sess_123")).rejects.toThrow(ClerkExternalServiceProblem);
     });
   });
 
@@ -99,7 +113,9 @@ describe("ClerkSessionProvider", () => {
 
       expect(result.sessions).toHaveLength(1);
       expect(result.totalCount).toBe(1);
-      expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledWith({ userId: "user_123" });
+      expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledWith({
+        userId: "user_123",
+      });
     });
 
     it("should pass all options to API", async () => {

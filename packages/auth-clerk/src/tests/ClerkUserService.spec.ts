@@ -1,6 +1,7 @@
 import { createClerkClient } from "@clerk/backend";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ClerkUserService } from "../libs/ClerkUserService";
+import { ClerkExternalServiceProblem } from "../libs/problems/ClerkProblems";
 
 vi.mock("@clerk/backend", () => ({
   createClerkClient: vi.fn(),
@@ -17,7 +18,11 @@ describe("ClerkUserService", () => {
     firstName: "John",
     lastName: "Doe",
     emailAddresses: [
-      { id: "ema_123", emailAddress: "john@example.com", verification: { status: "verified" } },
+      {
+        id: "ema_123",
+        emailAddress: "john@example.com",
+        verification: { status: "verified" },
+      },
     ],
     primaryEmailAddressId: "ema_123",
     publicMetadata: { role: "user" },
@@ -61,12 +66,27 @@ describe("ClerkUserService", () => {
       expect(result?.emailAddresses).toHaveLength(1);
     });
 
-    it("should return null on error", async () => {
-      vi.mocked(mockClerkClient.users.getUser).mockRejectedValue(new Error("User not found"));
+    it("should return null on 404", async () => {
+      const clerkError = { status: 404, message: "User not found" };
+      vi.mocked(mockClerkClient.users.getUser).mockRejectedValue(clerkError);
 
       const result = await service.getUser("invalid-user");
 
       expect(result).toBeNull();
+    });
+
+    it("should throw ClerkExternalServiceProblem on network error", async () => {
+      const networkError = new Error("Network connection failed");
+      vi.mocked(mockClerkClient.users.getUser).mockRejectedValue(networkError);
+
+      await expect(service.getUser("user_123")).rejects.toThrow(ClerkExternalServiceProblem);
+    });
+
+    it("should throw ClerkExternalServiceProblem on non-404 Clerk error", async () => {
+      const clerkError = { status: 500, message: "Internal server error" };
+      vi.mocked(mockClerkClient.users.getUser).mockRejectedValue(clerkError);
+
+      await expect(service.getUser("user_123")).rejects.toThrow(ClerkExternalServiceProblem);
     });
   });
 
