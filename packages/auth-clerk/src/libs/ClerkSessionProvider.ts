@@ -6,6 +6,7 @@ import type {
   SessionProvider,
 } from "@croco/auth-core";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
+import { ClerkExternalServiceProblem } from "./problems/ClerkProblems";
 
 function mapClerkSessionStatus(status: string): Session["status"] {
   const validStatuses: Session["status"][] = [
@@ -22,6 +23,24 @@ function mapClerkSessionStatus(status: string): Session["status"] {
     return status as Session["status"];
   }
   return "ended";
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getClerkErrorStatus(error: unknown): number | undefined {
+  if (!isObjectRecord(error)) {
+    return undefined;
+  }
+
+  const status = error.status;
+  if (typeof status === "number") {
+    return status;
+  }
+
+  const statusCode = error.statusCode;
+  return typeof statusCode === "number" ? statusCode : undefined;
 }
 
 function timestampToDate(timestamp: number | undefined): Date | undefined {
@@ -53,8 +72,15 @@ export class ClerkSessionProvider implements SessionProvider {
         abandonedAt: timestampToDate(clerkSession.abandonAt),
         lastActiveAt: timestampToDate(clerkSession.lastActiveAt),
       };
-    } catch {
-      return null;
+    } catch (error: unknown) {
+      const status = getClerkErrorStatus(error);
+      if (status === 404) {
+        return null; // 세션 미존재 — 정상
+      }
+
+      throw new ClerkExternalServiceProblem("Failed to get session from Clerk", {
+        cause: error instanceof Error ? error : new Error(String(error)),
+      });
     }
   }
 

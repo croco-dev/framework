@@ -1,5 +1,6 @@
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
+import { ClerkExternalServiceProblem } from "./problems/ClerkProblems";
 
 export type ClerkUser = {
   id: string;
@@ -46,6 +47,24 @@ export type UserListResult = {
   users: ClerkUser[];
   totalCount: number;
 };
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getClerkErrorStatus(error: unknown): number | undefined {
+  if (!isObjectRecord(error)) {
+    return undefined;
+  }
+
+  const status = error.status;
+  if (typeof status === "number") {
+    return status;
+  }
+
+  const statusCode = error.statusCode;
+  return typeof statusCode === "number" ? statusCode : undefined;
+}
 
 function mapClerkUser(user: {
   id: string;
@@ -95,8 +114,15 @@ export class ClerkUserService {
     try {
       const user = await this.clerkClient.users.getUser(userId);
       return mapClerkUser(user);
-    } catch {
-      return null;
+    } catch (error: unknown) {
+      const status = getClerkErrorStatus(error);
+      if (status === 404) {
+        return null; // 사용자 미존재 — 정상
+      }
+
+      throw new ClerkExternalServiceProblem("Failed to get user from Clerk", {
+        cause: error instanceof Error ? error : new Error(String(error)),
+      });
     }
   }
 
@@ -144,8 +170,12 @@ export class ClerkUserService {
     const user = await this.clerkClient.users.updateUser(userId, {
       ...(input.firstName !== undefined && { firstName: input.firstName }),
       ...(input.lastName !== undefined && { lastName: input.lastName }),
-      ...(input.publicMetadata !== undefined && { publicMetadata: input.publicMetadata }),
-      ...(input.privateMetadata !== undefined && { privateMetadata: input.privateMetadata }),
+      ...(input.publicMetadata !== undefined && {
+        publicMetadata: input.publicMetadata,
+      }),
+      ...(input.privateMetadata !== undefined && {
+        privateMetadata: input.privateMetadata,
+      }),
     });
 
     return mapClerkUser(user);
@@ -159,8 +189,12 @@ export class ClerkUserService {
     },
   ): Promise<ClerkUser> {
     const user = await this.clerkClient.users.updateUserMetadata(userId, {
-      ...(metadata.publicMetadata && { publicMetadata: metadata.publicMetadata }),
-      ...(metadata.privateMetadata && { privateMetadata: metadata.privateMetadata }),
+      ...(metadata.publicMetadata && {
+        publicMetadata: metadata.publicMetadata,
+      }),
+      ...(metadata.privateMetadata && {
+        privateMetadata: metadata.privateMetadata,
+      }),
     });
 
     return mapClerkUser(user);

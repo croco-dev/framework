@@ -155,7 +155,9 @@ export class ClerkOrganizationService {
 
   async getOrganization(organizationId: string): Promise<ClerkOrganization | null> {
     try {
-      const org = await this.clerkClient.organizations.getOrganization({ organizationId });
+      const org = await this.clerkClient.organizations.getOrganization({
+        organizationId,
+      });
       return mapClerkOrganization(org);
     } catch (error) {
       if (isMissingOrganizationError(error)) {
@@ -168,7 +170,9 @@ export class ClerkOrganizationService {
 
   async getOrganizationBySlug(slug: string): Promise<ClerkOrganization | null> {
     try {
-      const org = await this.clerkClient.organizations.getOrganization({ slug });
+      const org = await this.clerkClient.organizations.getOrganization({
+        slug,
+      });
       return mapClerkOrganization(org);
     } catch (error) {
       if (isMissingOrganizationError(error)) {
@@ -210,7 +214,9 @@ export class ClerkOrganizationService {
       name: input.name,
       createdBy: input.createdBy,
       ...(input.slug && { slug: input.slug }),
-      ...(input.maxAllowedMemberships && { maxAllowedMemberships: input.maxAllowedMemberships }),
+      ...(input.maxAllowedMemberships !== undefined && {
+        maxAllowedMemberships: input.maxAllowedMemberships,
+      }),
       ...(input.publicMetadata && { publicMetadata: input.publicMetadata }),
       ...(input.privateMetadata && { privateMetadata: input.privateMetadata }),
     });
@@ -228,8 +234,12 @@ export class ClerkOrganizationService {
       ...(input.maxAllowedMemberships !== undefined && {
         maxAllowedMemberships: input.maxAllowedMemberships,
       }),
-      ...(input.publicMetadata !== undefined && { publicMetadata: input.publicMetadata }),
-      ...(input.privateMetadata !== undefined && { privateMetadata: input.privateMetadata }),
+      ...(input.publicMetadata !== undefined && {
+        publicMetadata: input.publicMetadata,
+      }),
+      ...(input.privateMetadata !== undefined && {
+        privateMetadata: input.privateMetadata,
+      }),
     });
 
     return mapClerkOrganization(org);
