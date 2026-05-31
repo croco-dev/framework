@@ -42,4 +42,5 @@ yarn-error.log*
 
 .cursor/plans
 .claude/settings.local.json
+.owc
 .sisyphus

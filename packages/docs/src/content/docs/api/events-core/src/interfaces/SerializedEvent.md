@@ -13,25 +13,25 @@ title: "SerializedEvent"
 
 > `optional` **aggregateId**: `string`
 
-***
+---
 
 ### eventId
 
 > **eventId**: `string`
 
-***
+---
 
 ### eventType
 
 > **eventType**: `string`
 
-***
+---
 
 ### occurredAt
 
 > **occurredAt**: `string`
 
-***
+---
 
 ### payload
 

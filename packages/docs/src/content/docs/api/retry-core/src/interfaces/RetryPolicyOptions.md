@@ -20,7 +20,7 @@ Options for configuring retry behavior.
 
 Maximum attempts (default: 3)
 
-***
+---
 
 ### noRetryFor?
 
@@ -38,7 +38,7 @@ Exception classes to never retry
 
 `Error`
 
-***
+---
 
 ### retryFor?
 
@@ -56,7 +56,7 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 `Error`
 
-***
+---
 
 ### retryForCategories?
 

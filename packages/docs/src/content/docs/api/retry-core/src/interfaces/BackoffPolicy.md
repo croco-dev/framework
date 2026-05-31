@@ -41,7 +41,7 @@ Calculate delay for the given attempt (0-based)
 
 `number`
 
-***
+---
 
 ### reset()
 
@@ -53,7 +53,7 @@ Reset internal state if any
 
 `void`
 
-***
+---
 
 ### wait()
 

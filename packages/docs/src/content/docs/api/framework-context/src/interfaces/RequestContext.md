@@ -10,11 +10,11 @@ title: "RequestContext"
 ## Example
 
 ```typescript
-import type { RequestContext } from '@croco/framework-context';
+import type { RequestContext } from "@croco/framework-context";
 
 const ctx: RequestContext = {
-  requestId: 'req-123',
-  tenantId: 'tenant-a',
+  requestId: "req-123",
+  tenantId: "tenant-a",
 };
 ```
 
@@ -26,7 +26,7 @@ const ctx: RequestContext = {
 
 요청 고유 식별자입니다.
 
-***
+---
 
 ### tenantId?
 
@@ -34,7 +34,7 @@ const ctx: RequestContext = {
 
 멀티 테넌트 식별자입니다.
 
-***
+---
 
 ### traceId?
 
@@ -42,7 +42,7 @@ const ctx: RequestContext = {
 
 분산 추적 식별자입니다.
 
-***
+---
 
 ### user?
 

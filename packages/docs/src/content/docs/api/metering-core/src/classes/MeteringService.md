@@ -47,7 +47,7 @@ Usage Metering 핵심 서비스
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### record()
 

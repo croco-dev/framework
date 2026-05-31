@@ -45,7 +45,7 @@ title: "RetryAbortedProblem"
 
 `Problem.category`
 
-***
+---
 
 ### cause?
 
@@ -55,7 +55,7 @@ title: "RetryAbortedProblem"
 
 `Problem.cause`
 
-***
+---
 
 ### code
 
@@ -65,7 +65,7 @@ title: "RetryAbortedProblem"
 
 `Problem.code`
 
-***
+---
 
 ### detail?
 
@@ -75,7 +75,7 @@ title: "RetryAbortedProblem"
 
 `Problem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -85,7 +85,7 @@ title: "RetryAbortedProblem"
 
 `Problem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -95,7 +95,7 @@ title: "RetryAbortedProblem"
 
 `Problem.instance`
 
-***
+---
 
 ### message
 
@@ -105,13 +105,13 @@ title: "RetryAbortedProblem"
 
 `Problem.message`
 
-***
+---
 
 ### methodName?
 
 > `readonly` `optional` **methodName**: `string`
 
-***
+---
 
 ### name
 
@@ -121,7 +121,7 @@ title: "RetryAbortedProblem"
 
 `Problem.name`
 
-***
+---
 
 ### stack?
 
@@ -131,7 +131,7 @@ title: "RetryAbortedProblem"
 
 `Problem.stack`
 
-***
+---
 
 ### type
 
@@ -141,7 +141,7 @@ title: "RetryAbortedProblem"
 
 `Problem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -177,7 +177,7 @@ not capture any frames.
 
 `Problem.status`
 
-***
+---
 
 ### title
 
@@ -207,7 +207,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -220,7 +220,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -275,7 +275,7 @@ a();
 
 `Problem.captureStackTrace`
 
-***
+---
 
 ### fromContext()
 
@@ -291,7 +291,7 @@ a();
 
 `RetryAbortedProblem`
 
-***
+---
 
 ### prepareStackTrace()
 

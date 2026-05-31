@@ -74,19 +74,22 @@ class TelemetryRuntime {
     }
 
     this.initPromise = (async () => {
-      const [{ Resource }, { NodeSDK }, traceBaseModule, { OTLPTraceExporter }] = await Promise.all(
-        [
-          import("@opentelemetry/resources"),
-          import("@opentelemetry/sdk-node"),
-          import("@opentelemetry/sdk-trace-base"),
-          import("@opentelemetry/exporter-trace-otlp-http"),
-        ],
-      );
+      const [
+        { defaultResource, resourceFromAttributes },
+        { NodeSDK },
+        traceBaseModule,
+        { OTLPTraceExporter },
+      ] = await Promise.all([
+        import("@opentelemetry/resources"),
+        import("@opentelemetry/sdk-node"),
+        import("@opentelemetry/sdk-trace-base"),
+        import("@opentelemetry/exporter-trace-otlp-http"),
+      ]);
 
       const BatchSpanProcessor = traceBaseModule.BatchSpanProcessor;
 
-      const resource = Resource.default().merge(
-        new Resource({
+      const resource = defaultResource().merge(
+        resourceFromAttributes({
           [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
           [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion ?? "0.0.0",
           ...config.resourceAttributes,

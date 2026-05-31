@@ -28,7 +28,7 @@ Redis 기반 실시간 Usage 저장소 인터페이스
 
 `Promise`\<[`AtomicQuotaCheckResult`](/api/metering-core/src/type-aliases/atomicquotacheckresult/)\>
 
-***
+---
 
 ### deleteUsageRecords()?
 
@@ -51,7 +51,7 @@ Usage 데이터 삭제 (배치 저장 후)
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### fetchUsageRecords()
 
@@ -70,7 +70,7 @@ Redis에서 특정 기간의 usage records 조회
 
 `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)[]\>
 
-***
+---
 
 ### getUsage()
 
@@ -88,7 +88,7 @@ Usage 조회 (특정 기간 합산)
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### isIdempotent()
 
@@ -120,7 +120,7 @@ Idempotency 체크 (SET NX 기반)
 
 true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
-***
+---
 
 ### record()
 
@@ -139,7 +139,7 @@ Redis Sorted Set에 저장
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### resetBillingCycle()?
 

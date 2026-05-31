@@ -17,7 +17,7 @@ title: "ReplayResult"
 
 종료 시간
 
-***
+---
 
 ### failedCount
 
@@ -25,7 +25,7 @@ title: "ReplayResult"
 
 실패한 이벤트 수
 
-***
+---
 
 ### failedEventIds
 
@@ -33,7 +33,7 @@ title: "ReplayResult"
 
 실패한 이벤트 ID 목록
 
-***
+---
 
 ### processedCount
 
@@ -41,7 +41,7 @@ title: "ReplayResult"
 
 처리된 이벤트 수
 
-***
+---
 
 ### startedAt
 
@@ -49,7 +49,7 @@ title: "ReplayResult"
 
 시작 시간
 
-***
+---
 
 ### successCount
 

@@ -17,7 +17,7 @@ title: "EmbedManyParams"
 
 모델 ID (선택)
 
-***
+---
 
 ### texts
 

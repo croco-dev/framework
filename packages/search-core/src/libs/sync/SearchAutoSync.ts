@@ -96,6 +96,7 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
         const logger = Container.get(LOGGER_TOKEN) as ILogger;
         logger.error("Failed to publish search sync failed event", normalizedError);
       } catch {
+        // Logger DI is unavailable; fallback to console.error so the error is not lost.
         // eslint-disable-next-line no-console
         console.error("Failed to publish search sync failed event", normalizedError);
       }

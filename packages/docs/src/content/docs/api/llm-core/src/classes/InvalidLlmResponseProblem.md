@@ -41,7 +41,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.category`
 
-***
+---
 
 ### cause?
 
@@ -51,7 +51,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.cause`
 
-***
+---
 
 ### code
 
@@ -61,7 +61,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.code`
 
-***
+---
 
 ### detail?
 
@@ -71,7 +71,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -81,7 +81,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -91,7 +91,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.instance`
 
-***
+---
 
 ### message
 
@@ -101,7 +101,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.message`
 
-***
+---
 
 ### name
 
@@ -111,7 +111,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.name`
 
-***
+---
 
 ### stack?
 
@@ -121,7 +121,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.stack`
 
-***
+---
 
 ### type
 
@@ -131,7 +131,7 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 `Problem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -167,7 +167,7 @@ not capture any frames.
 
 `Problem.status`
 
-***
+---
 
 ### title
 
@@ -197,7 +197,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -210,7 +210,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -265,7 +265,7 @@ a();
 
 `Problem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

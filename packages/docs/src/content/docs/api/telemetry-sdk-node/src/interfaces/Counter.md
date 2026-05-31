@@ -11,8 +11,8 @@ Counters are typically used to count occurrences of an event.
 ## Example
 
 ```typescript
-const counter = metrics.createCounter({ name: 'requests.count' });
-counter.add(1, { method: 'GET' });
+const counter = metrics.createCounter({ name: "requests.count" });
+counter.add(1, { method: "GET" });
 ```
 
 ## Methods

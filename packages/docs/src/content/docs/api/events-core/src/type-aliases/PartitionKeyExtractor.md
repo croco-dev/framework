@@ -13,7 +13,7 @@ title: "PartitionKeyExtractor"
 
 ### TEvent
 
-`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ## Parameters
 

@@ -11,31 +11,31 @@ title: "CrocoRequest"
 
 > **headers**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### method
 
 > **method**: `string`
 
-***
+---
 
 ### params
 
 > **params**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### query
 
 > **query**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### url
 

@@ -78,6 +78,7 @@ export class ShutdownManager {
             const logger = Container.get(LOGGER_TOKEN) as ILogger;
             logger.error("[ShutdownManager] Hook execution failed:", normalizedError);
           } else {
+            // LOGGER_TOKEN is not registered in the DI container yet during early bootstrap.
             // eslint-disable-next-line no-console
             console.error("[ShutdownManager] Hook execution failed:", normalizedError);
           }
@@ -93,6 +94,7 @@ export class ShutdownManager {
           const logger = Container.get(LOGGER_TOKEN) as ILogger;
           logger.error("[ShutdownManager] Shutdown timeout exceeded.");
         } else {
+          // LOGGER_TOKEN is not registered in the DI container yet during early bootstrap.
           // eslint-disable-next-line no-console
           console.error("[ShutdownManager] Shutdown timeout exceeded.");
         }

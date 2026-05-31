@@ -11,7 +11,7 @@ TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다
 
 ### TEvent
 
-`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ## Implements
 
@@ -47,7 +47,7 @@ TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다
 
 [`EventBus`](/api/events-core/src/interfaces/eventbus/).[`clear`](/api/events-core/src/interfaces/eventbus/#clear)
 
-***
+---
 
 ### getRunningHandlerCount()
 
@@ -57,7 +57,7 @@ TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다
 
 `number`
 
-***
+---
 
 ### getRunningHandlers()
 
@@ -67,7 +67,7 @@ TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다
 
 readonly `RunningHandler`[]
 
-***
+---
 
 ### publish()
 
@@ -87,7 +87,7 @@ readonly `RunningHandler`[]
 
 [`EventBus`](/api/events-core/src/interfaces/eventbus/).[`publish`](/api/events-core/src/interfaces/eventbus/#publish)
 
-***
+---
 
 ### subscribe()
 
@@ -107,7 +107,7 @@ readonly `RunningHandler`[]
 
 [`EventBus`](/api/events-core/src/interfaces/eventbus/).[`subscribe`](/api/events-core/src/interfaces/eventbus/#subscribe)
 
-***
+---
 
 ### unsubscribe()
 

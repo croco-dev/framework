@@ -74,7 +74,14 @@ export class AuditErrorHandler {
       try {
         this.config.onExhausted(error, attempts);
       } catch (callbackError) {
-        console.error("[AuditErrorHandler] onExhausted callback failed:", callbackError);
+        try {
+          const logger = Container.get(LOGGER_TOKEN);
+          logger.error("[AuditErrorHandler] onExhausted callback failed:", callbackError as Error);
+        } catch {
+          // Logger DI is unavailable; fallback to console.error so the error is not lost.
+          // eslint-disable-next-line no-console
+          console.error("[AuditErrorHandler] onExhausted callback failed:", callbackError);
+        }
       }
     }
   }

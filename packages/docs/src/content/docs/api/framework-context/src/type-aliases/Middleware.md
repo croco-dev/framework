@@ -32,7 +32,7 @@ title: "Middleware"
 ## Example
 
 ```typescript
-import type { Middleware } from '@croco/framework-context';
+import type { Middleware } from "@croco/framework-context";
 
 const middleware: Middleware = async (_ctx, next) => {
   await next();

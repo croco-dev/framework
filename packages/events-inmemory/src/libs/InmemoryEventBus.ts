@@ -5,12 +5,12 @@ import type {
   EventSubscription,
 } from "@croco/events-core";
 import { EventBusConfig, EventSubscriptionIndex } from "@croco/events-core";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { TraceInfo } from "@croco/telemetry-api";
 import { getActiveTraceInfo, getTracer } from "@croco/telemetry-api";
 import { type Context, context, type Span, SpanStatusCode, trace } from "@opentelemetry/api";
-import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   BackpressureExceededProblem,
   BackpressureTimeoutProblem,

@@ -55,7 +55,7 @@ title: "FixedWindowInMemoryStore"
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`check`](/api/ratelimit-core/src/classes/fixedwindowstore/#check)
 
-***
+---
 
 ### checkFixedWindow()
 
@@ -79,7 +79,7 @@ title: "FixedWindowInMemoryStore"
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`checkFixedWindow`](/api/ratelimit-core/src/classes/fixedwindowstore/#checkfixedwindow)
 
-***
+---
 
 ### close()
 
@@ -89,7 +89,7 @@ title: "FixedWindowInMemoryStore"
 
 `void`
 
-***
+---
 
 ### destroy()
 
@@ -99,7 +99,7 @@ title: "FixedWindowInMemoryStore"
 
 `void`
 
-***
+---
 
 ### expire()
 
@@ -113,7 +113,7 @@ title: "FixedWindowInMemoryStore"
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`expire`](/api/ratelimit-core/src/classes/fixedwindowstore/#expire)
 
-***
+---
 
 ### getCount()
 
@@ -133,7 +133,7 @@ title: "FixedWindowInMemoryStore"
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`getCount`](/api/ratelimit-core/src/classes/fixedwindowstore/#getcount)
 
-***
+---
 
 ### getStats()
 
@@ -147,7 +147,7 @@ title: "FixedWindowInMemoryStore"
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`getStats`](/api/ratelimit-core/src/classes/fixedwindowstore/#getstats)
 
-***
+---
 
 ### increment()
 
@@ -171,7 +171,7 @@ title: "FixedWindowInMemoryStore"
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`increment`](/api/ratelimit-core/src/classes/fixedwindowstore/#increment)
 
-***
+---
 
 ### pruneExpired()
 
@@ -185,7 +185,7 @@ title: "FixedWindowInMemoryStore"
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/fixedwindowstore/#pruneexpired)
 
-***
+---
 
 ### reset()
 

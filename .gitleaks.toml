@@ -7,6 +7,4 @@ useDefault = true
 # Scoped tightly to *.spec.ts so production code is still fully scanned.
 [allowlist]
 description = "Test fixture dummy keys (packages/*/src/tests/*.spec.ts)"
-paths = [
-  '''(^|/)packages/[^/]+/src/tests/.*\.spec\.ts$''',
-]
+paths = ['''(^|/)packages/[^/]+/src/tests/.*\.spec\.ts$''']

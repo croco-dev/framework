@@ -41,7 +41,7 @@ title: "ModelNotFoundError"
 
 `Problem.category`
 
-***
+---
 
 ### cause?
 
@@ -51,7 +51,7 @@ title: "ModelNotFoundError"
 
 `Problem.cause`
 
-***
+---
 
 ### code
 
@@ -61,7 +61,7 @@ title: "ModelNotFoundError"
 
 `Problem.code`
 
-***
+---
 
 ### detail?
 
@@ -71,7 +71,7 @@ title: "ModelNotFoundError"
 
 `Problem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -81,7 +81,7 @@ title: "ModelNotFoundError"
 
 `Problem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -91,7 +91,7 @@ title: "ModelNotFoundError"
 
 `Problem.instance`
 
-***
+---
 
 ### message
 
@@ -101,7 +101,7 @@ title: "ModelNotFoundError"
 
 `Problem.message`
 
-***
+---
 
 ### name
 
@@ -111,7 +111,7 @@ title: "ModelNotFoundError"
 
 `Problem.name`
 
-***
+---
 
 ### stack?
 
@@ -121,7 +121,7 @@ title: "ModelNotFoundError"
 
 `Problem.stack`
 
-***
+---
 
 ### type
 
@@ -131,13 +131,13 @@ title: "ModelNotFoundError"
 
 `Problem.type`
 
-***
+---
 
 ### CODE
 
 > `readonly` `static` **CODE**: `"MODEL_NOT_FOUND"` = `"MODEL_NOT_FOUND"`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -173,7 +173,7 @@ not capture any frames.
 
 `Problem.status`
 
-***
+---
 
 ### title
 
@@ -203,7 +203,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -216,7 +216,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -271,7 +271,7 @@ a();
 
 `Problem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

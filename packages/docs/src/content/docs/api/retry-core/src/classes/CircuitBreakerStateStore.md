@@ -46,7 +46,7 @@ Circuit Breaker 상태 저장소 추상 클래스.
 
 실패 횟수 (기본값: 0)
 
-***
+---
 
 ### getHalfOpenActiveCount()
 
@@ -68,7 +68,7 @@ HALF_OPEN 상태에서 현재 실행 중인 요청 수를 가져옵니다.
 
 활성 요청 수
 
-***
+---
 
 ### getHalfOpenSuccessCount()
 
@@ -90,7 +90,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 성공한 요청 수
 
-***
+---
 
 ### getLastFailureTime()
 
@@ -112,7 +112,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 타임스탬프 (ms) 또는 null (기본값: null)
 
-***
+---
 
 ### getState()
 
@@ -134,7 +134,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 현재 상태 (기본값: CLOSED)
 
-***
+---
 
 ### incrementFailureAndCheck()
 
@@ -162,7 +162,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 증가된 실패 카운트와 열림 여부
 
-***
+---
 
 ### incrementFailureCount()
 
@@ -184,7 +184,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 증가된 실패 카운트
 
-***
+---
 
 ### reset()
 
@@ -204,7 +204,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### resetAll()
 
@@ -216,7 +216,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### resetFailureCount()
 
@@ -236,7 +236,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### setHalfOpenActiveCount()
 
@@ -262,7 +262,7 @@ HALF_OPEN 상태에서 활성 요청 수를 설정합니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### setHalfOpenSuccessCount()
 
@@ -288,7 +288,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### setLastFailureTime()
 
@@ -314,7 +314,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### setState()
 
@@ -340,7 +340,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### withCircuitLock()
 

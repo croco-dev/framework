@@ -20,7 +20,7 @@ Currently disabled by default in Lambda environments.
 
 Whether metrics collection is enabled. Default: false
 
-***
+---
 
 ### exporterHeaders?
 
@@ -28,7 +28,7 @@ Whether metrics collection is enabled. Default: false
 
 Additional HTTP headers for the exporter
 
-***
+---
 
 ### exporterUrl?
 
@@ -36,7 +36,7 @@ Additional HTTP headers for the exporter
 
 OTLP metrics exporter URL
 
-***
+---
 
 ### exportIntervalMillis?
 
@@ -44,7 +44,7 @@ OTLP metrics exporter URL
 
 Export interval in milliseconds
 
-***
+---
 
 ### exportTimeoutMillis?
 

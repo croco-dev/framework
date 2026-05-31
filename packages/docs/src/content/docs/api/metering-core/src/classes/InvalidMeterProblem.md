@@ -14,7 +14,7 @@ title: "InvalidMeterProblem"
 ## Example
 
 ```typescript
-throw new InvalidMeterProblem('api_calls', 'tenant-123');
+throw new InvalidMeterProblem("api_calls", "tenant-123");
 ```
 
 ## Extends
@@ -55,7 +55,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.category`
 
-***
+---
 
 ### cause?
 
@@ -65,7 +65,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.cause`
 
-***
+---
 
 ### code
 
@@ -75,7 +75,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.code`
 
-***
+---
 
 ### detail?
 
@@ -85,7 +85,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -95,7 +95,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -105,7 +105,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.instance`
 
-***
+---
 
 ### message
 
@@ -115,7 +115,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.message`
 
-***
+---
 
 ### name
 
@@ -125,7 +125,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.name`
 
-***
+---
 
 ### stack?
 
@@ -135,7 +135,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.stack`
 
-***
+---
 
 ### type
 
@@ -145,7 +145,7 @@ throw new InvalidMeterProblem('api_calls', 'tenant-123');
 
 `Problem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -181,7 +181,7 @@ not capture any frames.
 
 `Problem.status`
 
-***
+---
 
 ### title
 
@@ -211,7 +211,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -224,7 +224,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -279,7 +279,7 @@ a();
 
 `Problem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

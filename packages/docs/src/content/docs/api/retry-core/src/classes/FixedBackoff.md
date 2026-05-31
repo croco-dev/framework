@@ -35,13 +35,13 @@ Fixed delay backoff (no exponential growth).
 
 ### getDelay()
 
-> **getDelay**(`_attempt`): `number`
+> **getDelay**(`attempt`): `number`
 
 Calculate delay for the given attempt (0-based)
 
 #### Parameters
 
-##### \_attempt
+##### attempt
 
 `number`
 
@@ -53,7 +53,7 @@ Calculate delay for the given attempt (0-based)
 
 [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`getDelay`](/api/retry-core/src/interfaces/backoffpolicy/#getdelay)
 
-***
+---
 
 ### reset()
 
@@ -69,17 +69,17 @@ Reset internal state if any
 
 [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`reset`](/api/retry-core/src/interfaces/backoffpolicy/#reset)
 
-***
+---
 
 ### wait()
 
-> **wait**(`_attempt`): `Promise`\<`void`\>
+> **wait**(`attempt`): `Promise`\<`void`\>
 
 Wait for the calculated delay
 
 #### Parameters
 
-##### \_attempt
+##### attempt
 
 `number`
 

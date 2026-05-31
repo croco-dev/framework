@@ -52,6 +52,8 @@ export function createSsrHandler(
       try {
         return await renderServer.handle(request, ctx);
       } catch (error) {
+        // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
+        // eslint-disable-next-line no-console
         console.error("SSR rendering error:", error);
         return new Response("Internal server error", { status: 500 });
       }
@@ -105,6 +107,8 @@ export function createSsrHandlerAsFetchHandler(
       try {
         return await renderServer.handle(request, context);
       } catch (error) {
+        // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
+        // eslint-disable-next-line no-console
         console.error("SSR rendering error:", error);
         return new Response("Internal server error", { status: 500 });
       }

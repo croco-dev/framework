@@ -11,7 +11,7 @@ title: "CompiledRoute"
 
 > `optional` **controllerInstance**: `unknown`
 
-***
+---
 
 ### handler()
 
@@ -27,19 +27,19 @@ title: "CompiledRoute"
 
 `Promise`\<`unknown`\>
 
-***
+---
 
 ### method
 
 > **method**: `string`
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string` \| `symbol`
 
-***
+---
 
 ### path
 

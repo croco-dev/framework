@@ -5,17 +5,11 @@ prev: false
 title: "QuotaExceededProblem"
 ---
 
-quota 초과 시 발생하는 문제 타입입니다.
+Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
-## Description
+## Breaking-change
 
-테넌트의 사용량이 설정된 quota를 초과한 경우 발생합니다. HTTP 403 Forbidden 응답에 해당합니다.
-
-## Example
-
-```typescript
-throw new QuotaExceededProblem('api_calls', 10000, 10500);
-```
+이전 버전(403 Forbidden)과의 호환성이 필요하면 API Gateway에서 응답 코드 매핑이 필요합니다.
 
 ## Extends
 
@@ -59,7 +53,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.category`
 
-***
+---
 
 ### cause?
 
@@ -69,7 +63,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.cause`
 
-***
+---
 
 ### code
 
@@ -79,7 +73,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.code`
 
-***
+---
 
 ### detail?
 
@@ -89,7 +83,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -99,7 +93,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -109,7 +103,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.instance`
 
-***
+---
 
 ### message
 
@@ -119,7 +113,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.message`
 
-***
+---
 
 ### name
 
@@ -129,7 +123,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.name`
 
-***
+---
 
 ### stack?
 
@@ -139,7 +133,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.stack`
 
-***
+---
 
 ### type
 
@@ -149,7 +143,7 @@ throw new QuotaExceededProblem('api_calls', 10000, 10500);
 
 `Problem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -185,7 +179,7 @@ not capture any frames.
 
 `Problem.status`
 
-***
+---
 
 ### title
 
@@ -215,7 +209,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -228,7 +222,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -283,7 +277,7 @@ a();
 
 `Problem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

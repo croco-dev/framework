@@ -28,12 +28,12 @@ followed by the original method arguments.
 class Service {
   @Retryable({ maxAttempts: 3 })
   async fetchData(): Promise<Data> {
-    return await this.api.get('/data');
+    return await this.api.get("/data");
   }
 
   @Recover(ApiError)
   async handleApiError(error: ApiError): Promise<Data> {
-    return this.cache.get('data');
+    return this.cache.get("data");
   }
 }
 ```

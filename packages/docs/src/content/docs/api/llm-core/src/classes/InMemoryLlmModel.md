@@ -47,7 +47,7 @@ LLM 기능 플래그
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`capabilities`](/api/llm-core/src/classes/llmmodel/#capabilities)
 
-***
+---
 
 ### modelId
 
@@ -59,7 +59,7 @@ LLM 기능 플래그
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`modelId`](/api/llm-core/src/classes/llmmodel/#modelid)
 
-***
+---
 
 ### token
 
@@ -95,7 +95,7 @@ LLM 기능 플래그
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`callTool`](/api/llm-core/src/classes/llmmodel/#calltool)
 
-***
+---
 
 ### embed()
 
@@ -121,7 +121,7 @@ LLM 기능 플래그
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`embed`](/api/llm-core/src/classes/llmmodel/#embed)
 
-***
+---
 
 ### embedMany()
 
@@ -147,7 +147,7 @@ LLM 기능 플래그
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`embedMany`](/api/llm-core/src/classes/llmmodel/#embedmany)
 
-***
+---
 
 ### generate()
 
@@ -173,7 +173,7 @@ LLM 기능 플래그
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`generate`](/api/llm-core/src/classes/llmmodel/#generate)
 
-***
+---
 
 ### generateObject()
 
@@ -205,7 +205,7 @@ LLM 기능 플래그
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/).[`generateObject`](/api/llm-core/src/classes/llmmodel/#generateobject)
 
-***
+---
 
 ### stream()
 

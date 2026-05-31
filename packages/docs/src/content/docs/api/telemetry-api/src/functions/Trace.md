@@ -13,7 +13,7 @@ title: "Trace"
 
 ### Args
 
-`Args` *extends* `unknown`[] = `unknown`[]
+`Args` _extends_ `unknown`[] = `unknown`[]
 
 ### ReturnType
 
