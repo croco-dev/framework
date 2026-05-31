@@ -17,7 +17,7 @@ type ForceFlushResult = {
 };
 
 class TelemetryRuntime {
-  private static instance: TelemetryRuntime;
+  private static instance: TelemetryRuntime | null = null;
   private sdk: NodeSDK | null = null;
   private processor: BatchSpanProcessor | null = null;
   private initialized = false;
@@ -146,7 +146,7 @@ class TelemetryRuntime {
 
   async forceFlush(timeoutMillis?: number): Promise<ForceFlushResult> {
     if (!this.processor) {
-      return { success: true, flushedSpans: 0 };
+      return { success: true, flushedSpans: -1 };
     }
 
     const effectiveTimeout = timeoutMillis ?? 30000;
@@ -169,12 +169,12 @@ class TelemetryRuntime {
 
       return {
         success: true,
-        flushedSpans: 0,
+        flushedSpans: -1,
       };
     } catch (error) {
       return {
         success: false,
-        flushedSpans: 0,
+        flushedSpans: -1,
         error: this.createRuntimeProblem("forceFlush", error),
       };
     } finally {
@@ -203,7 +203,7 @@ class TelemetryRuntime {
     const instance = TelemetryRuntime.instance;
     if (instance) {
       await instance.shutdown();
-      TelemetryRuntime.instance = undefined as unknown as TelemetryRuntime;
+      TelemetryRuntime.instance = null;
     }
   }
 

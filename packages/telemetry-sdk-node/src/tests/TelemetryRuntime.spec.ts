@@ -174,6 +174,33 @@ describe("TelemetryRuntime", () => {
     vi.useRealTimers();
   });
 
+  it("should return flushedSpans: -1 when forceFlush succeeds", async () => {
+    const processor = {
+      forceFlush: vi.fn().mockResolvedValue(undefined),
+    };
+
+    Object.assign(runtime, { processor });
+
+    const result = await runtime.forceFlush();
+    expect(result.flushedSpans).toBe(-1);
+  });
+
+  it("should return flushedSpans: -1 when forceFlush fails", async () => {
+    const processor = {
+      forceFlush: vi.fn().mockRejectedValue(new Error("export failed")),
+    };
+
+    Object.assign(runtime, { processor });
+
+    const result = await runtime.forceFlush();
+    expect(result.flushedSpans).toBe(-1);
+  });
+
+  it("should return flushedSpans: -1 when processor is null", async () => {
+    const result = await runtime.forceFlush();
+    expect(result.flushedSpans).toBe(-1);
+  });
+
   it("should propagate shutdown failures as Problem details", async () => {
     const sdk = {
       shutdown: vi.fn().mockRejectedValue(new Error("shutdown failed")),
