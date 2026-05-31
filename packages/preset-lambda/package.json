@@ -12,18 +12,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
         "types": "./dist/index.d.ts"
       },
       "./entry": {
-        "import": "./dist/handler.js",
-        "require": "./dist/handler.cjs",
+        "import": "./dist/handler.mjs",
+        "require": "./dist/handler.js",
         "types": "./dist/handler.d.ts"
       },
       "./handler": {
-        "import": "./dist/handler.js",
-        "require": "./dist/handler.cjs",
+        "import": "./dist/handler.mjs",
+        "require": "./dist/handler.js",
         "types": "./dist/handler.d.ts"
       }
     },
