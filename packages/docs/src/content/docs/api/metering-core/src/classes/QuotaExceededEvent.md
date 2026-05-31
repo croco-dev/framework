@@ -14,13 +14,15 @@ quota 초과 시 발행되는 도메인 이벤트입니다.
 ## Example
 
 ```typescript
-eventBus.publish(new QuotaExceededEvent({
-  tenantId: 'tenant-123',
-  meterId: 'api_calls',
-  currentUsage: 10000,
-  quota: 10000,
-  timestamp: new Date(),
-}));
+eventBus.publish(
+  new QuotaExceededEvent({
+    tenantId: "tenant-123",
+    meterId: "api_calls",
+    currentUsage: 10000,
+    quota: 10000,
+    timestamp: new Date(),
+  }),
+);
 ```
 
 ## Extends
@@ -65,7 +67,7 @@ eventBus.publish(new QuotaExceededEvent({
 
 > `readonly` **currentUsage**: `number`
 
-***
+---
 
 ### eventId
 
@@ -75,7 +77,7 @@ eventBus.publish(new QuotaExceededEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -85,7 +87,7 @@ eventBus.publish(new QuotaExceededEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -95,25 +97,25 @@ eventBus.publish(new QuotaExceededEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### meterId
 
 > `readonly` **meterId**: `string`
 
-***
+---
 
 ### quota
 
 > `readonly` **quota**: `number`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -123,7 +125,7 @@ eventBus.publish(new QuotaExceededEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

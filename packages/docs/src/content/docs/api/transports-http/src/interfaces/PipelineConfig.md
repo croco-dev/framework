@@ -11,13 +11,13 @@ title: "PipelineConfig"
 
 > **filters**: `ExceptionFilter`\<`unknown`, [`HttpExecutionContext`](/api/transports-http/src/classes/httpexecutioncontext/)\>[]
 
-***
+---
 
 ### guards
 
 > **guards**: [`Guard`](/api/framework-context/src/interfaces/guard/)\<`ExecutionContext`\>[]
 
-***
+---
 
 ### interceptors
 

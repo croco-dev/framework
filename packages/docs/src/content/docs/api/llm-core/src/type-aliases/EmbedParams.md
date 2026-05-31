@@ -17,7 +17,7 @@ title: "EmbedParams"
 
 모델 ID (선택)
 
-***
+---
 
 ### text
 

@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@croco/framework-preset": "workspace:*",
-    "@hono/node-server": "^1.0.0",
+    "@hono/node-server": "^1.19.10",
     "hono": "^4.12.15"
   },
   "devDependencies": {

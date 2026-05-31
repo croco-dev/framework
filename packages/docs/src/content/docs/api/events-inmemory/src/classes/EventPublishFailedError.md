@@ -9,7 +9,7 @@ title: "EventPublishFailedError"
 
 ## Extends
 
-- `Error`
+- `Problem`
 
 ## Constructors
 
@@ -33,27 +33,81 @@ title: "EventPublishFailedError"
 
 #### Overrides
 
-`Error.constructor`
+`Problem.constructor`
 
 ## Properties
+
+### category
+
+> `readonly` **category**: `InternalServerError` = `ProblemCategory.InternalServerError`
+
+#### Overrides
+
+`Problem.category`
+
+---
 
 ### cause?
 
 > `readonly` `optional` **cause**: `Error`
 
-***
+#### Inherited from
+
+`Problem.cause`
+
+---
+
+### code
+
+> `readonly` **code**: `"events-inmemory/publish-failed"` = `"events-inmemory/publish-failed"`
+
+#### Overrides
+
+`Problem.code`
+
+---
+
+### detail?
+
+> `readonly` `optional` **detail**: `string`
+
+#### Inherited from
+
+`Problem.detail`
+
+---
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
-***
+---
+
+### extensions?
+
+> `readonly` `optional` **extensions**: `ProblemExtensions`
+
+#### Inherited from
+
+`Problem.extensions`
+
+---
 
 ### failures
 
 > `readonly` **failures**: [`EventPublishFailure`](/api/events-inmemory/src/type-aliases/eventpublishfailure/)[]
 
-***
+---
+
+### instance?
+
+> `readonly` `optional` **instance**: `string`
+
+#### Inherited from
+
+`Problem.instance`
+
+---
 
 ### message
 
@@ -61,19 +115,19 @@ title: "EventPublishFailedError"
 
 #### Inherited from
 
-`Error.message`
+`Problem.message`
 
-***
+---
 
 ### name
 
-> `readonly` **name**: `"EventPublishFailedError"` = `"EventPublishFailedError"`
+> **name**: `string`
 
-#### Overrides
+#### Inherited from
 
-`Error.name`
+`Problem.name`
 
-***
+---
 
 ### stack?
 
@@ -81,9 +135,19 @@ title: "EventPublishFailedError"
 
 #### Inherited from
 
-`Error.stack`
+`Problem.stack`
 
-***
+---
+
+### type
+
+> `readonly` **type**: `string`
+
+#### Inherited from
+
+`Problem.type`
+
+---
 
 ### stackTraceLimit
 
@@ -101,9 +165,55 @@ not capture any frames.
 
 #### Inherited from
 
-`Error.stackTraceLimit`
+`Problem.stackTraceLimit`
+
+## Accessors
+
+### status
+
+#### Get Signature
+
+> **get** **status**(): `number`
+
+##### Returns
+
+`number`
+
+#### Inherited from
+
+`Problem.status`
+
+---
+
+### title
+
+#### Get Signature
+
+> **get** **title**(): `string`
+
+##### Returns
+
+`string`
+
+#### Inherited from
+
+`Problem.title`
 
 ## Methods
+
+### toJSON()
+
+> **toJSON**(): `ProblemDetails`
+
+#### Returns
+
+`ProblemDetails`
+
+#### Inherited from
+
+`Problem.toJSON`
+
+---
 
 ### captureStackTrace()
 
@@ -116,7 +226,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -169,9 +279,9 @@ a();
 
 #### Inherited from
 
-`Error.captureStackTrace`
+`Problem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 
@@ -197,4 +307,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-`Error.prepareStackTrace`
+`Problem.prepareStackTrace`

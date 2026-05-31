@@ -12,16 +12,19 @@ pnpm dev
 Then test the endpoints:
 
 **Health check (no auth required):**
+
 ```bash
 curl http://localhost:3000/api/health
 ```
 
 Expected response:
+
 ```json
 { "status": "ok" }
 ```
 
 **List users (requires auth header):**
+
 ```bash
 curl -H "x-api-key: test-key" http://localhost:3000/api/users
 ```
@@ -29,6 +32,7 @@ curl -H "x-api-key: test-key" http://localhost:3000/api/users
 Expected response: `200` with user list.
 
 **Create user (requires auth header, triggers metering):**
+
 ```bash
 curl -X POST -H "x-api-key: test-key" -H "Content-Type: application/json" \
   -d '{"name":"Alice","email":"alice@example.com"}' \

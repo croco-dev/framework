@@ -17,13 +17,13 @@ Circuit Breaker 상태를 나타내는 열거형.
 
 > **CLOSED**: `"CLOSED"`
 
-***
+---
 
-### HALF\_OPEN
+### HALF_OPEN
 
-> **HALF\_OPEN**: `"HALF_OPEN"`
+> **HALF_OPEN**: `"HALF_OPEN"`
 
-***
+---
 
 ### OPEN
 

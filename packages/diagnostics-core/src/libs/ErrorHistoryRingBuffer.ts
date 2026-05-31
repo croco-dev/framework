@@ -16,7 +16,7 @@ export class ErrorHistoryRingBuffer {
       throw new Error("maxSize must be at least 1");
     }
     this._maxSize = maxSize;
-    this._buffer = new Array(maxSize);
+    this._buffer = Array.from({ length: maxSize });
     this._start = 0;
     this._count = 0;
   }
@@ -41,14 +41,10 @@ export class ErrorHistoryRingBuffer {
   }
 
   getAll(): readonly ErrorRecord[] {
-    const result: ErrorRecord[] = new Array(this._count);
-
-    for (let i = 0; i < this._count; i += 1) {
+    return Array.from({ length: this._count }, (_, i) => {
       const idx = (this._start + this._count - 1 - i + this._maxSize) % this._maxSize;
-      result[i] = this._buffer[idx] as ErrorRecord;
-    }
-
-    return result;
+      return this._buffer[idx] as ErrorRecord;
+    });
   }
 
   clear(): void {

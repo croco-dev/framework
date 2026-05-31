@@ -2,7 +2,10 @@ import { MetadataStorage } from "@croco/framework-context";
 import type { DomainEvent } from "./DomainEvent";
 import { DuplicateEventNameProblem, EventDefinitionProblem } from "./problems/EventsProblems";
 
-type EventClass<T extends DomainEvent = DomainEvent> = (new (...args: any[]) => T) & {
+type EventClass<T extends DomainEvent = DomainEvent> = (new (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...args: any[]
+) => T) & {
   eventName: string;
 };
 

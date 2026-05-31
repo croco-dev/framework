@@ -19,31 +19,31 @@ title: "AtomicQuotaCheckOptions"
 
 > **allowOverQuota**: `boolean`
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### quota
 
 > **quota**: `number`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### usageRecord
 
 > **usageRecord**: [`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)
 
-***
+---
 
 ### value
 

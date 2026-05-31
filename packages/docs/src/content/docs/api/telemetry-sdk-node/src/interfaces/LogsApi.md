@@ -12,9 +12,9 @@ This is a Croco abstraction over OpenTelemetry Logs API.
 
 ```typescript
 const logs = TelemetryRuntime.getInstance().getLogs();
-const logger = logs.getLogger({ name: 'my-service' });
+const logger = logs.getLogger({ name: "my-service" });
 
-logger.info('Service initialized');
+logger.info("Service initialized");
 ```
 
 ## Methods

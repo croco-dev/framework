@@ -52,7 +52,34 @@ Redis 기반 UsageStorage 구현체
 
 [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`checkAndRecordWithinQuota`](/api/metering-core/src/interfaces/usagestorage/#checkandrecordwithinquota)
 
-***
+---
+
+### deleteUsageRecords()
+
+> **deleteUsageRecords**(`options`, `records`): `Promise`\<`void`\>
+
+Usage 데이터 삭제 (배치 저장 후)
+저장이 성공한 경우에만 호출되어야 함
+
+#### Parameters
+
+##### options
+
+[`UsageQueryOptions`](/api/metering-core/src/type-aliases/usagequeryoptions/)
+
+##### records
+
+[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)[]
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Implementation of
+
+[`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`deleteUsageRecords`](/api/metering-core/src/interfaces/usagestorage/#deleteusagerecords)
+
+---
 
 ### fetchUsageRecords()
 
@@ -75,7 +102,7 @@ Redis에서 특정 기간의 usage records 조회
 
 [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`fetchUsageRecords`](/api/metering-core/src/interfaces/usagestorage/#fetchusagerecords)
 
-***
+---
 
 ### getUsage()
 
@@ -97,7 +124,7 @@ Usage 조회 (특정 기간 합산)
 
 [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`getUsage`](/api/metering-core/src/interfaces/usagestorage/#getusage)
 
-***
+---
 
 ### isIdempotent()
 
@@ -133,7 +160,7 @@ true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
 [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`isIdempotent`](/api/metering-core/src/interfaces/usagestorage/#isidempotent)
 
-***
+---
 
 ### record()
 
@@ -156,7 +183,7 @@ Redis Sorted Set에 저장
 
 [`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`record`](/api/metering-core/src/interfaces/usagestorage/#record)
 
-***
+---
 
 ### resetBillingCycle()
 

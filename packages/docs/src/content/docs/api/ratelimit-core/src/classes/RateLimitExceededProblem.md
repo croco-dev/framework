@@ -42,7 +42,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.category`
 
-***
+---
 
 ### cause?
 
@@ -52,7 +52,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.cause`
 
-***
+---
 
 ### code
 
@@ -62,7 +62,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.code`
 
-***
+---
 
 ### detail?
 
@@ -72,7 +72,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -82,7 +82,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -92,7 +92,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.instance`
 
-***
+---
 
 ### message
 
@@ -102,7 +102,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.message`
 
-***
+---
 
 ### name
 
@@ -112,7 +112,7 @@ RFC 7807 compliant with rate limit extensions.
 
 `Problem.name`
 
-***
+---
 
 ### retryAfterMs
 
@@ -120,7 +120,7 @@ RFC 7807 compliant with rate limit extensions.
 
 Time in milliseconds until the rate limit resets.
 
-***
+---
 
 ### stack?
 
@@ -130,7 +130,7 @@ Time in milliseconds until the rate limit resets.
 
 `Problem.stack`
 
-***
+---
 
 ### type
 
@@ -140,7 +140,7 @@ Time in milliseconds until the rate limit resets.
 
 `Problem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -174,7 +174,7 @@ Get Retry-After header value in seconds.
 
 `number`
 
-***
+---
 
 ### status
 
@@ -190,7 +190,7 @@ Get Retry-After header value in seconds.
 
 `Problem.status`
 
-***
+---
 
 ### title
 
@@ -220,7 +220,7 @@ Get Retry-After header value in seconds.
 
 `Problem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -233,7 +233,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -288,7 +288,7 @@ a();
 
 `Problem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

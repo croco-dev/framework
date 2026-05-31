@@ -15,7 +15,7 @@ Options for creating a Logger instance.
 
 Optional attributes to include with all logs
 
-***
+---
 
 ### name
 
@@ -23,7 +23,7 @@ Optional attributes to include with all logs
 
 The name of the logger
 
-***
+---
 
 ### schemaUrl?
 
@@ -31,7 +31,7 @@ The name of the logger
 
 Optional schema URL for the logger
 
-***
+---
 
 ### version?
 

@@ -13,7 +13,7 @@ title: "RegisterEventHandler"
 
 ### TArgs
 
-`TArgs` *extends* `unknown`[]
+`TArgs` _extends_ `unknown`[]
 
 ## Parameters
 
@@ -35,7 +35,7 @@ title: "RegisterEventHandler"
 
 #### T
 
-`T` *extends* [`EventHandlerClass`](/api/events-core/src/type-aliases/eventhandlerclass/)\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>
+`T` _extends_ [`EventHandlerClass`](/api/events-core/src/type-aliases/eventhandlerclass/)\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>
 
 ### Parameters
 

@@ -25,7 +25,7 @@ Retry decorator for methods.
 class Service {
   @Retryable({ maxAttempts: 3, backoff: { delay: 1000 } })
   async fetchData(): Promise<Data> {
-    return await this.api.get('/data');
+    return await this.api.get("/data");
   }
 }
 ```

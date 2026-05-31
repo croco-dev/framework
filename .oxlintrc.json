@@ -11,7 +11,7 @@
     "typescript/no-unused-vars": "error",
     "typescript/consistent-type-imports": "error",
     "typescript/no-non-null-assertion": "error",
-    "no-explicit-any": "warn",
+    "no-explicit-any": "error",
     "typescript/no-explicit-any": "off",
     "typescript/no-wrapper-object-types": "off",
     "no-unsafe-optional-chaining": "off",

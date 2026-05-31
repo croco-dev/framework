@@ -6,7 +6,7 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 
 ## 배경: 자기 진단 서브시스템이란
 
-자기 진단 서브시스템은 프레임워크를 구성하는 주요 컴포넌트(Container, EventBus, Telemetry 등)가 스스로의 건강 상태와 오류 내역을 중앙 집중식으로 리포팅하는 기능입니다. 
+자기 진단 서브시스템은 프레임워크를 구성하는 주요 컴포넌트(Container, EventBus, Telemetry 등)가 스스로의 건강 상태와 오류 내역을 중앙 집중식으로 리포팅하는 기능입니다.
 외부 관측(Observability) 시스템의 사각지대나 초기화 과정의 문제를 빠르고 정확하게 진단하기 위해 설계되었습니다.
 
 ## 핵심 개념
@@ -22,6 +22,7 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 - **URL**: `GET /health/diagnostics`
 
 응답 구조 예시:
+
 ```json
 {
   "timestamp": "2026-05-16T12:00:00.000Z",
@@ -46,6 +47,7 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 ```
 
 **보안 및 에러 제한**:
+
 - 에러 메시지(`message`)의 노출을 통한 민감 정보 유출을 막기 위해 진단 결과의 오류 메시지는 최대 **100자**로 제한(cap)되며, Stack Trace는 절대 포함되지 않습니다.
 
 ## 환경변수 설정
@@ -60,18 +62,22 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 각 `DiagnosticsProvider`는 다음과 같은 정보를 수집합니다.
 
 ### TelemetryDiagnosticsProvider
+
 - **수집 정보**: OTel SDK 초기화 여부(`isInitialized`), 현재 샘플링 확률(`probability`)
 - **Degraded 조건**: 초기화에 실패하거나 외부 콜렉터 연결 등 추적 시스템 상태가 불안정할 때
 
 ### EventBusDiagnosticsProvider
+
 - **수집 정보**: 현재 활성 구독자 수(`subscriberCount`), 누적 발행 횟수(`publishedCount`), 누적 실패 횟수(`failCount`)
 - **Degraded 조건**: `failCount`가 비정상적으로 급증하거나 건강 상태가 나빠진 경우
 
 ### ContainerDiagnosticsProvider
+
 - **수집 정보**: DI 컨테이너 초기화 여부(`isInitialized`), 등록된 서비스 개수(`registeredServiceCount`), 스코프별(singleton, request 등) 통계(`scopes`)
 - **Degraded 조건**: 컨테이너가 정상적으로 초기화되지 않거나 필수 서비스 바인딩이 누락된 경우
 
 ### ModuleDiagnosticsProvider
+
 - **수집 정보**: 등록된 모듈의 총 개수(`registeredModuleCount`), 초기화된 모듈 목록(`moduleList`)
 - **Degraded 조건**: 필수 모듈의 부트스트랩이 실패하거나 초기화가 지연될 때
 
@@ -87,7 +93,7 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 
 Croco는 AWS Lambda에 최적화된 프레임워크입니다. Lambda 환경에서 진단 서브시스템을 활용할 때 다음 사항을 유의해야 합니다.
 
-- **인메모리 기반**: 모든 통계치와 에러 이력은 메모리 상에 임시로 유지됩니다. 
+- **인메모리 기반**: 모든 통계치와 에러 이력은 메모리 상에 임시로 유지됩니다.
 - **Cold Start 리셋**: 새로운 Lambda 컨테이너가 프로비저닝(Cold Start)될 때마다 카운터와 링 버퍼 등 내부 상태는 모두 **리셋(초기화)**됩니다. 따라서 조회된 데이터는 현재 활성화된 특정 Lambda 인스턴스의 라이프사이클 내에서 발생한 정보입니다.
 
 ## 진단 시나리오 예제
@@ -95,6 +101,7 @@ Croco는 AWS Lambda에 최적화된 프레임워크입니다. Lambda 환경에�
 ### 시나리오 1: "Telemetry 데이터가 보이지 않을 때"
 
 배포 후 외부 모니터링 대시보드에 Trace 정보가 보이지 않는다면 `/health/diagnostics`를 호출해 봅니다.
+
 - `components` 배열에서 `TelemetryDiagnosticsProvider` 항목을 확인합니다.
 - `details.isInitialized`가 `false`라면 환경변수 오류 등으로 인해 OTel SDK 초기화가 이뤄지지 않은 상태입니다.
 - 초기화는 성공했지만 `details.probability`가 `0`으로 되어 있다면, 코드 레벨에서 샘플링 확률이 0%로 강제 드롭되고 있는지 확인해야 합니다.
@@ -102,6 +109,7 @@ Croco는 AWS Lambda에 최적화된 프레임워크입니다. Lambda 환경에�
 ### 시나리오 2: "이벤트가 처리되지 않을 때"
 
 시스템 내에서 기대했던 비동기 이벤트 훅이 동작하지 않으면 다음을 진단합니다.
+
 - `components` 배열에서 `EventBusDiagnosticsProvider` 상태를 점검합니다.
 - `details.subscriberCount`가 `0`이라면, 서비스 모듈에서 이벤트 구독용 데코레이터나 함수 등록 과정이 제대로 실행되지 않은 것입니다.
 - 반면 `subscriberCount`는 정상이나 `details.failCount`가 지속적으로 증가한다면, `recentErrors` 목록을 통해 어느 단계의 이벤트 핸들링에서 예외가 발생하고 있는지 100자 메시지와 에러 코드로 확인할 수 있습니다.

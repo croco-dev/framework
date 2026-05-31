@@ -10,7 +10,7 @@ Croco 전역 로거가 따라야 하는 최소 인터페이스 타입입니다.
 ## Example
 
 ```typescript
-import type { ILogger } from '@croco/framework-context';
+import type { ILogger } from "@croco/framework-context";
 
 const logger: ILogger = {
   info: () => undefined,
@@ -36,7 +36,7 @@ const logger: ILogger = {
 
 `ILogger`
 
-***
+---
 
 ### debug()
 
@@ -56,7 +56,7 @@ const logger: ILogger = {
 
 `void`
 
-***
+---
 
 ### error()
 
@@ -76,7 +76,7 @@ const logger: ILogger = {
 
 `void`
 
-***
+---
 
 ### info()
 
@@ -96,7 +96,7 @@ const logger: ILogger = {
 
 `void`
 
-***
+---
 
 ### warn()
 

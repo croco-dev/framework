@@ -13,31 +13,31 @@ title: "CircuitBreakerOptions"
 
 > **circuitId**: `string`
 
-***
+---
 
 ### failureThreshold?
 
 > `optional` **failureThreshold**: `number`
 
-***
+---
 
 ### fallback?
 
 > `optional` **fallback**: [`CircuitBreakerFallback`](/api/retry-core/src/type-aliases/circuitbreakerfallback/)
 
-***
+---
 
 ### halfOpenRequests?
 
 > `optional` **halfOpenRequests**: `number`
 
-***
+---
 
 ### openDuration?
 
 > `optional` **openDuration**: `number`
 
-***
+---
 
 ### stateStore?
 

@@ -33,7 +33,7 @@ title: "EventBusStats"
 
 > **publishedCount**: `number`
 
-***
+---
 
 ### publish()
 

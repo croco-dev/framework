@@ -41,7 +41,7 @@ title: "RateLimitStore"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-***
+---
 
 ### getStats()
 
@@ -57,7 +57,7 @@ title: "RateLimitStore"
 
 `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
 
-***
+---
 
 ### pruneExpired()
 

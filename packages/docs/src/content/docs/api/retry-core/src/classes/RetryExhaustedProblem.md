@@ -49,7 +49,7 @@ title: "RetryExhaustedProblem"
 
 > `readonly` **attempts**: `number` = `0`
 
-***
+---
 
 ### category
 
@@ -59,7 +59,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.category`
 
-***
+---
 
 ### cause?
 
@@ -69,7 +69,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.cause`
 
-***
+---
 
 ### code
 
@@ -79,7 +79,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.code`
 
-***
+---
 
 ### detail?
 
@@ -89,7 +89,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -99,7 +99,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -109,13 +109,13 @@ title: "RetryExhaustedProblem"
 
 `Problem.instance`
 
-***
+---
 
 ### lastError
 
 > `readonly` **lastError**: `Error` = `null`
 
-***
+---
 
 ### message
 
@@ -125,13 +125,13 @@ title: "RetryExhaustedProblem"
 
 `Problem.message`
 
-***
+---
 
 ### methodName?
 
 > `readonly` `optional` **methodName**: `string`
 
-***
+---
 
 ### name
 
@@ -141,7 +141,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.name`
 
-***
+---
 
 ### stack?
 
@@ -151,7 +151,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.stack`
 
-***
+---
 
 ### type
 
@@ -161,7 +161,7 @@ title: "RetryExhaustedProblem"
 
 `Problem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -197,7 +197,7 @@ not capture any frames.
 
 `Problem.status`
 
-***
+---
 
 ### title
 
@@ -223,7 +223,7 @@ not capture any frames.
 
 `Error`
 
-***
+---
 
 ### toJSON()
 
@@ -237,7 +237,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -250,7 +250,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -305,7 +305,7 @@ a();
 
 `Problem.captureStackTrace`
 
-***
+---
 
 ### fromContext()
 
@@ -329,7 +329,7 @@ a();
 
 `RetryExhaustedProblem`
 
-***
+---
 
 ### prepareStackTrace()
 
