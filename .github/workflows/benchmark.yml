@@ -3,8 +3,22 @@ name: Performance Benchmark
 on:
   pull_request:
     branches: [trunk]
+    paths:
+      - "packages/*/src/**"
+      - "benchmarks/**"
+      - "vitest.config.ts"
+      - "tsconfig.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/benchmark.yml"
   push:
     branches: [trunk]
+    paths:
+      - "packages/*/src/**"
+      - "benchmarks/**"
+      - "vitest.config.ts"
+      - "tsconfig.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/benchmark.yml"
 
 env:
   BENCHMARK_GATE_MODE: warning-only

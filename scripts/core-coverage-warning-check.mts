@@ -1,7 +1,5 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { hrtime } from "node:process";
 
 type CoverageMetric = "lines" | "branches" | "functions" | "statements";
 
@@ -104,29 +102,6 @@ function toPackagePath(packageName: string): string {
   return join(projectRoot, packageName.replace("@croco/", "packages/"));
 }
 
-function removeCoverageOutputs() {
-  for (const packageName of CORE_COVERAGE_PACKAGES) {
-    rmSync(join(toPackagePath(packageName), "coverage"), { recursive: true, force: true });
-  }
-}
-
-function runCoverageCommand(): number {
-  const result = spawnSync("pnpm", ["test:coverage:core"], {
-    cwd: projectRoot,
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      SKIP_ENV_VALIDATION: "true",
-    },
-  });
-
-  if (typeof result.status === "number") {
-    return result.status;
-  }
-
-  return 1;
-}
-
 function readCoverageSummary(packageName: string): PackageCoverageResult {
   const packagePath = toPackagePath(packageName);
   const summaryPath = join(packagePath, "coverage", "coverage-summary.json");
@@ -209,11 +184,7 @@ function formatWarnings(warnings: string[]): string {
   return warnings.length > 0 ? warnings.join("; ") : "없음";
 }
 
-function writeReport(
-  results: PackageCoverageResult[],
-  durationMs: number,
-  commandExitCode: number,
-) {
+function writeReport(results: PackageCoverageResult[]) {
   mkdirSync(reportDirectory, { recursive: true });
 
   const thresholdWarnings = results.flatMap((result) =>
@@ -226,10 +197,8 @@ function writeReport(
   const reportLines = [
     "# Core Coverage Warning Report",
     "",
-    `- 실행 명령: \`pnpm test:coverage:core\``,
-    `- 소요 시간: ${durationMs.toFixed(0)}ms`,
-    `- coverage 명령 종료 코드: ${commandExitCode}`,
-    `- warning-only 종료 코드: 0`,
+    "- coverage 실행: gate step (`pnpm test:coverage:core`)에서 별도 실행",
+    "- warning-only 종료 코드: 0",
     "",
     "## 적용 대상",
     ...CORE_COVERAGE_PACKAGES.map((packageName) => `- ${packageName}`),
@@ -271,23 +240,11 @@ function writeReport(
 }
 
 async function main() {
-  removeCoverageOutputs();
-
-  const startedAt = hrtime.bigint();
-  const commandExitCode = runCoverageCommand();
-  const durationMs = Number(hrtime.bigint() - startedAt) / 1_000_000;
-
   const results = CORE_COVERAGE_PACKAGES.map((packageName) => readCoverageSummary(packageName));
 
-  writeReport(results, durationMs, commandExitCode);
+  writeReport(results);
 
   console.log(`\n⚠️  Core coverage warning-only report written to ${resolve(reportPath)}`);
-
-  if (commandExitCode !== 0) {
-    console.warn(
-      `⚠️  Core coverage command exited with code ${commandExitCode}, but warning-only stage is forcing success.`,
-    );
-  }
 
   const totalWarnings = results.reduce(
     (count, result) => count + result.thresholdWarnings.length + result.baselineWarnings.length,

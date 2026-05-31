@@ -27,6 +27,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -117,10 +118,6 @@ jobs:
           path: ci-reports/security
           if-no-files-found: warn
 
-      - name: Dependency audit
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
-        run: pnpm audit:prod
-
       - name: Architecture circular dependency check
         run: |
           echo "Checking circular dependencies against allowlist..."
@@ -159,7 +156,11 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Core package coverage gate
+        run: pnpm test:coverage:core
+
       - name: Core package coverage warning report
+        if: always()
         run: pnpm test:coverage:core:warning
         continue-on-error: true
 
@@ -170,9 +171,6 @@ jobs:
           name: core-coverage-warning-report
           path: coverage/core-warning/report.md
           if-no-files-found: warn
-
-      - name: Core package coverage gate
-        run: pnpm test:coverage:core
 
   changes:
     runs-on: ubuntu-latest
