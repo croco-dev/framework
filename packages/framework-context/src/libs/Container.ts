@@ -49,7 +49,7 @@ export class Container {
 
     switch (metadata.scope) {
       case "singleton":
-        return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
+        return Container.getSingletonInstance(constructorToken);
 
       case "transient":
         return Container.createTransientInstance(constructorToken);
@@ -340,6 +340,16 @@ export class Container {
   private static createTransientInstance<T>(token: Constructor<T>): T {
     const dependencies = Container.resolveDependencies(token);
     return Reflect.construct(token, dependencies) as T;
+  }
+
+  private static getSingletonInstance<T>(token: Constructor<T>): T {
+    if (Container.hasRegisteredValue(token)) {
+      return Container.getRegisteredValue(token);
+    }
+
+    const instance = Container.createTransientInstance(token);
+    Container.set(token, instance);
+    return instance;
   }
 
   private static resolveDependencies<T>(token: Constructor<T>): unknown[] {

@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - trunk
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -15,6 +16,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -176,6 +178,7 @@ jobs:
 
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
       api-source: ${{ steps.filter.outputs.api-source }}
@@ -207,6 +210,7 @@ jobs:
     needs: [validate, changes]
     if: github.event_name == 'pull_request' && needs.changes.outputs.api-source == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -231,6 +235,7 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.api-source == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -242,6 +247,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -259,6 +265,7 @@ jobs:
     needs: [changes, docs-build]
     if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.api-source == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4

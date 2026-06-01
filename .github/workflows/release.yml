@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - trunk
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,6 +18,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -24,27 +26,56 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect release work
+        id: release_work
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base="$(git rev-parse HEAD^)"
+          fi
+
+          changed_files="$(git diff --name-only "$base" HEAD)"
+          if echo "$changed_files" | grep -Eq '^\.changeset/[^/]+\.md$|^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$'; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "No changeset, manifest, changelog, or lockfile changes detected; skipping release pipeline."
+          fi
+
       - name: Setup pnpm
+        if: steps.release_work.outputs.should_run == 'true'
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
+        if: steps.release_work.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - name: Install dependencies
+        if: steps.release_work.outputs.should_run == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build all packages
+        if: steps.release_work.outputs.should_run == 'true'
         run: pnpm build
 
       - name: Dry-run publish gate
+        if: steps.release_work.outputs.should_run == 'true'
         run: pnpm -r publish --dry-run --no-git-checks
 
       - name: Create Release Pull Request or Publish
+        if: steps.release_work.outputs.should_run == 'true'
         uses: changesets/action@v1
         with:
-          publish: pnpm release
+          publish: pnpm exec changeset publish
           version: pnpm version-packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

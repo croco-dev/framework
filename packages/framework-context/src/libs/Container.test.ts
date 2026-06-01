@@ -120,6 +120,28 @@ describe("Container.getRequestScoped", () => {
     expect(instance.config).toBe("token-value");
   });
 
+  it("should resolve and cache singleton components through Croco dependency resolution", () => {
+    class Dep {
+      value = "ok";
+    }
+
+    class SingletonService {
+      constructor(public readonly dep: Dep) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [], Dep);
+    Reflect.defineMetadata("design:paramtypes", [Dep], SingletonService);
+    Component()(Dep);
+    Component()(SingletonService);
+
+    const first = Container.get(SingletonService);
+    const second = Container.get(SingletonService);
+
+    expect(first.dep.value).toBe("ok");
+    expect(first).toBe(second);
+    expect(first.dep).toBe(second.dep);
+  });
+
   it("should respect @Inject token metadata for request-scoped services", () => {
     const configToken = new Token<string>("request.config.token");
 

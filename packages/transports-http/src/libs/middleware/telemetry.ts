@@ -103,7 +103,7 @@ export const telemetryMiddleware =
 
           const status = ctx.res.status;
           span.setStatus({
-            code: status >= 400 ? SpanStatusCode.ERROR : SpanStatusCode.UNSET,
+            code: status >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.UNSET,
           });
           span.setAttribute("http.status_code", status);
         } catch (error) {
