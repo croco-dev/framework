@@ -1,6 +1,6 @@
 {
   "name": "@croco/gid-core",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Type-safe prefixed ID generation using ULID",
   "files": [
     "dist"

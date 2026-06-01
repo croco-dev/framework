@@ -1,6 +1,6 @@
 {
   "name": "@croco/frontend-react",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "files": [
     "dist"
   ],
@@ -29,7 +29,7 @@
     "@croco/meta-vite": "workspace:*"
   },
   "devDependencies": {
-    "@croco/meta-vite": "^0.0.2",
+    "@croco/meta-vite": "^0.0.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "react": "^19.0.0",
@@ -37,7 +37,7 @@
     "vitest": "4.0.16"
   },
   "peerDependencies": {
-    "@croco/meta-vite": "^0.0.2",
+    "@croco/meta-vite": "^0.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
