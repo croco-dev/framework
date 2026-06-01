@@ -53,7 +53,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -63,7 +63,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -73,7 +73,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -83,7 +83,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.detail`
 
----
+***
 
 ### extensions?
 
@@ -93,7 +93,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.extensions`
 
----
+***
 
 ### instance?
 
@@ -103,7 +103,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -113,7 +113,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -123,7 +123,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -133,7 +133,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -143,7 +143,7 @@ Quota exceeded 시 HTTP 429 TooManyRequests를 반환합니다.
 
 `Problem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -179,7 +179,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -209,7 +209,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -222,7 +222,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -277,7 +277,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

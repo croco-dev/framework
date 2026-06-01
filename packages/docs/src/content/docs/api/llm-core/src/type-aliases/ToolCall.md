@@ -15,7 +15,7 @@ title: "ToolCall"
 
 > **arguments**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### name
 

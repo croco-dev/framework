@@ -28,7 +28,7 @@ title: "Constructor"
 ## Example
 
 ```typescript
-import type { Constructor } from "@croco/framework-context";
+import type { Constructor } from '@croco/framework-context';
 
 class UserService {}
 

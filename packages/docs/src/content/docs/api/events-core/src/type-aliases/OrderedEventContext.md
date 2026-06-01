@@ -17,7 +17,7 @@ title: "OrderedEventContext"
 
 다음 이벤트 존재 여부
 
----
+***
 
 ### hasPrevious
 
@@ -25,7 +25,7 @@ title: "OrderedEventContext"
 
 이전 이벤트 처리 여부
 
----
+***
 
 ### partitionKey
 
@@ -33,7 +33,7 @@ title: "OrderedEventContext"
 
 파티션 키
 
----
+***
 
 ### sequence
 
@@ -41,7 +41,7 @@ title: "OrderedEventContext"
 
 파티션 내 시퀀스 번호
 
----
+***
 
 ### startedAt
 

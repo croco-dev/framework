@@ -11,7 +11,7 @@ title: "ListenOptions"
 
 > `optional` **spaFallback**: `boolean`
 
----
+***
 
 ### staticDir?
 

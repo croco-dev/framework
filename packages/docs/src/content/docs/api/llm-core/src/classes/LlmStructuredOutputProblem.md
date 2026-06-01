@@ -45,7 +45,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -55,7 +55,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -65,7 +65,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -75,7 +75,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.detail`
 
----
+***
 
 ### extensions?
 
@@ -85,7 +85,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.extensions`
 
----
+***
 
 ### instance?
 
@@ -95,7 +95,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -105,7 +105,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -115,7 +115,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -125,7 +125,7 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -135,13 +135,13 @@ title: "LlmStructuredOutputProblem"
 
 `Problem.type`
 
----
+***
 
 ### CODE
 
 > `readonly` `static` **CODE**: `"STRUCTURED_OUTPUT_ERROR"` = `"STRUCTURED_OUTPUT_ERROR"`
 
----
+***
 
 ### stackTraceLimit
 
@@ -177,7 +177,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -207,7 +207,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -220,7 +220,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -275,7 +275,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

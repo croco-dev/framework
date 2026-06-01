@@ -20,7 +20,7 @@ DLQ를 비웁니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### dequeue()
 
@@ -32,7 +32,7 @@ DLQ에서 이벤트를 꺼내 재처리합니다.
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -48,7 +48,7 @@ DLQ에서 이벤트를 꺼내 재처리합니다.
 
 DLQ 항목 목록
 
----
+***
 
 ### enqueue()
 
@@ -60,7 +60,7 @@ DLQ 항목 목록
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -74,7 +74,7 @@ DLQ 항목 목록
 
 `Promise`\<`void`\>
 
----
+***
 
 ### peek()
 
@@ -86,7 +86,7 @@ DLQ의 모든 항목을 조회합니다.
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Returns
 
@@ -94,7 +94,7 @@ DLQ의 모든 항목을 조회합니다.
 
 DLQ 항목 목록
 
----
+***
 
 ### remove()
 
@@ -114,7 +114,7 @@ DLQ 항목 목록
 
 `Promise`\<`void`\>
 
----
+***
 
 ### size()
 

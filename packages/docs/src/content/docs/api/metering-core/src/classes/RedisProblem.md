@@ -17,7 +17,7 @@ Redis 연결 실패 또는 운영 중 오류가 발생한 경우 사용됩니다
 try {
   await redisClient.set(key, value);
 } catch (error) {
-  throw new RedisProblem("Redis 연결 실패", error);
+  throw new RedisProblem('Redis 연결 실패', error);
 }
 ```
 
@@ -59,7 +59,7 @@ try {
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -69,7 +69,7 @@ try {
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -79,7 +79,7 @@ try {
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -89,7 +89,7 @@ try {
 
 `Problem.detail`
 
----
+***
 
 ### extensions?
 
@@ -99,7 +99,7 @@ try {
 
 `Problem.extensions`
 
----
+***
 
 ### instance?
 
@@ -109,7 +109,7 @@ try {
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -119,7 +119,7 @@ try {
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -129,7 +129,7 @@ try {
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -139,7 +139,7 @@ try {
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -149,7 +149,7 @@ try {
 
 `Problem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -185,7 +185,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -215,7 +215,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -228,7 +228,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -283,7 +283,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

@@ -14,7 +14,7 @@ title: "Inject"
 ## Example
 
 ```typescript
-import { Inject } from "@croco/framework-context";
+import { Inject } from '@croco/framework-context';
 
 class Repository {}
 

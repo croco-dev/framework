@@ -14,7 +14,7 @@ title: "DuplicateRecordProblem"
 ## Example
 
 ```typescript
-throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-key-123");
+throw new DuplicateRecordProblem('이미 기록된 사용량입니다', 'unique-key-123');
 ```
 
 ## Extends
@@ -51,7 +51,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -61,7 +61,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -71,7 +71,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -81,7 +81,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.detail`
 
----
+***
 
 ### extensions?
 
@@ -91,7 +91,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.extensions`
 
----
+***
 
 ### instance?
 
@@ -101,7 +101,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -111,7 +111,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -121,7 +121,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -131,7 +131,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -141,7 +141,7 @@ throw new DuplicateRecordProblem("이미 기록된 사용량입니다", "unique-
 
 `Problem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -177,7 +177,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -207,7 +207,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -220,7 +220,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -275,7 +275,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

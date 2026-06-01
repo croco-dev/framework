@@ -53,7 +53,7 @@ Called after each failed attempt (before backoff).
 
 [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/).[`onError`](/api/retry-core/src/interfaces/retrylistener/#onerror)
 
----
+***
 
 ### onExhausted()
 
@@ -75,7 +75,7 @@ Called when all retry attempts are exhausted.
 
 [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/).[`onExhausted`](/api/retry-core/src/interfaces/retrylistener/#onexhausted)
 
----
+***
 
 ### onStart()
 
@@ -98,7 +98,7 @@ Return false to veto the retry operation.
 
 [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/).[`onStart`](/api/retry-core/src/interfaces/retrylistener/#onstart)
 
----
+***
 
 ### onSuccess()
 

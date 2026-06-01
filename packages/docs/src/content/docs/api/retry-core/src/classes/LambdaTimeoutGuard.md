@@ -48,7 +48,7 @@ Expected delay for next attempt
 
 Error if not enough time
 
----
+***
 
 ### getRemainingTimeMs()
 

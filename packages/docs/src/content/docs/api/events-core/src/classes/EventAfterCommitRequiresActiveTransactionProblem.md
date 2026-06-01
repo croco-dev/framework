@@ -35,7 +35,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -45,7 +45,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -55,7 +55,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -65,7 +65,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.detail`
 
----
+***
 
 ### extensions?
 
@@ -75,7 +75,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.extensions`
 
----
+***
 
 ### instance?
 
@@ -85,7 +85,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -95,7 +95,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -105,7 +105,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -115,7 +115,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -125,7 +125,7 @@ title: "EventAfterCommitRequiresActiveTransactionProblem"
 
 `Problem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -161,7 +161,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -191,7 +191,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -204,7 +204,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -259,7 +259,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

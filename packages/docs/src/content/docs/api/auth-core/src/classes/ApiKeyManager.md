@@ -55,7 +55,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `Promise`\<[`CreateApiKeyResult`](/api/auth-core/src/type-aliases/createapikeyresult/)\>
 
----
+***
 
 ### list()
 
@@ -71,7 +71,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `Promise`\<`Omit`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/), `"hash"`\>[]\>
 
----
+***
 
 ### revoke()
 
@@ -87,7 +87,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `Promise`\<`RevokeApiKeyResult`\>
 
----
+***
 
 ### rotate()
 
@@ -103,7 +103,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `Promise`\<`RotateApiKeyResult`\>
 
----
+***
 
 ### verify()
 

@@ -5,6 +5,6 @@ prev: false
 title: "DEFAULT_RETRYABLE_CATEGORIES"
 ---
 
-> `const` **DEFAULT_RETRYABLE_CATEGORIES**: `ProblemCategory`[]
+> `const` **DEFAULT\_RETRYABLE\_CATEGORIES**: `ProblemCategory`[]
 
 Default retryable categories (transient errors)

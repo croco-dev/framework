@@ -10,7 +10,7 @@ graceful shutdown 단계에서 호출되는 훅 인터페이스 타입입니다.
 ## Example
 
 ```typescript
-import type { ShutdownHook } from "@croco/framework-context";
+import type { ShutdownHook } from '@croco/framework-context';
 
 const hook: ShutdownHook = {
   onShutdown: async () => {},

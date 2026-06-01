@@ -47,7 +47,7 @@ title: "EventSubscriptionIndex"
 
 `void`
 
----
+***
 
 ### clear()
 
@@ -57,7 +57,7 @@ title: "EventSubscriptionIndex"
 
 `void`
 
----
+***
 
 ### delete()
 
@@ -77,7 +77,7 @@ title: "EventSubscriptionIndex"
 
 `void`
 
----
+***
 
 ### match()
 

@@ -11,8 +11,8 @@ Histograms are useful for measuring things like request latency or response size
 ## Example
 
 ```typescript
-const histogram = metrics.createHistogram({ name: "request.duration" });
-histogram.record(150, { method: "GET", status: 200 });
+const histogram = metrics.createHistogram({ name: 'request.duration' });
+histogram.record(150, { method: 'GET', status: 200 });
 ```
 
 ## Methods

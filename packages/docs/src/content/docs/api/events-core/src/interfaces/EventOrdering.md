@@ -20,7 +20,7 @@ title: "EventOrdering"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### flushPartition()
 
@@ -40,7 +40,7 @@ title: "EventOrdering"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### getAllPartitionStatus()
 
@@ -54,7 +54,7 @@ title: "EventOrdering"
 
 파티션 상태 목록
 
----
+***
 
 ### getPartitionStatus()
 
@@ -76,7 +76,7 @@ title: "EventOrdering"
 
 파티션 상태
 
----
+***
 
 ### publishOrdered()
 
@@ -89,7 +89,7 @@ title: "EventOrdering"
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -109,7 +109,7 @@ title: "EventOrdering"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### publishOrderedMany()
 
@@ -121,7 +121,7 @@ title: "EventOrdering"
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 

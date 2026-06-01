@@ -1,6 +1,6 @@
 {
   "name": "@croco/rpc-codegen",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "bin": {
     "croco-rpc-codegen": "./dist/cli.js"
   },

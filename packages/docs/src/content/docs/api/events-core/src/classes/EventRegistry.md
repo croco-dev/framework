@@ -30,7 +30,7 @@ title: "EventRegistry"
 
 `void`
 
----
+***
 
 ### get()
 
@@ -42,7 +42,7 @@ title: "EventRegistry"
 
 ##### T
 
-`T` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -58,7 +58,7 @@ title: "EventRegistry"
 
 등록된 이벤트 클래스 또는 undefined
 
----
+***
 
 ### getRegisteredTypes()
 
@@ -72,7 +72,7 @@ title: "EventRegistry"
 
 이벤트 타입 이름 배열
 
----
+***
 
 ### has()
 
@@ -94,7 +94,7 @@ title: "EventRegistry"
 
 등록 여부
 
----
+***
 
 ### register()
 
@@ -106,7 +106,7 @@ title: "EventRegistry"
 
 ##### T
 
-`T` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -122,7 +122,7 @@ title: "EventRegistry"
 
 체이닝을 위해 this 반환
 
----
+***
 
 ### fromMetadata()
 

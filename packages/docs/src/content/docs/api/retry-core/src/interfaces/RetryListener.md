@@ -30,7 +30,7 @@ Called after each failed attempt (before backoff).
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### onExhausted()?
 
@@ -48,7 +48,7 @@ Called when all retry attempts are exhausted.
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### onStart()?
 
@@ -67,7 +67,7 @@ Return false to veto the retry operation.
 
 `boolean` \| `Promise`\<`boolean`\>
 
----
+***
 
 ### onSuccess()?
 

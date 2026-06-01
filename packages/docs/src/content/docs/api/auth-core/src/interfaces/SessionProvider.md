@@ -23,7 +23,7 @@ title: "SessionProvider"
 
 `Promise`\<[`Session`](/api/auth-core/src/type-aliases/session/)\>
 
----
+***
 
 ### listSessions()
 
@@ -39,7 +39,7 @@ title: "SessionProvider"
 
 `Promise`\<[`SessionListResult`](/api/auth-core/src/type-aliases/sessionlistresult/)\>
 
----
+***
 
 ### revokeAllSessions()
 
@@ -55,7 +55,7 @@ title: "SessionProvider"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### revokeSession()
 

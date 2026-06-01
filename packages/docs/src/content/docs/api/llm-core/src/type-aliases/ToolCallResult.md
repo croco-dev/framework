@@ -25,7 +25,7 @@ title: "ToolCallResult"
 
 > **name**: `string`
 
----
+***
 
 ### usage
 

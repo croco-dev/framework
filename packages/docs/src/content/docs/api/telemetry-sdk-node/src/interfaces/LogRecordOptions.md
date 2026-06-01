@@ -15,7 +15,7 @@ Options for emitting a log record.
 
 Additional attributes
 
----
+***
 
 ### body
 
@@ -23,7 +23,7 @@ Additional attributes
 
 The log message body (string or structured object)
 
----
+***
 
 ### context?
 
@@ -31,7 +31,7 @@ The log message body (string or structured object)
 
 Context for trace correlation
 
----
+***
 
 ### severity
 

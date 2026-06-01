@@ -15,19 +15,19 @@ API 키 도메인 모델과 생성 관련 타입입니다.
 
 > `optional` **degraded**: `boolean`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### key
 
 > **key**: `string`
 
----
+***
 
 ### keyStart
 

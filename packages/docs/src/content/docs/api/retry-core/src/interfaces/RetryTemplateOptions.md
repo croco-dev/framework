@@ -19,7 +19,7 @@ Options for RetryTemplate.
 
 Backoff configuration
 
----
+***
 
 ### backoffPolicy?
 
@@ -27,7 +27,7 @@ Backoff configuration
 
 Custom backoff policy (overrides backoff options)
 
----
+***
 
 ### listeners?
 
@@ -35,7 +35,7 @@ Custom backoff policy (overrides backoff options)
 
 Retry listeners for lifecycle hooks
 
----
+***
 
 ### maxAttempts?
 
@@ -47,7 +47,7 @@ Maximum attempts (default: 3)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`maxAttempts`](/api/retry-core/src/interfaces/retrypolicyoptions/#maxattempts)
 
----
+***
 
 ### noRetryFor?
 
@@ -69,7 +69,7 @@ Exception classes to never retry
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`noRetryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#noretryfor)
 
----
+***
 
 ### retryFor?
 
@@ -91,7 +91,7 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryfor)
 
----
+***
 
 ### retryForCategories?
 
@@ -103,7 +103,7 @@ ProblemCategory values to retry (croco integration)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryForCategories`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryforcategories)
 
----
+***
 
 ### retryPolicy?
 
@@ -111,7 +111,7 @@ ProblemCategory values to retry (croco integration)
 
 Custom retry policy (overrides retryFor/noRetryFor)
 
----
+***
 
 ### wrapExhausted?
 

@@ -61,7 +61,7 @@ Lambda 환경에 최적화된 기본 구현입니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`getFailureCount`](/api/retry-core/src/classes/circuitbreakerstatestore/#getfailurecount)
 
----
+***
 
 ### getHalfOpenActiveCount()
 
@@ -87,7 +87,7 @@ HALF_OPEN 상태에서 현재 실행 중인 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`getHalfOpenActiveCount`](/api/retry-core/src/classes/circuitbreakerstatestore/#gethalfopenactivecount)
 
----
+***
 
 ### getHalfOpenSuccessCount()
 
@@ -113,7 +113,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`getHalfOpenSuccessCount`](/api/retry-core/src/classes/circuitbreakerstatestore/#gethalfopensuccesscount)
 
----
+***
 
 ### getLastFailureTime()
 
@@ -139,7 +139,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`getLastFailureTime`](/api/retry-core/src/classes/circuitbreakerstatestore/#getlastfailuretime)
 
----
+***
 
 ### getState()
 
@@ -165,7 +165,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`getState`](/api/retry-core/src/classes/circuitbreakerstatestore/#getstate)
 
----
+***
 
 ### incrementFailureAndCheck()
 
@@ -197,7 +197,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`incrementFailureAndCheck`](/api/retry-core/src/classes/circuitbreakerstatestore/#incrementfailureandcheck)
 
----
+***
 
 ### incrementFailureCount()
 
@@ -223,7 +223,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`incrementFailureCount`](/api/retry-core/src/classes/circuitbreakerstatestore/#incrementfailurecount)
 
----
+***
 
 ### reset()
 
@@ -247,7 +247,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`reset`](/api/retry-core/src/classes/circuitbreakerstatestore/#reset)
 
----
+***
 
 ### resetAll()
 
@@ -263,7 +263,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`resetAll`](/api/retry-core/src/classes/circuitbreakerstatestore/#resetall)
 
----
+***
 
 ### resetFailureCount()
 
@@ -287,7 +287,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 가져옵니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`resetFailureCount`](/api/retry-core/src/classes/circuitbreakerstatestore/#resetfailurecount)
 
----
+***
 
 ### setHalfOpenActiveCount()
 
@@ -317,7 +317,7 @@ HALF_OPEN 상태에서 활성 요청 수를 설정합니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`setHalfOpenActiveCount`](/api/retry-core/src/classes/circuitbreakerstatestore/#sethalfopenactivecount)
 
----
+***
 
 ### setHalfOpenSuccessCount()
 
@@ -347,7 +347,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`setHalfOpenSuccessCount`](/api/retry-core/src/classes/circuitbreakerstatestore/#sethalfopensuccesscount)
 
----
+***
 
 ### setLastFailureTime()
 
@@ -377,7 +377,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`setLastFailureTime`](/api/retry-core/src/classes/circuitbreakerstatestore/#setlastfailuretime)
 
----
+***
 
 ### setState()
 
@@ -407,7 +407,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/).[`setState`](/api/retry-core/src/classes/circuitbreakerstatestore/#setstate)
 
----
+***
 
 ### withCircuitLock()
 

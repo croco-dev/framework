@@ -19,7 +19,7 @@ UsageAggregator 인스턴스 생성 시 필요한 설정을 정의합니다.
 
 > **meterRepository**: [`MeterRepository`](/api/metering-core/src/classes/meterrepository/)
 
----
+***
 
 ### usageStorage
 

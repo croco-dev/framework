@@ -13,9 +13,9 @@ Provides methods to emit logs at different severity levels.
 ```typescript
 const logger = TelemetryRuntime.getInstance().getLogger();
 
-logger.info("Application started");
-logger.error("Failed to connect", { error: err.message });
-logger.debug("Processing request", { requestId: "abc123" });
+logger.info('Application started');
+logger.error('Failed to connect', { error: err.message });
+logger.debug('Processing request', { requestId: 'abc123' });
 ```
 
 ## Methods
@@ -44,7 +44,7 @@ Additional attributes
 
 `void`
 
----
+***
 
 ### emit()
 
@@ -64,7 +64,7 @@ Log record options
 
 `void`
 
----
+***
 
 ### error()
 
@@ -90,7 +90,7 @@ Additional attributes
 
 `void`
 
----
+***
 
 ### fatal()
 
@@ -116,7 +116,7 @@ Additional attributes
 
 `void`
 
----
+***
 
 ### info()
 
@@ -142,7 +142,7 @@ Additional attributes
 
 `void`
 
----
+***
 
 ### trace()
 
@@ -168,7 +168,7 @@ Additional attributes
 
 `void`
 
----
+***
 
 ### warn()
 

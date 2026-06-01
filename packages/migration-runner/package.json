@@ -1,6 +1,6 @@
 {
   "name": "@croco/migration-runner",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "bin": {
     "migrate": "./src/cli.ts"
   },

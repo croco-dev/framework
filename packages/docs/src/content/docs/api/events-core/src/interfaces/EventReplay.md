@@ -30,7 +30,7 @@ title: "EventReplay"
 
 생성된 스냅샷 정보
 
----
+***
 
 ### deleteSnapshot()
 
@@ -50,7 +50,7 @@ title: "EventReplay"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### listSnapshots()
 
@@ -64,7 +64,7 @@ title: "EventReplay"
 
 스냅샷 목록
 
----
+***
 
 ### replay()
 
@@ -86,7 +86,7 @@ title: "EventReplay"
 
 리플레이 결과
 
----
+***
 
 ### replayEvents()
 
@@ -108,7 +108,7 @@ title: "EventReplay"
 
 리플레이 결과
 
----
+***
 
 ### restoreSnapshot()
 

@@ -45,7 +45,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -55,7 +55,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -65,7 +65,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -75,7 +75,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.detail`
 
----
+***
 
 ### extensions?
 
@@ -85,7 +85,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.extensions`
 
----
+***
 
 ### instance?
 
@@ -95,7 +95,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -105,7 +105,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -115,7 +115,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -125,7 +125,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -135,7 +135,7 @@ title: "DuplicateEventFieldProblem"
 
 `Problem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -171,7 +171,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -201,7 +201,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -214,7 +214,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -269,7 +269,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

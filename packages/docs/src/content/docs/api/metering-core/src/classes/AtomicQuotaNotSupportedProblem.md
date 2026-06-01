@@ -33,7 +33,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -43,7 +43,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -53,7 +53,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -63,7 +63,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.detail`
 
----
+***
 
 ### extensions?
 
@@ -73,7 +73,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.extensions`
 
----
+***
 
 ### instance?
 
@@ -83,7 +83,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -93,7 +93,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -103,7 +103,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -113,7 +113,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -123,7 +123,7 @@ title: "AtomicQuotaNotSupportedProblem"
 
 `Problem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -159,7 +159,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -189,7 +189,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -202,7 +202,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -257,7 +257,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

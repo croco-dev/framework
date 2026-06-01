@@ -23,7 +23,7 @@ decorator.
 
 Backoff configuration
 
----
+***
 
 ### backoffPolicy?
 
@@ -31,7 +31,7 @@ Backoff configuration
 
 Custom backoff policy
 
----
+***
 
 ### circuitBreaker?
 
@@ -39,7 +39,7 @@ Custom backoff policy
 
 CircuitBreaker options
 
----
+***
 
 ### circuitIdResolver()?
 
@@ -57,7 +57,7 @@ Custom circuit ID resolver
 
 `string`
 
----
+***
 
 ### lambdaTimeoutReserveMs?
 
@@ -65,7 +65,7 @@ Custom circuit ID resolver
 
 Reserve time for Lambda timeout (ms)
 
----
+***
 
 ### listeners?
 
@@ -73,7 +73,7 @@ Reserve time for Lambda timeout (ms)
 
 Custom retry listeners
 
----
+***
 
 ### maxAttempts?
 
@@ -85,7 +85,7 @@ Maximum attempts (default: 3)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`maxAttempts`](/api/retry-core/src/interfaces/retrypolicyoptions/#maxattempts)
 
----
+***
 
 ### noRetryFor?
 
@@ -107,7 +107,7 @@ Exception classes to never retry
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`noRetryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#noretryfor)
 
----
+***
 
 ### recover?
 
@@ -115,7 +115,7 @@ Exception classes to never retry
 
 Recovery method name on the same class
 
----
+***
 
 ### retryFor?
 
@@ -137,7 +137,7 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryfor)
 
----
+***
 
 ### retryForCategories?
 
@@ -149,7 +149,7 @@ ProblemCategory values to retry (croco integration)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryForCategories`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryforcategories)
 
----
+***
 
 ### retryPolicy?
 
@@ -157,7 +157,7 @@ ProblemCategory values to retry (croco integration)
 
 Custom retry policy
 
----
+***
 
 ### trace?
 
@@ -165,7 +165,7 @@ Custom retry policy
 
 Disable telemetry (default: true)
 
----
+***
 
 ### wrapExhausted?
 

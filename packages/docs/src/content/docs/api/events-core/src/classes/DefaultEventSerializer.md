@@ -37,7 +37,7 @@ title: "DefaultEventSerializer"
 
 ##### T
 
-`T` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 
@@ -53,7 +53,7 @@ title: "DefaultEventSerializer"
 
 [`EventSerializer`](/api/events-core/src/interfaces/eventserializer/).[`deserialize`](/api/events-core/src/interfaces/eventserializer/#deserialize)
 
----
+***
 
 ### serialize()
 
@@ -63,7 +63,7 @@ title: "DefaultEventSerializer"
 
 ##### T
 
-`T` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 

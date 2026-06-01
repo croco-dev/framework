@@ -15,19 +15,19 @@ title: "EventTraceContext"
 
 > `optional` **isValid**: `boolean`
 
----
+***
 
 ### spanId?
 
 > `optional` **spanId**: `string`
 
----
+***
 
 ### traceFlags?
 
 > `optional` **traceFlags**: `number`
 
----
+***
 
 ### traceId?
 

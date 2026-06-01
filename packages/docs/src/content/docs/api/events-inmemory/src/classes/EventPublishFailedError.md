@@ -45,7 +45,7 @@ title: "EventPublishFailedError"
 
 `Problem.category`
 
----
+***
 
 ### cause?
 
@@ -55,7 +55,7 @@ title: "EventPublishFailedError"
 
 `Problem.cause`
 
----
+***
 
 ### code
 
@@ -65,7 +65,7 @@ title: "EventPublishFailedError"
 
 `Problem.code`
 
----
+***
 
 ### detail?
 
@@ -75,13 +75,13 @@ title: "EventPublishFailedError"
 
 `Problem.detail`
 
----
+***
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### extensions?
 
@@ -91,13 +91,13 @@ title: "EventPublishFailedError"
 
 `Problem.extensions`
 
----
+***
 
 ### failures
 
 > `readonly` **failures**: [`EventPublishFailure`](/api/events-inmemory/src/type-aliases/eventpublishfailure/)[]
 
----
+***
 
 ### instance?
 
@@ -107,7 +107,7 @@ title: "EventPublishFailedError"
 
 `Problem.instance`
 
----
+***
 
 ### message
 
@@ -117,7 +117,7 @@ title: "EventPublishFailedError"
 
 `Problem.message`
 
----
+***
 
 ### name
 
@@ -127,7 +127,7 @@ title: "EventPublishFailedError"
 
 `Problem.name`
 
----
+***
 
 ### stack?
 
@@ -137,7 +137,7 @@ title: "EventPublishFailedError"
 
 `Problem.stack`
 
----
+***
 
 ### type
 
@@ -147,7 +147,7 @@ title: "EventPublishFailedError"
 
 `Problem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -183,7 +183,7 @@ not capture any frames.
 
 `Problem.status`
 
----
+***
 
 ### title
 
@@ -213,7 +213,7 @@ not capture any frames.
 
 `Problem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -226,7 +226,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -281,7 +281,7 @@ a();
 
 `Problem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

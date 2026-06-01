@@ -27,7 +27,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### getEventBus()
 
@@ -37,7 +37,7 @@ title: "EventBusConfig"
 
 [`EventBus`](/api/events-core/src/interfaces/eventbus/)
 
----
+***
 
 ### getSubscriptions()
 
@@ -47,7 +47,7 @@ title: "EventBusConfig"
 
 `ReadonlySet`\<[`EventSubscription`](/api/events-core/src/interfaces/eventsubscription/)\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>\>
 
----
+***
 
 ### setEventBus()
 
@@ -63,7 +63,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### start()
 
@@ -79,7 +79,7 @@ title: "EventBusConfig"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### subscribe()
 
@@ -95,7 +95,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### unsubscribe()
 
@@ -111,7 +111,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### getInstance()
 
@@ -121,7 +121,7 @@ title: "EventBusConfig"
 
 `EventBusConfig`
 
----
+***
 
 ### getStats()
 
@@ -131,7 +131,7 @@ title: "EventBusConfig"
 
 [`EventBusStats`](/api/events-core/src/classes/eventbusstats/)
 
----
+***
 
 ### setInstance()
 
@@ -147,7 +147,7 @@ title: "EventBusConfig"
 
 `void`
 
----
+***
 
 ### setStats()
 

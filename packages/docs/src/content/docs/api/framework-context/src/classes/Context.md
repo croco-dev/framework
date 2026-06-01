@@ -27,7 +27,7 @@ AsyncLocalStorage 기반으로 요청 컨텍스트를 실행하고 조회하는 
 
 [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
 
----
+***
 
 ### getActiveTraceId()
 
@@ -39,7 +39,7 @@ Get active trace ID from request context propagation
 
 `string`
 
----
+***
 
 ### getCache()
 
@@ -49,7 +49,7 @@ Get active trace ID from request context propagation
 
 `Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\>
 
----
+***
 
 ### getCreatedAt()
 
@@ -59,7 +59,7 @@ Get active trace ID from request context propagation
 
 `number`
 
----
+***
 
 ### getCurrentUser()
 
@@ -69,7 +69,7 @@ Get active trace ID from request context propagation
 
 `UserContext`
 
----
+***
 
 ### getRequestId()
 
@@ -79,7 +79,7 @@ Get active trace ID from request context propagation
 
 `string`
 
----
+***
 
 ### getTenantId()
 
@@ -89,7 +89,7 @@ Get active trace ID from request context propagation
 
 `string`
 
----
+***
 
 ### isActive()
 
@@ -99,7 +99,7 @@ Get active trace ID from request context propagation
 
 `boolean`
 
----
+***
 
 ### run()
 
@@ -125,7 +125,7 @@ Get active trace ID from request context propagation
 
 `T` \| `Promise`\<`T`\>
 
----
+***
 
 ### runWithMiddleware()
 
