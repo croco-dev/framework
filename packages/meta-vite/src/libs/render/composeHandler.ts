@@ -48,7 +48,7 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
       });
 
       if (route) {
-        return route.handler(request);
+        return route.handler(request, context);
       }
 
       // API route miss → 404 (NOT page fallback)

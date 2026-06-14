@@ -111,12 +111,12 @@ function formDataToObject(formData: FormData): Record<string, unknown> {
 export function createServerActionHandler(): {
   path: string;
   method: "POST";
-  handler: (request: Request) => Promise<Response>;
+  handler: (request: Request, context?: RuntimeContext) => Promise<Response>;
 } {
   return {
     path: "/api/action",
     method: "POST",
-    handler: async (request: Request): Promise<Response> => {
+    handler: async (request: Request, context?: RuntimeContext): Promise<Response> => {
       const url = new URL(request.url);
       const pathname = url.pathname;
 
@@ -141,7 +141,7 @@ export function createServerActionHandler(): {
       const actionName = segments[3];
       const formData = await request.formData();
 
-      return dispatchServerAction(actionName, formData);
+      return dispatchServerAction(actionName, formData, context);
     },
   };
 }

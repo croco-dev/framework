@@ -5,7 +5,16 @@ import {
   createServerActionHandler,
   dispatchServerAction,
 } from "../libs/actions/serverActions";
+import { createCloudflareHandler } from "../libs/providers/cloudflare";
 import { createMetaFetchHandler } from "../libs/render/composeHandler";
+import type { RuntimeContext } from "../libs/render/types";
+
+function createExecutionContext(): ExecutionContext {
+  return {
+    waitUntil: () => {},
+    passThroughOnException: () => {},
+  };
+}
 
 describe("Server Actions", () => {
   it("registers and dispatches an action without schema", async () => {
@@ -165,6 +174,82 @@ describe("Server Action HTTP Integration", () => {
     const body = await response.json();
     expect(body.subscribed).toBe(true);
     expect(body.email).toBe("test@example.com");
+  });
+
+  it("passes RuntimeContext from composeHandler to server action handlers", async () => {
+    let observedContext: RuntimeContext | undefined;
+    const context: RuntimeContext = {
+      platform: "lambda",
+      event: { requestId: "event-1" },
+      lambdaContext: { awsRequestId: "lambda-1" },
+    };
+
+    createServerAction({
+      name: "http-context",
+      handler: async (_data, runtimeContext) => {
+        observedContext = runtimeContext;
+        return Response.json({
+          platform: runtimeContext?.platform,
+          requestId: (runtimeContext?.event as { requestId?: string } | undefined)?.requestId,
+        });
+      },
+    });
+
+    const handler = createMetaFetchHandler({
+      apiRoutes: [createServerActionHandler()],
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/action/http-context", {
+        method: "POST",
+        body: new FormData(),
+      }),
+      context,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      platform: "lambda",
+      requestId: "event-1",
+    });
+    expect(observedContext).toBe(context);
+  });
+
+  it("passes Cloudflare RuntimeContext to server action handlers", async () => {
+    const env = { TEST_BINDING: "bound-value" };
+    const executionContext = createExecutionContext();
+
+    createServerAction({
+      name: "cloudflare-http-context",
+      handler: async (_data, context) =>
+        Response.json({
+          platform: context?.platform,
+          binding: (context?.env as { TEST_BINDING?: string } | undefined)?.TEST_BINDING,
+          hasExecutionContext: context?.executionContext === executionContext,
+        }),
+    });
+
+    const handler = createCloudflareHandler(
+      createMetaFetchHandler({
+        apiRoutes: [createServerActionHandler()],
+      }),
+    );
+
+    const response = await handler(
+      new Request("http://localhost/api/action/cloudflare-http-context", {
+        method: "POST",
+        body: new FormData(),
+      }),
+      env,
+      executionContext,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      platform: "cloudflare",
+      binding: "bound-value",
+      hasExecutionContext: true,
+    });
   });
 
   it("returns 404 for unregistered action via HTTP", async () => {

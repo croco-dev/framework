@@ -58,10 +58,12 @@ export type ApiMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 /**
  * API route definition accepted by defineApiRoute().
  */
+export type ApiRouteHandler = (request: Request, context?: RuntimeContext) => Promise<Response>;
+
 export type ApiRouteDefinition = {
   path: string;
   method?: ApiMethod;
-  handler: (request: Request) => Promise<Response>;
+  handler: ApiRouteHandler;
 };
 
 /**
@@ -70,5 +72,5 @@ export type ApiRouteDefinition = {
 export type ApiRouteIR = {
   path: string;
   method?: ApiMethod;
-  handler: (request: Request) => Promise<Response>;
+  handler: ApiRouteHandler;
 };
