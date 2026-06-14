@@ -4,13 +4,7 @@ import {
   defineCrocoPreset,
 } from "@croco/framework-preset";
 
-import type { LambdaPresetOptions } from "./types";
-
-export type { LambdaPresetOptions };
-
-export function createLambdaPreset(options?: LambdaPresetOptions): CrocoPreset {
-  void options;
-
+export function createLambdaPreset(): CrocoPreset {
   return defineCrocoPreset({
     name: "lambda",
     entry: "./handler.js",
