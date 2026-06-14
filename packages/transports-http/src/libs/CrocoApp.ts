@@ -1,7 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
-import { type Constructor, Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import { Container, type ILogger, LOGGER_TOKEN, type Constructor } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { ProblemFactory } from "@croco/problems-core";
 import { Hono } from "hono";
@@ -11,9 +11,13 @@ import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
 import { ErrorHandler } from "./ErrorHandler";
 import { HealthCheckRegistry } from "./HealthCheckRegistry";
 import { PipelineRunner } from "./PipelineRunner";
-import { DiagnosticsCollector } from "@croco/diagnostics-core";
-import { ContainerDiagnosticsProvider } from "@croco/framework-context";
-import { EventBusDiagnosticsProvider } from "@croco/events-core";
+import {
+  DIAGNOSTICS_ENDPOINT_PATH,
+  authorizeDiagnosticsRequest,
+  createDefaultDiagnosticsCollector,
+  resolveDiagnosticsEndpointPolicy,
+  sanitizeDiagnosticsReport,
+} from "./operationalEndpoints";
 
 import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
 import type {
@@ -166,37 +170,19 @@ export class CrocoApp {
       return c.json(result, result.status === "ok" ? 200 : 503);
     });
 
-    const diagnosticsEnabled = process.env.CROCO_DIAGNOSTICS_ENABLED === "true";
-    if (diagnosticsEnabled) {
-      const collector = new DiagnosticsCollector();
-      try {
-        collector.registerProvider(new ContainerDiagnosticsProvider());
-      } catch {
-        /* provider unavailable */
-      }
-      try {
-        collector.registerProvider(new EventBusDiagnosticsProvider());
-      } catch {
-        /* provider unavailable */
-      }
+    const diagnosticsPolicy = resolveDiagnosticsEndpointPolicy(this.config.diagnostics);
+    if (diagnosticsPolicy.exposure !== "off") {
+      const collector = diagnosticsPolicy.collector ?? createDefaultDiagnosticsCollector();
 
-      this.hono.get("/health/diagnostics", async (c) => {
-        const token = process.env.CROCO_DIAGNOSTICS_TOKEN;
-        if (token && c.req.header("X-Diagnostics-Token") !== token) {
-          return c.json({ error: "Forbidden" }, 403);
+      this.hono.get(DIAGNOSTICS_ENDPOINT_PATH, async (c) => {
+        if (!(await authorizeDiagnosticsRequest(c, diagnosticsPolicy))) {
+          return c.json({ error: "Forbidden" }, 403, { "Cache-Control": "no-store" });
         }
+
         const report = await collector.getReport();
-        return c.json(
-          {
-            ...report,
-            recentErrors: report.recentErrors.map((e) => ({
-              timestamp: e.timestamp,
-              code: e.code,
-              message: e.message.slice(0, 100),
-            })),
-          },
-          200,
-        );
+        return c.json(sanitizeDiagnosticsReport(report, diagnosticsPolicy), 200, {
+          "Cache-Control": "no-store",
+        });
       });
     }
   }

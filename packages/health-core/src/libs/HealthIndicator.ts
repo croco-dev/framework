@@ -17,6 +17,7 @@ export type HealthIndicatorResult = {
 };
 
 export interface HealthIndicator {
+  readonly name?: string;
   check(signal?: AbortSignal): Promise<HealthIndicatorResult>;
 }
 

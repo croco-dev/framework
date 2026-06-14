@@ -1,4 +1,5 @@
 import type { Constructor } from "@croco/protocols-rest";
+import type { DiagnosticsEndpointOptions } from "./operationalEndpoints";
 import type {
   APIGatewayEventRequestContextV2,
   APIGatewayEventRequestContextV2WithAuthorizer,
@@ -21,6 +22,7 @@ export interface AppConfig {
   globalGuards?: GuardProvider[];
   globalInterceptors?: InterceptorProvider[];
   globalPipes?: PipeProvider[];
+  diagnostics?: DiagnosticsEndpointOptions;
 }
 
 export interface ListenOptions {

@@ -20,6 +20,8 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 웹 서버나 Lambda 환경에서 다음 엔드포인트를 통해 진단 결과를 조회할 수 있습니다.
 
 - **URL**: `GET /health/diagnostics`
+- **기본 노출**: off. 명시적으로 `diagnostics.exposure` 또는 `CROCO_DIAGNOSTICS_ENABLED=true`를 설정해야 등록됩니다.
+- **캐시 정책**: 모든 성공/거부 응답은 `Cache-Control: no-store`를 포함합니다.
 
 응답 구조 예시:
 
@@ -32,13 +34,14 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
       "status": "degraded",
       "component": "EventBus",
       "message": "Some events failed to process",
-      "details": { ... },
+      "details": { "safeKey": "visible", "apiToken": "[Redacted]" },
       "lastChecked": "2026-05-16T12:00:00.000Z"
     }
   ],
   "recentErrors": [
     {
       "timestamp": "2026-05-16T11:55:00.000Z",
+      "component": "EventBus",
       "code": "EVENT_PUBLISH_ERROR",
       "message": "Failed to publish event UserCreated. Details: ..."
     }
@@ -46,16 +49,51 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 }
 ```
 
-**보안 및 에러 제한**:
+## 운영 endpoint contract
 
-- 에러 메시지(`message`)의 노출을 통한 민감 정보 유출을 막기 위해 진단 결과의 오류 메시지는 최대 **100자**로 제한(cap)되며, Stack Trace는 절대 포함되지 않습니다.
+| Endpoint                  | 등록 조건 | 응답 contract                                                                | 상태 코드        |
+| ------------------------- | --------- | ---------------------------------------------------------------------------- | ---------------- |
+| `GET /health`             | 항상      | `{ "status": "ok" }`                                                         | `200`            |
+| `GET /health/live`        | 항상      | `{ "status": "ok" }`                                                         | `200`            |
+| `GET /ready`              | 항상      | `{ "status": "ok" \| "error", "checks": Record<string, HealthCheckResult> }` | `200` 또는 `503` |
+| `GET /health/ready`       | 항상      | `/ready`와 동일                                                              | `200` 또는 `503` |
+| `GET /health/diagnostics` | opt-in    | `DiagnosticsReport`에서 redaction 적용 후 반환                               | `200` 또는 `403` |
+
+Readiness는 `@croco/health-core`의 `HealthCheckService` 실행 semantics를 사용합니다.
+`@croco/transports-http`의 `HealthCheckRegistry`는 기존 `register(name, fn, options)` API와
+HTTP response shape를 유지하면서 health-core에 체크 실행과 timeout/abort 처리를 위임합니다.
+
+## 보안 및 에러 제한
+
+- Diagnostics endpoint는 기본적으로 등록되지 않습니다.
+- `private` exposure는 private network, local smoke test, internal load balancer 뒤에서만 사용합니다.
+- `token` exposure는 기본 헤더 `X-Diagnostics-Token`을 검사합니다. `tokenHeader`로 헤더명을 바꿀 수 있습니다.
+- `custom` exposure는 앱이 제공한 guard 함수가 true를 반환할 때만 허용합니다.
+- 에러 메시지(`message`)의 노출을 통한 민감 정보 유출을 막기 위해 진단 결과의 오류 메시지는 기본 최대 **100자**로 제한(cap)되며, Stack Trace와 `cause`는 절대 포함되지 않습니다.
+- `details` 안의 `token`, `secret`, `password`, `authorization`, `cookie`, `credential`, `apiKey` 계열 key는 `[Redacted]`로 대체됩니다.
+- `recentErrors`는 기본 최대 **100개**를 최신순으로 반환합니다. 저장소는 고정 크기 ring buffer이므로 retention도 최근 100개입니다.
 
 ## 환경변수 설정
 
 진단 엔드포인트는 기본적으로 **비활성화**되어 있습니다. 사용하려면 다음 환경변수를 설정해야 합니다.
 
 - `CROCO_DIAGNOSTICS_ENABLED`: `true`로 설정 시 `/health/diagnostics` 라우트가 활성화됩니다.
-- `CROCO_DIAGNOSTICS_TOKEN`: 외부에서 이 엔드포인트를 호출할 때 필요한 인증 토큰입니다. (선택사항) 설정 시, 요청 헤더에 반드시 `X-Diagnostics-Token: <토큰값>`을 포함해야 합니다.
+- `CROCO_DIAGNOSTICS_TOKEN`: 외부에서 이 엔드포인트를 호출할 때 필요한 인증 토큰입니다. 설정 시, 요청 헤더에 반드시 `X-Diagnostics-Token: <토큰값>`을 포함해야 합니다.
+- `CROCO_DIAGNOSTICS_EXPOSURE`: `off`, `private`, `token` 중 하나를 설정할 수 있습니다. 앱 코드의 `diagnostics.exposure`가 있으면 앱 코드 설정이 우선합니다.
+
+새 코드에서는 환경변수보다 `createApp({ diagnostics: ... })` 설정을 권장합니다.
+
+```typescript
+const app = createApp({
+  controllers: [],
+  diagnostics: {
+    exposure: "custom",
+    guard: ({ header }) => header("X-Internal-Request") === "true",
+    recentErrorLimit: 25,
+    messageLimit: 80,
+  },
+});
+```
 
 ## Provider별 진단 정보
 
@@ -95,6 +133,14 @@ Croco는 AWS Lambda에 최적화된 프레임워크입니다. Lambda 환경에�
 
 - **인메모리 기반**: 모든 통계치와 에러 이력은 메모리 상에 임시로 유지됩니다.
 - **Cold Start 리셋**: 새로운 Lambda 컨테이너가 프로비저닝(Cold Start)될 때마다 카운터와 링 버퍼 등 내부 상태는 모두 **리셋(초기화)**됩니다. 따라서 조회된 데이터는 현재 활성화된 특정 Lambda 인스턴스의 라이프사이클 내에서 발생한 정보입니다.
+
+## 런타임별 지원 범위
+
+| Runtime            | 지원 상태 | 비고                                                                                                                                                                        |
+| ------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node HTTP server   | 지원      | `app.listen()`으로 실행한 Hono 앱이 동일 endpoint를 제공합니다.                                                                                                             |
+| AWS Lambda         | 지원      | `app.lambdaHandler()`가 같은 endpoint contract를 API Gateway 응답으로 반환합니다. In-memory 상태는 Lambda 인스턴스 단위입니다.                                              |
+| Cloudflare Workers | 부분 지원 | `@croco/transports-http`의 Node/Lambda adapter endpoint는 직접 사용하지 않습니다. Worker preset/adapter는 Worker `fetch` contract에서 별도 운영 endpoint 연결이 필요합니다. |
 
 ## 진단 시나리오 예제
 

@@ -69,6 +69,18 @@ export type {
   HealthCheckStatus,
 } from "./libs/HealthCheckRegistry";
 
+export { DIAGNOSTICS_ENDPOINT_PATH, DIAGNOSTICS_TOKEN_HEADER } from "./libs/operationalEndpoints";
+
+export type {
+  DiagnosticsAccessContext,
+  DiagnosticsEndpointOptions,
+  DiagnosticsExposureMode,
+  DiagnosticsGuard,
+  OperationalLivenessResponse,
+  SafeDiagnosticsErrorRecord,
+  SafeDiagnosticsReport,
+} from "./libs/operationalEndpoints";
+
 /**
  * 요청 본문 크기를 제한하는 미들웨어와 바이트 단위 헬퍼입니다.
  */

@@ -16,21 +16,26 @@ export type HealthCheckServiceOptions = {
 
 const DEFAULT_TIMEOUT = 5000;
 
+type RegisteredIndicator<TIndicator extends HealthIndicator> = {
+  readonly indicator: TIndicator;
+  readonly options: HealthCheckServiceOptions;
+};
+
 export class HealthCheckService {
-  private readonly indicators: HealthIndicator[] = [];
-  private readonly readinessIndicators: ReadinessIndicator[] = [];
+  private readonly indicators: RegisteredIndicator<HealthIndicator>[] = [];
+  private readonly readinessIndicators: RegisteredIndicator<ReadinessIndicator>[] = [];
   private readonly timeout: number;
 
   constructor(options: HealthCheckServiceOptions = {}) {
     this.timeout = options.timeout ?? DEFAULT_TIMEOUT;
   }
 
-  register(indicator: HealthIndicator): void {
-    this.indicators.push(indicator);
+  register(indicator: HealthIndicator, options: HealthCheckServiceOptions = {}): void {
+    this.indicators.push({ indicator, options });
   }
 
-  registerReadiness(indicator: ReadinessIndicator): void {
-    this.readinessIndicators.push(indicator);
+  registerReadiness(indicator: ReadinessIndicator, options: HealthCheckServiceOptions = {}): void {
+    this.readinessIndicators.push({ indicator, options });
   }
 
   isLive(): boolean {
@@ -43,7 +48,9 @@ export class HealthCheckService {
     }
 
     const results = await Promise.all(
-      this.readinessIndicators.map((indicator) => this.checkWithTimeout(indicator, "isReady")),
+      this.readinessIndicators.map(({ indicator, options }) =>
+        this.checkWithTimeout(indicator, "isReady", options),
+      ),
     );
 
     return results.every((r) => r.status === "up");
@@ -51,7 +58,9 @@ export class HealthCheckService {
 
   async check(): Promise<HealthCheckResult> {
     const results = await Promise.all(
-      this.indicators.map((indicator) => this.checkWithTimeout(indicator, "check")),
+      this.indicators.map(({ indicator, options }) =>
+        this.checkWithTimeout(indicator, "check", options),
+      ),
     );
 
     const status = results.every((r) => r.status === "up") ? "up" : "down";
@@ -62,15 +71,17 @@ export class HealthCheckService {
   private async checkWithTimeout(
     indicator: HealthIndicator | ReadinessIndicator,
     method: "check" | "isReady",
+    options: HealthCheckServiceOptions,
   ): Promise<HealthIndicatorResult> {
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const timeout = options.timeout ?? this.timeout;
 
     const timeoutPromise = new Promise<HealthIndicatorResult>((_, reject) => {
       timeoutId = setTimeout(() => {
         controller.abort();
-        reject(new Error(`Health check timeout for ${indicator.constructor.name}`));
-      }, this.timeout);
+        reject(new Error(`Health check timeout for ${getIndicatorName(indicator)}`));
+      }, timeout);
     });
 
     try {
@@ -82,7 +93,7 @@ export class HealthCheckService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
-        name: indicator.constructor.name,
+        name: getIndicatorName(indicator),
         status: "down",
         details: { error: message },
       };
@@ -92,4 +103,8 @@ export class HealthCheckService {
       }
     }
   }
+}
+
+function getIndicatorName(indicator: HealthIndicator | ReadinessIndicator): string {
+  return indicator.name ?? indicator.constructor.name;
 }
