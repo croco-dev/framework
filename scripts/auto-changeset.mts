@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, relative, resolve, sep } from "node:path";
 import { env, exit, stdout } from "node:process";
 
 type BumpType = "major" | "minor" | "patch";
@@ -15,7 +15,14 @@ type ParsedCommit = {
   readonly body: string;
 };
 
+type WorkspacePackage = {
+  readonly directory: string;
+  readonly name: string;
+  readonly private: boolean;
+};
+
 const changesetDirectory = resolve(process.cwd(), ".changeset");
+const workspaceFile = resolve(process.cwd(), "pnpm-workspace.yaml");
 const conventionalCommitPattern =
   /^(feat|fix|chore|docs|refactor|perf|test|style|build|ci|revert)(\(.+\))?(!)?:\s/;
 const bumpRank: Record<BumpType, number> = {
@@ -38,18 +45,33 @@ function runGit(args: readonly string[]): string {
   return result.stdout.trim();
 }
 
-function hasExistingChangeset(): boolean {
-  if (!existsSync(changesetDirectory)) {
-    return false;
+function canResolveGitRef(ref: string): boolean {
+  const result = spawnSync("git", ["rev-parse", "--verify", ref], { encoding: "utf-8" });
+  return result.status === 0;
+}
+
+function resolveBaseRef(): string {
+  if (canResolveGitRef("origin/trunk")) {
+    return "origin/trunk";
   }
 
-  return readdirSync(changesetDirectory).some(
-    (file) => file.endsWith(".md") && file !== "README.md",
+  return "trunk";
+}
+
+function hasExistingChangeset(changedFiles: readonly string[]): boolean {
+  return changedFiles.some(
+    (file) =>
+      file.startsWith(".changeset/") && file.endsWith(".md") && file !== ".changeset/README.md",
   );
 }
 
-function getCommitHashes(): string[] {
-  const output = runGit(["rev-list", "trunk..HEAD"]);
+function getCommitHashes(baseRef: string): string[] {
+  const output = runGit(["rev-list", `${baseRef}..HEAD`]);
+  return output.split("\n").filter(Boolean);
+}
+
+function getChangedFiles(baseRef: string): string[] {
+  const output = runGit(["diff", "--name-only", `${baseRef}...HEAD`]);
   return output.split("\n").filter(Boolean);
 }
 
@@ -119,26 +141,191 @@ function determineBumpType(commits: readonly ParsedCommit[]): BumpType {
   return highest;
 }
 
-function formatChangeset(bump: BumpType, commits: readonly ParsedCommit[]): string {
-  const entries = commits.map((commit) => `- ${commit.subject}`);
+function unquoteYamlScalar(value: string): string {
+  const trimmed = value.trim();
 
-  return [
-    "---",
-    `'@croco/framework-context': ${bump}`,
-    `'create-croco-app': ${bump}`,
-    "---",
-    "",
-    ...entries,
-    "",
-  ].join("\n");
+  if (
+    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
 }
 
-function createChangeset(commits: readonly ParsedCommit[]): string {
+function getWorkspacePackagePatterns(): string[] {
+  if (!existsSync(workspaceFile)) {
+    return ["packages/**/*"];
+  }
+
+  const patterns: string[] = [];
+  let inPackagesSection = false;
+
+  for (const line of readFileSync(workspaceFile, "utf-8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+
+    if (trimmed.length === 0 || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    if (!line.startsWith(" ") && !line.startsWith("\t")) {
+      inPackagesSection = trimmed === "packages:";
+      continue;
+    }
+
+    if (!inPackagesSection || !trimmed.startsWith("- ")) {
+      continue;
+    }
+
+    const pattern = unquoteYamlScalar(trimmed.slice(2));
+
+    if (pattern.length > 0 && !pattern.startsWith("!")) {
+      patterns.push(pattern);
+    }
+  }
+
+  return patterns.length > 0 ? patterns : ["packages/**/*"];
+}
+
+function findPackageJsonFiles(directory: string, results: string[] = []): string[] {
+  if (!existsSync(directory)) {
+    return results;
+  }
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === "node_modules" || entry.name.startsWith(".")) {
+      continue;
+    }
+
+    const path = resolve(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      findPackageJsonFiles(path, results);
+      continue;
+    }
+
+    if (entry.isFile() && entry.name === "package.json") {
+      results.push(path);
+    }
+  }
+
+  return results.sort();
+}
+
+function findDirectPackageJsonFiles(directory: string): string[] {
+  if (!existsSync(directory)) {
+    return [];
+  }
+
+  const results: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === "node_modules" || entry.name.startsWith(".")) {
+      continue;
+    }
+
+    const packageJsonPath = resolve(directory, entry.name, "package.json");
+
+    if (existsSync(packageJsonPath)) {
+      results.push(packageJsonPath);
+    }
+  }
+
+  return results.sort();
+}
+
+function findWorkspacePackageJsonFiles(pattern: string): string[] {
+  const normalizedPattern = toGitPath(pattern).replace(/\/+$/, "");
+
+  if (normalizedPattern.endsWith("/**/*") || normalizedPattern.endsWith("/**")) {
+    const directory = normalizedPattern.replace(/\/\*\*\/?\*?$/, "");
+    return findPackageJsonFiles(resolve(process.cwd(), directory));
+  }
+
+  if (normalizedPattern.endsWith("/*")) {
+    const directory = normalizedPattern.slice(0, -2);
+    return findDirectPackageJsonFiles(resolve(process.cwd(), directory));
+  }
+
+  const packageJsonPath = resolve(process.cwd(), normalizedPattern, "package.json");
+
+  if (existsSync(packageJsonPath)) {
+    return [packageJsonPath];
+  }
+
+  return [];
+}
+
+function readWorkspacePackage(packageJsonPath: string): WorkspacePackage | null {
+  const content = readFileSync(packageJsonPath, "utf-8");
+  const manifest = JSON.parse(content) as { name?: unknown; private?: unknown };
+
+  if (typeof manifest.name !== "string" || manifest.name.length === 0) {
+    return null;
+  }
+
+  return {
+    directory: toGitPath(relative(process.cwd(), dirname(packageJsonPath))),
+    name: manifest.name,
+    private: manifest.private === true,
+  };
+}
+
+function getWorkspacePackages(): WorkspacePackage[] {
+  const packageJsonPaths = new Set(
+    getWorkspacePackagePatterns().flatMap(findWorkspacePackageJsonFiles),
+  );
+
+  return [...packageJsonPaths]
+    .map(readWorkspacePackage)
+    .filter((packageInfo): packageInfo is WorkspacePackage => packageInfo !== null)
+    .sort((left, right) => right.directory.length - left.directory.length);
+}
+
+function toGitPath(path: string): string {
+  return path.split(sep).join("/");
+}
+
+function resolveChangedPackageNames(changedFiles: readonly string[]): string[] {
+  const packages = getWorkspacePackages();
+  const packageNames = new Set<string>();
+
+  for (const file of changedFiles) {
+    const owner = packages.find(
+      (packageInfo) =>
+        file === `${packageInfo.directory}/package.json` ||
+        file.startsWith(`${packageInfo.directory}/`),
+    );
+
+    if (owner && !owner.private) {
+      packageNames.add(owner.name);
+    }
+  }
+
+  return [...packageNames].sort();
+}
+
+function formatChangeset(
+  bump: BumpType,
+  commits: readonly ParsedCommit[],
+  packageNames: readonly string[],
+): string {
+  const entries = commits.map((commit) => `- ${commit.subject}`);
+  const packageEntries = packageNames.map((packageName) => `'${packageName}': ${bump}`);
+
+  return ["---", ...packageEntries, "---", "", ...entries, ""].join("\n");
+}
+
+function createChangeset(
+  commits: readonly ParsedCommit[],
+  packageNames: readonly string[],
+): string {
   const bump = determineBumpType(commits);
   const filename = `${randomBytes(4).toString("hex")}.md`;
   const changesetPath = resolve(changesetDirectory, filename);
 
-  writeFileSync(changesetPath, formatChangeset(bump, commits), "utf-8");
+  writeFileSync(changesetPath, formatChangeset(bump, commits, packageNames), "utf-8");
 
   return changesetPath;
 }
@@ -167,12 +354,15 @@ function main(): void {
       exit(0);
     }
 
-    if (hasExistingChangeset()) {
+    const baseRef = resolveBaseRef();
+    const changedFiles = getChangedFiles(baseRef);
+
+    if (hasExistingChangeset(changedFiles)) {
       log("auto-changeset: existing changeset found (skipping)");
       exit(0);
     }
 
-    const hashes = getCommitHashes();
+    const hashes = getCommitHashes(baseRef);
     const commits = getParsedCommits(hashes);
 
     if (commits.length === 0) {
@@ -180,7 +370,14 @@ function main(): void {
       exit(0);
     }
 
-    const changesetPath = createChangeset(commits);
+    const packageNames = resolveChangedPackageNames(changedFiles);
+
+    if (packageNames.length === 0) {
+      log("auto-changeset: no publishable package changes found (skipping)");
+      exit(0);
+    }
+
+    const changesetPath = createChangeset(commits, packageNames);
     stageAndCommit(changesetPath);
     log(`auto-changeset: created and committed ${changesetPath}`);
     log("auto-changeset: push aborted — run 'git push' again to include the changeset");
