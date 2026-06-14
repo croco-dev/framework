@@ -43,42 +43,47 @@ export class OnboardingManager {
     }
 
     const { tenantId, userId } = this.getContext();
-    let state = await this.store.getState(tenantId, userId, onboardingId);
-
-    if (!state) {
-      state = { steps: {}, isCompleted: false };
-    }
+    const state = (await this.store.getState(tenantId, userId, onboardingId)) ?? {
+      steps: {},
+      isCompleted: false,
+    };
 
     if (state.steps[stepId]?.completed) {
       return; // Already completed
     }
 
-    // Update state
-    state.steps[stepId] = {
-      completed: true,
-      completedAt: new Date(),
+    const nextState: OnboardingState = {
+      ...state,
+      steps: {
+        ...state.steps,
+        [stepId]: {
+          ...state.steps[stepId],
+          completed: true,
+          completedAt: new Date(),
+        },
+      },
     };
 
-    // Check overall completion
     const allRequiredCompleted = definition.steps
       .filter((s) => s.required !== false)
-      .every((s) => state?.steps[s.id]?.completed);
+      .every((s) => nextState.steps[s.id]?.completed);
 
-    if (allRequiredCompleted && !state.isCompleted) {
-      state.isCompleted = true;
-      state.completedAt = new Date();
+    const becameCompleted = allRequiredCompleted && !state.isCompleted;
+    if (becameCompleted) {
+      nextState.isCompleted = true;
+      nextState.completedAt = new Date();
+    }
 
-      // Track onboarding completion
-      this.analytics.capture("onboarding_completed", {
+    await this.store.saveState(tenantId, userId, onboardingId, nextState);
+
+    if (becameCompleted) {
+      this.captureAnalytics("onboarding_completed", {
         onboardingId,
-        completedAt: state.completedAt,
+        completedAt: nextState.completedAt,
       });
     }
 
-    await this.store.saveState(tenantId, userId, onboardingId, state);
-
-    // Track step completion
-    this.analytics.capture("onboarding_step_completed", {
+    this.captureAnalytics("onboarding_step_completed", {
       onboardingId,
       stepId,
       stepTitle: step.title,
@@ -94,5 +99,13 @@ export class OnboardingManager {
     }
 
     return { tenantId, userId: user.id };
+  }
+
+  private captureAnalytics(event: string, properties: Record<string, unknown>): void {
+    try {
+      this.analytics.capture(event, properties);
+    } catch {
+      // Analytics delivery is best-effort after persistence.
+    }
   }
 }
