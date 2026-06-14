@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DiagnosticsCollector } from "../libs/DiagnosticsCollector";
 import { DuplicateDiagnosticsProviderProblem } from "../libs/problems/DiagnosticsProblems";
 import type { DiagnosticsProvider, HealthStatus, ErrorRecord } from "../libs/types";
@@ -189,5 +189,92 @@ describe("DiagnosticsCollector Integration", () => {
     expect(report.components[0].component).toBe("failing-service");
     expect(report.components[0].message).toBe("Provider health check failed");
     expect(report.summary).toBe("degraded");
+  });
+
+  it("should return degraded component when provider health check times out", async () => {
+    vi.useFakeTimers();
+
+    try {
+      let didAbort = false;
+      const collectorWithTimeout = new DiagnosticsCollector({ timeout: 100 });
+      const fastProvider = new MockDiagnosticsProvider("fast-service", {
+        status: "healthy",
+        component: "fast-service",
+        lastChecked: new Date().toISOString(),
+      });
+      const hangingProvider: DiagnosticsProvider = {
+        name: "stuck-service",
+        getHealth: vi.fn(
+          (signal?: AbortSignal) =>
+            new Promise<HealthStatus>((_, reject) => {
+              signal?.addEventListener("abort", () => {
+                didAbort = true;
+                reject(new Error("provider observed abort"));
+              });
+            }),
+        ),
+      };
+
+      collectorWithTimeout.registerProvider(fastProvider);
+      collectorWithTimeout.registerProvider(hangingProvider);
+
+      const reportPromise = collectorWithTimeout.getReport();
+
+      await vi.advanceTimersByTimeAsync(100);
+
+      const report = await reportPromise;
+
+      expect(report.components).toHaveLength(2);
+      expect(report.components[0].status).toBe("healthy");
+      expect(report.components[1].status).toBe("degraded");
+      expect(report.components[1].component).toBe("stuck-service");
+      expect(report.components[1].message).toBe(
+        "Provider health check timed out after 100ms for stuck-service",
+      );
+      expect(report.summary).toBe("degraded");
+      expect(didAbort).toBe(true);
+      expect(hangingProvider.getHealth).toHaveBeenCalledWith(expect.any(AbortSignal));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("should honor per-provider timeout overrides", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const collectorWithTimeout = new DiagnosticsCollector({ timeout: 5000 });
+      const hangingProvider: DiagnosticsProvider = {
+        name: "slow-provider",
+        getHealth: vi.fn((_signal?: AbortSignal) => new Promise<HealthStatus>(() => {})),
+      };
+
+      collectorWithTimeout.registerProvider(hangingProvider, { timeout: 75 });
+
+      let settled = false;
+      const reportPromise = collectorWithTimeout.getReport().then((report) => {
+        settled = true;
+        return report;
+      });
+
+      await vi.advanceTimersByTimeAsync(74);
+      await Promise.resolve();
+
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      const report = await reportPromise;
+
+      expect(settled).toBe(true);
+      expect(report.components).toHaveLength(1);
+      expect(report.components[0]).toMatchObject({
+        status: "degraded",
+        component: "slow-provider",
+        message: "Provider health check timed out after 75ms for slow-provider",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
