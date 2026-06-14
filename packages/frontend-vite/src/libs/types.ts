@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import type { PluginOption } from "vite";
 
 export type CrocoViteOptions = {
   /** SSR 활성화 여부 (기본: true) */
@@ -9,7 +9,7 @@ export type CrocoViteOptions = {
 
 export type CrocoViteConfig = {
   /** 생성된 Vite 플러그인 배열 */
-  plugins: Plugin[];
+  plugins: PluginOption[];
 };
 
 /** SPA 전용 Vite 설정 옵션 */

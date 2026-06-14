@@ -1,14 +1,46 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
-import type { Plugin } from "vite";
+import type { PluginOption } from "vite";
 import type { CrocoViteOptions } from "./types";
 
-export function crocoVitePlugin(options: CrocoViteOptions = {}): Plugin[] {
+export function crocoVitePlugin(options: CrocoViteOptions = {}): PluginOption[] {
   const { ssr = true, cloudflare: useCloudflare = true } = options;
-  const plugins: Plugin[] = [];
 
-  if (useCloudflare) {
-    plugins.push(...cloudflare({ viteEnvironment: ssr ? { name: "ssr" } : undefined }));
+  if (!useCloudflare) {
+    return [];
   }
 
-  return plugins;
+  return [loadCloudflarePlugin({ ssr })];
+}
+
+async function loadCloudflarePlugin(options: { ssr: boolean }): Promise<PluginOption[]> {
+  try {
+    const { cloudflare } = await import("@cloudflare/vite-plugin");
+    return cloudflare({ viteEnvironment: options.ssr ? { name: "ssr" } : undefined });
+  } catch (error) {
+    if (isMissingCloudflarePluginError(error)) {
+      throw new Error(
+        [
+          'crocoVitePlugin() requires optional peer dependency "@cloudflare/vite-plugin" when Cloudflare support is enabled.',
+          'Install "@cloudflare/vite-plugin" or call crocoVitePlugin({ cloudflare: false }).',
+        ].join(" "),
+      );
+    }
+
+    throw error;
+  }
+}
+
+function isMissingCloudflarePluginError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const code = (error as { code?: string }).code;
+  if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") {
+    return false;
+  }
+
+  return (
+    /^Cannot find package ['"]@cloudflare\/vite-plugin['"] imported from /.test(error.message) ||
+    /^Cannot find module ['"]@cloudflare\/vite-plugin['"]/.test(error.message)
+  );
 }

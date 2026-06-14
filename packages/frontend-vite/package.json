@@ -32,7 +32,13 @@
     "vitest": "4.0.16"
   },
   "peerDependencies": {
+    "@cloudflare/vite-plugin": "^1.0.0",
     "vite": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@cloudflare/vite-plugin": {
+      "optional": true
+    }
   },
   "vitest": {
     "include": [

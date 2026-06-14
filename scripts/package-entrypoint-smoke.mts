@@ -239,6 +239,10 @@ function runPackageSmoke(
       packageSmokeRoot,
     );
   }
+
+  if (packageInfo.packageName === "@croco/frontend-vite") {
+    runFrontendViteOptionalPeerSmoke(packageSmokeRoot, packageInfo.packageName);
+  }
 }
 
 function safeDirectoryName(packageName: string): string {
@@ -292,7 +296,23 @@ function dependencyNames(value: unknown): string[] {
 }
 
 function optionalDependencyNames(pkg: PackageJson): ReadonlySet<string> {
-  return new Set(dependencyNames(pkg.optionalDependencies));
+  return new Set([
+    ...dependencyNames(pkg.optionalDependencies),
+    ...optionalPeerDependencyNames(pkg.peerDependenciesMeta),
+  ]);
+}
+
+function optionalPeerDependencyNames(value: unknown): string[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.entries(value)
+    .filter(([, meta]) =>
+      Boolean(meta && typeof meta === "object" && "optional" in meta && meta.optional === true),
+    )
+    .map(([dependencyName]) => dependencyName)
+    .sort();
 }
 
 function installPackage(smokeRoot: string, packageInfo: PackageInfo): void {
@@ -630,6 +650,102 @@ function writeTypesConsumer(smokeRoot: string, targets: readonly SmokeTarget[]):
       null,
       2,
     )}\n`,
+  );
+}
+
+function runFrontendViteOptionalPeerSmoke(smokeRoot: string, packageName: string): void {
+  writeFileSync(
+    join(smokeRoot, "frontend-vite-optional-peer.cjs"),
+    [
+      `const { crocoVitePlugin } = require("${packageName}");`,
+      "const plugins = crocoVitePlugin({ cloudflare: false });",
+      "if (!Array.isArray(plugins) || plugins.length !== 0) {",
+      '  throw new Error("cloudflare: false should not create Cloudflare plugin options");',
+      "}",
+      'console.log("frontend-vite optional peer cjs ok");',
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(smokeRoot, "frontend-vite-optional-peer.mjs"),
+    [
+      `const { crocoVitePlugin, MissingCloudflareVitePluginProblem } = await import("${packageName}");`,
+      "const plugins = crocoVitePlugin({ cloudflare: false });",
+      "if (!Array.isArray(plugins) || plugins.length !== 0) {",
+      '  throw new Error("cloudflare: false should not create Cloudflare plugin options");',
+      "}",
+      "try {",
+      "  await Promise.all(crocoVitePlugin());",
+      "} catch (error) {",
+      "  if (error instanceof MissingCloudflareVitePluginProblem && error.message.includes('Install \"@cloudflare/vite-plugin\"')) {",
+      '    console.log("frontend-vite optional peer esm ok");',
+      "    process.exit(0);",
+      "  }",
+      "  throw error;",
+      "}",
+      'throw new Error("default Cloudflare plugin unexpectedly resolved without @cloudflare/vite-plugin");',
+      "",
+    ].join("\n"),
+  );
+
+  run("node", [join(smokeRoot, "frontend-vite-optional-peer.cjs")], smokeRoot);
+  run("node", [join(smokeRoot, "frontend-vite-optional-peer.mjs")], smokeRoot);
+
+  installBrokenCloudflareVitePlugin(smokeRoot);
+  writeFileSync(
+    join(smokeRoot, "frontend-vite-nested-error.mjs"),
+    [
+      `const { crocoVitePlugin } = await import("${packageName}");`,
+      "try {",
+      "  await Promise.all(crocoVitePlugin());",
+      "} catch (error) {",
+      "  if (!(error instanceof Error)) {",
+      "    throw new Error('expected an Error from the broken Cloudflare plugin');",
+      "  }",
+      "  if (!error.message.includes('cloudflare-plugin-transitive-missing')) {",
+      "    throw new Error(`expected nested missing dependency diagnostic, got: ${error.message}`);",
+      "  }",
+      "  if (error.message.includes('Install \"@cloudflare/vite-plugin\"')) {",
+      "    throw new Error(`nested Cloudflare plugin errors must not be rewritten: ${error.message}`);",
+      "  }",
+      '  console.log("frontend-vite nested error ok");',
+      "  process.exit(0);",
+      "}",
+      'throw new Error("broken Cloudflare plugin unexpectedly resolved");',
+      "",
+    ].join("\n"),
+  );
+  run("node", [join(smokeRoot, "frontend-vite-nested-error.mjs")], smokeRoot);
+}
+
+function installBrokenCloudflareVitePlugin(smokeRoot: string): void {
+  const packageDir = join(smokeRoot, "node_modules", "@cloudflare", "vite-plugin");
+  mkdirSync(join(packageDir, "dist"), { recursive: true });
+  writeFileSync(
+    join(packageDir, "package.json"),
+    `${JSON.stringify(
+      {
+        exports: {
+          ".": "./dist/index.mjs",
+        },
+        name: "@cloudflare/vite-plugin",
+        type: "module",
+        version: "0.0.0-smoke",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(packageDir, "dist", "index.mjs"),
+    [
+      "import 'cloudflare-plugin-transitive-missing';",
+      "",
+      "export function cloudflare() {",
+      "  return [];",
+      "}",
+      "",
+    ].join("\n"),
   );
 }
 
