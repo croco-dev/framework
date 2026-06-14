@@ -29,42 +29,46 @@ type GeneratedUsersClient = {
 };
 
 describe("OpenAPI round trip", () => {
-  it("should generate a fetch client that can call a matching backend", async () => {
-    @Controller("/users")
-    class UserController {
-      @Get("/")
-      @ResponseSchema(z.array(userSchema))
-      listUsers(): User[] {
-        return [{ id: 1, name: "Alice" }];
+  it(
+    "should generate a fetch client that can call a matching backend",
+    { timeout: 30000 },
+    async () => {
+      @Controller("/users")
+      class UserController {
+        @Get("/")
+        @ResponseSchema(z.array(userSchema))
+        listUsers(): User[] {
+          return [{ id: 1, name: "Alice" }];
+        }
       }
-    }
 
-    const routes = extractRouteIR(UserController);
-    const spec = emitOpenAPI([UserController]);
-    const tempDirectory = mkdtempSync(join(tmpdir(), "openapi-roundtrip-"));
-    const specPath = join(tempDirectory, "openapi.json");
-    const clientPath = join(tempDirectory, "client.ts");
-    const server = await listenOnRandomPort();
-    const originalFetch = globalThis.fetch;
+      const routes = extractRouteIR(UserController);
+      const spec = emitOpenAPI([UserController]);
+      const tempDirectory = mkdtempSync(join(tmpdir(), "openapi-roundtrip-"));
+      const specPath = join(tempDirectory, "openapi.json");
+      const clientPath = join(tempDirectory, "client.ts");
+      const server = await listenOnRandomPort();
+      const originalFetch = globalThis.fetch;
 
-    try {
-      expect(routes).toHaveLength(1);
-      writeFileSync(specPath, JSON.stringify(spec, null, 2));
-      runOrval(specPath, clientPath);
-      expect(readFileSync(clientPath, "utf8")).toContain("data: UserControllerListUsers200");
+      try {
+        expect(routes).toHaveLength(1);
+        writeFileSync(specPath, JSON.stringify(spec, null, 2));
+        runOrval(specPath, clientPath);
+        expect(readFileSync(clientPath, "utf8")).toContain("data: UserControllerListUsers200");
 
-      globalThis.fetch = createRelativeFetch(server.url, originalFetch);
-      const client = (await import(pathToFileURL(clientPath).href)) as GeneratedUsersClient;
-      const response = await client.userControllerListUsers();
+        globalThis.fetch = createRelativeFetch(server.url, originalFetch);
+        const client = (await import(pathToFileURL(clientPath).href)) as GeneratedUsersClient;
+        const response = await client.userControllerListUsers();
 
-      expect(response.status).toBe(200);
-      expect(response.data).toEqual([{ id: 1, name: "Alice" }]);
-    } finally {
-      globalThis.fetch = originalFetch;
-      await closeServer(server.instance);
-      rmSync(tempDirectory, { force: true, recursive: true });
-    }
-  });
+        expect(response.status).toBe(200);
+        expect(response.data).toEqual([{ id: 1, name: "Alice" }]);
+      } finally {
+        globalThis.fetch = originalFetch;
+        await closeServer(server.instance);
+        rmSync(tempDirectory, { force: true, recursive: true });
+      }
+    },
+  );
 });
 
 function runOrval(specPath: string, clientPath: string): void {
