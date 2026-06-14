@@ -27,6 +27,36 @@ function assertNoHandlebarsPlaceholders(projectDir: string): void {
   expect(filesWithPlaceholders).toEqual([]);
 }
 
+function collectPackageNames(projectDir: string): Set<string> {
+  return new Set(
+    collectFiles(projectDir)
+      .filter((filePath) => filePath.endsWith("package.json"))
+      .map((filePath) => JSON.parse(readFileSync(filePath, "utf8")).name as string),
+  );
+}
+
+function collectDockerPackageFilters(projectDir: string): string[] {
+  return collectFiles(projectDir)
+    .filter((filePath) => filePath.endsWith("Dockerfile") || filePath.includes("Dockerfile."))
+    .flatMap((filePath) => {
+      const content = readFileSync(filePath, "utf8");
+
+      return [...content.matchAll(/(?:turbo prune\s+|--filter=)(@[^\s]+)/g)].map(
+        (match) => match[1],
+      );
+    });
+}
+
+function assertDockerFiltersMatchPackages(projectDir: string): void {
+  const packageNames = collectPackageNames(projectDir);
+  const dockerFilters = collectDockerPackageFilters(projectDir);
+
+  expect(dockerFilters.length).toBeGreaterThan(0);
+  for (const dockerFilter of dockerFilters) {
+    expect(packageNames.has(dockerFilter)).toBe(true);
+  }
+}
+
 describe("E2E: generate()", () => {
   let testDir: string;
 
@@ -91,6 +121,22 @@ describe("E2E: generate()", () => {
       // Docker files
       expect(existsSync(join(testDir, "docker-compose.yml"))).toBe(true);
       expect(existsSync(join(testDir, ".dockerignore"))).toBe(true);
+      const apiDockerfileContent = readFileSync(
+        join(testDir, "apps", "graphql-api", "Dockerfile"),
+        "utf8",
+      );
+      const webDockerfileContent = readFileSync(join(testDir, "web", "Dockerfile"), "utf8");
+      const composeContent = readFileSync(join(testDir, "docker-compose.yml"), "utf8");
+
+      expect(apiDockerfileContent).toContain("turbo prune @test/graphql-api --docker");
+      expect(apiDockerfileContent).toContain("pnpm turbo build --filter=@test/graphql-api");
+      expect(apiDockerfileContent).toContain('CMD ["node", "apps/graphql-api/dist/index.js"]');
+      expect(webDockerfileContent).toContain("turbo prune @test/web --docker");
+      expect(webDockerfileContent).toContain("pnpm turbo build --filter=@test/web");
+      expect(composeContent).toContain("dockerfile: apps/graphql-api/Dockerfile");
+      expect(composeContent).toContain('"4000:4000"');
+      expect(existsSync(join(testDir, "apps", "api", "Dockerfile"))).toBe(false);
+      assertDockerFiltersMatchPackages(testDir);
       assertNoHandlebarsPlaceholders(testDir);
     },
   );
