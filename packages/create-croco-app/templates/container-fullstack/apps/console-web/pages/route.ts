@@ -1,9 +1,11 @@
-import type { default as PageComponent } from "./index/Page";
-import { defineRoute, head } from "@croco/meta-vite";
+import { defineRoute, head, type PageRouteDefinition } from "@croco/meta-vite";
+import Page from "./index/Page";
 
-export default defineRoute({
+const route = {
   path: "/",
   mode: "ssr",
-  component: undefined as PageComponent,
+  component: Page,
   head: head({ title: "Croco" }),
-});
+} satisfies PageRouteDefinition;
+
+export default defineRoute(route);

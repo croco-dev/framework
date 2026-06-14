@@ -28,6 +28,12 @@ function checkFileContains(template: string, filePath: string[], pattern: string
   expect(content).toMatch(pattern);
 }
 
+function checkFileDoesNotContain(template: string, filePath: string[], pattern: string | RegExp) {
+  const content = readFileSync(templatePath(template, ...filePath), "utf-8");
+
+  expect(content).not.toMatch(pattern);
+}
+
 function readJsonTemplate(template: string, ...paths: string[]): Record<string, unknown> {
   const content = readFileSync(templatePath(template, ...paths), "utf-8");
 
@@ -40,6 +46,17 @@ function listPageFiles(template: string): string[] {
   return readdirSync(pagesDir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
     .map((entry) => join(entry.parentPath, entry.name).replace(`${pagesDir}/`, ""));
+}
+
+function checkSsrRouteComponent(template: string) {
+  const routePath = ["apps", "console-web", "pages", "route.ts"];
+
+  checkFileContains(template, routePath, /import Page from ["']\.\/index\/Page["'];/);
+  checkFileContains(template, routePath, /type PageRouteDefinition/);
+  checkFileContains(template, routePath, /component:\s*Page,/);
+  checkFileContains(template, routePath, /satisfies PageRouteDefinition/);
+  checkFileDoesNotContain(template, routePath, /import type \{ default as Page/);
+  checkFileDoesNotContain(template, routePath, /component:\s*undefined/);
 }
 
 function checkSpaBeSplitStructure() {
@@ -88,6 +105,7 @@ function checkSsrLambdaStructure() {
     ["apps", "console-web", "pages", "index", "Page.tsx"],
     /export default function \w+\(/,
   );
+  checkSsrRouteComponent("ssr-lambda");
 }
 
 function checkContainerFullstackStructure() {
@@ -113,6 +131,7 @@ function checkContainerFullstackStructure() {
     ["apps", "console-web", "pages", "route.ts"],
     /mode:\s*['"]ssr['"]/,
   );
+  checkSsrRouteComponent("container-fullstack");
 }
 
 describe.each(["spa-be-split", "ssr-lambda", "container-fullstack"])("Template: %s", (template) => {
