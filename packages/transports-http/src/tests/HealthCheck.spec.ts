@@ -29,6 +29,23 @@ describe("HealthCheck", () => {
     vi.useRealTimers();
   });
 
+  describe("HealthCheckRegistry", () => {
+    it("should expose the health-core aggregate contract", async () => {
+      registry.register("db", async () => ({ status: "up", latency: 10 }));
+
+      await expect(registry.check()).resolves.toEqual({
+        status: "up",
+        results: [
+          {
+            name: "db",
+            status: "up",
+            details: { latency: 10 },
+          },
+        ],
+      });
+    });
+  });
+
   describe("GET /health", () => {
     it("should return 200 OK", async () => {
       const app = createApp({ controllers: [] });
@@ -61,10 +78,14 @@ describe("HealthCheck", () => {
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toEqual({
-        status: "ok",
-        checks: {
-          db: { status: "up", latency: 10 },
-        },
+        status: "up",
+        results: [
+          {
+            name: "db",
+            status: "up",
+            details: { latency: 10 },
+          },
+        ],
       });
     });
   });
@@ -76,7 +97,7 @@ describe("HealthCheck", () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json).toEqual({ status: "ok", checks: {} });
+      expect(json).toEqual({ status: "up", results: [] });
     });
 
     it("should return 200 OK when all checks pass", async () => {
@@ -88,10 +109,14 @@ describe("HealthCheck", () => {
       expect(response.status).toBe(200);
       const json = await response.json();
       expect(json).toEqual({
-        status: "ok",
-        checks: {
-          db: { status: "up", latency: 10 },
-        },
+        status: "up",
+        results: [
+          {
+            name: "db",
+            status: "up",
+            details: { latency: 10 },
+          },
+        ],
       });
     });
 
@@ -135,10 +160,14 @@ describe("HealthCheck", () => {
 
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({
-        status: "error",
-        checks: {
-          slow: { status: "down", error: "timeout" },
-        },
+        status: "down",
+        results: [
+          {
+            name: "slow",
+            status: "down",
+            details: { error: "Health check timeout for slow" },
+          },
+        ],
       });
       expect(didAbort).toBe(true);
 
@@ -155,9 +184,10 @@ describe("HealthCheck", () => {
 
       expect(response.status).toBe(503);
       const json = await response.json();
-      expect(json.status).toBe("error");
-      expect(json.checks.db.status).toBe("down");
-      expect(json.checks.db.error).toBe("Connection failed");
+      expect(json.status).toBe("down");
+      expect(json.results[0].name).toBe("db");
+      expect(json.results[0].status).toBe("down");
+      expect(json.results[0].details.error).toBe("Connection failed");
     });
 
     it("should handle timeout", async () => {
@@ -196,8 +226,9 @@ describe("HealthCheck", () => {
 
       expect(response.status).toBe(503);
       const json = await response.json();
-      expect(json.checks.slow.status).toBe("down");
-      expect(json.checks.slow.error).toBe("timeout");
+      expect(json.results[0].name).toBe("slow");
+      expect(json.results[0].status).toBe("down");
+      expect(json.results[0].details.error).toBe("Health check timeout for slow");
       expect(didAbort).toBe(true);
 
       vi.useRealTimers();
@@ -216,10 +247,14 @@ describe("HealthCheck", () => {
 
       expect(response.status).toBe(200);
       expect(json).toEqual({
-        status: "ok",
-        checks: {
-          db: { status: "up", latency: 10 },
-        },
+        status: "up",
+        results: [
+          {
+            name: "db",
+            status: "up",
+            details: { latency: 10 },
+          },
+        ],
       });
     });
   });

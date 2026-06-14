@@ -13,4 +13,4 @@ title: "HealthCheckResult"
 
 ### status
 
-> **status**: [`HealthCheckStatus`](/api/transports-http/src/type-aliases/healthcheckstatus/)
+> **status**: `HealthStatus`

@@ -162,12 +162,12 @@ export class CrocoApp {
 
     this.hono.get("/health/ready", async (c) => {
       const result = await this.healthCheckRegistry.check();
-      return c.json(result, result.status === "ok" ? 200 : 503);
+      return c.json(result, result.status === "up" ? 200 : 503);
     });
 
     this.hono.get("/ready", async (c) => {
       const result = await this.healthCheckRegistry.check();
-      return c.json(result, result.status === "ok" ? 200 : 503);
+      return c.json(result, result.status === "up" ? 200 : 503);
     });
 
     const diagnosticsPolicy = resolveDiagnosticsEndpointPolicy(this.config.diagnostics);

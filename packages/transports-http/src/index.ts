@@ -66,6 +66,7 @@ export type {
   HealthCheckFunction,
   HealthCheckOptions,
   HealthCheckResult,
+  HealthCheckRegistryResult,
   HealthCheckStatus,
 } from "./libs/HealthCheckRegistry";
 
