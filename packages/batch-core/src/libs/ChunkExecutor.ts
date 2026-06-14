@@ -1,6 +1,7 @@
 import type { ExecutionManager } from "@croco/execution-core";
 import type { Checkpointable } from "./interfaces/ItemReader";
 import type { Step } from "./Step";
+import { createStepExecutionError } from "./StepFailure";
 
 function isCheckpointable(obj: unknown): obj is Checkpointable {
   return (
@@ -93,11 +94,11 @@ export class ChunkExecutor {
       await this.executionManager.complete(executionId, { processedCount });
     } catch (error) {
       // Fail execution
-      const err = error instanceof Error ? error : new Error(String(error));
       await this.executionManager.fail(executionId, {
-        message: err.message,
-        stack: err.stack,
-        retryable: true, // Configurable?
+        ...createStepExecutionError(error, step.classifyFailure, {
+          executionId,
+          stepName: step.name,
+        }),
       });
       throw error; // Re-throw to let caller know
     }

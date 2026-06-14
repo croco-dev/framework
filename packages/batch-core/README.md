@@ -7,6 +7,7 @@
 - **Chunk 지향 처리**: 메모리 효율적인 대용량 데이터 처리
 - **단계별 구성 (Step & Job)**: 재사용 가능한 스텝과 작업 구성
 - **체크포인트 & 재시작**: 실패 지점부터 재시작 가능한 구조 (Checkpointable)
+- **실패 분류**: 영구 실패와 일시 실패를 구분하여 실행 상태에 전달
 - **타입 안전성**: 제네릭을 통한 입출력 타입 보장
 
 ## 설치
@@ -72,4 +73,28 @@ const userStep = new Step({
 });
 
 const job = new JobBuilder("daily-user-batch").start(userStep).build();
+```
+
+### 3. 실패 재시도 분류
+
+기본적으로 Step 실행 중 발생한 오류는 재시도 가능한 실패로 기록됩니다. 검증 오류처럼 재시도해도 해결되지 않는 실패는 `classifyFailure`로 분류할 수 있습니다.
+
+```typescript
+class ValidationError extends Error {
+  code = "VALIDATION_ERROR";
+}
+
+const importStep = new Step({
+  name: "import-users",
+  reader: new UserReader(),
+  processor: new UserProcessor(),
+  writer: new UserWriter(),
+  classifyFailure(error) {
+    if (error instanceof ValidationError) {
+      return { retryable: false, code: error.code };
+    }
+
+    return true;
+  },
+});
 ```

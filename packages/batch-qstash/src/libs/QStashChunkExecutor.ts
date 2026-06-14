@@ -1,3 +1,4 @@
+import { createStepExecutionError } from "@croco/batch-core";
 import type { Checkpointable, Step } from "@croco/batch-core";
 import type { ExecutionManager } from "@croco/execution-core";
 import type { Client } from "@upstash/qstash";
@@ -111,11 +112,11 @@ export class QStashChunkExecutor {
 
       return { hasMore, processedCount: items.length };
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
       await this.executionManager.fail(executionId, {
-        message: err.message,
-        stack: err.stack,
-        retryable: true,
+        ...createStepExecutionError(error, step.classifyFailure, {
+          executionId,
+          stepName: step.name,
+        }),
       });
       throw error;
     }

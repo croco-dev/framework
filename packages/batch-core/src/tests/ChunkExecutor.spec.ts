@@ -134,6 +134,67 @@ describe("ChunkExecutor", () => {
       "exec-1",
       expect.objectContaining({
         message: "Read failed",
+        retryable: true,
+      }),
+    );
+  });
+
+  it("should preserve non-retryable failure classification", async () => {
+    const error = Object.assign(new Error("Validation failed"), {
+      code: "VALIDATION_ERROR",
+    });
+    const classifyFailure = vi.fn().mockReturnValue({ retryable: false });
+    const reader = {
+      read: vi.fn().mockRejectedValue(error),
+    };
+    const writer = { write: vi.fn() };
+
+    const step = new Step<number, number>({
+      name: "non-retryable-step",
+      reader: reader as unknown as ItemReader<number>,
+      writer,
+      classifyFailure,
+    });
+
+    await expect(executor.execute("exec-1", step)).rejects.toThrow("Validation failed");
+    expect(classifyFailure).toHaveBeenCalledWith(error, {
+      executionId: "exec-1",
+      stepName: "non-retryable-step",
+    });
+    expect(executionManager.fail).toHaveBeenCalledWith(
+      "exec-1",
+      expect.objectContaining({
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        retryable: false,
+      }),
+    );
+  });
+
+  it("should record the original failure when classification throws", async () => {
+    const error = new Error("Read failed");
+    const classifyFailure = vi.fn().mockImplementation(() => {
+      throw new Error("Classifier failed");
+    });
+    const reader = {
+      read: vi.fn().mockRejectedValue(error),
+    };
+    const writer = { write: vi.fn() };
+
+    const step = new Step<number, number>({
+      name: "classifier-failure-step",
+      reader: reader as unknown as ItemReader<number>,
+      writer,
+      classifyFailure,
+    });
+
+    await expect(executor.execute("exec-1", step)).rejects.toThrow("Read failed");
+    expect(executionManager.fail).toHaveBeenCalledWith(
+      "exec-1",
+      expect.objectContaining({
+        message: "Read failed",
+        code: "batch-core/failure-classification-failed",
+        retryable: true,
       }),
     );
   });
