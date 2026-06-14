@@ -2242,6 +2242,9 @@ importers:
       '@croco/ratelimit-core':
         specifier: workspace:*
         version: link:../ratelimit-core
+      '@hono/node-server':
+        specifier: 1.19.10
+        version: 1.19.10(hono@4.12.15)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -2255,9 +2258,6 @@ importers:
         specifier: 0.2.2
         version: 0.2.2
     devDependencies:
-      '@hono/node-server':
-        specifier: 1.19.10
-        version: 1.19.10(hono@4.12.15)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
