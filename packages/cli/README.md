@@ -40,7 +40,7 @@ Creates a single source file under `apps/api-server/src/`:
 
 ### create — Project Files
 
-- `croco create page Dashboard` generates 3 files under `apps/console-web/pages/dashboard/`
+- `croco create page Dashboard` generates 2 runtime files under `apps/console-web/pages/dashboard/`
 - `croco create domain Payment` generates 5 files under `apps/api-server/src/domains/payment/` plus controller registration
 
 ### generate — Bundled Scaffolds
@@ -91,16 +91,15 @@ apps/api-server/src/domains/{name}/
 
 Running `croco create domain Payment` with `--register` also adds the controller to the API server entry file.
 
-### page (3 files)
+### page (2 files)
 
 ```
 apps/console-web/pages/{name}/
   Page.tsx               # Page component
   route.ts               # Route definition
-  Page.spec.tsx          # Test file
 ```
 
-The `--mode` flag switches between SSR (default) and SPA rendering.
+The `--mode` flag switches the route template between SSR (default) and SPA rendering. SSR routes are supported for console web apps that declare `@croco/meta-vite`, and SPA routes are supported for console web apps that declare `@croco/frontend-vite`. If a scaffold manifest only supports the other mode, the CLI reports that before writing files.
 
 ## Troubleshooting
 
