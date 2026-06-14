@@ -43,10 +43,7 @@ export async function generateEntity(
     "entities",
     `${className}Entity.ts`,
   );
-  const content = `import { Entity } from "@croco/repository-core";
-
-@Entity()
-export class ${className}Entity {
+  const content = `export class ${className}Entity {
   id!: string;
   createdAt!: Date;
   updatedAt!: Date;

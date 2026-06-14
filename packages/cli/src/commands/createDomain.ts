@@ -175,18 +175,33 @@ export class ${className}Service {
 }
 
 function repositoryTemplate(className: string): string {
-  return `import { Repository } from "@croco/repository-core";
+  return `import type { Repository } from "@croco/repository-core";
 import type { ${className}Entity } from "./${className}Entity";
 
-export class ${className}Repository extends Repository<${className}Entity, string> {}
+export class ${className}Repository implements Repository<${className}Entity, string> {
+  async findById(id: string): Promise<${className}Entity | null> {
+    void id;
+    return null;
+  }
+
+  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<${className}Entity>> {
+    void ids;
+    return [];
+  }
+
+  async save(entity: ${className}Entity): Promise<${className}Entity> {
+    return entity;
+  }
+
+  async deleteById(id: string): Promise<void> {
+    void id;
+  }
+}
 `;
 }
 
 function entityTemplate(className: string): string {
-  return `import { Entity } from "@croco/repository-core";
-
-@Entity()
-export class ${className}Entity {
+  return `export class ${className}Entity {
   id!: string;
   createdAt!: Date;
   updatedAt!: Date;

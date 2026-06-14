@@ -21,8 +21,8 @@ describe("generateEntity", () => {
 
     expect(result?.status).toBe("created");
     expect(result?.path).toBe(filePath);
-    expect(content).toContain('import { Entity } from "@croco/repository-core";');
-    expect(content).toContain("@Entity()");
+    expect(content).not.toContain("@croco/repository-core");
+    expect(content).not.toContain("@Entity()");
     expect(content).toContain("export class UserProfileEntity");
     expect(content).toContain("id!: string;");
     expect(content).toContain("createdAt!: Date;");

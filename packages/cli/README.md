@@ -33,8 +33,8 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 Creates a single source file under `apps/api-server/src/`:
 
 - `croco make controller User` creates `apps/api-server/src/controllers/UserController.ts` with `@Controller`, `@Get`, `@Post`, `@Put`, `@Delete` stubs
-- `croco make repository User` creates a class extending `Repository<UserEntity, string>`
-- `croco make entity User` creates an `@Entity()` class with `id`, `createdAt`, `updatedAt`
+- `croco make repository User` creates a class implementing `Repository<UserEntity, string>`
+- `croco make entity User` creates a plain entity class with `id`, `createdAt`, `updatedAt`
 - `croco make event OrderShipped` creates a `DomainEvent` subclass
 - `croco make listener SendEmail` creates an event handler registered via `@RegisterEventHandler`
 
