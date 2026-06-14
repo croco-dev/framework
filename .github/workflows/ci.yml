@@ -164,6 +164,9 @@ jobs:
       - name: Package entrypoint smoke
         run: pnpm package-entrypoints:smoke
 
+      - name: create-croco-app generated app smoke
+        run: pnpm create-croco-app:smoke
+
       - name: TypeScript check
         run: pnpm typecheck
 

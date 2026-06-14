@@ -1,9 +1,8 @@
 import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { renderHandlebars } from "../helpers/fs.js";
+import { TEMPLATES_DIR } from "../template-path.js";
 import type { GeneratorOptions } from "../types.js";
-
-const TEMPLATES_DIR = new URL("../../templates", import.meta.url).pathname;
 
 function copyDockerTemplate(src: string, dest: string, context: Record<string, unknown>): void {
   mkdirSync(dirname(dest), { recursive: true });

@@ -2,7 +2,7 @@
 
 import { ApolloProvider } from "@apollo/client";
 import type { ReactNode } from "react";
-import { createApolloClient } from "./apollo-client.js";
+import { createApolloClient } from "./apollo-client";
 
 const client = createApolloClient();
 

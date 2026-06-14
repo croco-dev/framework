@@ -15,6 +15,7 @@
   "scripts": {
     "build": "tsup",
     "lint": "oxlint .",
+    "smoke:generated-apps": "node --experimental-strip-types ../../scripts/create-croco-app-generated-smoke.mts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
