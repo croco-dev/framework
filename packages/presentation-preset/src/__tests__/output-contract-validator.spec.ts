@@ -56,27 +56,46 @@ describe("OutputContractValidator", () => {
     expect(report.passed).toBe(false);
   });
 
-  it("reports warning when entry references missing artifact", () => {
+  it("reports error when entry references missing artifact", () => {
     const contract = createValidContract({
       artifacts: [{ path: "index.js", format: "esm", type: "code" }],
       entries: [{ exportName: ".", main: "index.js", types: "index.d.ts" }],
     });
     const report = validator.validate(contract);
 
+    expect(report.passed).toBe(false);
     expect(
       report.results.some(
-        (result) => result.message.includes("index.d.ts") && result.severity === "warning",
+        (result) => result.message.includes("index.d.ts") && result.severity === "error",
       ),
     ).toBe(true);
   });
 
-  it("warns when types file is missing from entry", () => {
+  it("reports error when types file is missing from entry", () => {
     const contract = createValidContract({
       entries: [{ exportName: ".", main: "index.js", types: "" }],
     });
     const report = validator.validate(contract);
 
-    expect(report.results.some((result) => result.message.includes("types"))).toBe(true);
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) => result.message.includes("types") && result.severity === "error",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not require optional cjs entry artifacts when cjs is omitted", () => {
+    const contract = createValidContract({
+      artifacts: [
+        { path: "index.js", format: "esm", type: "code" },
+        { path: "index.d.ts", format: "esm", type: "types" },
+      ],
+      entries: [{ exportName: ".", main: "index.js", types: "index.d.ts" }],
+    });
+    const report = validator.validate(contract);
+
+    expect(report.passed).toBe(true);
   });
 
   it("handles empty contract gracefully", () => {

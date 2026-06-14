@@ -96,7 +96,7 @@ export class OutputContractValidator {
     if (!entry.types) {
       results.push({
         path,
-        severity: "warning",
+        severity: "error",
         message: `Entry '${entry.exportName}' missing types file`,
       });
     }
@@ -125,7 +125,7 @@ export class OutputContractValidator {
       if (!artifactPaths.has(refPath)) {
         results.push({
           path: `cross-check:${refPath}`,
-          severity: "warning",
+          severity: "error",
           message: `Entry references '${refPath}' but no matching artifact exists`,
         });
       }
