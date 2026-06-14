@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "paths": {
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
+  },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }

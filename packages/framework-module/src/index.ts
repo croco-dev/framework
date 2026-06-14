@@ -1,5 +1,5 @@
 import type { ModuleContext } from "./ModuleContext";
-import { initializeModules, registerModule, resetModules } from "./ModuleRegistry";
+import { initializeModules, registerModule, resetModules, shutdownModules } from "./ModuleRegistry";
 import type { ModuleOptions } from "./types";
 
 export class CrocoModule {
@@ -11,13 +11,43 @@ export class CrocoModule {
     return initializeModules();
   }
 
+  static async shutdown(): Promise<void> {
+    await shutdownModules();
+  }
+
   static reset(): void {
     resetModules();
   }
 }
 
+export function defineCrocoModule(module: ModuleOptions): ModuleOptions {
+  return Object.freeze({
+    ...module,
+    imports: module.imports ? Object.freeze([...module.imports]) : undefined,
+    providers: module.providers ? Object.freeze([...module.providers]) : undefined,
+    exports: module.exports ? Object.freeze([...module.exports]) : undefined,
+    controllers: module.controllers ? Object.freeze([...module.controllers]) : undefined,
+  });
+}
+
 export { detectCircularDependency } from "./CircularDependencyDetector";
 export { ModuleContext } from "./ModuleContext";
 export { ModuleDiagnosticsProvider } from "./libs/diagnostics/ModuleDiagnosticsProvider";
-export type { CrocoModule as CrocoModuleDefinition, ModuleOptions } from "./types";
+export {
+  InvalidModuleDefinitionProblem,
+  ModuleCircularDependencyProblem,
+  ModuleLifecycleProblem,
+  ModuleProviderVisibilityProblem,
+} from "./problems";
+export type {
+  CrocoModule as CrocoModuleDefinition,
+  ModuleDiagnosticsSnapshot,
+  ModuleLifecycleHook,
+  ModuleLifecyclePhase,
+  ModuleOptions,
+  ModuleProvider,
+  ModuleProviderDefinition,
+  ModuleProviderFactory,
+  ModuleRuntimePhase,
+} from "./types";
 export type { ModuleToken } from "./types/ModuleToken";

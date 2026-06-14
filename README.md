@@ -398,7 +398,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `@croco/events-tx`            | Core         | `packages/events-tx`            | tests              |
 | `@croco/framework-config`     | Core         | `packages/framework-config`     | README, tests      |
 | `@croco/framework-logger`     | Core         | `packages/framework-logger`     | README, tests      |
-| `@croco/framework-module`     | Core         | `packages/framework-module`     | tests              |
+| `@croco/framework-module`     | Core         | `packages/framework-module`     | README, tests      |
 | `@croco/framework-preset`     | Core         | `packages/framework-preset`     | tests              |
 | `@croco/framework-routes`     | Core         | `packages/framework-routes`     | tests              |
 | `@croco/gid-core`             | Core         | `packages/gid-core`             | README, tests      |
@@ -434,7 +434,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `@croco/preset-cloudflare`    | Tooling      | `packages/preset-cloudflare`    | tests              |
 | `@croco/preset-lambda`        | Tooling      | `packages/preset-lambda`        | tests              |
 | `@croco/preset-node`          | Tooling      | `packages/preset-node`          | tests              |
-| `@croco/testing`              | Tooling      | `packages/testing`              | README, tests      |
+| `@croco/testing`              | Tooling      | `packages/testing`              | README, API, tests |
 | `@croco/transports-graphql`   | Transport    | `packages/transports-graphql`   | tests              |
 
 ### 🔴 alpha/WIP
