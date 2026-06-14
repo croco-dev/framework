@@ -164,6 +164,7 @@ export * from "./libs/interfaces/ItemWriter";
  * ```
  */
 export * from "./libs/JobBuilder";
+export * from "./libs/StepFailure";
 
 /**
  * Step - 배치 스텝

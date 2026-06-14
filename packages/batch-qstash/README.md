@@ -34,3 +34,4 @@ const result = await executor.executeChunk("execution-1", step);
 - 체크포인트 가능한 reader면 마지막 위치를 저장하고 복구합니다.
 - peek 지원 reader면 다음 아이템 존재 여부를 비소모 방식으로 확인합니다.
 - 다음 청크 메시지는 step 이름과 checkpoint 기준 idempotency key를 붙여 발행합니다.
+- `Step.classifyFailure`가 있으면 로컬 청크 실행기와 동일하게 재시도 가능 여부와 실패 코드를 보존합니다.

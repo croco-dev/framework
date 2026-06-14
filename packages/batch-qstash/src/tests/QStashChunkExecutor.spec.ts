@@ -308,6 +308,74 @@ describe("QStashChunkExecutor", () => {
     );
   });
 
+  it("should preserve non-retryable failure classification", async () => {
+    const error = Object.assign(new Error("Permanent write failed"), {
+      category: "ValidationError",
+    });
+    const classifyFailure = vi.fn().mockReturnValue({ retryable: false });
+    const reader = {
+      read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(null),
+    };
+    const writer = {
+      write: vi.fn().mockRejectedValue(error),
+    };
+
+    const step = new Step<number, number>({
+      name: "non-retryable-qstash-step",
+      reader,
+      writer,
+      chunkSize: 10,
+      classifyFailure,
+    });
+
+    await expect(executor.executeChunk("exec-1", step)).rejects.toThrow("Permanent write failed");
+    expect(classifyFailure).toHaveBeenCalledWith(error, {
+      executionId: "exec-1",
+      stepName: "non-retryable-qstash-step",
+    });
+    expect(executionManager.fail).toHaveBeenCalledWith(
+      "exec-1",
+      expect.objectContaining({
+        message: "Permanent write failed",
+        code: "ValidationError",
+        retryable: false,
+      }),
+    );
+  });
+
+  it("should record the original failure when classification throws", async () => {
+    const error = Object.assign(new Error("Write failed"), {
+      category: "InternalServerError",
+    });
+    const classifyFailure = vi.fn().mockImplementation(() => {
+      throw new Error("Classifier failed");
+    });
+    const reader = {
+      read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(null),
+    };
+    const writer = {
+      write: vi.fn().mockRejectedValue(error),
+    };
+
+    const step = new Step<number, number>({
+      name: "classifier-failure-qstash-step",
+      reader,
+      writer,
+      chunkSize: 10,
+      classifyFailure,
+    });
+
+    await expect(executor.executeChunk("exec-1", step)).rejects.toThrow("Write failed");
+    expect(executionManager.fail).toHaveBeenCalledWith(
+      "exec-1",
+      expect.objectContaining({
+        message: "Write failed",
+        code: "InternalServerError",
+        retryable: true,
+      }),
+    );
+  });
+
   it("should use processor when provided", async () => {
     const reader = {
       read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(2).mockResolvedValueOnce(null),
