@@ -13,14 +13,20 @@ export type CloudflareFetchHandler = (
   ctx: ExecutionContext,
 ) => Response | Promise<Response>;
 
+export type CloudflareAppFetch = (
+  request: Request,
+  env: CloudflareFetchEnv,
+  ctx: ExecutionContext,
+) => Response | Promise<Response>;
+
 export function createWorkerFetchHandler(honoApp: {
-  readonly fetch: (req: Request) => Promise<Response>;
+  readonly fetch: CloudflareAppFetch;
 }): CloudflareFetchHandler {
   return async (
     request: Request,
-    _env: CloudflareFetchEnv,
-    _ctx: ExecutionContext,
+    env: CloudflareFetchEnv,
+    ctx: ExecutionContext,
   ): Promise<Response> => {
-    return honoApp.fetch(request);
+    return honoApp.fetch(request, env, ctx);
   };
 }
