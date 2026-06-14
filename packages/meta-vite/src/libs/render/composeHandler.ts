@@ -6,15 +6,23 @@ const NOT_FOUND_HEADERS = {
   "content-type": "text/html; charset=utf-8",
 } as const;
 
-const NOT_FOUND_RESPONSE = new Response("<h1>Not Found</h1>", {
-  status: 404,
-  headers: NOT_FOUND_HEADERS,
-});
+const API_NOT_FOUND_HEADERS = {
+  "content-type": "application/json",
+} as const;
 
-const API_NOT_FOUND_RESPONSE = new Response(JSON.stringify({ error: "Not Found" }), {
-  status: 404,
-  headers: { "content-type": "application/json" },
-});
+function createNotFoundResponse(): Response {
+  return new Response("<h1>Not Found</h1>", {
+    status: 404,
+    headers: NOT_FOUND_HEADERS,
+  });
+}
+
+function createApiNotFoundResponse(): Response {
+  return new Response(JSON.stringify({ error: "Not Found" }), {
+    status: 404,
+    headers: API_NOT_FOUND_HEADERS,
+  });
+}
 
 export type MetaFetchHandlerOptions = {
   readonly apiHandler?: (
@@ -44,7 +52,7 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
       }
 
       // API route miss → 404 (NOT page fallback)
-      return API_NOT_FOUND_RESPONSE;
+      return createApiNotFoundResponse();
     }
 
     // Legacy apiHandler flow (backward compatibility)
@@ -63,7 +71,7 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
     }
 
     if (!options.pageHandler) {
-      return NOT_FOUND_RESPONSE;
+      return createNotFoundResponse();
     }
 
     const pageHandler = options.pageHandler;

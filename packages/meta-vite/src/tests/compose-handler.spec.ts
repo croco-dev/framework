@@ -59,6 +59,18 @@ describe("createMetaFetchHandler", () => {
     await expect(response.text()).resolves.toContain("Not Found");
   });
 
+  it("returns fresh 404 responses when no page handler is available", async () => {
+    const handler = createMetaFetchHandler({});
+
+    const first = await handler(new Request("https://example.com/first-missing"));
+    const second = await handler(new Request("https://example.com/second-missing"));
+
+    expect(first.status).toBe(404);
+    expect(second.status).toBe(404);
+    await expect(first.text()).resolves.toContain("Not Found");
+    await expect(second.text()).resolves.toContain("Not Found");
+  });
+
   it("delegates directly to page handler when no API handler is provided", async () => {
     const handler = createMetaFetchHandler({
       pageHandler: async () => new Response("page-direct"),
@@ -135,6 +147,27 @@ describe("createMetaFetchHandler with apiRoutes", () => {
     const response = await handler(new Request("https://example.com/api/nonexistent"));
 
     expect(response.status).toBe(404);
+    expect(pageHandler).not.toHaveBeenCalled();
+  });
+
+  it("returns fresh API 404 responses for repeated route misses", async () => {
+    const apiRoutes = createApiRoutes([
+      {
+        path: "/api/exists",
+        handler: async () => new Response("exists"),
+      },
+    ]);
+
+    const pageHandler = vi.fn(async () => new Response("page"));
+    const handler = createMetaFetchHandler({ apiRoutes, pageHandler });
+
+    const first = await handler(new Request("https://example.com/api/missing-one"));
+    const second = await handler(new Request("https://example.com/api/missing-two"));
+
+    expect(first.status).toBe(404);
+    expect(second.status).toBe(404);
+    await expect(first.json()).resolves.toEqual({ error: "Not Found" });
+    await expect(second.json()).resolves.toEqual({ error: "Not Found" });
     expect(pageHandler).not.toHaveBeenCalled();
   });
 
