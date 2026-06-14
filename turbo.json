@@ -28,11 +28,11 @@
     },
     "test": {
       "cache": true,
-      "dependsOn": ["^test"]
+      "dependsOn": ["^build", "^test"]
     },
     "typecheck": {
       "cache": true,
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^build", "^typecheck"]
     }
   }
 }

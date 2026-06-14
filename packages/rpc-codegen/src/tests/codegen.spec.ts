@@ -86,6 +86,10 @@ describe("generateClientFiles", () => {
     expect(files).toEqual([path.join(TEMP_DIR, "user.ts")]);
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export const userClient = {");
+    expect(content).toContain("export class RpcClientProblemError extends Error");
+    expect(content).toContain("export class RpcClientResponseError extends Error");
+    expect(content).toContain("if (isRpcProblemDetails(body))");
+    expect(content).not.toContain("async function handleJsonResponse<T = unknown>");
     expect(content).toContain(
       "list: (): Promise<unknown | undefined> => fetch('/users', { method: 'GET' }).then((response) => readOptionalJsonResponse(response)),",
     );
@@ -307,7 +311,8 @@ describe("generateClientFiles", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export type GetOutput = { id: string; name: string; };");
     expect(content).toContain("get: (input: GetInput): Promise<GetOutput> =>");
-    expect(content).toContain("response.json() as Promise<GetOutput>");
+    expect(content).toContain("handleJsonResponse<GetOutput>(response)");
+    expect(content).not.toContain("readOptionalJsonResponse(response: Response)");
   });
 
   it("should not emit zod references for body-only routes", () => {
