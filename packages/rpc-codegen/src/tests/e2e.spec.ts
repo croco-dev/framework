@@ -85,6 +85,29 @@ describe("rpc-codegen e2e", () => {
     );
     expect(content).not.toContain("zod");
   }, 60_000);
+
+  it("rejects extracted @All controller routes before generating clients", async () => {
+    const sourcePath = path.join(sourceDir, "HooksController.ts");
+    fs.writeFileSync(sourcePath, getAllControllerSource());
+
+    const sourceFile = emitController(sourcePath);
+    const emittedPath = getEmittedFilePath(sourceDir, emitDir, sourceFile);
+    const controllerCtor = await importController(emittedPath, "HooksController");
+
+    const routes = extractRouteIR(controllerCtor);
+
+    expect(routes).toHaveLength(1);
+    expect(routes[0]).toMatchObject({
+      controllerName: "HooksController",
+      methodName: "handleHook",
+      httpMethod: "ALL",
+      path: "/hooks/:id",
+    });
+    expect(() => generateClientFiles(routes, outDir)).toThrow(
+      "Cannot generate RPC client for @All route HooksController.handleHook (/hooks/:id): @All is runtime-only and cannot be represented as a concrete generated client request. Use explicit HTTP method decorators for generated contracts.",
+    );
+    expect(fs.existsSync(path.join(outDir, "hooks.ts"))).toBe(false);
+  }, 60_000);
 });
 
 function emitController(sourcePath: string): SourceFile {
@@ -275,5 +298,66 @@ export class TestController {
 }
 
 Reflect.defineMetadata(RESPONSE_SCHEMA_KEY, z.object({ id: z.string(), name: z.string() }), TestController, 'createUser');
+`;
+}
+
+function getAllControllerSource(): string {
+  return `const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
+
+enum ParamType {
+  PARAM = 'param',
+}
+
+type RouteMetadata = {
+  readonly method: string;
+  readonly path: string;
+  readonly methodName: string | symbol;
+};
+
+function Controller(controllerPath: string): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: controllerPath, target }, target);
+  };
+}
+
+function All(routePath: string): MethodDecorator {
+  return createRouteDecorator('ALL', routePath);
+}
+
+function Param(name: string): ParameterDecorator {
+  return createParamDecorator(ParamType.PARAM, name);
+}
+
+function createRouteDecorator(method: string, routePath: string): MethodDecorator {
+  return (target, propertyKey) => {
+    const ctor = target.constructor;
+    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method, path: routePath, methodName: propertyKey }], ctor);
+  };
+}
+
+function createParamDecorator(type: ParamType, name: string): ParameterDecorator {
+  return (target, propertyKey, parameterIndex) => {
+    if (!propertyKey) return;
+
+    const ctor = target.constructor;
+    const paramsMap = (Reflect.getMetadata(REST_PARAMS_KEY, ctor) as Map<string | symbol, unknown[]> | undefined) ?? new Map();
+    const methodParams = paramsMap.get(propertyKey) ?? [];
+
+    paramsMap.set(propertyKey, [...methodParams, { type, index: parameterIndex, name }]);
+    Reflect.defineMetadata(REST_PARAMS_KEY, paramsMap, ctor);
+  };
+}
+
+@Controller('/hooks')
+export class HooksController {
+  @All('/:id')
+  handleHook(@Param('id') id: string) {
+    return { id };
+  }
+}
 `;
 }

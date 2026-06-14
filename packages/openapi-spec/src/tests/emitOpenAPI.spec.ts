@@ -12,6 +12,7 @@ import {
   Post,
   Query,
   ResponseSchema,
+  All,
 } from "@croco/protocols-rest";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -132,6 +133,18 @@ describe("emitOpenAPI", () => {
     expect(spec.paths?.["/health"]?.get?.responses?.[200]).toEqual({
       description: "Successful response",
     });
+  });
+
+  it("should reject @All routes with a generated-contract diagnostic", () => {
+    @Controller("/hooks")
+    class HooksController {
+      @All("/:id")
+      handleHook(@Param("id") _id: string): void {}
+    }
+
+    expect(() => emitOpenAPI([HooksController])).toThrow(
+      "Cannot emit OpenAPI operation for @All route HooksController.handleHook (/hooks/:id): @All is runtime-only and cannot be represented as a concrete OpenAPI operation. Use explicit HTTP method decorators for generated contracts.",
+    );
   });
 
   it("should unwrap refined response schemas", () => {

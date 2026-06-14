@@ -46,7 +46,7 @@ export function emitOpenAPI(controllers: Function[]): OpenAPIDocument {
 
 function toRouteConfig(route: RouteIR): RouteConfig {
   return {
-    method: toHttpMethod(route.httpMethod),
+    method: toHttpMethod(route),
     path: toOpenAPIPath(route.path),
     operationId: `${route.controllerName}_${route.methodName}`,
     summary: `${route.controllerName}.${route.methodName}`,
@@ -159,7 +159,8 @@ function toOpenAPIPath(path: string): string {
   return path.replace(/:([^/]+)/g, "{$1}");
 }
 
-function toHttpMethod(method: string): HttpMethod {
+function toHttpMethod(route: RouteIR): HttpMethod {
+  const method = route.httpMethod;
   const normalizedMethod = method.toLowerCase();
   const httpMethod = HTTP_METHODS.find((candidate) => candidate === normalizedMethod);
 
@@ -167,5 +168,15 @@ function toHttpMethod(method: string): HttpMethod {
     return httpMethod;
   }
 
+  if (normalizedMethod === "all") {
+    throw new Error(
+      `Cannot emit OpenAPI operation for @All route ${formatRoute(route)}: @All is runtime-only and cannot be represented as a concrete OpenAPI operation. Use explicit HTTP method decorators for generated contracts.`,
+    );
+  }
+
   throw new Error(`Unsupported HTTP method: ${method}`);
+}
+
+function formatRoute(route: RouteIR): string {
+  return `${route.controllerName}.${route.methodName} (${route.path})`;
 }

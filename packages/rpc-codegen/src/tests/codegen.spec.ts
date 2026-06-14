@@ -91,6 +91,27 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should reject ALL routes instead of emitting invalid fetch methods", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "HooksController",
+        methodName: "handleHook",
+        httpMethod: "ALL",
+        path: "/hooks/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      "Cannot generate RPC client for @All route HooksController.handleHook (/hooks/:id): @All is runtime-only and cannot be represented as a concrete generated client request. Use explicit HTTP method decorators for generated contracts.",
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "hooks.ts"))).toBe(false);
+  });
+
   it("should serialize POST body input", () => {
     const routes: RouteIR[] = [
       {
