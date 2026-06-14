@@ -1677,6 +1677,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
 
   packages/presentation-preset:
     dependencies:

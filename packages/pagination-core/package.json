@@ -29,7 +29,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "zod": "4.3.6"
   },
   "devDependencies": {}
 }
