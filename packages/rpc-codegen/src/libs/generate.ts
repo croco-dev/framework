@@ -48,22 +48,7 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const types = [...inputTypes, ...outputTypes];
-  const responseHelpers = domainRoutes.routes.some((route) => !route.outputSchema)
-    ? `async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
-  if (response.ok && response.status === 204) {
-    return undefined;
-  }
-
-  const body = await response.text();
-
-  if (response.ok && body.length === 0) {
-    return undefined;
-  }
-
-  return JSON.parse(body) as unknown;
-}
-`
-    : "";
+  const responseHelpers = getResponseHelpers();
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
     ? `type QueryParamValue = string | number | boolean | null | undefined;
 type QueryParamInput = QueryParamValue | readonly QueryParamValue[];
@@ -121,6 +106,101 @@ export const ${clientName} = {
 ${clientMethods}
 };
 ${hooks}`;
+}
+
+function getResponseHelpers(): string {
+  return `export type RpcProblemDetails = {
+  type: string;
+  title: string;
+  status: number;
+  code: string;
+  detail?: string;
+  instance?: string;
+} & Record<string, unknown>;
+
+export class RpcClientProblemError extends Error {
+  readonly problem: RpcProblemDetails;
+  readonly response: Response;
+
+  constructor(problem: RpcProblemDetails, response: Response) {
+    super(problem.detail ?? problem.title);
+    this.name = 'RpcClientProblemError';
+    this.problem = problem;
+    this.response = response;
+  }
+}
+
+export class RpcClientResponseError extends Error {
+  readonly response: Response;
+  readonly body?: unknown;
+
+  constructor(response: Response, body?: unknown) {
+    super(\`RPC request failed with HTTP \${response.status}\`);
+    this.name = 'RpcClientResponseError';
+    this.response = response;
+    this.body = body;
+  }
+}
+
+async function handleJsonResponse<T = unknown>(response: Response): Promise<T> {
+  if (!response.ok) {
+    return rejectErrorResponse(response);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
+  if (!response.ok) {
+    return rejectErrorResponse(response);
+  }
+
+  if (response.status === 204) {
+    return undefined;
+  }
+
+  const body = await response.text();
+
+  if (body.length === 0) {
+    return undefined;
+  }
+
+  return JSON.parse(body) as unknown;
+}
+
+async function rejectErrorResponse(response: Response): Promise<never> {
+  let body: unknown;
+
+  try {
+    body = await response.json();
+  } catch {
+    throw new RpcClientResponseError(response);
+  }
+
+  if (isRpcProblemDetails(body)) {
+    throw new RpcClientProblemError(body, response);
+  }
+
+  throw new RpcClientResponseError(response, body);
+}
+
+function isRpcProblemDetails(value: unknown): value is RpcProblemDetails {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.type === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.status === 'number' &&
+    typeof value.code === 'string'
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+`;
 }
 
 function generateInputType(route: RouteIR): string {
@@ -204,7 +284,7 @@ function getResponseExpression(route: RouteIR): string {
     return "readOptionalJsonResponse(response)";
   }
 
-  return `response.json() as Promise<${getOutputTypeName(route)}>`;
+  return `handleJsonResponse<${getOutputTypeName(route)}>(response)`;
 }
 
 function getReturnType(route: RouteIR): string {

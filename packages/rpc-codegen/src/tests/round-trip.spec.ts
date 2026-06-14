@@ -195,10 +195,10 @@ describe("rpc-codegen round trip", () => {
     expect(healthContent).toContain(
       "function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
     );
-    expect(healthContent).not.toContain("response.json()");
+    expect(healthContent).toContain("async function rejectErrorResponse(response: Response): Promise<never>");
     await expect(healthModule.healthClient.health()).resolves.toBeUndefined();
     await expect(healthModule.healthClient.clear()).resolves.toBeUndefined();
-    await expect(healthModule.healthClient.fail()).rejects.toThrow(SyntaxError);
+    await expect(healthModule.healthClient.fail()).rejects.toThrow("RPC request failed with HTTP 500");
     expect(fetchMock).toHaveBeenCalledWith("/health", { method: "GET" });
     expect(fetchMock).toHaveBeenCalledWith("/health/cache", { method: "POST" });
     expect(fetchMock).toHaveBeenCalledWith("/health/fail", { method: "GET" });
@@ -315,6 +315,84 @@ describe("rpc-codegen round trip", () => {
       name: "Alice",
     });
   });
+
+  it("rejects non-2xx Problem responses with preserved details", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: { body: null, path: z.object({ id: z.string() }) as any, query: null },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-problem.ts", userContent);
+    const problem = {
+      type: "https://errors.example.com/not-found",
+      title: "Not Found",
+      status: 404,
+      code: "USER_NOT_FOUND",
+      detail: "User missing",
+      traceId: "trace-1",
+    };
+    const fetchMock = vi.fn(async () => jsonResponse(problem, 404));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = await getRejectedError(
+      userModule.userClient.getUser({ path: { id: "missing" } }),
+    );
+    const problemError = error as {
+      readonly name: string;
+      readonly problem: Record<string, unknown>;
+      readonly response: Response;
+    };
+
+    expect(problemError.name).toBe("RpcClientProblemError");
+    expect(problemError.problem).toEqual(problem);
+    expect(problemError.response.status).toBe(404);
+  });
+
+  it("rejects non-JSON error responses without parsing them as success", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: { body: null, path: z.object({ id: z.string() }) as any, query: null },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-non-json.ts", userContent);
+    const fetchMock = vi.fn(async () => textResponse("upstream unavailable", 503));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = await getRejectedError(userModule.userClient.getUser({ path: { id: "1" } }));
+    const responseError = error as {
+      readonly name: string;
+      readonly message: string;
+      readonly response: Response;
+    };
+
+    expect(responseError.name).toBe("RpcClientResponseError");
+    expect(responseError.message).toBe("RPC request failed with HTTP 503");
+    expect(responseError.response.status).toBe(503);
+  });
 });
 
 async function importGeneratedClient(fileName: string, source: string) {
@@ -365,4 +443,21 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { "content-type": "application/json" },
   });
+}
+
+function textResponse(body: string, status: number): Response {
+  return new Response(body, {
+    status,
+    headers: { "content-type": "text/plain" },
+  });
+}
+
+async function getRejectedError(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+
+  throw new Error("Expected promise to reject.");
 }
