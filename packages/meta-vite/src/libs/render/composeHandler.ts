@@ -24,6 +24,16 @@ function createApiNotFoundResponse(): Response {
   });
 }
 
+function createApiMethodNotAllowedResponse(allowedMethods: readonly string[]): Response {
+  const headers = new Headers(API_NOT_FOUND_HEADERS);
+  headers.set("Allow", allowedMethods.join(", "));
+
+  return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+    status: 405,
+    headers,
+  });
+}
+
 export type MetaFetchHandlerOptions = {
   readonly apiHandler?: (
     request: Request,
@@ -40,15 +50,17 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
 
     // URL-based API route dispatch: /api/* → apiRoutes matching
     if (options.apiRoutes && pathname.startsWith("/api/")) {
-      const route = options.apiRoutes.find((r) => {
-        const methodMatch = r.method === undefined || r.method === request.method;
-        const exactMatch = pathname === r.path;
-        const prefixMatch = pathname.startsWith(`${r.path}/`);
-        return methodMatch && (exactMatch || prefixMatch);
-      });
+      const pathMatchedRoutes = options.apiRoutes.filter((r) => routePathMatches(pathname, r.path));
+      const route = pathMatchedRoutes.find(
+        (r) => r.method === undefined || r.method === request.method,
+      );
 
       if (route) {
         return route.handler(request, context);
+      }
+
+      if (pathMatchedRoutes.length > 0) {
+        return createApiMethodNotAllowedResponse(getAllowedMethods(pathMatchedRoutes));
       }
 
       // API route miss → 404 (NOT page fallback)
@@ -88,4 +100,12 @@ function isRenderServer(
   pageHandler: RenderServer | CrocoFetchHandler,
 ): pageHandler is RenderServer {
   return "handle" in pageHandler && typeof pageHandler.handle === "function";
+}
+
+function routePathMatches(pathname: string, routePath: string): boolean {
+  return pathname === routePath || pathname.startsWith(`${routePath}/`);
+}
+
+function getAllowedMethods(routes: readonly ApiRouteIR[]): string[] {
+  return Array.from(new Set(routes.flatMap((route) => (route.method ? [route.method] : []))));
 }

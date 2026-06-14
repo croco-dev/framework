@@ -313,6 +313,8 @@ describe("Server Action HTTP Integration", () => {
       }),
     );
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("POST");
+    await expect(response.json()).resolves.toEqual({ error: "Method Not Allowed" });
   });
 });

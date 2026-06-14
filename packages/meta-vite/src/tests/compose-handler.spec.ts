@@ -171,7 +171,7 @@ describe("createMetaFetchHandler with apiRoutes", () => {
     expect(pageHandler).not.toHaveBeenCalled();
   });
 
-  it("returns 404 for /api/* with wrong method", async () => {
+  it("returns 405 with Allow header for /api/* with wrong method", async () => {
     const apiRoutes = createApiRoutes([
       {
         path: "/api/data",
@@ -185,7 +185,35 @@ describe("createMetaFetchHandler with apiRoutes", () => {
 
     const response = await handler(new Request("https://example.com/api/data", { method: "GET" }));
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("POST");
+    await expect(response.json()).resolves.toEqual({ error: "Method Not Allowed" });
+    expect(pageHandler).not.toHaveBeenCalled();
+  });
+
+  it("returns all allowed methods for an API route path mismatch", async () => {
+    const apiRoutes = createApiRoutes([
+      {
+        path: "/api/data",
+        method: "GET",
+        handler: async () => new Response("read"),
+      },
+      {
+        path: "/api/data",
+        method: "POST",
+        handler: async () => new Response("created"),
+      },
+    ]);
+
+    const pageHandler = vi.fn(async () => new Response("page"));
+    const handler = createMetaFetchHandler({ apiRoutes, pageHandler });
+
+    const response = await handler(
+      new Request("https://example.com/api/data", { method: "PATCH" }),
+    );
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("GET, POST");
     expect(pageHandler).not.toHaveBeenCalled();
   });
 
