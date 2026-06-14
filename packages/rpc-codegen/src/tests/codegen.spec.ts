@@ -62,7 +62,7 @@ describe("generateClientFiles", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export const userClient = {");
     expect(content).toContain(
-      "list: () => fetch('/users', { method: 'GET' }).then((response) => response.json()),",
+      "list: (): Promise<unknown | undefined> => fetch('/users', { method: 'GET' }).then((response) => readOptionalJsonResponse(response)),",
     );
   });
 
@@ -84,7 +84,7 @@ describe("generateClientFiles", () => {
     const files = generateClientFiles(routes, TEMP_DIR);
 
     const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("create: (input: CreateInput) =>");
+    expect(content).toContain("create: (input: CreateInput): Promise<unknown | undefined> =>");
     expect(content).toContain(
       "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
     );
@@ -234,6 +234,7 @@ describe("generateClientFiles", () => {
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export type GetOutput = { id: string; name: string; };");
+    expect(content).toContain("get: (input: GetInput): Promise<GetOutput> =>");
     expect(content).toContain("response.json() as Promise<GetOutput>");
   });
 
@@ -278,7 +279,7 @@ describe("generateClientFiles", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("const path = `/users/${input.path.id}`;");
     expect(content).toContain(
-      "return fetch(path, { method: 'GET' }).then((response) => response.json());",
+      "return fetch(path, { method: 'GET' }).then((response) => readOptionalJsonResponse(response));",
     );
   });
 
@@ -312,7 +313,7 @@ describe("generateClientFiles", () => {
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain("const url = query ? `${path}?${query}` : path;");
     expect(content).toContain(
-      "return fetch(url, { method: 'GET' }).then((response) => response.json());",
+      "return fetch(url, { method: 'GET' }).then((response) => readOptionalJsonResponse(response));",
     );
   });
 
@@ -367,10 +368,14 @@ describe("generateClientFiles", () => {
     expect(content).toContain(
       "export type ListInput = { query: { page: number; active: boolean | undefined; search: string | undefined; tags: string[]; deletedAt: string | null; }; };",
     );
+    expect(content).toContain(
+      "function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
+    );
     assertGeneratedClientTypechecks(`${content}
-userClient.list({
+const result: Promise<unknown | undefined> = userClient.list({
   query: { page: 2, active: false, search: undefined, tags: ['new', 'vip'], deletedAt: null },
 });
+void result;
 `);
   });
 

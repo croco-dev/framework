@@ -73,13 +73,13 @@ describe("rpc-codegen e2e", () => {
     expect(content).toContain("const path = `/users/${input.path.id}`;");
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain(
-      "return fetch(url, { method: 'GET' }).then((response) => response.json());",
+      "return fetch(url, { method: 'GET' }).then((response) => readOptionalJsonResponse(response));",
     );
     expect(content).toContain(
       "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
     );
     expect(content).toContain(
-      "health: () => fetch('/health', { method: 'GET' }).then((response) => response.json()),",
+      "health: (): Promise<unknown | undefined> => fetch('/health', { method: 'GET' }).then((response) => readOptionalJsonResponse(response)),",
     );
     expect(content).not.toContain("zod");
   }, 60_000);
