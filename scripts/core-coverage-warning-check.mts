@@ -13,9 +13,10 @@ type PackageCoverageResult = {
   packageName: string;
   packagePath: string;
   summaryPath: string;
-  totals: CoverageTotals;
+  totals: CoverageTotals | null;
   thresholdWarnings: string[];
   baselineWarnings: string[];
+  missingSummaryWarning: string | null;
 };
 
 type BaselineEntry = {
@@ -107,7 +108,15 @@ function readCoverageSummary(packageName: string): PackageCoverageResult {
   const summaryPath = join(packagePath, "coverage", "coverage-summary.json");
 
   if (!existsSync(summaryPath)) {
-    throw new Error(`coverage summary not found: ${summaryPath}`);
+    return {
+      packageName,
+      packagePath,
+      summaryPath,
+      totals: null,
+      thresholdWarnings: [],
+      baselineWarnings: [],
+      missingSummaryWarning: `coverage summary not found: ${summaryPath}`,
+    };
   }
 
   const coverageSummary = JSON.parse(readFileSync(summaryPath, "utf-8")) as CoverageSummary;
@@ -122,6 +131,7 @@ function readCoverageSummary(packageName: string): PackageCoverageResult {
     totals,
     thresholdWarnings,
     baselineWarnings,
+    missingSummaryWarning: null,
   };
 }
 
@@ -184,9 +194,16 @@ function formatWarnings(warnings: string[]): string {
   return warnings.length > 0 ? warnings.join("; ") : "없음";
 }
 
+function formatCoveragePct(totals: CoverageTotals | null, metric: CoverageMetric): string {
+  return totals ? totals[metric].pct.toFixed(2) : "n/a";
+}
+
 function writeReport(results: PackageCoverageResult[]) {
   mkdirSync(reportDirectory, { recursive: true });
 
+  const missingSummaryWarnings = results
+    .filter((result) => result.missingSummaryWarning)
+    .map((result) => `- ${result.packageName}: ${result.missingSummaryWarning}`);
   const thresholdWarnings = results.flatMap((result) =>
     result.thresholdWarnings.map((warning) => `- ${result.packageName}: ${warning}`),
   );
@@ -220,10 +237,15 @@ function writeReport(results: PackageCoverageResult[]) {
     "| --- | ---: | ---: | ---: | ---: | --- | --- |",
     ...results.map(
       (result) =>
-        `| \`${result.packageName}\` | ${result.totals.statements.pct.toFixed(2)} | ${result.totals.branches.pct.toFixed(2)} | ${result.totals.functions.pct.toFixed(2)} | ${result.totals.lines.pct.toFixed(2)} | ${formatWarnings(result.thresholdWarnings)} | ${formatWarnings(result.baselineWarnings)} |`,
+        `| \`${result.packageName}\` | ${formatCoveragePct(result.totals, "statements")} | ${formatCoveragePct(result.totals, "branches")} | ${formatCoveragePct(result.totals, "functions")} | ${formatCoveragePct(result.totals, "lines")} | ${formatWarnings(result.thresholdWarnings)} | ${formatWarnings(result.baselineWarnings)} |`,
     ),
     "",
     "## Warning summary",
+    missingSummaryWarnings.length > 0
+      ? "### Missing coverage summaries"
+      : "### Missing coverage summaries\n- 없음",
+    ...(missingSummaryWarnings.length > 0 ? missingSummaryWarnings : []),
+    "",
     thresholdWarnings.length > 0 ? "### Threshold warnings" : "### Threshold warnings\n- 없음",
     ...(thresholdWarnings.length > 0 ? thresholdWarnings : []),
     "",
@@ -247,7 +269,11 @@ async function main() {
   console.log(`\n⚠️  Core coverage warning-only report written to ${resolve(reportPath)}`);
 
   const totalWarnings = results.reduce(
-    (count, result) => count + result.thresholdWarnings.length + result.baselineWarnings.length,
+    (count, result) =>
+      count +
+      (result.missingSummaryWarning ? 1 : 0) +
+      result.thresholdWarnings.length +
+      result.baselineWarnings.length,
     0,
   );
 
