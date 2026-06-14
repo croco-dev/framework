@@ -37,6 +37,7 @@
     "@croco/protocols-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
+    "@hono/node-server": "^1.19.10",
     "@opentelemetry/api": "^1.9.0",
     "@types/aws-lambda": "^8.10.0",
     "hono": "^4.12.15",
@@ -44,7 +45,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@hono/node-server": "^1.19.10",
     "vitest": "4.0.16"
   },
   "vitest": {
