@@ -12,6 +12,14 @@ Cloudflare Workers + Vite + Vike 통합 플러그인 패키지입니다.
 pnpm add @croco/frontend-vite
 ```
 
+Cloudflare 통합을 사용하는 기본 설정(`crocoVitePlugin()`)에는 선택적 peer dependency인 `@cloudflare/vite-plugin`도 필요합니다:
+
+```bash
+pnpm add @cloudflare/vite-plugin
+```
+
+Cloudflare 통합을 사용하지 않는 Vite 설정은 `cloudflare: false`를 지정하면 `@cloudflare/vite-plugin` 없이도 패키지 엔트리포인트를 import할 수 있습니다.
+
 ## 사용법
 
 ### Vite 설정
@@ -50,7 +58,7 @@ Cloudflare Workers + Vite + Vike 통합 플러그인을 반환합니다.
 - `ssr?: boolean` - SSR 활성화 여부 (기본값: `true`)
 - `cloudflare?: boolean` - Cloudflare Workers 타겟 여부 (기본값: `true`)
 
-**반환값:** `Plugin[]` - Vite 플러그인 배열
+**반환값:** `PluginOption[]` - Vite 플러그인 옵션 배열
 
 ## 타입
 
@@ -71,7 +79,7 @@ export type CrocoViteOptions = {
 
 ```typescript
 export type CrocoViteConfig = {
-  plugins: Plugin[];
+  plugins: PluginOption[];
 };
 ```
 
