@@ -77,20 +77,22 @@ Container.get(HealthCheckRegistry).register("database", async () => ({ status: "
 ## Operational Endpoints
 
 `createApp()`는 별도 컨트롤러 없이 운영 endpoint를 등록합니다. Readiness 실행은
-`@croco/health-core`의 `HealthCheckService`를 통해 수행되며, `HealthCheckRegistry`는 기존
-HTTP 응답 contract를 유지하는 compatibility wrapper입니다.
+`@croco/health-core`의 `HealthCheckService`를 통해 수행되며, `HealthCheckRegistry`는 HTTP에서
+간단히 이름별 체크를 등록하기 위한 adapter입니다.
 
-| Endpoint                  | 기본 노출 | 성공 응답                              | 실패 응답                        |
-| ------------------------- | --------- | -------------------------------------- | -------------------------------- |
-| `GET /health`             | on        | `200 { "status": "ok" }`               | 없음                             |
-| `GET /health/live`        | on        | `200 { "status": "ok" }`               | 없음                             |
-| `GET /ready`              | on        | `200 { "status": "ok", "checks": {} }` | `503 { "status": "error", ... }` |
-| `GET /health/ready`       | on        | `/ready`와 동일                        | `/ready`와 동일                  |
-| `GET /health/diagnostics` | off       | `200 DiagnosticsReport`                | `403 { "error": "Forbidden" }`   |
+| Endpoint                  | 기본 노출 | 성공 응답                               | 실패 응답                       |
+| ------------------------- | --------- | --------------------------------------- | ------------------------------- |
+| `GET /health`             | on        | `200 { "status": "ok" }`                | 없음                            |
+| `GET /health/live`        | on        | `200 { "status": "ok" }`                | 없음                            |
+| `GET /ready`              | on        | `200 { "status": "up", "results": [] }` | `503 { "status": "down", ... }` |
+| `GET /health/ready`       | on        | `/ready`와 동일                         | `/ready`와 동일                 |
+| `GET /health/diagnostics` | off       | `200 DiagnosticsReport`                 | `403 { "error": "Forbidden" }`  |
 
-`/ready`와 `/health/ready`는 같은 readiness contract를 반환합니다. 등록된 체크가 없으면
-`{ "status": "ok", "checks": {} }`로 간주합니다. 체크 함수가 실패하거나 timeout을 넘기면 해당
-체크는 `{ "status": "down", "error": "..." }`로 직렬화되고 전체 응답은 `503`입니다.
+`/ready`와 `/health/ready`는 `@croco/health-core`의 `HealthCheckResult` readiness contract를
+그대로 반환합니다. 등록된 체크가 없으면 `{ "status": "up", "results": [] }`로 간주합니다. 체크
+함수가 실패하거나 timeout을 넘기면 해당 체크는 `results` 배열에서
+`{ "name": "...", "status": "down", "details": { "error": "..." } }`로 직렬화되고 전체 응답은
+`503`입니다.
 
 ### Diagnostics exposure policy
 

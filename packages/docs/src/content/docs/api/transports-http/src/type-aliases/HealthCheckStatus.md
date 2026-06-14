@@ -5,4 +5,4 @@ prev: false
 title: "HealthCheckStatus"
 ---
 
-> **HealthCheckStatus** = `"up"` \| `"down"`
+> **HealthCheckStatus** = `HealthStatus`

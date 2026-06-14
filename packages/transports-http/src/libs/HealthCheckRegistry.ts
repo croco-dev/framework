@@ -3,10 +3,13 @@ import {
   HealthCheckService,
   type HealthIndicator,
   type HealthIndicatorResult,
+  type HealthStatus,
+  type HealthCheckResult as CoreHealthCheckResult,
+  type HealthCheckServiceOptions,
 } from "@croco/health-core";
 import { ProblemFactory } from "@croco/problems-core";
 
-export type HealthCheckStatus = "up" | "down";
+export type HealthCheckStatus = HealthStatus;
 
 export interface HealthCheckResult {
   status: HealthCheckStatus;
@@ -15,9 +18,9 @@ export interface HealthCheckResult {
 
 export type HealthCheckFunction = (signal?: AbortSignal) => Promise<HealthCheckResult>;
 
-export interface HealthCheckOptions {
-  timeout?: number;
-}
+export interface HealthCheckOptions extends HealthCheckServiceOptions {}
+
+export interface HealthCheckRegistryResult extends CoreHealthCheckResult {}
 
 @Component({ scope: "singleton" })
 /**
@@ -39,19 +42,8 @@ export class HealthCheckRegistry {
     this.service.register(new RegisteredHealthCheckIndicator(name, check), options);
   }
 
-  async check(): Promise<{
-    status: "ok" | "error";
-    checks: Record<string, HealthCheckResult & { error?: string }>;
-  }> {
-    const result = await this.service.check();
-    const checks = Object.fromEntries(
-      result.results.map((checkResult) => [checkResult.name, toHttpHealthCheckResult(checkResult)]),
-    );
-
-    return {
-      status: result.status === "up" ? "ok" : "error",
-      checks,
-    };
+  async check(): Promise<HealthCheckRegistryResult> {
+    return this.service.check();
   }
 }
 
@@ -79,17 +71,4 @@ class RegisteredHealthCheckIndicator implements HealthIndicator {
         : {}),
     };
   }
-}
-
-function toHttpHealthCheckResult(result: Awaited<ReturnType<HealthIndicator["check"]>>) {
-  const details = result.details ?? {};
-  const normalizedDetails =
-    "error" in details && typeof details.error === "string" && details.error.includes("timeout")
-      ? { ...details, error: "timeout" }
-      : details;
-
-  return {
-    status: result.status,
-    ...normalizedDetails,
-  };
 }
