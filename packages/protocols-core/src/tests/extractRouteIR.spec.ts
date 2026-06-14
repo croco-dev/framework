@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractRouteIR } from "../libs/extractRouteIR";
-import { Body, Controller, Get, Param, Post, Query } from "./helpers/test-decorators";
+import { Body, Controller, Get, Header, Param, Post, Query } from "./helpers/test-decorators";
 
 const RESPONSE_SCHEMA_KEY = Symbol.for("croco:rest:responseSchema");
 
@@ -94,6 +94,7 @@ describe("extractRouteIR", () => {
     expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape).toHaveProperty("id");
     expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeNull();
+    expect(routes[0]?.inputSchemas.headers).toBeNull();
     expect(routes[0]?.params).toEqual([{ kind: "path", name: "id", schema: null }]);
   });
 
@@ -138,6 +139,26 @@ describe("extractRouteIR", () => {
       z.ZodString,
     );
     expect(routes[0]?.inputSchema).toBe(updateItemSchema);
+  });
+
+  it("should set inputSchemas.headers with default string schema for header params", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/")
+      listUsers(@Header("x-tenant-id") _tenantId: string): void {}
+    }
+
+    const routes = extractRouteIR(UsersController);
+
+    expect(routes).toHaveLength(1);
+    expect(routes[0]?.inputSchemas.body).toBeNull();
+    expect(routes[0]?.inputSchemas.path).toBeNull();
+    expect(routes[0]?.inputSchemas.query).toBeNull();
+    expect(routes[0]?.inputSchemas.headers).toBeTruthy();
+    expect(
+      (routes[0]?.inputSchemas.headers as z.ZodObject<any>).shape["x-tenant-id"],
+    ).toBeInstanceOf(z.ZodString);
+    expect(routes[0]?.params).toEqual([{ kind: "header", name: "x-tenant-id", schema: null }]);
   });
 
   it("should extract outputSchema from response schema metadata", () => {

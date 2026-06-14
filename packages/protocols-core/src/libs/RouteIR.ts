@@ -16,6 +16,7 @@ export type RouteInputSchemas = {
   body: z.ZodType | null;
   path: z.ZodType | null;
   query: z.ZodType | null;
+  headers: z.ZodType | null;
 };
 
 export interface ParamIR {

@@ -104,7 +104,7 @@ describe("createTrpcRouter", () => {
         path: "/users",
         params: [{ kind: "body", name: "", schema: createUserSchema }],
         inputSchema: createUserSchema,
-        inputSchemas: { body: createUserSchema, path: null, query: null },
+        inputSchemas: { body: createUserSchema, path: null, query: null, headers: null },
         outputSchema: userSchema,
         domain: null,
       },
@@ -177,7 +177,7 @@ function extractTestRouteIR(controllerCtor: Function): RouteIR[] {
     path: `${controllerMeta.path}${routeMeta.path}`,
     params: [],
     inputSchema: null,
-    inputSchemas: { body: null, path: null, query: null },
+    inputSchemas: { body: null, path: null, query: null, headers: null },
     outputSchema: null,
     domain: null,
   }));

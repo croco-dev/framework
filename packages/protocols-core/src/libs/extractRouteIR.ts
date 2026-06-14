@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { z } from "zod";
 import type { ParamIR, RouteInputSchemas, RouteIR } from "./RouteIR";
-import { buildPathSchema, buildQuerySchema } from "./schemaBuilder";
+import { buildHeaderSchema, buildPathSchema, buildQuerySchema } from "./schemaBuilder";
 import {
   type Constructor,
   type ControllerMetadata,
@@ -68,6 +68,7 @@ function extractInputSchemas(params: ParamIR[]): RouteInputSchemas {
     body: params.find((param) => param.kind === "body")?.schema ?? null,
     path: buildPathSchema(params),
     query: buildQuerySchema(params),
+    headers: buildHeaderSchema(params),
   };
 }
 

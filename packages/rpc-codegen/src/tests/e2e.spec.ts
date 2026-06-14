@@ -52,28 +52,30 @@ describe("rpc-codegen e2e", () => {
     expect(getUser.inputSchemas.body).toBeNull();
     expect(getUser.inputSchemas.path).toBeTruthy();
     expect(getUser.inputSchemas.query).toBeTruthy();
+    expect(getUser.inputSchemas.headers).toBeTruthy();
     expect(getUser.outputSchema).toBeNull();
 
     const createUser = findRoute(routes, "createUser");
     expect(createUser.inputSchemas.body).toBeTruthy();
     expect(createUser.inputSchemas.path).toBeNull();
     expect(createUser.inputSchemas.query).toBeNull();
+    expect(createUser.inputSchemas.headers).toBeNull();
     expect(createUser.outputSchema).toBeTruthy();
 
     const health = findRoute(routes, "health");
-    expect(health.inputSchemas).toEqual({ body: null, path: null, query: null });
+    expect(health.inputSchemas).toEqual({ body: null, path: null, query: null, headers: null });
     expect(health.outputSchema).toBeNull();
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; };",
+      "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; headers: { 'x-request-id': string; }; };",
     );
     expect(content).toContain("export type CreateUserInput = { name: string; };");
     expect(content).toContain("export type CreateUserOutput = { id: string; name: string; };");
     expect(content).toContain("const path = `/users/${input.path.id}`;");
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain(
-      "return fetch(url, { method: 'GET' }).then((response) => readOptionalJsonResponse(response));",
+      "return fetch(url, { method: 'GET', headers: serializeHeaders(input.headers) }).then((response) => readOptionalJsonResponse(response));",
     );
     expect(content).toContain(
       "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
@@ -189,6 +191,7 @@ enum ParamType {
   PARAM = 'param',
   QUERY = 'query',
   BODY = 'body',
+  HEADER = 'header',
 }
 
 type RouteMetadata = {
@@ -223,6 +226,10 @@ function Body(schema?: unknown): ParameterDecorator {
   return createParamDecorator(ParamType.BODY, undefined, schema);
 }
 
+function Header(name: string, schema?: unknown): ParameterDecorator {
+  return createParamDecorator(ParamType.HEADER, name, schema);
+}
+
 function createRouteDecorator(method: string, routePath: string): MethodDecorator {
   return (target, propertyKey) => {
     const ctor = target.constructor;
@@ -250,7 +257,8 @@ export class TestController {
   @Get('/users/:id')
   getUser(
     @Param('id', z.string()) id: string,
-    @Query('include', z.string().optional()) include?: string | undefined
+    @Query('include', z.string().optional()) include: string | undefined,
+    @Header('x-request-id', z.string()) _requestId: string
   ) {
     return { id: '1', name: include ?? 'test' };
   }

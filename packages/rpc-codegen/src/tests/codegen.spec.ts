@@ -7,13 +7,24 @@ import { z } from "zod";
 import { generateClientFiles } from "../libs/generate";
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
-const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null };
-const BODY_INPUT_SCHEMAS = { body: {} as RouteIR["inputSchemas"]["body"], path: null, query: null };
-const PATH_INPUT_SCHEMAS = { body: null, path: z.object({ id: z.string() }) as any, query: null };
+const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null, headers: null };
+const BODY_INPUT_SCHEMAS = {
+  body: {} as RouteIR["inputSchemas"]["body"],
+  path: null,
+  query: null,
+  headers: null,
+};
+const PATH_INPUT_SCHEMAS = {
+  body: null,
+  path: z.object({ id: z.string() }) as any,
+  query: null,
+  headers: null,
+};
 const QUERY_INPUT_SCHEMAS = {
   body: null,
   path: null,
   query: z.object({ page: z.string() }) as any,
+  headers: null,
 };
 const NON_STRING_QUERY_INPUT_SCHEMAS = {
   body: null,
@@ -25,11 +36,25 @@ const NON_STRING_QUERY_INPUT_SCHEMAS = {
     tags: z.array(z.string()),
     deletedAt: z.string().nullable(),
   }) as any,
+  headers: null,
+};
+const HEADER_INPUT_SCHEMAS = {
+  body: null,
+  path: null,
+  query: null,
+  headers: z.object({ authorization: z.string(), "x-tenant-id": z.string().optional() }) as any,
 };
 const COMBINED_INPUT_SCHEMAS = {
   body: z.object({ name: z.string() }) as any,
   path: z.object({ id: z.string() }) as any,
   query: z.object({ filter: z.string() }) as any,
+  headers: null,
+};
+const BODY_HEADER_INPUT_SCHEMAS = {
+  body: z.object({ name: z.string() }) as any,
+  path: null,
+  query: null,
+  headers: z.object({ "x-request-id": z.string() }) as any,
 };
 
 describe("generateClientFiles", () => {
@@ -188,6 +213,32 @@ describe("generateClientFiles", () => {
     expect(content).toContain("export type GetInput = { path: { id: string; }; };");
   });
 
+  it("should generate header input types from inputSchemas", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users",
+        params: [
+          { kind: "header", name: "authorization", schema: null },
+          { kind: "header", name: "x-tenant-id", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: HEADER_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "export type GetInput = { headers: { authorization: string; 'x-tenant-id': string | undefined; }; };",
+    );
+  });
+
   it("should generate combined input types from inputSchemas", () => {
     const routes: RouteIR[] = [
       {
@@ -247,7 +298,12 @@ describe("generateClientFiles", () => {
         path: "/users",
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
-        inputSchemas: { body: z.object({ name: z.string() }) as any, path: null, query: null },
+        inputSchemas: {
+          body: z.object({ name: z.string() }) as any,
+          path: null,
+          query: null,
+          headers: null,
+        },
         outputSchema: null,
         domain: null,
       },
@@ -317,6 +373,65 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should serialize header input when generating fetch calls", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users",
+        params: [
+          { kind: "header", name: "authorization", schema: null },
+          { kind: "header", name: "x-tenant-id", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: HEADER_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<string, string>",
+    );
+    expect(content).toContain("const path = '/users';");
+    expect(content).toContain(
+      "return fetch(path, { method: 'GET', headers: serializeHeaders(input.headers) }).then((response) => readOptionalJsonResponse(response));",
+    );
+  });
+
+  it("should preserve generated headers when body routes set JSON content type", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "create",
+        httpMethod: "POST",
+        path: "/users",
+        params: [
+          { kind: "body", name: "", schema: null },
+          { kind: "header", name: "x-request-id", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: BODY_HEADER_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "export type CreateInput = { body: { name: string; }; headers: { 'x-request-id': string; }; };",
+    );
+    expect(content).toContain(
+      "return fetch(path, { method: 'POST', body: JSON.stringify(input.body), headers: { ...serializeHeaders(input.headers), 'Content-Type': 'application/json' } })",
+    );
+  });
+
   it("should keep React Query hooks delegated to typed query clients", () => {
     const routes: RouteIR[] = [
       {
@@ -374,6 +489,35 @@ describe("generateClientFiles", () => {
     assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
   query: { page: 2, active: false, search: undefined, tags: ['new', 'vip'], deletedAt: null },
+});
+void result;
+`);
+  });
+
+  it("should typecheck generated clients with header inputs", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users",
+        params: [
+          { kind: "header", name: "authorization", schema: null },
+          { kind: "header", name: "x-tenant-id", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: HEADER_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    assertGeneratedClientTypechecks(`${content}
+const result: Promise<unknown | undefined> = userClient.get({
+  headers: { authorization: 'Bearer token', 'x-tenant-id': undefined },
 });
 void result;
 `);
