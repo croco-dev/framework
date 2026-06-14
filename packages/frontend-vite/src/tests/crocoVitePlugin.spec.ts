@@ -1,3 +1,4 @@
+import { ProblemCategory } from "@croco/problems-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Plugin, PluginOption } from "vite";
 import { crocoVitePlugin } from "../libs/crocoVitePlugin";
@@ -47,6 +48,7 @@ describe("crocoVitePlugin", () => {
     expect(problem).toBeInstanceOf(Error);
     expect(problem).toBeInstanceOf(MissingCloudflareVitePluginProblem);
     expect(problem).toMatchObject({
+      category: ProblemCategory.ValidationError,
       code: "frontend-vite/missing-cloudflare-vite-plugin",
       message:
         'crocoVitePlugin() requires optional peer dependency "@cloudflare/vite-plugin" when Cloudflare support is enabled. Install "@cloudflare/vite-plugin" or call crocoVitePlugin({ cloudflare: false }).',
@@ -55,6 +57,7 @@ describe("crocoVitePlugin", () => {
   });
 
   it("should preserve nested module resolution errors from the cloudflare plugin", async () => {
+    vi.resetModules();
     vi.doMock("@cloudflare/vite-plugin", () => ({
       cloudflare: () => {
         throw Object.assign(
@@ -78,20 +81,23 @@ async function resolvePluginOptions(pluginOptions: PluginOption[]): Promise<Plug
   const resolvedPlugins: Plugin[] = [];
 
   for (const pluginOption of pluginOptions) {
-    collectPlugins(await pluginOption, resolvedPlugins);
+    await collectPlugins(await pluginOption, resolvedPlugins);
   }
 
   return resolvedPlugins;
 }
 
-function collectPlugins(pluginOption: Awaited<PluginOption>, plugins: Plugin[]): void {
+async function collectPlugins(
+  pluginOption: Awaited<PluginOption>,
+  plugins: Plugin[],
+): Promise<void> {
   if (!pluginOption) {
     return;
   }
 
   if (Array.isArray(pluginOption)) {
     for (const nestedPluginOption of pluginOption) {
-      collectPlugins(nestedPluginOption as Awaited<PluginOption>, plugins);
+      await collectPlugins(await nestedPluginOption, plugins);
     }
     return;
   }

@@ -9,7 +9,7 @@ export class MissingCloudflareVitePluginProblem extends Problem {
   public constructor(cause?: Error) {
     super(
       "frontend-vite/missing-cloudflare-vite-plugin",
-      ProblemCategory.InternalServerError,
+      ProblemCategory.ValidationError,
       DETAIL,
       cause ? { cause } : undefined,
     );
