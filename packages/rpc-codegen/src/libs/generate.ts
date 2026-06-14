@@ -16,6 +16,7 @@ export function generateClientFiles(
   outDir: string,
   options: GenerateClientOptions = {},
 ): string[] {
+  assertGeneratedClientRoutes(routes);
   fs.mkdirSync(outDir, { recursive: true });
 
   return groupRoutesByDomain(routes).map((domainRoutes) => {
@@ -28,6 +29,16 @@ export function generateClientFiles(
 
     return filePath;
   });
+}
+
+function assertGeneratedClientRoutes(routes: RouteIR[]): void {
+  for (const route of routes) {
+    if (route.httpMethod.toUpperCase() === "ALL") {
+      throw new Error(
+        `Cannot generate RPC client for @All route ${formatRoute(route)}: @All is runtime-only and cannot be represented as a concrete generated client request. Use explicit HTTP method decorators for generated contracts.`,
+      );
+    }
+  }
 }
 
 function groupRoutesByDomain(routes: RouteIR[]): DomainRoutes[] {
@@ -428,6 +439,10 @@ function getInputTypeName(route: RouteIR): string {
 
 function getOutputTypeName(route: RouteIR): string {
   return `${toPascalCase(route.methodName)}Output`;
+}
+
+function formatRoute(route: RouteIR): string {
+  return `${route.controllerName}.${route.methodName} (${route.path})`;
 }
 
 function assertNoZodImport(content: string): void {
