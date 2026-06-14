@@ -187,8 +187,8 @@ function main(): void {
     exit(1);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    log(`auto-changeset: ${message}`);
-    exit(0);
+    log(`auto-changeset: failed: ${message}`);
+    exit(1);
   }
 }
 
