@@ -34,8 +34,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Security audit warning report
-        id: security_audit_warning
+      - name: Production dependency audit advisory
+        id: security_audit_advisory
         shell: bash
         continue-on-error: true
         run: |
@@ -52,7 +52,7 @@ jobs:
             echo "duration_seconds=$duration"
           } >> "$GITHUB_OUTPUT"
           if [ "$exit_code" -ne 0 ]; then
-            echo "::warning::pnpm audit:prod reported production vulnerabilities. See security-warning-report artifact."
+            echo "::warning::pnpm audit:prod reported production vulnerabilities. Dependency audit is advisory-only in CI; see security-report artifact."
           fi
           exit "$exit_code"
 
@@ -82,23 +82,24 @@ jobs:
           fi
           exit "$exit_code"
 
-      - name: Assemble security warning summary
+      - name: Assemble security policy summary
         if: always()
         shell: bash
         run: |
           mkdir -p ci-reports/security
           {
-            echo "# Security warning summary"
+            echo "# Security policy summary"
             echo ""
-            echo "- \`pnpm audit:prod\` dependency audit: blocking on trunk push, warning-only on PR"
-            echo "- \`gitleaks\` secret scanning: blocking on trunk push, warning-only on PR"
+            echo "- \`pnpm audit:prod\` dependency audit: advisory-only on pull requests, trunk pushes, and manual runs"
+            echo "- \`gitleaks\` secret scanning: warning-only on pull requests; blocking on trunk pushes and manual runs"
+            echo "- Release path: release-triggering changes still pass through CI before merge; publish-specific gates live in the Release workflow"
             echo ""
             echo "## Current run"
             echo ""
-            echo "- Audit warning exit code: ${{ steps.security_audit_warning.outputs.exit_code || 'unknown' }}"
-            echo "- Audit warning duration (seconds): ${{ steps.security_audit_warning.outputs.duration_seconds || 'unknown' }}"
-            echo "- Gitleaks warning exit code: ${{ steps.security_gitleaks_warning.outputs.exit_code || 'unknown' }}"
-            echo "- Gitleaks warning duration (seconds): ${{ steps.security_gitleaks_warning.outputs.duration_seconds || 'unknown' }}"
+            echo "- Audit advisory exit code: ${{ steps.security_audit_advisory.outputs.exit_code || 'unknown' }}"
+            echo "- Audit advisory duration (seconds): ${{ steps.security_audit_advisory.outputs.duration_seconds || 'unknown' }}"
+            echo "- Gitleaks exit code: ${{ steps.security_gitleaks_warning.outputs.exit_code || 'unknown' }}"
+            echo "- Gitleaks duration (seconds): ${{ steps.security_gitleaks_warning.outputs.duration_seconds || 'unknown' }}"
             echo ""
             echo "## False positive management"
             echo ""
@@ -108,15 +109,15 @@ jobs:
             echo ""
             echo "## Runtime impact"
             echo ""
-            echo "- \`pnpm audit:prod\` warning report reuses the existing dependency install and should add only the command runtime."
+            echo "- \`pnpm audit:prod\` advisory report reuses the existing dependency install and should add only the command runtime."
             echo "- \`ghcr.io/gitleaks/gitleaks\` adds one cold-start image pull plus repository scan time; use the recorded duration above as the baseline for enforce decisions."
           } > ci-reports/security/summary.md
 
-      - name: Upload security warning report
+      - name: Upload security report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-warning-report
+          name: security-report
           path: ci-reports/security
           if-no-files-found: warn
 
