@@ -1,8 +1,20 @@
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
 import type { GeneratorOptions } from "../types.js";
+
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+] as const;
+
+type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
+type PackageJson = {
+  name?: string;
+} & Partial<Record<DependencyField, Record<string, string>>>;
 
 function collectFiles(directory: string): string[] {
   return readdirSync(directory, { recursive: true, withFileTypes: true })
@@ -55,6 +67,42 @@ function assertDockerFiltersMatchPackages(projectDir: string): void {
   for (const dockerFilter of dockerFilters) {
     expect(packageNames.has(dockerFilter)).toBe(true);
   }
+}
+
+function readPackageJson(filePath: string): PackageJson {
+  return JSON.parse(readFileSync(filePath, "utf8")) as PackageJson;
+}
+
+function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
+  const manifests = collectFiles(projectDir)
+    .filter((filePath) => basename(filePath) === "package.json")
+    .map((filePath) => ({
+      filePath,
+      packageJson: readPackageJson(filePath),
+    }));
+  const generatedPackageNames = new Set(
+    manifests
+      .map(({ packageJson }) => packageJson.name)
+      .filter((name): name is string => typeof name === "string"),
+  );
+  const externalWorkspaceRanges = manifests.flatMap(({ filePath, packageJson }) =>
+    DEPENDENCY_FIELDS.flatMap((field) =>
+      Object.entries(packageJson[field] ?? {})
+        .filter(
+          ([packageName, range]) =>
+            packageName.startsWith("@croco/") &&
+            range.startsWith("workspace:") &&
+            !generatedPackageNames.has(packageName),
+        )
+        .map(([packageName, range]) => ({
+          filePath: relative(projectDir, filePath),
+          packageName,
+          range,
+        })),
+    ),
+  );
+
+  expect(externalWorkspaceRanges).toEqual([]);
 }
 
 describe("E2E: generate()", () => {
@@ -110,6 +158,8 @@ describe("E2E: generate()", () => {
       await generate(testDir, options);
 
       // Base DDD structure
+      expect(existsSync(join(testDir, "package.json"))).toBe(true);
+      expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
       expect(existsSync(join(testDir, "libs", "shared"))).toBe(true);
 
       // GraphQL standalone API
@@ -138,6 +188,7 @@ describe("E2E: generate()", () => {
       expect(existsSync(join(testDir, "apps", "api", "Dockerfile"))).toBe(false);
       assertDockerFiltersMatchPackages(testDir);
       assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
     },
   );
 
@@ -217,10 +268,7 @@ describe("E2E: generate()", () => {
       join(testDir, "apps", "graphql-api", "src", "schema.ts"),
       "utf8",
     );
-    const packageJsonContent = readFileSync(
-      join(testDir, "apps", "graphql-api", "package.json"),
-      "utf8",
-    );
+    const packageJson = readPackageJson(join(testDir, "apps", "graphql-api", "package.json"));
 
     expect(handlerContent).toContain('from "@croco/telemetry-sdk-node";');
     expect(handlerContent).toContain('import { createSchema } from "./schema.js";');
@@ -229,11 +277,40 @@ describe("E2E: generate()", () => {
     expect(handlerContent).toContain("const lambdaHandler = await lambdaHandlerPromise;");
     expect(handlerContent).toContain("await telemetry.forceFlush();");
     expect(schemaContent).toContain("export async function createSchema()");
-    expect(packageJsonContent).toContain('"@croco/telemetry-sdk-node": "workspace:*"');
+    expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");
+    expect(packageJson.dependencies?.["@test/provider-database"]).toBe("workspace:*");
+    assertNoExternalCrocoWorkspaceRanges(testDir);
 
     // Lambda SST
     expect(existsSync(join(testDir, "sst.config.ts"))).toBe(true);
     // MongoDB provider
     expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb"))).toBe(true);
   });
+
+  it(
+    "preserves generated workspace dependencies when the app scope is @croco",
+    { timeout: 120_000 },
+    async () => {
+      const options: GeneratorOptions = {
+        projectName: "croco-scoped-api",
+        scope: "@croco",
+        preset: "ddd-api",
+        webApps: [],
+        api: "graphql",
+        apiHosting: "standalone",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      };
+
+      await generate(testDir, options);
+
+      const packageJson = readPackageJson(join(testDir, "apps", "graphql-api", "package.json"));
+
+      expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");
+      expect(packageJson.dependencies?.["@croco/provider-database"]).toBe("workspace:*");
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+    },
+  );
 });

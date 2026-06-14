@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { mergeInto } from "./helpers/fs.js";
+import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
 import {
   installAgentRules,
   installDocker,
@@ -33,11 +34,10 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
   mkdirSync(resolvedTarget, { recursive: true });
 
-  // Step 2: 프리셋 분기 — blank or ddd
-  if (options.preset === "blank") {
-    mergeInto(join(TEMPLATES_DIR, "blank"), resolvedTarget, vars);
-  } else {
-    // ddd-api or ddd-fullstack
+  // Step 2: root workspace baseline + 프리셋 분기
+  mergeInto(join(TEMPLATES_DIR, "blank"), resolvedTarget, vars);
+
+  if (options.preset !== "blank") {
     mergeInto(join(TEMPLATES_DIR, "base-ddd"), resolvedTarget, vars);
   }
 
@@ -133,6 +133,8 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
 }
 
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
+  rewriteExternalCrocoWorkspaceRanges(targetDir);
+
   // Step 10: .env.example → .env 복사
   const envExample = join(targetDir, ".env.example");
   const envFile = join(targetDir, ".env");
