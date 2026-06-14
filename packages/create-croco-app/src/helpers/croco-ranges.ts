@@ -8,6 +8,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/protocols-rest": "^0.0.2",
   "@croco/ratelimit-core": "^0.0.2",
   "@croco/telemetry-sdk-node": "^0.0.2",
+  "@croco/testing": "^0.0.1",
   "@croco/transports-cloudflare-workers": "^0.0.2",
   "@croco/transports-http": "^0.0.2",
 } as const satisfies Record<string, string>;

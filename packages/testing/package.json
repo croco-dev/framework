@@ -1,0 +1,42 @@
+{
+  "name": "@croco/testing",
+  "version": "0.0.0",
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-logger": "workspace:*",
+    "@croco/openapi-spec": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/transports-http": "workspace:*",
+    "reflect-metadata": "0.2.2"
+  },
+  "devDependencies": {
+    "@croco/protocols-rest": "workspace:*",
+    "tsup": "8.5.1",
+    "vitest": "4.0.16"
+  }
+}

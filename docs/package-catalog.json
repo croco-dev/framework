@@ -130,7 +130,8 @@
         "migration-runner",
         "preset-cloudflare",
         "preset-lambda",
-        "preset-node"
+        "preset-node",
+        "testing"
       ]
     },
     "Docs": {
@@ -211,6 +212,7 @@
         "storage-r2",
         "tasks-core",
         "tenant-core",
+        "testing",
         "transports-graphql",
         "triggers-core"
       ]
