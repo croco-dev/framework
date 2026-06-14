@@ -208,15 +208,24 @@ describe("RedisUsageStorage", () => {
   });
 
   describe("fetchUsageRecords", () => {
-    it("should return parsed usage records", async () => {
-      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:5", "usage-2:3"]);
+    it("should return parsed usage records with timestamps restored from Redis scores", async () => {
+      const firstTimestamp = new Date("2024-01-15T10:30:00Z");
+      const secondTimestamp = new Date("2024-01-15T11:45:00Z");
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
+        "usage-1:5",
+        String(firstTimestamp.getTime()),
+        "usage-2:3",
+        String(secondTimestamp.getTime()),
+      ]);
+      const startDate = new Date("2024-01-15T00:00:00Z");
+      const endDate = new Date("2024-01-15T23:59:59Z");
 
       const options: UsageQueryOptions = {
         tenantId: "tenant-1",
         meterId: "api_calls",
         period: "day",
-        startDate: new Date("2024-01-15T00:00:00Z"),
-        endDate: new Date("2024-01-15T23:59:59Z"),
+        startDate,
+        endDate,
       };
 
       const result = await storage.fetchUsageRecords(options);
@@ -224,13 +233,22 @@ describe("RedisUsageStorage", () => {
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe("usage-1");
       expect(result[0].value).toBe(5);
+      expect(result[0].timestamp).toEqual(firstTimestamp);
       expect(result[1].id).toBe("usage-2");
       expect(result[1].value).toBe(3);
+      expect(result[1].timestamp).toEqual(secondTimestamp);
+      expect(mockRedis.zrangebyscore).toHaveBeenCalledWith(
+        "usage:tenant-1:api_calls:2024-01-15",
+        startDate.getTime(),
+        endDate.getTime(),
+        "WITHSCORES",
+      );
     });
 
     it("should preserve metadata when fetching usage records", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
         "usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%2C%22nested%22%3A%7B%22active%22%3Atrue%7D%7D",
+        String(new Date("2024-01-15T10:30:00Z").getTime()),
       ]);
 
       const result = await storage.fetchUsageRecords({
@@ -248,7 +266,10 @@ describe("RedisUsageStorage", () => {
 
     it("should preserve metadata when records are fetched", async () => {
       const metadata = encodeURIComponent(JSON.stringify({ source: "api", version: "v2" }));
-      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([`usage-1:5:${metadata}`]);
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
+        `usage-1:5:${metadata}`,
+        String(new Date("2024-01-15T10:30:00Z").getTime()),
+      ]);
 
       const result = await storage.fetchUsageRecords({
         tenantId: "tenant-1",
@@ -273,6 +294,20 @@ describe("RedisUsageStorage", () => {
       const result = await storage.fetchUsageRecords(options);
 
       expect(result).toEqual([]);
+    });
+
+    it("should throw RedisProblem when Redis omits scores for fetched records", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:5"]);
+
+      await expect(
+        storage.fetchUsageRecords({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "day",
+          startDate: new Date("2024-01-15T00:00:00Z"),
+          endDate: new Date("2024-01-15T23:59:59Z"),
+        }),
+      ).rejects.toThrow(RedisProblem);
     });
 
     it("should remove flushed records from Redis", async () => {

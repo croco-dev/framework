@@ -11,6 +11,7 @@ export interface RedisClient {
    * Sorted Set에서 점수 범위로 멤버 조회
    */
   zrangebyscore(key: string, min: number, max: number): Promise<string[]>;
+  zrangebyscore(key: string, min: number, max: number, withScores: "WITHSCORES"): Promise<string[]>;
 
   /**
    * 키 설정 (NX: 존재하지 않을 때만, EX: TTL)

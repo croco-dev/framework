@@ -9,7 +9,7 @@
 | Public packages                |    98 |
 | Private packages skipped       |     1 |
 | Missing package README         |    24 |
-| Missing generated API docs     |    85 |
+| Missing generated API docs     |    86 |
 | Missing package test directory |     1 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`.
@@ -122,6 +122,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/tasks-core` (`packages/tasks-core`) — legacy baseline
 - `@croco/tasks-qstash` (`packages/tasks-qstash`) — legacy baseline
 - `@croco/tenant-core` (`packages/tenant-core`) — legacy baseline
+- `@croco/testing` (`packages/testing`) — legacy baseline
 - `@croco/transports-cloudflare-workers` (`packages/transports-cloudflare-workers`) — legacy baseline
 - `@croco/transports-graphql` (`packages/transports-graphql`) — legacy baseline
 - `@croco/triggers-core` (`packages/triggers-core`) — legacy baseline

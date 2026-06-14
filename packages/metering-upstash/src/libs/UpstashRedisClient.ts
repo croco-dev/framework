@@ -18,8 +18,16 @@ export class UpstashRedisClient implements RedisClient {
   /**
    * Sorted Set에서 점수 범위로 멤버 조회
    */
-  async zrangebyscore(key: string, min: number, max: number): Promise<string[]> {
-    const result = await this.redis.zrange(key, min, max, { byScore: true });
+  async zrangebyscore(
+    key: string,
+    min: number,
+    max: number,
+    withScores?: "WITHSCORES",
+  ): Promise<string[]> {
+    const result = await this.redis.zrange(key, min, max, {
+      byScore: true,
+      ...(withScores === "WITHSCORES" ? { withScores: true } : {}),
+    });
     return result.map((item) => String(item));
   }
 
