@@ -4,14 +4,14 @@ RUN npm install -g pnpm turbo
 FROM base AS pruner
 WORKDIR /app
 COPY . .
-RUN turbo prune @{{projectName}}/web --docker
+RUN turbo prune {{webPackageName}} --docker
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
-RUN pnpm turbo build --filter=@{{projectName}}/web
+RUN pnpm turbo build --filter={{webPackageName}}
 
 FROM node:22-slim AS runner
 WORKDIR /app

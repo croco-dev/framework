@@ -13,13 +13,13 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: {{apiDockerfilePath}}
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/{{projectName}}
     depends_on:
       - postgres
     ports:
-      - "3001:3001"
+      - "{{apiPort}}:{{apiPort}}"
 
 volumes:
   postgres_data:

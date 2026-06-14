@@ -88,7 +88,12 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   // Step 6: backend deploy
   if (!isVikeFullstackPreset) {
     if (options.backendDeploy === "docker") {
-      installDocker(resolvedTarget, { ...vars, api: options.api });
+      installDocker(resolvedTarget, {
+        ...vars,
+        api: options.api,
+        frontendDeploy: options.frontendDeploy,
+        webApps: options.webApps,
+      });
     } else if (options.backendDeploy === "lambda") {
       installLambda(resolvedTarget, { ...vars, api: options.api });
     }
