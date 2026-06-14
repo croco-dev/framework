@@ -74,6 +74,58 @@ import { HealthCheckRegistry } from "@croco/transports-http";
 Container.get(HealthCheckRegistry).register("database", async () => ({ status: "up" }));
 ```
 
+## Operational Endpoints
+
+`createApp()`는 별도 컨트롤러 없이 운영 endpoint를 등록합니다. Readiness 실행은
+`@croco/health-core`의 `HealthCheckService`를 통해 수행되며, `HealthCheckRegistry`는 기존
+HTTP 응답 contract를 유지하는 compatibility wrapper입니다.
+
+| Endpoint                  | 기본 노출 | 성공 응답                              | 실패 응답                        |
+| ------------------------- | --------- | -------------------------------------- | -------------------------------- |
+| `GET /health`             | on        | `200 { "status": "ok" }`               | 없음                             |
+| `GET /health/live`        | on        | `200 { "status": "ok" }`               | 없음                             |
+| `GET /ready`              | on        | `200 { "status": "ok", "checks": {} }` | `503 { "status": "error", ... }` |
+| `GET /health/ready`       | on        | `/ready`와 동일                        | `/ready`와 동일                  |
+| `GET /health/diagnostics` | off       | `200 DiagnosticsReport`                | `403 { "error": "Forbidden" }`   |
+
+`/ready`와 `/health/ready`는 같은 readiness contract를 반환합니다. 등록된 체크가 없으면
+`{ "status": "ok", "checks": {} }`로 간주합니다. 체크 함수가 실패하거나 timeout을 넘기면 해당
+체크는 `{ "status": "down", "error": "..." }`로 직렬화되고 전체 응답은 `503`입니다.
+
+### Diagnostics exposure policy
+
+Diagnostics는 기본적으로 꺼져 있습니다. 앱 코드에서 명시하거나 기존 환경변수 경로를 사용할 수
+있습니다.
+
+```typescript
+const app = createApp({
+  controllers: [UserController],
+  diagnostics: {
+    exposure: "token",
+    token: process.env.CROCO_DIAGNOSTICS_TOKEN,
+  },
+});
+```
+
+지원되는 exposure mode:
+
+| Mode      | 동작                                                                             |
+| --------- | -------------------------------------------------------------------------------- |
+| `off`     | `/health/diagnostics`를 등록하지 않습니다. 기본값입니다.                         |
+| `private` | token 없이 노출합니다. Private network, local smoke, internal LB에만 사용합니다. |
+| `token`   | `X-Diagnostics-Token` 헤더가 configured token과 같을 때만 허용합니다.            |
+| `custom`  | `guard` 함수가 true를 반환할 때만 허용합니다.                                    |
+
+하위 호환을 위해 `CROCO_DIAGNOSTICS_ENABLED=true`도 지원합니다. 이때
+`CROCO_DIAGNOSTICS_TOKEN`이 있으면 `token`, 없으면 `private`로 동작합니다. 새 설정에서는
+`diagnostics.exposure` 사용을 권장합니다.
+
+Diagnostics 응답은 `Cache-Control: no-store`를 포함합니다. `recentErrors`는 기본 최대 100개까지
+최신순으로 반환되며 `cause`/stack trace는 노출하지 않습니다. 오류 메시지와 provider message는 기본
+100자로 제한되고, `token`, `secret`, `password`, `authorization`, `cookie`, `credential`,
+`apiKey` 계열 detail key는 `[Redacted]`로 대체됩니다. 필요하면 `recentErrorLimit`과
+`messageLimit`을 조정할 수 있습니다.
+
 ## Security Middleware Contract
 
 `createApp`는 기본적으로 아래 4개 보안 미들웨어가 모두 등록되어 있는지 부트스트랩 시점에 검증합니다. 하나라도 누락되면 앱 생성은 fail-closed로 중단됩니다.
@@ -143,6 +195,7 @@ All four are part of the public API and can be imported directly from `@croco/tr
 - 앱 런타임: `createApp`, `CrocoApp`, `ErrorHandler`, `PipelineRunner`, `RouteCompiler`
 - Lambda 연동: `toLambdaHandler`, `getLambdaEvent`, `getLambdaContext`, `TypedLambdaHandler`
 - 헬스체크: `HealthCheckRegistry`, `HealthCheckFunction`, `HealthCheckResult`
+- 운영 endpoint: `DiagnosticsEndpointOptions`, `DiagnosticsExposureMode`, `DIAGNOSTICS_ENDPOINT_PATH`
 - 본문 제한: `bodyLimitMiddleware`, `kb`, `mb`
 - 압축: `compressionMiddleware`
 - CORS: `corsMiddleware`

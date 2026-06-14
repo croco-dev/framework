@@ -32,6 +32,7 @@
     "@croco/events-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
+    "@croco/health-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",

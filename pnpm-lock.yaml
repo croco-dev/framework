@@ -2230,6 +2230,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/health-core':
+        specifier: workspace:*
+        version: link:../health-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core

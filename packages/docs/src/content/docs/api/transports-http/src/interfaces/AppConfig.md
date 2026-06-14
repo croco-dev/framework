@@ -13,6 +13,12 @@ title: "AppConfig"
 
 ***
 
+### diagnostics?
+
+> `optional` **diagnostics**: [`DiagnosticsEndpointOptions`](/api/transports-http/src/type-aliases/diagnosticsendpointoptions/)
+
+***
+
 ### globalFilters?
 
 > `optional` **globalFilters**: `unknown`[]

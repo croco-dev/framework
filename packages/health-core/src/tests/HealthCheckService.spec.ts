@@ -108,6 +108,37 @@ describe("HealthCheckService", () => {
     expect(didAbort).toBe(true);
   });
 
+  it("should honor per-indicator timeout overrides", async () => {
+    let didAbort = false;
+
+    const slowIndicator: HealthIndicator = {
+      name: "slow",
+      check: vi.fn().mockImplementation(
+        (signal?: AbortSignal) =>
+          new Promise<HealthIndicatorResult>((resolve) => {
+            signal?.addEventListener("abort", () => {
+              didAbort = true;
+            });
+
+            setTimeout(() => resolve({ name: "slow", status: "up" }), 10000);
+          }),
+      ),
+    };
+
+    const serviceWithLongDefault = new HealthCheckService({ timeout: 5000 });
+    serviceWithLongDefault.register(slowIndicator, { timeout: 100 });
+
+    const result = await serviceWithLongDefault.check();
+
+    expect(result.status).toBe("down");
+    expect(result.results[0]).toEqual({
+      name: "slow",
+      status: "down",
+      details: { error: "Health check timeout for slow" },
+    });
+    expect(didAbort).toBe(true);
+  });
+
   it("should use default timeout of 5000ms", () => {
     const defaultService = new HealthCheckService();
     expect(defaultService).toBeInstanceOf(HealthCheckService);
