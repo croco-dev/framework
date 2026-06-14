@@ -8,6 +8,7 @@ import {
   validateCliOptions,
   validateResolvedOptions,
 } from "./options.js";
+import { getPackageVersion } from "./package-version.js";
 import { runPrompts } from "./prompts.js";
 import type { GeneratorOptions } from "./types.js";
 
@@ -17,7 +18,7 @@ export function createProgram(): Command {
   program
     .name("create-croco-app")
     .description("Create a new Croco application")
-    .version("0.1.0")
+    .version(getPackageVersion())
     .argument("[directory]", "Target directory")
     .option("--preset <preset>", "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack)")
     .option("--scope <scope>", "Package scope (e.g. @myorg)")

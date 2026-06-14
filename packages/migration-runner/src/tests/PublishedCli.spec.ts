@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,8 +19,7 @@ describe("published migrate CLI", () => {
       const consumerRoot = mkdtempSync(join(tmpdir(), "croco-migration-runner-consumer-"));
 
       try {
-        run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
-        run("pnpm", ["--filter", "@croco/migration-runner", "build"], rootDir);
+        ensureBuilt();
         run(
           "pnpm",
           ["--filter", "@croco/problems-core", "pack", "--pack-destination", packRoot],
@@ -44,6 +43,14 @@ describe("published migrate CLI", () => {
         expect(packedManifest.dependencies?.pg).toBe("^8.11.0");
         expect(packedManifest.devDependencies?.pg).toBeUndefined();
 
+        const packageVersion = readPackageVersion();
+        const builtVersion = run(
+          "node",
+          [join(packageDir, "dist", "cli.js"), "--version"],
+          rootDir,
+        );
+        expect(builtVersion.stdout.trim()).toBe(packageVersion);
+
         writeFileSync(
           join(consumerRoot, "package.json"),
           `${JSON.stringify(
@@ -66,6 +73,9 @@ describe("published migrate CLI", () => {
 
         const help = run("pnpm", ["exec", "migrate", "--help"], consumerRoot);
         expect(help.stdout).toContain("Drizzle migration runner");
+
+        const installedVersion = run("pnpm", ["exec", "migrate", "--version"], consumerRoot);
+        expect(installedVersion.stdout.trim()).toBe(packageVersion);
       } finally {
         rmSync(packRoot, { force: true, recursive: true });
         rmSync(consumerRoot, { force: true, recursive: true });
@@ -74,6 +84,18 @@ describe("published migrate CLI", () => {
     spawnTimeoutMs,
   );
 });
+
+function ensureBuilt(): void {
+  if (
+    existsSync(join(rootDir, "packages", "problems-core", "dist", "index.js")) &&
+    existsSync(join(packageDir, "dist", "cli.js"))
+  ) {
+    return;
+  }
+
+  run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
+  run("pnpm", ["--filter", "@croco/migration-runner", "build"], rootDir);
+}
 
 function findTarball(directory: string, prefix: string): string {
   const filename = readdirSync(directory).find(
@@ -85,6 +107,18 @@ function findTarball(directory: string, prefix: string): string {
   }
 
   return join(directory, filename);
+}
+
+function readPackageVersion(): string {
+  const manifest = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")) as {
+    version?: unknown;
+  };
+
+  if (typeof manifest.version !== "string") {
+    throw new Error("Missing package version in package.json");
+  }
+
+  return manifest.version;
 }
 
 function run(
