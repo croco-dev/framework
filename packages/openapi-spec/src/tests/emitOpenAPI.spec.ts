@@ -3,7 +3,16 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Body, Controller, Get, Header, Param, Post, Query } from "@croco/protocols-rest";
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  Query,
+  ResponseSchema,
+} from "@croco/protocols-rest";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { emitOpenAPI } from "../libs/emitOpenAPI";
@@ -60,6 +69,94 @@ describe("emitOpenAPI", () => {
               },
               required: ["productId", "quantity"],
             },
+          },
+        },
+      },
+    });
+  });
+
+  it("should emit response content for declared response schemas", () => {
+    const orderSchema = z.object({
+      id: z.string().uuid(),
+      items: z.array(z.object({ sku: z.string(), quantity: z.number().int() })),
+    });
+
+    @Controller("/orders")
+    class OrdersController {
+      @Get("/:id")
+      @ResponseSchema(orderSchema)
+      getOrder(@Param("id") _id: string): z.infer<typeof orderSchema> {
+        return { id: "5d295963-ec3b-48ca-a270-c63b5793ec9a", items: [] };
+      }
+    }
+
+    const spec = emitOpenAPI([OrdersController]);
+    const getOrder = spec.paths?.["/orders/{id}"]?.get;
+
+    expect(getOrder?.responses?.[200]).toMatchObject({
+      description: "Successful response",
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    sku: { type: "string" },
+                    quantity: { type: "integer" },
+                  },
+                  required: ["sku", "quantity"],
+                },
+              },
+            },
+            required: ["id", "items"],
+          },
+        },
+      },
+    });
+  });
+
+  it("should preserve generic success responses without a response schema", () => {
+    @Controller("/health")
+    class HealthController {
+      @Get("/")
+      checkHealth(): void {}
+    }
+
+    const spec = emitOpenAPI([HealthController]);
+
+    expect(spec.paths?.["/health"]?.get?.responses?.[200]).toEqual({
+      description: "Successful response",
+    });
+  });
+
+  it("should unwrap refined response schemas", () => {
+    const responseSchema = z
+      .object({ name: z.string().min(1) })
+      .refine((response) => response.name.length > 2);
+
+    @Controller("/profiles")
+    class ProfilesController {
+      @Get("/:id")
+      @ResponseSchema(responseSchema)
+      getProfile(@Param("id") _id: string): z.infer<typeof responseSchema> {
+        return { name: "Ada" };
+      }
+    }
+
+    const spec = emitOpenAPI([ProfilesController]);
+
+    expect(spec.paths?.["/profiles/{id}"]?.get?.responses?.[200]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: { name: { type: "string", minLength: 1 } },
+            required: ["name"],
           },
         },
       },

@@ -51,15 +51,30 @@ function toRouteConfig(route: RouteIR): RouteConfig {
     operationId: `${route.controllerName}_${route.methodName}`,
     summary: `${route.controllerName}.${route.methodName}`,
     tags: [route.domain ?? route.controllerName],
-    responses: {
-      200: {
-        description: "Successful response",
-      },
-      400: {
-        description: "Invalid request",
-      },
-    },
+    responses: toResponseConfig(route),
     ...(route.params.length > 0 || route.inputSchema ? { request: toRequestConfig(route) } : {}),
+  };
+}
+
+function toResponseConfig(route: RouteIR): RouteConfig["responses"] {
+  const outputSchema = unwrapZodEffects(route.outputSchema);
+
+  return {
+    200: {
+      description: "Successful response",
+      ...(outputSchema
+        ? {
+            content: {
+              "application/json": {
+                schema: outputSchema,
+              },
+            },
+          }
+        : {}),
+    },
+    400: {
+      description: "Invalid request",
+    },
   };
 }
 

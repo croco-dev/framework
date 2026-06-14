@@ -1,19 +1,25 @@
 import "reflect-metadata";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { extractRouteIR } from "@croco/protocols-core";
-import { Controller, Get } from "@croco/protocols-rest";
+import { Controller, Get, ResponseSchema } from "@croco/protocols-rest";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { emitOpenAPI } from "../libs/emitOpenAPI";
 
 type User = {
   readonly id: number;
   readonly name: string;
 };
+
+const userSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
 
 type GeneratedUsersClient = {
   readonly userControllerListUsers: (options?: RequestInit) => Promise<{
@@ -27,6 +33,7 @@ describe("OpenAPI round trip", () => {
     @Controller("/users")
     class UserController {
       @Get("/")
+      @ResponseSchema(z.array(userSchema))
       listUsers(): User[] {
         return [{ id: 1, name: "Alice" }];
       }
@@ -44,6 +51,7 @@ describe("OpenAPI round trip", () => {
       expect(routes).toHaveLength(1);
       writeFileSync(specPath, JSON.stringify(spec, null, 2));
       runOrval(specPath, clientPath);
+      expect(readFileSync(clientPath, "utf8")).toContain("data: UserControllerListUsers200");
 
       globalThis.fetch = createRelativeFetch(server.url, originalFetch);
       const client = (await import(pathToFileURL(clientPath).href)) as GeneratedUsersClient;
