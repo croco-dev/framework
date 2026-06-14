@@ -434,7 +434,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `@croco/preset-cloudflare`    | Tooling      | `packages/preset-cloudflare`    | tests              |
 | `@croco/preset-lambda`        | Tooling      | `packages/preset-lambda`        | tests              |
 | `@croco/preset-node`          | Tooling      | `packages/preset-node`          | tests              |
-| `@croco/testing`              | Tooling      | `packages/testing`              | README, API, tests |
+| `@croco/testing`              | Tooling      | `packages/testing`              | README, tests      |
 | `@croco/transports-graphql`   | Transport    | `packages/transports-graphql`   | tests              |
 
 ### 🔴 alpha/WIP
