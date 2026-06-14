@@ -56,10 +56,11 @@ describe("container-fullstack generator e2e", () => {
     expect(result?.files.map((file) => file.status)).toEqual(["created", "created"]);
     expect(pageContent).toContain("export default function DashboardPage");
     expect(routeContent).toContain("defineRoute");
+    expect(routeContent).toContain("satisfies PageRouteDefinition");
     expect(routeContent).toContain("path: '/dashboard'");
   });
 
-  it("should create a SPA page", async () => {
+  it("should create an explicit SPA legacy frontend-vite page", async () => {
     const cwd = await createWorkspace();
 
     const result = await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
@@ -70,6 +71,8 @@ describe("container-fullstack generator e2e", () => {
     expect(result?.files.map((file) => file.status)).toEqual(["created", "created"]);
     expect(pageContent).toContain("export default function SettingsPanelPage");
     expect(routeContent).toContain("Component: Page");
+    expect(routeContent).toContain("routeConfig");
+    expect(routeContent).not.toContain("defineRoute");
     expect(routeContent).not.toContain("react-router");
   });
 

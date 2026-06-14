@@ -14,13 +14,15 @@ export const routeConfig = {
 `;
   }
 
-  return `import { defineRoute } from '@croco/meta-vite';
+  return `import { defineRoute, type PageRouteDefinition } from '@croco/meta-vite';
 import Page from './Page';
 
-export default defineRoute({
+const route = {
   path: '${options.path}',
   mode: 'ssr',
   component: Page,
-});
+} satisfies PageRouteDefinition;
+
+export default defineRoute(route);
 `;
 }
