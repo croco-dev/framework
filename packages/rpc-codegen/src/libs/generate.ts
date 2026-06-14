@@ -48,6 +48,22 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const types = [...inputTypes, ...outputTypes];
+  const responseHelpers = domainRoutes.routes.some((route) => !route.outputSchema)
+    ? `async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
+  if (response.ok && response.status === 204) {
+    return undefined;
+  }
+
+  const body = await response.text();
+
+  if (response.ok && body.length === 0) {
+    return undefined;
+  }
+
+  return JSON.parse(body) as unknown;
+}
+`
+    : "";
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
     ? `type QueryParamValue = string | number | boolean | null | undefined;
 type QueryParamInput = QueryParamValue | readonly QueryParamValue[];
@@ -82,7 +98,7 @@ function serializeQueryParams(query: Record<string, QueryParamInput>): string {
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
 
   return `${imports}${types.join("\n")}
-${queryHelpers}
+${responseHelpers}${queryHelpers}
 export const ${clientName} = {
 ${clientMethods}
 };
@@ -119,15 +135,16 @@ function generateClientMethod(route: RouteIR): string {
     : "";
   const fetchOptions = getFetchOptions(route);
   const response = getResponseExpression(route);
+  const returnType = getReturnType(route);
 
   if (hasStructuredInput(route)) {
-    return `  ${route.methodName}: (${input}) => {
+    return `  ${route.methodName}: (${input}): ${returnType} => {
     const path = ${getPathExpression(route)};
 ${getQueryStatements(route)}    return fetch(${getUrlExpression(route)}, ${fetchOptions}).then((response) => ${response});
   },`;
   }
 
-  return `  ${route.methodName}: (${input}) => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${response}),`;
+  return `  ${route.methodName}: (${input}): ${returnType} => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${response}),`;
 }
 
 function getFetchOptions(route: RouteIR): string {
@@ -143,10 +160,18 @@ function getFetchOptions(route: RouteIR): string {
 
 function getResponseExpression(route: RouteIR): string {
   if (!route.outputSchema) {
-    return "response.json()";
+    return "readOptionalJsonResponse(response)";
   }
 
   return `response.json() as Promise<${getOutputTypeName(route)}>`;
+}
+
+function getReturnType(route: RouteIR): string {
+  if (!route.outputSchema) {
+    return "Promise<unknown | undefined>";
+  }
+
+  return `Promise<${getOutputTypeName(route)}>`;
 }
 
 function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {

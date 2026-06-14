@@ -84,13 +84,19 @@ describe("rpc-codegen round trip", () => {
     const orderContent = fs.readFileSync(path.join(outDir, "order.ts"), "utf-8");
 
     expect(userContent).toContain("export const userClient = {");
-    expect(userContent).toContain("listUsers: () => fetch('/users', { method: 'GET' })");
-    expect(userContent).toContain("createUser: (input: CreateUserInput) =>");
+    expect(userContent).toContain(
+      "listUsers: (): Promise<unknown | undefined> => fetch('/users', { method: 'GET' })",
+    );
+    expect(userContent).toContain(
+      "createUser: (input: CreateUserInput): Promise<unknown | undefined> =>",
+    );
     expect(userContent).toContain(
       "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
     );
     expect(orderContent).toContain("export const orderClient = {");
-    expect(orderContent).toContain("listOrders: () => fetch('/orders', { method: 'GET' })");
+    expect(orderContent).toContain(
+      "listOrders: (): Promise<unknown | undefined> => fetch('/orders', { method: 'GET' })",
+    );
 
     const userModule = await importGeneratedClient("user-path-query.ts", userContent);
     const fetchMock = vi.fn(async (url: string, options: RequestInit) => {
@@ -118,6 +124,72 @@ describe("rpc-codegen round trip", () => {
       body: JSON.stringify({ name: "Bob" }),
       headers: { "Content-Type": "application/json" },
     });
+  });
+
+  it("resolves no-output clients for 204 and empty success responses", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "HealthController",
+        methodName: "health",
+        httpMethod: "GET",
+        path: "/health",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "health",
+      },
+      {
+        controllerName: "HealthController",
+        methodName: "clear",
+        httpMethod: "POST",
+        path: "/health/cache",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "health",
+      },
+      {
+        controllerName: "HealthController",
+        methodName: "fail",
+        httpMethod: "GET",
+        path: "/health/fail",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "health",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const healthContent = fs.readFileSync(files[0], "utf-8");
+    const healthModule = await importGeneratedClient("health.ts", healthContent);
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/health") {
+        return new Response(null, { status: 204 });
+      }
+
+      if (url === "/health/fail") {
+        return new Response("", { status: 500 });
+      }
+
+      return new Response("", { status: 200 });
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(healthContent).toContain(
+      "function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
+    );
+    expect(healthContent).not.toContain("response.json()");
+    await expect(healthModule.healthClient.health()).resolves.toBeUndefined();
+    await expect(healthModule.healthClient.clear()).resolves.toBeUndefined();
+    await expect(healthModule.healthClient.fail()).rejects.toThrow(SyntaxError);
+    expect(fetchMock).toHaveBeenCalledWith("/health", { method: "GET" });
+    expect(fetchMock).toHaveBeenCalledWith("/health/cache", { method: "POST" });
+    expect(fetchMock).toHaveBeenCalledWith("/health/fail", { method: "GET" });
   });
 
   it("generates path and query inputs that can call a mocked server", async () => {
@@ -220,6 +292,11 @@ async function importGeneratedClient(fileName: string, source: string) {
           readonly deletedAt: string | null;
         };
       }) => Promise<unknown>;
+    };
+    readonly healthClient: {
+      readonly health: () => Promise<unknown>;
+      readonly clear: () => Promise<unknown>;
+      readonly fail: () => Promise<unknown>;
     };
   }>;
 }
