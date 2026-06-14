@@ -1,8 +1,31 @@
-import { existsSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
 import type { GeneratorOptions } from "../types.js";
+
+function collectFiles(directory: string): string[] {
+  return readdirSync(directory, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
+}
+
+function isTextFile(filePath: string): boolean {
+  return !readFileSync(filePath).includes(0);
+}
+
+function assertNoHandlebarsPlaceholders(projectDir: string): void {
+  const filesWithPlaceholders = collectFiles(projectDir)
+    .filter(isTextFile)
+    .filter((filePath) => {
+      const content = readFileSync(filePath, "utf8");
+
+      return content.includes("{{") || content.includes("}}");
+    })
+    .map((filePath) => relative(projectDir, filePath));
+
+  expect(filesWithPlaceholders).toEqual([]);
+}
 
 describe("E2E: generate()", () => {
   let testDir: string;
@@ -68,6 +91,7 @@ describe("E2E: generate()", () => {
       // Docker files
       expect(existsSync(join(testDir, "docker-compose.yml"))).toBe(true);
       expect(existsSync(join(testDir, ".dockerignore"))).toBe(true);
+      assertNoHandlebarsPlaceholders(testDir);
     },
   );
 
@@ -116,6 +140,7 @@ describe("E2E: generate()", () => {
       const workerContent = readFileSync(join(testDir, "api-worker", "src", "index.ts"), "utf8");
 
       expect(workerContent).toContain('securityValidation: "off"');
+      assertNoHandlebarsPlaceholders(testDir);
     },
   );
 

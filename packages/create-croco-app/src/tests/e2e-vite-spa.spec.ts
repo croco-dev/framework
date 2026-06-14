@@ -74,9 +74,9 @@ describe("E2E Vite SPA: generate()", () => {
 
     const dockerfileContent = readFileSync(join(testDir, "web", "Dockerfile.vite-spa"), "utf8");
 
-    expect(dockerfileContent).toContain(
-      "pnpm turbo build --filter=@{{scope}}/web --filter=@{{scope}}/api",
-    );
+    expect(dockerfileContent).toContain("pnpm turbo build --filter=");
+    expect(dockerfileContent).not.toContain("{{scope}}");
+    expect(dockerfileContent).not.toContain("}}");
     expect(dockerfileContent).toContain(
       "COPY --from=builder --chown=nodejs:nodejs /app/apps/api/dist ./apps/api/dist",
     );
