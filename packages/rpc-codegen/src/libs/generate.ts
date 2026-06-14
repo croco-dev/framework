@@ -48,6 +48,33 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const types = [...inputTypes, ...outputTypes];
+  const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
+    ? `type QueryParamValue = string | number | boolean | null | undefined;
+type QueryParamInput = QueryParamValue | readonly QueryParamValue[];
+
+function serializeQueryParams(query: Record<string, QueryParamInput>): string {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    const values = Array.isArray(value) ? value : [value];
+
+    for (const item of values) {
+      if (item === undefined) {
+        continue;
+      }
+
+      params.append(key, String(item));
+    }
+  }
+
+  return params.toString();
+}
+`
+    : "";
   const clientMethods = domainRoutes.routes.map(generateClientMethod).join("\n");
   const imports = options.reactQuery
     ? "import { useMutation, useQuery } from '@tanstack/react-query';\n"
@@ -55,6 +82,7 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
 
   return `${imports}${types.join("\n")}
+${queryHelpers}
 export const ${clientName} = {
 ${clientMethods}
 };
@@ -206,9 +234,9 @@ function getArrayElementSchema(schema: unknown): unknown {
     return undefined;
   }
 
-  const definition = schema._def as { readonly type?: unknown };
+  const definition = schema._def as { readonly element?: unknown; readonly type?: unknown };
 
-  return definition.type;
+  return definition.element ?? definition.type;
 }
 
 function getObjectTypeScript(schema: unknown): string {
@@ -269,7 +297,7 @@ function getQueryStatements(route: RouteIR): string {
     return "";
   }
 
-  return `    const query = new URLSearchParams(input.query).toString();
+  return `    const query = serializeQueryParams(input.query);
     const url = query ? \`${"${path}"}?${"${query}"}\` : path;
 `;
 }

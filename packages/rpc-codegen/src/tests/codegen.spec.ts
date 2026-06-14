@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { RouteIR } from "@croco/protocols-core";
+import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { generateClientFiles } from "../libs/generate";
@@ -13,6 +14,17 @@ const QUERY_INPUT_SCHEMAS = {
   body: null,
   path: null,
   query: z.object({ page: z.string() }) as any,
+};
+const NON_STRING_QUERY_INPUT_SCHEMAS = {
+  body: null,
+  path: null,
+  query: z.object({
+    page: z.number(),
+    active: z.boolean().optional(),
+    search: z.string().optional(),
+    tags: z.array(z.string()),
+    deletedAt: z.string().nullable(),
+  }) as any,
 };
 const COMBINED_INPUT_SCHEMAS = {
   body: z.object({ name: z.string() }) as any,
@@ -288,11 +300,78 @@ describe("generateClientFiles", () => {
     const files = generateClientFiles(routes, TEMP_DIR);
 
     const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("const query = new URLSearchParams(input.query).toString();");
+    expect(content).toContain(
+      "type QueryParamValue = string | number | boolean | null | undefined;",
+    );
+    expect(content).toContain(
+      "type QueryParamInput = QueryParamValue | readonly QueryParamValue[];",
+    );
+    expect(content).toContain(
+      "function serializeQueryParams(query: Record<string, QueryParamInput>): string",
+    );
+    expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain("const url = query ? `${path}?${query}` : path;");
     expect(content).toContain(
       "return fetch(url, { method: 'GET' }).then((response) => response.json());",
     );
+  });
+
+  it("should keep React Query hooks delegated to typed query clients", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users",
+        params: [{ kind: "query", name: "page", schema: null }],
+        inputSchema: null,
+        inputSchemas: QUERY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain("export function useList(input: ListInput)");
+    expect(content).toContain(
+      "return useQuery({ queryKey: ['list', input], queryFn: () => userClient.list(input) });",
+    );
+  });
+
+  it("should typecheck generated clients with non-string query inputs", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users",
+        params: [
+          { kind: "query", name: "page", schema: null },
+          { kind: "query", name: "active", schema: null },
+          { kind: "query", name: "search", schema: null },
+          { kind: "query", name: "tags", schema: null },
+          { kind: "query", name: "deletedAt", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: NON_STRING_QUERY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "export type ListInput = { query: { page: number; active: boolean | undefined; search: string | undefined; tags: string[]; deletedAt: string | null; }; };",
+    );
+    assertGeneratedClientTypechecks(`${content}
+userClient.list({
+  query: { page: 2, active: false, search: undefined, tags: ['new', 'vip'], deletedAt: null },
+});
+`);
   });
 
   it("should serialize body, path, and query input when generating combined fetch calls", () => {
@@ -318,10 +397,45 @@ describe("generateClientFiles", () => {
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("const path = `/users/${input.path.id}`;");
-    expect(content).toContain("const query = new URLSearchParams(input.query).toString();");
+    expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain("const url = query ? `${path}?${query}` : path;");
     expect(content).toContain(
       "return fetch(url, { method: 'PATCH', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } })",
     );
   });
 });
+
+function assertGeneratedClientTypechecks(source: string): void {
+  const fileName = "generated-client.ts";
+  const compilerOptions: ts.CompilerOptions = {
+    lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    module: ts.ModuleKind.NodeNext,
+    moduleResolution: ts.ModuleResolutionKind.NodeNext,
+    noEmit: true,
+    skipLibCheck: true,
+    strict: true,
+    target: ts.ScriptTarget.ES2022,
+    types: [],
+  };
+  const host = ts.createCompilerHost(compilerOptions);
+
+  host.getSourceFile = (name, languageVersion) => {
+    if (name === fileName) {
+      return ts.createSourceFile(name, source, languageVersion, true);
+    }
+
+    const text = ts.sys.readFile(name);
+
+    return text === undefined ? undefined : ts.createSourceFile(name, text, languageVersion, true);
+  };
+  host.fileExists = (name) => name === fileName || ts.sys.fileExists(name);
+  host.readFile = (name) => (name === fileName ? source : ts.sys.readFile(name));
+
+  const program = ts.createProgram([fileName], compilerOptions, host);
+  const diagnostics = ts.getPreEmitDiagnostics(program);
+  const messages = diagnostics.map((diagnostic) =>
+    ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+  );
+
+  expect(messages).toEqual([]);
+}

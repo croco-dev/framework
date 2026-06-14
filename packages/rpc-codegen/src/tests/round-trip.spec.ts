@@ -15,7 +15,13 @@ const BODY_INPUT_SCHEMAS = { body: {} as RouteIR["inputSchemas"]["body"], path: 
 const PATH_QUERY_INPUT_SCHEMAS = {
   body: null,
   path: z.object({ id: z.string() }) as any,
-  query: z.object({ includePosts: z.string() }) as any,
+  query: z.object({
+    includePosts: z.boolean(),
+    page: z.number(),
+    search: z.string().optional(),
+    tags: z.array(z.string()),
+    deletedAt: z.string().nullable(),
+  }) as any,
 };
 
 describe("rpc-codegen round trip", () => {
@@ -140,9 +146,21 @@ describe("rpc-codegen round trip", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      userModule.userClient.getUser({ path: { id: "1" }, query: { includePosts: "true" } }),
+      userModule.userClient.getUser({
+        path: { id: "1" },
+        query: {
+          includePosts: true,
+          page: 2,
+          search: undefined,
+          tags: ["new", "vip"],
+          deletedAt: null,
+        },
+      }),
     ).resolves.toEqual({ id: "1", includePosts: true });
-    expect(fetchMock).toHaveBeenCalledWith("/users/1?includePosts=true", { method: "GET" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/users/1?includePosts=true&page=2&tags=new&tags=vip&deletedAt=null",
+      { method: "GET" },
+    );
   });
 
   it("generates outputSchema types that compile", async () => {
@@ -194,7 +212,13 @@ async function importGeneratedClient(fileName: string, source: string) {
       readonly createUser: (input: { readonly name: string }) => Promise<unknown>;
       readonly getUser: (input: {
         readonly path: { readonly id: string };
-        readonly query?: { readonly includePosts: string };
+        readonly query?: {
+          readonly includePosts: boolean;
+          readonly page: number;
+          readonly search: string | undefined;
+          readonly tags: string[];
+          readonly deletedAt: string | null;
+        };
       }) => Promise<unknown>;
     };
   }>;
