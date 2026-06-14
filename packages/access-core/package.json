@@ -36,10 +36,10 @@
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
     "vitest": "4.0.16"

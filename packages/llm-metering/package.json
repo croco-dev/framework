@@ -37,7 +37,8 @@
     "@croco/llm-core": "workspace:*",
     "@croco/metering-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
-    "@croco/telemetry-api": "workspace:*"
+    "@croco/telemetry-api": "workspace:*",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "tsup": "8.5.1",

@@ -14,6 +14,11 @@ the packed manifest, so every public runtime package must keep these fields norm
 - Type declaration targets are strings ending in `.d.ts`, not arrays.
 - `publishConfig.files` is not used; artifact allowlists live at root `files`.
 
+Decorator and metadata packages use a package-owned side-effect import contract: if non-test source
+imports `reflect-metadata`, that package must declare `reflect-metadata` in runtime
+`dependencies`. Keeping it only in `devDependencies`, or relying on another Croco package to hoist it
+for consumers, is not valid because strict package managers may isolate transitive dependencies.
+
 The contract is enforced by:
 
 ```bash

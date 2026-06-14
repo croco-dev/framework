@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
-  existsSync,
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -221,7 +221,6 @@ function runPackageSmoke(
   const packageSmokeRoot = join(smokeRoot, safeDirectoryName(packageInfo.packageName));
   mkdirSync(packageSmokeRoot, { recursive: true });
   installPackageGraph(packageSmokeRoot, packageInfo, packageIndex, new Set());
-  installExternalDependency(packageSmokeRoot, "reflect-metadata", false);
 
   writeEsmConsumer(packageSmokeRoot, plan.esm);
   writeCjsConsumer(packageSmokeRoot, plan.cjs);
@@ -234,7 +233,11 @@ function runPackageSmoke(
     run("node", [join(packageSmokeRoot, "esm.mjs")], packageSmokeRoot);
   }
   if (plan.types.length > 0) {
-    run(tscPath(), ["-p", join(packageSmokeRoot, "tsconfig.json")], packageSmokeRoot);
+    run(
+      process.execPath,
+      [tscPath(), "-p", join(packageSmokeRoot, "tsconfig.json")],
+      packageSmokeRoot,
+    );
   }
 }
 
@@ -565,7 +568,6 @@ function writeEsmConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): v
   writeFileSync(
     join(smokeRoot, "esm.mjs"),
     [
-      'import "reflect-metadata";',
       'process.env.SKIP_ENV_VALIDATION = "true";',
       "const targets = [",
       ...targets.map((target) => `  ${JSON.stringify(target.specifier)},`),
@@ -584,7 +586,6 @@ function writeCjsConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): v
     join(smokeRoot, "cjs.cjs"),
     [
       'process.env.SKIP_ENV_VALIDATION = "true";',
-      'require("reflect-metadata");',
       'const { createRequire } = require("node:module");',
       "const requireFromSmoke = createRequire(__filename);",
       "const targets = [",
@@ -661,8 +662,7 @@ function printCoverageSummary(
 }
 
 function tscPath(): string {
-  const executable = process.platform === "win32" ? "tsc.cmd" : "tsc";
-  return join(defaultRootDir, "node_modules", ".bin", executable);
+  return join(defaultRootDir, "node_modules", "typescript", "lib", "tsc.js");
 }
 
 function run(command: string, args: readonly string[], cwd: string): void {
