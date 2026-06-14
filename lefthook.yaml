@@ -7,7 +7,7 @@ pre-commit:
       run: pnpm oxlint --fix {staged_files} && git add {staged_files}
     oxfmt:
       glob: "*.{ts,tsx,js,jsx,json}"
-      run: pnpm oxfmt --write {staged_files} && git add {staged_files}
+      run: pnpm oxfmt --write --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore {staged_files} && git add {staged_files}
 
 pre-push:
   commands:

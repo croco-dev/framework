@@ -4,6 +4,9 @@
   "files": [
     "dist"
   ],
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

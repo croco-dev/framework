@@ -25,6 +25,18 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@croco/auth-core": "workspace:*",
+    "@croco/events-core": "workspace:*",
+    "@croco/events-inmemory": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/llm-core": "workspace:*",
+    "@croco/metering-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
+    "@croco/telemetry-sdk-node": "workspace:*",
+    "@croco/transports-http": "workspace:*",
     "@playwright/test": "1.58.2"
   }
 }

@@ -5,6 +5,8 @@
     "dist"
   ],
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
