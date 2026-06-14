@@ -16,6 +16,10 @@ export class RedisUsageStorage implements UsageStorage {
   private static readonly USAGE_KEY_PREFIX = "usage";
   private static readonly IDEM_KEY_PREFIX = "idem";
   private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
+  private static readonly RECORD_IDEMPOTENCY_TTL_MILLISECONDS =
+    RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS * 1000;
+  private static readonly RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES = 10_000;
+  private static readonly RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS = 60_000;
   private static readonly RESET_SCAN_BATCH_SIZE = 500;
   private static readonly SCAN_AND_DELETE_USAGE_KEYS_SCRIPT = `
 local cursor = ARGV[1]
@@ -31,7 +35,9 @@ end
 
 return { nextCursor, #keys }
 `;
+  // Redis remains the idempotency source of truth; this cache only short-circuits duplicate quota writes.
   private readonly recordedRecordKeys = new Map<string, number>();
+  private nextRecordIdempotencyCachePruneAt = 0;
 
   private static buildCheckAndRecordWithinQuotaScript(dedupeKey: string): string {
     const dedupeKeyLiteral = RedisUsageStorage.toLuaLongString(dedupeKey);
@@ -271,13 +277,17 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private hasRecordedRecordKey(dedupeKey: string): boolean {
+    const now = Date.now();
+
+    this.pruneRecordedRecordKeysIfNeeded(now);
+
     const expiresAt = this.recordedRecordKeys.get(dedupeKey);
 
     if (expiresAt === undefined) {
       return false;
     }
 
-    if (expiresAt > Date.now()) {
+    if (expiresAt > now) {
       return true;
     }
 
@@ -286,9 +296,59 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private rememberRecordIdempotencyKey(dedupeKey: string): void {
-    const ttlMilliseconds = RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS * 1000;
-    this.recordedRecordKeys.set(dedupeKey, Date.now() + ttlMilliseconds);
+    const now = Date.now();
+
+    this.pruneRecordedRecordKeysIfNeeded(now);
+
+    if (
+      !this.recordedRecordKeys.has(dedupeKey) &&
+      this.recordedRecordKeys.size >= RedisUsageStorage.RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES
+    ) {
+      this.evictOldestRecordedRecordKeys(
+        this.recordedRecordKeys.size - RedisUsageStorage.RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES + 1,
+      );
+    }
+
+    this.recordedRecordKeys.set(
+      dedupeKey,
+      now + RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_MILLISECONDS,
+    );
   }
+
+  private pruneRecordedRecordKeysIfNeeded(now: number): void {
+    if (
+      now < this.nextRecordIdempotencyCachePruneAt &&
+      this.recordedRecordKeys.size < RedisUsageStorage.RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES
+    ) {
+      return;
+    }
+
+    this.pruneExpiredRecordedRecordKeys(now);
+    this.nextRecordIdempotencyCachePruneAt =
+      now + RedisUsageStorage.RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS;
+  }
+
+  private pruneExpiredRecordedRecordKeys(now: number): void {
+    for (const [dedupeKey, expiresAt] of this.recordedRecordKeys) {
+      if (expiresAt <= now) {
+        this.recordedRecordKeys.delete(dedupeKey);
+      }
+    }
+  }
+
+  private evictOldestRecordedRecordKeys(count: number): void {
+    let evicted = 0;
+
+    for (const dedupeKey of this.recordedRecordKeys.keys()) {
+      this.recordedRecordKeys.delete(dedupeKey);
+      evicted += 1;
+
+      if (evicted >= count) {
+        return;
+      }
+    }
+  }
+
   private serializeUsageMember(usage: Pick<UsageRecord, "id" | "value" | "metadata">): string {
     const base = `${usage.id}:${usage.value}`;
 

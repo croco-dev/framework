@@ -8,6 +8,18 @@ describe("RedisUsageStorage", () => {
   let storage!: RedisUsageStorage;
   let mockRedis!: RedisClient;
 
+  const getRecordedRecordKeys = (): Map<string, number> =>
+    Reflect.get(storage, "recordedRecordKeys") as Map<string, number>;
+
+  const createUsageRecord = (idempotencyKey: string): UsageRecord => ({
+    id: `usage-${idempotencyKey}`,
+    tenantId: "tenant-1",
+    meterId: "api_calls",
+    value: 5,
+    timestamp: new Date("2024-01-15T10:30:00Z"),
+    idempotencyKey,
+  });
+
   beforeEach(() => {
     mockRedis = {
       zadd: vi.fn().mockResolvedValue(1),
@@ -500,6 +512,61 @@ describe("RedisUsageStorage", () => {
 
       expect(first).toEqual({ exceeded: false, newUsage: 8 });
       expect(second).toEqual({ exceeded: false, newUsage: 8 });
+    });
+
+    it("should prune expired local record idempotency keys during later quota writes", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2024-01-01T00:00:00.000Z"));
+      vi.mocked(mockRedis.eval).mockResolvedValue([0, 5]);
+
+      const firstRecord = createUsageRecord("key-1");
+      await storage.checkAndRecordWithinQuota({
+        tenantId: firstRecord.tenantId,
+        meterId: firstRecord.meterId,
+        value: firstRecord.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord: firstRecord,
+      });
+
+      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-1")).toBe(true);
+
+      vi.setSystemTime(new Date("2024-01-02T00:00:01.000Z"));
+
+      const secondRecord = createUsageRecord("key-2");
+      await storage.checkAndRecordWithinQuota({
+        tenantId: secondRecord.tenantId,
+        meterId: secondRecord.meterId,
+        value: secondRecord.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord: secondRecord,
+      });
+
+      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-1")).toBe(false);
+      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-2")).toBe(true);
+      expect(getRecordedRecordKeys().size).toBe(1);
+    });
+
+    it("should cap the local record idempotency cache size", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([0, 5]);
+
+      for (let index = 0; index <= 10_000; index += 1) {
+        const usageRecord = createUsageRecord(`key-${index}`);
+
+        await storage.checkAndRecordWithinQuota({
+          tenantId: usageRecord.tenantId,
+          meterId: usageRecord.meterId,
+          value: usageRecord.value,
+          quota: 10,
+          allowOverQuota: false,
+          usageRecord,
+        });
+      }
+
+      expect(getRecordedRecordKeys().size).toBe(10_000);
+      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-0")).toBe(false);
+      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-10000")).toBe(true);
     });
 
     it("should throw RedisProblem on eval error", async () => {
