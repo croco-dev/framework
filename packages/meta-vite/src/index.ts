@@ -56,6 +56,7 @@ export { RouteConflictError, RouteRegistry } from "./libs/routes/routeRegistry";
 export type {
   ApiMethod,
   ApiRouteDefinition,
+  ApiRouteHandler,
   ApiRouteIR,
   PageRouteDefinition,
   PageRouteIR,

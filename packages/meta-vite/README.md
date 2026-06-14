@@ -183,7 +183,8 @@ Common errors and their diagnostics:
 | Export               | Type     | Description                                                                                                                      |
 | -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `defineApiRoute`     | function | Register an API route with path, HTTP method, and fetch-style handler. Returns the same definition for build plugin consumption. |
-| `ApiRouteDefinition` | type     | `{ path: string; method?: ApiMethod; handler: (request: Request) => Promise<Response> }`                                         |
+| `ApiRouteDefinition` | type     | `{ path: string; method?: ApiMethod; handler: (request: Request, context?: RuntimeContext) => Promise<Response> }`               |
+| `ApiRouteHandler`    | type     | `(request: Request, context?: RuntimeContext) => Promise<Response>`                                                              |
 | `ApiMethod`          | type     | `'GET' \| 'POST' \| 'PUT' \| 'DELETE' \| 'PATCH'`                                                                                |
 
 ### Server Actions
