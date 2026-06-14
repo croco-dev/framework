@@ -359,7 +359,9 @@ describe("generateClientFiles", () => {
     const files = generateClientFiles(routes, TEMP_DIR);
 
     const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("const path = `/users/${input.path.id}`;");
+    expect(content).toContain(
+      "const path = `/users/${encodeURIComponent(String(input.path.id))}`;",
+    );
     expect(content).toContain(
       "return fetch(path, { method: 'GET' }).then((response) => readOptionalJsonResponse(response));",
     );
@@ -571,7 +573,9 @@ void result;
     const files = generateClientFiles(routes, TEMP_DIR);
 
     const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("const path = `/users/${input.path.id}`;");
+    expect(content).toContain(
+      "const path = `/users/${encodeURIComponent(String(input.path.id))}`;",
+    );
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain("const url = query ? `${path}?${query}` : path;");
     expect(content).toContain(
