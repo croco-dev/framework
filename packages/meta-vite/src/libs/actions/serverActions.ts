@@ -1,5 +1,5 @@
-import type { RuntimeContext } from "../render/types";
 import type { ZodSchema } from "zod";
+import type { RuntimeContext } from "../render/types";
 
 /**
  * Server Action configuration.
@@ -22,21 +22,116 @@ export type ServerActionConfig<T = unknown> = {
   handler: (data: T, context?: RuntimeContext) => Promise<Response> | Response;
 };
 
-const registry = new Map<string, ServerActionConfig<unknown>>();
+export class ServerActionRegistry {
+  private readonly actions = new Map<string, ServerActionConfig<unknown>>();
 
-/**
- * Register a server action.
- * @throws Error if action name is already registered
- */
-export function createServerAction<T>(config: ServerActionConfig<T>): void {
-  if (registry.has(config.name)) {
-    throw new Error(`ServerAction '${config.name}' already registered`);
+  /**
+   * Register a server action in this registry.
+   * @throws Error if action name is already registered in this registry
+   */
+  register<T>(config: ServerActionConfig<T>): void {
+    if (this.actions.has(config.name)) {
+      throw new Error(`ServerAction '${config.name}' already registered`);
+    }
+    this.actions.set(config.name, config as ServerActionConfig<unknown>);
   }
-  registry.set(config.name, config as ServerActionConfig<unknown>);
+
+  /**
+   * Remove a registered server action from this registry.
+   */
+  unregister(name: string): boolean {
+    return this.actions.delete(name);
+  }
+
+  /**
+   * Clear all server actions from this registry.
+   */
+  clear(): void {
+    this.actions.clear();
+  }
+
+  /**
+   * Dispatch a registered server action by name.
+   * - Validates input against the registered schema (if any)
+   * - Returns 404 if action not found
+   * - Returns 400 if validation fails
+   * - Passes RuntimeContext to the handler
+   */
+  async dispatch(
+    name: string,
+    formData: FormData | Record<string, unknown>,
+    context?: RuntimeContext,
+  ): Promise<Response> {
+    const config = this.actions.get(name);
+    if (!config) {
+      return new Response(JSON.stringify({ code: "ACTION_NOT_FOUND", name }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Convert FormData to plain object if needed
+    const raw = formData instanceof FormData ? formDataToObject(formData) : formData;
+
+    if (config.schema) {
+      const parsed = config.schema.safeParse(raw);
+      if (!parsed.success) {
+        return new Response(
+          JSON.stringify({
+            code: "VALIDATION_ERROR",
+            fields: parsed.error.flatten().fieldErrors,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return config.handler(parsed.data, context);
+    }
+
+    return config.handler(raw as never, context);
+  }
 }
 
 /**
- * Dispatch a registered server action by name.
+ * Create an isolated server action registry for app, test, or HMR lifecycle scoping.
+ */
+export function createServerActionRegistry(): ServerActionRegistry {
+  return new ServerActionRegistry();
+}
+
+const globalServerActionRegistry = createServerActionRegistry();
+
+/**
+ * Register a server action in the global registry by default.
+ * @throws Error if action name is already registered in the selected registry
+ */
+export function createServerAction<T>(
+  config: ServerActionConfig<T>,
+  registry: ServerActionRegistry = globalServerActionRegistry,
+): void {
+  registry.register(config);
+}
+
+/**
+ * Remove a server action from the global registry by default.
+ */
+export function unregisterServerAction(
+  name: string,
+  registry: ServerActionRegistry = globalServerActionRegistry,
+): boolean {
+  return registry.unregister(name);
+}
+
+/**
+ * Clear all actions from the global registry by default.
+ */
+export function resetServerActions(
+  registry: ServerActionRegistry = globalServerActionRegistry,
+): void {
+  registry.clear();
+}
+
+/**
+ * Dispatch a registered server action by name from the global registry by default.
  * - Validates input against the registered schema (if any)
  * - Returns 404 if action not found
  * - Returns 400 if validation fails
@@ -46,33 +141,9 @@ export async function dispatchServerAction(
   name: string,
   formData: FormData | Record<string, unknown>,
   context?: RuntimeContext,
+  registry: ServerActionRegistry = globalServerActionRegistry,
 ): Promise<Response> {
-  const config = registry.get(name);
-  if (!config) {
-    return new Response(JSON.stringify({ code: "ACTION_NOT_FOUND", name }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  // Convert FormData to plain object if needed
-  const raw = formData instanceof FormData ? formDataToObject(formData) : formData;
-
-  if (config.schema) {
-    const parsed = config.schema.safeParse(raw);
-    if (!parsed.success) {
-      return new Response(
-        JSON.stringify({
-          code: "VALIDATION_ERROR",
-          fields: parsed.error.flatten().fieldErrors,
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    return config.handler(parsed.data, context);
-  }
-
-  return config.handler(raw as never, context);
+  return registry.dispatch(name, formData, context);
 }
 
 // Workaround: Node.js FormData type does not include entries() method
@@ -108,7 +179,9 @@ function formDataToObject(formData: FormData): Record<string, unknown> {
  * });
  * ```
  */
-export function createServerActionHandler(): {
+export function createServerActionHandler(
+  registry: ServerActionRegistry = globalServerActionRegistry,
+): {
   path: string;
   method: "POST";
   handler: (request: Request, context?: RuntimeContext) => Promise<Response>;
@@ -141,7 +214,7 @@ export function createServerActionHandler(): {
       const actionName = segments[3];
       const formData = await request.formData();
 
-      return dispatchServerAction(actionName, formData, context);
+      return registry.dispatch(actionName, formData, context);
     },
   };
 }

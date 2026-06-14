@@ -15,9 +15,13 @@
 export type { ServerActionConfig } from "./libs/actions/serverActions";
 // Server actions
 export {
+  createServerActionRegistry,
   createServerAction,
   createServerActionHandler,
   dispatchServerAction,
+  resetServerActions,
+  ServerActionRegistry,
+  unregisterServerAction,
 } from "./libs/actions/serverActions";
 export type { SsgRenderedArtifact, SsgRenderFunction } from "./libs/build/ssgPrerender";
 // Build helpers
