@@ -170,6 +170,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: CLI integration tests
+        run: pnpm --filter @croco/cli test:e2e
+
       - name: Core package coverage gate
         run: pnpm test:coverage:core
 
