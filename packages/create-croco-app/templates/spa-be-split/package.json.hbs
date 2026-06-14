@@ -6,6 +6,7 @@
     "dev:web": "pnpm --filter {{scope}}/console-web dev",
     "codegen": "croco-rpc-codegen --controllers 'apps/api-server/src/controllers/**/*.ts' --out libs/shared/provider-rpc/src",
     "build": "turbo build",
+    "test": "turbo test",
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {

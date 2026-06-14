@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |    97 |
+| Public packages                |    98 |
 | Private packages skipped       |     1 |
 | Missing package README         |    24 |
 | Missing generated API docs     |    85 |
@@ -144,12 +144,12 @@ New public packages must not add missing README, API docs, or test coverage unle
 | Protocol     |        6 |
 | Transport    |        3 |
 | Presentation |        5 |
-| Tooling      |        7 |
+| Tooling      |        8 |
 | Docs         |        1 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       43 |
+| 🟡 beta             |       44 |
 | 🔴 alpha/WIP        |       31 |
 | ⚠️ deprecated       |        0 |

@@ -64,9 +64,10 @@ function checkSpaBeSplitStructure() {
   readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
   checkFileContains(
     "spa-be-split",
-    ["apps", "api-server", "src", "index.ts"],
+    ["apps", "api-server", "src", "app.ts"],
     /@croco\/transports-http/,
   );
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createCrocoApp/);
   checkFileExists("spa-be-split", "apps", "console-web", "package.json.hbs");
   checkFileExists("spa-be-split", "apps", "console-web", "src", "main.tsx");
   checkFileExists("spa-be-split", "apps", "console-web", "vite.config.ts.hbs");
@@ -83,8 +84,29 @@ function checkSpaBeSplitStructure() {
       "dev:api": expect.any(String),
       "dev:web": expect.any(String),
       codegen: expect.any(String),
+      test: "turbo test",
     }),
   });
+  const apiPackageJson = readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
+  expect(apiPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      test: "vitest run",
+    }),
+    devDependencies: expect.objectContaining({
+      "@croco/testing": "workspace:*",
+      vitest: expect.any(String),
+    }),
+  });
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "tests", "app.spec.ts"],
+    /createTestingApp/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "app.ts"],
+    /export function createCrocoApp/,
+  );
   checkFileExists("spa-be-split", "pnpm-workspace.yaml");
 }
 

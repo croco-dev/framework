@@ -335,7 +335,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **97개 public package**를 추적합니다. Private package 1개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **98개 public package**를 추적합니다. Private package 1개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Package Groups
 
@@ -348,7 +348,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | Protocol     | API protocol definitions and code generation                                               |         6 |
 | Transport    | Runtime adapters that execute protocol routes                                              |         3 |
 | Presentation | Frontend, SSR, and presentation-layer adapters                                             |         5 |
-| Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |         7 |
+| Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |         8 |
 | Docs         | Documentation site and generated reference content                                         |         1 |
 
 ### Maturity Guide
@@ -356,7 +356,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | 상태                | 의미                                | 패키지 수 |
 | ------------------- | ----------------------------------- | --------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |        43 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |        44 |
 | 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        31 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
@@ -434,6 +434,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `@croco/preset-cloudflare`    | Tooling      | `packages/preset-cloudflare`    | tests              |
 | `@croco/preset-lambda`        | Tooling      | `packages/preset-lambda`        | tests              |
 | `@croco/preset-node`          | Tooling      | `packages/preset-node`          | tests              |
+| `@croco/testing`              | Tooling      | `packages/testing`              | README, API, tests |
 | `@croco/transports-graphql`   | Transport    | `packages/transports-graphql`   | tests              |
 
 ### 🔴 alpha/WIP

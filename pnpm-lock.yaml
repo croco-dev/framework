@@ -2173,6 +2173,37 @@ importers:
         specifier: workspace:*
         version: link:../telemetry-api
 
+  packages/testing:
+    dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
+      '@croco/openapi-spec':
+        specifier: workspace:*
+        version: link:../openapi-spec
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/transports-http':
+        specifier: workspace:*
+        version: link:../transports-http
+      reflect-metadata:
+        specifier: 0.2.2
+        version: 0.2.2
+    devDependencies:
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../protocols-rest
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
   packages/transports-cloudflare-workers:
     dependencies:
       '@croco/transports-http':
