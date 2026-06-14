@@ -654,6 +654,8 @@ function writeTypesConsumer(smokeRoot: string, targets: readonly SmokeTarget[]):
 }
 
 function runFrontendViteOptionalPeerSmoke(smokeRoot: string, packageName: string): void {
+  removeCloudflareVitePlugin(smokeRoot);
+
   writeFileSync(
     join(smokeRoot, "frontend-vite-optional-peer.cjs"),
     [
@@ -716,6 +718,13 @@ function runFrontendViteOptionalPeerSmoke(smokeRoot: string, packageName: string
     ].join("\n"),
   );
   run("node", [join(smokeRoot, "frontend-vite-nested-error.mjs")], smokeRoot);
+}
+
+function removeCloudflareVitePlugin(smokeRoot: string): void {
+  rmSync(join(smokeRoot, "node_modules", "@cloudflare", "vite-plugin"), {
+    force: true,
+    recursive: true,
+  });
 }
 
 function installBrokenCloudflareVitePlugin(smokeRoot: string): void {
