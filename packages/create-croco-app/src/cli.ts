@@ -1,6 +1,13 @@
 import { intro, outro } from "@clack/prompts";
 import { Command } from "commander";
 import { generate } from "./generator.js";
+import {
+  isNonInteractiveOptions,
+  normalizeNonInteractiveOptions,
+  parseCliOptions,
+  validateCliOptions,
+  validateResolvedOptions,
+} from "./options.js";
 import { runPrompts } from "./prompts.js";
 import type { GeneratorOptions } from "./types.js";
 
@@ -20,7 +27,7 @@ export function createProgram(): Command {
     .option("--backend-deploy <deploy>", "Backend deploy (docker|lambda)")
     .option(
       "--frontend-deploy <deploy>",
-      "Frontend deploy (opennext|vercel|docker|cloudflare-meta-vite)",
+      "Frontend deploy (opennext|vercel|docker|cloudflare-meta-vite|vite-spa)",
     )
     .option("--db <dbs>", "Comma-separated DB types (postgres,mongodb,redis)")
     .option("--no-agent-rules", "Skip agent rules")
@@ -30,59 +37,17 @@ export function createProgram(): Command {
       try {
         intro("create-croco-app");
 
-        // Parse CLI options to Partial<GeneratorOptions>
-        const cliOptions: Partial<GeneratorOptions> = {};
-
-        if (directory) cliOptions.projectName = directory.split("/").at(-1) ?? directory;
-        if (rawOptions.preset) cliOptions.preset = rawOptions.preset as GeneratorOptions["preset"];
-        if (rawOptions.scope) cliOptions.scope = rawOptions.scope as string;
-        if (rawOptions.api) cliOptions.api = rawOptions.api as GeneratorOptions["api"];
-        if (rawOptions.apiHosting)
-          cliOptions.apiHosting = rawOptions.apiHosting as GeneratorOptions["apiHosting"];
-        if (rawOptions.webApps)
-          cliOptions.webApps = (rawOptions.webApps as string)
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-        if (rawOptions.backendDeploy)
-          cliOptions.backendDeploy = rawOptions.backendDeploy as GeneratorOptions["backendDeploy"];
-        if (rawOptions.frontendDeploy)
-          cliOptions.frontendDeploy =
-            rawOptions.frontendDeploy as GeneratorOptions["frontendDeploy"];
-        if (rawOptions.db)
-          cliOptions.db = (rawOptions.db as string)
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean) as GeneratorOptions["db"];
-        if (rawOptions.agentRules === false) cliOptions.agentRules = false;
-        if (rawOptions.install === false) cliOptions.installDeps = false;
-        if (rawOptions.git === false) cliOptions.initGit = false;
-
-        // Determine if non-interactive (all required options provided)
-        const isNonInteractive =
-          !!cliOptions.preset && !!cliOptions.scope && !!cliOptions.projectName;
+        const cliOptions = parseCliOptions(directory, rawOptions);
+        validateCliOptions(cliOptions);
 
         let options: GeneratorOptions;
 
-        if (isNonInteractive) {
-          // Non-interactive: fill defaults for missing optional fields
-          options = {
-            projectName: cliOptions.projectName ?? "",
-            scope: cliOptions.scope ?? "",
-            preset: cliOptions.preset ?? "blank",
-            webApps: cliOptions.webApps ?? [],
-            api: cliOptions.api,
-            apiHosting: cliOptions.apiHosting ?? "standalone",
-            backendDeploy: cliOptions.backendDeploy,
-            frontendDeploy: cliOptions.frontendDeploy,
-            db: cliOptions.db ?? [],
-            agentRules: cliOptions.agentRules ?? true,
-            installDeps: cliOptions.installDeps ?? true,
-            initGit: cliOptions.initGit ?? true,
-          };
+        if (isNonInteractiveOptions(cliOptions)) {
+          options = normalizeNonInteractiveOptions(cliOptions);
         } else {
           // Interactive mode
           options = await runPrompts(cliOptions);
+          validateResolvedOptions(options);
         }
 
         const targetDir = directory ?? options.projectName;
