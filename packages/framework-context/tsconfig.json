@@ -1,5 +1,11 @@
 {
   "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts"],
   "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
+  },
   "include": ["src/**/*.ts"]
 }
