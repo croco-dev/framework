@@ -1,6 +1,27 @@
-import type { DiagnosticsProvider, HealthStatus, ErrorRecord, DiagnosticsReport } from "./types";
+import type {
+  DiagnosticsCollectorOptions,
+  DiagnosticsProvider,
+  DiagnosticsProviderOptions,
+  DiagnosticsReport,
+  ErrorRecord,
+  HealthStatus,
+} from "./types";
 import { ErrorHistoryRingBuffer } from "./ErrorHistoryRingBuffer";
 import { DuplicateDiagnosticsProviderProblem } from "./problems/DiagnosticsProblems";
+
+const DEFAULT_PROVIDER_TIMEOUT_MS = 5000;
+
+type RegisteredDiagnosticsProvider = {
+  readonly provider: DiagnosticsProvider;
+  readonly options: DiagnosticsProviderOptions;
+};
+
+class DiagnosticsProviderTimeoutError extends Error {
+  constructor(providerName: string, timeoutMs: number) {
+    super(`Provider health check timed out after ${timeoutMs}ms for ${providerName}`);
+    this.name = "DiagnosticsProviderTimeoutError";
+  }
+}
 
 function capMessage(message: string, maxLength: number): string {
   if (message.length <= maxLength) {
@@ -23,25 +44,30 @@ function computeSummary(statuses: readonly HealthStatus[]): DiagnosticsReport["s
 }
 
 export class DiagnosticsCollector {
-  private readonly providers = new Map<string, DiagnosticsProvider>();
+  private readonly providers = new Map<string, RegisteredDiagnosticsProvider>();
   private readonly errors = new ErrorHistoryRingBuffer();
+  private readonly timeout: number;
 
-  registerProvider(provider: DiagnosticsProvider): void {
+  constructor(options: DiagnosticsCollectorOptions = {}) {
+    this.timeout = options.timeout ?? DEFAULT_PROVIDER_TIMEOUT_MS;
+  }
+
+  registerProvider(provider: DiagnosticsProvider, options: DiagnosticsProviderOptions = {}): void {
     const existingProvider = this.providers.get(provider.name);
 
     if (existingProvider !== undefined) {
-      if (existingProvider === provider) {
+      if (existingProvider.provider === provider) {
         return;
       }
 
       throw new DuplicateDiagnosticsProviderProblem(provider.name);
     }
 
-    this.providers.set(provider.name, provider);
+    this.providers.set(provider.name, { provider, options });
   }
 
   getProviders(): readonly DiagnosticsProvider[] {
-    return Array.from(this.providers.values());
+    return Array.from(this.providers.values(), ({ provider }) => provider);
   }
 
   recordError(error: ErrorRecord): void {
@@ -52,7 +78,9 @@ export class DiagnosticsCollector {
     const providerEntries = Array.from(this.providers.entries());
 
     const settled = await Promise.allSettled(
-      providerEntries.map(async ([, provider]) => provider.getHealth()),
+      providerEntries.map(async ([, registeredProvider]) =>
+        this.getProviderHealth(registeredProvider),
+      ),
     );
 
     const components: HealthStatus[] = settled.map((result, index) => {
@@ -81,5 +109,29 @@ export class DiagnosticsCollector {
       components,
       recentErrors: this.errors.getAll(),
     };
+  }
+
+  private async getProviderHealth({
+    provider,
+    options,
+  }: RegisteredDiagnosticsProvider): Promise<HealthStatus> {
+    const timeoutMs = options.timeout ?? this.timeout;
+    const controller = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const timeoutPromise = new Promise<HealthStatus>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new DiagnosticsProviderTimeoutError(provider.name, timeoutMs));
+        controller.abort();
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([provider.getHealth(controller.signal), timeoutPromise]);
+    } finally {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+    }
   }
 }

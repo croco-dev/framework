@@ -1,7 +1,15 @@
 export interface DiagnosticsProvider {
   readonly name: string;
-  getHealth(): Promise<HealthStatus>;
+  getHealth(signal?: AbortSignal): Promise<HealthStatus>;
 }
+
+export type DiagnosticsCollectorOptions = {
+  readonly timeout?: number;
+};
+
+export type DiagnosticsProviderOptions = {
+  readonly timeout?: number;
+};
 
 export type HealthStatus = {
   readonly status: "healthy" | "degraded" | "unhealthy";
