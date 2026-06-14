@@ -40,12 +40,14 @@ jobs:
             base="$(git rev-parse HEAD^)"
           fi
 
+          release_work_pattern='^\.changeset/(pre\.json|[^/]+\.md)$|^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$'
+
           changed_files="$(git diff --name-only "$base" HEAD)"
-          if echo "$changed_files" | grep -Eq '^\.changeset/[^/]+\.md$|^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$'; then
+          if echo "$changed_files" | grep -Eq "$release_work_pattern"; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "No changeset, manifest, changelog, or lockfile changes detected; skipping release pipeline."
+            echo "No changeset, prerelease state, manifest, changelog, or lockfile changes detected; skipping release pipeline."
           fi
 
       - name: Setup pnpm
