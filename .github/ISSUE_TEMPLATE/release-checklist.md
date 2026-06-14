@@ -7,9 +7,13 @@ labels: [documentation, release]
 
 ## Pre-Release Documentation Checklist
 
+### Package Catalog Gate
+
+- [ ] `pnpm docs:catalog:check` passes
+- [ ] Review `docs/package-docs-report.md` for legacy README/API docs/test gaps
+
 ### Root README
 
-- [ ] Package catalog tables match `ls packages/` output
 - [ ] Roadmap sections updated (no stale Q\*/YYYY dates)
 - [ ] Architecture diagram still accurate
 - [ ] Quick start commands still valid
@@ -22,5 +26,5 @@ labels: [documentation, release]
 
 ### Package READMEs
 
-- [ ] New packages have READMEs with: overview, API surface, dependencies
-- [ ] Deprecated/removed packages removed from catalog
+- [ ] New public packages have README/API docs/test coverage or an explicit baseline entry
+- [ ] Deprecated/removed packages are reflected in `docs/package-catalog.json`

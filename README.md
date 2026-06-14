@@ -116,7 +116,7 @@ graph LR
 
 #### 패키지 성숙도 안내
 
-Croco는 80여 개의 패키지로 구성되며, 패키지마다 성숙도가 다릅니다. 사용 전 상태를 확인하세요.
+Croco의 package count, group, maturity metadata는 아래 [패키지 카탈로그](#-패키지-카탈로그) 섹션에서 자동 생성됩니다. 사용 전 상태를 확인하세요.
 
 - 🟢 production-ready — 안정화, 적극 사용 권장
 - 🟡 beta — 기능 완성, 실사용 검증 중
@@ -125,16 +125,7 @@ Croco는 80여 개의 패키지로 구성되며, 패키지마다 성숙도가 �
 
 ### 📂 Package Grouping
 
-Croco는 80여 개의 패키지를 다음 6개 그룹으로 분류합니다.
-
-| 그룹            | 역할                    | 대표 패키지                                                       |
-| --------------- | ----------------------- | ----------------------------------------------------------------- |
-| **Core**        | 프레임워크 기반 계층    | `framework-context`, `problems-core`, `events-core`, `retry-core` |
-| **Domain**      | 비즈니스 도메인 로직    | `billing-core`, `metering-core`, `auth-core`, `membership-core`   |
-| **Provider**    | 외부 서비스 연동 구현체 | `billing-polar`, `metering-upstash`, `auth-clerk`, `storage-r2`   |
-| **Protocol**    | API 인터페이스 정의     | `protocols-rest`, `protocols-graphql`                             |
-| **Transport**   | 프로토콜 실행 어댑터    | `transports-http`, `transports-graphql`                           |
-| **Integration** | 분석/관찰 가능성 통합   | `integrations-posthog`, `telemetry-api`, `logging-pino`           |
+Croco package grouping은 `docs/package-catalog.json`의 group metadata와 `packages/*/package.json`에서 생성됩니다. README의 카탈로그가 drift되면 `pnpm docs:catalog:check`가 실패합니다.
 
 #### 기여자를 위한 읽기 순서
 
@@ -338,114 +329,156 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 ---
 
+<!-- CROCO:PACKAGE-CATALOG:START -->
+
 ## 📦 패키지 카탈로그
 
-### 🟢 Available Now (Production Ready)
+> 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-| 패키지               | 설명                                                                                 | 상태 |
-| -------------------- | ------------------------------------------------------------------------------------ | ---- |
-| `framework-context`  | DI 컨테이너, 요청 컨텍스트(AsyncLocalStorage), 데코레이터 기반 컴포넌트 등록         | 🟢   |
-| `problems-core`      | RFC 7807 Problem Details 기반 구조화된 에러 처리                                     | 🟢   |
-| `events-core`        | 도메인 이벤트 발행/구독, EDA 기반 아키텍처                                           | 🟢   |
-| `tx-core`            | AsyncLocalStorage 기반 Unit of Work 트랜잭션 관리                                    | 🟢   |
-| `tx-drizzle`         | Drizzle ORM 트랜잭션 어댑터                                                          | 🟢   |
-| `retry-core`         | 재시도 정책, 지수 백오프, 서킷브레이커                                               | 🟢   |
-| `billing-core`       | 구독, 주문, 결제 도메인 모델 + DDD 이벤트                                            | 🟢   |
-| `metering-core`      | @Meter/@Metered 데코레이터, 사용량 측정, Quota, Redis 집계, 멱등성                   | 🟢   |
-| `metrics-core`       | SaaS 핵심 지표 계산 엔진 — MRR, LTV, Churn, NRR, GRR, Quick Ratio, Carrying Capacity | 🟢   |
-| `membership-core`    | 팀/조직 멤버십 관리, 역할 할당                                                       | 🟢   |
-| `invitation-core`    | 이메일/링크 기반 멤버 초대, 토큰 관리, 도메인 정책                                   | 🟢   |
-| `llm-core`           | @Llm 데코레이터 기반 LLM 통합 — 생성, 스트리밍, 도구 호출, 임베딩, 구조화 출력       | 🟢   |
-| `llm-metering`       | @AiMetered 데코레이터, LLM 토큰 사용량 추적 및 비용 계산                             | 🟢   |
-| `telemetry-api`      | @Trace 데코레이터, withSpan, 분산 추적 API                                           | 🟢   |
-| `telemetry-sdk-node` | Node.js OpenTelemetry SDK 초기화, Lambda 프리셋                                      | 🟢   |
-| `audit-core`         | @Auditable 데코레이터, 감사 로그 추상화                                              | 🟢   |
-| `auth-core`          | RBAC 엔진, @RequirePermission 데코레이터, Guard 패턴                                 | 🟢   |
-| `ratelimit-core`     | Rate Limiting 추상화 (고정 윈도우, 슬라이딩 윈도우, 토큰 버킷)                       | 🟢   |
-| `repository-core`    | 리포지토리 패턴 인터페이스 및 기본 구현                                              | 🟢   |
-| `dataloader-core`    | N+1 문제 해결을 위한 배치 로딩                                                       | 🟢   |
-| `search-core`        | @Searchable 데코레이터, 검색 엔진 추상화, 한국어 초성/로마자 변환                    | 🟢   |
-| `protocols-rest`     | REST API (@Controller, @Get, @Post 등)                                               | 🟢   |
-| `transports-http`    | Hono 기반 HTTP 실행 엔진, Lambda 핸들러 생성기                                       | 🟢   |
+현재 카탈로그는 **97개 public package**를 추적합니다. Private package 1개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
-### 🟡 Beta / Experimental
+### Package Groups
 
-| 패키지                 | 설명                                                                    | 상태 |
-| ---------------------- | ----------------------------------------------------------------------- | ---- |
-| `events-inmemory`      | 인메모리 이벤트 버스 구현체                                             | 🟡   |
-| `events-tx`            | 트랜잭션 연동 이벤트 발행 (outbox 패턴)                                 | 🟡   |
-| `cache-core`           | 캐시 추상화 레이어                                                      | 🟡   |
-| `pagination-core`      | 커서/오프셋 기반 페이지네이션 유틸리티                                  | 🟡   |
-| `gid-core`             | ULID 기반 타입 안전 Prefix ID 생성                                      | 🟡   |
-| `health-core`          | 헬스체크 엔드포인트 및 의존성 상태 확인                                 | 🟡   |
-| `entitlements-core`    | 기능 사용권 관리 — Boolean/Metered/Static entitlement, Guard, Plan 매핑 | 🟡   |
-| `customer-health-core` | 테넌트 건강 점수 — Signal 수집, 가중 평균, 상태 전이 이벤트             | 🟡   |
-| `impersonation-core`   | 관리자 대리 접속 — 세션 관리, Guard, 감사 추적                          | 🟡   |
-| `tenant-core`          | 멀티테넌시 컨텍스트, 테넌트 격리                                        | 🟡   |
-| `onboarding-core`      | 사용자/팀 온보딩 단계 추적                                              | 🟡   |
-| `storage-core`         | 파일 스토리지 추상화 (업로드, 다운로드, 삭제)                           | 🟡   |
-| `storage-r2`           | Cloudflare R2 스토리지 구현체                                           | 🟡   |
-| `access-core`          | Fine-grained Access Control (ACL) 엔진                                  | 🟡   |
-| `protocols-graphql`    | GraphQL 코드-first 정의 (Yoga 런타임)                                   | 🟡   |
-| `transports-graphql`   | GraphQL 프로토콜 실행 어댑터                                            | 🟡   |
-| `integrations-posthog` | PostHog 분석 이벤트 수집                                                | 🟡   |
-| `features-core`        | 기능 플래그 관리                                                        | 🟡   |
-| `features-posthog`     | PostHog 기반 기능 플래그 제공자                                         | 🟡   |
-| `tasks-core`           | 태스크 큐 추상화                                                        | 🟡   |
-| `triggers-core`        | 이벤트 트리거 추상화                                                    | 🟡   |
-| `execution-core`       | 실행 추상화 레이어                                                      | 🟡   |
-| `framework-config`     | 설정 관리                                                               | 🟡   |
-| `framework-logger`     | 프레임워크 로깅 유틸리티                                                | 🟡   |
-| `notifications-core`   | 알림 추상화, 채널 라우팅, 템플릿 엔진                                   | 🟡   |
-| `shared`               | 공유 유틸리티                                                           | 🟡   |
-| `create-croco-app`     | Croco 프로젝트 생성기                                                   | 🟡   |
-| `esbuild-plugin`       | Esbuild 플러그인                                                        | 🟡   |
-| `docs`                 | Starlight 기반 API 문서 사이트                                          | 🟡   |
-| `billing-polar`        | Polar 결제 플랫폼 연동 (checkout, webhook)                              | 🟡   |
+| 그룹         | 역할                                                                                       | 패키지 수 |
+| ------------ | ------------------------------------------------------------------------------------------ | --------: |
+| Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities |        21 |
+| Domain       | Business-domain APIs and package-level abstractions                                        |        24 |
+| Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        25 |
+| Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
+| Protocol     | API protocol definitions and code generation                                               |         6 |
+| Transport    | Runtime adapters that execute protocol routes                                              |         3 |
+| Presentation | Frontend, SSR, and presentation-layer adapters                                             |         5 |
+| Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |         7 |
+| Docs         | Documentation site and generated reference content                                         |         1 |
 
-### 🔴 Alpha / WIP
+### Maturity Guide
 
-| 패키지                          | 설명                              | 상태 |
-| ------------------------------- | --------------------------------- | ---- |
-| `metering-upstash`              | Upstash Redis 미터링 구현체       | 🔴   |
-| `metrics-billing`               | Billing → Metrics 자동 파이프라인 | 🔴   |
-| `entitlements-drizzle`          | Drizzle 구현체                    | 🔴   |
-| `customer-health-drizzle`       | Drizzle 구현체                    | 🔴   |
-| `membership-drizzle`            | Drizzle 구현체                    | 🔴   |
-| `invitation-drizzle`            | Drizzle 구현체                    | 🔴   |
-| `onboarding-drizzle`            | Drizzle 구현체                    | 🔴   |
-| `ratelimit-upstash`             | Upstash Rate Limit 구현체         | 🔴   |
-| `search-drizzle`                | Drizzle 기반 DB 검색 구현체       | 🔴   |
-| `search-meilisearch`            | Meilisearch 전문 검색 연동        | 🔴   |
-| `storage-cloudflare`            | Cloudflare Images 연동            | 🔴   |
-| `storage-cloudinary`            | Cloudinary 이미지/동영상 관리     | 🔴   |
-| `audit-drizzle`                 | Drizzle 기반 감사 로그 저장소     | 🔴   |
-| `metering-drizzle`              | Drizzle 기반 계량 데이터 저장소   | 🔴   |
-| `analytics-core`                | 이벤트 추적, 분석 어댑터 추상화   | 🔴   |
-| `analytics-posthog`             | PostHog 분석 어댑터               | 🔴   |
-| `auth-drizzle`                  | Drizzle 기반 권한 저장소          | 🔴   |
-| `auth-clerk`                    | Clerk 인증 연동                   | 🔴   |
-| `auth-better-auth`              | Better Auth 인증 연동             | 🔴   |
-| `access-drizzle`                | Drizzle 기반 ACL 제공자           | 🔴   |
-| `transports-cloudflare-workers` | Cloudflare Workers 전송           | 🔴   |
-| `notifications-resend`          | Resend 이메일 알림                | 🔴   |
-| `batch-core`                    | 배치 처리 추상화                  | 🔴   |
-| `batch-qstash`                  | QStash 배치 처리 구현체           | 🔴   |
-| `tasks-qstash`                  | QStash 태스크 큐 구현체           | 🔴   |
-| `triggers-qstash`               | QStash 트리거 구현체              | 🔴   |
-| `execution-drizzle`             | Drizzle 실행 구현체               | 🔴   |
-| `migration-runner`              | 마이그레이션 실행기               | 🔴   |
-| `frontend-vite`                 | Vite 프론트엔드 빌드              | 🔴   |
-| `frontend-react`                | React 프론트엔드 유틸리티         | 🔴   |
-| `frontend-cloudflare`           | Cloudflare 프론트엔드 유틸리티    | 🔴   |
-| `utils-next-font`               | Next.js 폰트 최적화 유틸리티      | 🔴   |
-| `utils-structure`               | 구조 검증 유틸리티                | 🔴   |
+| 상태                | 의미                                | 패키지 수 |
+| ------------------- | ----------------------------------- | --------: |
+| 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |        43 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        31 |
+| ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
-### ⚠️ Deprecated
+### 🟢 production-ready
 
-| 패키지          | 설명                                           | 상태 |
-| --------------- | ---------------------------------------------- | ---- |
-| `eslint-config` | 공유 ESLint 설정 (Biome으로 마이그레이션 권장) | ⚠️   |
+| 패키지                      | 그룹        | 디렉터리                      | 문서               |
+| --------------------------- | ----------- | ----------------------------- | ------------------ |
+| `@croco/dataloader-core`    | Core        | `packages/dataloader-core`    | README, tests      |
+| `@croco/events-core`        | Core        | `packages/events-core`        | README, API, tests |
+| `@croco/framework-context`  | Core        | `packages/framework-context`  | README, API, tests |
+| `@croco/problems-core`      | Core        | `packages/problems-core`      | README, API, tests |
+| `@croco/repository-core`    | Core        | `packages/repository-core`    | README, tests      |
+| `@croco/retry-core`         | Core        | `packages/retry-core`         | README, API, tests |
+| `@croco/tx-core`            | Core        | `packages/tx-core`            | README, tests      |
+| `@croco/tx-drizzle`         | Core        | `packages/tx-drizzle`         | README, tests      |
+| `@croco/audit-core`         | Domain      | `packages/audit-core`         | README, tests      |
+| `@croco/auth-core`          | Domain      | `packages/auth-core`          | README, API, tests |
+| `@croco/billing-core`       | Domain      | `packages/billing-core`       | README, tests      |
+| `@croco/invitation-core`    | Domain      | `packages/invitation-core`    | README, tests      |
+| `@croco/llm-core`           | Domain      | `packages/llm-core`           | README, API, tests |
+| `@croco/llm-metering`       | Domain      | `packages/llm-metering`       | README, tests      |
+| `@croco/membership-core`    | Domain      | `packages/membership-core`    | README, tests      |
+| `@croco/metering-core`      | Domain      | `packages/metering-core`      | README, API, tests |
+| `@croco/metrics-core`       | Domain      | `packages/metrics-core`       | README, tests      |
+| `@croco/ratelimit-core`     | Domain      | `packages/ratelimit-core`     | README, API, tests |
+| `@croco/search-core`        | Domain      | `packages/search-core`        | README, tests      |
+| `@croco/telemetry-api`      | Integration | `packages/telemetry-api`      | README, API, tests |
+| `@croco/telemetry-sdk-node` | Integration | `packages/telemetry-sdk-node` | README, API, tests |
+| `@croco/protocols-rest`     | Protocol    | `packages/protocols-rest`     | README, tests      |
+| `@croco/transports-http`    | Transport   | `packages/transports-http`    | README, API, tests |
+
+### 🟡 beta
+
+| 패키지                        | 그룹         | 디렉터리                        | 문서               |
+| ----------------------------- | ------------ | ------------------------------- | ------------------ |
+| `@croco/cache-core`           | Core         | `packages/cache-core`           | README, tests      |
+| `@croco/diagnostics-core`     | Core         | `packages/diagnostics-core`     | tests              |
+| `@croco/events-inmemory`      | Core         | `packages/events-inmemory`      | README, API, tests |
+| `@croco/events-tx`            | Core         | `packages/events-tx`            | tests              |
+| `@croco/framework-config`     | Core         | `packages/framework-config`     | README, tests      |
+| `@croco/framework-logger`     | Core         | `packages/framework-logger`     | README, tests      |
+| `@croco/framework-module`     | Core         | `packages/framework-module`     | tests              |
+| `@croco/framework-preset`     | Core         | `packages/framework-preset`     | tests              |
+| `@croco/framework-routes`     | Core         | `packages/framework-routes`     | tests              |
+| `@croco/gid-core`             | Core         | `packages/gid-core`             | README, tests      |
+| `@croco/health-core`          | Core         | `packages/health-core`          | README, tests      |
+| `@croco/pagination-core`      | Core         | `packages/pagination-core`      | README, tests      |
+| `@croco/tenant-core`          | Core         | `packages/tenant-core`          | README, tests      |
+| `@croco/docs`                 | Docs         | `packages/docs`                 | README             |
+| `@croco/access-core`          | Domain       | `packages/access-core`          | README, tests      |
+| `@croco/customer-health-core` | Domain       | `packages/customer-health-core` | README, tests      |
+| `@croco/entitlements-core`    | Domain       | `packages/entitlements-core`    | README, tests      |
+| `@croco/execution-core`       | Domain       | `packages/execution-core`       | README, tests      |
+| `@croco/features-core`        | Domain       | `packages/features-core`        | tests              |
+| `@croco/impersonation-core`   | Domain       | `packages/impersonation-core`   | README, tests      |
+| `@croco/notifications-core`   | Domain       | `packages/notifications-core`   | tests              |
+| `@croco/onboarding-core`      | Domain       | `packages/onboarding-core`      | README, tests      |
+| `@croco/storage-core`         | Domain       | `packages/storage-core`         | tests              |
+| `@croco/tasks-core`           | Domain       | `packages/tasks-core`           | README, tests      |
+| `@croco/triggers-core`        | Domain       | `packages/triggers-core`        | README, tests      |
+| `@croco/features-posthog`     | Integration  | `packages/features-posthog`     | README, tests      |
+| `@croco/integrations-posthog` | Integration  | `packages/integrations-posthog` | tests              |
+| `@croco/meta-vite`            | Presentation | `packages/meta-vite`            | README, tests      |
+| `@croco/presentation-preset`  | Presentation | `packages/presentation-preset`  | tests              |
+| `@croco/openapi-spec`         | Protocol     | `packages/openapi-spec`         | tests              |
+| `@croco/protocols-core`       | Protocol     | `packages/protocols-core`       | tests              |
+| `@croco/protocols-graphql`    | Protocol     | `packages/protocols-graphql`    | tests              |
+| `@croco/protocols-trpc`       | Protocol     | `packages/protocols-trpc`       | tests              |
+| `@croco/rpc-codegen`          | Protocol     | `packages/rpc-codegen`          | tests              |
+| `@croco/billing-polar`        | Provider     | `packages/billing-polar`        | README, tests      |
+| `@croco/storage-r2`           | Provider     | `packages/storage-r2`           | README, tests      |
+| `@croco/cli`                  | Tooling      | `packages/cli`                  | README, tests      |
+| `create-croco-app`            | Tooling      | `packages/create-croco-app`     | tests              |
+| `@croco/esbuild-plugin`       | Tooling      | `packages/esbuild-plugin`       | README, tests      |
+| `@croco/preset-cloudflare`    | Tooling      | `packages/preset-cloudflare`    | tests              |
+| `@croco/preset-lambda`        | Tooling      | `packages/preset-lambda`        | tests              |
+| `@croco/preset-node`          | Tooling      | `packages/preset-node`          | tests              |
+| `@croco/transports-graphql`   | Transport    | `packages/transports-graphql`   | tests              |
+
+### 🔴 alpha/WIP
+
+| 패키지                                 | 그룹         | 디렉터리                                 | 문서          |
+| -------------------------------------- | ------------ | ---------------------------------------- | ------------- |
+| `@croco/analytics-core`                | Domain       | `packages/analytics-core`                | tests         |
+| `@croco/batch-core`                    | Domain       | `packages/batch-core`                    | README, tests |
+| `@croco/analytics-posthog`             | Integration  | `packages/analytics-posthog`             | README, tests |
+| `@croco/frontend-cloudflare`           | Presentation | `packages/frontend-cloudflare`           | README, tests |
+| `@croco/frontend-react`                | Presentation | `packages/frontend-react`                | README, tests |
+| `@croco/frontend-vite`                 | Presentation | `packages/frontend-vite`                 | README, tests |
+| `@croco/access-drizzle`                | Provider     | `packages/access-drizzle`                | README, tests |
+| `@croco/audit-drizzle`                 | Provider     | `packages/audit-drizzle`                 | README, tests |
+| `@croco/auth-better-auth`              | Provider     | `packages/auth-better-auth`              | README, tests |
+| `@croco/auth-clerk`                    | Provider     | `packages/auth-clerk`                    | README, tests |
+| `@croco/auth-drizzle`                  | Provider     | `packages/auth-drizzle`                  | README, tests |
+| `@croco/batch-qstash`                  | Provider     | `packages/batch-qstash`                  | README, tests |
+| `@croco/customer-health-drizzle`       | Provider     | `packages/customer-health-drizzle`       | README, tests |
+| `@croco/entitlements-drizzle`          | Provider     | `packages/entitlements-drizzle`          | README, tests |
+| `@croco/execution-drizzle`             | Provider     | `packages/execution-drizzle`             | README, tests |
+| `@croco/invitation-drizzle`            | Provider     | `packages/invitation-drizzle`            | README, tests |
+| `@croco/membership-drizzle`            | Provider     | `packages/membership-drizzle`            | README, tests |
+| `@croco/metering-drizzle`              | Provider     | `packages/metering-drizzle`              | README, tests |
+| `@croco/metering-upstash`              | Provider     | `packages/metering-upstash`              | README, tests |
+| `@croco/metrics-billing`               | Provider     | `packages/metrics-billing`               | README, tests |
+| `@croco/notifications-resend`          | Provider     | `packages/notifications-resend`          | README, tests |
+| `@croco/onboarding-drizzle`            | Provider     | `packages/onboarding-drizzle`            | README, tests |
+| `@croco/ratelimit-upstash`             | Provider     | `packages/ratelimit-upstash`             | README, tests |
+| `@croco/search-drizzle`                | Provider     | `packages/search-drizzle`                | README, tests |
+| `@croco/search-meilisearch`            | Provider     | `packages/search-meilisearch`            | README, tests |
+| `@croco/storage-cloudflare`            | Provider     | `packages/storage-cloudflare`            | README, tests |
+| `@croco/storage-cloudinary`            | Provider     | `packages/storage-cloudinary`            | README, tests |
+| `@croco/tasks-qstash`                  | Provider     | `packages/tasks-qstash`                  | README, tests |
+| `@croco/triggers-qstash`               | Provider     | `packages/triggers-qstash`               | tests         |
+| `@croco/migration-runner`              | Tooling      | `packages/migration-runner`              | tests         |
+| `@croco/transports-cloudflare-workers` | Transport    | `packages/transports-cloudflare-workers` | tests         |
+
+### Documentation Gate
+
+- `pnpm docs:catalog:check`는 README 카탈로그와 문서 커버리지 리포트 drift를 검증합니다.
+- 신규 public package는 `docs/package-catalog.json`에 그룹/성숙도 metadata가 있어야 합니다.
+- 신규 public package의 README, API docs, tests 누락은 `docs/package-docs-baseline.json`에 없는 한 실패합니다.
+
+<!-- CROCO:PACKAGE-CATALOG:END -->
 
 ---
 
