@@ -1,29 +1,26 @@
 export type PageRouteOptions = {
-  readonly name: string;
-  readonly kebab: string;
   readonly path: string;
   readonly mode: "ssr" | "spa";
 };
 
 export function pageRoute(options: PageRouteOptions): string {
   if (options.mode === "spa") {
-    return `import type { RouteObject } from 'react-router';
-import Page from './Page';
+    return `import Page from './Page';
 
 export const routeConfig = {
   path: '${options.path}',
   Component: Page,
-} satisfies RouteObject;
+};
 `;
   }
 
-  return `import { createCrocoPageConfig } from '@croco/frontend-react';
+  return `import { defineRoute } from '@croco/meta-vite';
+import Page from './Page';
 
-export const routeConfig = {
+export default defineRoute({
   path: '${options.path}',
-  component: {
-    config: createCrocoPageConfig(),
-  },
-};
+  mode: 'ssr',
+  component: Page,
+});
 `;
 }

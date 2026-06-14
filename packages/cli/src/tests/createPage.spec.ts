@@ -1,8 +1,22 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
 import { runCreatePage } from "../commands/createPage.js";
+
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(TEST_DIR, "../../../..");
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+] as const;
+
+type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
+type PackageManifest = Partial<Record<DependencyField, Record<string, string>>>;
 
 describe("runCreatePage", () => {
   it("should create an SSR page file set", async () => {
@@ -12,15 +26,14 @@ describe("runCreatePage", () => {
     const pageDir = path.join(cwd, "apps", "console-web", "pages", "dashboard");
     const pageContent = await fs.readFile(path.join(pageDir, "Page.tsx"), "utf-8");
     const routeContent = await fs.readFile(path.join(pageDir, "route.ts"), "utf-8");
-    const specContent = await fs.readFile(path.join(pageDir, "Page.spec.tsx"), "utf-8");
 
-    expect(result?.files.map((file) => file.status)).toEqual(["created", "created", "created"]);
-    expect(pageContent).toContain("createIsomorphicPageConfig");
-    expect(pageContent).toContain("path: '/dashboard'");
+    expect(result?.files.map((file) => file.status)).toEqual(["created", "created"]);
+    expect(pageContent).toContain("export default function DashboardPage");
+    expect(pageContent).not.toContain("@croco/frontend-react");
+    expect(routeContent).toContain("import { defineRoute } from '@croco/meta-vite';");
+    expect(routeContent).toContain("mode: 'ssr'");
     expect(pageContent).not.toContain("CrocoDataFn");
-    expect(routeContent).toContain("createCrocoPageConfig");
     expect(routeContent).toContain("path: '/dashboard'");
-    expect(specContent).toContain("toMatchSnapshot");
   });
 
   it("should create a SPA page file set", async () => {
@@ -31,10 +44,59 @@ describe("runCreatePage", () => {
     const pageContent = await fs.readFile(path.join(pageDir, "Page.tsx"), "utf-8");
     const routeContent = await fs.readFile(path.join(pageDir, "route.ts"), "utf-8");
 
-    expect(pageContent).toContain("usePageData");
-    expect(pageContent).not.toContain("createIsomorphicPageConfig");
-    expect(routeContent).toContain("import type { RouteObject } from 'react-router';");
+    expect(pageContent).toContain("export default function SettingsPanelPage");
+    expect(pageContent).not.toContain("@croco/frontend-react");
+    expect(routeContent).toContain("Component: Page");
+    expect(routeContent).not.toContain("react-router");
     expect(routeContent).toContain("path: '/settings-panel'");
+  });
+
+  it("should keep SSR generated imports declared by scaffold manifests", async () => {
+    for (const template of ["ssr-lambda", "container-fullstack"]) {
+      const cwd = await createWorkspace({
+        consoleWebManifest: await readConsoleWebTemplateManifest(template),
+      });
+
+      const result = await runCreatePage("Dashboard", { cwd, mode: "ssr" });
+
+      await expectMissingGeneratedDependencies(cwd, result?.files.map((file) => file.path) ?? []);
+    }
+  });
+
+  it("should keep SPA generated imports declared by scaffold manifests", async () => {
+    const cwd = await createWorkspace({
+      consoleWebManifest: await readConsoleWebTemplateManifest("spa-be-split"),
+    });
+
+    const result = await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
+
+    await expectMissingGeneratedDependencies(cwd, result?.files.map((file) => file.path) ?? []);
+  });
+
+  it("should reject SSR pages in SPA scaffolds before writing files", async () => {
+    const cwd = await createWorkspace({
+      consoleWebManifest: await readConsoleWebTemplateManifest("spa-be-split"),
+    });
+
+    await expect(runCreatePage("Dashboard", { cwd })).rejects.toThrow(
+      "Page mode 'ssr' is not supported by apps/console-web. Supported modes: spa",
+    );
+    await expect(
+      fs.access(path.join(cwd, "apps", "console-web", "pages", "dashboard", "Page.tsx")),
+    ).rejects.toThrow();
+  });
+
+  it("should reject SPA pages in SSR scaffolds before writing files", async () => {
+    const cwd = await createWorkspace({
+      consoleWebManifest: await readConsoleWebTemplateManifest("ssr-lambda"),
+    });
+
+    await expect(runCreatePage("SettingsPanel", { cwd, mode: "spa" })).rejects.toThrow(
+      "Page mode 'spa' is not supported by apps/console-web. Supported modes: ssr",
+    );
+    await expect(
+      fs.access(path.join(cwd, "apps", "console-web", "pages", "settings-panel", "Page.tsx")),
+    ).rejects.toThrow();
   });
 
   it("should throw for invalid names", async () => {
@@ -46,12 +108,94 @@ describe("runCreatePage", () => {
   });
 });
 
-async function createWorkspace(): Promise<string> {
+async function createWorkspace(options: { consoleWebManifest?: string } = {}): Promise<string> {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "croco-cli-page-"));
 
   await fs.mkdir(path.join(cwd, "apps", "console-web"), { recursive: true });
   await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
-  await fs.writeFile(path.join(cwd, "apps", "console-web", "package.json"), "{}");
+  await fs.writeFile(
+    path.join(cwd, "apps", "console-web", "package.json"),
+    options.consoleWebManifest ?? "{}",
+  );
 
   return cwd;
+}
+
+async function readConsoleWebTemplateManifest(template: string): Promise<string> {
+  const manifestPath = path.join(
+    REPO_ROOT,
+    "packages",
+    "create-croco-app",
+    "templates",
+    template,
+    "apps",
+    "console-web",
+    "package.json.hbs",
+  );
+  const content = await fs.readFile(manifestPath, "utf-8");
+
+  return content.split("{{scope}}").join("@test").split("{{projectName}}").join("test-app");
+}
+
+async function expectMissingGeneratedDependencies(
+  cwd: string,
+  generatedFilePaths: readonly string[],
+): Promise<void> {
+  const manifest = JSON.parse(
+    await fs.readFile(path.join(cwd, "apps", "console-web", "package.json"), "utf-8"),
+  ) as PackageManifest;
+  const declaredDependencies = collectDeclaredDependencies(manifest);
+  const generatedImports = await collectBareImports(generatedFilePaths);
+  const missingDependencies = [...generatedImports].filter(
+    (moduleSpecifier) => !declaredDependencies.has(toPackageName(moduleSpecifier)),
+  );
+
+  expect(missingDependencies).toEqual([]);
+}
+
+function collectDeclaredDependencies(manifest: PackageManifest): Set<string> {
+  return new Set(DEPENDENCY_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {})));
+}
+
+async function collectBareImports(filePaths: readonly string[]): Promise<Set<string>> {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const moduleSpecifiers = new Set<string>();
+
+  for (const filePath of filePaths) {
+    const content = await fs.readFile(filePath, "utf-8");
+    const sourceFile = project.createSourceFile(filePath, content);
+    const imports = sourceFile
+      .getImportDeclarations()
+      .map((declaration) => declaration.getModuleSpecifierValue());
+    const exports = sourceFile
+      .getExportDeclarations()
+      .map((declaration) => declaration.getModuleSpecifierValue())
+      .filter((value): value is string => typeof value === "string");
+
+    for (const moduleSpecifier of [...imports, ...exports]) {
+      if (isBareModuleSpecifier(moduleSpecifier)) {
+        moduleSpecifiers.add(moduleSpecifier);
+      }
+    }
+  }
+
+  return moduleSpecifiers;
+}
+
+function isBareModuleSpecifier(moduleSpecifier: string): boolean {
+  return (
+    !moduleSpecifier.startsWith(".") &&
+    !moduleSpecifier.startsWith("/") &&
+    !moduleSpecifier.startsWith("node:")
+  );
+}
+
+function toPackageName(moduleSpecifier: string): string {
+  if (!moduleSpecifier.startsWith("@")) {
+    return moduleSpecifier.split("/")[0] ?? moduleSpecifier;
+  }
+
+  const [scope, name] = moduleSpecifier.split("/");
+
+  return `${scope}/${name}`;
 }

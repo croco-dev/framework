@@ -24,11 +24,7 @@ describe("runGenerateScaffold", () => {
       "created",
     ]);
     expect(result.domain?.registration?.status).toBe("updated");
-    expect(result.page?.files.map((file) => file.status)).toEqual([
-      "created",
-      "created",
-      "created",
-    ]);
+    expect(result.page?.files.map((file) => file.status)).toEqual(["created", "created"]);
     await expect(fs.access(path.join(domainDir, "ProductController.ts"))).resolves.toBeUndefined();
     await expect(fs.access(path.join(domainDir, "ProductService.ts"))).resolves.toBeUndefined();
     await expect(fs.access(path.join(domainDir, "ProductRepository.ts"))).resolves.toBeUndefined();
@@ -36,7 +32,6 @@ describe("runGenerateScaffold", () => {
     await expect(fs.access(path.join(domainDir, "index.ts"))).resolves.toBeUndefined();
     await expect(fs.access(path.join(pageDir, "Page.tsx"))).resolves.toBeUndefined();
     await expect(fs.access(path.join(pageDir, "route.ts"))).resolves.toBeUndefined();
-    await expect(fs.access(path.join(pageDir, "Page.spec.tsx"))).resolves.toBeUndefined();
     expect(entryContent).toContain("app.addControllers([ProductController]);");
   });
 

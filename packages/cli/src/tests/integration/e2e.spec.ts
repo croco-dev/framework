@@ -53,8 +53,9 @@ describe("container-fullstack generator e2e", () => {
     const pageContent = await fs.readFile(path.join(pageDir, "Page.tsx"), "utf-8");
     const routeContent = await fs.readFile(path.join(pageDir, "route.ts"), "utf-8");
 
-    expect(result?.files.map((file) => file.status)).toEqual(["created", "created", "created"]);
-    expect(pageContent).toContain("createIsomorphicPageConfig");
+    expect(result?.files.map((file) => file.status)).toEqual(["created", "created"]);
+    expect(pageContent).toContain("export default function DashboardPage");
+    expect(routeContent).toContain("defineRoute");
     expect(routeContent).toContain("path: '/dashboard'");
   });
 
@@ -66,9 +67,10 @@ describe("container-fullstack generator e2e", () => {
     const pageContent = await fs.readFile(path.join(pageDir, "Page.tsx"), "utf-8");
     const routeContent = await fs.readFile(path.join(pageDir, "route.ts"), "utf-8");
 
-    expect(result?.files.map((file) => file.status)).toEqual(["created", "created", "created"]);
-    expect(pageContent).toContain("usePageData");
-    expect(routeContent).toContain("import type { RouteObject } from 'react-router';");
+    expect(result?.files.map((file) => file.status)).toEqual(["created", "created"]);
+    expect(pageContent).toContain("export default function SettingsPanelPage");
+    expect(routeContent).toContain("Component: Page");
+    expect(routeContent).not.toContain("react-router");
   });
 
   it("should create a domain and page scaffold", async () => {
@@ -87,11 +89,7 @@ describe("container-fullstack generator e2e", () => {
       "created",
     ]);
     expect(result.domain?.registration?.status).toBe("updated");
-    expect(result.page?.files.map((file) => file.status)).toEqual([
-      "created",
-      "created",
-      "created",
-    ]);
+    expect(result.page?.files.map((file) => file.status)).toEqual(["created", "created"]);
     await expect(fs.access(path.join(domainDir, "ProductController.ts"))).resolves.toBeUndefined();
     await expect(fs.access(path.join(pageDir, "Page.tsx"))).resolves.toBeUndefined();
     expect(entryContent).toContain("app.addControllers([ProductController]);");
@@ -144,7 +142,6 @@ describe("container-fullstack generator e2e", () => {
     ]);
     expect(result.domain?.registration?.status).toBe("updated");
     expect(result.page?.files.map((file) => file.status)).toEqual([
-      "skipped-dry-run",
       "skipped-dry-run",
       "skipped-dry-run",
     ]);
