@@ -106,6 +106,7 @@
     "tasks-core",
     "tasks-qstash",
     "tenant-core",
+    "testing",
     "transports-cloudflare-workers",
     "transports-graphql",
     "triggers-core",

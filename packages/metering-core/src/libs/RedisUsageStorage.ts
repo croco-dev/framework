@@ -176,9 +176,9 @@ return { exceeded and 1 or 0, newUsage }
 
   async fetchUsageRecords(options: UsageQueryOptions): Promise<UsageRecord[]> {
     try {
-      const { members } = await this.readUsageMembers(options);
+      const { members } = await this.readUsageMembers(options, "WITHSCORES");
 
-      return members.map((member) => {
+      return this.parseScoredUsageMembers(members).map(({ member, score }) => {
         const parsed = this.parseUsageMember(member);
 
         return {
@@ -186,7 +186,7 @@ return { exceeded and 1 or 0, newUsage }
           tenantId: options.tenantId,
           meterId: options.meterId,
           value: parsed.value,
-          timestamp: new Date(), // Score에서 복원해야 하지만 단순화
+          timestamp: this.restoreUsageTimestamp(score),
           idempotencyKey: parsed.id,
           metadata: parsed.metadata,
         };
@@ -226,13 +226,17 @@ return { exceeded and 1 or 0, newUsage }
 
   private async readUsageMembers(
     options: UsageQueryOptions,
+    withScores?: "WITHSCORES",
   ): Promise<{ key: string; members: string[] }> {
     const { tenantId, meterId, period, startDate, endDate } = options;
     const { min, max } = this.getTimeRange(period, startDate, endDate);
     const candidates = this.getUsageKeyCandidates(tenantId, meterId, new Date(min), period);
 
     for (const key of candidates) {
-      const members = await this.redis.zrangebyscore(key, min, max);
+      const members =
+        withScores === "WITHSCORES"
+          ? await this.redis.zrangebyscore(key, min, max, withScores)
+          : await this.redis.zrangebyscore(key, min, max);
       if (members.length > 0) {
         return { key, members };
       }
@@ -293,6 +297,41 @@ return { exceeded and 1 or 0, newUsage }
       value: Number.isNaN(value) ? 0 : value,
       metadata: metadataEncoded ? this.decodeMetadata(metadataEncoded) : undefined,
     };
+  }
+
+  private parseScoredUsageMembers(
+    membersWithScores: string[],
+  ): Array<{ member: string; score: number }> {
+    if (membersWithScores.length % 2 !== 0) {
+      throw new Error("Redis ZRANGEBYSCORE WITHSCORES returned an odd number of values");
+    }
+
+    const members: Array<{ member: string; score: number }> = [];
+
+    for (let index = 0; index < membersWithScores.length; index += 2) {
+      const member = membersWithScores[index] ?? "";
+      const score = Number(membersWithScores[index + 1]);
+
+      if (!Number.isFinite(score)) {
+        throw new Error(
+          `Redis ZRANGEBYSCORE WITHSCORES returned invalid score '${membersWithScores[index + 1]}'`,
+        );
+      }
+
+      members.push({ member, score });
+    }
+
+    return members;
+  }
+
+  private restoreUsageTimestamp(score: number): Date {
+    const timestamp = new Date(score);
+
+    if (Number.isNaN(timestamp.getTime())) {
+      throw new Error(`Redis usage timestamp score '${score}' is not a valid Date`);
+    }
+
+    return timestamp;
   }
 
   private decodeMetadata(encodedMetadata: string): Record<string, unknown> | undefined {

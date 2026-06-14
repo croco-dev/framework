@@ -103,24 +103,52 @@ Sorted Set에 멤버 추가
 
 ### zrangebyscore()
 
+#### Call Signature
+
 > **zrangebyscore**(`key`, `min`, `max`): `Promise`\<`string`[]\>
 
 Sorted Set에서 점수 범위로 멤버 조회
 
-#### Parameters
+##### Parameters
 
-##### key
+###### key
 
 `string`
 
-##### min
+###### min
 
 `number`
 
-##### max
+###### max
 
 `number`
 
-#### Returns
+##### Returns
+
+`Promise`\<`string`[]\>
+
+#### Call Signature
+
+> **zrangebyscore**(`key`, `min`, `max`, `withScores`): `Promise`\<`string`[]\>
+
+##### Parameters
+
+###### key
+
+`string`
+
+###### min
+
+`number`
+
+###### max
+
+`number`
+
+###### withScores
+
+`"WITHSCORES"`
+
+##### Returns
 
 `Promise`\<`string`[]\>

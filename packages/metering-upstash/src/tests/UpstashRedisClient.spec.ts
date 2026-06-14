@@ -59,6 +59,18 @@ describe("UpstashRedisClient", () => {
       expect(result).toEqual(["123", "456"]);
     });
 
+    it("should request scores when WITHSCORES is passed", async () => {
+      vi.mocked(mockRedis.zrange).mockResolvedValue(["member1", 100, "member2", 200]);
+
+      const result = await client.zrangebyscore("test-key", 100, 200, "WITHSCORES");
+
+      expect(mockRedis.zrange).toHaveBeenCalledWith("test-key", 100, 200, {
+        byScore: true,
+        withScores: true,
+      });
+      expect(result).toEqual(["member1", "100", "member2", "200"]);
+    });
+
     it("should return empty array when no results", async () => {
       vi.mocked(mockRedis.zrange).mockResolvedValue([]);
 
