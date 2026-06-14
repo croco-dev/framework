@@ -10,8 +10,13 @@ import { generateClientFiles } from "../libs/generate";
 
 const outDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen");
 const moduleDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen-modules");
-const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null };
-const BODY_INPUT_SCHEMAS = { body: {} as RouteIR["inputSchemas"]["body"], path: null, query: null };
+const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null, headers: null };
+const BODY_INPUT_SCHEMAS = {
+  body: {} as RouteIR["inputSchemas"]["body"],
+  path: null,
+  query: null,
+  headers: null,
+};
 const PATH_QUERY_INPUT_SCHEMAS = {
   body: null,
   path: z.object({ id: z.string() }) as any,
@@ -22,6 +27,13 @@ const PATH_QUERY_INPUT_SCHEMAS = {
     tags: z.array(z.string()),
     deletedAt: z.string().nullable(),
   }) as any,
+  headers: null,
+};
+const HEADER_INPUT_SCHEMAS = {
+  body: null,
+  path: null,
+  query: null,
+  headers: z.object({ authorization: z.string(), "x-request-id": z.string().optional() }) as any,
 };
 
 describe("rpc-codegen round trip", () => {
@@ -235,6 +247,42 @@ describe("rpc-codegen round trip", () => {
     );
   });
 
+  it("generates header inputs that can call a mocked server", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getCurrentUser",
+        httpMethod: "GET",
+        path: "/me",
+        params: [
+          { kind: "header", name: "authorization", schema: null },
+          { kind: "header", name: "x-request-id", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: HEADER_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-headers.ts", userContent);
+    const fetchMock = vi.fn(async () => jsonResponse({ id: "1" }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      userModule.userClient.getCurrentUser({
+        headers: { authorization: "Bearer token", "x-request-id": undefined },
+      }),
+    ).resolves.toEqual({ id: "1" });
+    expect(fetchMock).toHaveBeenCalledWith("/me", {
+      method: "GET",
+      headers: { authorization: "Bearer token" },
+    });
+  });
+
   it("generates outputSchema types that compile", async () => {
     const routeIRs: RouteIR[] = [
       {
@@ -244,7 +292,12 @@ describe("rpc-codegen round trip", () => {
         path: "/users/:id",
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
-        inputSchemas: { body: null, path: z.object({ id: z.string() }) as any, query: null },
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
         outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
         domain: "user",
       },
@@ -290,6 +343,12 @@ async function importGeneratedClient(fileName: string, source: string) {
           readonly search: string | undefined;
           readonly tags: string[];
           readonly deletedAt: string | null;
+        };
+      }) => Promise<unknown>;
+      readonly getCurrentUser: (input: {
+        readonly headers: {
+          readonly authorization: string;
+          readonly "x-request-id": string | undefined;
         };
       }) => Promise<unknown>;
     };

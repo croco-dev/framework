@@ -91,6 +91,24 @@ function serializeQueryParams(query: Record<string, QueryParamInput>): string {
 }
 `
     : "";
+  const headerHelpers = domainRoutes.routes.some((route) => route.inputSchemas.headers)
+    ? `type HeaderParamValue = string | number | boolean | null | undefined;
+
+function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<string, string> {
+  const serialized: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    serialized[key] = String(value);
+  }
+
+  return serialized;
+}
+`
+    : "";
   const clientMethods = domainRoutes.routes.map(generateClientMethod).join("\n");
   const imports = options.reactQuery
     ? "import { useMutation, useQuery } from '@tanstack/react-query';\n"
@@ -98,7 +116,7 @@ function serializeQueryParams(query: Record<string, QueryParamInput>): string {
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
 
   return `${imports}${types.join("\n")}
-${responseHelpers}${queryHelpers}
+${responseHelpers}${queryHelpers}${headerHelpers}
 export const ${clientName} = {
 ${clientMethods}
 };
@@ -152,10 +170,33 @@ function getFetchOptions(route: RouteIR): string {
 
   if (hasBody(route)) {
     options.push(`body: JSON.stringify(${hasStructuredInput(route) ? "input.body" : "input"})`);
-    options.push("headers: { 'Content-Type': 'application/json' }");
+  }
+
+  const headers = getHeadersExpression(route);
+
+  if (headers.length > 0) {
+    options.push(`headers: ${headers}`);
   }
 
   return `{ ${options.join(", ")} }`;
+}
+
+function getHeadersExpression(route: RouteIR): string {
+  const hasHeaderInput = route.inputSchemas.headers !== null;
+
+  if (hasHeaderInput && hasBody(route)) {
+    return `{ ...serializeHeaders(input.headers), 'Content-Type': 'application/json' }`;
+  }
+
+  if (hasHeaderInput) {
+    return "serializeHeaders(input.headers)";
+  }
+
+  if (hasBody(route)) {
+    return "{ 'Content-Type': 'application/json' }";
+  }
+
+  return "";
 }
 
 function getResponseExpression(route: RouteIR): string {
@@ -266,10 +307,18 @@ function getArrayElementSchema(schema: unknown): unknown {
 
 function getObjectTypeScript(schema: unknown): string {
   const fields = Object.entries(getObjectShape(schema)).map(
-    ([key, value]) => `${key}: ${zodTypeToTypeScript(value)};`,
+    ([key, value]) => `${formatObjectKey(key)}: ${zodTypeToTypeScript(value)};`,
   );
 
   return `{ ${fields.join(" ")} }`;
+}
+
+function formatObjectKey(key: string): string {
+  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) {
+    return key;
+  }
+
+  return `'${key.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
 function getObjectShape(schema: unknown): Record<string, unknown> {
@@ -336,6 +385,7 @@ function getInputSchemaEntries(route: RouteIR): [string, unknown][] {
     ["body", route.inputSchemas.body],
     ["path", route.inputSchemas.path],
     ["query", route.inputSchemas.query],
+    ["headers", route.inputSchemas.headers],
   ];
 
   return entries.filter((entry): entry is [string, unknown] => entry[1] !== null);
@@ -354,11 +404,16 @@ function hasBody(route: RouteIR): boolean {
 }
 
 function hasStructuredInput(route: RouteIR): boolean {
-  return Boolean(route.inputSchemas.path || route.inputSchemas.query);
+  return Boolean(route.inputSchemas.path || route.inputSchemas.query || route.inputSchemas.headers);
 }
 
 function hasLegacyBodyInput(route: RouteIR): boolean {
-  return Boolean(route.inputSchemas.body && !route.inputSchemas.path && !route.inputSchemas.query);
+  return Boolean(
+    route.inputSchemas.body &&
+    !route.inputSchemas.path &&
+    !route.inputSchemas.query &&
+    !route.inputSchemas.headers,
+  );
 }
 
 function getDomainName(route: RouteIR): string {
