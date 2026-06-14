@@ -99,7 +99,7 @@ apps/console-web/pages/{name}/
   route.ts               # Route definition
 ```
 
-The `--mode` flag switches the route template between SSR (default) and SPA rendering. SSR routes are supported for console web apps that declare `@croco/meta-vite`, and SPA routes are supported for console web apps that declare `@croco/frontend-vite`. If a scaffold manifest only supports the other mode, the CLI reports that before writing files.
+The `--mode` flag switches the route template between SSR (default) and SPA rendering. SSR routes are supported for console web apps that declare `@croco/meta-vite` and generate a `defineRoute(route)` export typed with `PageRouteDefinition`, matching the current app templates. SPA routes are the explicit legacy `@croco/frontend-vite` path and generate `routeConfig`. If a scaffold manifest only supports the other mode, the CLI reports that before writing files.
 
 ## Troubleshooting
 

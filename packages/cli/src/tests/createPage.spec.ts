@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Project } from "ts-morph";
+import { Project, ts } from "ts-morph";
 import { describe, expect, it } from "vitest";
 import { runCreatePage } from "../commands/createPage.js";
 
@@ -30,13 +30,74 @@ describe("runCreatePage", () => {
     expect(result?.files.map((file) => file.status)).toEqual(["created", "created"]);
     expect(pageContent).toContain("export default function DashboardPage");
     expect(pageContent).not.toContain("@croco/frontend-react");
-    expect(routeContent).toContain("import { defineRoute } from '@croco/meta-vite';");
+    expect(routeContent).toContain(
+      "import { defineRoute, type PageRouteDefinition } from '@croco/meta-vite';",
+    );
+    expect(routeContent).toContain("satisfies PageRouteDefinition");
+    expect(routeContent).toContain("export default defineRoute(route)");
     expect(routeContent).toContain("mode: 'ssr'");
     expect(pageContent).not.toContain("CrocoDataFn");
+    expect(routeContent).not.toContain("routeConfig");
+    expect(routeContent).not.toContain("Component: Page");
     expect(routeContent).toContain("path: '/dashboard'");
   });
 
-  it("should create a SPA page file set", async () => {
+  it("should typecheck the generated SSR route against the meta-vite contract", async () => {
+    const cwd = await createWorkspace();
+
+    await runCreatePage("Dashboard", { cwd, mode: "ssr" });
+    const pageDir = path.join(cwd, "apps", "console-web", "pages", "dashboard");
+    const pagePath = path.join(pageDir, "Page.tsx");
+    const routePath = path.join(pageDir, "route.ts");
+
+    const project = new Project({
+      useInMemoryFileSystem: true,
+      compilerOptions: {
+        jsx: ts.JsxEmit.Preserve,
+        strict: true,
+        target: ts.ScriptTarget.ES2022,
+      },
+    });
+    project.createSourceFile(
+      "/types/jsx.d.ts",
+      `declare namespace JSX {
+  type Element = unknown;
+
+  interface IntrinsicElements {
+    main: unknown;
+    h1: unknown;
+    p: unknown;
+  }
+}
+`,
+    );
+    project.createSourceFile(
+      "/types/meta-vite.d.ts",
+      `declare module '@croco/meta-vite' {
+  export type RenderRouteComponentProps = {
+    readonly request: Request;
+    readonly context?: unknown;
+  };
+
+  export type PageRouteDefinition = {
+    readonly path: string;
+    readonly component: (props: RenderRouteComponentProps) => JSX.Element;
+    readonly mode?: 'ssr' | 'ssg' | 'isr' | 'rsc';
+  };
+
+  export function defineRoute(route: PageRouteDefinition): PageRouteDefinition;
+}
+`,
+    );
+    project.createSourceFile(pagePath, await fs.readFile(pagePath, "utf-8"));
+    project.createSourceFile(routePath, await fs.readFile(routePath, "utf-8"));
+
+    const diagnostics = project.getPreEmitDiagnostics();
+
+    expect(project.formatDiagnosticsWithColorAndContext(diagnostics)).toBe("");
+  });
+
+  it("should create an explicit SPA legacy frontend-vite page file set", async () => {
     const cwd = await createWorkspace();
 
     await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
@@ -47,6 +108,9 @@ describe("runCreatePage", () => {
     expect(pageContent).toContain("export default function SettingsPanelPage");
     expect(pageContent).not.toContain("@croco/frontend-react");
     expect(routeContent).toContain("Component: Page");
+    expect(routeContent).toContain("export const routeConfig");
+    expect(routeContent).not.toContain("@croco/meta-vite");
+    expect(routeContent).not.toContain("defineRoute");
     expect(routeContent).not.toContain("react-router");
     expect(routeContent).toContain("path: '/settings-panel'");
   });
