@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -61,6 +61,20 @@ describe("auto-changeset.mts", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("auto-changeset: on changeset release branch (skipping)");
+    expect(listChangesets(repo)).toEqual([]);
+  });
+
+  it("skips when a feature branch has no commits ahead of trunk", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "feature/no-commits");
+
+    const result = runScript(
+      newBranchStdin("feature/no-commits", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("auto-changeset: no commits found (skipping)");
     expect(listChangesets(repo)).toEqual([]);
   });
 
@@ -175,6 +189,59 @@ describe("auto-changeset.mts", () => {
       "auto-changeset: push aborted — run 'git push' again to include the changeset",
     );
     expect(readOnlyChangeset(repo)).toContain("'@croco/framework-context': minor");
+  });
+
+  it("fails when git inspection fails unexpectedly", () => {
+    const repo = mkdtempSync(join(tmpdir(), "croco-auto-changeset-not-git-"));
+    tempRepos.push(repo);
+
+    const result = runScript("", repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("auto-changeset: failed:");
+    expect(result.stdout).toContain("not a git repository");
+  });
+
+  it("fails when the changeset cannot be written", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "feature/write-failure");
+    commitFile(repo, "feature.txt", "feature", "feat: add checkout flow");
+    rmSync(join(repo, ".changeset"), { force: true, recursive: true });
+
+    const result = runScript(
+      newBranchStdin("feature/write-failure", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("auto-changeset: failed:");
+    expect(result.stdout).toContain(".changeset");
+    expect(git(repo, ["log", "-1", "--format=%s"])).toBe("feat: add checkout flow");
+  });
+
+  it("fails when the generated changeset cannot be committed", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "feature/commit-failure");
+    commitFile(repo, "feature.txt", "feature", "feat: add checkout flow");
+    const hooksPath = join(repo, "hooks");
+    const prepareCommitMessageHook = join(hooksPath, "prepare-commit-msg");
+    mkdirSync(hooksPath);
+    writeFileSync(
+      prepareCommitMessageHook,
+      "#!/bin/sh\necho prepare-commit-msg hook failed >&2\nexit 1\n",
+    );
+    chmodSync(prepareCommitMessageHook, 0o755);
+    git(repo, ["config", "core.hooksPath", hooksPath]);
+
+    const result = runScript(
+      newBranchStdin("feature/commit-failure", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("auto-changeset: failed:");
+    expect(result.stdout).toContain("prepare-commit-msg hook failed");
+    expect(git(repo, ["log", "-1", "--format=%s"])).toBe("feat: add checkout flow");
   });
 });
 
