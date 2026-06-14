@@ -9,4 +9,5 @@
 
 export { createCrocoSpaViteConfig, crocoSpaViteConfig } from "./libs/crocoSpaViteConfig";
 export { crocoVitePlugin } from "./libs/crocoVitePlugin";
+export { MissingCloudflareVitePluginProblem } from "./libs/problems/MissingCloudflareVitePluginProblem";
 export type { CrocoSpaOptions, CrocoViteConfig, CrocoViteOptions } from "./libs/types";

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Plugin, PluginOption } from "vite";
 import { crocoVitePlugin } from "../libs/crocoVitePlugin";
+import { MissingCloudflareVitePluginProblem } from "../libs/problems/MissingCloudflareVitePluginProblem";
 
 describe("crocoVitePlugin", () => {
   afterEach(() => {
@@ -32,6 +33,25 @@ describe("crocoVitePlugin", () => {
 
     const cloudflarePlugins = plugins.filter((p) => p.name?.includes("cloudflare"));
     expect(cloudflarePlugins.length).toBeGreaterThan(0);
+  });
+
+  it("should expose the missing cloudflare plugin diagnostic as a Problem", () => {
+    const cause = Object.assign(
+      new Error(
+        "Cannot find package '@cloudflare/vite-plugin' imported from /consumer/app/vite.config.mjs",
+      ),
+      { code: "ERR_MODULE_NOT_FOUND" },
+    );
+    const problem = new MissingCloudflareVitePluginProblem(cause);
+
+    expect(problem).toBeInstanceOf(Error);
+    expect(problem).toBeInstanceOf(MissingCloudflareVitePluginProblem);
+    expect(problem).toMatchObject({
+      code: "frontend-vite/missing-cloudflare-vite-plugin",
+      message:
+        'crocoVitePlugin() requires optional peer dependency "@cloudflare/vite-plugin" when Cloudflare support is enabled. Install "@cloudflare/vite-plugin" or call crocoVitePlugin({ cloudflare: false }).',
+    });
+    expect(problem.cause).toBe(cause);
   });
 
   it("should preserve nested module resolution errors from the cloudflare plugin", async () => {

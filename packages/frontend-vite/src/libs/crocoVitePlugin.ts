@@ -1,4 +1,5 @@
 import type { PluginOption } from "vite";
+import { MissingCloudflareVitePluginProblem } from "./problems/MissingCloudflareVitePluginProblem";
 import type { CrocoViteOptions } from "./types";
 
 export function crocoVitePlugin(options: CrocoViteOptions = {}): PluginOption[] {
@@ -17,19 +18,14 @@ async function loadCloudflarePlugin(options: { ssr: boolean }): Promise<PluginOp
     return cloudflare({ viteEnvironment: options.ssr ? { name: "ssr" } : undefined });
   } catch (error) {
     if (isMissingCloudflarePluginError(error)) {
-      throw new Error(
-        [
-          'crocoVitePlugin() requires optional peer dependency "@cloudflare/vite-plugin" when Cloudflare support is enabled.',
-          'Install "@cloudflare/vite-plugin" or call crocoVitePlugin({ cloudflare: false }).',
-        ].join(" "),
-      );
+      throw new MissingCloudflareVitePluginProblem(error);
     }
 
     throw error;
   }
 }
 
-function isMissingCloudflarePluginError(error: unknown): boolean {
+function isMissingCloudflarePluginError(error: unknown): error is Error {
   if (!(error instanceof Error)) {
     return false;
   }
