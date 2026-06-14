@@ -44,6 +44,7 @@ export default defineConfig({
             "../auth-core/src/index.ts",
             "../ratelimit-core/src/index.ts",
             "../metering-core/src/index.ts",
+            "../testing/src/index.ts",
             "../transports-http/src/index.ts",
             "../telemetry-api/src/index.ts",
             "../telemetry-sdk-node/src/index.ts",

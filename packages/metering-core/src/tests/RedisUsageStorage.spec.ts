@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RedisProblem } from "../libs/problems/RedisProblem";
 import type { RedisClient } from "../libs/RedisClient";
 import { RedisUsageStorage } from "../libs/RedisUsageStorage";
@@ -17,6 +17,77 @@ describe("RedisUsageStorage", () => {
     };
     storage = new RedisUsageStorage(mockRedis);
   });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function createScanDeleteRedis(initialKeys: string[]): {
+    keyspace: Set<string>;
+    redis: RedisClient;
+    scripts: string[];
+  } {
+    const keyspace = new Set(initialKeys);
+    const scripts: string[] = [];
+    const snapshots = new Map<string, string[]>();
+    const redis: RedisClient = {
+      zadd: vi.fn().mockResolvedValue(1),
+      zrangebyscore: vi.fn().mockResolvedValue([]),
+      set: vi.fn().mockResolvedValue("OK"),
+      async eval<TResult extends unknown[]>(
+        script: string,
+        keys: string[],
+        args: Array<string | number>,
+      ): Promise<TResult> {
+        scripts.push(script);
+        expect(keys).toEqual([]);
+
+        const cursor = Number(args[0]);
+        const pattern = String(args[1]);
+        const snapshot =
+          snapshots.get(pattern) ??
+          Array.from(keyspace)
+            .filter((key) => redisGlobToRegExp(pattern).test(key))
+            .sort();
+        snapshots.set(pattern, snapshot);
+
+        const batch = snapshot.slice(cursor, cursor + 1);
+        for (const key of batch) {
+          keyspace.delete(key);
+        }
+
+        const nextCursor = cursor + 1 < snapshot.length ? String(cursor + 1) : "0";
+        return [nextCursor, batch.length] as TResult;
+      },
+    };
+
+    return { keyspace, redis, scripts };
+  }
+
+  function redisGlobToRegExp(pattern: string): RegExp {
+    let source = "^";
+
+    for (let index = 0; index < pattern.length; index += 1) {
+      const char = pattern[index] ?? "";
+
+      if (char === "\\") {
+        index += 1;
+        source += escapeRegExp(pattern[index] ?? "\\");
+      } else if (char === "*") {
+        source += ".*";
+      } else if (char === "?") {
+        source += ".";
+      } else {
+        source += escapeRegExp(char);
+      }
+    }
+
+    return new RegExp(`${source}$`);
+  }
+
+  function escapeRegExp(value: string): string {
+    return value.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&");
+  }
 
   describe("record", () => {
     it("should store usage in Redis sorted set", async () => {
@@ -457,6 +528,76 @@ describe("RedisUsageStorage", () => {
         ["usage:tenant-1:api_calls:2024-01-15"],
         ["usage-1:5:%7B%22source%22%3A%22api%22%7D", "usage-2:3"],
       );
+    });
+  });
+
+  describe("resetBillingCycle", () => {
+    it("should delete a single meter billing cycle key directly", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+
+      await storage.resetBillingCycle("tenant-1", "api_calls");
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        'return redis.call("DEL", KEYS[1])',
+        ["usage:tenant-1:api_calls:2024-01"],
+        [],
+      );
+    });
+
+    it("should reset tenant billing cycle usage with bounded SCAN batches instead of KEYS", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+      vi.mocked(mockRedis.eval).mockResolvedValueOnce(["7", 2]).mockResolvedValueOnce(["0", 1]);
+
+      await storage.resetBillingCycle("tenant-1");
+
+      expect(mockRedis.eval).toHaveBeenCalledTimes(2);
+      const [firstScript, firstKeys, firstArgs] = vi.mocked(mockRedis.eval).mock.calls[0];
+      const [secondScript, secondKeys, secondArgs] = vi.mocked(mockRedis.eval).mock.calls[1];
+
+      expect(firstScript).toContain("redis.call('SCAN'");
+      expect(firstScript).not.toContain("redis.call('KEYS'");
+      expect(firstKeys).toEqual([]);
+      expect(firstArgs).toEqual(["0", "usage:tenant-1:*:2024-01", 500]);
+      expect(secondScript).toBe(firstScript);
+      expect(secondKeys).toEqual([]);
+      expect(secondArgs).toEqual(["7", "usage:tenant-1:*:2024-01", 500]);
+    });
+
+    it("should delete only current tenant billing cycle keys from a Redis-like keyspace", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+      const { keyspace, redis, scripts } = createScanDeleteRedis([
+        "usage:tenant-1:api_calls:2024-01",
+        "usage:tenant-1:storage:2024-01",
+        "usage:tenant-1:api_calls:2024-02",
+        "usage:tenant-2:api_calls:2024-01",
+        "idem:tenant-1:api_calls:key-1",
+      ]);
+      const redisBackedStorage = new RedisUsageStorage(redis);
+
+      await redisBackedStorage.resetBillingCycle("tenant-1");
+
+      expect(Array.from(keyspace).sort()).toEqual([
+        "idem:tenant-1:api_calls:key-1",
+        "usage:tenant-1:api_calls:2024-02",
+        "usage:tenant-2:api_calls:2024-01",
+      ]);
+      expect(scripts).toHaveLength(2);
+      expect(scripts.every((script) => script.includes("redis.call('SCAN'"))).toBe(true);
+      expect(scripts.every((script) => !script.includes("redis.call('KEYS'"))).toBe(true);
+    });
+
+    it("should escape tenant glob metacharacters in tenant-wide reset patterns", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+      vi.mocked(mockRedis.eval).mockResolvedValue(["0", 0]);
+
+      await storage.resetBillingCycle("tenant*[alpha]?\\");
+
+      const [, , args] = vi.mocked(mockRedis.eval).mock.calls[0];
+      expect(args).toEqual(["0", "usage:tenant\\*\\[alpha\\]\\?\\\\:*:2024-01", 500]);
     });
   });
 

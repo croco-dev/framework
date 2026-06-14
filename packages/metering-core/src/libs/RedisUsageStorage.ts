@@ -3,6 +3,8 @@ import type { RedisClient } from "./RedisClient";
 import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from "./types";
 import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
 
+type ScanDeleteResult = [string | number, number];
+
 /**
  * Redis 기반 UsageStorage 구현체
  *
@@ -14,6 +16,21 @@ export class RedisUsageStorage implements UsageStorage {
   private static readonly USAGE_KEY_PREFIX = "usage";
   private static readonly IDEM_KEY_PREFIX = "idem";
   private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
+  private static readonly RESET_SCAN_BATCH_SIZE = 500;
+  private static readonly SCAN_AND_DELETE_USAGE_KEYS_SCRIPT = `
+local cursor = ARGV[1]
+local pattern = ARGV[2]
+local count = tonumber(ARGV[3])
+local result = redis.call('SCAN', cursor, 'MATCH', pattern, 'COUNT', count)
+local nextCursor = result[1]
+local keys = result[2]
+
+if #keys > 0 then
+  redis.call('DEL', unpack(keys))
+end
+
+return { nextCursor, #keys }
+`;
   private readonly recordedRecordKeys = new Map<string, number>();
 
   private static buildCheckAndRecordWithinQuotaScript(dedupeKey: string): string {
@@ -378,23 +395,32 @@ return { exceeded and 1 or 0, newUsage }
       } else {
         const now = new Date();
         const periodKey = this.getPeriodKey(now, "billing_cycle");
-        const keyPattern = `${RedisUsageStorage.USAGE_KEY_PREFIX}:${tenantId}:*:${periodKey}`;
-
-        await this.redis.eval<[number]>(
-          `
-          local keys = redis.call('KEYS', ARGV[1])
-          for _, key in ipairs(keys) do
-            redis.call('DEL', key)
-          end
-          return #keys
-          `,
-          [],
-          [keyPattern],
-        );
+        await this.deleteTenantBillingCycleUsageKeys(tenantId, periodKey);
       }
     } catch (error) {
-      throw new RedisProblem("DEL", error instanceof Error ? error : undefined);
+      throw new RedisProblem(meterId ? "DEL" : "SCAN", error instanceof Error ? error : undefined);
     }
+  }
+
+  private async deleteTenantBillingCycleUsageKeys(
+    tenantId: string,
+    periodKey: string,
+  ): Promise<void> {
+    const keyPattern = `${RedisUsageStorage.USAGE_KEY_PREFIX}:${this.escapeRedisGlob(tenantId)}:*:${periodKey}`;
+    let cursor = "0";
+
+    do {
+      const [nextCursor] = await this.redis.eval<ScanDeleteResult>(
+        RedisUsageStorage.SCAN_AND_DELETE_USAGE_KEYS_SCRIPT,
+        [],
+        [cursor, keyPattern, RedisUsageStorage.RESET_SCAN_BATCH_SIZE],
+      );
+      cursor = String(nextCursor);
+    } while (cursor !== "0");
+  }
+
+  private escapeRedisGlob(value: string): string {
+    return value.replace(/[\\*?[\]]/g, "\\$&");
   }
 
   async deleteUsageRecords(options: UsageQueryOptions, records: UsageRecord[]): Promise<void> {
