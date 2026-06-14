@@ -31,7 +31,22 @@ describe("runCreateDomain", () => {
     expect(controllerContent).toContain('@Controller("/user")');
     expect(controllerContent).toContain("export class UserController");
     expect(serviceContent).toContain("export class UserService");
+    expect(repositoryContent).toContain(
+      'import type { Repository } from "@croco/repository-core";',
+    );
     expect(repositoryContent).toContain('import type { UserEntity } from "./UserEntity";');
+    expect(repositoryContent).toContain(
+      "export class UserRepository implements Repository<UserEntity, string>",
+    );
+    expect(repositoryContent).toContain("async findById(id: string): Promise<UserEntity | null>");
+    expect(repositoryContent).toContain(
+      "async findByIds(ids: readonly string[]): Promise<ReadonlyArray<UserEntity>>",
+    );
+    expect(repositoryContent).toContain("async save(entity: UserEntity): Promise<UserEntity>");
+    expect(repositoryContent).toContain("async deleteById(id: string): Promise<void>");
+    expect(repositoryContent).not.toContain("extends Repository");
+    expect(entityContent).not.toContain("@croco/repository-core");
+    expect(entityContent).not.toContain("@Entity()");
     expect(entityContent).toContain("export class UserEntity");
     expect(barrelContent).toContain('export { UserController } from "./UserController";');
     expect(entryContent).toContain(

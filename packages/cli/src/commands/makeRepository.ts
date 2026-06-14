@@ -43,10 +43,28 @@ export async function generateRepository(
     "repositories",
     `${className}Repository.ts`,
   );
-  const content = `import { Repository } from "@croco/repository-core";
+  const content = `import type { Repository } from "@croco/repository-core";
 import type { ${className}Entity } from "../entities/${className}Entity";
 
-export class ${className}Repository extends Repository<${className}Entity, string> {}
+export class ${className}Repository implements Repository<${className}Entity, string> {
+  async findById(id: string): Promise<${className}Entity | null> {
+    void id;
+    return null;
+  }
+
+  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<${className}Entity>> {
+    void ids;
+    return [];
+  }
+
+  async save(entity: ${className}Entity): Promise<${className}Entity> {
+    return entity;
+  }
+
+  async deleteById(id: string): Promise<void> {
+    void id;
+  }
+}
 `;
 
   const result = await fileWriterWrite(targetPath, content, { dryRun, overwrite });
