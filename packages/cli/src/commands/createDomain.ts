@@ -127,37 +127,37 @@ export const createDomain = defineCommand({
 });
 
 function controllerTemplate(className: string, kebab: string): string {
-  return `import { Controller, Get, Post, Put, Delete } from "@croco/protocols-rest";
-import type { RouteContext } from "@croco/transports-http";
+  return `import { Controller, Ctx, Get, Post, Put, Delete } from "@croco/protocols-rest";
+import type { CrocoHttpContext } from "@croco/transports-http";
 
 @Controller("/${kebab}")
 export class ${className}Controller {
   @Post("/")
-  async create(ctx: RouteContext): Promise<unknown> {
+  async create(@Ctx() ctx: CrocoHttpContext): Promise<unknown> {
     void ctx;
     return {};
   }
 
   @Get("/")
-  async findAll(ctx: RouteContext): Promise<unknown[]> {
+  async findAll(@Ctx() ctx: CrocoHttpContext): Promise<unknown[]> {
     void ctx;
     return [];
   }
 
   @Get("/:id")
-  async findById(ctx: RouteContext): Promise<unknown> {
+  async findById(@Ctx() ctx: CrocoHttpContext): Promise<unknown> {
     void ctx;
     return {};
   }
 
   @Put("/:id")
-  async update(ctx: RouteContext): Promise<unknown> {
+  async update(@Ctx() ctx: CrocoHttpContext): Promise<unknown> {
     void ctx;
     return {};
   }
 
   @Delete("/:id")
-  async delete(ctx: RouteContext): Promise<void> {
+  async delete(@Ctx() ctx: CrocoHttpContext): Promise<void> {
     void ctx;
   }
 }
