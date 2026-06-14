@@ -195,10 +195,14 @@ describe("rpc-codegen round trip", () => {
     expect(healthContent).toContain(
       "function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
     );
-    expect(healthContent).toContain("async function rejectErrorResponse(response: Response): Promise<never>");
+    expect(healthContent).toContain(
+      "async function rejectErrorResponse(response: Response): Promise<never>",
+    );
     await expect(healthModule.healthClient.health()).resolves.toBeUndefined();
     await expect(healthModule.healthClient.clear()).resolves.toBeUndefined();
-    await expect(healthModule.healthClient.fail()).rejects.toThrow("RPC request failed with HTTP 500");
+    await expect(healthModule.healthClient.fail()).rejects.toThrow(
+      "RPC request failed with HTTP 500",
+    );
     expect(fetchMock).toHaveBeenCalledWith("/health", { method: "GET" });
     expect(fetchMock).toHaveBeenCalledWith("/health/cache", { method: "POST" });
     expect(fetchMock).toHaveBeenCalledWith("/health/fail", { method: "GET" });
@@ -325,7 +329,12 @@ describe("rpc-codegen round trip", () => {
         path: "/users/:id",
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
-        inputSchemas: { body: null, path: z.object({ id: z.string() }) as any, query: null },
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
         outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
         domain: "user",
       },
@@ -369,7 +378,12 @@ describe("rpc-codegen round trip", () => {
         path: "/users/:id",
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
-        inputSchemas: { body: null, path: z.object({ id: z.string() }) as any, query: null },
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
         outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
         domain: "user",
       },
@@ -392,6 +406,46 @@ describe("rpc-codegen round trip", () => {
     expect(responseError.name).toBe("RpcClientResponseError");
     expect(responseError.message).toBe("RPC request failed with HTTP 503");
     expect(responseError.response.status).toBe(503);
+  });
+
+  it("rejects non-Problem JSON error responses with preserved body", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-json-error.ts", userContent);
+    const body = { message: "bad request" };
+    const fetchMock = vi.fn(async () => jsonResponse(body, 400));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = await getRejectedError(userModule.userClient.getUser({ path: { id: "1" } }));
+    const responseError = error as {
+      readonly name: string;
+      readonly body: unknown;
+      readonly response: Response;
+    };
+
+    expect(responseError.name).toBe("RpcClientResponseError");
+    expect(responseError.body).toEqual(body);
+    expect(responseError.response.status).toBe(400);
   });
 });
 

@@ -11,6 +11,11 @@ type DomainRoutes = {
   readonly routes: RouteIR[];
 };
 
+type ResponseHelperOptions = {
+  readonly hasOutputRoutes: boolean;
+  readonly hasNoOutputRoutes: boolean;
+};
+
 export function generateClientFiles(
   routes: RouteIR[],
   outDir: string,
@@ -48,7 +53,10 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const types = [...inputTypes, ...outputTypes];
-  const responseHelpers = getResponseHelpers();
+  const responseHelpers = getResponseHelpers({
+    hasOutputRoutes: domainRoutes.routes.some((route) => route.outputSchema),
+    hasNoOutputRoutes: domainRoutes.routes.some((route) => !route.outputSchema),
+  });
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
     ? `type QueryParamValue = string | number | boolean | null | undefined;
 type QueryParamInput = QueryParamValue | readonly QueryParamValue[];
@@ -108,7 +116,40 @@ ${clientMethods}
 ${hooks}`;
 }
 
-function getResponseHelpers(): string {
+function getResponseHelpers(options: ResponseHelperOptions): string {
+  const jsonResponseHelper = options.hasOutputRoutes
+    ? `async function handleJsonResponse<T = unknown>(response: Response): Promise<T> {
+  if (!response.ok) {
+    return rejectErrorResponse(response);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+`
+    : "";
+  const optionalJsonResponseHelper = options.hasNoOutputRoutes
+    ? `async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
+  if (!response.ok) {
+    return rejectErrorResponse(response);
+  }
+
+  if (response.status === 204) {
+    return undefined;
+  }
+
+  const body = await response.text();
+
+  if (body.length === 0) {
+    return undefined;
+  }
+
+  return JSON.parse(body) as unknown;
+}
+
+`
+    : "";
+
   return `export type RpcProblemDetails = {
   type: string;
   title: string;
@@ -142,32 +183,7 @@ export class RpcClientResponseError extends Error {
   }
 }
 
-async function handleJsonResponse<T = unknown>(response: Response): Promise<T> {
-  if (!response.ok) {
-    return rejectErrorResponse(response);
-  }
-
-  return response.json() as Promise<T>;
-}
-
-async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
-  if (!response.ok) {
-    return rejectErrorResponse(response);
-  }
-
-  if (response.status === 204) {
-    return undefined;
-  }
-
-  const body = await response.text();
-
-  if (body.length === 0) {
-    return undefined;
-  }
-
-  return JSON.parse(body) as unknown;
-}
-
+${jsonResponseHelper}${optionalJsonResponseHelper}
 async function rejectErrorResponse(response: Response): Promise<never> {
   let body: unknown;
 
@@ -193,7 +209,9 @@ function isRpcProblemDetails(value: unknown): value is RpcProblemDetails {
     typeof value.type === 'string' &&
     typeof value.title === 'string' &&
     typeof value.status === 'number' &&
-    typeof value.code === 'string'
+    typeof value.code === 'string' &&
+    (value.detail === undefined || typeof value.detail === 'string') &&
+    (value.instance === undefined || typeof value.instance === 'string')
   );
 }
 
@@ -262,7 +280,8 @@ function getFetchOptions(route: RouteIR): string {
 }
 
 function getHeadersExpression(route: RouteIR): string {
-  const hasHeaderInput = route.inputSchemas.headers !== null;
+  const hasHeaderInput =
+    route.inputSchemas.headers !== null && route.inputSchemas.headers !== undefined;
 
   if (hasHeaderInput && hasBody(route)) {
     return `{ ...serializeHeaders(input.headers), 'Content-Type': 'application/json' }`;
@@ -468,7 +487,9 @@ function getInputSchemaEntries(route: RouteIR): [string, unknown][] {
     ["headers", route.inputSchemas.headers],
   ];
 
-  return entries.filter((entry): entry is [string, unknown] => entry[1] !== null);
+  return entries.filter(
+    (entry): entry is [string, unknown] => entry[1] !== null && entry[1] !== undefined,
+  );
 }
 
 function needsInput(route: RouteIR): boolean {
@@ -480,7 +501,7 @@ function hasRequiredInput(route: RouteIR): boolean {
 }
 
 function hasBody(route: RouteIR): boolean {
-  return route.inputSchemas.body !== null;
+  return route.inputSchemas.body !== null && route.inputSchemas.body !== undefined;
 }
 
 function hasStructuredInput(route: RouteIR): boolean {
