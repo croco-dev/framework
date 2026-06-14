@@ -1,8 +1,9 @@
+#!/usr/bin/env node
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { extractRouteIR, type RouteIR } from "@croco/protocols-core";
+import type { RouteIR } from "@croco/protocols-core";
 import { type ClassDeclaration, Project, type SourceFile, ts } from "ts-morph";
 import { generateClientFiles } from "./libs/generate";
 
@@ -57,6 +58,7 @@ function getFlagValue(args: string[], flag: string): string | null {
 }
 
 async function loadRoutes(glob: string): Promise<RouteIR[]> {
+  const { extractRouteIR } = await import("@croco/protocols-core");
   const project = new Project({
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
