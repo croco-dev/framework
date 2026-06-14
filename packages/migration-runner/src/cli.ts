@@ -6,10 +6,11 @@ import type { DatabaseClient } from "./libs/db-types";
 import { MigrationRunner } from "./libs/MigrationRunner";
 import { DatabaseUrlRequiredProblem } from "./libs/problems/DatabaseUrlRequiredProblem";
 import { UnsupportedDialectProblem } from "./libs/problems/UnsupportedDialectProblem";
+import { getPackageVersion } from "./package-version";
 
 const program = new Command();
 
-program.name("migrate").description("Drizzle migration runner").version("0.1.0");
+program.name("migrate").description("Drizzle migration runner").version(getPackageVersion());
 
 export type UpOptions = {
   dir: string;
