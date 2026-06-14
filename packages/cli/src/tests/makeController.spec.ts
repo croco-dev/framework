@@ -28,6 +28,10 @@ describe("generateController", () => {
     expect(content).toContain('@Get("/:id")');
     expect(content).toContain('@Put("/:id")');
     expect(content).toContain('@Delete("/:id")');
+    expect(content).toContain("import { Controller, Ctx, Get, Post, Put, Delete }");
+    expect(content).toContain('import type { CrocoHttpContext } from "@croco/transports-http";');
+    expect(content).toContain("async create(@Ctx() ctx: CrocoHttpContext): Promise<unknown>");
+    expect(content).not.toContain("RouteContext");
   });
 
   it("should throw for invalid names", async () => {

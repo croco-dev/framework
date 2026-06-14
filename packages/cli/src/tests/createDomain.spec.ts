@@ -30,6 +30,14 @@ describe("runCreateDomain", () => {
     expect(result?.registration?.status).toBe("updated");
     expect(controllerContent).toContain('@Controller("/user")');
     expect(controllerContent).toContain("export class UserController");
+    expect(controllerContent).toContain("import { Controller, Ctx, Get, Post, Put, Delete }");
+    expect(controllerContent).toContain(
+      'import type { CrocoHttpContext } from "@croco/transports-http";',
+    );
+    expect(controllerContent).toContain(
+      "async create(@Ctx() ctx: CrocoHttpContext): Promise<unknown>",
+    );
+    expect(controllerContent).not.toContain("RouteContext");
     expect(serviceContent).toContain("export class UserService");
     expect(repositoryContent).toContain(
       'import type { Repository } from "@croco/repository-core";',
