@@ -109,6 +109,8 @@ export { type CorsOptions, corsMiddleware } from "./libs/middleware/CorsMiddlewa
  * graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
  */
 export {
+  createGracefulShutdownController,
+  type GracefulShutdownController,
   type GracefulShutdownOptions,
   gracefulShutdownMiddleware,
   isShuttingDown,

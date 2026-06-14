@@ -199,7 +199,8 @@ All four are part of the public API and can be imported directly from `@croco/tr
 - 본문 제한: `bodyLimitMiddleware`, `kb`, `mb`
 - 압축: `compressionMiddleware`
 - CORS: `corsMiddleware`
-- 종료 제어: `gracefulShutdownMiddleware`, `setupGracefulShutdown`, `isShuttingDown`, `resetShutdownState`
+- 종료 제어: `createGracefulShutdownController`, `gracefulShutdownMiddleware`, `setupGracefulShutdown`, `isShuttingDown`,
+  `resetShutdownState`
 - 레이트 리밋: `rateLimitHttpMiddleware`, `createRateLimitMiddlewareFactory`
 - 보안 헤더: `securityHeadersMiddleware`
 - 타입: `AppConfig`, `CrocoHttpContext`, `CrocoRequest`, `CrocoResponse`, `LambdaEvent`, `LambdaResponse`
