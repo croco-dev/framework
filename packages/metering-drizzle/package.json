@@ -38,13 +38,13 @@
     "lint": "oxlint ."
   },
   "dependencies": {
+    "@croco/framework-context": "workspace:*",
     "@croco/metering-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tx-core": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
-    "@croco/framework-context": "workspace:*",
     "@croco/migration-runner": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",

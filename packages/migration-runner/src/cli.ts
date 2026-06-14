@@ -178,4 +178,6 @@ async function createDbClient(
   }
 }
 
-program.parse();
+if (typeof require !== "undefined" && typeof module !== "undefined" && require.main === module) {
+  program.parse();
+}

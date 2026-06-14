@@ -26,10 +26,10 @@
     "lint": "oxlint ."
   },
   "dependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
     "@croco/transports-http": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.0.0",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
