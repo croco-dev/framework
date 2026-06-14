@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { DiagnosticsCollector } from "../libs/DiagnosticsCollector";
+import { DuplicateDiagnosticsProviderProblem } from "../libs/problems/DiagnosticsProblems";
 import type { DiagnosticsProvider, HealthStatus, ErrorRecord } from "../libs/types";
 
 class MockDiagnosticsProvider implements DiagnosticsProvider {
@@ -130,6 +131,45 @@ describe("DiagnosticsCollector Integration", () => {
     expect(providers).toHaveLength(2);
     expect(providers[0].name).toBe("db");
     expect(providers[1].name).toBe("cache");
+  });
+
+  it("should keep the original provider when a different provider uses the same name", async () => {
+    const provider1 = new MockDiagnosticsProvider("db", {
+      status: "healthy",
+      component: "db",
+      lastChecked: new Date().toISOString(),
+    });
+    const provider2 = new MockDiagnosticsProvider("db", {
+      status: "unhealthy",
+      component: "db",
+      lastChecked: new Date().toISOString(),
+    });
+
+    collector.registerProvider(provider1);
+
+    expect(() => collector.registerProvider(provider2)).toThrow(
+      DuplicateDiagnosticsProviderProblem,
+    );
+
+    const providers = collector.getProviders();
+    const report = await collector.getReport();
+
+    expect(providers).toEqual([provider1]);
+    expect(report.components).toHaveLength(1);
+    expect(report.components[0].status).toBe("healthy");
+  });
+
+  it("should treat registering the same provider instance as idempotent", () => {
+    const provider = new MockDiagnosticsProvider("db", {
+      status: "healthy",
+      component: "db",
+      lastChecked: new Date().toISOString(),
+    });
+
+    collector.registerProvider(provider);
+    collector.registerProvider(provider);
+
+    expect(collector.getProviders()).toEqual([provider]);
   });
 
   it("should handle provider that throws in getHealth()", async () => {
