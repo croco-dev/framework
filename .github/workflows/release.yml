@@ -63,9 +63,17 @@ jobs:
         if: steps.release_work.outputs.should_run == 'true'
         run: pnpm install --frozen-lockfile
 
+      - name: Package manifest contract check
+        if: steps.release_work.outputs.should_run == 'true'
+        run: pnpm package-manifests:check
+
       - name: Build all packages
         if: steps.release_work.outputs.should_run == 'true'
         run: pnpm build
+
+      - name: Package entrypoint smoke
+        if: steps.release_work.outputs.should_run == 'true'
+        run: pnpm package-entrypoints:smoke
 
       - name: Dry-run publish gate
         if: steps.release_work.outputs.should_run == 'true'

@@ -154,6 +154,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Package entrypoint smoke
+        run: pnpm package-entrypoints:smoke
+
       - name: TypeScript check
         run: pnpm typecheck
 

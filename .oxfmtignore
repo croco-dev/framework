@@ -1,1 +1,5 @@
 **/*.hbs
+.owx/**
+ci-reports/**
+packages/docs/src/content/docs/api/**
+scripts/tests/normalize-packages.spec.ts

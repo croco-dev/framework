@@ -669,6 +669,42 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@croco/auth-core':
+        specifier: workspace:*
+        version: link:../auth-core
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/events-inmemory':
+        specifier: workspace:*
+        version: link:../events-inmemory
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/llm-core':
+        specifier: workspace:*
+        version: link:../llm-core
+      '@croco/metering-core':
+        specifier: workspace:*
+        version: link:../metering-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/ratelimit-core':
+        specifier: workspace:*
+        version: link:../ratelimit-core
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../retry-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
+      '@croco/telemetry-sdk-node':
+        specifier: workspace:*
+        version: link:../telemetry-sdk-node
+      '@croco/transports-http':
+        specifier: workspace:*
+        version: link:../transports-http
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2

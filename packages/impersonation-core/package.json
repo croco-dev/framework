@@ -7,18 +7,12 @@
   "type": "commonjs",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": [
-    "dist/index.d.ts",
-    "dist/index.d.mts"
-  ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
-      "types": [
-        "dist/index.d.ts",
-        "dist/index.d.mts"
-      ]
+      "types": "./dist/index.d.ts"
     }
   },
   "publishConfig": {

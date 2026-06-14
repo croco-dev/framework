@@ -92,6 +92,9 @@ export class Container {
   static remove<T>(token: TokenIdentifier<T>): void {
     Container.removeRegisteredValue(token);
     Container.lazyProviders.delete(token);
+    if (Container.isConstructorToken(token)) {
+      MetadataStorage.delete(COMPONENT_METADATA_KEY, token);
+    }
     Container.validated = false;
   }
 

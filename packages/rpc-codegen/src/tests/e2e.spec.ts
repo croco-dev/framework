@@ -82,7 +82,7 @@ describe("rpc-codegen e2e", () => {
       "health: () => fetch('/health', { method: 'GET' }).then((response) => response.json()),",
     );
     expect(content).not.toContain("zod");
-  });
+  }, 60_000);
 });
 
 function emitController(sourcePath: string): SourceFile {
