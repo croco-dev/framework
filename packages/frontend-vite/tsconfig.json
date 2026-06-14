@@ -2,8 +2,12 @@
   "exclude": ["node_modules"],
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "module": "esnext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "paths": {
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
