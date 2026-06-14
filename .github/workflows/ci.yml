@@ -177,7 +177,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: core-coverage-warning-report
-          path: coverage/core-warning/report.md
+          path: ci-reports/coverage/core-warning/report.md
           if-no-files-found: warn
 
   changes:
