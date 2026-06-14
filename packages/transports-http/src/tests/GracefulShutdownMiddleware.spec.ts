@@ -101,7 +101,7 @@ describe("GracefulShutdownMiddleware", () => {
       expect(getActiveRequestCount()).toBe(0);
     });
 
-    it("should keep active request state isolated per middleware instance", async () => {
+    it("should track concurrent active requests across legacy middleware wrappers", async () => {
       const firstMiddleware = gracefulShutdownMiddleware();
       const secondMiddleware = gracefulShutdownMiddleware();
 
@@ -156,6 +156,27 @@ describe("GracefulShutdownMiddleware", () => {
 
       resetShutdownState();
       expect(isShuttingDown()).toBe(false);
+    });
+
+    it("should share shutdown state between legacy setup and middleware wrappers", async () => {
+      const shutdown = setupGracefulShutdown();
+      const middleware = gracefulShutdownMiddleware();
+
+      await shutdown();
+
+      const ctx = createContext();
+      let nextCalled = false;
+
+      await expect(
+        middleware(ctx, async () => {
+          nextCalled = true;
+        }),
+      ).rejects.toBeInstanceOf(Response);
+
+      expect(nextCalled).toBe(false);
+      expect(ctx.res.status).toBe(503);
+      expect(ctx.raw.header).toHaveBeenCalledWith("Retry-After", "10");
+      expect(ctx.raw.header).toHaveBeenCalledWith("Connection", "close");
     });
 
     it("should isolate shutdown rejection state per app controller", async () => {

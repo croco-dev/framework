@@ -29,6 +29,9 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS = 10000;
 const DEFAULT_SIGNALS: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
 
+const states = new Set<ShutdownState>();
+let legacyState: ShutdownState | null = null;
+
 function createMiddlewareState(): ShutdownState {
   const state = {
     isShuttingDown: false,
@@ -41,7 +44,13 @@ function createMiddlewareState(): ShutdownState {
   return state;
 }
 
-const states = new Set<ShutdownState>();
+function getLegacyState(): ShutdownState {
+  if (legacyState === null) {
+    legacyState = createMiddlewareState();
+  }
+
+  return legacyState;
+}
 
 function isRunningInLambda(): boolean {
   return !!(process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AWS_EXECUTION_ENV);
@@ -62,7 +71,29 @@ function noopLogger(): ILogger {
  */
 export const gracefulShutdownMiddleware = (
   options: GracefulShutdownOptions = {},
-): MiddlewareFunction => createGracefulShutdownController(options).middleware;
+): MiddlewareFunction => {
+  const state = getLegacyState();
+  const {
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    onShutdown,
+    signals = DEFAULT_SIGNALS,
+    logger,
+    isLambdaEnvironment = isRunningInLambda(),
+  } = options;
+
+  if (!isLambdaEnvironment) {
+    setupSignalHandlers(
+      state,
+      signals,
+      timeoutMs,
+      onShutdown,
+      logger,
+      options.eventBusDrainTimeoutMs,
+    );
+  }
+
+  return createMiddlewareForState(state);
+};
 
 /**
  * 하나의 HTTP 앱에 귀속된 graceful shutdown 미들웨어와 제어 함수를 생성합니다.
@@ -119,7 +150,7 @@ export function setupGracefulShutdown(options: GracefulShutdownOptions = {}): ()
     eventBusDrainTimeoutMs,
   } = options;
 
-  const state = createMiddlewareState();
+  const state = getLegacyState();
 
   return () =>
     performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
@@ -163,6 +194,11 @@ function setupSignalHandlers(
   eventBusDrainTimeoutMs?: number,
 ): void {
   for (const signal of signals) {
+    const existingHandler = state.signalHandlers.get(signal);
+    if (existingHandler) {
+      process.off(signal, existingHandler);
+    }
+
     const handler = async (): Promise<void> => {
       await performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
     };
@@ -338,6 +374,7 @@ export function resetShutdownState(): void {
   }
 
   states.clear();
+  legacyState = null;
 }
 
 function resetState(state: ShutdownState): void {
