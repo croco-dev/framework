@@ -1,5 +1,6 @@
 import type { DiagnosticsProvider, HealthStatus, ErrorRecord, DiagnosticsReport } from "./types";
 import { ErrorHistoryRingBuffer } from "./ErrorHistoryRingBuffer";
+import { DuplicateDiagnosticsProviderProblem } from "./problems/DiagnosticsProblems";
 
 function capMessage(message: string, maxLength: number): string {
   if (message.length <= maxLength) {
@@ -26,6 +27,16 @@ export class DiagnosticsCollector {
   private readonly errors = new ErrorHistoryRingBuffer();
 
   registerProvider(provider: DiagnosticsProvider): void {
+    const existingProvider = this.providers.get(provider.name);
+
+    if (existingProvider !== undefined) {
+      if (existingProvider === provider) {
+        return;
+      }
+
+      throw new DuplicateDiagnosticsProviderProblem(provider.name);
+    }
+
     this.providers.set(provider.name, provider);
   }
 

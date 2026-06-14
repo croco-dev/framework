@@ -99,6 +99,9 @@ const app = createApp({
 
 각 `DiagnosticsProvider`는 다음과 같은 정보를 수집합니다.
 
+Provider `name`은 collector 안에서 유일해야 합니다. 같은 인스턴스를 다시 등록하는 것은 no-op이지만,
+같은 `name`을 가진 다른 provider를 등록하면 `DuplicateDiagnosticsProviderProblem`이 발생합니다.
+
 ### TelemetryDiagnosticsProvider
 
 - **수집 정보**: OTel SDK 초기화 여부(`isInitialized`), 현재 샘플링 확률(`probability`)
