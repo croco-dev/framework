@@ -36,7 +36,8 @@
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
-    "ai": "^4.0.0"
+    "ai": "^4.0.0",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@ai-sdk/anthropic": "3.0.38",

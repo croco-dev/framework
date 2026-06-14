@@ -118,10 +118,10 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
-    devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+    devDependencies:
       tsup:
         specifier: ^8.4.0
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
@@ -224,10 +224,10 @@ importers:
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
-    devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+    devDependencies:
       tsup:
         specifier: ^8.4.0
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
@@ -354,10 +354,10 @@ importers:
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
-    devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+    devDependencies:
       tsup:
         specifier: ^8.4.0
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
@@ -891,6 +891,9 @@ importers:
       '@t3-oss/env-core':
         specifier: 0.13.10
         version: 0.13.10(typescript@5.9.3)(zod@4.3.6)
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
       typedi:
         specifier: 0.10.0
         version: 0.10.0
@@ -1197,6 +1200,9 @@ importers:
       ai:
         specifier: ^4.0.0
         version: 4.3.19(react@19.2.5)(zod@4.3.6)
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       '@ai-sdk/anthropic':
         specifier: 3.0.38
@@ -1234,6 +1240,9 @@ importers:
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       tsup:
         specifier: 8.5.1
@@ -1837,6 +1846,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       tsup:
         specifier: ^8.0.0
@@ -1903,6 +1915,9 @@ importers:
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       vitest:
         specifier: 4.0.16
@@ -2222,6 +2237,9 @@ importers:
       graphql-yoga:
         specifier: ^5.10.1
         version: 5.18.0(graphql@16.12.0)
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
       type-graphql:
         specifier: ^2.0.0-rc.3
         version: 2.0.0-rc.3(class-validator@0.14.4)(graphql-scalars@1.24.2(graphql@16.12.0))(graphql@16.12.0)

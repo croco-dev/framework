@@ -29,7 +29,8 @@
   },
   "dependencies": {
     "@croco/problems-core": "workspace:*",
-    "@croco/telemetry-api": "workspace:*"
+    "@croco/telemetry-api": "workspace:*",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "vitest": "4.0.16"

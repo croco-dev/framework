@@ -28,6 +28,9 @@ const DIST_INDEX_MAIN = "./dist/index.js";
 const DIST_INDEX_MODULE = "./dist/index.mjs";
 const DIST_INDEX_TYPES = "./dist/index.d.ts";
 const SRC_INDEX = "./src/index.ts";
+const REFLECT_METADATA_PACKAGE = "reflect-metadata";
+const REFLECT_METADATA_IMPORT_RE =
+  /^\s*import\s+(?:[^'"]+\s+from\s+)?["']reflect-metadata["']\s*;?/m;
 
 const mode = parseArgs(process.argv.slice(2));
 
@@ -302,6 +305,7 @@ function validatePackage(pkg, pkgPath) {
   validateNoArrayTypes(pkg, "root", violations);
   validateNoArrayTypes(pkg.publishConfig, "publishConfig", violations);
   validateExportMap(pkg.publishConfig?.exports, "publishConfig.exports", violations);
+  validateReflectMetadataDependency(pkg, path.dirname(pkgPath), violations);
 
   if (pkg.name === "@croco/impersonation-core") {
     validateDistPath(pkg.types, "types", violations, { mustEndWith: ".d.ts" });
@@ -388,4 +392,74 @@ function validateExportMap(exportsValue, fieldName, violations) {
       });
     }
   }
+}
+
+function validateReflectMetadataDependency(pkg, packageDir, violations) {
+  const sourceImports = findReflectMetadataSourceImports(path.join(packageDir, "src"));
+
+  if (sourceImports.length === 0) {
+    return;
+  }
+
+  if (pkg.dependencies?.[REFLECT_METADATA_PACKAGE]) {
+    return;
+  }
+
+  const importList = sourceImports
+    .map((filePath) => path.relative(packageDir, filePath))
+    .join(", ");
+
+  if (pkg.devDependencies?.[REFLECT_METADATA_PACKAGE]) {
+    violations.push(
+      `source imports reflect-metadata but only devDependencies.reflect-metadata is declared; move it to dependencies: ${importList}`,
+    );
+    return;
+  }
+
+  violations.push(
+    `source imports reflect-metadata but dependencies.reflect-metadata is missing: ${importList}`,
+  );
+}
+
+function findReflectMetadataSourceImports(srcDir) {
+  if (!fs.existsSync(srcDir)) {
+    return [];
+  }
+
+  return findSourceFiles(srcDir)
+    .filter((filePath) => !isTestSourceFile(filePath, srcDir))
+    .filter((filePath) => REFLECT_METADATA_IMPORT_RE.test(fs.readFileSync(filePath, "utf-8")));
+}
+
+function findSourceFiles(dir, results = []) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) {
+        continue;
+      }
+      findSourceFiles(fullPath, results);
+    } else if (entry.isFile() && entry.name.endsWith(".ts")) {
+      results.push(fullPath);
+    }
+  }
+
+  return results.sort();
+}
+
+function isTestSourceFile(filePath, srcDir) {
+  const relativePath = path.relative(srcDir, filePath);
+  const segments = relativePath.split(path.sep);
+  const fileName = path.basename(filePath);
+
+  return (
+    segments.includes("tests") ||
+    segments.includes("__tests__") ||
+    fileName.endsWith(".spec.ts") ||
+    fileName.endsWith(".test.ts") ||
+    fileName.endsWith(".bench.ts")
+  );
 }
