@@ -15,4 +15,4 @@ export {
   usePageData,
   usePageMeta,
 } from "./libs/hooks/usePageData";
-export type { CrocoPageContext } from "./libs/types";
+export type { CrocoDataFn, CrocoPageContext } from "./libs/types";

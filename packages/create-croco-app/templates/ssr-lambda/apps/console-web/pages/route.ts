@@ -1,9 +1,11 @@
-import type { default as Page } from "./index/Page";
-import { defineRoute, head } from "@croco/meta-vite";
+import { defineRoute, head, type PageRouteDefinition } from "@croco/meta-vite";
+import Page from "./index/Page";
 
-export default defineRoute({
+const route = {
   path: "/",
   mode: "ssr",
-  component: Page satisfies Page,
+  component: Page,
   head: head({ title: "Croco Console" }),
-});
+} satisfies PageRouteDefinition;
+
+export default defineRoute(route);
