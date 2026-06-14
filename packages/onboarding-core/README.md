@@ -90,6 +90,16 @@ constructor(
 - `getStatus(onboardingId: string): Promise<OnboardingState>` - 온보딩 상태 조회
 - `completeStep(onboardingId: string, stepId: string): Promise<void>` - 단계 완료 처리
 
+#### `completeStep()` 저장 및 분석 이벤트 계약
+
+`completeStep()`는 컨텍스트, 온보딩 정의, 단계 존재 여부를 먼저 검증한 뒤 상태를 새 객체로 계산하고
+`OnboardingStore.saveState()`가 성공한 후에만 분석 이벤트를 전송합니다.
+
+- `saveState()`가 실패하면 `completeStep()`는 해당 오류로 reject되고 분석 이벤트는 전송되지 않습니다.
+- 저장 전 상태 객체는 직접 변경하지 않으므로, 저장 실패가 기존 저장 상태를 암묵적으로 바꾸지 않습니다.
+- 저장 성공 후 `onboarding_completed`와 `onboarding_step_completed` 이벤트를 best-effort로 전송합니다.
+- 분석 이벤트 전송이 동기적으로 실패해도 저장된 온보딩 상태는 유지되고 `completeStep()`는 성공으로 처리됩니다.
+
 ### 타입
 
 ```typescript

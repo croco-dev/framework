@@ -3,13 +3,43 @@ import type { AnalyticsManager } from "@croco/analytics-core";
 import { Context } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingManager } from "../libs/OnboardingManager";
-import { InMemoryOnboardingStore } from "../libs/OnboardingStore";
+import { InMemoryOnboardingStore, OnboardingStore } from "../libs/OnboardingStore";
 import {
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepNotFoundProblem,
 } from "../libs/problems/OnboardingProblems";
-import type { OnboardingDefinition } from "../libs/types";
+import type { OnboardingDefinition, OnboardingState } from "../libs/types";
+
+class RecordingOnboardingStore extends InMemoryOnboardingStore {
+  constructor(private readonly operations: string[]) {
+    super();
+  }
+
+  override async saveState(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+    state: OnboardingState,
+  ): Promise<void> {
+    this.operations.push("save");
+    await super.saveState(tenantId, userId, onboardingId, state);
+  }
+}
+
+class ReferenceFailingSaveStore extends OnboardingStore {
+  constructor(private readonly state: OnboardingState) {
+    super();
+  }
+
+  async getState(): Promise<OnboardingState | null> {
+    return this.state;
+  }
+
+  async saveState(): Promise<void> {
+    throw new Error("save failed");
+  }
+}
 
 describe("OnboardingManager", () => {
   let manager!: OnboardingManager;
@@ -89,6 +119,107 @@ describe("OnboardingManager", () => {
         // Should be completed even if step-3 is not done
         expect(analytics.capture).toHaveBeenCalledWith("onboarding_completed", expect.anything());
       },
+    );
+  });
+
+  it("should persist state before emitting analytics events", async () => {
+    const operations: string[] = [];
+    const capture = vi.fn((event: string) => {
+      operations.push(`analytics:${event}`);
+    });
+    const storeInstance = new RecordingOnboardingStore(operations);
+    const orderedAnalytics = {
+      capture,
+      identify: vi.fn(),
+      group: vi.fn(),
+    } as unknown as AnalyticsManager;
+    const orderedManager = new OnboardingManager(storeInstance, orderedAnalytics);
+    orderedManager.register(sampleDefinition);
+
+    await Context.run(
+      { requestId: "req-8", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await orderedManager.completeStep("welcome-tour", "step-1");
+        await orderedManager.completeStep("welcome-tour", "step-2");
+
+        expect(operations).toEqual([
+          "save",
+          "analytics:onboarding_step_completed",
+          "save",
+          "analytics:onboarding_completed",
+          "analytics:onboarding_step_completed",
+        ]);
+
+        const status = await orderedManager.getStatus("welcome-tour");
+        expect(status.isCompleted).toBe(true);
+        expect(status.steps["step-2"]?.completed).toBe(true);
+      },
+    );
+  });
+
+  it("should reject save failures without mutating existing state or emitting analytics", async () => {
+    const initialState: OnboardingState = {
+      steps: {
+        "step-1": {
+          completed: true,
+          completedAt: new Date("2026-01-01T00:00:00.000Z"),
+        },
+      },
+      isCompleted: false,
+    };
+    const storeInstance = new ReferenceFailingSaveStore(initialState);
+    const failingManager = new OnboardingManager(storeInstance, analytics);
+    failingManager.register(sampleDefinition);
+
+    await Context.run(
+      { requestId: "req-9", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await expect(failingManager.completeStep("welcome-tour", "step-2")).rejects.toThrow(
+          "save failed",
+        );
+      },
+    );
+
+    expect(analytics.capture).not.toHaveBeenCalled();
+    expect(initialState.steps["step-2"]).toBeUndefined();
+    expect(initialState.isCompleted).toBe(false);
+    expect(initialState.completedAt).toBeUndefined();
+  });
+
+  it("should persist state and resolve when analytics capture throws after save", async () => {
+    const capture = vi.fn(() => {
+      throw new Error("analytics failed");
+    });
+    const throwingAnalytics = {
+      capture,
+      identify: vi.fn(),
+      group: vi.fn(),
+    } as unknown as AnalyticsManager;
+    const storeInstance = new InMemoryOnboardingStore();
+    const throwingManager = new OnboardingManager(storeInstance, throwingAnalytics);
+    throwingManager.register(sampleDefinition);
+
+    await Context.run(
+      { requestId: "req-10", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await throwingManager.completeStep("welcome-tour", "step-1");
+        await expect(
+          throwingManager.completeStep("welcome-tour", "step-2"),
+        ).resolves.toBeUndefined();
+
+        const status = await throwingManager.getStatus("welcome-tour");
+        expect(status.isCompleted).toBe(true);
+        expect(status.steps["step-2"]?.completed).toBe(true);
+      },
+    );
+
+    expect(capture).toHaveBeenCalledWith(
+      "onboarding_completed",
+      expect.objectContaining({ onboardingId: "welcome-tour" }),
+    );
+    expect(capture).toHaveBeenCalledWith(
+      "onboarding_step_completed",
+      expect.objectContaining({ onboardingId: "welcome-tour", stepId: "step-2" }),
     );
   });
 
