@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../libs/Container";
 import { type ILogger, LOGGER_TOKEN } from "../libs/ILogger";
 import { OnShutdown } from "../libs/decorators/OnShutdown";
-import { ShutdownTimeoutProblem } from "../libs/problems/ShutdownProblems";
+import {
+  ShutdownConfigurationConflictProblem,
+  ShutdownTimeoutProblem,
+} from "../libs/problems/ShutdownProblems";
 import { ShutdownManager } from "../libs/ShutdownManager";
 import type { ShutdownHook } from "../libs/types";
 
@@ -34,13 +37,48 @@ describe("ShutdownManager", () => {
       expect(instance1).not.toBe(instance2);
     });
 
-    it("should reconfigure singleton timeout on later calls", async () => {
+    it("should remove registered listeners when reset creates an isolated singleton", () => {
+      const manager = ShutdownManager.getInstance();
+      const processOffSpy = vi.spyOn(process, "off");
+
+      manager.listen();
+      ShutdownManager.reset();
+
+      expect(processOffSpy).toHaveBeenCalledWith("SIGTERM", expect.any(Function));
+      expect(processOffSpy).toHaveBeenCalledWith("SIGINT", expect.any(Function));
+
+      processOffSpy.mockRestore();
+    });
+
+    it("should not route signals to a singleton replaced by reset", async () => {
+      const firstManager = ShutdownManager.getInstance();
+      const firstShutdownSpy = vi.spyOn(firstManager, "shutdown");
+      firstManager.listen();
+
+      ShutdownManager.reset();
+
+      const secondManager = ShutdownManager.getInstance();
+      const secondHook = { onShutdown: vi.fn(async () => {}) };
+      secondManager.register(secondHook);
+      secondManager.listen();
+
+      process.emit("SIGTERM");
+
+      await vi.waitFor(() => {
+        expect(secondHook.onShutdown).toHaveBeenCalledTimes(1);
+      });
+      expect(firstShutdownSpy).not.toHaveBeenCalled();
+
+      firstShutdownSpy.mockRestore();
+    });
+
+    it("should allow first explicit timeout after implicit singleton creation", async () => {
       vi.useFakeTimers();
 
       const mockLogger = { error: vi.fn() } as unknown as ILogger;
       Container.set(LOGGER_TOKEN, mockLogger);
 
-      const manager = ShutdownManager.getInstance(1000);
+      const manager = ShutdownManager.getInstance();
       ShutdownManager.getInstance(50);
 
       manager.register({
@@ -61,11 +99,21 @@ describe("ShutdownManager", () => {
 
       vi.useRealTimers();
     });
+
+    it("should reject conflicting explicit timeout configuration", () => {
+      const manager = ShutdownManager.getInstance(100);
+
+      expect(() => ShutdownManager.getInstance(5000)).toThrow(ShutdownConfigurationConflictProblem);
+      expect(() => ShutdownManager.getInstance(5000)).toThrow(
+        "ShutdownManager is already configured with timeout 100ms; received conflicting timeout 5000ms",
+      );
+      expect(ShutdownManager.getInstance(100)).toBe(manager);
+    });
   });
 
   describe("configure", () => {
-    it("should remove registered listeners so listen can register with current configuration", () => {
-      const manager = ShutdownManager.getInstance();
+    it("should keep registered listeners when configuration is repeated", () => {
+      const manager = ShutdownManager.getInstance(100);
       const processOnSpy = vi.spyOn(process, "on");
       const processOffSpy = vi.spyOn(process, "off");
 
@@ -73,11 +121,22 @@ describe("ShutdownManager", () => {
       manager.configure(100);
       manager.listen();
 
-      expect(processOffSpy).toHaveBeenCalledWith("SIGTERM", expect.any(Function));
-      expect(processOffSpy).toHaveBeenCalledWith("SIGINT", expect.any(Function));
-      expect(processOnSpy).toHaveBeenCalledTimes(4);
+      expect(processOffSpy).not.toHaveBeenCalled();
+      expect(processOnSpy).toHaveBeenCalledTimes(2);
 
       processOnSpy.mockRestore();
+      processOffSpy.mockRestore();
+    });
+
+    it("should reject conflicting configuration without releasing signal listeners", () => {
+      const manager = ShutdownManager.getInstance(100);
+      const processOffSpy = vi.spyOn(process, "off");
+
+      manager.listen();
+
+      expect(() => manager.configure(5000)).toThrow(ShutdownConfigurationConflictProblem);
+      expect(processOffSpy).not.toHaveBeenCalled();
+
       processOffSpy.mockRestore();
     });
   });
