@@ -7,12 +7,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import {
+  createGracefulShutdownController,
   getActiveRequestCount,
   gracefulShutdownMiddleware,
   isShuttingDown,
   resetShutdownState,
   setupGracefulShutdown,
 } from "../libs/middleware/GracefulShutdownMiddleware";
+import type { MiddlewareFunction } from "../libs/types";
+
+function createContext(): Parameters<MiddlewareFunction>[0] {
+  return {
+    req: { method: "GET", path: "/test", headers: {}, url: "http://localhost/test" },
+    res: { status: 200, headers: {} },
+    raw: { header: vi.fn(), json: () => new Response() },
+    jsonResponse: vi.fn(
+      (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json" },
+        }),
+    ),
+  } as unknown as Parameters<MiddlewareFunction>[0];
+}
 
 describe("GracefulShutdownMiddleware", () => {
   beforeEach(() => {
@@ -84,7 +101,7 @@ describe("GracefulShutdownMiddleware", () => {
       expect(getActiveRequestCount()).toBe(0);
     });
 
-    it("should keep active request state isolated per middleware instance", async () => {
+    it("should track concurrent active requests across legacy middleware wrappers", async () => {
       const firstMiddleware = gracefulShutdownMiddleware();
       const secondMiddleware = gracefulShutdownMiddleware();
 
@@ -139,6 +156,82 @@ describe("GracefulShutdownMiddleware", () => {
 
       resetShutdownState();
       expect(isShuttingDown()).toBe(false);
+    });
+
+    it("should share shutdown state between legacy setup and middleware wrappers", async () => {
+      const shutdown = setupGracefulShutdown();
+      const middleware = gracefulShutdownMiddleware();
+
+      await shutdown();
+
+      const ctx = createContext();
+      let nextCalled = false;
+
+      await expect(
+        middleware(ctx, async () => {
+          nextCalled = true;
+        }),
+      ).rejects.toBeInstanceOf(Response);
+
+      expect(nextCalled).toBe(false);
+      expect(ctx.res.status).toBe(503);
+      expect(ctx.raw.header).toHaveBeenCalledWith("Retry-After", "10");
+      expect(ctx.raw.header).toHaveBeenCalledWith("Connection", "close");
+    });
+
+    it("should isolate shutdown rejection state per app controller", async () => {
+      const firstApp = createGracefulShutdownController({ isLambdaEnvironment: true });
+      const secondApp = createGracefulShutdownController({ isLambdaEnvironment: true });
+
+      await firstApp.shutdown();
+
+      expect(firstApp.isShuttingDown()).toBe(true);
+      expect(secondApp.isShuttingDown()).toBe(false);
+      expect(isShuttingDown()).toBe(true);
+
+      const firstCtx = createContext();
+      let firstNextCalled = false;
+
+      await expect(
+        firstApp.middleware(firstCtx, async () => {
+          firstNextCalled = true;
+        }),
+      ).rejects.toBeInstanceOf(Response);
+
+      expect(firstNextCalled).toBe(false);
+      expect(firstCtx.res.status).toBe(503);
+
+      const secondCtx = createContext();
+      let secondNextCalled = false;
+
+      await secondApp.middleware(secondCtx, async () => {
+        secondNextCalled = true;
+      });
+
+      expect(secondNextCalled).toBe(true);
+      expect(secondCtx.res.status).toBe(200);
+    });
+
+    it("should register app signal handlers without replacing another app handler", () => {
+      const signal = "SIGUSR2";
+      const listenerCount = process.listeners(signal).length;
+
+      const firstApp = createGracefulShutdownController({
+        signals: [signal],
+        isLambdaEnvironment: false,
+      });
+      const secondApp = createGracefulShutdownController({
+        signals: [signal],
+        isLambdaEnvironment: false,
+      });
+
+      expect(process.listeners(signal)).toHaveLength(listenerCount + 2);
+
+      firstApp.reset();
+      expect(process.listeners(signal)).toHaveLength(listenerCount + 1);
+
+      secondApp.reset();
+      expect(process.listeners(signal)).toHaveLength(listenerCount);
     });
   });
 

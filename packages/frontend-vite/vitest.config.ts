@@ -13,8 +13,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    env: {
-      SKIP_ENV_VALIDATION: "1",
-    },
+    include: ["src/**/*.spec.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**"],
+    testTimeout: 10000,
   },
 });

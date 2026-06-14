@@ -17,9 +17,20 @@ type ShutdownState = {
   signalHandlers: Map<NodeJS.Signals, () => Promise<void>>;
 };
 
+export type GracefulShutdownController = {
+  middleware: MiddlewareFunction;
+  shutdown: () => Promise<void>;
+  getActiveRequestCount: () => number;
+  isShuttingDown: () => boolean;
+  reset: () => void;
+};
+
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS = 10000;
 const DEFAULT_SIGNALS: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
+
+const states = new Set<ShutdownState>();
+let legacyState: ShutdownState | null = null;
 
 function createMiddlewareState(): ShutdownState {
   const state = {
@@ -33,8 +44,13 @@ function createMiddlewareState(): ShutdownState {
   return state;
 }
 
-const states = new Set<ShutdownState>();
-createMiddlewareState();
+function getLegacyState(): ShutdownState {
+  if (legacyState === null) {
+    legacyState = createMiddlewareState();
+  }
+
+  return legacyState;
+}
 
 function isRunningInLambda(): boolean {
   return !!(process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AWS_EXECUTION_ENV);
@@ -56,6 +72,35 @@ function noopLogger(): ILogger {
 export const gracefulShutdownMiddleware = (
   options: GracefulShutdownOptions = {},
 ): MiddlewareFunction => {
+  const state = getLegacyState();
+  const {
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    onShutdown,
+    signals = DEFAULT_SIGNALS,
+    logger,
+    isLambdaEnvironment = isRunningInLambda(),
+  } = options;
+
+  if (!isLambdaEnvironment) {
+    setupSignalHandlers(
+      state,
+      signals,
+      timeoutMs,
+      onShutdown,
+      logger,
+      options.eventBusDrainTimeoutMs,
+    );
+  }
+
+  return createMiddlewareForState(state);
+};
+
+/**
+ * 하나의 HTTP 앱에 귀속된 graceful shutdown 미들웨어와 제어 함수를 생성합니다.
+ */
+export function createGracefulShutdownController(
+  options: GracefulShutdownOptions = {},
+): GracefulShutdownController {
   const state = createMiddlewareState();
   const {
     timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -76,6 +121,42 @@ export const gracefulShutdownMiddleware = (
     );
   }
 
+  return {
+    middleware: createMiddlewareForState(state),
+    shutdown: () =>
+      performShutdown(
+        state,
+        timeoutMs,
+        onShutdown,
+        signals,
+        logger,
+        options.eventBusDrainTimeoutMs,
+      ),
+    getActiveRequestCount: () => state.activeRequests.size,
+    isShuttingDown: () => state.isShuttingDown,
+    reset: () => resetState(state),
+  };
+}
+
+/**
+ * 원하는 시점에 graceful shutdown 절차를 실행할 함수를 생성합니다.
+ */
+export function setupGracefulShutdown(options: GracefulShutdownOptions = {}): () => Promise<void> {
+  const {
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    onShutdown,
+    signals = DEFAULT_SIGNALS,
+    logger,
+    eventBusDrainTimeoutMs,
+  } = options;
+
+  const state = getLegacyState();
+
+  return () =>
+    performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
+}
+
+function createMiddlewareForState(state: ShutdownState): MiddlewareFunction {
   return async (ctx, next): Promise<void> => {
     if (state.isShuttingDown) {
       ctx.res.status = 503;
@@ -102,24 +183,6 @@ export const gracefulShutdownMiddleware = (
       }
     }
   };
-};
-
-/**
- * 원하는 시점에 graceful shutdown 절차를 실행할 함수를 생성합니다.
- */
-export function setupGracefulShutdown(options: GracefulShutdownOptions = {}): () => Promise<void> {
-  const {
-    timeoutMs = DEFAULT_TIMEOUT_MS,
-    onShutdown,
-    signals = DEFAULT_SIGNALS,
-    logger,
-    eventBusDrainTimeoutMs,
-  } = options;
-
-  const state = createMiddlewareState();
-
-  return () =>
-    performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
 }
 
 function setupSignalHandlers(
@@ -131,6 +194,11 @@ function setupSignalHandlers(
   eventBusDrainTimeoutMs?: number,
 ): void {
   for (const signal of signals) {
+    const existingHandler = state.signalHandlers.get(signal);
+    if (existingHandler) {
+      process.off(signal, existingHandler);
+    }
+
     const handler = async (): Promise<void> => {
       await performShutdown(state, timeoutMs, onShutdown, signals, logger, eventBusDrainTimeoutMs);
     };
@@ -302,17 +370,21 @@ export function isShuttingDown(): boolean {
  */
 export function resetShutdownState(): void {
   for (const state of states) {
-    state.isShuttingDown = false;
-    state.activeRequests.clear();
-    state.shutdownPromise = null;
-
-    for (const [signal, handler] of state.signalHandlers.entries()) {
-      process.off(signal, handler);
-    }
-
-    state.signalHandlers.clear();
+    resetState(state);
   }
 
   states.clear();
-  createMiddlewareState();
+  legacyState = null;
+}
+
+function resetState(state: ShutdownState): void {
+  state.isShuttingDown = false;
+  state.activeRequests.clear();
+  state.shutdownPromise = null;
+
+  for (const [signal, handler] of state.signalHandlers.entries()) {
+    process.off(signal, handler);
+  }
+
+  state.signalHandlers.clear();
 }
