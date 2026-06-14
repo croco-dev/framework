@@ -1,6 +1,9 @@
 import { Container } from "typedi";
 import { type ILogger, LOGGER_TOKEN } from "./ILogger";
-import { ShutdownTimeoutProblem } from "./problems/ShutdownProblems";
+import {
+  ShutdownConfigurationConflictProblem,
+  ShutdownTimeoutProblem,
+} from "./problems/ShutdownProblems";
 import type { ShutdownHook } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -10,10 +13,12 @@ export class ShutdownManager {
   private hooks: ShutdownHook[] = [];
   private isShuttingDown = false;
   private timeoutMs: number;
+  private timeoutConfigured: boolean;
   private listenersRegistered = false;
 
-  private constructor(timeoutMs = DEFAULT_TIMEOUT_MS) {
-    this.timeoutMs = timeoutMs;
+  private constructor(timeoutMs?: number) {
+    this.timeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.timeoutConfigured = timeoutMs !== undefined;
   }
 
   static getInstance(timeoutMs?: number): ShutdownManager {
@@ -26,8 +31,11 @@ export class ShutdownManager {
   }
 
   configure(timeoutMs: number): void {
+    if (this.timeoutConfigured && this.timeoutMs !== timeoutMs) {
+      throw new ShutdownConfigurationConflictProblem(this.timeoutMs, timeoutMs);
+    }
     this.timeoutMs = timeoutMs;
-    this.removeAllListeners();
+    this.timeoutConfigured = true;
   }
 
   static reset(): void {

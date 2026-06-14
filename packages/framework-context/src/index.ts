@@ -204,7 +204,10 @@ export { MiddlewareChain } from "./libs/Middleware";
 export { ShutdownManager } from "./libs/ShutdownManager";
 export { CircularDependencyProblem } from "./libs/problems/CircularDependencyProblem";
 export { MiddlewareProblem } from "./libs/problems/MiddlewareProblems";
-export { ShutdownTimeoutProblem } from "./libs/problems/ShutdownProblems";
+export {
+  ShutdownConfigurationConflictProblem,
+  ShutdownTimeoutProblem,
+} from "./libs/problems/ShutdownProblems";
 
 /**
  * 컴포넌트 등록 시 내부적으로 사용하는 메타데이터 타입입니다.
