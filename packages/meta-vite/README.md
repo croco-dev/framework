@@ -17,7 +17,7 @@ Requires Vite 6+ and React 19+.
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
 - **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`)
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
-- **Server Actions**: `createServerAction()` for form POST handling with Zod validation. `createServerActionHandler()` integrates with the `apiRoutes` dispatch pipeline
+- **Server Actions**: `createServerAction()` for form POST handling with Zod validation. `createServerActionRegistry()` scopes actions for tests, HMR, and multi-app runtimes, while `createServerActionHandler()` integrates with the `apiRoutes` dispatch pipeline
 - **Provider adapters**: Cloudflare Workers, AWS Lambda, Node.js with API-first/page-fallback composition
 - **Vite 6 plugin**: `crocoMetaVitePlugin` with client/ssr/rsc environment configuration
 
@@ -189,12 +189,16 @@ Common errors and their diagnostics:
 
 ### Server Actions
 
-| Export                      | Type     | Description                                                                                                                                     |
-| --------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createServerAction`        | function | Register a server action with name, optional Zod schema, and handler. Throws on duplicate name.                                                 |
-| `createServerActionHandler` | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Integrates with `apiRoutes` dispatch.                               |
-| `dispatchServerAction`      | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Returns 404 or 400 JSON on failure. |
-| `ServerActionConfig`        | type     | `{ name: string; schema?: ZodSchema<T>; handler: (data: T, context?: RuntimeContext) => Promise<Response> \| Response }`                        |
+| Export                       | Type     | Description                                                                                                                                     |
+| ---------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ServerActionRegistry`       | class    | Isolated action registry with `register`, `unregister`, `clear`, and `dispatch` methods for app, test, or HMR lifecycle scoping.                |
+| `createServerActionRegistry` | function | Create an isolated `ServerActionRegistry` instance.                                                                                             |
+| `createServerAction`         | function | Register a server action with name, optional Zod schema, and handler. Defaults to the global registry and throws on duplicate name.             |
+| `createServerActionHandler`  | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Accepts a registry instance and integrates with `apiRoutes`.        |
+| `dispatchServerAction`       | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Returns 404 or 400 JSON on failure. |
+| `resetServerActions`         | function | Clear all actions from the global registry by default, or from a supplied registry.                                                             |
+| `unregisterServerAction`     | function | Remove one action from the global registry by default, or from a supplied registry.                                                             |
+| `ServerActionConfig`         | type     | `{ name: string; schema?: ZodSchema<T>; handler: (data: T, context?: RuntimeContext) => Promise<Response> \| Response }`                        |
 
 ### SSG
 

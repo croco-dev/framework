@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  createServerActionRegistry,
   createServerAction,
   createServerActionHandler,
   dispatchServerAction,
+  resetServerActions,
+  unregisterServerAction,
 } from "../libs/actions/serverActions";
 import { createCloudflareHandler } from "../libs/providers/cloudflare";
 import { createMetaFetchHandler } from "../libs/render/composeHandler";
@@ -17,6 +20,10 @@ function createExecutionContext(): ExecutionContext {
 }
 
 describe("Server Actions", () => {
+  beforeEach(() => {
+    resetServerActions();
+  });
+
   it("registers and dispatches an action without schema", async () => {
     createServerAction({
       name: "greet",
@@ -101,6 +108,67 @@ describe("Server Actions", () => {
     }).toThrow("ServerAction 'unique-action' already registered");
   });
 
+  it("keeps duplicate action names isolated between scoped registries", async () => {
+    const firstRegistry = createServerActionRegistry();
+    const secondRegistry = createServerActionRegistry();
+
+    firstRegistry.register({
+      name: "shared-action",
+      handler: async () => Response.json({ registry: "first" }),
+    });
+    secondRegistry.register({
+      name: "shared-action",
+      handler: async () => Response.json({ registry: "second" }),
+    });
+
+    const firstResponse = await firstRegistry.dispatch("shared-action", {});
+    const secondResponse = await secondRegistry.dispatch("shared-action", {});
+
+    await expect(firstResponse.json()).resolves.toEqual({ registry: "first" });
+    await expect(secondResponse.json()).resolves.toEqual({ registry: "second" });
+  });
+
+  it("supports global unregister and reset cleanup", async () => {
+    createServerAction({
+      name: "cleanup-action",
+      handler: async () => Response.json({ cleaned: false }),
+    });
+
+    expect(unregisterServerAction("cleanup-action")).toBe(true);
+    const unregisteredResponse = await dispatchServerAction("cleanup-action", {});
+    expect(unregisteredResponse.status).toBe(404);
+
+    createServerAction({
+      name: "cleanup-action",
+      handler: async () => Response.json({ cleaned: false }),
+    });
+    resetServerActions();
+
+    const resetResponse = await dispatchServerAction("cleanup-action", {});
+    expect(resetResponse.status).toBe(404);
+  });
+
+  it("lets scoped registries reset without clearing the global registry", async () => {
+    const scopedRegistry = createServerActionRegistry();
+
+    createServerAction({
+      name: "global-action",
+      handler: async () => Response.json({ scope: "global" }),
+    });
+    scopedRegistry.register({
+      name: "scoped-action",
+      handler: async () => Response.json({ scope: "scoped" }),
+    });
+
+    scopedRegistry.clear();
+
+    const scopedResponse = await scopedRegistry.dispatch("scoped-action", {});
+    const globalResponse = await dispatchServerAction("global-action", {});
+
+    expect(scopedResponse.status).toBe(404);
+    await expect(globalResponse.json()).resolves.toEqual({ scope: "global" });
+  });
+
   it("passes RuntimeContext to handler", async () => {
     createServerAction({
       name: "check-context",
@@ -143,6 +211,10 @@ describe("Server Actions", () => {
 });
 
 describe("Server Action HTTP Integration", () => {
+  beforeEach(() => {
+    resetServerActions();
+  });
+
   it("handles POST /api/action/subscribe via composeHandler", async () => {
     createServerAction({
       name: "subscribe",
@@ -316,5 +388,32 @@ describe("Server Action HTTP Integration", () => {
     expect(response.status).toBe(405);
     expect(response.headers.get("Allow")).toBe("POST");
     await expect(response.json()).resolves.toEqual({ error: "Method Not Allowed" });
+  });
+
+  it("dispatches HTTP actions through a supplied scoped registry", async () => {
+    const registry = createServerActionRegistry();
+
+    registry.register({
+      name: "scoped-http",
+      handler: async (data) =>
+        Response.json({ scope: "scoped", name: (data as { name: string }).name }),
+    });
+
+    const handler = createMetaFetchHandler({
+      apiRoutes: [createServerActionHandler(registry)],
+    });
+
+    const formData = new FormData();
+    formData.append("name", "Scoped");
+
+    const response = await handler(
+      new Request("http://localhost/api/action/scoped-http", {
+        method: "POST",
+        body: formData,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ scope: "scoped", name: "Scoped" });
   });
 });
