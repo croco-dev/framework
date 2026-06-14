@@ -31,6 +31,39 @@ describe("auto-changeset.mts", () => {
     expect(listChangesets(repo)).toEqual([]);
   });
 
+  it("skips in GitHub Actions", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "feature/ci-skip");
+    commitFile(repo, "feature.txt", "feature", "feat: add checkout flow");
+
+    const result = runScript(
+      newBranchStdin("feature/ci-skip", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+      { GITHUB_ACTIONS: "true" },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "auto-changeset: GitHub Actions environment detected (skipping)",
+    );
+    expect(listChangesets(repo)).toEqual([]);
+  });
+
+  it("skips changeset release branches", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "changeset-release/trunk");
+    commitFile(repo, "version.txt", "version", "chore: version packages");
+
+    const result = runScript(
+      newBranchStdin("changeset-release/trunk", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("auto-changeset: on changeset release branch (skipping)");
+    expect(listChangesets(repo)).toEqual([]);
+  });
+
   it("detects feat commit → minor bump", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "feature/minor");
@@ -186,10 +219,19 @@ function commitFile(
   git(repo, ["commit", "-m", subject]);
 }
 
-function runScript(stdin: string, cwd: string): ScriptResult {
+function runScript(
+  stdin: string,
+  cwd: string,
+  scriptEnv: Record<string, string> = {},
+): ScriptResult {
+  const { CI: _ci, GITHUB_ACTIONS: _githubActions, ...baseEnv } = process.env;
   const result = spawnSync("node", ["--experimental-strip-types", scriptPath], {
     cwd,
     encoding: "utf-8",
+    env: {
+      ...baseEnv,
+      ...scriptEnv,
+    },
     input: stdin,
   });
 

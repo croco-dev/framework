@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { exit, stdout } from "node:process";
+import { env, exit, stdout } from "node:process";
 
 type BumpType = "major" | "minor" | "patch";
 
@@ -152,8 +152,18 @@ function main(): void {
   try {
     const branch = runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
 
+    if (env.GITHUB_ACTIONS === "true") {
+      log("auto-changeset: GitHub Actions environment detected (skipping)");
+      exit(0);
+    }
+
     if (branch === "trunk") {
       log("auto-changeset: on trunk branch (skipping)");
+      exit(0);
+    }
+
+    if (branch.startsWith("changeset-release/")) {
+      log("auto-changeset: on changeset release branch (skipping)");
       exit(0);
     }
 
