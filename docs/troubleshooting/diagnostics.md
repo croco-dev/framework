@@ -116,7 +116,7 @@ const app = createApp({
 
 ### ModuleDiagnosticsProvider
 
-- **수집 정보**: 등록된 모듈의 총 개수(`registeredModuleCount`), 초기화된 모듈 목록(`moduleList`)
+- **수집 정보**: 등록된 모듈의 총 개수(`registeredModuleCount`), 초기화된 모듈 수(`initializedModuleCount`), 모듈별 lifecycle phase, imports/providers/exports/controllers 목록
 - **Degraded 조건**: 필수 모듈의 부트스트랩이 실패하거나 초기화가 지연될 때
 
 ## ErrorHistoryRingBuffer

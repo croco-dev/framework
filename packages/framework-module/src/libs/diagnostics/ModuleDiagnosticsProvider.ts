@@ -8,13 +8,20 @@ export class ModuleDiagnosticsProvider implements DiagnosticsProvider {
     const modules = getRegisteredModules();
     const initializedCount = modules.filter((m) => m.initialized).length;
     const totalCount = modules.length;
+    const details = {
+      totalModuleCount: totalCount,
+      registeredModuleCount: totalCount,
+      initializedModuleCount: initializedCount,
+      moduleList: modules.map((m) => m.name),
+      modules,
+    };
 
     if (totalCount === 0) {
       return {
         status: "unhealthy",
         component: "modules",
         message: "No modules registered",
-        details: { totalModuleCount: 0, initializedModuleCount: 0, moduleList: [] },
+        details,
         lastChecked: new Date().toISOString(),
       };
     }
@@ -23,22 +30,14 @@ export class ModuleDiagnosticsProvider implements DiagnosticsProvider {
         status: "degraded",
         component: "modules",
         message: `${totalCount - initializedCount} module(s) not initialized`,
-        details: {
-          totalModuleCount: totalCount,
-          initializedModuleCount: initializedCount,
-          moduleList: modules.map((m) => m.name),
-        },
+        details,
         lastChecked: new Date().toISOString(),
       };
     }
     return {
       status: "healthy",
       component: "modules",
-      details: {
-        totalModuleCount: totalCount,
-        initializedModuleCount: initializedCount,
-        moduleList: modules.map((m) => m.name),
-      },
+      details,
       lastChecked: new Date().toISOString(),
     };
   }

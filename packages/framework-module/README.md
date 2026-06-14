@@ -1,0 +1,96 @@
+# @croco/framework-module
+
+`@croco/framework-module` defines the runtime contract for Croco feature modules.
+Modules group providers, controllers, lifecycle hooks, and imported modules behind
+an explicit boundary.
+
+## Module Contract
+
+```ts
+import { CrocoModule, defineCrocoModule } from "@croco/framework-module";
+
+const databaseModule = defineCrocoModule({
+  name: "database",
+  providers: [{ provide: "database.url", useValue: process.env.DATABASE_URL }],
+  exports: ["database.url"],
+});
+
+CrocoModule.use({
+  name: "users",
+  imports: [databaseModule],
+  providers: [UserService],
+  controllers: [UserController],
+  setup: (ctx) => {
+    const databaseUrl = ctx.get("database.url");
+  },
+  start: async () => {
+    await warmUserCache();
+  },
+  shutdown: async () => {
+    await closeUserResources();
+  },
+});
+```
+
+Supported metadata:
+
+- `name`: stable module identifier used by diagnostics and failure messages.
+- `imports`: modules that must initialize first.
+- `providers`: tokens, classes, values, classes bound to tokens, or factories owned by the module.
+- `exports`: provider tokens visible to direct importers.
+- `controllers`: transport-facing controller tokens recorded for diagnostics.
+- `setup`, `start`, `shutdown`: lifecycle hooks.
+
+## Provider Visibility
+
+Providers are private to the owning module unless their token appears in
+`exports`. A module can resolve its own providers and the exported providers of
+its direct imports. Accessing a known but non-exported provider throws
+`ModuleProviderVisibilityProblem`.
+
+Module-scoped contexts also reject undeclared class providers. Register class
+providers in the module's `providers` metadata, or export them from an imported
+module, before resolving them through `ctx.get`.
+Token-backed TypeDI classes should be declared as
+`{ provide: Token, useClass: ServiceClass }`; exporting a token alone does not
+make global `@Service(token)` class metadata part of the module contract.
+
+This package intentionally records controllers but does not bind them to an HTTP,
+GraphQL, RPC, or worker transport. Transport packages decide how controller
+tokens become routes or handlers.
+
+## Lifecycle Semantics
+
+Initialization is dependency ordered:
+
+1. imported module providers and `setup`
+2. importer providers and `setup`
+3. imported module `start`
+4. importer `start`
+
+Shutdown runs in reverse dependency order. Lifecycle failures are wrapped in
+`ModuleLifecycleProblem` with `moduleName` and `phase` extensions. Circular
+imports throw `ModuleCircularDependencyProblem`.
+
+## Dynamic Modules And Presets
+
+Dynamic modules should return `ModuleOptions` from a factory and can be wrapped
+with `defineCrocoModule` for a stable, frozen public contract:
+
+```ts
+export function createCacheModule(options: CacheOptions) {
+  return defineCrocoModule({
+    name: "cache",
+    providers: [{ provide: CacheOptionsToken, useValue: options }, CacheService],
+    exports: [CacheService],
+  });
+}
+```
+
+`@croco/preset-lambda`, `@croco/preset-node`, and
+`@croco/preset-cloudflare` are build/runtime entrypoint presets from
+`@croco/framework-preset`. They are compatible with module contracts by design:
+presets choose the deployment entrypoint while modules own provider visibility
+and lifecycle boundaries inside that entrypoint. Preset packages do not need a
+runtime dependency on `@croco/framework-module` unless they start registering
+application modules directly.

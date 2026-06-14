@@ -1,3 +1,4 @@
+import { ModuleCircularDependencyProblem } from "./problems";
 import type { ModuleOptions } from "./types";
 
 type Color = "white" | "gray" | "black";
@@ -5,8 +6,20 @@ type Color = "white" | "gray" | "black";
 export function detectCircularDependency(modules: readonly ModuleOptions[]): string | null {
   const adjList = new Map<string, string[]>();
 
-  for (const mod of modules) {
-    adjList.set(mod.name, mod.imports?.map((importedModule) => importedModule.name) ?? []);
+  const visitModule = (module: ModuleOptions): void => {
+    if (adjList.has(module.name)) {
+      return;
+    }
+
+    adjList.set(module.name, module.imports?.map((importedModule) => importedModule.name) ?? []);
+
+    for (const importedModule of module.imports ?? []) {
+      visitModule(importedModule);
+    }
+  };
+
+  for (const module of modules) {
+    visitModule(module);
   }
 
   const color = new Map<string, Color>();
@@ -26,7 +39,7 @@ export function detectCircularDependency(modules: readonly ModuleOptions[]): str
       if (dependencyColor === "gray") {
         const cycle = stack.slice(stack.indexOf(dependencyName));
         cycle.push(dependencyName);
-        throw new Error(`Circular dependency detected: ${cycle.join(" → ")}`);
+        throw new ModuleCircularDependencyProblem(cycle);
       }
 
       if (dependencyColor === "white") {
