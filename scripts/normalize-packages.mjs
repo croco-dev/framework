@@ -12,27 +12,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ENTRYPOINT_EXEMPTIONS,
+  FILES_EXEMPTIONS,
+  expectedFilesFor,
+  findPackageJsonFiles,
+  packageHasSourceEntrypoint,
+} from "./package-manifest-contracts.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const defaultRootDir = path.dirname(__dirname);
-
-const ENTRYPOINT_EXEMPTIONS = new Map([
-  ["@croco/docs", "Astro documentation site; not imported as a runtime package."],
-  ["create-croco-app", "Bin-only project generator; importing it would execute the CLI."],
-]);
-
-const FILES_EXEMPTIONS = new Map([
-  [
-    "@croco/docs",
-    "Astro documentation site output is not part of the package entrypoint contract.",
-  ],
-]);
-
-const EXPECTED_FILES_BY_PACKAGE = new Map([
-  ["create-croco-app", ["dist", "templates"]],
-  ["@croco/utils-next-font-pretendard", ["dist", "PretendardVariable.woff2"]],
-]);
 
 const DIST_INDEX_MAIN = "./dist/index.js";
 const DIST_INDEX_MODULE = "./dist/index.mjs";
@@ -150,33 +140,9 @@ function parseArgs(args) {
   };
 }
 
-function findPackageJsonFiles(dir, results = []) {
-  if (!fs.existsSync(dir)) {
-    return results;
-  }
-
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-
-    if (entry.isDirectory()) {
-      if (entry.name === "node_modules" || entry.name.startsWith(".")) {
-        continue;
-      }
-      findPackageJsonFiles(fullPath, results);
-    } else if (entry.isFile() && entry.name === "package.json") {
-      results.push(fullPath);
-    }
-  }
-
-  return results.sort();
-}
-
 function normalizePackage(pkg, pkgPath) {
   const normalized = structuredClone(pkg);
-  const packageDir = path.dirname(pkgPath);
-  const hasSourceEntrypoint = fs.existsSync(path.join(packageDir, "src", "index.ts"));
+  const hasSourceEntrypoint = packageHasSourceEntrypoint(pkgPath);
 
   normalized.publishConfig = normalizeObject(normalized.publishConfig);
   normalized.publishConfig.access = "public";
@@ -201,10 +167,6 @@ function normalizeObject(value) {
   }
 
   return value;
-}
-
-function expectedFilesFor(packageName) {
-  return EXPECTED_FILES_BY_PACKAGE.get(packageName) ?? ["dist"];
 }
 
 function normalizeTypesFields(pkg) {
@@ -296,8 +258,7 @@ function publishedRootExportFor(pkg) {
 }
 
 function validatePackage(pkg, pkgPath) {
-  const packageDir = path.dirname(pkgPath);
-  const hasSourceEntrypoint = fs.existsSync(path.join(packageDir, "src", "index.ts"));
+  const hasSourceEntrypoint = packageHasSourceEntrypoint(pkgPath);
   const violations = [];
 
   if (pkg.publishConfig?.access !== "public") {

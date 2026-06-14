@@ -1,4 +1,5 @@
-import { verifyWebhook } from "@clerk/backend/webhooks";
+import type { verifyWebhook } from "@clerk/backend/webhooks";
+
 import { InvalidWebhookPayloadProblem, WebhookVerificationProblem } from "./problems/ClerkProblems";
 import type {
   ClerkMembershipEvent,
@@ -7,6 +8,13 @@ import type {
   WebhookEventHandler,
   WebhookHandlerOptions,
 } from "./types";
+
+type VerifyWebhook = typeof verifyWebhook;
+
+async function loadVerifyWebhook(): Promise<VerifyWebhook> {
+  const module = await import("@clerk/backend/webhooks");
+  return module.verifyWebhook;
+}
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -96,6 +104,7 @@ export class ClerkWebhookHandler {
   async handleWebhook(request: Request): Promise<void> {
     let event: unknown;
     try {
+      const verifyWebhook = await loadVerifyWebhook();
       event = await verifyWebhook(request, { signingSecret: this.options.signingSecret });
     } catch {
       throw new WebhookVerificationProblem();

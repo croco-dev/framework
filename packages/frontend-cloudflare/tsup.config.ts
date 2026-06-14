@@ -8,6 +8,7 @@ export default defineConfig({
   platform: "neutral",
 
   clean: true,
+  dts: true,
   minify: true,
   outExtension: () => ({ js: ".js" }),
 });
