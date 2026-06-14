@@ -8,8 +8,11 @@ import type {
 } from "./types";
 
 export class RouteConflictError extends Error {
-  constructor(path: string, method: string) {
-    super(`API route conflict: '${method} ${path}' is already registered`);
+  constructor(path: string, method?: string) {
+    const label = method
+      ? `API route conflict: '${method} ${path}'`
+      : `Page route conflict: '${path}'`;
+    super(`${label} is already registered`);
     this.name = "RouteConflictError";
   }
 }
@@ -19,6 +22,9 @@ export class RouteRegistry {
   private readonly apiDefinitions: ApiRouteIR[] = [];
 
   register(definition: PageRouteDefinition): void {
+    if (this.hasRegisteredRoute(definition.path)) {
+      throw new RouteConflictError(definition.path);
+    }
     this.definitions.push(definition);
   }
 
@@ -56,10 +62,7 @@ export class RouteRegistry {
 
   registerApiRoute(definition: ApiRouteDefinition): void {
     const method = definition.method ?? "GET";
-    const conflict = this.apiDefinitions.some(
-      (r) => r.path === definition.path && (r.method ?? "GET") === method,
-    );
-    if (conflict) {
+    if (this.hasRegisteredRoute(definition.path, method)) {
       throw new RouteConflictError(definition.path, method);
     }
     this.apiDefinitions.push({ path: definition.path, method, handler: definition.handler });
@@ -67,5 +70,13 @@ export class RouteRegistry {
 
   getApiRoutes(): ApiRouteIR[] {
     return [...this.apiDefinitions];
+  }
+
+  private hasRegisteredRoute(path: string, method?: string): boolean {
+    if (method === undefined) {
+      return this.definitions.some((route) => route.path === path);
+    }
+
+    return this.apiDefinitions.some((route) => route.path === path && route.method === method);
   }
 }

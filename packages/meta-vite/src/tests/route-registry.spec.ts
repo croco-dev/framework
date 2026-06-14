@@ -60,6 +60,15 @@ describe("RouteRegistry", () => {
     expect(routes.map((route) => route.path)).toEqual(["/first", "/second", "/third"]);
   });
 
+  it("throws RouteConflictError for duplicate page paths", () => {
+    const registry = new RouteRegistry();
+    registry.register(defineRoute({ path: "/dashboard", component: Page, mode: "ssr" }));
+
+    expect(() =>
+      registry.register(defineRoute({ path: "/dashboard", component: Page, mode: "ssg" })),
+    ).toThrow(RouteConflictError);
+  });
+
   it("loads components typed with RenderRouteComponentProps", async () => {
     const registry = new RouteRegistry();
     registry.register(defineRoute({ path: "/typed", component: Page }));
