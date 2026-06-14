@@ -1,0 +1,259 @@
+{
+  "schemaVersion": 1,
+  "groups": {
+    "Core": {
+      "description": "Framework primitives, context, reliability, transactions, and cross-cutting core utilities",
+      "packages": [
+        "cache-core",
+        "dataloader-core",
+        "diagnostics-core",
+        "events-core",
+        "events-inmemory",
+        "events-tx",
+        "framework-config",
+        "framework-context",
+        "framework-logger",
+        "framework-module",
+        "framework-preset",
+        "framework-routes",
+        "gid-core",
+        "health-core",
+        "pagination-core",
+        "problems-core",
+        "repository-core",
+        "retry-core",
+        "tenant-core",
+        "tx-core",
+        "tx-drizzle"
+      ]
+    },
+    "Domain": {
+      "description": "Business-domain APIs and package-level abstractions",
+      "packages": [
+        "access-core",
+        "analytics-core",
+        "audit-core",
+        "auth-core",
+        "batch-core",
+        "billing-core",
+        "customer-health-core",
+        "entitlements-core",
+        "execution-core",
+        "features-core",
+        "impersonation-core",
+        "invitation-core",
+        "llm-core",
+        "llm-metering",
+        "membership-core",
+        "metering-core",
+        "metrics-core",
+        "notifications-core",
+        "onboarding-core",
+        "ratelimit-core",
+        "search-core",
+        "storage-core",
+        "tasks-core",
+        "triggers-core"
+      ]
+    },
+    "Provider": {
+      "description": "Concrete datastore, SaaS provider, and external service adapters",
+      "packages": [
+        "access-drizzle",
+        "audit-drizzle",
+        "auth-better-auth",
+        "auth-clerk",
+        "auth-drizzle",
+        "batch-qstash",
+        "billing-polar",
+        "customer-health-drizzle",
+        "entitlements-drizzle",
+        "execution-drizzle",
+        "invitation-drizzle",
+        "membership-drizzle",
+        "metering-drizzle",
+        "metering-upstash",
+        "metrics-billing",
+        "notifications-resend",
+        "onboarding-drizzle",
+        "ratelimit-upstash",
+        "search-drizzle",
+        "search-meilisearch",
+        "storage-cloudflare",
+        "storage-cloudinary",
+        "storage-r2",
+        "tasks-qstash",
+        "triggers-qstash"
+      ]
+    },
+    "Integration": {
+      "description": "Analytics, feature-flag, and observability integrations",
+      "packages": [
+        "analytics-posthog",
+        "features-posthog",
+        "integrations-posthog",
+        "telemetry-api",
+        "telemetry-sdk-node"
+      ]
+    },
+    "Protocol": {
+      "description": "API protocol definitions and code generation",
+      "packages": [
+        "openapi-spec",
+        "protocols-core",
+        "protocols-graphql",
+        "protocols-rest",
+        "protocols-trpc",
+        "rpc-codegen"
+      ]
+    },
+    "Transport": {
+      "description": "Runtime adapters that execute protocol routes",
+      "packages": ["transports-cloudflare-workers", "transports-graphql", "transports-http"]
+    },
+    "Presentation": {
+      "description": "Frontend, SSR, and presentation-layer adapters",
+      "packages": [
+        "frontend-cloudflare",
+        "frontend-react",
+        "frontend-vite",
+        "meta-vite",
+        "presentation-preset"
+      ]
+    },
+    "Tooling": {
+      "description": "CLIs, scaffolds, presets, migration tools, and build-time helpers",
+      "packages": [
+        "cli",
+        "create-croco-app",
+        "esbuild-plugin",
+        "migration-runner",
+        "preset-cloudflare",
+        "preset-lambda",
+        "preset-node"
+      ]
+    },
+    "Docs": {
+      "description": "Documentation site and generated reference content",
+      "packages": ["docs"]
+    }
+  },
+  "maturity": {
+    "production": {
+      "label": "🟢 production-ready",
+      "packages": [
+        "audit-core",
+        "auth-core",
+        "billing-core",
+        "dataloader-core",
+        "events-core",
+        "framework-context",
+        "invitation-core",
+        "llm-core",
+        "llm-metering",
+        "membership-core",
+        "metering-core",
+        "metrics-core",
+        "problems-core",
+        "protocols-rest",
+        "ratelimit-core",
+        "repository-core",
+        "retry-core",
+        "search-core",
+        "telemetry-api",
+        "telemetry-sdk-node",
+        "transports-http",
+        "tx-core",
+        "tx-drizzle"
+      ]
+    },
+    "beta": {
+      "label": "🟡 beta",
+      "packages": [
+        "access-core",
+        "billing-polar",
+        "cache-core",
+        "cli",
+        "create-croco-app",
+        "customer-health-core",
+        "diagnostics-core",
+        "docs",
+        "entitlements-core",
+        "esbuild-plugin",
+        "events-inmemory",
+        "events-tx",
+        "execution-core",
+        "features-core",
+        "features-posthog",
+        "framework-config",
+        "framework-logger",
+        "framework-module",
+        "framework-preset",
+        "framework-routes",
+        "gid-core",
+        "health-core",
+        "impersonation-core",
+        "integrations-posthog",
+        "meta-vite",
+        "notifications-core",
+        "onboarding-core",
+        "openapi-spec",
+        "pagination-core",
+        "presentation-preset",
+        "preset-cloudflare",
+        "preset-lambda",
+        "preset-node",
+        "protocols-core",
+        "protocols-graphql",
+        "protocols-trpc",
+        "rpc-codegen",
+        "storage-core",
+        "storage-r2",
+        "tasks-core",
+        "tenant-core",
+        "transports-graphql",
+        "triggers-core"
+      ]
+    },
+    "alpha": {
+      "label": "🔴 alpha/WIP",
+      "packages": [
+        "access-drizzle",
+        "analytics-core",
+        "analytics-posthog",
+        "audit-drizzle",
+        "auth-better-auth",
+        "auth-clerk",
+        "auth-drizzle",
+        "batch-core",
+        "batch-qstash",
+        "customer-health-drizzle",
+        "entitlements-drizzle",
+        "execution-drizzle",
+        "frontend-cloudflare",
+        "frontend-react",
+        "frontend-vite",
+        "invitation-drizzle",
+        "membership-drizzle",
+        "metering-drizzle",
+        "metering-upstash",
+        "metrics-billing",
+        "migration-runner",
+        "notifications-resend",
+        "onboarding-drizzle",
+        "ratelimit-upstash",
+        "search-drizzle",
+        "search-meilisearch",
+        "storage-cloudflare",
+        "storage-cloudinary",
+        "tasks-qstash",
+        "transports-cloudflare-workers",
+        "triggers-qstash"
+      ]
+    },
+    "deprecated": {
+      "label": "⚠️ deprecated",
+      "packages": []
+    }
+  }
+}
