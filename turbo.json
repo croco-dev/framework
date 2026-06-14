@@ -28,11 +28,14 @@
     },
     "test": {
       "cache": true,
-      "dependsOn": ["^build", "^test"]
+      "dependsOn": ["build", "^test"]
+    },
+    "@croco/oxlint-rules#test": {
+      "cache": true
     },
     "typecheck": {
       "cache": true,
-      "dependsOn": ["^build", "^typecheck"]
+      "dependsOn": ["build", "^typecheck"]
     }
   }
 }
