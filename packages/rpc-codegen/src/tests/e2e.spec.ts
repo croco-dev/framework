@@ -72,7 +72,9 @@ describe("rpc-codegen e2e", () => {
     );
     expect(content).toContain("export type CreateUserInput = { name: string; };");
     expect(content).toContain("export type CreateUserOutput = { id: string; name: string; };");
-    expect(content).toContain("const path = `/users/${input.path.id}`;");
+    expect(content).toContain(
+      "const path = `/users/${encodeURIComponent(String(input.path.id))}`;",
+    );
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain(
       "return fetch(url, { method: 'GET', headers: serializeHeaders(input.headers) }).then((response) => readOptionalJsonResponse(response));",

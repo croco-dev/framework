@@ -235,7 +235,7 @@ describe("rpc-codegen round trip", () => {
 
     await expect(
       userModule.userClient.getUser({
-        path: { id: "1" },
+        path: { id: "a/b c?#%" },
         query: {
           includePosts: true,
           page: 2,
@@ -246,7 +246,7 @@ describe("rpc-codegen round trip", () => {
       }),
     ).resolves.toEqual({ id: "1", includePosts: true });
     expect(fetchMock).toHaveBeenCalledWith(
-      "/users/1?includePosts=true&page=2&tags=new&tags=vip&deletedAt=null",
+      "/users/a%2Fb%20c%3F%23%25?includePosts=true&page=2&tags=new&tags=vip&deletedAt=null",
       { method: "GET" },
     );
   });

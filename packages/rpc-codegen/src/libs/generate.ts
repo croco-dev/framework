@@ -461,7 +461,9 @@ function getPathExpression(route: RouteIR): string {
 
   const pathExpression = pathParams.reduce(
     (currentPath, paramName) =>
-      currentPath.split(`:${paramName}`).join(`\${input.path.${paramName}}`),
+      currentPath
+        .split(`:${paramName}`)
+        .join(`\${encodeURIComponent(String(input.path.${paramName}))}`),
     route.path,
   );
 
