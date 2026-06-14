@@ -1,8 +1,7 @@
 import { join } from "node:path";
 import { mergeInto } from "../helpers/fs.js";
+import { TEMPLATES_DIR } from "../template-path.js";
 import type { GeneratorOptions } from "../types.js";
-
-const TEMPLATES_DIR = new URL("../../templates", import.meta.url).pathname;
 
 export function installTrpcStandalone(
   targetDir: string,

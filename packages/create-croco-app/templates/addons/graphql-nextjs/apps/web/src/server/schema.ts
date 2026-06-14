@@ -1,5 +1,5 @@
 import { buildSchema } from "type-graphql";
-import { HealthResolver } from "./resolvers/health.resolver.js";
+import { HealthResolver } from "./resolvers/health.resolver";
 
 export async function createSchema() {
   return buildSchema({

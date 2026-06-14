@@ -19,9 +19,8 @@ import {
   installWebTrpc,
 } from "./installers/index.js";
 import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
+import { TEMPLATES_DIR } from "./template-path.js";
 import type { GeneratorOptions } from "./types.js";
-
-const TEMPLATES_DIR = new URL("../templates", import.meta.url).pathname;
 
 export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
   const vars = { projectName: options.projectName, scope: options.scope };
