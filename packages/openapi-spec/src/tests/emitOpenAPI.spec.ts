@@ -11,6 +11,7 @@ import {
   Param,
   Post,
   Query,
+  RequestValidationProblem,
   ResponseSchema,
   All,
 } from "@croco/protocols-rest";
@@ -41,6 +42,46 @@ describe("emitOpenAPI", () => {
           schema: { type: "string" },
         },
       ],
+    });
+  });
+
+  it("should apply document metadata options", () => {
+    @Controller("/accounts")
+    class AccountsController {
+      @Get("/")
+      listAccounts(): void {}
+    }
+
+    const spec = emitOpenAPI([AccountsController], {
+      info: {
+        title: "Accounts API",
+        version: "2026.6.0",
+        description: "Tenant account operations",
+      },
+      servers: [{ url: "https://api.example.com" }],
+      security: [{ bearerAuth: [] }],
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+      tags: [{ name: "Accounts", description: "Account operations" }],
+    });
+
+    expect(spec.info).toMatchObject({
+      title: "Accounts API",
+      version: "2026.6.0",
+      description: "Tenant account operations",
+    });
+    expect(spec.servers).toEqual([{ url: "https://api.example.com" }]);
+    expect(spec.security).toEqual([{ bearerAuth: [] }]);
+    expect(spec.tags).toEqual([{ name: "Accounts", description: "Account operations" }]);
+    expect(spec.components?.securitySchemes?.bearerAuth).toEqual({
+      type: "http",
+      scheme: "bearer",
+      bearerFormat: "JWT",
     });
   });
 
@@ -119,6 +160,97 @@ describe("emitOpenAPI", () => {
         },
       },
     });
+  });
+
+  it("should document Problem Details responses by default", () => {
+    @Controller("/orders")
+    class OrdersController {
+      @Get("/:id")
+      getOrder(@Param("id") _id: string): void {}
+    }
+
+    const spec = emitOpenAPI([OrdersController]);
+    const responses = spec.paths?.["/orders/{id}"]?.get?.responses;
+    const validationProblem = new RequestValidationProblem("body", [
+      { path: "id", message: "Required" },
+    ]);
+
+    expect(responses?.[400]).toMatchObject({
+      description: "Bad request",
+      content: {
+        "application/problem+json": {
+          schema: {
+            $ref: "#/components/schemas/ProblemDetails",
+          },
+        },
+      },
+    });
+    expect(validationProblem.status).toBe(422);
+    expect(responses?.[validationProblem.status]).toMatchObject({
+      description: "Validation error",
+      content: {
+        "application/problem+json": {
+          schema: {
+            $ref: "#/components/schemas/ProblemDetails",
+          },
+        },
+      },
+    });
+    expect(responses?.[500]).toMatchObject({
+      description: "Internal server error",
+      content: {
+        "application/problem+json": {
+          schema: {
+            $ref: "#/components/schemas/ProblemDetails",
+          },
+        },
+      },
+    });
+    expect(spec.components?.schemas?.ProblemDetails).toMatchObject({
+      type: "object",
+      required: ["type", "title", "status", "code"],
+      properties: {
+        type: { type: "string" },
+        title: { type: "string" },
+        status: { type: "integer" },
+        code: { type: "string" },
+        detail: { type: "string" },
+        instance: { type: "string" },
+      },
+      additionalProperties: true,
+    });
+  });
+
+  it("should allow custom problem and default responses", () => {
+    @Controller("/sessions")
+    class SessionsController {
+      @Post("/")
+      createSession(): void {}
+    }
+
+    const spec = emitOpenAPI([SessionsController], {
+      problemResponses: [{ status: 401, description: "Authentication required" }],
+      defaultResponses: {
+        429: {
+          description: "Too many requests",
+        },
+      },
+    });
+    const responses = spec.paths?.["/sessions"]?.post?.responses;
+
+    expect(responses?.[400]).toBeUndefined();
+    expect(responses?.[401]).toMatchObject({
+      description: "Authentication required",
+      content: {
+        "application/problem+json": {
+          schema: {
+            $ref: "#/components/schemas/ProblemDetails",
+          },
+        },
+      },
+    });
+    expect(responses?.[429]).toEqual({ description: "Too many requests" });
+    expect(responses?.[200]).toEqual({ description: "Successful response" });
   });
 
   it("should preserve generic success responses without a response schema", () => {
