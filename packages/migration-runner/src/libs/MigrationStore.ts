@@ -40,8 +40,36 @@ export class MigrationStore {
     await db.execute(sql`
       INSERT INTO ${sql.identifier(this.tableName)} (id, name, executed_at)
       VALUES (${id}, ${name}, CURRENT_TIMESTAMP)
-      ON CONFLICT (id) DO UPDATE SET executed_at = CURRENT_TIMESTAMP
     `);
+  }
+
+  async reserveMigration(db: DatabaseClient, id: string, name: string): Promise<boolean> {
+    const result = await db.execute(sql`
+      INSERT INTO ${sql.identifier(this.tableName)} (id, name, executed_at)
+      VALUES (${id}, ${name}, CURRENT_TIMESTAMP)
+      ON CONFLICT (id) DO NOTHING
+      RETURNING id
+    `);
+
+    return getResultRows(result).length > 0;
+  }
+
+  async completeMigration(db: DatabaseClient, id: string): Promise<void> {
+    await db.execute(sql`
+      UPDATE ${sql.identifier(this.tableName)}
+      SET executed_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+    `);
+  }
+
+  async claimMigrationForRollback(db: DatabaseClient, id: string): Promise<boolean> {
+    const result = await db.execute(sql`
+      DELETE FROM ${sql.identifier(this.tableName)}
+      WHERE id = ${id}
+      RETURNING id
+    `);
+
+    return getResultRows(result).length > 0;
   }
 
   async removeMigration(db: DatabaseClient, id: string): Promise<void> {
