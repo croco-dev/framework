@@ -1,6 +1,7 @@
 # Circular Dependency Allowlist
 # Policy: existing_only — 신규 순환 의존은 0건 정책
 # Format: one cycle per line, paths separated by " > "
+# The verifier normalizes whitespace, path separators, and cyclic rotations.
 #
 # Exception process:
 # 1. Add reason in PR description

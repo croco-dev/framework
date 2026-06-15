@@ -128,27 +128,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Architecture circular dependency check
-        run: |
-          echo "Checking circular dependencies against allowlist..."
-          CIRCULAR_OUTPUT=$(pnpm architecture:check:circular 2>&1) || true
-          ALLOWLIST_FILE=".madge-circular-allowlist.txt"
-          if [ -f "$ALLOWLIST_FILE" ]; then
-            # Extract cycle count from output
-            CYCLE_COUNT=$(echo "$CIRCULAR_OUTPUT" | grep -oP '\d+(?= circular)' || echo "0")
-            ALLOWLIST_COUNT=$(grep -cve '^\s*#' -e '^\s*$' "$ALLOWLIST_FILE" || echo "0")
-            if [ "$CYCLE_COUNT" -gt "$ALLOWLIST_COUNT" ]; then
-              echo "::error::New circular dependency detected. Existing: $ALLOWLIST_COUNT, Found: $CYCLE_COUNT. See .madge-circular-allowlist.txt for allowlisted cycles."
-              exit 1
-            fi
-            echo "Circular dependency check passed ($CYCLE_COUNT existing, all allowlisted)"
-          else
-            # No allowlist yet — fail on any circular dependency
-            if echo "$CIRCULAR_OUTPUT" | grep -q 'circular'; then
-              echo "::error::Circular dependency found. Create .madge-circular-allowlist.txt to allowlist existing cycles."
-              exit 1
-            fi
-            echo "Circular dependency check passed (no allowlist, no violations)"
-          fi
+        run: pnpm architecture:check:circular:allowlist
 
       - name: First-Success Contract Verify
         run: pnpm first-success:verify

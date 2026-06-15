@@ -3,10 +3,11 @@
   "private": true,
   "scripts": {
     "architecture:check:circular": "npx --yes madge --circular --extensions ts packages",
+    "architecture:check:circular:allowlist": "node --experimental-strip-types scripts/verify-circular-allowlist.mts",
     "build": "turbo build",
     "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
-    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm release-docs:check && pnpm architecture:check:circular && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
+    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm release-docs:check && pnpm architecture:check:circular:allowlist && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
