@@ -1,6 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { MiddlewareChain } from "./MiddlewareChain";
-import type { Constructor, LifecycleHooks, Middleware, RequestContext } from "./types";
+import type {
+  Constructor,
+  LifecycleHooks,
+  Middleware,
+  RequestContext,
+  RuntimeContext,
+  RuntimePlatform,
+} from "./types";
 
 interface ContextData {
   context: RequestContext;
@@ -63,7 +70,16 @@ export class Context {
    */
   static getActiveTraceId(): string | null {
     const context = Context.get();
-    return context?.traceId ?? null;
+    return context?.traceId ?? context?.runtime?.trace?.traceId ?? null;
+  }
+
+  static getRuntimeContext(): RuntimeContext | null {
+    const context = Context.get();
+    return context?.runtime ?? null;
+  }
+
+  static getRuntimePlatform(): RuntimePlatform | null {
+    return Context.getRuntimeContext()?.platform ?? null;
   }
 
   /**

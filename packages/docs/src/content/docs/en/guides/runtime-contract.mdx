@@ -1,0 +1,52 @@
+---
+title: Runtime Contract
+description: Use one request runtime context across Node, AWS Lambda, and Cloudflare Workers.
+---
+
+Croco exposes adapter runtime details through `Context.getRuntimeContext()` from
+`@croco/framework-context`. Application code can read one request-scoped contract without depending on
+Node, API Gateway, or Workers-specific objects.
+
+The contract is provided by Croco-owned entry points such as `createApp().fetch()`, `lambdaHandler()`,
+`toWorkersHandler()`, and the default `createWorkerFetchHandler()` path in the Cloudflare preset.
+Explicit raw Hono forwarding remains a compatibility path and does not provide this runtime contract.
+
+```typescript
+import { Context } from "@croco/framework-context";
+import { Controller, Get } from "@croco/protocols-rest";
+
+@Controller("/runtime")
+class RuntimeController {
+  @Get("/context")
+  context() {
+    const runtime = Context.getRuntimeContext();
+
+    runtime?.waitUntil(Promise.resolve());
+
+    return {
+      platform: runtime?.platform,
+      requestId: runtime?.requestId,
+      canUseEnv: runtime?.capabilities.env,
+      canUseWaitUntil: runtime?.capabilities.waitUntil,
+    };
+  }
+}
+```
+
+## Capability Matrix
+
+| Runtime            | `platform`           | `env`                 | `requestId`                              | `logger`   | `trace`                    | `waitUntil`                                   | `flush`                                | `shutdown` |
+| ------------------ | -------------------- | --------------------- | ---------------------------------------- | ---------- | -------------------------- | --------------------------------------------- | -------------------------------------- | ---------- |
+| Node HTTP          | `node`               | `process.env`         | `x-request-id` or generated id           | app logger | `traceparent` when present | no-op                                         | no-op                                  | no-op      |
+| AWS Lambda         | `lambda`             | `process.env`         | API Gateway request id or `awsRequestId` | app logger | `traceparent` when present | queued and drained before response conversion | drains queued work and logs rejections | no-op      |
+| Cloudflare Workers | `cloudflare-workers` | Worker binding object | `x-request-id` or generated id           | app logger | `traceparent` when present | delegates to `ExecutionContext.waitUntil`     | no-op                                  | no-op      |
+
+## Native Context
+
+Use `runtime.native` only at adapter boundaries:
+
+- Lambda stores `{ event, lambdaContext }`.
+- Cloudflare Workers stores `{ executionContext }`.
+
+Prefer capability checks before reading runtime-specific objects. Missing features are represented as
+`capabilities.<name> === false` and no-op hooks, not as hidden platform assumptions.

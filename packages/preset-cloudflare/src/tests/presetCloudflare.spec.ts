@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CloudflareFetchEnv, ExecutionContext } from "../fetch";
-import { createCloudflarePreset, createWorkerFetchHandler } from "../index";
+import {
+  createCloudflarePreset,
+  createRawHonoWorkerFetchHandler,
+  createWorkerFetchHandler,
+} from "../index";
 
 const createExecutionContext = (): ExecutionContext => ({
   waitUntil: vi.fn(),
@@ -29,7 +33,7 @@ describe("createWorkerFetchHandler", () => {
     expect(typeof handler).toBe("function");
   });
 
-  it("passes requests to the underlying Hono app", async () => {
+  it("passes requests with runtime context to the app", async () => {
     const request = new Request("https://example.com/users");
     const response = new Response("ok");
     const env: CloudflareFetchEnv = {};
@@ -38,26 +42,65 @@ describe("createWorkerFetchHandler", () => {
     const handler = createWorkerFetchHandler({ fetch });
 
     await expect(handler(request, env, ctx)).resolves.toBe(response);
-    expect(fetch).toHaveBeenCalledWith(request, env, ctx);
+    expect(fetch).toHaveBeenCalledWith(
+      request,
+      expect.objectContaining({
+        platform: "cloudflare-workers",
+        env,
+        native: {
+          executionContext: ctx,
+        },
+        capabilities: expect.objectContaining({
+          env: true,
+          waitUntil: true,
+          flush: false,
+          shutdown: false,
+        }),
+      }),
+      { env, executionContext: ctx },
+    );
   });
 
-  it("passes Cloudflare env and execution context to the app fetch handler", async () => {
-    const request = new Request("https://example.com/users");
+  it("exposes Cloudflare env and waitUntil through runtime context", async () => {
+    const request = new Request("https://example.com/users", {
+      headers: {
+        "x-request-id": "worker-req-1",
+      },
+    });
     const env: CloudflareFetchEnv = { KV_NAMESPACE: "users-kv" };
     const ctx = createExecutionContext();
     const pending = Promise.resolve();
-    const fetch = vi.fn(
-      async (_request: Request, appEnv: CloudflareFetchEnv, appCtx: ExecutionContext) => {
-        appCtx.waitUntil(pending);
-        return new Response(String(appEnv.KV_NAMESPACE));
-      },
-    );
+    const fetch = vi.fn(async (_request: Request, runtimeContext) => {
+      runtimeContext?.waitUntil?.(pending);
+      return new Response(
+        JSON.stringify({
+          platform: runtimeContext?.platform,
+          requestId: runtimeContext?.requestId,
+          value: runtimeContext?.env?.KV_NAMESPACE,
+        }),
+      );
+    });
     const handler = createWorkerFetchHandler({ fetch });
 
     const response = await handler(request, env, ctx);
 
-    await expect(response.text()).resolves.toBe("users-kv");
-    expect(fetch).toHaveBeenCalledWith(request, env, ctx);
+    await expect(response.json()).resolves.toEqual({
+      platform: "cloudflare-workers",
+      requestId: "worker-req-1",
+      value: "users-kv",
+    });
     expect(ctx.waitUntil).toHaveBeenCalledWith(pending);
+  });
+
+  it("keeps raw Hono forwarding behind an explicit compatibility helper", async () => {
+    const request = new Request("https://example.com/users");
+    const response = new Response("ok");
+    const env: CloudflareFetchEnv = {};
+    const ctx = createExecutionContext();
+    const fetch = vi.fn(async () => response);
+    const handler = createRawHonoWorkerFetchHandler({ fetch });
+
+    await expect(handler(request, env, ctx)).resolves.toBe(response);
+    expect(fetch).toHaveBeenCalledWith(request, env, ctx);
   });
 });

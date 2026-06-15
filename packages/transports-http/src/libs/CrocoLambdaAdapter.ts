@@ -1,4 +1,6 @@
+import type { ILogger } from "@croco/framework-context";
 import type { Hono, HonoRequest } from "hono";
+import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type { LambdaContext, LambdaEvent, LambdaHandler } from "./types";
 
 function isBinaryContentType(contentType: string): boolean {
@@ -39,13 +41,37 @@ export type TypedLambdaHandler = (
   isBase64Encoded?: boolean;
 }>;
 
+export type LambdaHandlerOptions = {
+  logger?: ILogger;
+};
+
+const WAIT_UNTIL_REJECTION_MESSAGE = "Lambda waitUntil task rejected";
+
+function reportWaitUntilRejections(
+  results: PromiseSettledResult<unknown>[],
+  logger: ILogger | undefined,
+): void {
+  results.forEach((result, taskIndex) => {
+    if (result.status !== "rejected") {
+      return;
+    }
+
+    if (logger) {
+      logger.error(WAIT_UNTIL_REJECTION_MESSAGE, { taskIndex, reason: result.reason });
+      return;
+    }
+
+    console.error(WAIT_UNTIL_REJECTION_MESSAGE, result.reason);
+  });
+}
+
 /**
  * Hono 앱을 API Gateway v2 형태의 AWS Lambda 핸들러로 연결하는 어댑터입니다.
  */
 export class CrocoLambdaAdapter {
   constructor(private readonly hono: Hono) {}
 
-  createHandler(): LambdaHandler {
+  createHandler(options: LambdaHandlerOptions = {}): LambdaHandler {
     return async (event: LambdaEvent, lambdaContext: LambdaContext) => {
       const method = event.requestContext?.http?.method ?? "GET";
       const path = event.rawPath ?? "/";
@@ -72,12 +98,41 @@ export class CrocoLambdaAdapter {
         body: ["GET", "HEAD"].includes(method) ? null : body,
       });
 
-      const executionEnv: LambdaExecutionEnv = {
-        event,
-        lambdaContext,
+      const pendingTasks: Promise<unknown>[] = [];
+      const runtimeContext: RuntimeContextInit = {
+        platform: "lambda",
+        requestId: event.requestContext?.requestId ?? lambdaContext.awsRequestId,
+        env: process.env,
+        logger: options.logger,
+        native: {
+          event,
+          lambdaContext,
+        },
+        waitUntil: (promise) => {
+          pendingTasks.push(Promise.resolve(promise));
+        },
+        flush: async () => {
+          const results = await Promise.allSettled(pendingTasks.splice(0));
+          reportWaitUntilRejections(results, options.logger);
+        },
+        capabilities: {
+          env: true,
+          waitUntil: true,
+          flush: true,
+          shutdown: false,
+        },
       };
 
+      const executionEnv = withRuntimeContextEnv(
+        {
+          event,
+          lambdaContext,
+        },
+        runtimeContext,
+      ) as LambdaExecutionEnv & Record<string, unknown>;
+
       const response = await this.hono.fetch(request, executionEnv);
+      await runtimeContext.flush?.();
 
       const contentType = response.headers.get("content-type") ?? "";
       const isBinary = isBinaryContentType(contentType);

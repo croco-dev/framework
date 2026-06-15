@@ -81,6 +81,26 @@ Get active trace ID from request context propagation
 
 ***
 
+### getRuntimeContext()
+
+> `static` **getRuntimeContext**(): [`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
+
+#### Returns
+
+[`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
+
+***
+
+### getRuntimePlatform()
+
+> `static` **getRuntimePlatform**(): [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+
+#### Returns
+
+[`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+
+***
+
 ### getTenantId()
 
 > `static` **getTenantId**(): `string`

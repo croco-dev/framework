@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "reflect-metadata";
 import { Component, Container, Context, MetadataStorage, Token } from "../index";
+import type { RuntimeContext } from "../index";
 import { getComponentScope } from "../libs/decorators/Component";
 
 class SimpleService {
@@ -247,6 +248,54 @@ describe("Context", () => {
     await Context.run(ctx, async () => {
       const traceId = Context.getActiveTraceId();
       expect(traceId).toBe("propagated-trace-123");
+    });
+  });
+
+  it("should return traceId from RuntimeContext when RequestContext has no traceId", async () => {
+    const runtime: RuntimeContext = {
+      platform: "node",
+      requestId: "runtime-trace-req-1",
+      trace: {
+        traceId: "runtime-trace-123",
+      },
+      capabilities: {
+        env: false,
+        logger: false,
+        trace: true,
+        waitUntil: false,
+        flush: false,
+        shutdown: false,
+      },
+      waitUntil: () => undefined,
+      flush: async () => undefined,
+      shutdown: async () => undefined,
+    };
+
+    await Context.run({ requestId: "runtime-trace-req-1", runtime }, async () => {
+      expect(Context.getActiveTraceId()).toBe("runtime-trace-123");
+    });
+  });
+
+  it("should expose the active runtime context", async () => {
+    const runtime: RuntimeContext = {
+      platform: "lambda",
+      requestId: "runtime-req-1",
+      capabilities: {
+        env: true,
+        logger: false,
+        trace: false,
+        waitUntil: true,
+        flush: true,
+        shutdown: false,
+      },
+      waitUntil: () => undefined,
+      flush: async () => undefined,
+      shutdown: async () => undefined,
+    };
+
+    await Context.run({ requestId: "runtime-req-1", runtime }, async () => {
+      expect(Context.getRuntimeContext()).toBe(runtime);
+      expect(Context.getRuntimePlatform()).toBe("lambda");
     });
   });
 

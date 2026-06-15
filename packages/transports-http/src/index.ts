@@ -59,8 +59,11 @@ export {
   getLambdaContext,
   getLambdaEvent,
   type LambdaExecutionEnv,
+  type LambdaHandlerOptions,
   type TypedLambdaHandler,
 } from "./libs/CrocoLambdaAdapter";
+
+export type { RuntimeContextInit } from "./libs/runtimeContext";
 
 export type {
   HealthCheckFunction,

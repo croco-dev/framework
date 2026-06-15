@@ -20,6 +20,7 @@ import {
 } from "./operationalEndpoints";
 
 import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
+import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type {
   AppConfig,
   CompiledRoute,
@@ -29,6 +30,11 @@ import type {
 } from "./types";
 
 type SecurityValidationMode = NonNullable<AppConfig["securityValidation"]>;
+type HonoFetchExecutionContext = Parameters<Hono["fetch"]>[2];
+type FetchRuntimeOptions = {
+  env?: Record<string, unknown>;
+  executionContext?: HonoFetchExecutionContext;
+};
 
 type RequiredSecurityMiddleware = {
   readonly exportName: string;
@@ -76,6 +82,7 @@ export class CrocoApp {
       this.hono,
       this.errorHandler,
       this.config.middlewares ?? [],
+      this.logger,
     );
     this.lambdaAdapter = new CrocoLambdaAdapter(this.hono);
   }
@@ -189,7 +196,7 @@ export class CrocoApp {
 
   lambdaHandler(): LambdaHandler {
     this.boot();
-    return this.lambdaAdapter.createHandler();
+    return this.lambdaAdapter.createHandler({ logger: this.logger });
   }
 
   getHono(): Hono {
@@ -223,8 +230,21 @@ export class CrocoApp {
     );
   }
 
-  async fetch(request: Request): Promise<Response> {
+  async fetch(
+    request: Request,
+    runtimeContext?: RuntimeContextInit,
+    options: FetchRuntimeOptions = {},
+  ): Promise<Response> {
     this.boot();
+
+    if (runtimeContext) {
+      return this.hono.fetch(
+        request,
+        withRuntimeContextEnv(options.env, runtimeContext),
+        options.executionContext,
+      );
+    }
+
     return this.hono.fetch(request);
   }
 

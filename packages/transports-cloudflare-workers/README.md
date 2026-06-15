@@ -39,9 +39,19 @@ export default toWorkersHandler(app);
 
 ## Env 주입
 
-`injectEnv: true`를 사용하면 Cloudflare `env` binding을 내부 Hono fetch 호출로 전달합니다.
+Cloudflare `env` binding과 `ExecutionContext.waitUntil`은 기본적으로
+`Context.getRuntimeContext()`에 반영됩니다. 기존 `@Raw()` 기반 Hono env 접근이 필요할 때만
+`injectEnv: true`를 사용하면 Cloudflare `env` binding을 내부 Hono fetch 호출로도 전달합니다.
 
 ```typescript
+import { Context } from "@croco/framework-context";
+
+const runtime = Context.getRuntimeContext();
+
+runtime?.waitUntil(Promise.resolve());
+console.log(runtime?.platform); // "cloudflare-workers"
+console.log(runtime?.env?.MY_BINDING);
+
 export default toWorkersHandler(app, { injectEnv: true });
 ```
 

@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { Container, Context as FrameworkContext } from "@croco/framework-context";
+import { Container, Context as FrameworkContext, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import {
   type ArgumentMetadata,
@@ -44,8 +44,11 @@ vi.mock("@hono/node-server", () => ({
 }));
 
 describe("CrocoApp", () => {
+  let lambdaWaitUntilCompleted = false;
+
   beforeEach(() => {
     Container.reset();
+    lambdaWaitUntilCompleted = false;
     vi.mocked(serve).mockClear();
     const logger = {
       info: () => {},
@@ -63,6 +66,20 @@ describe("CrocoApp", () => {
     @Get("/hello")
     hello() {
       return { message: "Hello, World!" };
+    }
+
+    @Get("/runtime-context")
+    getRuntimeContext() {
+      const runtime = FrameworkContext.getRuntimeContext();
+
+      return {
+        platform: runtime?.platform ?? null,
+        requestId: runtime?.requestId ?? null,
+        traceId: runtime?.trace?.traceId ?? null,
+        waitUntil: runtime?.capabilities.waitUntil ?? null,
+        env: runtime?.capabilities.env ?? null,
+        logger: runtime?.capabilities.logger ?? null,
+      };
     }
 
     @Get("/users/:id")
@@ -133,6 +150,44 @@ describe("CrocoApp", () => {
         authorizer: env?.event?.requestContext?.authorizer ?? null,
         awsRequestId: env?.lambdaContext?.awsRequestId ?? null,
       };
+    }
+
+    @Get("/runtime-context")
+    getRuntimeContext() {
+      const runtime = FrameworkContext.getRuntimeContext();
+      const native = runtime?.native;
+      const lambdaContext =
+        native && "lambdaContext" in native
+          ? (native.lambdaContext as { awsRequestId?: string })
+          : undefined;
+
+      runtime?.waitUntil(
+        Promise.resolve().then(() => {
+          lambdaWaitUntilCompleted = true;
+        }),
+      );
+
+      return {
+        platform: runtime?.platform ?? null,
+        requestId: runtime?.requestId ?? null,
+        awsRequestId: lambdaContext?.awsRequestId ?? null,
+        waitUntil: runtime?.capabilities.waitUntil ?? null,
+        flush: runtime?.capabilities.flush ?? null,
+        env: runtime?.capabilities.env ?? null,
+      };
+    }
+
+    @Get("/runtime-context-rejected-wait-until")
+    getRuntimeContextRejectedWaitUntil() {
+      const runtime = FrameworkContext.getRuntimeContext();
+
+      runtime?.waitUntil(
+        Promise.resolve().then(() => {
+          throw new Error("lambda waitUntil failed");
+        }),
+      );
+
+      return { ok: true };
     }
   }
 
@@ -223,6 +278,31 @@ describe("CrocoApp", () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({ message: "Hello, World!" });
+  });
+
+  it("should expose Node runtime context with request id and trace metadata", async () => {
+    const app = createApp({ controllers: [TestController] });
+    const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const spanId = "00f067aa0ba902b7";
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/runtime-context", {
+        headers: {
+          traceparent: `00-${traceId}-${spanId}-01`,
+          "x-request-id": "node-req-1",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      platform: "node",
+      requestId: "node-req-1",
+      traceId,
+      waitUntil: false,
+      env: true,
+      logger: true,
+    });
   });
 
   it("should bootstrap when all required security middlewares are configured", async () => {
@@ -555,7 +635,7 @@ describe("CrocoApp", () => {
       debug: () => {},
     } as unknown as Logger;
 
-    const registrar = new CrocoRouteRegistrar(hono as never, new ErrorHandler(logger), []);
+    const registrar = new CrocoRouteRegistrar(hono as never, new ErrorHandler(logger), [], logger);
 
     expect(() => {
       registrar.register({
@@ -601,6 +681,99 @@ describe("CrocoApp", () => {
     expect(response.statusCode).toBe(200);
     expect(response.isBase64Encoded).toBe(false);
     expect(JSON.parse(response.body ?? "{}")).toEqual({ message: "Hello, World!" });
+  });
+
+  it("should expose Lambda runtime context and drain waitUntil work before responding", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        requestContext: {
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
+          http: {
+            method: "GET",
+            path: "/lambda/runtime-context",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
+          },
+          requestId: "gateway-req-123",
+          routeKey: "$default",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
+          timeEpoch: 1710676800000,
+        },
+        rawPath: "/lambda/runtime-context",
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      platform: "lambda",
+      requestId: "gateway-req-123",
+      awsRequestId: "req-123",
+      waitUntil: true,
+      flush: true,
+      env: true,
+    });
+    expect(lambdaWaitUntilCompleted).toBe(true);
+  });
+
+  it("should log rejected Lambda waitUntil work after draining", async () => {
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as Logger & { error: ReturnType<typeof vi.fn> };
+    Container.set(Logger, logger);
+    Container.set(LOGGER_TOKEN, logger);
+    Container.set(ErrorHandler, new ErrorHandler(logger));
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        requestContext: {
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
+          http: {
+            method: "GET",
+            path: "/lambda/runtime-context-rejected-wait-until",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
+          },
+          requestId: "gateway-req-123",
+          routeKey: "$default",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
+          timeEpoch: 1710676800000,
+        },
+        rawPath: "/lambda/runtime-context-rejected-wait-until",
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({ ok: true });
+    expect(logger.error).toHaveBeenCalledOnce();
+    expect(logger.error).toHaveBeenCalledWith("Lambda waitUntil task rejected", {
+      taskIndex: 0,
+      reason: expect.any(Error),
+    });
+    const [, context] = logger.error.mock.calls[0] as [
+      string,
+      { taskIndex: number; reason: Error },
+    ];
+    expect(context.reason.message).toBe("lambda waitUntil failed");
   });
 
   it("should parse traceparent with traceId spanId and traceFlags", async () => {
