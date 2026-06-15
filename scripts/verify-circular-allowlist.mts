@@ -271,7 +271,7 @@ function compareRotation(parts: readonly string[], leftStart: number, rightStart
   for (let offset = 0; offset < parts.length; offset++) {
     const left = parts[(leftStart + offset) % parts.length];
     const right = parts[(rightStart + offset) % parts.length];
-    const comparison = left.localeCompare(right);
+    const comparison = left < right ? -1 : left > right ? 1 : 0;
 
     if (comparison !== 0) {
       return comparison;
