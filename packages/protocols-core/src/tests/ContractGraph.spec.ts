@@ -80,8 +80,8 @@ describe("buildContractGraph", () => {
   });
 
   it("should expose auth and access metadata references when present", () => {
-    class AuthGuard {}
-    class AuditGuard {}
+    const AuthGuard = class SharedAccessGuard {};
+    const AuditGuard = class SharedAccessGuard {};
 
     @UseGuards(AuthGuard)
     @Roles("admin")
@@ -100,10 +100,12 @@ describe("buildContractGraph", () => {
       guards: [
         {
           type: "rest.guard",
-          id: "rest.guard:constructor:AuthGuard",
+          id: "rest.guard:controller:AdminController:0:constructor:SharedAccessGuard",
           kind: "constructor",
-          name: "AuthGuard",
+          name: "SharedAccessGuard",
           declaredAt: "controller",
+          owner: { controllerName: "AdminController" },
+          index: 0,
         },
       ],
       roles: ["admin"],
@@ -112,21 +114,30 @@ describe("buildContractGraph", () => {
       guards: [
         {
           type: "rest.guard",
-          id: "rest.guard:constructor:AuthGuard",
+          id: "rest.guard:controller:AdminController:0:constructor:SharedAccessGuard",
           kind: "constructor",
-          name: "AuthGuard",
+          name: "SharedAccessGuard",
           declaredAt: "controller",
+          owner: { controllerName: "AdminController" },
+          index: 0,
         },
         {
           type: "rest.guard",
-          id: "rest.guard:constructor:AuditGuard",
+          id: "rest.guard:route:AdminController.getAdminAsset:0:constructor:SharedAccessGuard",
           kind: "constructor",
-          name: "AuditGuard",
+          name: "SharedAccessGuard",
           declaredAt: "route",
+          owner: {
+            controllerName: "AdminController",
+            methodName: "getAdminAsset",
+            routeId: "AdminController.getAdminAsset",
+          },
+          index: 0,
         },
       ],
       roles: ["admin", "owner"],
     });
+    expect(graph.routes[0]?.access.guards[0]?.id).not.toBe(graph.routes[0]?.access.guards[1]?.id);
     expect(graph.diagnostics).toEqual([]);
   });
 

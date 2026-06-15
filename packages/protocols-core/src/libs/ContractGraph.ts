@@ -40,6 +40,14 @@ export type ContractMetadataReference = {
   readonly kind: "constructor" | "instance";
   readonly name: string;
   readonly declaredAt: "controller" | "route";
+  readonly owner: ContractMetadataOwner;
+  readonly index: number;
+};
+
+export type ContractMetadataOwner = {
+  readonly controllerName: string;
+  readonly routeId?: string;
+  readonly methodName?: string;
 };
 
 export type ContractAccessMetadata = {
@@ -101,7 +109,13 @@ export function buildContractGraph(controllers: readonly Constructor[]): Contrac
     graphControllers.push({
       name: controller.name,
       path: controllerMeta.path,
-      guards: getMetadataReferences(Reflect.getMetadata(REST_GUARDS_KEY, controller), "controller"),
+      guards: getMetadataReferences(
+        Reflect.getMetadata(REST_GUARDS_KEY, controller),
+        "controller",
+        {
+          controllerName: controller.name,
+        },
+      ),
       roles: getMetadataStrings(Reflect.getMetadata(REST_ROLES_KEY, controller)),
       routeIds: routes.map((route) => route.routeId),
     });
@@ -176,10 +190,12 @@ function toContractGraphRoute(
         ...getMetadataReferences(
           Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor),
           "controller",
+          { controllerName: route.controllerName },
         ),
         ...getMetadataReferences(
           Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor, route.methodName),
           "route",
+          { controllerName: route.controllerName, methodName: route.methodName, routeId },
         ),
       ],
       roles: [
@@ -424,29 +440,32 @@ function getDiagnosticTarget(code: string): ContractDiagnosticTarget {
 function getMetadataReferences(
   value: unknown,
   declaredAt: ContractMetadataReference["declaredAt"],
+  owner: ContractMetadataOwner,
 ): ContractMetadataReference[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
   return value
-    .map((item) => getMetadataReference(item, declaredAt))
+    .map((item, index) => getMetadataReference(item, declaredAt, owner, index))
     .filter((reference): reference is ContractMetadataReference => reference !== null);
 }
 
 function getMetadataReference(
   value: unknown,
   declaredAt: ContractMetadataReference["declaredAt"],
+  owner: ContractMetadataOwner,
+  index: number,
 ): ContractMetadataReference | null {
   if (typeof value === "function" && value.name.length > 0) {
-    return createGuardReference("constructor", value.name, declaredAt);
+    return createGuardReference("constructor", value.name, declaredAt, owner, index);
   }
 
   if (value && typeof value === "object" && "constructor" in value) {
     const constructor = value.constructor;
 
     if (typeof constructor === "function" && constructor.name.length > 0) {
-      return createGuardReference("instance", constructor.name, declaredAt);
+      return createGuardReference("instance", constructor.name, declaredAt, owner, index);
     }
   }
 
@@ -457,13 +476,19 @@ function createGuardReference(
   kind: ContractMetadataReference["kind"],
   name: string,
   declaredAt: ContractMetadataReference["declaredAt"],
+  owner: ContractMetadataOwner,
+  index: number,
 ): ContractMetadataReference {
+  const ownerId = owner.routeId ?? owner.controllerName;
+
   return {
     type: "rest.guard",
-    id: `rest.guard:${kind}:${name}`,
+    id: `rest.guard:${declaredAt}:${ownerId}:${index}:${kind}:${name}`,
     kind,
     name,
     declaredAt,
+    owner,
+    index,
   };
 }
 
