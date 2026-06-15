@@ -15,7 +15,11 @@ export class TaskRegistry {
   private tasks: Map<string, RegisteredTask>;
 
   constructor(tasks?: Iterable<RegisteredTask>) {
-    this.tasks = new Map(Array.from(tasks ?? [], (task) => [task.name, task]));
+    this.tasks = new Map();
+
+    for (const task of tasks ?? []) {
+      this.registerTask(task);
+    }
   }
 
   static getInstance(): TaskRegistry {
@@ -32,17 +36,23 @@ export class TaskRegistry {
   }
 
   register(name: string, target: object, methodName: string, metadata: TaskMetadata): void {
-    const existingTask = this.get(name);
+    this.registerTask({ name, target, methodName, metadata });
+  }
+
+  private registerTask(task: RegisteredTask): void {
+    const existingTask = this.get(task.name);
 
     if (existingTask) {
-      if (TaskRegistry.isSameRegistration(existingTask, target, methodName, metadata)) {
+      if (
+        TaskRegistry.isSameRegistration(existingTask, task.target, task.methodName, task.metadata)
+      ) {
         return;
       }
 
-      throw new DuplicateTaskRegistrationProblem(name);
+      throw new DuplicateTaskRegistrationProblem(task.name);
     }
 
-    this.tasks.set(name, { name, target, methodName, metadata });
+    this.tasks.set(task.name, task);
   }
 
   get(name: string): RegisteredTask | undefined {
