@@ -531,6 +531,132 @@ describe("normalize-packages.mjs", () => {
     expect(result.stdout).toContain("drizzle-orm must be declared with catalog:");
   });
 
+  it("requires production source runtime imports to be declared as published dependencies", () => {
+    const root = createTempRoot();
+
+    writePackage(
+      root,
+      "events-inmemory-missing-otel",
+      publishablePackage("@croco/events-inmemory-missing-otel", {
+        dependencies: {
+          "@croco/telemetry-api": "workspace:*",
+        },
+      }),
+      {
+        sourceContent:
+          'import { recordError } from "@croco/telemetry-api";\nimport { context, SpanStatusCode, trace } from "@opentelemetry/api";\nexport const value = { context, recordError, SpanStatusCode, trace };\n',
+      },
+    );
+    writePackage(
+      root,
+      "runtime-declared",
+      publishablePackage("@croco/runtime-declared", {
+        dependencies: {
+          "runtime-lib": "^1.0.0",
+        },
+      }),
+      {
+        sourceContent:
+          'import { value } from "runtime-lib/subpath";\nexport const exported = value;\n',
+      },
+    );
+    writePackage(
+      root,
+      "peer-declared",
+      publishablePackage("@croco/peer-declared", {
+        peerDependencies: {
+          "peer-lib": "^1.0.0",
+        },
+      }),
+      {
+        sourceContent:
+          'import type { PeerValue } from "peer-lib";\nexport type Exported = PeerValue;\n',
+      },
+    );
+    writePackage(
+      root,
+      "optional-declared",
+      publishablePackage("@croco/optional-declared", {
+        optionalDependencies: {
+          "optional-lib": "^1.0.0",
+        },
+      }),
+      {
+        sourceContent: 'export const loadOptional = () => import("optional-lib");\n',
+      },
+    );
+    writePackage(
+      root,
+      "type-package-declared",
+      publishablePackage("@croco/type-package-declared", {
+        dependencies: {
+          "@types/aws-lambda": "^8.10.0",
+        },
+      }),
+      {
+        sourceContent:
+          'import type { Context as AwsLambdaContext } from "aws-lambda";\nexport type LambdaContext = AwsLambdaContext;\n',
+      },
+    );
+    writePackage(
+      root,
+      "runtime-with-only-types",
+      publishablePackage("@croco/runtime-with-only-types", {
+        dependencies: {
+          "@types/runtime-with-only-types": "^1.0.0",
+        },
+      }),
+      {
+        sourceContent:
+          'import { value } from "runtime-with-only-types";\nexport const exported = value;\n',
+      },
+    );
+    writePackage(root, "builtin-import", publishablePackage("@croco/builtin-import"), {
+      sourceContent:
+        'import { readFileSync } from "node:fs";\nimport path from "path";\nexport const value = path.basename(readFileSync.toString());\n',
+    });
+    writePackage(
+      root,
+      "dev-only-import",
+      publishablePackage("@croco/dev-only-import", {
+        devDependencies: {
+          "dev-only-lib": "^1.0.0",
+        },
+      }),
+      {
+        sourceContent: 'import { value } from "dev-only-lib";\nexport const exported = value;\n',
+      },
+    );
+    writePackage(root, "missing-import", publishablePackage("@croco/missing-import"), {
+      sourceContent: 'export { value } from "missing-lib/subpath";\n',
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain("runtime-declared/package.json");
+    expect(result.stdout).not.toContain("peer-declared/package.json");
+    expect(result.stdout).not.toContain("optional-declared/package.json");
+    expect(result.stdout).not.toContain("type-package-declared/package.json");
+    expect(result.stdout).not.toContain("builtin-import/package.json");
+    expect(result.stdout).toContain("events-inmemory-missing-otel/package.json");
+    expect(result.stdout).toContain(
+      "source imports @opentelemetry/api at runtime but dependencies/peerDependencies/optionalDependencies is missing: src/index.ts",
+    );
+    expect(result.stdout).toContain("runtime-with-only-types/package.json");
+    expect(result.stdout).toContain(
+      "source imports runtime-with-only-types at runtime but dependencies/peerDependencies/optionalDependencies is missing",
+    );
+    expect(result.stdout).toContain("dev-only-import/package.json");
+    expect(result.stdout).toContain(
+      "source imports dev-only-lib at runtime but dependencies/peerDependencies/optionalDependencies is missing",
+    );
+    expect(result.stdout).toContain("missing-import/package.json");
+    expect(result.stdout).toContain(
+      "source imports missing-lib at runtime but dependencies/peerDependencies/optionalDependencies is missing",
+    );
+  });
+
   it("ignores test-only reflect-metadata imports in package manifests", () => {
     const root = createTempRoot();
     const packagePath = writePackage(root, "test-only-decorator", {
@@ -591,6 +717,33 @@ function writePackage(
   writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
 
   return packagePath;
+}
+
+function publishablePackage(
+  packageName: string,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    name: packageName,
+    version: "0.0.3",
+    files: ["dist"],
+    type: "commonjs",
+    main: "./src/index.ts",
+    types: "./src/index.ts",
+    publishConfig: {
+      access: "public",
+      main: "./dist/index.js",
+      types: "./dist/index.d.ts",
+      exports: {
+        ".": {
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+          types: "./dist/index.d.ts",
+        },
+      },
+    },
+    ...extra,
+  };
 }
 
 function runScript(root: string, mode: "--check" | "--write"): ScriptResult {
