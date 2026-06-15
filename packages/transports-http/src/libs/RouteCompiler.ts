@@ -109,7 +109,7 @@ export class RouteCompiler {
     routeIR: RouteIR,
     options: CompileOptions,
   ): CompiledRoute {
-    const fullPath = this.joinPaths("", routeIR.path);
+    const fullPath = this.toRuntimeRoutePath(this.joinPaths("", routeIR.path));
     const paramResolver = new ParamResolver((pipe) => instantiateProvider(pipe, options.container));
 
     // Instantiate guards/interceptors/filters once at compile time (not per-request)
@@ -186,5 +186,13 @@ export class RouteCompiler {
     const result = `${cleanBase}${cleanPath}`.replace(/\/+/g, "/");
     // trailing slash 제거 (루트 제외)
     return result.length > 1 && result.endsWith("/") ? result.slice(0, -1) : result || "/";
+  }
+
+  private toRuntimeRoutePath(path: string): string {
+    return path.replace(/:([^/]+)/g, (token, paramToken: string) => {
+      const name = paramToken.replace(/^\.\.\./, "");
+
+      return name === paramToken || name.length === 0 ? token : `:${name}{.+}`;
+    });
   }
 }

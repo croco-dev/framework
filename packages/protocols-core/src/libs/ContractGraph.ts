@@ -126,6 +126,7 @@ export function buildContractGraph(controllers: readonly Constructor[]): Contrac
     }
   }
 
+  diagnostics.push(...validateUniqueControllerNames(graphControllers));
   diagnostics.push(...validateUniqueRouteIds(graphRoutes));
   diagnostics.push(...validateUniqueOperationIds(graphRoutes));
 
@@ -360,6 +361,33 @@ function validateUniqueRouteIds(routes: readonly ContractGraphRoute[]): Contract
     }
 
     routeIds.set(route.routeId, route);
+  }
+
+  return diagnostics;
+}
+
+function validateUniqueControllerNames(
+  controllers: readonly ContractGraphController[],
+): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const controllerNames = new Map<string, ContractGraphController>();
+
+  for (const controller of controllers) {
+    const existingController = controllerNames.get(controller.name);
+
+    if (existingController) {
+      diagnostics.push({
+        code: "contract-controller-duplicate-name",
+        severity: "error",
+        target: "controller",
+        controllerName: controller.name,
+        path: controller.path,
+        message: `Controller name '${controller.name}' is already used for path '${existingController.path}'. Controller names must be unique because route ids and access metadata references use them as contract identity.`,
+      });
+      continue;
+    }
+
+    controllerNames.set(controller.name, controller);
   }
 
   return diagnostics;

@@ -233,4 +233,41 @@ describe("buildContractGraph", () => {
     ]);
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
   });
+
+  it("should reject duplicate controller names used as contract identity", () => {
+    let FirstController!: new () => unknown;
+    let SecondController!: new () => unknown;
+
+    {
+      @Controller("/first")
+      class DuplicateController {
+        @Get("/one")
+        one(): void {}
+      }
+
+      FirstController = DuplicateController;
+    }
+
+    {
+      @Controller("/second")
+      class DuplicateController {
+        @Get("/two")
+        two(): void {}
+      }
+
+      SecondController = DuplicateController;
+    }
+
+    const graph = buildContractGraph([FirstController, SecondController]);
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-controller-duplicate-name",
+        severity: "error",
+        target: "controller",
+        controllerName: "DuplicateController",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
 });
