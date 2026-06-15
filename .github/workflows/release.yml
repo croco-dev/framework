@@ -86,6 +86,10 @@ jobs:
         if: steps.release_work.outputs.should_run == 'true'
         run: pnpm package-entrypoints:smoke
 
+      - name: Package binary smoke
+        if: steps.release_work.outputs.should_run == 'true'
+        run: pnpm package-bins:smoke
+
       - name: TypeScript check
         if: steps.release_work.outputs.should_run == 'true'
         run: pnpm typecheck

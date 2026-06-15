@@ -144,6 +144,9 @@ jobs:
       - name: Package entrypoint smoke
         run: pnpm package-entrypoints:smoke
 
+      - name: Package binary smoke
+        run: pnpm package-bins:smoke
+
       - name: create-croco-app generated app smoke
         run: pnpm create-croco-app:smoke
 

@@ -35,6 +35,8 @@ describe("release workflow quality gates", () => {
       "run: pnpm build",
       "- name: Package entrypoint smoke",
       "run: pnpm package-entrypoints:smoke",
+      "- name: Package binary smoke",
+      "run: pnpm package-bins:smoke",
       "- name: TypeScript check",
       "run: pnpm typecheck",
       "- name: Test",
