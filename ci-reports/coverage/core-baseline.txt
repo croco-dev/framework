@@ -1,7 +1,7 @@
 | Package | Statements | Branches | Functions | Lines |
 |---------|-----------:|---------:|----------:|------:|
-| `@croco/framework-context` | 0 | 0 | 0 | 0 |
-| `@croco/retry-core` | 0 | 0 | 0 | 0 |
-| `@croco/events-core` | 0 | 0 | 0 | 0 |
-| `@croco/auth-core` | 0 | 0 | 0 | 0 |
-| `@croco/telemetry-api` | 0 | 0 | 0 | 0 |
+| `@croco/framework-context` | 85.03 | 68.92 | 94.89 | 85.29 |
+| `@croco/retry-core` | 78.83 | 74.80 | 72.97 | 79.58 |
+| `@croco/events-core` | 87.65 | 75.21 | 91.11 | 87.50 |
+| `@croco/auth-core` | 94.09 | 87.64 | 94.91 | 94.20 |
+| `@croco/telemetry-api` | 73.68 | 81.81 | 76.19 | 76.08 |
