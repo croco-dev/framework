@@ -9,11 +9,35 @@
  */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 let failed = false;
+
+type PublicDocsSource = {
+  readonly label: string;
+  readonly content: string;
+  readonly requireSkipFlags?: boolean;
+};
+
+type ExtractedCommand = {
+  readonly command: string;
+  readonly line: number;
+};
+
+type ParsedCreateCrocoAppCommand = {
+  readonly projectName?: string;
+  readonly flags: Map<string, string | boolean>;
+};
+
+const CREATE_CROCO_APP_CHOICES = new Map<string, readonly string[]>([
+  ["--preset", ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack"]],
+  ["--api", ["graphql", "trpc"]],
+  ["--api-hosting", ["standalone", "nextjs"]],
+  ["--backend-deploy", ["docker", "lambda"]],
+  ["--frontend-deploy", ["opennext", "vercel", "docker", "cloudflare-meta-vite", "vite-spa"]],
+]);
 
 function pass(label: string, detail?: string): void {
   console.log(`  ✅ ${label}${detail ? ` — ${detail}` : ""}`);
@@ -34,39 +58,320 @@ function read(path: string): string {
   }
 }
 
-function extractBashCommand(content: string, commandName: string): string | undefined {
-  const fences = content.matchAll(/```bash\n([\s\S]*?)```/g);
+function readRootArg(): string {
+  const rootIndex = process.argv.indexOf("--root");
 
-  for (const fence of fences) {
-    const command = fence[1]
-      .split("\n")
-      .map((line) => line.trim())
-      .find((line) => line.includes(commandName));
+  if (rootIndex === -1) {
+    return process.cwd();
+  }
 
-    if (command) {
-      return command;
+  const root = process.argv[rootIndex + 1];
+
+  if (!root) {
+    fail("Argument error", "--root requires a path");
+    return process.cwd();
+  }
+
+  return resolve(root);
+}
+
+function normalizeMarkdownShellLine(line: string): string {
+  return line.trim().replace(/^>\s?/, "").trim();
+}
+
+function extractCreateCrocoAppCommands(content: string): ExtractedCommand[] {
+  const commands: ExtractedCommand[] = [];
+  const lines = content.split(/\r?\n/);
+  let inFence = false;
+
+  for (const [index, rawLine] of lines.entries()) {
+    const line = normalizeMarkdownShellLine(rawLine);
+
+    if (line.startsWith("```")) {
+      inFence = !inFence;
+      continue;
+    }
+
+    if (inFence) {
+      if (isCreateCrocoAppCommandSnippet(line)) {
+        commands.push({ command: line, line: index + 1 });
+      }
+      continue;
+    }
+
+    for (const match of line.matchAll(/`([^`]*create-croco-app[^`]*)`/g)) {
+      const command = match[1];
+      if (isCreateCrocoAppCommandSnippet(command)) {
+        commands.push({ command, line: index + 1 });
+      }
     }
   }
 
-  return undefined;
+  return commands;
 }
 
-function readFlagValue(args: readonly string[], flag: string): string | undefined {
-  const flagIndex = args.indexOf(flag);
+function isCreateCrocoAppCommandSnippet(snippet: string): boolean {
+  const args = splitShellWords(snippet);
 
-  if (flagIndex === -1) {
+  return args.length > 1 && args.some(isCreateCrocoAppExecutable);
+}
+
+function splitShellWords(command: string): string[] {
+  const words: string[] = [];
+  let current = "";
+  let quote: "'" | '"' | undefined;
+  let escaped = false;
+
+  for (const char of command) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\" && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = undefined;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current) {
+        words.push(current);
+        current = "";
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current) {
+    words.push(current);
+  }
+
+  return words;
+}
+
+function parseCreateCrocoAppCommand(command: string): ParsedCreateCrocoAppCommand | undefined {
+  const args = splitShellWords(command);
+  const executableIndex = args.findIndex(isCreateCrocoAppExecutable);
+
+  if (executableIndex === -1) {
     return undefined;
   }
 
-  return args[flagIndex + 1];
+  let projectName: string | undefined;
+  const flags = new Map<string, string | boolean>();
+
+  for (let index = executableIndex + 1; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === "&&" || arg === ";") {
+      break;
+    }
+
+    if (!arg.startsWith("--")) {
+      projectName ??= arg;
+      continue;
+    }
+
+    const [flag, inlineValue] = arg.split("=", 2);
+
+    if (flag === "--no-install" || flag === "--no-git" || flag === "--no-agent-rules") {
+      flags.set(flag, false);
+      continue;
+    }
+
+    if (inlineValue !== undefined) {
+      flags.set(flag, inlineValue);
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith("--") || value === "&&" || value === ";") {
+      flags.set(flag, "");
+      continue;
+    }
+
+    flags.set(flag, value);
+    index += 1;
+  }
+
+  return { projectName, flags };
+}
+
+function isCreateCrocoAppExecutable(arg: string): boolean {
+  return arg === "create-croco-app" || arg.startsWith("create-croco-app@");
+}
+
+function readStringFlag(flags: Map<string, string | boolean>, flag: string): string | undefined {
+  const value = flags.get(flag);
+
+  return typeof value === "string" ? value : undefined;
+}
+
+function validatePublicCreateCommand(
+  extracted: ExtractedCommand,
+  source: PublicDocsSource,
+): string[] {
+  const parsed = parseCreateCrocoAppCommand(extracted.command);
+
+  if (!parsed) {
+    return [`${source.label}:${extracted.line} could not parse create-croco-app command`];
+  }
+
+  const failures: string[] = [];
+  const preset = readStringFlag(parsed.flags, "--preset");
+  const scope = readStringFlag(parsed.flags, "--scope");
+  const api = readStringFlag(parsed.flags, "--api");
+  const missingRequiredFlags = [
+    parsed.projectName ? undefined : "project=<missing>",
+    preset ? undefined : "--preset=<missing>",
+    scope ? undefined : "--scope=<missing>",
+    preset === "ddd-api" || preset === "ddd-fullstack"
+      ? api
+        ? undefined
+        : "--api=<missing>"
+      : undefined,
+    preset === "ddd-vike-fullstack" && !readStringFlag(parsed.flags, "--frontend-deploy")
+      ? "--frontend-deploy=<missing>"
+      : undefined,
+  ].filter((value): value is string => !!value);
+
+  if (missingRequiredFlags.length > 0) {
+    failures.push(
+      `${source.label}:${extracted.line} create-croco-app command is missing required noninteractive values: ${missingRequiredFlags.join(", ")}`,
+    );
+  }
+
+  if (scope && !scope.startsWith("@")) {
+    failures.push(`${source.label}:${extracted.line} create-croco-app --scope must start with @`);
+  }
+
+  for (const [flag, choices] of CREATE_CROCO_APP_CHOICES) {
+    const value = readStringFlag(parsed.flags, flag);
+    if (value && !choices.includes(value)) {
+      failures.push(
+        `${source.label}:${extracted.line} create-croco-app ${flag} value "${value}" is not one of ${choices.join(", ")}`,
+      );
+    }
+  }
+
+  if (preset === "blank") {
+    for (const unsupported of [
+      "--api",
+      "--api-hosting",
+      "--backend-deploy",
+      "--frontend-deploy",
+      "--web-apps",
+      "--db",
+    ]) {
+      if (parsed.flags.has(unsupported)) {
+        failures.push(
+          `${source.label}:${extracted.line} ${unsupported} is not supported with the blank preset`,
+        );
+      }
+    }
+  }
+
+  if (preset === "ddd-api") {
+    if (parsed.flags.has("--web-apps")) {
+      failures.push(
+        `${source.label}:${extracted.line} --web-apps is only supported with the ddd-fullstack preset`,
+      );
+    }
+    if (readStringFlag(parsed.flags, "--api-hosting") === "nextjs") {
+      failures.push(
+        `${source.label}:${extracted.line} --api-hosting nextjs is only supported with ddd-fullstack`,
+      );
+    }
+    if (parsed.flags.has("--frontend-deploy")) {
+      failures.push(
+        `${source.label}:${extracted.line} --frontend-deploy is only supported with fullstack presets`,
+      );
+    }
+  }
+
+  if (preset === "ddd-fullstack" && readStringFlag(parsed.flags, "--api-hosting") === "nextjs") {
+    const webApps = readStringFlag(parsed.flags, "--web-apps")?.split(",").filter(Boolean) ?? [
+      "web",
+    ];
+    if (webApps.length !== 1) {
+      failures.push(
+        `${source.label}:${extracted.line} --api-hosting nextjs requires exactly one web app`,
+      );
+    }
+    if (parsed.flags.has("--backend-deploy")) {
+      failures.push(
+        `${source.label}:${extracted.line} --backend-deploy is only supported with standalone API hosting`,
+      );
+    }
+  }
+
+  if (
+    preset === "ddd-vike-fullstack" &&
+    readStringFlag(parsed.flags, "--frontend-deploy") !== "cloudflare-meta-vite"
+  ) {
+    failures.push(
+      `${source.label}:${extracted.line} ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite`,
+    );
+  }
+
+  if (source.requireSkipFlags) {
+    const missingSkipFlags = ["--no-install", "--no-git"].filter((flag) => !parsed.flags.has(flag));
+    if (missingSkipFlags.length > 0) {
+      failures.push(
+        `${source.label}:${extracted.line} create-croco-app command must include ${missingSkipFlags.join(" and ")} before manual install steps`,
+      );
+    }
+  }
+
+  return failures;
+}
+
+function extractPublicPackageCount(report: string): number | undefined {
+  const match = report.match(/^\|\s*Public packages\s*\|\s*(\d+)\s*\|/m);
+
+  return match ? Number(match[1]) : undefined;
+}
+
+function validatePackageCountClaims(source: PublicDocsSource, expected: number): string[] {
+  const failures: string[] = [];
+
+  for (const match of source.content.matchAll(/\b(\d+)\s+packages\b/g)) {
+    const actual = Number(match[1]);
+
+    if (actual !== expected) {
+      failures.push(
+        `${source.label} package-count claim ${actual} does not match docs/package-docs-report.md public package count ${expected}`,
+      );
+    }
+  }
+
+  return failures;
 }
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
-const ROOT = process.cwd();
+const ROOT = readRootArg();
 const QUICK_START_DIR = join(ROOT, "examples", "quick-start-lambda");
 
 const paths = {
+  rootReadme: join(ROOT, "README.md"),
   readme: join(QUICK_START_DIR, "README.md"),
   index: join(QUICK_START_DIR, "src", "index.ts"),
   authProvider: join(QUICK_START_DIR, "src", "AuthProvider.ts"),
@@ -84,6 +389,8 @@ const paths = {
     "guides",
     "getting-started.mdx",
   ),
+  docsIndex: join(ROOT, "packages", "docs", "src", "content", "docs", "en", "index.mdx"),
+  packageDocsReport: join(ROOT, "docs", "package-docs-report.md"),
   prompts: join(ROOT, "packages", "create-croco-app", "src", "prompts.ts"),
 };
 
@@ -268,7 +575,26 @@ console.log("\n📋 C. Metering contract\n");
 console.log("\n📋 D. Docs contract\n");
 
 {
+  const rootReadme = read(paths.rootReadme);
+  const docsIndex = read(paths.docsIndex);
   const gettingStarted = read(paths.gettingStarted);
+  const packageDocsReport = read(paths.packageDocsReport);
+  const publicDocsSources: PublicDocsSource[] = [
+    {
+      label: "README.md",
+      content: rootReadme,
+      requireSkipFlags: true,
+    },
+    {
+      label: "docs landing page",
+      content: docsIndex,
+    },
+    {
+      label: "getting-started guide",
+      content: gettingStarted,
+      requireSkipFlags: true,
+    },
+  ];
 
   // Getting Started links to quick-start-lambda as complete example
   if (!gettingStarted.includes("quick-start-lambda")) {
@@ -284,56 +610,48 @@ console.log("\n📋 D. Docs contract\n");
     pass("D2", "Getting started docs document create-croco-app command");
   }
 
-  const createCommand = extractBashCommand(gettingStarted, "create-croco-app");
+  const commandFailures = publicDocsSources.flatMap((source) => {
+    const commands = extractCreateCrocoAppCommands(source.content);
 
-  if (!createCommand) {
-    fail("D3", "Getting started docs missing a bash create-croco-app command");
+    if (commands.length === 0) {
+      return [`${source.label} missing a public create-croco-app command`];
+    }
+
+    return commands.flatMap((command) => validatePublicCreateCommand(command, source));
+  });
+
+  if (commandFailures.length > 0) {
+    for (const commandFailure of commandFailures) {
+      fail("D3", commandFailure);
+    }
   } else {
-    const args = createCommand.split(/\s+/);
-    const executableIndex = args.findIndex((arg) => arg.includes("create-croco-app"));
-    const projectName = executableIndex === -1 ? undefined : args[executableIndex + 1];
-    const expectedFlagValues = new Map([
-      ["--preset", "ddd-api"],
-      ["--scope", "@myorg"],
-      ["--api", "graphql"],
-      ["--backend-deploy", "lambda"],
-    ]);
-    const missingOrMismatchedFlags = [...expectedFlagValues].flatMap(([flag, expected]) => {
-      const actual = readFlagValue(args, flag);
-
-      return actual === expected ? [] : [`${flag}=${actual ?? "<missing>"}`];
-    });
-    const missingSkipFlags = ["--no-install", "--no-git"].filter((flag) => !args.includes(flag));
-
-    if (projectName !== "my-project") {
-      fail("D3a", `create-croco-app command project name is ${projectName ?? "<missing>"}`);
-    } else {
-      pass("D3a", "create-croco-app command includes project name");
-    }
-
-    if (missingOrMismatchedFlags.length > 0) {
-      fail(
-        "D3b",
-        `create-croco-app command is missing required noninteractive values: ${missingOrMismatchedFlags.join(", ")}`,
-      );
-    } else {
-      pass("D3b", "create-croco-app command includes required noninteractive values");
-    }
-
-    if (missingSkipFlags.length > 0) {
-      fail(
-        "D3c",
-        `create-croco-app command must include ${missingSkipFlags.join(" and ")} before manual install steps`,
-      );
-    } else {
-      pass("D3c", "create-croco-app command skips install and git before manual next steps");
-    }
+    pass("D3", "Public create-croco-app commands satisfy the noninteractive contract");
   }
 
   if (gettingStarted.includes("When prompted")) {
     fail("D4", "Getting started docs describe prompts for the noninteractive quick-start command");
   } else {
     pass("D4", "Getting started docs do not describe prompts for the quick-start command");
+  }
+
+  const publicPackageCount = extractPublicPackageCount(packageDocsReport);
+  if (publicPackageCount === undefined) {
+    fail("D5", "docs/package-docs-report.md missing Public packages summary row");
+  } else {
+    const packageCountFailures = publicDocsSources.flatMap((source) =>
+      validatePackageCountClaims(source, publicPackageCount),
+    );
+
+    if (packageCountFailures.length > 0) {
+      for (const packageCountFailure of packageCountFailures) {
+        fail("D5", packageCountFailure);
+      }
+    } else {
+      pass(
+        "D5",
+        `Public package-count claims match generated catalog count (${publicPackageCount})`,
+      );
+    }
   }
 }
 
