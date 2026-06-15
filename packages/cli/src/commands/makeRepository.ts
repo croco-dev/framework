@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { join } from "node:path";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
+import { assertGeneratedImportDependencies } from "../libs/generatedImportContract.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -66,6 +67,12 @@ export class ${className}Repository implements Repository<${className}Entity, st
   }
 }
 `;
+
+  await assertGeneratedImportDependencies({
+    manifestPath: join(workspace.root, "apps", "api-server", "package.json"),
+    manifestLabel: "apps/api-server/package.json",
+    sources: [{ path: targetPath, content }],
+  });
 
   const result = await fileWriterWrite(targetPath, content, { dryRun, overwrite });
 

@@ -1,8 +1,12 @@
 import { defineCommand } from "citty";
-import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
+import {
+  assertGeneratedImportDependencies,
+  hasManifestDependency,
+  readPackageManifest,
+} from "../libs/generatedImportContract.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
 import { pageRoute } from "../templates/pageRoute.js";
@@ -25,16 +29,6 @@ export interface RunCreatePageResult {
   files: WriteResult[];
 }
 
-const DEPENDENCY_FIELDS = [
-  "dependencies",
-  "devDependencies",
-  "peerDependencies",
-  "optionalDependencies",
-] as const;
-
-type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
-type ConsoleWebPackageManifest = Partial<Record<DependencyField, Record<string, string>>>;
-
 export async function runCreatePage(
   name: string,
   options: RunCreatePageOptions = {},
@@ -50,7 +44,7 @@ export async function runCreatePage(
 
   const pageName = normalize(name, "pascal");
   const kebab = normalize(name, "kebab");
-  const routePath = options.path ?? `/${kebab}`;
+  const routeUrlPath = options.path ?? `/${kebab}`;
   const workspace = await detect(cwd);
 
   if (!workspace.root || !workspace.hasConsoleWeb) {
@@ -58,9 +52,8 @@ export async function runCreatePage(
     return null;
   }
 
-  const supportedModes = await detectSupportedPageModes(
-    join(workspace.root, "apps", "console-web", "package.json"),
-  );
+  const consoleWebManifestPath = join(workspace.root, "apps", "console-web", "package.json");
+  const supportedModes = await detectSupportedPageModes(consoleWebManifestPath);
 
   if (supportedModes && !supportedModes.includes(mode)) {
     throw new Error(
@@ -70,9 +63,22 @@ export async function runCreatePage(
 
   const pagePath = join(workspace.root, "apps", "console-web", "pages", kebab, "Page.tsx");
   const pageDir = dirname(pagePath);
+  const pageContent = pageTsx({ name: pageName });
+  const routeFilePath = join(pageDir, "route.ts");
+  const routeContent = pageRoute({ mode, path: routeUrlPath });
+
+  await assertGeneratedImportDependencies({
+    manifestPath: consoleWebManifestPath,
+    manifestLabel: "apps/console-web/package.json",
+    sources: [
+      { path: pagePath, content: pageContent },
+      { path: routeFilePath, content: routeContent },
+    ],
+  });
+
   const files = await Promise.all([
-    fileWriterWrite(pagePath, pageTsx({ name: pageName }), { dryRun, overwrite }),
-    fileWriterWrite(join(pageDir, "route.ts"), pageRoute({ mode, path: routePath }), {
+    fileWriterWrite(pagePath, pageContent, { dryRun, overwrite }),
+    fileWriterWrite(routeFilePath, routeContent, {
       dryRun,
       overwrite,
     }),
@@ -133,11 +139,9 @@ function isPageMode(value: string): value is PageMode {
 async function detectSupportedPageModes(
   packageJsonPath: string,
 ): Promise<readonly PageMode[] | null> {
-  const manifest = JSON.parse(
-    await readFile(packageJsonPath, "utf-8"),
-  ) as ConsoleWebPackageManifest;
-  const hasMetaVite = hasDependency(manifest, "@croco/meta-vite");
-  const hasFrontendVite = hasDependency(manifest, "@croco/frontend-vite");
+  const manifest = await readPackageManifest(packageJsonPath);
+  const hasMetaVite = hasManifestDependency(manifest, "@croco/meta-vite");
+  const hasFrontendVite = hasManifestDependency(manifest, "@croco/frontend-vite");
 
   if (!hasMetaVite && !hasFrontendVite) {
     return null;
@@ -153,12 +157,6 @@ async function detectSupportedPageModes(
   }
 
   return modes;
-}
-
-function hasDependency(manifest: ConsoleWebPackageManifest, packageName: string): boolean {
-  return DEPENDENCY_FIELDS.some((field) =>
-    Object.prototype.hasOwnProperty.call(manifest[field] ?? {}, packageName),
-  );
 }
 
 function logWriteResults(result: RunCreatePageResult | null): void {

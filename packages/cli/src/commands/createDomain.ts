@@ -5,6 +5,7 @@ import { registerController } from "../libs/codemods/registerController.js";
 import type { RegisterControllerResult } from "../libs/codemods/registerController.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
+import { assertGeneratedImportDependencies } from "../libs/generatedImportContract.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -52,29 +53,43 @@ export async function runCreateDomain(
     "index.ts",
   );
   const domainDir = dirname(barrelPath);
-  const files = await Promise.all([
-    fileWriterWrite(
-      join(domainDir, `${className}Controller.ts`),
-      controllerTemplate(className, kebab),
-      {
+  const generatedSources = [
+    {
+      path: join(domainDir, `${className}Controller.ts`),
+      content: controllerTemplate(className, kebab),
+    },
+    {
+      path: join(domainDir, `${className}Service.ts`),
+      content: serviceTemplate(className),
+    },
+    {
+      path: join(domainDir, `${className}Repository.ts`),
+      content: repositoryTemplate(className),
+    },
+    {
+      path: join(domainDir, `${className}Entity.ts`),
+      content: entityTemplate(className),
+    },
+    {
+      path: barrelPath,
+      content: barrelTemplate(className),
+    },
+  ];
+
+  await assertGeneratedImportDependencies({
+    manifestPath: join(workspace.root, "apps", "api-server", "package.json"),
+    manifestLabel: "apps/api-server/package.json",
+    sources: generatedSources,
+  });
+
+  const files = await Promise.all(
+    generatedSources.map((source) =>
+      fileWriterWrite(source.path, source.content, {
         dryRun,
         overwrite,
-      },
+      }),
     ),
-    fileWriterWrite(join(domainDir, `${className}Service.ts`), serviceTemplate(className), {
-      dryRun,
-      overwrite,
-    }),
-    fileWriterWrite(join(domainDir, `${className}Repository.ts`), repositoryTemplate(className), {
-      dryRun,
-      overwrite,
-    }),
-    fileWriterWrite(join(domainDir, `${className}Entity.ts`), entityTemplate(className), {
-      dryRun,
-      overwrite,
-    }),
-    fileWriterWrite(barrelPath, barrelTemplate(className), { dryRun, overwrite }),
-  ]);
+  );
 
   const apiServerSrc = join(workspace.root, "apps", "api-server", "src");
   const indexPath = join(apiServerSrc, "index.ts");

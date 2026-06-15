@@ -1,4 +1,5 @@
 const EXTERNAL_CROCO_PACKAGE_RANGES = {
+  "@croco/events-core": "^0.0.2",
   "@croco/framework-context": "^0.0.2",
   "@croco/frontend-cloudflare": "^0.0.2",
   "@croco/frontend-react": "^0.0.2",
@@ -8,6 +9,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/protocols-core": "^0.0.2",
   "@croco/protocols-rest": "^0.0.2",
   "@croco/ratelimit-core": "^0.0.2",
+  "@croco/repository-core": "^0.0.2",
   "@croco/rpc-codegen": "^0.0.3",
   "@croco/telemetry-sdk-node": "^0.0.2",
   "@croco/testing": "^0.0.1",

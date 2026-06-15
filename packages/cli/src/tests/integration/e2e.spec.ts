@@ -1,11 +1,21 @@
+import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import { runCreateDomain } from "../../commands/createDomain.js";
 import { runCreatePage } from "../../commands/createPage.js";
+import { generateController } from "../../commands/makeController.js";
+import { generateEntity } from "../../commands/makeEntity.js";
+import { generateEvent } from "../../commands/makeEvent.js";
+import { generateListener } from "../../commands/makeListener.js";
+import { generateRepository } from "../../commands/makeRepository.js";
 import { runGenerateScaffold } from "../../commands/generateScaffold.js";
 
+const execFileAsync = promisify(execFile);
+const REPO_ROOT = fileURLToPath(new URL("../../../../../", import.meta.url));
 const tmpRoots: string[] = [];
 
 describe("container-fullstack generator e2e", () => {
@@ -158,6 +168,49 @@ describe("container-fullstack generator e2e", () => {
     ).rejects.toThrow();
     expect(await readApiEntry(cwd)).not.toContain("ReportController");
   });
+
+  it("should typecheck representative generated command output", async () => {
+    const cwd = await createWorkspace();
+
+    await generateController("Account", { cwd });
+    await runCreateDomain("Product", { cwd });
+    await generateEntity("Order", { cwd });
+    await generateRepository("Order", { cwd });
+    await generateEvent("OrderCreated", { cwd });
+    await generateListener("OrderCreated", { cwd });
+    await runCreatePage("Dashboard", { cwd, mode: "ssr" });
+    await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
+
+    const typeDeclarationsPath = path.join(cwd, "generated-contracts.d.ts");
+    await fs.writeFile(typeDeclarationsPath, generatedContractDeclarations());
+    const tsconfigPath = path.join(cwd, "tsconfig.generated.json");
+    await fs.writeFile(
+      tsconfigPath,
+      JSON.stringify(
+        {
+          compilerOptions: {
+            experimentalDecorators: true,
+            jsx: "preserve",
+            module: "ESNext",
+            moduleResolution: "Bundler",
+            noEmit: true,
+            skipLibCheck: true,
+            strict: true,
+            target: "ES2022",
+          },
+          include: [
+            "generated-contracts.d.ts",
+            "apps/api-server/src/**/*.ts",
+            "apps/console-web/pages/**/*.ts",
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    await expectGeneratedFixtureToTypecheck(tsconfigPath);
+  });
 });
 
 async function createWorkspace(): Promise<string> {
@@ -176,17 +229,29 @@ async function createWorkspace(): Promise<string> {
     path.join(cwd, "package.json"),
     JSON.stringify({ name: "test-app", private: true }, null, 2),
   );
-  await fs.writeFile(path.join(cwd, "apps", "api-server", "package.json"), "{}");
-  await fs.writeFile(path.join(cwd, "apps", "console-web", "package.json"), "{}");
+  await fs.writeFile(
+    path.join(cwd, "apps", "api-server", "package.json"),
+    packageManifest([
+      "@croco/events-core",
+      "@croco/protocols-rest",
+      "@croco/repository-core",
+      "@croco/transports-http",
+      "typedi",
+    ]),
+  );
+  await fs.writeFile(
+    path.join(cwd, "apps", "console-web", "package.json"),
+    packageManifest(["@croco/frontend-vite", "@croco/meta-vite"]),
+  );
   await fs.writeFile(
     path.join(cwd, "apps", "console-web", "pages", "index.ts"),
     "export const index = true;\n",
   );
   await fs.writeFile(
     path.join(cwd, "apps", "api-server", "src", "index.ts"),
-    `import { createCrocoApp } from '@croco/framework';
+    `import { createApp } from '@croco/transports-http';
 
-const app = createCrocoApp();
+const app = createApp();
 app.addControllers([]);
 app.listen({ port: 3000 });
 `,
@@ -197,4 +262,109 @@ app.listen({ port: 3000 });
 
 async function readApiEntry(cwd: string): Promise<string> {
   return fs.readFile(path.join(cwd, "apps", "api-server", "src", "index.ts"), "utf-8");
+}
+
+async function expectGeneratedFixtureToTypecheck(tsconfigPath: string): Promise<void> {
+  try {
+    await execFileAsync("pnpm", ["exec", "tsc", "-p", tsconfigPath, "--noEmit"], {
+      cwd: REPO_ROOT,
+    });
+  } catch (error) {
+    const output = getExecOutput(error);
+    throw new Error(`Generated fixture failed to typecheck.\n${output}`);
+  }
+}
+
+function getExecOutput(error: unknown): string {
+  if (typeof error === "object" && error !== null) {
+    const { message, stdout, stderr } = error as {
+      message?: string;
+      stdout?: string;
+      stderr?: string;
+    };
+    return [message, stdout, stderr].filter(Boolean).join("\n");
+  }
+
+  return String(error);
+}
+
+function packageManifest(packageNames: readonly string[]): string {
+  return JSON.stringify(
+    {
+      dependencies: Object.fromEntries(
+        packageNames.map((packageName) => [packageName, "workspace:*"]),
+      ),
+    },
+    null,
+    2,
+  );
+}
+
+function generatedContractDeclarations(): string {
+  return `declare namespace JSX {
+  type Element = unknown;
+
+  interface IntrinsicElements {
+    h1: unknown;
+    main: unknown;
+    p: unknown;
+  }
+}
+
+declare module '@croco/protocols-rest' {
+  export function Controller(path: string): ClassDecorator;
+  export function Ctx(): ParameterDecorator;
+  export function Delete(path: string): MethodDecorator;
+  export function Get(path: string): MethodDecorator;
+  export function Post(path: string): MethodDecorator;
+  export function Put(path: string): MethodDecorator;
+}
+
+declare module '@croco/transports-http' {
+  export type CrocoHttpContext = unknown;
+
+  export function createApp(): {
+    addControllers(controllers: readonly Function[]): void;
+    listen(options: { readonly port: number }): void;
+  };
+}
+
+declare module '@croco/repository-core' {
+  export interface Repository<TEntity, TId> {
+    findById(id: TId): Promise<TEntity | null>;
+    findByIds(ids: readonly TId[]): Promise<ReadonlyArray<TEntity>>;
+    save(entity: TEntity): Promise<TEntity>;
+    deleteById(id: TId): Promise<void>;
+  }
+}
+
+declare module '@croco/events-core' {
+  export abstract class DomainEvent<TPayload = unknown> {}
+
+  export interface EventHandler<TEvent> {
+    handle(event: TEvent): void | Promise<void>;
+  }
+
+  export function RegisterEventHandler(event: Function): ClassDecorator;
+}
+
+declare module '@croco/meta-vite' {
+  export type RenderRouteComponentProps = {
+    readonly request: Request;
+    readonly context?: unknown;
+  };
+
+  export type PageRouteDefinition = {
+    readonly path: string;
+    readonly component: (props: RenderRouteComponentProps) => JSX.Element;
+    readonly mode?: 'ssr' | 'ssg' | 'isr' | 'rsc';
+  };
+
+  export function defineRoute(route: PageRouteDefinition): PageRouteDefinition;
+}
+
+declare module 'typedi' {
+  export function Service(): ClassDecorator;
+}
+`;
 }
