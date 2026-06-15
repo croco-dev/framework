@@ -76,6 +76,7 @@ export { ClerkWebhookHandler } from "./libs/ClerkWebhookHandler";
  * Clerk 조직이 이미 다른 tenant에 매핑되어 있을 때 발생하는 Problem입니다.
  */
 export {
+  ClerkExternalServiceProblem,
   ClerkMalformedClaimProblem,
   ClerkPublicUserDataMissingProblem,
   ClerkTokenVerificationProblem,

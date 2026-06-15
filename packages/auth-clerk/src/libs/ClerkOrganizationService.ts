@@ -1,7 +1,9 @@
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
-import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
-import { ClerkPublicUserDataMissingProblem } from "./problems/ClerkProblems";
+import {
+  ClerkExternalServiceProblem,
+  ClerkPublicUserDataMissingProblem,
+} from "./problems/ClerkProblems";
 
 export type ClerkOrganization = {
   id: string;
@@ -77,17 +79,6 @@ export type CreateInvitationInput = {
   redirectUrl?: string;
 };
 
-class ClerkOrganizationLookupProblem extends Problem {
-  constructor(cause: Error) {
-    super(
-      "auth-clerk/organization-lookup-failed",
-      ProblemCategory.InternalServerError,
-      "Clerk organization lookup failed",
-      { cause },
-    );
-  }
-}
-
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -108,8 +99,8 @@ function getClerkErrorStatus(error: unknown): number | undefined {
 
 function isMissingOrganizationError(error: unknown): boolean {
   const status = getClerkErrorStatus(error);
-  if (status === 401 || status === 403 || status === 404) {
-    return true;
+  if (status !== undefined) {
+    return status === 404;
   }
 
   const message = error instanceof Error ? error.message : undefined;
@@ -144,6 +135,30 @@ function mapClerkOrganization(org: {
   };
 }
 
+function hasPublicUserData<T extends { publicUserData?: unknown }>(
+  membership: T,
+): membership is T & { publicUserData: NonNullable<T["publicUserData"]> } {
+  return membership.publicUserData != null;
+}
+
+function mapClerkOrganizationMembership(membership: {
+  id: string;
+  organization: { id: string };
+  publicUserData: { userId: string };
+  role: string;
+  createdAt: number;
+  updatedAt: number;
+}): ClerkOrganizationMembership {
+  return {
+    id: membership.id,
+    organizationId: membership.organization.id,
+    userId: membership.publicUserData.userId,
+    role: membership.role,
+    createdAt: new Date(membership.createdAt),
+    updatedAt: new Date(membership.updatedAt),
+  };
+}
+
 export class ClerkOrganizationService {
   private clerkClient: ClerkClient;
 
@@ -165,7 +180,9 @@ export class ClerkOrganizationService {
         return null;
       }
 
-      throw new ClerkOrganizationLookupProblem(toError(error));
+      throw new ClerkExternalServiceProblem("Failed to get organization from Clerk", {
+        cause: toError(error),
+      });
     }
   }
 
@@ -180,7 +197,9 @@ export class ClerkOrganizationService {
         return null;
       }
 
-      throw new ClerkOrganizationLookupProblem(toError(error));
+      throw new ClerkExternalServiceProblem("Failed to get organization from Clerk", {
+        cause: toError(error),
+      });
     }
   }
 
@@ -261,22 +280,7 @@ export class ClerkOrganizationService {
 
     const response = await this.clerkClient.organizations.getOrganizationMembershipList(params);
 
-    const memberships = response.data
-      .filter(
-        (
-          membership,
-        ): membership is typeof membership & {
-          publicUserData: Exclude<typeof membership.publicUserData, null | undefined>;
-        } => membership.publicUserData != null,
-      )
-      .map((membership) => ({
-        id: membership.id,
-        organizationId: membership.organization.id,
-        userId: membership.publicUserData.userId,
-        role: membership.role,
-        createdAt: new Date(membership.createdAt),
-        updatedAt: new Date(membership.updatedAt),
-      }));
+    const memberships = response.data.filter(hasPublicUserData).map(mapClerkOrganizationMembership);
 
     return {
       memberships,
@@ -293,18 +297,11 @@ export class ClerkOrganizationService {
       role: input.role,
     });
 
-    if (membership.publicUserData == null) {
+    if (!hasPublicUserData(membership)) {
       throw new ClerkPublicUserDataMissingProblem();
     }
 
-    return {
-      id: membership.id,
-      organizationId: membership.organization.id,
-      userId: membership.publicUserData.userId,
-      role: membership.role,
-      createdAt: new Date(membership.createdAt),
-      updatedAt: new Date(membership.updatedAt),
-    };
+    return mapClerkOrganizationMembership(membership);
   }
 
   async updateOrganizationMembership(
@@ -318,18 +315,11 @@ export class ClerkOrganizationService {
       role,
     });
 
-    if (membership.publicUserData == null) {
+    if (!hasPublicUserData(membership)) {
       throw new ClerkPublicUserDataMissingProblem();
     }
 
-    return {
-      id: membership.id,
-      organizationId: membership.organization.id,
-      userId: membership.publicUserData.userId,
-      role: membership.role,
-      createdAt: new Date(membership.createdAt),
-      updatedAt: new Date(membership.updatedAt),
-    };
+    return mapClerkOrganizationMembership(membership);
   }
 
   async deleteOrganizationMembership(organizationId: string, userId: string): Promise<void> {

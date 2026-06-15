@@ -1,11 +1,12 @@
 import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
+  ClerkExternalServiceProblem,
   ClerkPublicUserDataMissingProblem,
   ClerkTokenVerificationProblem,
   InvalidWebhookPayloadProblem,
   WebhookVerificationProblem,
-} from "../libs/problems/ClerkProblems";
+} from "../index";
 
 describe("ClerkProblems", () => {
   describe("WebhookVerificationProblem", () => {
@@ -53,6 +54,17 @@ describe("ClerkProblems", () => {
 
       expect(problem.code).toBe("auth-clerk/public-user-data-missing");
       expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    });
+  });
+
+  describe("ClerkExternalServiceProblem", () => {
+    it("has correct code and category", () => {
+      const cause = new Error("Clerk unavailable");
+      const problem = new ClerkExternalServiceProblem("Failed to get user from Clerk", { cause });
+
+      expect(problem.code).toBe("auth-clerk/external-service-error");
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
+      expect(problem.cause).toBe(cause);
     });
   });
 });
