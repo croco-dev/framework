@@ -21,6 +21,7 @@ import type {
 } from "./types";
 
 const MAX_STREAM_BUFFER_CHUNKS = 1000;
+const MAX_STREAM_COMPLETION_EVENT_TEXT_CHARS = 100_000;
 
 export class LlmService {
   static readonly token = new Token<LlmService>("LlmService");
@@ -57,9 +58,21 @@ export class LlmService {
     let queuedError: unknown;
     let hasQueuedError = false;
     let isDone = false;
+    let isCancelled = false;
     let resumeConsumer: (() => void) | undefined;
     let resumeProducer: (() => void) | undefined;
     const abortController = new AbortController();
+    let completionEvent:
+      | {
+          operation: "stream";
+          modelId: string;
+          prompt: string;
+          text: string;
+          usage: LlmUsage;
+          chunkCount: number;
+          textTruncated: boolean;
+        }
+      | undefined;
 
     const notifyConsumer = (): void => {
       const consumer = resumeConsumer;
@@ -94,6 +107,7 @@ export class LlmService {
     };
 
     const cancelProducer = (): void => {
+      isCancelled = true;
       if (!abortController.signal.aborted) {
         abortController.abort();
       }
@@ -122,7 +136,9 @@ export class LlmService {
           const model = await this.registry.getModel(modelId);
           const streamParams = { ...params, signal: abortController.signal };
           const chunkIterator = model.stream(streamParams)[Symbol.asyncIterator]();
-          const streamedChunks: string[] = [];
+          let completionText = "";
+          let completionTextLength = 0;
+          let isCompletionTextTruncated = false;
           const streamUsage: Partial<LlmUsage> = {};
           let chunkCount = 0;
 
@@ -140,7 +156,17 @@ export class LlmService {
 
               const chunk = result.value;
               chunkCount += 1;
-              streamedChunks.push(chunk.delta);
+              completionTextLength += chunk.delta.length;
+
+              const remainingTextLength =
+                MAX_STREAM_COMPLETION_EVENT_TEXT_CHARS - completionText.length;
+              if (remainingTextLength > 0) {
+                completionText += chunk.delta.slice(0, remainingTextLength);
+              }
+
+              if (chunk.delta.length > remainingTextLength) {
+                isCompletionTextTruncated = true;
+              }
 
               if (chunk.usage) {
                 Object.assign(streamUsage, chunk.usage);
@@ -159,17 +185,17 @@ export class LlmService {
             return;
           }
 
-          const text = streamedChunks.join("");
-          const usage = this.buildStreamUsage(params.prompt, text, streamUsage);
+          const usage = this.buildStreamUsage(params.prompt, completionTextLength, streamUsage);
 
-          await this.publishCompletionEvent({
+          completionEvent = {
             operation: "stream",
             modelId: model.modelId,
             prompt: params.prompt,
-            text,
+            text: completionText,
             usage,
             chunkCount,
-          });
+            textTruncated: isCompletionTextTruncated,
+          };
         } catch (error) {
           if (abortController.signal.aborted) {
             return;
@@ -207,6 +233,10 @@ export class LlmService {
         }
 
         await waitForProducer();
+      }
+
+      if (completionEvent && !isCancelled) {
+        await this.publishCompletionEvent(completionEvent);
       }
     } finally {
       cancelProducer();
@@ -275,18 +305,29 @@ export class LlmService {
     text: string;
     usage: LlmUsage;
     chunkCount?: number;
+    textTruncated?: boolean;
   }): Promise<void> {
     const event =
       params.operation === "stream"
-        ? new LlmStreamCompletedEvent(params.modelId, params.text, params.usage, params.chunkCount)
+        ? new LlmStreamCompletedEvent(
+            params.modelId,
+            params.text,
+            params.usage,
+            params.chunkCount,
+            params.textTruncated,
+          )
         : new LlmGeneratedEvent(params.modelId, params.prompt, params.text, params.usage);
 
     await this.eventBus.publish(event);
   }
 
-  private buildStreamUsage(prompt: string, text: string, usage: Partial<LlmUsage>): LlmUsage {
+  private buildStreamUsage(
+    prompt: string,
+    completionTextLength: number,
+    usage: Partial<LlmUsage>,
+  ): LlmUsage {
     const promptTokens = usage.promptTokens ?? prompt.length;
-    const completionTokens = usage.completionTokens ?? text.length;
+    const completionTokens = usage.completionTokens ?? completionTextLength;
     const totalTokens = usage.totalTokens ?? promptTokens + completionTokens;
 
     return {

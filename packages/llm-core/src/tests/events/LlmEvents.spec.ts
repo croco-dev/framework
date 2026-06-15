@@ -19,6 +19,7 @@ describe("LlmEvents", () => {
       expect(event.modelId).toBe("gpt-4");
       expect(event.text).toBe("full text");
       expect(event.usage).toEqual(mockUsage);
+      expect(event.textTruncated).toBe(false);
       expect(event.timestamp).toBeInstanceOf(Date);
     });
 
@@ -26,6 +27,12 @@ describe("LlmEvents", () => {
       const event = new LlmStreamCompletedEvent("gpt-4", "full text", mockUsage, 5);
 
       expect(event.chunkCount).toBe(5);
+    });
+
+    it("should mark truncated completion text", () => {
+      const event = new LlmStreamCompletedEvent("gpt-4", "partial text", mockUsage, 5, true);
+
+      expect(event.textTruncated).toBe(true);
     });
 
     it("should handle undefined chunk count", () => {

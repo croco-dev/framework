@@ -15,7 +15,7 @@ title: "LlmStreamCompletedEvent"
 
 ### Constructor
 
-> **new LlmStreamCompletedEvent**(`modelId`, `text`, `usage`, `chunkCount?`): `LlmStreamCompletedEvent`
+> **new LlmStreamCompletedEvent**(`modelId`, `text`, `usage`, `chunkCount?`, `textTruncated?`): `LlmStreamCompletedEvent`
 
 #### Parameters
 
@@ -34,6 +34,10 @@ title: "LlmStreamCompletedEvent"
 ##### chunkCount?
 
 `number`
+
+##### textTruncated?
+
+`boolean` = `false`
 
 #### Returns
 
@@ -90,6 +94,12 @@ title: "LlmStreamCompletedEvent"
 ### text
 
 > `readonly` **text**: `string`
+
+***
+
+### textTruncated
+
+> `readonly` **textTruncated**: `boolean` = `false`
 
 ***
 

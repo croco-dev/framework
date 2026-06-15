@@ -1,5 +1,6 @@
 import type { EventBus } from "@croco/events-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LlmStreamCompletedEvent } from "../libs/events/LlmStreamCompletedEvent";
 import { InMemoryLlmModel } from "../libs/InMemoryLlmModel";
 import { InMemoryLlmRegistry } from "../libs/InMemoryLlmRegistry";
 import { LlmService } from "../libs/LlmService";
@@ -32,6 +33,25 @@ class CountingStreamModel extends InMemoryLlmModel {
       }
     } finally {
       this.observedAbort = params.signal?.aborted ?? false;
+    }
+  }
+}
+
+class DeltaStreamModel extends InMemoryLlmModel {
+  constructor(
+    modelId: string,
+    private readonly deltas: string[],
+  ) {
+    super(modelId);
+  }
+
+  override async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
+    for (const delta of this.deltas) {
+      if (params.signal?.aborted) {
+        return;
+      }
+
+      yield { delta };
     }
   }
 }
@@ -297,6 +317,29 @@ describe("LlmService", () => {
       );
     });
 
+    it("should not publish completion when the consumer breaks after the producer finishes", async () => {
+      registry.registerProvider(
+        "fast-finite-stream-model",
+        () => new DeltaStreamModel("fast-finite-stream-model", ["0", "1", "2", "3", "4"]),
+      );
+
+      for await (const chunk of service.stream({
+        prompt: "Fast",
+        modelId: "fast-finite-stream-model",
+      })) {
+        expect(chunk.delta).toBe("0");
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        break;
+      }
+
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: "llm.stream_completed",
+          modelId: "fast-finite-stream-model",
+        }),
+      );
+    });
+
     it("should pause the producer when the stream buffer is full", async () => {
       const model = new CountingStreamModel();
       registry.registerProvider("buffered-stream-model", () => model);
@@ -316,6 +359,67 @@ describe("LlmService", () => {
       await iterator.return?.();
     });
 
+    it("should bound retained completion event text for long streams", async () => {
+      const chunkCount = 1001;
+      const delta = "x".repeat(101);
+      const totalCompletionLength = chunkCount * delta.length;
+      const model = new DeltaStreamModel(
+        "long-stream-model",
+        Array.from({ length: chunkCount }, () => delta),
+      );
+      registry.registerProvider("long-stream-model", () => model);
+
+      const chunks = await collectStream(
+        service.stream({
+          prompt: "Long",
+          modelId: "long-stream-model",
+        }),
+      );
+
+      const publishedEvent = vi
+        .mocked(eventBus.publish)
+        .mock.calls.find(([event]) => event instanceof LlmStreamCompletedEvent)?.[0];
+
+      if (!(publishedEvent instanceof LlmStreamCompletedEvent)) {
+        throw new Error("Expected LlmStreamCompletedEvent to be published");
+      }
+
+      expect(chunks.join("")).toHaveLength(totalCompletionLength);
+      expect(publishedEvent.chunkCount).toBe(chunkCount);
+      expect(publishedEvent.textTruncated).toBe(true);
+      expect(publishedEvent.text.length).toBeLessThan(totalCompletionLength);
+      expect(publishedEvent.usage).toEqual({
+        promptTokens: "Long".length,
+        completionTokens: totalCompletionLength,
+        totalTokens: "Long".length + totalCompletionLength,
+        accuracy: undefined,
+      });
+    });
+
+    it("should not mark exact-limit stream event text as truncated for empty final chunks", async () => {
+      const exactLimitDelta = "x".repeat(100_000);
+      const model = new DeltaStreamModel("exact-limit-stream-model", [exactLimitDelta, ""]);
+      registry.registerProvider("exact-limit-stream-model", () => model);
+
+      await collectStream(
+        service.stream({
+          prompt: "Exact",
+          modelId: "exact-limit-stream-model",
+        }),
+      );
+
+      const publishedEvent = vi
+        .mocked(eventBus.publish)
+        .mock.calls.find(([event]) => event instanceof LlmStreamCompletedEvent)?.[0];
+
+      if (!(publishedEvent instanceof LlmStreamCompletedEvent)) {
+        throw new Error("Expected LlmStreamCompletedEvent to be published");
+      }
+
+      expect(publishedEvent.text).toHaveLength(exactLimitDelta.length);
+      expect(publishedEvent.textTruncated).toBe(false);
+    });
+
     it("should stop streaming when the abort signal is aborted", async () => {
       const model = new CountingStreamModel();
       const abortController = new AbortController();
@@ -330,6 +434,12 @@ describe("LlmService", () => {
       }
 
       expect(model.observedAbort).toBe(true);
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: "llm.stream_completed",
+          modelId: "abortable-stream-model",
+        }),
+      );
     });
   });
 

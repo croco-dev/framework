@@ -23,12 +23,12 @@ This guide takes you from zero to a deployed API: scaffold the project, add an a
 Create a new project with the CLI. The `ddd-api` preset generates a basic DDD skeleton (Drizzle ORM + env config) — a clean foundation to build on:
 
 ```bash
-npx create-croco-app@latest my-project --preset ddd-api --backend-deploy lambda
+npx create-croco-app@latest my-project --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git
 ```
 
-When prompted, choose `ddd-api` for the preset and `lambda` for the backend deploy target.
+This runs noninteractively with the `ddd-api` preset, `@myorg` package scope, GraphQL API, and Lambda backend. Replace `@myorg` with your package scope.
 
-Then install dependencies and start the dev server:
+Install dependencies and start the dev server:
 
 ```bash
 cd my-project && pnpm install && pnpm dev

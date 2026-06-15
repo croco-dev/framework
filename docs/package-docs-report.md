@@ -6,11 +6,11 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |    98 |
-| Private packages skipped       |     1 |
+| Public packages                |    97 |
+| Private packages skipped       |     2 |
 | Missing package README         |    23 |
-| Missing generated API docs     |    85 |
-| Missing package test directory |     1 |
+| Missing generated API docs     |    84 |
+| Missing package test directory |     0 |
 | Extension matrix packages      |    38 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`.
@@ -63,7 +63,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/customer-health-drizzle` (`packages/customer-health-drizzle`) — legacy baseline
 - `@croco/dataloader-core` (`packages/dataloader-core`) — legacy baseline
 - `@croco/diagnostics-core` (`packages/diagnostics-core`) — legacy baseline
-- `@croco/docs` (`packages/docs`) — legacy baseline
 - `@croco/entitlements-core` (`packages/entitlements-core`) — legacy baseline
 - `@croco/entitlements-drizzle` (`packages/entitlements-drizzle`) — legacy baseline
 - `@croco/esbuild-plugin` (`packages/esbuild-plugin`) — legacy baseline
@@ -131,7 +130,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 
 ## Missing Test Directory
 
-- `@croco/docs` (`packages/docs`) — legacy baseline
+None.
 
 ## Catalog Metadata
 
@@ -145,12 +144,11 @@ New public packages must not add missing README, API docs, or test coverage unle
 | Transport    |        3 |
 | Presentation |        5 |
 | Tooling      |        8 |
-| Docs         |        1 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       44 |
+| 🟡 beta             |       43 |
 | 🔴 alpha/WIP        |       31 |
 | ⚠️ deprecated       |        0 |
 

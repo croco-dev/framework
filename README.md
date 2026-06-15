@@ -335,7 +335,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **98개 public package**를 추적합니다. Private package 1개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **97개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Package Groups
 
@@ -349,14 +349,13 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | Transport    | Runtime adapters that execute protocol routes                                              |         3 |
 | Presentation | Frontend, SSR, and presentation-layer adapters                                             |         5 |
 | Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |         8 |
-| Docs         | Documentation site and generated reference content                                         |         1 |
 
 ### Maturity Guide
 
 | 상태                | 의미                                | 패키지 수 |
 | ------------------- | ----------------------------------- | --------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |        44 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |        43 |
 | 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        31 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
@@ -416,13 +415,13 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 #### Presentation
 
-| Package                      | Domain              | Adapter                             | Node | Lambda | Workers | Frontend | Required env/config                                    | Peer deps                              | Features                                                              | Maturity     | CI smoke                         |
-| ---------------------------- | ------------------- | ----------------------------------- | ---- | ------ | ------- | -------- | ------------------------------------------------------ | -------------------------------------- | --------------------------------------------------------------------- | ------------ | -------------------------------- |
-| `@croco/frontend-react`      | Frontend React      | React integration helpers           | yes  | -      | -       | yes      | none                                                   | @croco/meta-vite<br>react<br>react-dom | React bindings<br>meta-vite integration                               | 🔴 alpha/WIP | entrypoint smoke + package tests |
-| `@croco/meta-vite`           | Frontend routing    | Meta Vite runtime                   | yes  | yes    | yes     | yes      | optional Redis-compatible ISR adapter config           | react<br>react-dom<br>vite<br>zod      | route registry<br>server actions<br>SSR/RSC streaming<br>ISR adapters | 🟡 beta      | entrypoint smoke + package tests |
-| `@croco/frontend-cloudflare` | Frontend SSR        | Cloudflare SSR handler              | -    | -      | yes     | -        | API_WORKER binding optional<br>ASSETS binding optional | -                                      | SSR fetch handler<br>service binding routing<br>asset fallback        | 🔴 alpha/WIP | entrypoint smoke + package tests |
-| `@croco/frontend-vite`       | Frontend Vite       | Vite integration helpers            | yes  | -      | yes     | yes      | none                                                   | @cloudflare/vite-plugin<br>vite        | Vite config helpers<br>Cloudflare Vite compatibility                  | 🔴 alpha/WIP | entrypoint smoke + package tests |
-| `@croco/presentation-preset` | Presentation preset | Backend/frontend preset composition | yes  | yes    | yes     | yes      | none                                                   | -                                      | preset composition<br>contract wiring<br>generated app support        | 🟡 beta      | entrypoint smoke + package tests |
+| Package                      | Domain              | Adapter                             | Node | Lambda | Workers | Frontend | Required env/config                                    | Peer deps                                    | Features                                                              | Maturity     | CI smoke                         |
+| ---------------------------- | ------------------- | ----------------------------------- | ---- | ------ | ------- | -------- | ------------------------------------------------------ | -------------------------------------------- | --------------------------------------------------------------------- | ------------ | -------------------------------- |
+| `@croco/frontend-react`      | Frontend React      | React integration helpers           | yes  | -      | -       | yes      | none                                                   | @croco/meta-vite<br>react<br>react-dom       | React bindings<br>meta-vite integration                               | 🔴 alpha/WIP | entrypoint smoke + package tests |
+| `@croco/meta-vite`           | Frontend routing    | Meta Vite runtime                   | yes  | yes    | yes     | yes      | optional Redis-compatible ISR adapter config           | ioredis<br>react<br>react-dom<br>vite<br>zod | route registry<br>server actions<br>SSR/RSC streaming<br>ISR adapters | 🟡 beta      | entrypoint smoke + package tests |
+| `@croco/frontend-cloudflare` | Frontend SSR        | Cloudflare SSR handler              | -    | -      | yes     | -        | API_WORKER binding optional<br>ASSETS binding optional | -                                            | SSR fetch handler<br>service binding routing<br>asset fallback        | 🔴 alpha/WIP | entrypoint smoke + package tests |
+| `@croco/frontend-vite`       | Frontend Vite       | Vite integration helpers            | yes  | -      | yes     | yes      | none                                                   | @cloudflare/vite-plugin<br>vite              | Vite config helpers<br>Cloudflare Vite compatibility                  | 🔴 alpha/WIP | entrypoint smoke + package tests |
+| `@croco/presentation-preset` | Presentation preset | Backend/frontend preset composition | yes  | yes    | yes     | yes      | none                                                   | -                                            | preset composition<br>contract wiring<br>generated app support        | 🟡 beta      | entrypoint smoke + package tests |
 
 ### 🟢 production-ready
 
@@ -469,7 +468,6 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/health-core`          | Core         | `packages/health-core`          | README, tests      |
 | `@croco/pagination-core`      | Core         | `packages/pagination-core`      | README, tests      |
 | `@croco/tenant-core`          | Core         | `packages/tenant-core`          | README, tests      |
-| `@croco/docs`                 | Docs         | `packages/docs`                 | README             |
 | `@croco/access-core`          | Domain       | `packages/access-core`          | README, tests      |
 | `@croco/customer-health-core` | Domain       | `packages/customer-health-core` | README, tests      |
 | `@croco/entitlements-core`    | Domain       | `packages/entitlements-core`    | README, tests      |
