@@ -19,6 +19,15 @@ describe("noninteractive CLI option validation", () => {
     generateMock.mockClear();
   });
 
+  it("documents the pnpm-only install contract in CLI help", () => {
+    const help = createProgram().helpInformation();
+
+    expect(help).toContain("Create a pnpm-based Croco application");
+    expect(help).toContain("--no-install");
+    expect(help).toContain("Skip pnpm dependency installation");
+    expect(help).not.toContain("--package-manager");
+  });
+
   it("rejects ddd-api generation when --api is missing", () => {
     const cliOptions = parseCliOptions("my-api", {
       preset: "ddd-api",

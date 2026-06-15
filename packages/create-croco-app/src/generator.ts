@@ -148,6 +148,18 @@ async function finalize(targetDir: string, options: GeneratorOptions): Promise<v
 
   // Step 12: pnpm install
   if (options.installDeps) {
-    execSync("pnpm install", { cwd: targetDir, stdio: "inherit" });
+    installPnpmDependencies(targetDir);
   }
+}
+
+function installPnpmDependencies(targetDir: string): void {
+  try {
+    execSync("pnpm --version", { stdio: "ignore" });
+  } catch {
+    throw new Error(
+      "create-croco-app installs dependencies with pnpm. Install pnpm or rerun with --no-install.",
+    );
+  }
+
+  execSync("pnpm install", { cwd: targetDir, stdio: "inherit" });
 }

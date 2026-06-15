@@ -152,10 +152,13 @@ try {
     const projectDir = join(smokeRoot, smokeCase.name);
 
     run("node", [cliPath, projectDir, ...smokeCase.args], rootDir);
-    assertExists(join(projectDir, "pnpm-lock.yaml"), `${smokeCase.name} did not create a lockfile`);
+    assertExists(
+      join(projectDir, "pnpm-lock.yaml"),
+      `${smokeCase.name} did not create a pnpm lockfile`,
+    );
     assertExists(
       join(projectDir, "node_modules"),
-      `${smokeCase.name} did not install dependencies`,
+      `${smokeCase.name} did not install dependencies with pnpm`,
     );
 
     for (const validation of smokeCase.validations) {
