@@ -11,12 +11,41 @@ interface MockTx {
   id: string;
 }
 
+interface MockExecutableTx extends MockTx {
+  execute(query: unknown): Promise<string>;
+}
+
+interface MockInsertExecutable {
+  execute(): Promise<string>;
+}
+
+interface MockInsertBuilder {
+  values(row: unknown): MockInsertExecutable;
+}
+
+interface MockBuilderTx extends MockTx {
+  insert(table: string): MockInsertBuilder;
+  query: {
+    users: {
+      findFirst(): Promise<string>;
+    };
+  };
+}
+
 interface MockNestedTx extends MockTx {
   transaction<T>(fn: (tx: MockNestedTx) => Promise<T>): Promise<T>;
 }
 
+interface MockExecutableNestedTx extends MockExecutableTx {
+  transaction<T>(fn: (tx: MockExecutableNestedTx) => Promise<T>): Promise<T>;
+}
+
 interface MockRlsTx extends MockTx {
   execute(query: unknown): Promise<void>;
+}
+
+interface MockDrizzleDb<TClient> {
+  transaction<T>(fn: (tx: TClient) => Promise<T>): Promise<T>;
 }
 
 describe("DrizzleTxAdapter", () => {
@@ -65,6 +94,148 @@ describe("DrizzleTxAdapter", () => {
         }),
       ).rejects.toThrow("DB error");
     });
+
+    it("should rollback and block transaction client calls after abort", async () => {
+      const execute = vi.fn(async (_query: unknown) => "write-result");
+      const lifecycle: string[] = [];
+      const transaction = async <T>(fn: (tx: MockExecutableTx) => Promise<T>): Promise<T> => {
+        try {
+          const result = await fn({ id: "drizzle-tx", execute });
+          lifecycle.push("commit");
+          return result;
+        } catch (error) {
+          lifecycle.push("rollback");
+          throw error;
+        }
+      };
+      const db: MockDrizzleDb<MockExecutableTx> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+      };
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockExecutableTx>;
+      const controller = new AbortController();
+      const timeout = new Error("Transaction timed out after 50ms");
+
+      const transactionPromise = adapter.transaction(
+        async (tx) => {
+          lifecycle.push("callback:start");
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          lifecycle.push("callback:after-timeout");
+          await tx.execute("insert");
+          lifecycle.push("callback:write-finished");
+          return "result";
+        },
+        undefined,
+        controller.signal,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      controller.abort(timeout);
+
+      await expect(transactionPromise).rejects.toBe(timeout);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(lifecycle).toEqual(["callback:start", "rollback", "callback:after-timeout"]);
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("should wait for transaction rollback cleanup before rejecting after abort", async () => {
+      const lifecycle: string[] = [];
+      const transaction = async <T>(fn: (tx: MockTx) => Promise<T>): Promise<T> => {
+        try {
+          const result = await fn({ id: "drizzle-tx" });
+          lifecycle.push("commit");
+          return result;
+        } catch (error) {
+          lifecycle.push("rollback:start");
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          lifecycle.push("rollback:end");
+          throw error;
+        }
+      };
+      const db: MockDrizzleDb<MockTx> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+      };
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
+      const controller = new AbortController();
+      const timeout = new Error("Transaction timed out after 50ms");
+
+      const transactionPromise = adapter.transaction(
+        async () => {
+          lifecycle.push("callback:start");
+          await new Promise<never>(() => undefined);
+        },
+        undefined,
+        controller.signal,
+      );
+      let settled = false;
+      void transactionPromise
+        .finally(() => {
+          settled = true;
+        })
+        .catch(() => undefined);
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      controller.abort(timeout);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(settled).toBe(false);
+      expect(lifecycle).toEqual(["callback:start", "rollback:start"]);
+
+      await expect(transactionPromise).rejects.toBe(timeout);
+      expect(lifecycle).toEqual(["callback:start", "rollback:start", "rollback:end"]);
+    });
+
+    it("should block stored builders and nested query clients after abort", async () => {
+      const execute = vi.fn(async () => "inserted");
+      const findFirst = vi.fn(async () => "found");
+      const tx: MockBuilderTx = {
+        id: "drizzle-tx",
+        insert: vi.fn((_table: string) => ({
+          values: vi.fn((_row: unknown) => ({ execute })),
+        })),
+        query: {
+          users: {
+            findFirst,
+          },
+        },
+      };
+      const transaction = async <T>(fn: (tx: MockBuilderTx) => Promise<T>): Promise<T> => {
+        return fn(tx);
+      };
+      const db: MockDrizzleDb<MockBuilderTx> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+      };
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockBuilderTx>;
+      const controller = new AbortController();
+      const timeout = new Error("Transaction timed out after 50ms");
+      let postAbortProbe: Promise<void> = Promise.resolve();
+
+      const transactionPromise = adapter.transaction(
+        async (client) => {
+          const insertStatement = client.insert("users").values({ id: "user-1" });
+          const usersQuery = client.query.users;
+
+          postAbortProbe = (async () => {
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            expect(() => insertStatement.execute()).toThrow(timeout);
+            expect(() => usersQuery.findFirst()).toThrow(timeout);
+          })();
+
+          await postAbortProbe;
+          return "result";
+        },
+        undefined,
+        controller.signal,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      controller.abort(timeout);
+
+      await expect(transactionPromise).rejects.toBe(timeout);
+      await expect(postAbortProbe).resolves.toBeUndefined();
+      expect(execute).not.toHaveBeenCalled();
+      expect(findFirst).not.toHaveBeenCalled();
+    });
   });
 
   describe("supportsSavepoint", () => {
@@ -97,6 +268,101 @@ describe("DrizzleTxAdapter", () => {
 
       expect(result).toBe("savepoint-result");
       expect(nestedTransactionSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("should rollback and block savepoint client calls after abort", async () => {
+      const execute = vi.fn(async (_query: unknown) => "write-result");
+      const lifecycle: string[] = [];
+      const db = createMockDrizzleDb();
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockExecutableNestedTx>;
+      const controller = new AbortController();
+      const timeout = new Error("Transaction timed out after 50ms");
+      const client: MockExecutableNestedTx = {
+        id: "existing-tx",
+        execute,
+        transaction: async <T>(fn: (tx: MockExecutableNestedTx) => Promise<T>): Promise<T> => {
+          try {
+            const result = await fn(client);
+            lifecycle.push("release");
+            return result;
+          } catch (error) {
+            lifecycle.push("rollback");
+            throw error;
+          }
+        },
+      };
+
+      const savepointPromise = adapter.savepoint(
+        client,
+        async (tx) => {
+          lifecycle.push("callback:start");
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          lifecycle.push("callback:after-timeout");
+          await tx.execute("insert");
+          lifecycle.push("callback:write-finished");
+          return "result";
+        },
+        undefined,
+        controller.signal,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      controller.abort(timeout);
+
+      await expect(savepointPromise).rejects.toBe(timeout);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(lifecycle).toEqual(["callback:start", "rollback", "callback:after-timeout"]);
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("should wait for savepoint rollback cleanup before rejecting after abort", async () => {
+      const lifecycle: string[] = [];
+      const db = createMockDrizzleDb();
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockNestedTx>;
+      const controller = new AbortController();
+      const timeout = new Error("Transaction timed out after 50ms");
+      const client: MockNestedTx = {
+        id: "existing-tx",
+        transaction: async <T>(fn: (tx: MockNestedTx) => Promise<T>): Promise<T> => {
+          try {
+            const result = await fn(client);
+            lifecycle.push("release");
+            return result;
+          } catch (error) {
+            lifecycle.push("rollback:start");
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            lifecycle.push("rollback:end");
+            throw error;
+          }
+        },
+      };
+
+      const savepointPromise = adapter.savepoint(
+        client,
+        async () => {
+          lifecycle.push("callback:start");
+          await new Promise<never>(() => undefined);
+        },
+        undefined,
+        controller.signal,
+      );
+      let settled = false;
+      void savepointPromise
+        .finally(() => {
+          settled = true;
+        })
+        .catch(() => undefined);
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      controller.abort(timeout);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(settled).toBe(false);
+      expect(lifecycle).toEqual(["callback:start", "rollback:start"]);
+
+      await expect(savepointPromise).rejects.toBe(timeout);
+      expect(lifecycle).toEqual(["callback:start", "rollback:start", "rollback:end"]);
     });
 
     it("should fail fast when nested transaction client does not support savepoint", async () => {

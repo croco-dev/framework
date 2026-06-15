@@ -27,17 +27,36 @@ type AfterCommitHookFailure = {
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
 
-function createTimeoutPromise<T>(
-  ms: number,
-  timeoutHandle: { id?: ReturnType<typeof setTimeout> },
+function getAbortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error ? signal.reason : new Error("Transaction aborted");
+}
+
+async function executeWithTimeout<T>(
+  operation: () => Promise<T>,
+  timeout: number,
   controller: AbortController,
 ): Promise<T> {
-  return new Promise((_, reject) => {
-    timeoutHandle.id = setTimeout(() => {
-      controller.abort();
-      reject(new TransactionTimeoutProblem(ms));
-    }, ms);
-  });
+  const timeoutHandle = setTimeout(() => {
+    controller.abort(new TransactionTimeoutProblem(timeout));
+  }, timeout);
+
+  try {
+    const result = await operation();
+
+    if (controller.signal.aborted) {
+      throw getAbortReason(controller.signal);
+    }
+
+    return result;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw getAbortReason(controller.signal);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
 }
 
 /**
@@ -108,18 +127,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     };
 
     if (timeout !== undefined && timeout > 0) {
-      const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
-
-      try {
-        return await Promise.race([
-          executeTransaction(),
-          createTimeoutPromise<T>(timeout, timeoutHandle, controller),
-        ]);
-      } finally {
-        if (timeoutHandle.id !== undefined) {
-          clearTimeout(timeoutHandle.id);
-        }
-      }
+      return executeWithTimeout(executeTransaction, timeout, controller);
     }
 
     return executeTransaction();
@@ -167,18 +175,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     };
 
     if (timeout !== undefined && timeout > 0) {
-      const timeoutHandle: { id?: ReturnType<typeof setTimeout> } = {};
-
-      try {
-        return await Promise.race([
-          executeSavepoint(),
-          createTimeoutPromise<T>(timeout, timeoutHandle, controller),
-        ]);
-      } finally {
-        if (timeoutHandle.id !== undefined) {
-          clearTimeout(timeoutHandle.id);
-        }
-      }
+      return executeWithTimeout(executeSavepoint, timeout, controller);
     }
 
     return executeSavepoint();

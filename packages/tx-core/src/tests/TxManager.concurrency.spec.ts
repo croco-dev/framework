@@ -329,6 +329,55 @@ describe("TxManager Transaction Timeout", () => {
       expect(transactionSignal.aborted).toBe(true);
     });
 
+    it("should wait for adapter cleanup before reporting timeout", async () => {
+      const events: string[] = [];
+      const transaction = async <T>(
+        _fn: (client: { id: string }) => Promise<T>,
+        _options?: unknown,
+        signal?: AbortSignal,
+      ): Promise<T> => {
+        if (!signal) throw new TransactionTimeoutProblem(50);
+        events.push("transaction:start");
+
+        try {
+          return await new Promise<T>((_resolve, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          });
+        } catch (error) {
+          events.push("rollback:start");
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          events.push("rollback:end");
+          throw error;
+        }
+      };
+      const cleanupAdapter: TxAdapter<{ id: string }> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+        savepoint: vi.fn(async (client, fn) => fn(client)),
+        supportsSavepoint: () => true,
+      };
+      txManager = new TxManager(cleanupAdapter);
+
+      const runPromise = txManager.run(
+        async () => {
+          return "result";
+        },
+        { timeout: 50 },
+      );
+      let settled = false;
+      void runPromise
+        .finally(() => {
+          settled = true;
+        })
+        .catch(() => undefined);
+
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(settled).toBe(false);
+      expect(events).toEqual(["transaction:start", "rollback:start"]);
+
+      await expect(runPromise).rejects.toThrow(TransactionTimeoutProblem);
+      expect(events).toEqual(["transaction:start", "rollback:start", "rollback:end"]);
+    });
+
     it("should complete successfully when transaction is within timeout", async () => {
       fastAdapter = createMockAdapter({ delay: 10 });
       txManager = new TxManager(fastAdapter);
