@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,8 +19,12 @@ describe("published RPC codegen CLI", () => {
       const consumerRoot = mkdtempSync(join(tmpdir(), "croco-rpc-codegen-consumer-"));
 
       try {
-        run("pnpm", ["--filter", "@croco/protocols-core", "build"], rootDir);
-        run("pnpm", ["--filter", "@croco/rpc-codegen", "build"], rootDir);
+        ensureBuilt();
+        run(
+          "pnpm",
+          ["--filter", "@croco/problems-core", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
         run(
           "pnpm",
           ["--filter", "@croco/protocols-core", "pack", "--pack-destination", packRoot],
@@ -32,6 +36,7 @@ describe("published RPC codegen CLI", () => {
           rootDir,
         );
 
+        const problemsCoreTarball = findTarball(packRoot, "croco-problems-core-");
         const protocolsCoreTarball = findTarball(packRoot, "croco-protocols-core-");
         const rpcCodegenTarball = findTarball(packRoot, "croco-rpc-codegen-");
         const packedManifest = JSON.parse(
@@ -56,6 +61,7 @@ describe("published RPC codegen CLI", () => {
               private: true,
               pnpm: {
                 overrides: {
+                  "@croco/problems-core": `file:${problemsCoreTarball}`,
                   "@croco/protocols-core": `file:${protocolsCoreTarball}`,
                 },
               },
@@ -78,6 +84,20 @@ describe("published RPC codegen CLI", () => {
     spawnTimeoutMs,
   );
 });
+
+function ensureBuilt(): void {
+  if (
+    existsSync(join(rootDir, "packages", "problems-core", "dist", "index.js")) &&
+    existsSync(join(rootDir, "packages", "protocols-core", "dist", "index.js")) &&
+    existsSync(join(packageDir, "dist", "cli.js"))
+  ) {
+    return;
+  }
+
+  run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
+  run("pnpm", ["--filter", "@croco/protocols-core", "build"], rootDir);
+  run("pnpm", ["--filter", "@croco/rpc-codegen", "build"], rootDir);
+}
 
 function findTarball(directory: string, prefix: string): string {
   const filename = readdirSync(directory).find(
