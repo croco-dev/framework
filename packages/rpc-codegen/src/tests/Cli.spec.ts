@@ -7,7 +7,15 @@ const generationModuleImports = vi.hoisted(() => ({
   loadContractGraph: 0,
   graph: {
     version: "croco.contract-graph.v1",
-    controllers: [{ name: "UsersController", path: "/users", routeIds: ["UsersController.list"] }],
+    controllers: [
+      {
+        name: "UsersController",
+        path: "/users",
+        guards: [],
+        roles: [],
+        routeIds: ["UsersController.list"],
+      },
+    ],
     routes: [{ routeId: "UsersController.list" }],
     diagnostics: [] as ContractDiagnosticFixture[],
   },
@@ -63,7 +71,13 @@ describe("rpc-codegen CLI", () => {
     generationModuleImports.graph = {
       version: "croco.contract-graph.v1",
       controllers: [
-        { name: "UsersController", path: "/users", routeIds: ["UsersController.list"] },
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.list"],
+        },
       ],
       routes: [{ routeId: "UsersController.list" }],
       diagnostics: [],
@@ -110,7 +124,13 @@ describe("rpc-codegen CLI", () => {
     generationModuleImports.graph = {
       version: "croco.contract-graph.v1",
       controllers: [
-        { name: "HooksController", path: "/hooks", routeIds: ["HooksController.handle"] },
+        {
+          name: "HooksController",
+          path: "/hooks",
+          guards: [],
+          roles: [],
+          routeIds: ["HooksController.handle"],
+        },
       ],
       routes: [{ routeId: "HooksController.handle" }],
       diagnostics: [
@@ -133,6 +153,7 @@ describe("rpc-codegen CLI", () => {
       "ERROR contract-route-unsupported-all-method HooksController.handle: Use explicit HTTP method decorators.",
     );
     expect(stdout).toContain("Contract graph check failed with 1 error(s).");
+    expect(generationModuleImports.generate).toBe(0);
     expect(generationModuleImports.generateClientFiles).toBe(0);
     expect(generationModuleImports.loadContractGraph).toBe(1);
   });
@@ -141,7 +162,13 @@ describe("rpc-codegen CLI", () => {
     generationModuleImports.graph = {
       version: "croco.contract-graph.v1",
       controllers: [
-        { name: "UsersController", path: "/users", routeIds: ["UsersController.getUser"] },
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.getUser"],
+        },
       ],
       routes: [{ routeId: "UsersController.getUser" }],
       diagnostics: [
@@ -166,6 +193,7 @@ describe("rpc-codegen CLI", () => {
     expect(stdout).toContain(
       "Contract graph contains 1 error(s); fix them before generating clients.",
     );
+    expect(generationModuleImports.generate).toBe(0);
     expect(generationModuleImports.generateClientFiles).toBe(0);
     expect(generationModuleImports.loadContractGraph).toBe(1);
   });

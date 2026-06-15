@@ -97,11 +97,14 @@ describe("buildContractGraph", () => {
 
     expect(graph.controllers[0]).toMatchObject({
       name: "AdminController",
-      guards: ["AuthGuard"],
+      guards: [{ kind: "constructor", name: "AuthGuard" }],
       roles: ["admin"],
     });
     expect(graph.routes[0]?.access).toEqual({
-      guards: ["AuthGuard", "AuditGuard"],
+      guards: [
+        { kind: "constructor", name: "AuthGuard" },
+        { kind: "constructor", name: "AuditGuard" },
+      ],
       roles: ["admin", "owner"],
     });
     expect(graph.diagnostics).toEqual([]);

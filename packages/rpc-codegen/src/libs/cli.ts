@@ -37,10 +37,7 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     return 1;
   }
 
-  const [{ generateClientFilesFromContractGraph }, { loadContractGraph }] = await Promise.all([
-    import("./generate"),
-    import("./loadRoutes"),
-  ]);
+  const { loadContractGraph } = await import("./loadRoutes");
   const graph = await loadContractGraph(result.options.controllers);
 
   if (result.options.check) {
@@ -64,6 +61,7 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     return 1;
   }
 
+  const { generateClientFilesFromContractGraph } = await import("./generate");
   const files = generateClientFilesFromContractGraph(graph, outDir, {
     reactQuery: result.options.reactQuery,
   });

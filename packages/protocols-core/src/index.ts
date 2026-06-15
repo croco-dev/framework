@@ -21,6 +21,7 @@ export type {
   ContractGraph,
   ContractGraphController,
   ContractGraphRoute,
+  ContractMetadataReference,
   ContractPathParam,
   ContractGraphVersion,
 } from "./libs/ContractGraph";
