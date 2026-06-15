@@ -69,34 +69,40 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
     async transaction<T>(
       fn: (client: InferTxClient<TDb>) => Promise<T>,
       txOptions?: InferTxOptions<TDb>,
+      signal?: AbortSignal,
     ): Promise<T> {
       const tenantId = getTenantIdOrThrow(tenantProvider);
 
-      return baseAdapter.transaction(async (tx) => {
-        if (options.debug) {
-          logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
-        }
+      return baseAdapter.transaction(
+        async (tx) => {
+          if (options.debug) {
+            logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
+          }
 
-        // Drizzle transaction client usually has .execute
-        if (!supportsExecute(tx)) {
-          const problem = new RlsExecuteUnsupportedProblem(configKey);
-          logger?.error(`[RlsTxAdapter] ${problem.detail}`);
-          throw problem;
-        }
+          // Drizzle transaction client usually has .execute
+          if (!supportsExecute(tx)) {
+            const problem = new RlsExecuteUnsupportedProblem(configKey);
+            logger?.error(`[RlsTxAdapter] ${problem.detail}`);
+            throw problem;
+          }
 
-        await tx.execute(sql`SET LOCAL ${sql.raw(configKey)} = ${tenantId}`);
+          await tx.execute(sql`SET LOCAL ${sql.raw(configKey)} = ${tenantId}`);
 
-        return fn(tx);
-      }, txOptions);
+          return fn(tx);
+        },
+        txOptions,
+        signal,
+      );
     },
 
     async savepoint<T>(
       client: InferTxClient<TDb>,
       fn: (client: InferTxClient<TDb>) => Promise<T>,
       txOptions?: InferTxOptions<TDb>,
+      signal?: AbortSignal,
     ): Promise<T> {
       // Nested transactions inherit RLS settings from the parent.
-      return baseAdapter.savepoint(client, fn, txOptions);
+      return baseAdapter.savepoint(client, fn, txOptions, signal);
     },
 
     supportsSavepoint() {
