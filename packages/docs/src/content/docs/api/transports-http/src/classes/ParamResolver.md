@@ -17,7 +17,7 @@ title: "ParamResolver"
 
 ##### createPipeInstance?
 
-(`pipe`) => `PipeTransform`\<`unknown`, `unknown`\>
+(`pipe`) => [`PipeTransform`](/api/protocols-rest/src/interfaces/pipetransform/)\<`unknown`, `unknown`\>
 
 #### Returns
 
@@ -37,7 +37,7 @@ title: "ParamResolver"
 
 ##### controller
 
-`Constructor`
+[`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)
 
 ##### methodName
 

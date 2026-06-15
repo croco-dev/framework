@@ -5,7 +5,7 @@ prev: false
 title: "PipeProvider"
 ---
 
-> **PipeProvider**\<`T`\> = `Constructor`\<`T`\> \| `T`
+> **PipeProvider**\<`T`\> = [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)\<`T`\> \| `T`
 
 ## Type Parameters
 

@@ -5,7 +5,7 @@ prev: false
 title: "readProblemResponse"
 ---
 
-> **readProblemResponse**(`response`): `Promise`\<`ProblemDetails`\>
+> **readProblemResponse**(`response`): `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
 ## Parameters
 
@@ -15,4 +15,4 @@ title: "readProblemResponse"
 
 ## Returns
 
-`Promise`\<`ProblemDetails`\>
+`Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>

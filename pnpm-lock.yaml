@@ -678,9 +678,18 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@croco/audit-core':
+        specifier: workspace:*
+        version: link:../audit-core
       '@croco/auth-core':
         specifier: workspace:*
         version: link:../auth-core
+      '@croco/billing-core':
+        specifier: workspace:*
+        version: link:../billing-core
+      '@croco/dataloader-core':
+        specifier: workspace:*
+        version: link:../dataloader-core
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
@@ -690,21 +699,42 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/invitation-core':
+        specifier: workspace:*
+        version: link:../invitation-core
       '@croco/llm-core':
         specifier: workspace:*
         version: link:../llm-core
+      '@croco/llm-metering':
+        specifier: workspace:*
+        version: link:../llm-metering
+      '@croco/membership-core':
+        specifier: workspace:*
+        version: link:../membership-core
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core
+      '@croco/metrics-core':
+        specifier: workspace:*
+        version: link:../metrics-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../protocols-rest
       '@croco/ratelimit-core':
         specifier: workspace:*
         version: link:../ratelimit-core
+      '@croco/repository-core':
+        specifier: workspace:*
+        version: link:../repository-core
       '@croco/retry-core':
         specifier: workspace:*
         version: link:../retry-core
+      '@croco/search-core':
+        specifier: workspace:*
+        version: link:../search-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -714,6 +744,12 @@ importers:
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
+      '@croco/tx-core':
+        specifier: workspace:*
+        version: link:../tx-core
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2

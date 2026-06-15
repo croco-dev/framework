@@ -25,7 +25,7 @@ title: "CompileOptions"
 
 ###### type
 
-`Constructor`\<`T`\>
+[`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)\<`T`\>
 
 ##### Returns
 

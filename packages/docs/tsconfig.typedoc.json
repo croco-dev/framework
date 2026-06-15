@@ -1,23 +1,39 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "paths": {
+      "@croco/*": ["../*/src/index.ts"]
+    },
     "target": "ES2022",
     "types": ["node"]
   },
   "files": [
-    "../framework-context/src/index.ts",
-    "../retry-core/src/index.ts",
-    "../problems-core/src/index.ts",
+    "../audit-core/src/index.ts",
+    "../auth-core/src/index.ts",
+    "../billing-core/src/index.ts",
+    "../dataloader-core/src/index.ts",
     "../events-core/src/index.ts",
     "../events-inmemory/src/index.ts",
-    "../auth-core/src/index.ts",
-    "../ratelimit-core/src/index.ts",
+    "../framework-context/src/index.ts",
+    "../invitation-core/src/index.ts",
+    "../llm-core/src/index.ts",
+    "../llm-metering/src/index.ts",
+    "../membership-core/src/index.ts",
     "../metering-core/src/index.ts",
-    "../testing/src/index.ts",
-    "../transports-http/src/index.ts",
+    "../metrics-core/src/index.ts",
+    "../problems-core/src/index.ts",
+    "../protocols-rest/src/index.ts",
+    "../ratelimit-core/src/index.ts",
+    "../repository-core/src/index.ts",
+    "../retry-core/src/index.ts",
+    "../search-core/src/index.ts",
     "../telemetry-api/src/index.ts",
     "../telemetry-sdk-node/src/index.ts",
-    "../llm-core/src/index.ts"
+    "../testing/src/index.ts",
+    "../transports-http/src/index.ts",
+    "../tx-core/src/index.ts",
+    "../tx-drizzle/src/index.ts"
   ]
 }

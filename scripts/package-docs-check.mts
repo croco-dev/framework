@@ -81,12 +81,14 @@ type DocsBaseline = {
   readonly allowedMissingApiDocs?: unknown;
   readonly allowedMissingReadme?: unknown;
   readonly allowedMissingTests?: unknown;
+  readonly temporaryProductionApiDocExceptions?: unknown;
 };
 
 type Baseline = {
   readonly allowedMissingApiDocs: ReadonlySet<string>;
   readonly allowedMissingReadme: ReadonlySet<string>;
   readonly allowedMissingTests: ReadonlySet<string>;
+  readonly temporaryProductionApiDocExceptions: ReadonlyMap<string, string>;
 };
 
 type CoverageSet = {
@@ -616,6 +618,9 @@ function loadDocsBaseline(
 ): Baseline {
   const baseline = readJsonFile<DocsBaseline>(join(rootDir, docsBaselinePath));
   const actualPackages = new Set(packages.map((pkg) => pkg.shortName));
+  const productionPackages = new Set(
+    packages.filter((pkg) => pkg.maturity === "production").map((pkg) => pkg.shortName),
+  );
   const allowedMissingReadme = readBaselineArray(
     "allowedMissingReadme",
     baseline.allowedMissingReadme,
@@ -634,11 +639,18 @@ function loadDocsBaseline(
     actualPackages,
     violations,
   );
+  const temporaryProductionApiDocExceptions = readTemporaryProductionApiDocExceptions(
+    baseline.temporaryProductionApiDocExceptions,
+    actualPackages,
+    productionPackages,
+    violations,
+  );
 
   return {
     allowedMissingApiDocs,
     allowedMissingReadme,
     allowedMissingTests,
+    temporaryProductionApiDocExceptions,
   };
 }
 
@@ -665,6 +677,52 @@ function readBaselineArray(
   return names;
 }
 
+function readTemporaryProductionApiDocExceptions(
+  value: unknown,
+  actualPackages: ReadonlySet<string>,
+  productionPackages: ReadonlySet<string>,
+  violations: string[],
+): ReadonlyMap<string, string> {
+  if (value === undefined) {
+    return new Map();
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    violations.push(
+      `${docsBaselinePath}: temporaryProductionApiDocExceptions must be an object mapping production package names to non-empty justification strings`,
+    );
+    return new Map();
+  }
+
+  const exceptions = new Map<string, string>();
+  for (const [packageName, reason] of Object.entries(value)) {
+    if (!actualPackages.has(packageName)) {
+      violations.push(
+        `${docsBaselinePath}: temporaryProductionApiDocExceptions references missing package ${packageName}`,
+      );
+      continue;
+    }
+
+    if (!productionPackages.has(packageName)) {
+      violations.push(
+        `${docsBaselinePath}: temporaryProductionApiDocExceptions.${packageName} is only valid for production-ready packages`,
+      );
+      continue;
+    }
+
+    if (typeof reason !== "string" || reason.trim().length === 0) {
+      violations.push(
+        `${docsBaselinePath}: temporaryProductionApiDocExceptions.${packageName} must include a non-empty justification`,
+      );
+      continue;
+    }
+
+    exceptions.set(packageName, reason.trim());
+  }
+
+  return exceptions;
+}
+
 function validateCoverageBaseline(
   coverage: CoverageSet,
   baseline: Baseline,
@@ -677,9 +735,10 @@ function validateCoverageBaseline(
     "Add packages/<name>/README.md or add a justified legacy baseline entry.",
     violations,
   );
+  validateProductionApiDocsBaseline(coverage.missingApiDocs, baseline, violations);
   addUnexpectedCoverageGaps(
     "API docs",
-    coverage.missingApiDocs,
+    coverage.missingApiDocs.filter((pkg) => pkg.maturity !== "production"),
     baseline.allowedMissingApiDocs,
     "Generate packages/docs/src/content/docs/api/<name>/ or add a justified legacy baseline entry.",
     violations,
@@ -691,6 +750,42 @@ function validateCoverageBaseline(
     "Add src/tests coverage or add a justified legacy baseline entry.",
     violations,
   );
+}
+
+function validateProductionApiDocsBaseline(
+  missingApiDocs: readonly PackageRecord[],
+  baseline: Baseline,
+  violations: string[],
+): void {
+  const missingProductionPackages = missingApiDocs.filter((pkg) => pkg.maturity === "production");
+  const productionPackageNames = new Set(missingProductionPackages.map((pkg) => pkg.shortName));
+  const legacyProductionEntries = [...baseline.allowedMissingApiDocs].filter((packageName) =>
+    productionPackageNames.has(packageName),
+  );
+  const unapprovedProductionGaps = missingProductionPackages.filter(
+    (pkg) => !baseline.temporaryProductionApiDocExceptions.has(pkg.shortName),
+  );
+  const staleTemporaryEntries = [...baseline.temporaryProductionApiDocExceptions.keys()].filter(
+    (packageName) => !productionPackageNames.has(packageName),
+  );
+
+  if (legacyProductionEntries.length > 0) {
+    violations.push(
+      `production-ready packages cannot remain in allowedMissingApiDocs: ${legacyProductionEntries.join(", ")}. Generate API docs or move a short-lived, justified exception to temporaryProductionApiDocExceptions.`,
+    );
+  }
+
+  if (unapprovedProductionGaps.length > 0) {
+    violations.push(
+      `production-ready packages missing API docs: ${unapprovedProductionGaps.map((pkg) => pkg.name).join(", ")}. Generate packages/docs/src/content/docs/api/<name>/ or add a short-lived, justified temporaryProductionApiDocExceptions entry.`,
+    );
+  }
+
+  if (staleTemporaryEntries.length > 0) {
+    violations.push(
+      `temporaryProductionApiDocExceptions entries must match production-ready packages currently missing API docs: ${staleTemporaryEntries.join(", ")}`,
+    );
+  }
 }
 
 function addUnexpectedCoverageGaps(
@@ -797,6 +892,7 @@ function generateReadmeCatalog(state: CatalogState): string {
     "- `pnpm docs:catalog:check`는 README 카탈로그, extension matrix reference 문서, 문서 커버리지 리포트 drift를 검증합니다.",
     "- 신규 public package는 `docs/package-catalog.json`에 그룹/성숙도 metadata가 있어야 합니다.",
     "- 신규 public package의 README, API docs, tests 누락은 `docs/package-docs-baseline.json`에 없는 한 실패합니다.",
+    "- production-ready package의 API docs 누락은 legacy baseline으로 숨길 수 없고, 생성하거나 짧은 사유가 있는 `temporaryProductionApiDocExceptions`에만 임시로 둘 수 있습니다.",
     "",
     catalogEnd,
     "",
@@ -826,7 +922,7 @@ function generateDocsReport(
     `| Missing package test directory | ${coverage.missingTests.length} |`,
     `| Extension matrix packages | ${state.extensionMatrix.packages.length} |`,
     "",
-    "New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`.",
+    "New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.",
     "",
     "## Missing Package README",
     "",
@@ -834,7 +930,7 @@ function generateDocsReport(
     "",
     "## Missing Generated API Docs",
     "",
-    ...formatMissingPackages(coverage.missingApiDocs, baseline.allowedMissingApiDocs),
+    ...formatMissingApiDocs(coverage.missingApiDocs, baseline),
     "",
     "## Missing Test Directory",
     "",
@@ -942,6 +1038,23 @@ function formatMissingPackages(
   return packages.map((pkg) => {
     const baseline = allowedMissingPackages.has(pkg.shortName) ? "legacy baseline" : "new gap";
     return `- \`${pkg.name}\` (\`packages/${pkg.dir}\`) — ${baseline}`;
+  });
+}
+
+function formatMissingApiDocs(packages: readonly PackageRecord[], baseline: Baseline): string[] {
+  if (packages.length === 0) {
+    return ["None."];
+  }
+
+  return packages.map((pkg) => {
+    const temporaryReason = baseline.temporaryProductionApiDocExceptions.get(pkg.shortName);
+    const status = temporaryReason
+      ? `temporary production exception: ${temporaryReason}`
+      : baseline.allowedMissingApiDocs.has(pkg.shortName)
+        ? "legacy baseline"
+        : "new gap";
+
+    return `- \`${pkg.name}\` (\`packages/${pkg.dir}\`) — ${status}`;
   });
 }
 
