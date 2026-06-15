@@ -5,27 +5,27 @@ description: Understand Croco's layered architecture, DI container, and event-dr
 
 ## Introduction
 
-Croco uses an opinionated architecture to keep large codebases consistent and maintainable. The framework separates concerns into four clear layers, then connects them with dependency injection and event-driven patterns.
+Croco uses an opinionated architecture to keep large codebases consistent and maintainable. The framework separates concerns into five current layers, then connects them with dependency injection and event-driven patterns.
 
 This guide explains how each layer works, how the DI container wires components, and how domain events help you model complex business workflows.
 
-## 4-Layer Architecture Diagram
+## Five-Layer Architecture Diagram
 
-Croco follows a 4-layer architecture focused on separation of concerns:
+Croco follows a five-layer architecture focused on separation of concerns:
 
 ```mermaid
 flowchart TD
-  frameworkContext[framework-context]
+  framework[Framework<br/>framework-context, framework-module]
+  protocols[Protocols<br/>protocols-rest, protocols-graphql, protocols-trpc]
+  transports[Transports<br/>transports-http, transports-graphql, transports-cloudflare-workers]
+  integrations[Integrations<br/>integrations-posthog, telemetry-api, telemetry-sdk-node]
+  presentation[Presentation<br/>frontend-react, frontend-vite, frontend-cloudflare, meta-vite, presentation-preset]
 
-  frameworkContext --> protocolsRest[protocols-rest]
-  frameworkContext --> protocolsGraphql[protocols-graphql]
-  frameworkContext --> integrationsSlack[integrations-slack]
-
-  frameworkContext --> transportsHttp[transports-http]
-  frameworkContext --> transportsWebsocket[transports-websocket]
-
-  protocolsRest --> transportsHttp
-  transportsWebsocket --> protocolsGraphql
+  framework --> protocols
+  protocols --> transports
+  transports --> integrations
+  transports --> presentation
+  integrations --> presentation
 ```
 
 ## Layer Details
@@ -35,6 +35,7 @@ flowchart TD
 The foundation of the ecosystem.
 
 - **`framework-context`** provides shared context interfaces.
+- **`framework-module`** supports module composition and package-level wiring.
 - Includes the DI container and metadata storage used by decorators.
 - Establishes the core contracts used by upper layers.
 
@@ -44,22 +45,34 @@ Defines application-facing interfaces and contracts.
 
 - **`protocols-rest`** offers decorators like `@Controller` and `@Get`.
 - **`protocols-graphql`** supports code-first GraphQL definitions on Yoga.
-- **`protocols-grpc`** is planned for future gRPC contract definitions.
+- **`protocols-trpc`** provides tRPC-oriented protocol contracts.
+- **`openapi-spec`** and **`rpc-codegen`** turn protocol metadata into generated contracts and clients.
 
 ### 3. Transports Layer
 
 Executes protocol definitions in runtime environments.
 
 - **`transports-http`** runs REST definitions on a Hono-based engine.
-- Includes AWS Lambda (API Gateway v2) handler generation.
-- **`transports-websocket`** provides utilities for real-time bidirectional communication.
+- **`transports-graphql`** runs GraphQL schemas through the Croco transport surface.
+- **`transports-cloudflare-workers`** adapts Croco applications to Cloudflare Workers.
 
 ### 4. Integrations Layer
 
 Connects Croco to external systems.
 
-- **`integrations-slack`** integrates with Slack Bolt to accelerate Slack app development.
+- **`integrations-posthog`** integrates with PostHog-backed analytics and feature workflows.
+- **`telemetry-api`** and **`telemetry-sdk-node`** provide OpenTelemetry-based tracing APIs and runtime setup.
 - Keeps external platform wiring separate from domain logic.
+
+### 5. Presentation Layer
+
+Connects Croco backends to frontend and SSR application surfaces.
+
+- **`frontend-react`** provides React integration helpers.
+- **`frontend-vite`** provides Vite configuration helpers.
+- **`frontend-cloudflare`** provides Cloudflare SSR handling.
+- **`meta-vite`** provides the Meta Vite runtime for routing, server actions, and SSR/RSC streaming.
+- **`presentation-preset`** composes backend and frontend presets for generated applications.
 
 ## DI Container
 
