@@ -1,10 +1,16 @@
 import { defineCommand } from "citty";
-import { spawn } from "node:child_process";
+import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { GLOBAL_OPTIONS } from "./options.js";
 
-const getMigrateBinPath = (): string => {
-  return require.resolve("@croco/migration-runner/dist/cli.js");
-};
+const require = createRequire(import.meta.url);
+
+export type MigrateCommand = "up" | "down" | "status";
+export type MigrationRunnerSpawn = (
+  command: string,
+  args: string[],
+  options: SpawnOptions,
+) => ChildProcess;
 
 const migrateUp = defineCommand({
   meta: {
@@ -14,22 +20,8 @@ const migrateUp = defineCommand({
   args: {
     ...GLOBAL_OPTIONS,
   },
-  run({ args }) {
-    const binPath = getMigrateBinPath();
-    const restArgs = args._.slice(1);
-
-    const child = spawn(process.execPath, [binPath, "up", ...restArgs], {
-      stdio: "inherit",
-    });
-
-    child.on("exit", (code) => {
-      process.exit(code ?? 1);
-    });
-
-    child.on("error", (err) => {
-      console.error(err.message);
-      process.exit(1);
-    });
+  run({ rawArgs }) {
+    runMigrateCommand("up", rawArgs);
   },
 });
 
@@ -41,22 +33,21 @@ const migrateDown = defineCommand({
   args: {
     ...GLOBAL_OPTIONS,
   },
-  run({ args }) {
-    const binPath = getMigrateBinPath();
-    const restArgs = args._.slice(1);
+  run({ rawArgs }) {
+    runMigrateCommand("down", rawArgs);
+  },
+});
 
-    const child = spawn(process.execPath, [binPath, "down", ...restArgs], {
-      stdio: "inherit",
-    });
-
-    child.on("exit", (code) => {
-      process.exit(code ?? 1);
-    });
-
-    child.on("error", (err) => {
-      console.error(err.message);
-      process.exit(1);
-    });
+const migrateStatus = defineCommand({
+  meta: {
+    name: "status",
+    description: "Show migration status",
+  },
+  args: {
+    ...GLOBAL_OPTIONS,
+  },
+  run({ rawArgs }) {
+    runMigrateCommand("status", rawArgs);
   },
 });
 
@@ -71,5 +62,42 @@ export const migrate = defineCommand({
   subCommands: {
     up: migrateUp,
     down: migrateDown,
+    status: migrateStatus,
   },
 });
+
+export function runMigrateCommand(
+  command: MigrateCommand,
+  args: string[],
+  options: {
+    readonly resolveBin?: () => string;
+    readonly spawn?: MigrationRunnerSpawn;
+    readonly setExitCode?: (code: number) => void;
+    readonly writeError?: (message: string) => void;
+  } = {},
+): void {
+  const resolveBin = options.resolveBin ?? resolveMigrationRunnerBin;
+  const spawnChild = options.spawn ?? spawn;
+  const setExitCode =
+    options.setExitCode ??
+    ((code: number) => {
+      process.exit(code);
+    });
+  const writeError = options.writeError ?? ((message: string) => console.error(message));
+  const child = spawnChild(process.execPath, [resolveBin(), command, ...args], {
+    stdio: "inherit",
+  });
+
+  child.on("exit", (code) => {
+    setExitCode(code ?? 1);
+  });
+
+  child.on("error", (error) => {
+    writeError(error.message);
+    setExitCode(1);
+  });
+}
+
+export function resolveMigrationRunnerBin(): string {
+  return require.resolve("@croco/migration-runner/dist/cli.js");
+}
