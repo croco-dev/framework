@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import type { ExecutionContext } from "@cloudflare/workers-types";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Body, Controller, Delete, Get, Param, Post, Put, Raw } from "@croco/protocols-rest";
@@ -10,7 +11,22 @@ import { toWorkersHandler } from "../libs/adapters/WorkersAdapter";
 
 describe("WorkersAdapter", () => {
   let app!: CrocoApp;
-  const mockExecutionContext = {} as never;
+
+  type TestExecutionContext = ExecutionContext & {
+    TEST_CTX_VALUE?: string;
+  };
+
+  const createExecutionContext = (
+    overrides: Partial<TestExecutionContext> = {},
+  ): TestExecutionContext =>
+    ({
+      passThroughOnException: () => {},
+      props: {},
+      waitUntil: () => {},
+      ...overrides,
+    }) as TestExecutionContext;
+
+  const mockExecutionContext = createExecutionContext();
 
   @Controller("/api")
   class TestController {
@@ -46,6 +62,23 @@ describe("WorkersAdapter", () => {
       return {
         value:
           typeof env === "object" && env !== null && "TEST_VALUE" in env ? env.TEST_VALUE : null,
+      };
+    }
+
+    @Get("/execution-context")
+    getExecutionContext(@Raw() raw: unknown) {
+      const executionCtx =
+        typeof raw === "object" && raw !== null && "executionCtx" in raw
+          ? raw.executionCtx
+          : undefined;
+
+      return {
+        value:
+          typeof executionCtx === "object" &&
+          executionCtx !== null &&
+          "TEST_CTX_VALUE" in executionCtx
+            ? executionCtx.TEST_CTX_VALUE
+            : null,
       };
     }
   }
@@ -173,6 +206,19 @@ describe("WorkersAdapter", () => {
       expect(response.status).toBe(200);
       const json = await response.json();
       expect(json).toEqual({ value: "from-worker-env" });
+    });
+
+    it("should forward Cloudflare execution context when injectEnv is enabled", async () => {
+      const handler = toWorkersHandler(app, { injectEnv: true });
+      const request = new Request("http://localhost/api/execution-context");
+      const env = {};
+      const ctx = createExecutionContext({ TEST_CTX_VALUE: "from-worker-ctx" });
+
+      const response = await handler.fetch(request, env, ctx);
+
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json).toEqual({ value: "from-worker-ctx" });
     });
   });
 });

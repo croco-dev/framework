@@ -9,9 +9,9 @@ export function toWorkersHandler(
   const { injectEnv = false } = options;
 
   return {
-    async fetch(request: Request, env: CloudflareEnv, _ctx: ExecutionContext): Promise<Response> {
+    async fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response> {
       if (injectEnv) {
-        return app.getHono().fetch(request, env);
+        return app.getHono().fetch(request, env, ctx);
       }
 
       return app.fetch(request);
