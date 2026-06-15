@@ -259,6 +259,14 @@ export type { ComponentOptions } from "./libs/types";
  */
 export type { Constructor } from "./libs/types";
 
+export type {
+  RuntimeCapabilities,
+  RuntimeContext,
+  RuntimeNativeContext,
+  RuntimePlatform,
+  RuntimeTraceContext,
+} from "./libs/types";
+
 /**
  * 요청 라이프사이클 전후와 에러 상황에 실행할 훅 타입입니다.
  *

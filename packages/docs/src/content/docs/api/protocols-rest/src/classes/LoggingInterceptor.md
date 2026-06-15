@@ -15,13 +15,13 @@ title: "LoggingInterceptor"
 
 ### Constructor
 
-> **new LoggingInterceptor**(`logger`): `LoggingInterceptor`
+> **new LoggingInterceptor**(`logger?`): `LoggingInterceptor`
 
 #### Parameters
 
-##### logger
+##### logger?
 
-[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/) = `...`
 
 #### Returns
 

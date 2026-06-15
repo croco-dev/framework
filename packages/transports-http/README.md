@@ -59,6 +59,27 @@ const app = createApp({
 export const handler = app.lambdaHandler();
 ```
 
+### RuntimeContext
+
+컨트롤러, guard, interceptor, service에서는 `@croco/framework-context`의
+`Context.getRuntimeContext()`로 Node/Lambda 요청의 공통 런타임 정보를 읽을 수 있습니다.
+
+```typescript
+import { Context } from "@croco/framework-context";
+
+const runtime = Context.getRuntimeContext();
+
+runtime?.waitUntil(Promise.resolve());
+
+console.log(runtime?.platform); // "node" 또는 "lambda"
+console.log(runtime?.requestId);
+```
+
+| Runtime | `env`         | `requestId`                                | `waitUntil` | `flush`                                 |
+| ------- | ------------- | ------------------------------------------ | ----------- | --------------------------------------- |
+| Node    | `process.env` | `x-request-id` 또는 generated id           | no-op       | no-op                                   |
+| Lambda  | `process.env` | API Gateway request id 또는 `awsRequestId` | queued work | queued work drain, rejected work logged |
+
 ### Node 서버 실행
 
 ```typescript

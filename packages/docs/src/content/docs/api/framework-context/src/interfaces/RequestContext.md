@@ -28,11 +28,29 @@ const ctx: RequestContext = {
 
 ***
 
+### runtime?
+
+> `optional` **runtime**: [`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
+
+***
+
+### spanId?
+
+> `optional` **spanId**: `string`
+
+***
+
 ### tenantId?
 
 > `optional` **tenantId**: `string`
 
 멀티 테넌트 식별자입니다.
+
+***
+
+### traceFlags?
+
+> `optional` **traceFlags**: `string` \| `number`
 
 ***
 

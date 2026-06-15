@@ -39,13 +39,21 @@ title: "CrocoApp"
 
 ### fetch()
 
-> **fetch**(`request`): `Promise`\<`Response`\>
+> **fetch**(`request`, `runtimeContext?`, `options?`): `Promise`\<`Response`\>
 
 #### Parameters
 
 ##### request
 
 `Request`
+
+##### runtimeContext?
+
+[`RuntimeContextInit`](/api/transports-http/src/type-aliases/runtimecontextinit/)
+
+##### options?
+
+`FetchRuntimeOptions` = `{}`
 
 #### Returns
 

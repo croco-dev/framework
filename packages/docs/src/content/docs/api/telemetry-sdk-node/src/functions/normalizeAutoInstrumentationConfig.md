@@ -22,7 +22,7 @@ User-provided configuration
 
 Target environment ('lambda' | 'node')
 
-`"lambda"` | `"node"`
+`"node"` | `"lambda"`
 
 ## Returns
 

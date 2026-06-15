@@ -1,5 +1,5 @@
 import type { ExecutionContext } from "@cloudflare/workers-types";
-import type { CrocoApp } from "@croco/transports-http";
+import type { CrocoApp, RuntimeContextInit } from "@croco/transports-http";
 import type { CloudflareEnv, WorkersFetchHandler, WorkersHandlerOptions } from "../types";
 
 export function toWorkersHandler(
@@ -10,11 +10,35 @@ export function toWorkersHandler(
 
   return {
     async fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response> {
+      const runtimeContext = createWorkersRuntimeContext(request, env, ctx);
+
       if (injectEnv) {
-        return app.getHono().fetch(request, env, ctx);
+        return app.fetch(request, runtimeContext, { env, executionContext: ctx });
       }
 
-      return app.fetch(request);
+      return app.fetch(request, runtimeContext);
+    },
+  };
+}
+
+function createWorkersRuntimeContext(
+  request: Request,
+  env: CloudflareEnv,
+  ctx: ExecutionContext,
+): RuntimeContextInit {
+  return {
+    platform: "cloudflare-workers",
+    requestId: request.headers.get("x-request-id") ?? undefined,
+    env,
+    native: {
+      executionContext: ctx,
+    },
+    waitUntil: (promise) => ctx.waitUntil(promise),
+    capabilities: {
+      env: true,
+      waitUntil: true,
+      flush: false,
+      shutdown: false,
     },
   };
 }

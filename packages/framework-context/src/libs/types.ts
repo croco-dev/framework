@@ -1,3 +1,5 @@
+import type { ILogger } from "./ILogger";
+
 export type Scope = "singleton" | "request" | "transient";
 
 export type Constructor<T = unknown> = new (...args: never[]) => T;
@@ -17,11 +19,46 @@ export type UserContext = {
   [key: string]: unknown;
 };
 
+export type RuntimePlatform = "node" | "lambda" | "cloudflare-workers" | (string & {});
+
+export type RuntimeTraceContext = {
+  traceId?: string;
+  spanId?: string;
+  traceFlags?: string | number;
+};
+
+export type RuntimeCapabilities = {
+  env: boolean;
+  logger: boolean;
+  trace: boolean;
+  waitUntil: boolean;
+  flush: boolean;
+  shutdown: boolean;
+};
+
+export type RuntimeNativeContext = Record<string, unknown>;
+
+export interface RuntimeContext {
+  platform: RuntimePlatform;
+  requestId: string;
+  env?: Record<string, unknown>;
+  logger?: ILogger;
+  trace?: RuntimeTraceContext;
+  capabilities: RuntimeCapabilities;
+  native?: RuntimeNativeContext;
+  waitUntil(promise: Promise<unknown>): void;
+  flush(): Promise<void>;
+  shutdown(): Promise<void>;
+}
+
 export interface RequestContext {
   requestId: string;
   user?: UserContext;
   tenantId?: string;
   traceId?: string;
+  spanId?: string;
+  traceFlags?: string | number;
+  runtime?: RuntimeContext;
 }
 
 export type Middleware<TContext = RequestContext> = (

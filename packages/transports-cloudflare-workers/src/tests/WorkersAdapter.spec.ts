@@ -1,12 +1,12 @@
 import "reflect-metadata";
 import type { ExecutionContext } from "@cloudflare/workers-types";
-import { Container } from "@croco/framework-context";
+import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Body, Controller, Delete, Get, Param, Post, Put, Raw } from "@croco/protocols-rest";
 import type { CrocoApp } from "@croco/transports-http";
 import { createApp, ErrorHandler } from "@croco/transports-http";
 import { HealthCheckRegistry } from "@croco/transports-http/src/libs/HealthCheckRegistry";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toWorkersHandler } from "../libs/adapters/WorkersAdapter";
 
 describe("WorkersAdapter", () => {
@@ -79,6 +79,22 @@ describe("WorkersAdapter", () => {
           "TEST_CTX_VALUE" in executionCtx
             ? executionCtx.TEST_CTX_VALUE
             : null,
+      };
+    }
+
+    @Get("/runtime-context")
+    getRuntimeContext() {
+      const runtime = FrameworkContext.getRuntimeContext();
+      const pending = Promise.resolve();
+
+      runtime?.waitUntil(pending);
+
+      return {
+        platform: runtime?.platform ?? null,
+        requestId: runtime?.requestId ?? null,
+        envValue: runtime?.env?.TEST_VALUE ?? null,
+        waitUntil: runtime?.capabilities.waitUntil ?? null,
+        env: runtime?.capabilities.env ?? null,
       };
     }
   }
@@ -219,6 +235,29 @@ describe("WorkersAdapter", () => {
       expect(response.status).toBe(200);
       const json = await response.json();
       expect(json).toEqual({ value: "from-worker-ctx" });
+    });
+
+    it("should expose Cloudflare env and waitUntil through RuntimeContext by default", async () => {
+      const handler = toWorkersHandler(app);
+      const request = new Request("http://localhost/api/runtime-context", {
+        headers: {
+          "x-request-id": "worker-req-1",
+        },
+      });
+      const env = { TEST_VALUE: "from-runtime-env" };
+      const ctx = createExecutionContext({ waitUntil: vi.fn() });
+
+      const response = await handler.fetch(request, env, ctx);
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        platform: "cloudflare-workers",
+        requestId: "worker-req-1",
+        envValue: "from-runtime-env",
+        waitUntil: true,
+        env: true,
+      });
+      expect(ctx.waitUntil).toHaveBeenCalledWith(expect.any(Promise));
     });
   });
 });

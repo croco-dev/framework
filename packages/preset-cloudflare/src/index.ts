@@ -22,5 +22,12 @@ export function createCloudflarePreset(options?: CloudflarePresetOptions): Croco
   });
 }
 
-export type { CloudflareAppFetch, CloudflareFetchEnv, CloudflareFetchHandler } from "./fetch";
-export { createWorkerFetchHandler } from "./fetch";
+export type {
+  CloudflareAppFetch,
+  CloudflareFetchEnv,
+  CloudflareFetchHandler,
+  CloudflareRuntimeContext,
+  RawHonoFetch,
+  WorkerFetchHandlerOptions,
+} from "./fetch";
+export { createRawHonoWorkerFetchHandler, createWorkerFetchHandler } from "./fetch";

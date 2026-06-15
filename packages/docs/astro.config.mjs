@@ -82,6 +82,7 @@ export default defineConfig({
           items: [
             { label: "Getting Started", slug: "guides/getting-started" },
             { label: "Architecture", slug: "guides/architecture" },
+            { label: "Runtime Contract", slug: "guides/runtime-contract" },
             { label: "Events Core", slug: "guides/events-core" },
             { label: "Retry Core", slug: "guides/retry-core" },
           ],
