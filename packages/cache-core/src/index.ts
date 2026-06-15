@@ -1,4 +1,5 @@
 export {
+  Cache,
   type CacheGetOrSetOptions,
   type CachePattern,
   type CacheStats,
