@@ -9,6 +9,10 @@ export type {
   IBatchLoaderFactory,
 } from "./libs/IBatchLoaderFactory";
 export { BATCH_LOADER_FACTORY_TOKEN } from "./libs/IBatchLoaderFactory";
+export {
+  BatchLoaderFactoryNotRegisteredProblem,
+  BatchLoaderFactoryResolutionProblem,
+} from "./libs/problems/BatchLoadProblems";
 export * from "./libs/ReadRepository";
 /**
  * Unified repository contract that combines read and write capabilities.
