@@ -6,6 +6,7 @@ import {
   SpanStatusCode,
   trace,
 } from "@opentelemetry/api";
+import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import type { Context as HonoContext } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HttpContext } from "../libs/HttpContext";
@@ -67,6 +68,7 @@ describe("TelemetryMiddleware", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    Container.reset();
   });
 
   it("should create the server span from propagation-extracted context", async () => {
@@ -126,11 +128,20 @@ describe("TelemetryMiddleware", () => {
 
   it("should mark degraded mode and continue pipeline when telemetry setup fails", async () => {
     const ctx = createContext();
+    const logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn(),
+    } as unknown as ILogger;
     const next = vi.fn().mockResolvedValue(undefined);
+    const setupError = new TypeError("header access failure");
 
+    Container.set(LOGGER_TOKEN, logger);
     const middleware = telemetryMiddleware("/health");
     const headerSpy = vi.spyOn(ctx, "header").mockImplementation(() => {
-      throw new Error("header access failure");
+      throw setupError;
     });
 
     await middleware(ctx, next);
@@ -138,8 +149,60 @@ describe("TelemetryMiddleware", () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(ctx.get("telemetryDegraded")).toBe(true);
     expect(ctx.get("traceId")).toMatch(/^telemetry-degraded-/);
+    expect(ctx.get("telemetryDegradedReason")).toBe("telemetry_setup_failed");
+    expect(ctx.get("telemetryDegradedError")).toEqual({
+      name: "TypeError",
+      message: setupError.message,
+    });
+    expect(logger.warn).toHaveBeenCalledWith(
+      "[TelemetryMiddleware] Telemetry setup failed; continuing in degraded mode",
+      expect.objectContaining({
+        errorCategory: "telemetry_setup_failed",
+        errorMessage: setupError.message,
+        errorName: "TypeError",
+        method: "GET",
+        path: "/health",
+        route: "/health",
+        traceId: ctx.get("traceId"),
+      }),
+    );
 
     headerSpy.mockRestore();
+  });
+
+  it("should keep degraded fallback when logger warning fails", async () => {
+    const ctx = createContext();
+    const logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(() => {
+        throw new Error("logger unavailable");
+      }),
+      error: vi.fn(),
+      child: vi.fn(),
+    } as unknown as ILogger;
+    const next = vi.fn().mockResolvedValue(undefined);
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    Container.set(LOGGER_TOKEN, logger);
+    const middleware = telemetryMiddleware("/health");
+    vi.spyOn(ctx, "header").mockImplementation(() => {
+      throw new Error("header access failure");
+    });
+
+    await middleware(ctx, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(ctx.get("telemetryDegraded")).toBe(true);
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(consoleWarn).toHaveBeenCalledWith(
+      "[TelemetryMiddleware] Telemetry setup failed; continuing in degraded mode",
+      expect.objectContaining({
+        errorCategory: "telemetry_setup_failed",
+        route: "/health",
+        traceId: ctx.get("traceId"),
+      }),
+    );
   });
 
   it("should leave client error responses as unset span status", async () => {
