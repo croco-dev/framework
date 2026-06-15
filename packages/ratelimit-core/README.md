@@ -61,4 +61,5 @@ class ApiController {
 
 - 분산 저장소가 필요하면 `RateLimitStore` 계층을 상속해 Redis, Upstash 등으로 확장합니다.
 - `failOpen` 옵션으로 저장소 장애 시 허용 전략을 선택할 수 있습니다.
+- `getStats()`는 저장소 통계 조회가 실패하면 `degraded: true`와 직렬화 가능한 `error` 메타데이터를 함께 반환합니다.
 - 윈도우 문자열은 `1s`, `1m`, `1h`, `1d` 형식을 사용합니다.

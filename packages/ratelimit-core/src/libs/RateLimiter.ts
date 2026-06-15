@@ -5,6 +5,7 @@ import type {
   RateLimitPolicy,
   RateLimitResult,
   RateLimitStats,
+  RateLimitStatsError,
   SlidingWindowPolicy,
   TokenBucketPolicy,
 } from "./types";
@@ -40,7 +41,7 @@ export class RateLimiter<TContext = KeyContext> {
       const result = await this.store.check(key, policy);
       return { ...result, policyName: policy.algorithm };
     } catch (error) {
-      return this.handleStoreError(error as Error, policy);
+      return this.handleStoreError(error, policy);
     }
   }
 
@@ -49,7 +50,7 @@ export class RateLimiter<TContext = KeyContext> {
       const result = await this.store.check(key, policy);
       return { ...result, policyName: policy.algorithm };
     } catch (error) {
-      return this.handleStoreError(error as Error, policy);
+      return this.handleStoreError(error, policy);
     }
   }
 
@@ -57,13 +58,22 @@ export class RateLimiter<TContext = KeyContext> {
     try {
       return await this.store.getStats(key);
     } catch (error) {
-      this.onStoreError?.(error as Error);
-      return { allowed: 0, denied: 0, total: 0 };
+      const storeError = normalizeStoreError(error);
+      this.onStoreError?.(storeError);
+
+      return {
+        allowed: 0,
+        denied: 0,
+        total: 0,
+        degraded: true,
+        error: toRateLimitStatsError(storeError),
+      };
     }
   }
 
-  private handleStoreError(error: Error, policy: RateLimitPolicy): RateLimitResult {
-    this.onStoreError?.(error);
+  private handleStoreError(error: unknown, policy: RateLimitPolicy): RateLimitResult {
+    const storeError = normalizeStoreError(error);
+    this.onStoreError?.(storeError);
 
     const limit =
       policy.algorithm === "token-bucket" ? (policy as TokenBucketPolicy).capacity : policy.limit;
@@ -88,6 +98,21 @@ export class RateLimiter<TContext = KeyContext> {
       policyName: policy.algorithm,
     };
   }
+}
+
+function normalizeStoreError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(String(error));
+}
+
+function toRateLimitStatsError(error: Error): RateLimitStatsError {
+  return {
+    name: error.name,
+    message: error.message,
+  };
 }
 
 export type RateLimiterContext<T> = T extends RateLimiter<infer C> ? C : never;

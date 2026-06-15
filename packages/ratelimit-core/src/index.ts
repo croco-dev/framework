@@ -99,6 +99,7 @@ export {
   type RateLimitMiddlewareOptions,
   type RateLimitPolicy,
   type RateLimitResult,
+  type RateLimitStatsError,
   type RateLimitStats,
   type SlidingWindowPolicy,
   type TokenBucketPolicy,

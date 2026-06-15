@@ -17,9 +17,21 @@ title: "RateLimitStats"
 
 ***
 
+### degraded?
+
+> `optional` **degraded**: `boolean`
+
+***
+
 ### denied
 
 > **denied**: `number`
+
+***
+
+### error?
+
+> `optional` **error**: [`RateLimitStatsError`](/api/ratelimit-core/src/type-aliases/ratelimitstatserror/)
 
 ***
 
