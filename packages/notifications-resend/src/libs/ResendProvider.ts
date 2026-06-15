@@ -13,6 +13,7 @@ import { type CreateEmailOptions, type CreateEmailResponse, Resend } from "resen
 import { ResendNotificationProblem } from "./problems/ResendNotificationProblem";
 
 const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+const RESEND_BATCH_CONCURRENCY_LIMIT = 5;
 const TRANSIENT_ERROR_NAMES = new Set([
   "application_error",
   "concurrent_idempotent_requests",
@@ -242,6 +243,29 @@ export class ResendProvider implements NotificationProvider {
   }
 
   async sendBatch(payloads: NotificationPayload[]): Promise<NotificationResult[]> {
-    return Promise.all(payloads.map((payload) => this.send(payload)));
+    const batchPayloads = [...payloads];
+
+    if (batchPayloads.length === 0) {
+      return [];
+    }
+
+    const results: NotificationResult[] = [];
+    results.length = batchPayloads.length;
+    const workerCount = Math.min(RESEND_BATCH_CONCURRENCY_LIMIT, batchPayloads.length);
+    let nextPayloadIndex = 0;
+
+    const sendNextPayload = async (): Promise<void> => {
+      while (nextPayloadIndex < batchPayloads.length) {
+        const payloadIndex = nextPayloadIndex;
+        nextPayloadIndex += 1;
+        const payload = batchPayloads[payloadIndex];
+
+        results[payloadIndex] = await this.send(payload);
+      }
+    };
+
+    await Promise.all(Array.from({ length: workerCount }, () => sendNextPayload()));
+
+    return results;
   }
 }
