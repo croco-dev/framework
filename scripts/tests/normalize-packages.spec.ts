@@ -570,7 +570,7 @@ describe("normalize-packages.mjs", () => {
       }),
       {
         sourceContent:
-          'import type { PeerValue } from "peer-lib";\nexport type Exported = PeerValue;\n',
+          'import { value } from "peer-lib/subpath";\nexport const exported = value;\n',
       },
     );
     writePackage(
