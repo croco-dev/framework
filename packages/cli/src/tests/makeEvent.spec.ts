@@ -28,6 +28,16 @@ describe("generateEvent", () => {
     await expect(generateEvent("123User", { cwd })).rejects.toThrow("Invalid name: 123User");
   });
 
+  it("should reject missing generated import dependencies before writing files", async () => {
+    const cwd = await createWorkspace({ apiServerManifest: "{}" });
+    const filePath = path.join(cwd, "apps", "api-server", "src", "events", "UserProfileEvent.ts");
+
+    await expect(generateEvent("UserProfile", { cwd })).rejects.toThrow(
+      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/events-core.",
+    );
+    await expect(fs.access(filePath)).rejects.toThrow();
+  });
+
   it("should not write files in dry-run mode", async () => {
     const cwd = await createWorkspace();
     const filePath = path.join(cwd, "apps", "api-server", "src", "events", "DryRunEvent.ts");
@@ -39,12 +49,27 @@ describe("generateEvent", () => {
   });
 });
 
-async function createWorkspace(): Promise<string> {
+async function createWorkspace(options: { apiServerManifest?: string } = {}): Promise<string> {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "croco-cli-event-"));
 
   await fs.mkdir(path.join(cwd, "apps", "api-server"), { recursive: true });
   await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
-  await fs.writeFile(path.join(cwd, "apps", "api-server", "package.json"), "{}");
+  await fs.writeFile(
+    path.join(cwd, "apps", "api-server", "package.json"),
+    options.apiServerManifest ?? apiServerManifest(["@croco/events-core"]),
+  );
 
   return cwd;
+}
+
+function apiServerManifest(packageNames: readonly string[]): string {
+  return JSON.stringify(
+    {
+      dependencies: Object.fromEntries(
+        packageNames.map((packageName) => [packageName, "workspace:*"]),
+      ),
+    },
+    null,
+    2,
+  );
 }

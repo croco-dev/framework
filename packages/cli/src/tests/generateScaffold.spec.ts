@@ -63,7 +63,15 @@ async function createWorkspace(options: { consoleWeb?: boolean } = {}): Promise<
 
   await fs.mkdir(path.join(cwd, "apps", "api-server", "src"), { recursive: true });
   await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
-  await fs.writeFile(path.join(cwd, "apps", "api-server", "package.json"), "{}");
+  await fs.writeFile(
+    path.join(cwd, "apps", "api-server", "package.json"),
+    packageManifest([
+      "@croco/protocols-rest",
+      "@croco/repository-core",
+      "@croco/transports-http",
+      "typedi",
+    ]),
+  );
   await fs.writeFile(
     path.join(cwd, "apps", "api-server", "src", "index.ts"),
     `const app = createCrocoApp();
@@ -73,8 +81,23 @@ app.listen({ port: 3000 });
 
   if (consoleWeb) {
     await fs.mkdir(path.join(cwd, "apps", "console-web"), { recursive: true });
-    await fs.writeFile(path.join(cwd, "apps", "console-web", "package.json"), "{}");
+    await fs.writeFile(
+      path.join(cwd, "apps", "console-web", "package.json"),
+      packageManifest(["@croco/meta-vite"]),
+    );
   }
 
   return cwd;
+}
+
+function packageManifest(packageNames: readonly string[]): string {
+  return JSON.stringify(
+    {
+      dependencies: Object.fromEntries(
+        packageNames.map((packageName) => [packageName, "workspace:*"]),
+      ),
+    },
+    null,
+    2,
+  );
 }

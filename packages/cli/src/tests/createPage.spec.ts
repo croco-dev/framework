@@ -98,7 +98,9 @@ describe("runCreatePage", () => {
   });
 
   it("should create an explicit SPA legacy frontend-vite page file set", async () => {
-    const cwd = await createWorkspace();
+    const cwd = await createWorkspace({
+      consoleWebManifest: consoleWebManifest(["@croco/frontend-vite"]),
+    });
 
     await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
     const pageDir = path.join(cwd, "apps", "console-web", "pages", "settings-panel");
@@ -135,6 +137,17 @@ describe("runCreatePage", () => {
     const result = await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
 
     await expectMissingGeneratedDependencies(cwd, result?.files.map((file) => file.path) ?? []);
+  });
+
+  it("should reject missing SSR route import dependencies before writing files", async () => {
+    const cwd = await createWorkspace({ consoleWebManifest: "{}" });
+
+    await expect(runCreatePage("Dashboard", { cwd, mode: "ssr" })).rejects.toThrow(
+      "Missing dependencies in apps/console-web/package.json for generated imports: @croco/meta-vite.",
+    );
+    await expect(
+      fs.access(path.join(cwd, "apps", "console-web", "pages", "dashboard", "route.ts")),
+    ).rejects.toThrow();
   });
 
   it("should reject SSR pages in SPA scaffolds before writing files", async () => {
@@ -179,10 +192,22 @@ async function createWorkspace(options: { consoleWebManifest?: string } = {}): P
   await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
   await fs.writeFile(
     path.join(cwd, "apps", "console-web", "package.json"),
-    options.consoleWebManifest ?? "{}",
+    options.consoleWebManifest ?? consoleWebManifest(["@croco/meta-vite"]),
   );
 
   return cwd;
+}
+
+function consoleWebManifest(packageNames: readonly string[]): string {
+  return JSON.stringify(
+    {
+      dependencies: Object.fromEntries(
+        packageNames.map((packageName) => [packageName, "workspace:*"]),
+      ),
+    },
+    null,
+    2,
+  );
 }
 
 async function readConsoleWebTemplateManifest(template: string): Promise<string> {

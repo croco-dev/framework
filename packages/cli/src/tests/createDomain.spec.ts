@@ -98,14 +98,35 @@ describe("runCreateDomain", () => {
 
     await expect(runCreateDomain("123User", { cwd })).rejects.toThrow("Invalid name: 123User");
   });
+
+  it("should reject missing generated import dependencies before writing files", async () => {
+    const cwd = await createWorkspace({ apiServerManifest: "{}" });
+    const domainDir = path.join(cwd, "apps", "api-server", "src", "domains", "user");
+
+    await expect(runCreateDomain("User", { cwd })).rejects.toThrow(
+      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/protocols-rest, @croco/transports-http, typedi, @croco/repository-core.",
+    );
+    await expect(fs.access(path.join(domainDir, "UserController.ts"))).rejects.toThrow();
+    await expect(fs.access(path.join(domainDir, "UserService.ts"))).rejects.toThrow();
+    await expect(fs.access(path.join(domainDir, "UserRepository.ts"))).rejects.toThrow();
+  });
 });
 
-async function createWorkspace(): Promise<string> {
+async function createWorkspace(options: { apiServerManifest?: string } = {}): Promise<string> {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "croco-cli-domain-"));
 
   await fs.mkdir(path.join(cwd, "apps", "api-server", "src"), { recursive: true });
   await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
-  await fs.writeFile(path.join(cwd, "apps", "api-server", "package.json"), "{}");
+  await fs.writeFile(
+    path.join(cwd, "apps", "api-server", "package.json"),
+    options.apiServerManifest ??
+      apiServerManifest([
+        "@croco/protocols-rest",
+        "@croco/transports-http",
+        "@croco/repository-core",
+        "typedi",
+      ]),
+  );
   await fs.writeFile(
     path.join(cwd, "apps", "api-server", "src", "index.ts"),
     `const app = createCrocoApp();
@@ -114,4 +135,16 @@ app.listen({ port: 3000 });
   );
 
   return cwd;
+}
+
+function apiServerManifest(packageNames: readonly string[]): string {
+  return JSON.stringify(
+    {
+      dependencies: Object.fromEntries(
+        packageNames.map((packageName) => [packageName, "workspace:*"]),
+      ),
+    },
+    null,
+    2,
+  );
 }
