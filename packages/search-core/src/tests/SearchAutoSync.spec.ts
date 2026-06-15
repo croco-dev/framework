@@ -1,5 +1,5 @@
-import type { Constructor } from "@croco/framework-context";
-import { Container, MetadataStorage } from "@croco/framework-context";
+import type { Constructor, ILogger } from "@croco/framework-context";
+import { Container, LOGGER_TOKEN, MetadataStorage } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import type { SearchableMetadata } from "../libs/decorators/Searchable";
 import {
@@ -18,9 +18,9 @@ describe("SearchAutoSync", () => {
   };
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     Container.reset();
-    vi.clearAllMocks();
-    Container.reset();
+    Container.remove(LOGGER_TOKEN);
 
     searchEngine = {
       indexDocument: vi.fn(),
@@ -34,6 +34,36 @@ describe("SearchAutoSync", () => {
 
     searchAutoSync = new SearchAutoSync(eventBusMock as SearchSyncFailedEventPublisher);
   });
+
+  const mockUserAutoSyncMetadata = (): void => {
+    vi.spyOn(MetadataStorage, "getAll").mockReturnValue([
+      {
+        target: class User {},
+        value: {
+          index: "users",
+          autoSync: true,
+          target: class User {},
+        } as SearchableMetadata,
+      },
+    ]);
+  };
+
+  type LoggerMock = ILogger & {
+    error: ReturnType<typeof vi.fn>;
+    child: ReturnType<typeof vi.fn>;
+  };
+
+  const createLoggerMock = (): LoggerMock => {
+    const logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn(),
+    } as unknown as LoggerMock;
+    logger.child.mockReturnValue(logger);
+    return logger;
+  };
 
   it("should be defined", () => {
     expect(searchAutoSync).not.toBeNull();
@@ -133,6 +163,65 @@ describe("SearchAutoSync", () => {
       const failedEvent = eventBusMock.publishNow.mock.calls[0][0];
       expect(failedEvent.error).toBe(error);
       expect(failedEvent.operation).toBe("index");
+    });
+
+    it("should log failed event publisher errors with sync context", async () => {
+      mockUserAutoSyncMetadata();
+      const logger = createLoggerMock();
+      Container.set(LOGGER_TOKEN, logger);
+      const originalError = new Error("Indexing failed");
+      const publishError = new Error("Failed event publisher unavailable");
+      (searchEngine.indexDocument as Mock).mockRejectedValue(originalError);
+      eventBusMock.publishNow.mockRejectedValue(publishError);
+
+      const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
+
+      await expect(searchAutoSync.handle(event)).resolves.toBeUndefined();
+
+      expect(logger.child).toHaveBeenCalledWith({
+        searchSyncFailedEvent: {
+          eventName: SearchSyncFailedEvent.eventName,
+          indexName: "users",
+          documentId: "user-1",
+          tenantId: "tenant-1",
+          operation: "index",
+          syncErrorName: "Error",
+          syncErrorMessage: "Indexing failed",
+        },
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to publish search sync failed event",
+        publishError,
+      );
+    });
+
+    it("should fall back to console error when logger lookup fails after publisher error", async () => {
+      mockUserAutoSyncMetadata();
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const originalError = new Error("Indexing failed");
+      const publishError = new Error("Failed event publisher unavailable");
+      (searchEngine.indexDocument as Mock).mockRejectedValue(originalError);
+      eventBusMock.publishNow.mockRejectedValue(publishError);
+
+      const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
+
+      await expect(searchAutoSync.handle(event)).resolves.toBeUndefined();
+
+      expect(consoleError).toHaveBeenCalledWith(
+        "Failed to publish search sync failed event",
+        {
+          searchSyncFailedEvent: {
+            eventName: SearchSyncFailedEvent.eventName,
+            indexName: "users",
+            documentId: "user-1",
+            tenantId: "tenant-1",
+            operation: "index",
+            syncErrorName: "Error",
+            syncErrorMessage: "Indexing failed",
+          },
+        },
+        publishError,
+      );
     });
   });
 

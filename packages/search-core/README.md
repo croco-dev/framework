@@ -64,3 +64,13 @@ void chosung;
 - 검색 엔진은 tenantId 기반 격리를 기본으로 가정합니다.
 - `autoSync`를 사용하면 이벤트 기반으로 인덱스 갱신을 자동화할 수 있습니다.
 - `./ko` 서브패스로 한국어 전용 초성, 자모 변환 도구를 별도 import 할 수 있습니다.
+
+### SearchAutoSync 실패 이벤트 계약
+
+`SearchAutoSync`는 검색 인덱싱 또는 삭제 실패를 `SearchSyncFailedEvent`로 발행합니다. 이 실패 이벤트 발행은
+best-effort 계약입니다. `failedEventPublisher.publishNow()`가 reject되어도 `handle()`은 publisher 오류를 호출자에게
+전파하지 않고 완료됩니다.
+
+대신 운영 신호는 `LOGGER_TOKEN` 로거의 `error()` 호출로 남깁니다. 로그 컨텍스트의 `searchSyncFailedEvent`에는
+`eventName`, `indexName`, `documentId`, `tenantId`, `operation`, `syncErrorName`, `syncErrorMessage`가 포함됩니다.
+초기 부트스트랩처럼 로거를 조회할 수 없는 경우에만 같은 컨텍스트와 publisher 오류를 `console.error`로 남깁니다.

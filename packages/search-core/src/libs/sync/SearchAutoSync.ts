@@ -4,6 +4,18 @@ import { Container, type ILogger, LOGGER_TOKEN, MetadataStorage } from "@croco/f
 import { SEARCHABLE_METADATA, type SearchableMetadata } from "../decorators/Searchable";
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from "../events";
 
+const SEARCH_SYNC_FAILED_EVENT_PUBLISH_ERROR_MESSAGE = "Failed to publish search sync failed event";
+
+type SearchSyncFailedEventLogContext = {
+  eventName: string;
+  indexName: string;
+  documentId: string;
+  tenantId: string;
+  operation: SearchSyncFailedEvent["operation"];
+  syncErrorName: string;
+  syncErrorMessage: string;
+};
+
 class LRUCache<T> {
   private cache = new Map<string, T>();
 
@@ -92,15 +104,42 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
       await this.failedEventPublisher.publishNow(event);
     } catch (error) {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
-      try {
-        const logger = Container.get(LOGGER_TOKEN) as ILogger;
-        logger.error("Failed to publish search sync failed event", normalizedError);
-      } catch {
-        // Logger DI is unavailable; fallback to console.error so the error is not lost.
-        // eslint-disable-next-line no-console
-        console.error("Failed to publish search sync failed event", normalizedError);
-      }
+      this.reportFailedEventPublishError(event, normalizedError);
     }
+  }
+
+  private reportFailedEventPublishError(event: SearchSyncFailedEvent, error: Error): void {
+    const logContext = this.createFailedEventLogContext(event);
+    try {
+      const logger = Container.get(LOGGER_TOKEN) as ILogger;
+      logger
+        .child({
+          searchSyncFailedEvent: logContext,
+        })
+        .error(SEARCH_SYNC_FAILED_EVENT_PUBLISH_ERROR_MESSAGE, error);
+    } catch {
+      // Logger DI is unavailable; fallback to console.error so the error is not lost.
+      // eslint-disable-next-line no-console
+      console.error(
+        SEARCH_SYNC_FAILED_EVENT_PUBLISH_ERROR_MESSAGE,
+        { searchSyncFailedEvent: logContext },
+        error,
+      );
+    }
+  }
+
+  private createFailedEventLogContext(
+    event: SearchSyncFailedEvent,
+  ): SearchSyncFailedEventLogContext {
+    return {
+      eventName: SearchSyncFailedEvent.eventName,
+      indexName: event.indexName,
+      documentId: event.documentId,
+      tenantId: event.tenantId,
+      operation: event.operation,
+      syncErrorName: event.error.name,
+      syncErrorMessage: event.error.message,
+    };
   }
 
   private getSearchableMetadata(indexName: string): SearchableMetadata | undefined {
