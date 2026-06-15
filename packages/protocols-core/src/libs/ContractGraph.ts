@@ -35,8 +35,11 @@ export type ContractGraphController = {
 };
 
 export type ContractMetadataReference = {
+  readonly type: "rest.guard";
+  readonly id: string;
   readonly kind: "constructor" | "instance";
   readonly name: string;
+  readonly declaredAt: "controller" | "route";
 };
 
 export type ContractAccessMetadata = {
@@ -98,7 +101,7 @@ export function buildContractGraph(controllers: readonly Constructor[]): Contrac
     graphControllers.push({
       name: controller.name,
       path: controllerMeta.path,
-      guards: getMetadataReferences(Reflect.getMetadata(REST_GUARDS_KEY, controller)),
+      guards: getMetadataReferences(Reflect.getMetadata(REST_GUARDS_KEY, controller), "controller"),
       roles: getMetadataStrings(Reflect.getMetadata(REST_ROLES_KEY, controller)),
       routeIds: routes.map((route) => route.routeId),
     });
@@ -170,9 +173,13 @@ function toContractGraphRoute(
     controllerPath,
     access: {
       guards: [
-        ...getMetadataReferences(Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor)),
+        ...getMetadataReferences(
+          Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor),
+          "controller",
+        ),
         ...getMetadataReferences(
           Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor, route.methodName),
+          "route",
         ),
       ],
       roles: [
@@ -414,30 +421,50 @@ function getDiagnosticTarget(code: string): ContractDiagnosticTarget {
   return "route";
 }
 
-function getMetadataReferences(value: unknown): ContractMetadataReference[] {
+function getMetadataReferences(
+  value: unknown,
+  declaredAt: ContractMetadataReference["declaredAt"],
+): ContractMetadataReference[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
   return value
-    .map(getMetadataReference)
+    .map((item) => getMetadataReference(item, declaredAt))
     .filter((reference): reference is ContractMetadataReference => reference !== null);
 }
 
-function getMetadataReference(value: unknown): ContractMetadataReference | null {
+function getMetadataReference(
+  value: unknown,
+  declaredAt: ContractMetadataReference["declaredAt"],
+): ContractMetadataReference | null {
   if (typeof value === "function" && value.name.length > 0) {
-    return { kind: "constructor", name: value.name };
+    return createGuardReference("constructor", value.name, declaredAt);
   }
 
   if (value && typeof value === "object" && "constructor" in value) {
     const constructor = value.constructor;
 
     if (typeof constructor === "function" && constructor.name.length > 0) {
-      return { kind: "instance", name: constructor.name };
+      return createGuardReference("instance", constructor.name, declaredAt);
     }
   }
 
   return null;
+}
+
+function createGuardReference(
+  kind: ContractMetadataReference["kind"],
+  name: string,
+  declaredAt: ContractMetadataReference["declaredAt"],
+): ContractMetadataReference {
+  return {
+    type: "rest.guard",
+    id: `rest.guard:${kind}:${name}`,
+    kind,
+    name,
+    declaredAt,
+  };
 }
 
 function getMetadataStrings(value: unknown): string[] {
