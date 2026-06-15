@@ -69,6 +69,30 @@ function assertDockerFiltersMatchPackages(projectDir: string): void {
   }
 }
 
+function readSstHandlerPath(projectDir: string): string {
+  const sstConfig = readFileSync(join(projectDir, "sst.config.ts"), "utf8");
+  const match = sstConfig.match(/handler:\s*["']([^"']+)["']/);
+  const handlerPath = match?.[1];
+
+  if (typeof handlerPath !== "string") {
+    throw new Error("Generated sst.config.ts is missing an SST function handler path");
+  }
+
+  return handlerPath;
+}
+
+function assertLambdaHandlerTarget(projectDir: string, expectedHandlerPath: string): void {
+  const handlerPath = readSstHandlerPath(projectDir);
+  const handlerModulePath = handlerPath.replace(/\.[^.]+$/, ".ts");
+  const handlerFilePath = join(projectDir, handlerModulePath);
+
+  expect(handlerPath).toBe(expectedHandlerPath);
+  expect(existsSync(handlerFilePath)).toBe(true);
+  expect(readFileSync(handlerFilePath, "utf8")).toMatch(
+    /\bexport\s+(const|async function|function)\s+handler\b/,
+  );
+}
+
 function readPackageJson(filePath: string): PackageJson {
   return JSON.parse(readFileSync(filePath, "utf8")) as PackageJson;
 }
@@ -283,8 +307,30 @@ describe("E2E: generate()", () => {
 
     // Lambda SST
     expect(existsSync(join(testDir, "sst.config.ts"))).toBe(true);
+    assertLambdaHandlerTarget(testDir, "apps/graphql-api/src/handler.handler");
     // MongoDB provider
     expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb"))).toBe(true);
+  });
+
+  it("generates ddd-api with trpc + lambda handler target", { timeout: 120_000 }, async () => {
+    const options: GeneratorOptions = {
+      projectName: "my-trpc-api",
+      scope: "@test",
+      preset: "ddd-api",
+      webApps: [],
+      api: "trpc",
+      apiHosting: "standalone",
+      backendDeploy: "lambda",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    await generate(testDir, options);
+
+    expect(existsSync(join(testDir, "sst.config.ts"))).toBe(true);
+    assertLambdaHandlerTarget(testDir, "apps/api/src/handler.handler");
   });
 
   it(
