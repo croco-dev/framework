@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { basename, extname, join, relative } from "node:path";
 import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
@@ -11,6 +11,19 @@ const DEPENDENCY_FIELDS = [
   "peerDependencies",
   "optionalDependencies",
 ] as const;
+const SOURCE_FILE_EXTENSIONS = new Set([
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+]);
+const IMPORT_SPECIFIER_PATTERN =
+  /\b(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']/g;
+const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 
 type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
 type PackageJson = {
@@ -98,14 +111,6 @@ function readPackageJson(filePath: string): PackageJson {
   return JSON.parse(readFileSync(filePath, "utf8")) as PackageJson;
 }
 
-function collectBarePackageImports(filePath: string): string[] {
-  const imports = preProcessFile(readFileSync(filePath, "utf8"), true, true)
-    .importedFiles.map(({ fileName }) => toPackageName(fileName))
-    .filter((packageName): packageName is string => packageName !== undefined);
-
-  return [...new Set(imports)];
-}
-
 function toPackageName(specifier: string): string | undefined {
   if (
     specifier.length === 0 ||
@@ -121,6 +126,21 @@ function toPackageName(specifier: string): string | undefined {
   return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
 }
 
+function collectBarePackageImports(filePath: string): string[] {
+  const imports = preProcessFile(readFileSync(filePath, "utf8"), true, true)
+    .importedFiles.map(({ fileName }) => toPackageName(fileName))
+    .filter((packageName): packageName is string => packageName !== undefined);
+
+  return [...new Set(imports)];
+}
+
+function collectImportSpecifiers(content: string): string[] {
+  return [
+    ...content.matchAll(IMPORT_SPECIFIER_PATTERN),
+    ...content.matchAll(DYNAMIC_IMPORT_SPECIFIER_PATTERN),
+  ].map((match) => match[1]);
+}
+
 function assertViteConfigImportsDeclared(packageDir: string): void {
   const packageJson = readPackageJson(join(packageDir, "package.json"));
   const declaredDependencies = new Set(
@@ -133,6 +153,27 @@ function assertViteConfigImportsDeclared(packageDir: string): void {
 
   expect(importedPackages).not.toEqual([]);
   expect(missingPackages).toEqual([]);
+}
+
+function assertSourceBareImportsDeclared(packageDir: string): void {
+  const packageJson = readPackageJson(join(packageDir, "package.json"));
+  const declaredDependencies = new Set(
+    DEPENDENCY_FIELDS.flatMap((field) => Object.keys(packageJson[field] ?? {})),
+  );
+  const missingDependencies = collectFiles(join(packageDir, "src"))
+    .filter((filePath) => SOURCE_FILE_EXTENSIONS.has(extname(filePath)))
+    .flatMap((filePath) =>
+      collectImportSpecifiers(readFileSync(filePath, "utf8"))
+        .map(toPackageName)
+        .filter((packageName): packageName is string => packageName !== undefined)
+        .filter((packageName) => !declaredDependencies.has(packageName))
+        .map((packageName) => ({
+          filePath: relative(packageDir, filePath),
+          packageName,
+        })),
+    );
+
+  expect(missingDependencies).toEqual([]);
 }
 
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
@@ -237,9 +278,16 @@ describe("E2E: generate()", () => {
         join(testDir, "apps", "graphql-api", "Dockerfile"),
         "utf8",
       );
+      const graphqlPackageJson = readPackageJson(
+        join(testDir, "apps", "graphql-api", "package.json"),
+      );
       const webDockerfileContent = readFileSync(join(testDir, "web", "Dockerfile"), "utf8");
       const composeContent = readFileSync(join(testDir, "docker-compose.yml"), "utf8");
 
+      expect(graphqlPackageJson.dependencies?.["@apollo/server"]).toBe("^4.12.2");
+      expect(graphqlPackageJson.dependencies?.["@as-integrations/aws-lambda"]).toBeUndefined();
+      expect(graphqlPackageJson.dependencies?.["apollo-server"]).toBeUndefined();
+      assertSourceBareImportsDeclared(join(testDir, "apps", "graphql-api"));
       expect(apiDockerfileContent).toContain("turbo prune @test/graphql-api --docker");
       expect(apiDockerfileContent).toContain("pnpm turbo build --filter=@test/graphql-api");
       expect(apiDockerfileContent).toContain('CMD ["node", "apps/graphql-api/dist/index.js"]');
@@ -368,14 +416,20 @@ describe("E2E: generate()", () => {
     const packageJson = readPackageJson(join(testDir, "apps", "graphql-api", "package.json"));
 
     expect(handlerContent).toContain('from "@croco/telemetry-sdk-node";');
+    expect(handlerContent).toContain('from "@apollo/server";');
+    expect(handlerContent).toContain('from "@as-integrations/aws-lambda";');
     expect(handlerContent).toContain('import { createSchema } from "./schema.js";');
     expect(handlerContent).toContain("const telemetryReady = telemetry.init(");
     expect(handlerContent).toContain("await telemetryReady;");
     expect(handlerContent).toContain("const lambdaHandler = await lambdaHandlerPromise;");
     expect(handlerContent).toContain("await telemetry.forceFlush();");
     expect(schemaContent).toContain("export async function createSchema()");
+    expect(packageJson.dependencies?.["@apollo/server"]).toBe("^4.12.2");
+    expect(packageJson.dependencies?.["@as-integrations/aws-lambda"]).toBe("^3.1.0");
+    expect(packageJson.dependencies?.["apollo-server"]).toBeUndefined();
     expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");
     expect(packageJson.dependencies?.["@test/provider-database"]).toBe("workspace:*");
+    assertSourceBareImportsDeclared(join(testDir, "apps", "graphql-api"));
     assertNoExternalCrocoWorkspaceRanges(testDir);
 
     // Lambda SST
@@ -383,6 +437,10 @@ describe("E2E: generate()", () => {
     assertLambdaHandlerTarget(testDir, "apps/graphql-api/src/handler.handler");
     // MongoDB provider
     expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb"))).toBe(true);
+    expect(existsSync(join(testDir, "libs", "shared", "utils-env", "tsconfig.json"))).toBe(true);
+    expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb", "tsconfig.json"))).toBe(
+      true,
+    );
   });
 
   it("generates ddd-api with trpc + lambda handler target", { timeout: 120_000 }, async () => {
