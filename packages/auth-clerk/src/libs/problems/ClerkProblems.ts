@@ -48,6 +48,14 @@ export class DuplicateTenantMappingProblem extends Problem {
   }
 }
 
+export class ClerkPublicUserDataMissingProblem extends Problem {
+  readonly code = "auth-clerk/public-user-data-missing";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(undefined, undefined, "Clerk organization membership response is missing publicUserData");
+  }
+}
+
 export class ClerkExternalServiceProblem extends Problem {
   constructor(detail: string, options?: ProblemOptions) {
     super(
