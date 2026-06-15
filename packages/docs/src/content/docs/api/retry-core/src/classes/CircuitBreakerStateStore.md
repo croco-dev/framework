@@ -13,6 +13,7 @@ Circuit Breaker 상태 저장소 추상 클래스.
 ## Extended by
 
 - [`InMemoryCircuitBreakerStateStore`](/api/retry-core/src/classes/inmemorycircuitbreakerstatestore/)
+- [`RedisCircuitBreakerStore`](/api/retry-core/src/classes/rediscircuitbreakerstore/)
 
 ## Constructors
 

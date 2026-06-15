@@ -14,8 +14,14 @@ type UpstashRedisLike = {
   scan: (cursor: number, opts?: { match?: string; count?: number }) => Promise<[string, string[]]>;
 };
 
+/**
+ * Redis 저장소 접근 실패 시 서킷 브레이커가 취할 동작입니다.
+ */
 export type OnStoreError = "throw" | "open" | "fallback-inmemory";
 
+/**
+ * Redis 기반 분산 서킷 브레이커 상태 저장소 옵션입니다.
+ */
 export type RedisCircuitBreakerStoreOptions = {
   redis: UpstashRedisLike;
   ttlSeconds?: number;

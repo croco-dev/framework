@@ -35,6 +35,12 @@ export {
   InMemoryCircuitBreakerStateStore,
 } from "./libs/CircuitBreakerState";
 
+export type {
+  OnStoreError,
+  RedisCircuitBreakerStoreOptions,
+} from "./libs/stores/RedisCircuitBreakerStore";
+export { RedisCircuitBreakerStore } from "./libs/stores/RedisCircuitBreakerStore";
+
 /**
  * 재시도 차단, 소진, 복구 충돌 시 발생하는 Problem 타입들입니다.
  */
