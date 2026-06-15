@@ -47,7 +47,7 @@
  * @param options - Configuration options for the batch loader
  * @param options.name - Unique name for caching the loader instance in request context
  * @param options.batchFn - Function that loads data for multiple keys at once
- * @param options.maxBatchSize - Maximum items per batch (default: 100)
+ * @param options.maxBatchSize - Maximum items per batch (default: Infinity)
  * @param options.cache - Whether to cache results (default: true)
  * @param options.scope - Static scope for cache isolation (e.g., tenantId)
  * @param options.resolveScope - Dynamic scope function for transaction-aware caching
@@ -130,7 +130,7 @@ export { BatchResultLengthMismatchProblem } from "./libs/problems/BatchLoaderPro
  *
  * @property name - Unique identifier for caching the loader in request context
  * @property batchFn - Function that batches multiple keys into a single load operation
- * @property maxBatchSize - Optional maximum number of items per batch (default: 100)
+ * @property maxBatchSize - Optional maximum number of items per batch (default: Infinity)
  * @property cache - Optional flag to enable/disable result caching (default: true)
  * @property scope - Optional static scope for cache isolation (e.g., tenant ID)
  * @property resolveScope - Optional function for dynamic scope resolution (e.g., transaction ID)
