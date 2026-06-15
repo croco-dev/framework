@@ -1,6 +1,7 @@
 import type { DatabaseClient } from "./db-types";
 import { MigrationScanner } from "./MigrationScanner";
 import { MigrationStore } from "./MigrationStore";
+import { MigrationTransactionRequiredProblem } from "./problems/MigrationTransactionRequiredProblem";
 import { MissingDownFunctionProblem } from "./problems/MissingDownFunctionProblem";
 import { MissingUpFunctionProblem } from "./problems/MissingUpFunctionProblem";
 import type { MigrationFile, MigrationStatus } from "./types";
@@ -53,11 +54,10 @@ export class MigrationRunner {
         throw new MissingUpFunctionProblem(file.id, file.name);
       }
 
-      await this.runInTransaction(async (tx) => {
-        await file.up(tx);
-        await this.store.recordMigration(tx, file.id, file.name);
-      });
-      runIds.push(`${file.id}_${file.name}`);
+      const executed = await this.runUpMigration(file);
+      if (executed) {
+        runIds.push(`${file.id}_${file.name}`);
+      }
     }
 
     return runIds;
@@ -95,22 +95,45 @@ export class MigrationRunner {
         throw new MissingDownFunctionProblem(file.id, file.name);
       }
 
-      await this.runInTransaction(async (tx) => {
-        await file.down(tx);
-        await this.store.removeMigration(tx, file.id);
-      });
-      revertedIds.push(`${file.id}_${file.name}`);
+      const reverted = await this.runDownMigration(file);
+      if (reverted) {
+        revertedIds.push(`${file.id}_${file.name}`);
+      }
     }
 
     return revertedIds;
   }
 
-  private async runInTransaction(fn: (tx: DatabaseClient) => Promise<void>): Promise<void> {
+  private async runUpMigration(file: MigrationFile): Promise<boolean> {
     if (!this.db.transaction) {
-      await fn(this.db);
-      return;
+      throw new MigrationTransactionRequiredProblem("up");
     }
 
-    await this.db.transaction(fn);
+    return this.db.transaction(async (tx) => {
+      const reserved = await this.store.reserveMigration(tx, file.id, file.name);
+      if (!reserved) {
+        return false;
+      }
+
+      await file.up(tx);
+      await this.store.completeMigration(tx, file.id);
+      return true;
+    });
+  }
+
+  private async runDownMigration(file: MigrationFile): Promise<boolean> {
+    if (!this.db.transaction) {
+      throw new MigrationTransactionRequiredProblem("down");
+    }
+
+    return this.db.transaction(async (tx) => {
+      const claimed = await this.store.claimMigrationForRollback(tx, file.id);
+      if (!claimed) {
+        return false;
+      }
+
+      await file.down(tx);
+      return true;
+    });
   }
 }

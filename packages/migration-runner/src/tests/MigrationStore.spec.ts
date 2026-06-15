@@ -59,4 +59,70 @@ describe("MigrationStore", () => {
       UnsupportedMigrationQueryResultProblem,
     );
   });
+
+  it("should reserve unclaimed migrations", async () => {
+    const db = {
+      execute: vi.fn().mockResolvedValue({ rows: [{ id: "20260615000001" }] }),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore("_migrations");
+
+    await expect(store.reserveMigration(db, "20260615000001", "create_users")).resolves.toBe(true);
+  });
+
+  it("should skip migrations already claimed by another transaction", async () => {
+    const db = {
+      execute: vi.fn().mockResolvedValue({ rows: [] }),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore("_migrations");
+
+    await expect(store.reserveMigration(db, "20260615000001", "create_users")).resolves.toBe(false);
+  });
+
+  it("should claim executed migrations for rollback", async () => {
+    const db = {
+      execute: vi.fn().mockResolvedValue([{ id: "20260615000001" }]),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore("_migrations");
+
+    await expect(store.claimMigrationForRollback(db, "20260615000001")).resolves.toBe(true);
+  });
+
+  it("should not hide duplicate checkpoints when recording migrations directly", async () => {
+    const db = {
+      execute: vi.fn().mockResolvedValue(undefined),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore("_migrations");
+
+    await store.recordMigration(db, "20260615000001", "create_users");
+
+    expect(sqlText(vi.mocked(db.execute).mock.calls[0]?.[0])).not.toContain("ON CONFLICT");
+  });
 });
+
+function sqlText(query: unknown): string {
+  const chunks = getQueryChunks(query);
+
+  return chunks
+    .map((chunk) => {
+      if (typeof chunk === "object" && chunk !== null && "value" in chunk) {
+        const value = (chunk as { readonly value?: unknown }).value;
+        return Array.isArray(value) ? value.join("") : String(value);
+      }
+
+      return "";
+    })
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getQueryChunks(query: unknown): readonly unknown[] {
+  if (typeof query === "object" && query !== null && "queryChunks" in query) {
+    const chunks = (query as { readonly queryChunks?: unknown }).queryChunks;
+    if (Array.isArray(chunks)) {
+      return chunks;
+    }
+  }
+
+  return [];
+}
