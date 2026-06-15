@@ -10,6 +10,12 @@ pnpm add @croco/meta-vite
 
 Requires Vite 6+ and React 19+.
 
+Redis-backed ISR is an optional integration:
+
+```bash
+pnpm add ioredis
+```
+
 ## Features
 
 - **SSR**: Server-side rendering with React 19, head metadata injection, XSS-safe HTML shell
@@ -133,7 +139,7 @@ const response = await handler(new Request("https://example.com/api/hello"));
 
 - **React-only**: v1 supports React 19+ only. No Vue/Svelte support.
 - **Vite 6+**: Requires Vite 6 Environment API. Older Vite versions not supported.
-- **ISR non-durable**: InMemoryCacheStore is local/dev/single-process. Production durable ISR (KV, Redis, S3) requires a custom adapter.
+- **ISR non-durable by default**: InMemoryCacheStore is local/dev/single-process. Production Redis ISR uses the optional `ioredis` peer and the `@croco/meta-vite/isr/adapters` entrypoint.
 - **Cloudflare streaming**: Cloudflare Workers support streaming Response bodies, but InMemory ISR is not durable across Worker isolates.
 - **RSC dev mode**: RSC routes require full reload during development. HMR-based RSC updates are deferred.
 
@@ -169,14 +175,20 @@ Common errors and their diagnostics:
 
 ### ISR
 
-| Export                      | Type     | Description                                                                                                                               |
-| --------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `createIsrMiddleware`       | function | CacheStore-backed ISR middleware wrapping a fetch-style render function.                                                                  |
-| `createIsrHandler`          | function | Legacy ISR handler with string-based API and `IsrCacheAdapter`.                                                                           |
-| `IsrCacheAdapter`           | type     | Cache adapter contract with `getOrSet` and `invalidate`.                                                                                  |
-| `IsrCacheStore`             | type     | `CacheStore<string, Response>` subset for ISR middleware.                                                                                 |
-| `AbstractCacheStoreAdapter` | class    | Abstract base class implementing `IsrCacheStore.getOrSet`. Subclasses implement `_get`, `_set`, `_delete`.                                |
-| `RedisCacheStoreAdapter`    | class    | Redis-backed ISR cache adapter extending `AbstractCacheStoreAdapter`. Uses ioredis, supports TTL and pattern-based `invalidatePattern()`. |
+Redis adapter exports are published from `@croco/meta-vite/isr/adapters`:
+
+```typescript
+import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
+```
+
+| Export                      | Type     | Description                                                                                                                          |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `createIsrMiddleware`       | function | CacheStore-backed ISR middleware wrapping a fetch-style render function.                                                             |
+| `createIsrHandler`          | function | Legacy ISR handler with string-based API and `IsrCacheAdapter`.                                                                      |
+| `IsrCacheAdapter`           | type     | Cache adapter contract with `getOrSet` and `invalidate`.                                                                             |
+| `IsrCacheStore`             | type     | `CacheStore<string, Response>` subset for ISR middleware.                                                                            |
+| `AbstractCacheStoreAdapter` | class    | Subpath export. Abstract base class implementing `IsrCacheStore.getOrSet`. Subclasses implement `_get`, `_set`, `_delete`.           |
+| `RedisCacheStoreAdapter`    | class    | Subpath export. Redis-backed ISR cache adapter extending `AbstractCacheStoreAdapter`. Requires `ioredis`, supports TTL and patterns. |
 
 ### API Routes
 
