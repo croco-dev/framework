@@ -10,6 +10,8 @@ export default defineConfig({
     alias: {
       "@croco/framework-context": resolve(__dirname, "../framework-context/src/index.ts"),
       "@croco/invitation-core": resolve(__dirname, "../invitation-core/src/index.ts"),
+      "@croco/notifications-core": resolve(__dirname, "../notifications-core/src/index.ts"),
+      "@croco/problems-core": resolve(__dirname, "../problems-core/src/index.ts"),
       "@croco/tx-core": resolve(__dirname, "../tx-core/src/index.ts"),
       "@croco/tx-drizzle": resolve(__dirname, "../tx-drizzle/src/index.ts"),
     },

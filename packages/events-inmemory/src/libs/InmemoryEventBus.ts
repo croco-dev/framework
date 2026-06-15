@@ -58,6 +58,8 @@ export type InMemoryEventBusOptions = {
   backpressureTimeoutMs?: number;
 };
 
+const DEFAULT_BACKPRESSURE_TIMEOUT_MS = 5000;
+
 type RunningHandler = {
   eventName: string;
   handlerName: string;
@@ -74,7 +76,7 @@ export class InMemoryEventBus<
   private readonly tracer = getTracer();
   private readonly maxConcurrency: number;
   private readonly backpressureStrategy: BackpressureStrategy;
-  private readonly backpressureTimeoutMs?: number;
+  private readonly backpressureTimeoutMs: number;
   private runningHandlers = new Map<string, RunningHandler>();
   private handlerCounter = 0;
   private readonly slotWaiters = new Set<() => void>();
@@ -86,9 +88,15 @@ export class InMemoryEventBus<
         `maxConcurrency must be a positive finite number, got ${maxConcurrency}`,
       );
     }
+    const backpressureTimeoutMs = options.backpressureTimeoutMs ?? DEFAULT_BACKPRESSURE_TIMEOUT_MS;
+    if (!Number.isFinite(backpressureTimeoutMs) || backpressureTimeoutMs <= 0) {
+      throw new InvalidEventBusConfigurationError(
+        `backpressureTimeoutMs must be a positive finite number, got ${backpressureTimeoutMs}`,
+      );
+    }
     this.maxConcurrency = maxConcurrency;
     this.backpressureStrategy = options.backpressureStrategy ?? "block";
-    this.backpressureTimeoutMs = options.backpressureTimeoutMs;
+    this.backpressureTimeoutMs = backpressureTimeoutMs;
   }
 
   async publish(event: TEvent): Promise<void> {
@@ -204,12 +212,10 @@ export class InMemoryEventBus<
 
       this.slotWaiters.add(onSlotAvailable);
 
-      if (timeoutMs !== undefined) {
-        timeoutId = setTimeout(() => {
-          cleanup();
-          reject(BackpressureTimeoutProblem.timeout(timeoutMs));
-        }, timeoutMs);
-      }
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(BackpressureTimeoutProblem.timeout(timeoutMs));
+      }, timeoutMs);
 
       signal?.addEventListener("abort", onAbort, { once: true });
       onSlotAvailable();
