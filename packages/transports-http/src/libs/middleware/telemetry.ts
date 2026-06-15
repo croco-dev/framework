@@ -1,5 +1,6 @@
 import { context, propagation, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
-import type { MiddlewareFunction } from "../types";
+import { Container, LOGGER_TOKEN, type ILogger } from "@croco/framework-context";
+import type { CrocoHttpContext, MiddlewareFunction } from "../types";
 
 export interface TraceParent {
   traceId: string;
@@ -46,6 +47,25 @@ export function parseTraceParent(header: string | null): TraceParent | null {
 }
 
 type HeaderCarrier = Headers | Record<string, string>;
+
+const TELEMETRY_DEGRADED_REASON = "telemetry_setup_failed";
+const TELEMETRY_DEGRADED_MESSAGE =
+  "[TelemetryMiddleware] Telemetry setup failed; continuing in degraded mode";
+
+type TelemetrySetupErrorInfo = {
+  name: string;
+  message: string;
+};
+
+type TelemetryDegradationMetadata = {
+  route: string;
+  method: string;
+  path: string;
+  traceId: string;
+  errorCategory: typeof TELEMETRY_DEGRADED_REASON;
+  errorName: string;
+  errorMessage: string;
+};
 
 const headerGetter = {
   keys(carrier: HeaderCarrier): string[] {
@@ -129,10 +149,77 @@ export const telemetryMiddleware =
 
       ctx.set("traceId", fallbackTraceId);
       ctx.set("telemetryDegraded", true);
+      recordTelemetryDegradation(ctx, route, fallbackTraceId, error);
 
       await next();
     }
   };
+
+function recordTelemetryDegradation(
+  ctx: CrocoHttpContext,
+  route: string,
+  traceId: string,
+  error: unknown,
+): void {
+  const errorInfo = normalizeSetupError(error);
+
+  ctx.set("telemetryDegradedReason", TELEMETRY_DEGRADED_REASON);
+  ctx.set("telemetryDegradedError", errorInfo);
+
+  warnTelemetryDegradation({
+    route,
+    method: ctx.req.method,
+    path: ctx.req.path,
+    traceId,
+    errorCategory: TELEMETRY_DEGRADED_REASON,
+    errorName: errorInfo.name,
+    errorMessage: errorInfo.message,
+  });
+}
+
+function normalizeSetupError(error: unknown): TelemetrySetupErrorInfo {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+    };
+  }
+
+  return {
+    name: "NonErrorThrown",
+    message: String(error),
+  };
+}
+
+function warnTelemetryDegradation(metadata: TelemetryDegradationMetadata): void {
+  const logger = resolveLogger();
+
+  if (logger) {
+    try {
+      logger.warn(TELEMETRY_DEGRADED_MESSAGE, metadata);
+      return;
+    } catch (loggerError) {
+      console.warn(
+        "[TelemetryMiddleware] Failed to write telemetry degradation warning",
+        loggerError,
+      );
+    }
+  }
+
+  console.warn(TELEMETRY_DEGRADED_MESSAGE, metadata);
+}
+
+function resolveLogger(): ILogger | undefined {
+  try {
+    if (!Container.has(LOGGER_TOKEN)) {
+      return undefined;
+    }
+
+    return Container.get(LOGGER_TOKEN);
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * 현재 활성 OpenTelemetry Span을 반환합니다.
