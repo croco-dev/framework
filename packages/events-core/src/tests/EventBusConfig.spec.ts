@@ -146,17 +146,27 @@ describe("EventBusConfig", () => {
       config.setEventBus(secondBus as EventBus);
 
       expect(firstBus.subscriptions).toHaveLength(0);
+      expect(secondBus.subscriptions).toHaveLength(0);
+
+      await config.start({ handlers: [] });
+
       expect(secondBus.subscriptions).toHaveLength(1);
     });
 
-    it("should reconnect started subscriptions when event bus is updated", async () => {
+    it("should resolve subscriptions again after event bus is updated and restarted", async () => {
       const config = EventBusConfig.getInstance();
       const firstBus = new MockEventBus();
       const secondBus = new MockEventBus();
-      const customHandler = new TestHandler();
-      const customResolver = {
+      const firstHandler = new TestHandler();
+      const secondHandler = new TestHandler();
+      const firstResolver = {
         resolve(): EventHandler<TestEvent> {
-          return customHandler;
+          return firstHandler;
+        },
+      };
+      const secondResolver = {
+        resolve(): EventHandler<TestEvent> {
+          return secondHandler;
         },
       };
 
@@ -165,16 +175,20 @@ describe("EventBusConfig", () => {
         eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
-      await config.start({ handlers: [], resolver: customResolver as HandlerResolver });
+      await config.start({ handlers: [], resolver: firstResolver as HandlerResolver });
 
       config.setEventBus(secondBus as EventBus);
 
       expect(firstBus.subscriptions).toHaveLength(0);
+      expect(secondBus.subscriptions).toHaveLength(0);
+
+      await config.start({ handlers: [], resolver: secondResolver as HandlerResolver });
+
       expect(secondBus.subscriptions).toHaveLength(1);
       expect(secondBus.subscriptions[0]).toMatchObject({
         eventName: "TestEvent",
         handlerClass: TestHandler,
-        handler: customHandler,
+        handler: secondHandler,
       });
     });
 
@@ -301,6 +315,28 @@ describe("EventBusConfig", () => {
       config.clear();
 
       expect(mockBus.subscriptions).toEqual([]);
+    });
+
+    it("should allow restarting after clear without stale started subscriptions", async () => {
+      const config = EventBusConfig.getInstance();
+      const mockBus = new MockEventBus();
+      const subscription: EventSubscription = {
+        eventName: "ClearRestartEvent",
+        handlerClass: TestHandler as EventHandlerClass,
+      };
+
+      config.setEventBus(mockBus as EventBus);
+      config.subscribe(subscription);
+      await config.start({ handlers: [] });
+
+      config.clear();
+      config.subscribe(subscription);
+      await config.start({ handlers: [] });
+
+      const restartedSubscriptions = mockBus.subscriptions.filter(
+        (entry) => entry.eventName === "ClearRestartEvent",
+      );
+      expect(restartedSubscriptions).toHaveLength(1);
     });
   });
 
