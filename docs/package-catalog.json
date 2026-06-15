@@ -257,5 +257,299 @@
       "label": "⚠️ deprecated",
       "packages": []
     }
+  },
+  "extensionMatrix": {
+    "groups": ["Provider", "Integration", "Transport", "Presentation"],
+    "packages": {
+      "access-drizzle": {
+        "domain": "Access control",
+        "adapter": "Drizzle repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["permission checks", "policy storage"]
+      },
+      "analytics-posthog": {
+        "domain": "Analytics",
+        "adapter": "PostHog analytics provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["POSTHOG_API_KEY", "POSTHOG_HOST optional"],
+        "features": ["event capture", "user/group analytics"]
+      },
+      "audit-drizzle": {
+        "domain": "Audit",
+        "adapter": "Drizzle repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["audit event persistence", "tenant audit lookup"]
+      },
+      "auth-better-auth": {
+        "domain": "Auth",
+        "adapter": "Better Auth + Drizzle provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": [
+          "BETTER_AUTH_URL",
+          "BETTER_AUTH_SECRET",
+          "BETTER_AUTH_WEBHOOK_SECRET optional"
+        ],
+        "features": ["session auth", "webhooks", "Drizzle schema"]
+      },
+      "auth-clerk": {
+        "domain": "Auth",
+        "adapter": "Clerk Backend provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": [
+          "CLERK_SECRET_KEY",
+          "CLERK_PUBLISHABLE_KEY optional",
+          "CLERK_WEBHOOK_SECRET optional"
+        ],
+        "features": ["token auth", "session management", "organizations", "webhooks"]
+      },
+      "auth-drizzle": {
+        "domain": "Auth",
+        "adapter": "Drizzle store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["API key store", "role registry"]
+      },
+      "batch-qstash": {
+        "domain": "Batch",
+        "adapter": "QStash chunk executor",
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "requiredEnv": ["QSTASH_TOKEN", "public webhook URL"],
+        "features": ["chunk scheduling", "checkpoint resume", "idempotent publish"]
+      },
+      "billing-polar": {
+        "domain": "Billing",
+        "adapter": "Polar billing gateway",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": [
+          "POLAR_ACCESS_TOKEN",
+          "POLAR_WEBHOOK_SECRET",
+          "POLAR_ORGANIZATION_ID optional"
+        ],
+        "features": ["checkout", "webhooks", "subscription lifecycle", "customer portal"]
+      },
+      "customer-health-drizzle": {
+        "domain": "Customer health",
+        "adapter": "Drizzle repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["health score persistence", "customer health lookup"]
+      },
+      "entitlements-drizzle": {
+        "domain": "Entitlements",
+        "adapter": "Drizzle repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["entitlement persistence", "billing entitlement lookup"]
+      },
+      "execution-drizzle": {
+        "domain": "Execution",
+        "adapter": "Drizzle execution store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["execution state persistence", "retryable failure records"]
+      },
+      "features-posthog": {
+        "domain": "Feature flags",
+        "adapter": "PostHog feature provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["POSTHOG_API_KEY", "POSTHOG_HOST optional"],
+        "features": ["feature flag lookup", "PostHog client reuse"]
+      },
+      "frontend-cloudflare": {
+        "domain": "Frontend SSR",
+        "adapter": "Cloudflare SSR handler",
+        "runtimes": ["cloudflare-workers"],
+        "requiredEnv": ["API_WORKER binding optional", "ASSETS binding optional"],
+        "features": ["SSR fetch handler", "service binding routing", "asset fallback"]
+      },
+      "frontend-react": {
+        "domain": "Frontend React",
+        "adapter": "React integration helpers",
+        "runtimes": ["browser", "node"],
+        "requiredEnv": ["none"],
+        "features": ["React bindings", "meta-vite integration"]
+      },
+      "frontend-vite": {
+        "domain": "Frontend Vite",
+        "adapter": "Vite integration helpers",
+        "runtimes": ["node", "browser", "cloudflare-workers"],
+        "requiredEnv": ["none"],
+        "features": ["Vite config helpers", "Cloudflare Vite compatibility"]
+      },
+      "integrations-posthog": {
+        "domain": "PostHog",
+        "adapter": "Shared PostHog client",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["POSTHOG_API_KEY", "POSTHOG_HOST optional"],
+        "features": ["client lifecycle", "capture flush", "diagnostics"]
+      },
+      "invitation-drizzle": {
+        "domain": "Invitation",
+        "adapter": "Drizzle repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["invitation persistence", "transaction-aware repository"]
+      },
+      "membership-drizzle": {
+        "domain": "Membership",
+        "adapter": "Drizzle repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["membership persistence", "transaction-aware repository"]
+      },
+      "meta-vite": {
+        "domain": "Frontend routing",
+        "adapter": "Meta Vite runtime",
+        "runtimes": ["node", "lambda", "cloudflare-workers", "browser"],
+        "requiredEnv": ["optional Redis-compatible ISR adapter config"],
+        "features": ["route registry", "server actions", "SSR/RSC streaming", "ISR adapters"]
+      },
+      "metering-drizzle": {
+        "domain": "Metering",
+        "adapter": "Drizzle usage store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["usage persistence", "quota lookup", "migration scripts"]
+      },
+      "metering-upstash": {
+        "domain": "Metering",
+        "adapter": "Upstash Redis client adapter",
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
+        "features": ["Redis command adapter", "serverless usage storage"]
+      },
+      "metrics-billing": {
+        "domain": "Metrics",
+        "adapter": "Billing metrics bridge",
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "requiredEnv": ["none"],
+        "features": ["billing event metrics", "usage aggregation bridge"]
+      },
+      "notifications-resend": {
+        "domain": "Notifications",
+        "adapter": "Resend email provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["RESEND_API_KEY", "default from address"],
+        "features": ["email send", "template send", "retry", "idempotency key"]
+      },
+      "onboarding-drizzle": {
+        "domain": "Onboarding",
+        "adapter": "Drizzle repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["onboarding state persistence", "step completion storage"]
+      },
+      "presentation-preset": {
+        "domain": "Presentation preset",
+        "adapter": "Backend/frontend preset composition",
+        "runtimes": ["node", "lambda", "cloudflare-workers", "browser"],
+        "requiredEnv": ["none"],
+        "features": ["preset composition", "contract wiring", "generated app support"]
+      },
+      "ratelimit-upstash": {
+        "domain": "Rate limiting",
+        "adapter": "Upstash Redis rate-limit store",
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
+        "features": ["sliding window", "token bucket", "fixed window", "Lua atomicity"]
+      },
+      "search-drizzle": {
+        "domain": "Search",
+        "adapter": "Drizzle search index",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": ["search document persistence", "tenant-aware lookup"]
+      },
+      "search-meilisearch": {
+        "domain": "Search",
+        "adapter": "Meilisearch engine",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["MEILISEARCH_HOST", "MEILISEARCH_API_KEY"],
+        "features": ["indexing", "search", "tenant tokens"]
+      },
+      "storage-cloudflare": {
+        "domain": "Storage",
+        "adapter": "Cloudflare Images provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_HASH"],
+        "features": ["image upload", "transform URLs", "upload intents", "signed URLs"]
+      },
+      "storage-cloudinary": {
+        "domain": "Storage",
+        "adapter": "Cloudinary provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"],
+        "features": ["file upload", "transform URLs", "upload intents", "retry"]
+      },
+      "storage-r2": {
+        "domain": "Storage",
+        "adapter": "Cloudflare R2 S3-compatible provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"],
+        "features": ["put/get/delete", "signed URLs", "stream reads", "retry"]
+      },
+      "tasks-qstash": {
+        "domain": "Tasks",
+        "adapter": "QStash task runner",
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "requiredEnv": ["QSTASH_TOKEN", "destination webhook URL"],
+        "features": ["task publish", "delay override", "custom headers"]
+      },
+      "telemetry-api": {
+        "domain": "Telemetry",
+        "adapter": "OpenTelemetry application API",
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "requiredEnv": ["none"],
+        "features": ["Trace decorator", "withSpan", "recordError", "trace context lookup"]
+      },
+      "telemetry-sdk-node": {
+        "domain": "Telemetry",
+        "adapter": "OpenTelemetry Node SDK runtime",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": [
+          "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT",
+          "TELEMETRY_ENABLED optional"
+        ],
+        "features": ["SDK init", "Lambda preset", "OTLP export", "forceFlush"]
+      },
+      "transports-cloudflare-workers": {
+        "domain": "HTTP transport",
+        "adapter": "Cloudflare Workers adapter",
+        "runtimes": ["cloudflare-workers"],
+        "requiredEnv": ["Cloudflare Worker env object supplied by platform"],
+        "features": ["Worker fetch adapter", "request context bridge"]
+      },
+      "transports-graphql": {
+        "domain": "GraphQL transport",
+        "adapter": "GraphQL Yoga transport",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["none"],
+        "features": ["GraphQL server", "resolver execution", "Problem mapping"]
+      },
+      "transports-http": {
+        "domain": "HTTP transport",
+        "adapter": "Hono HTTP/Lambda transport",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": [
+          "CROCO_DIAGNOSTICS_TOKEN optional",
+          "CROCO_HTTP_SECURITY_VALIDATION optional"
+        ],
+        "features": [
+          "REST route execution",
+          "Lambda adapter",
+          "operational endpoints",
+          "diagnostics"
+        ]
+      },
+      "triggers-qstash": {
+        "domain": "Triggers",
+        "adapter": "QStash scheduler and webhook handler",
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "requiredEnv": ["QSTASH_TOKEN", "public webhook URL"],
+        "features": ["schedule publish", "webhook verification", "trigger dispatch"]
+      }
+    }
   }
 }
