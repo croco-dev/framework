@@ -111,6 +111,8 @@ const docsDirName = "docs";
 const catalogMetadataPath = join(docsDirName, "package-catalog.json");
 const docsBaselinePath = join(docsDirName, "package-docs-baseline.json");
 const docsReportPath = join(docsDirName, "package-docs-report.md");
+const publicDocsRootPath = join("packages", "docs", "src", "content", "docs", "en");
+const architectureGuidePath = join(publicDocsRootPath, "guides", "architecture.mdx");
 const extensionMatrixDocsPath = join(
   "packages",
   "docs",
@@ -154,6 +156,7 @@ function main(): void {
 function run(options: Options): string[] {
   const violations: string[] = [];
   const state = loadCatalogState(options.rootDir, violations);
+  validateArchitectureDocs(options.rootDir, state, violations);
   const baseline = loadDocsBaseline(options.rootDir, state.packages, violations);
   const coverage = getCoverageSet(state.packages);
   validateCoverageBaseline(coverage, baseline, violations);
@@ -716,6 +719,139 @@ function getCoverageSet(packages: readonly PackageRecord[]): CoverageSet {
     missingReadme: packages.filter((pkg) => !pkg.hasReadme),
     missingTests: packages.filter((pkg) => !pkg.hasTests),
   };
+}
+
+function validateArchitectureDocs(
+  rootDir: string,
+  state: CatalogState,
+  violations: string[],
+): void {
+  for (const docsPath of collectMarkdownFiles(rootDir, publicDocsRootPath)) {
+    const content = readRequiredFile(join(rootDir, docsPath));
+    validateNoStaleLayerCount(docsPath, content, violations);
+  }
+
+  const architectureGuideAbsolutePath = join(rootDir, architectureGuidePath);
+  if (!existsSync(architectureGuideAbsolutePath)) {
+    violations.push(`${architectureGuidePath} must exist and describe the current architecture`);
+    return;
+  }
+
+  const architectureGuide = readRequiredFile(architectureGuideAbsolutePath);
+  validateArchitecturePackageReferences(architectureGuide, state, violations);
+  validatePresentationLayerMention(architectureGuide, state, violations);
+}
+
+function collectMarkdownFiles(rootDir: string, docsPath: string): string[] {
+  const absolutePath = join(rootDir, docsPath);
+  if (!existsSync(absolutePath)) {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const entry of readdirSync(absolutePath, { withFileTypes: true })) {
+    const childPath = join(docsPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectMarkdownFiles(rootDir, childPath));
+      continue;
+    }
+
+    if (entry.isFile() && /\.(md|mdx)$/.test(entry.name)) {
+      files.push(childPath);
+    }
+  }
+
+  return files.sort();
+}
+
+function validateNoStaleLayerCount(docsPath: string, content: string, violations: string[]): void {
+  const staleLayerPatterns = [
+    /\b4-layer\b/i,
+    /\b4 layer\b/i,
+    /\bfour clear layers\b/i,
+    /\bfour layers\b/i,
+  ];
+
+  if (staleLayerPatterns.some((pattern) => pattern.test(content))) {
+    violations.push(`${docsPath}: must not describe the current architecture as four layers`);
+  }
+}
+
+function validateArchitecturePackageReferences(
+  architectureGuide: string,
+  state: CatalogState,
+  violations: string[],
+): void {
+  const actualPackages = new Set(state.packages.map((pkg) => pkg.shortName));
+  const packagePrefixes = new Set(state.packages.map((pkg) => `${pkg.shortName.split("-")[0]}-`));
+  const packageReferences = collectPackageReferences(architectureGuide, packagePrefixes);
+
+  for (const packageName of packageReferences) {
+    if (!actualPackages.has(packageName)) {
+      violations.push(
+        `${architectureGuidePath}: references package ${packageName} that is not in ${catalogMetadataPath}`,
+      );
+    }
+  }
+}
+
+function collectPackageReferences(
+  content: string,
+  packagePrefixes: ReadonlySet<string>,
+): readonly string[] {
+  const references = new Set<string>();
+  const codeSpanPackageReferencePattern = /`(?:@croco\/)?([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`/g;
+  const packageReferencePattern = /(?:@croco\/)?([a-z][a-z0-9]*(?:-[a-z0-9]+)+)/g;
+
+  for (const match of content.matchAll(codeSpanPackageReferencePattern)) {
+    references.add(match[1]);
+  }
+
+  for (const match of content.matchAll(packageReferencePattern)) {
+    const rawReference = match[0];
+    const packageName = match[1];
+    if (rawReference.startsWith("@croco/") || hasPackagePrefix(packageName, packagePrefixes)) {
+      references.add(packageName);
+    }
+  }
+
+  return [...references].sort();
+}
+
+function hasPackagePrefix(packageName: string, packagePrefixes: ReadonlySet<string>): boolean {
+  for (const prefix of packagePrefixes) {
+    if (packageName.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function validatePresentationLayerMention(
+  architectureGuide: string,
+  state: CatalogState,
+  violations: string[],
+): void {
+  const presentationGroup = state.groups.get("Presentation");
+  if (!presentationGroup || presentationGroup.packages.length === 0) {
+    return;
+  }
+
+  if (!/\bPresentation\b/.test(architectureGuide)) {
+    violations.push(`${architectureGuidePath}: must include the Presentation layer`);
+  }
+
+  const referencesPresentationPackage = presentationGroup.packages.some(
+    (packageName) =>
+      architectureGuide.includes(packageName) ||
+      architectureGuide.includes(`@croco/${packageName}`),
+  );
+  if (!referencesPresentationPackage) {
+    violations.push(
+      `${architectureGuidePath}: must reference at least one Presentation package from ${catalogMetadataPath}`,
+    );
+  }
 }
 
 function generateReadmeCatalog(state: CatalogState): string {

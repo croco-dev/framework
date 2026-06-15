@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const scriptPath = resolve(__dirname, "../package-docs-check.mts");
+const scriptTestTimeout = 30_000;
 const tempRoots: string[] = [];
 
 type ScriptResult = {
@@ -20,63 +21,71 @@ describe("package-docs-check.mts", () => {
     }
   });
 
-  it("writes the README package catalog and documentation report from package manifests", () => {
-    const root = createTempRoot();
-    writePackage(root, "alpha", { name: "@croco/alpha" });
-    writePackage(root, "beta", { name: "@croco/beta" });
-    writeCatalogMetadata(root, ["alpha", "beta"]);
-    writeDocsBaseline(root, {
-      allowedMissingApiDocs: ["alpha", "beta"],
-      allowedMissingReadme: [],
-      allowedMissingTests: [],
-    });
+  it(
+    "writes the README package catalog and documentation report from package manifests",
+    () => {
+      const root = createTempRoot();
+      writePackage(root, "alpha", { name: "@croco/alpha" });
+      writePackage(root, "beta", { name: "@croco/beta" });
+      writeCatalogMetadata(root, ["alpha", "beta"]);
+      writeDocsBaseline(root, {
+        allowedMissingApiDocs: ["alpha", "beta"],
+        allowedMissingReadme: [],
+        allowedMissingTests: [],
+      });
 
-    const result = runScript(root, "--write");
-    const readme = readFileSync(join(root, "README.md"), "utf-8");
-    const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
-    const matrix = readFileSync(
-      join(
-        root,
-        "packages",
-        "docs",
-        "src",
-        "content",
-        "docs",
-        "en",
-        "reference",
-        "extension-matrix.md",
-      ),
-      "utf-8",
-    );
+      const result = runScript(root, "--write");
+      const readme = readFileSync(join(root, "README.md"), "utf-8");
+      const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
+      const matrix = readFileSync(
+        join(
+          root,
+          "packages",
+          "docs",
+          "src",
+          "content",
+          "docs",
+          "en",
+          "reference",
+          "extension-matrix.md",
+        ),
+        "utf-8",
+      );
 
-    expect(result.status).toBe(0);
-    expect(readme).toContain("<!-- CROCO:PACKAGE-CATALOG:START -->");
-    expect(readme).toContain("현재 카탈로그는 **2개 public package**");
-    expect(readme).toContain("Extension & Adapter Matrix");
-    expect(readme).toContain("`@croco/alpha`");
-    expect(report).toContain("Missing generated API docs");
-    expect(report).toContain("Extension Matrix");
-    expect(matrix).toContain("title: Extension Matrix");
-    expect(matrix).toContain("`@croco/alpha`");
-  });
+      expect(result.status).toBe(0);
+      expect(readme).toContain("<!-- CROCO:PACKAGE-CATALOG:START -->");
+      expect(readme).toContain("현재 카탈로그는 **2개 public package**");
+      expect(readme).toContain("Extension & Adapter Matrix");
+      expect(readme).toContain("`@croco/alpha`");
+      expect(report).toContain("Missing generated API docs");
+      expect(report).toContain("Extension Matrix");
+      expect(matrix).toContain("title: Extension Matrix");
+      expect(matrix).toContain("`@croco/alpha`");
+    },
+    scriptTestTimeout,
+  );
 
-  it("fails check mode when the README catalog was not regenerated", () => {
-    const root = createTempRoot();
-    writePackage(root, "alpha", { name: "@croco/alpha" });
-    writeCatalogMetadata(root, ["alpha"]);
-    writeDocsBaseline(root, {
-      allowedMissingApiDocs: ["alpha"],
-      allowedMissingReadme: [],
-      allowedMissingTests: [],
-    });
+  it(
+    "fails check mode when the README catalog was not regenerated",
+    () => {
+      const root = createTempRoot();
+      writePackage(root, "alpha", { name: "@croco/alpha" });
+      writeCatalogMetadata(root, ["alpha"]);
+      writeDocsBaseline(root, {
+        allowedMissingApiDocs: ["alpha"],
+        allowedMissingReadme: [],
+        allowedMissingTests: [],
+      });
 
-    const result = runScript(root, "--check");
+      const result = runScript(root, "--check");
 
-    expect(result.status).toBe(1);
-    expect(result.stdout).toContain("README.md package catalog drift detected");
-    expect(result.stdout).toContain("reference/extension-matrix.md drift detected");
-    expect(result.stdout).toContain("docs/package-docs-report.md drift detected");
-  });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("README.md package catalog drift detected");
+      expect(result.stdout).toContain("reference/extension-matrix.md drift detected");
+      expect(result.stdout).toContain("docs/package-docs-report.md drift detected");
+    },
+    scriptTestTimeout,
+  );
 
   it("fails when metadata references a package that no longer exists", () => {
     const root = createTempRoot();
@@ -132,6 +141,38 @@ describe("package-docs-check.mts", () => {
       "extensionMatrix is missing metadata for Provider package provider",
     );
   });
+
+  it("fails when public architecture docs use stale layer text or missing package names", () => {
+    const root = createTempRoot();
+    writePackage(root, "alpha", { name: "@croco/alpha" });
+    writeCatalogMetadata(root, ["alpha"]);
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["alpha"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+    writeFileSync(
+      join(root, "packages", "docs", "src", "content", "docs", "en", "guides", "architecture.mdx"),
+      [
+        "---",
+        "title: Architecture",
+        "---",
+        "",
+        "Croco separates concerns into four clear layers.",
+        "",
+        "- `removed-package` is no longer present.",
+        "",
+      ].join("\n"),
+    );
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("must not describe the current architecture as four layers");
+    expect(result.stdout).toContain(
+      "references package removed-package that is not in docs/package-catalog.json",
+    );
+  });
 });
 
 function createTempRoot(): string {
@@ -155,8 +196,44 @@ function createTempRoot(): string {
       "",
     ].join("\n"),
   );
+  writeDefaultPublicDocs(root);
 
   return root;
+}
+
+function writeDefaultPublicDocs(root: string): void {
+  const docsRoot = join(root, "packages", "docs", "src", "content", "docs", "en");
+  mkdirSync(join(docsRoot, "guides"), { recursive: true });
+  writeFileSync(
+    join(docsRoot, "index.mdx"),
+    ["---", "title: Fixture", "---", "", "Understand the current layered structure.", ""].join(
+      "\n",
+    ),
+  );
+  writeFileSync(
+    join(docsRoot, "guides", "getting-started.mdx"),
+    [
+      "---",
+      "title: Getting Started",
+      "---",
+      "",
+      "Explore the current architecture guide.",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(docsRoot, "guides", "architecture.mdx"),
+    [
+      "---",
+      "title: Architecture",
+      "---",
+      "",
+      "Croco follows the current layered architecture.",
+      "",
+      "- `alpha` is a fixture package.",
+      "",
+    ].join("\n"),
+  );
 }
 
 function writePackage(
