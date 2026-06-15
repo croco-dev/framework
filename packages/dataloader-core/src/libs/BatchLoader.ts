@@ -27,16 +27,16 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
   private scheduled = false;
 
   constructor(options: BatchLoaderOptions<K, V>, logger: ILogger = noopLogger) {
-    const maxBatchSize = options.maxBatchSize ?? 100;
-    if (!Number.isFinite(maxBatchSize) || maxBatchSize <= 0) {
+    const maxBatchSize = options.maxBatchSize ?? Infinity;
+    if (maxBatchSize !== Infinity && (!Number.isFinite(maxBatchSize) || maxBatchSize <= 0)) {
       throw new InvalidBatchLoaderConfigurationError(
-        `maxBatchSize must be a positive finite number, got ${maxBatchSize}`,
+        `maxBatchSize must be a positive finite number or Infinity, got ${maxBatchSize}`,
       );
     }
     this.options = {
       cache: true,
-      maxBatchSize,
       ...options,
+      maxBatchSize,
     };
     this.logger = logger.child({ component: "BatchLoader", loader: this.options.name });
   }

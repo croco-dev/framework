@@ -154,7 +154,7 @@ describe("BatchLoader", () => {
     });
   });
 
-  it("should use 100 as the default maxBatchSize", async () => {
+  it("should not split batches by default", async () => {
     await Context.run({ requestId: "test-default-batch-size" }, async () => {
       const loader = createBatchLoader<number, string>({
         name: "default-batch-size-loader",
@@ -163,12 +163,23 @@ describe("BatchLoader", () => {
 
       await Promise.all(Array.from({ length: 101 }, (_, index) => loader.load(index + 1)));
 
-      expect(batchFn).toHaveBeenCalledTimes(2);
-      expect(batchFn).toHaveBeenNthCalledWith(
-        1,
-        Array.from({ length: 100 }, (_, index) => index + 1),
-      );
-      expect(batchFn).toHaveBeenNthCalledWith(2, [101]);
+      expect(batchFn).toHaveBeenCalledTimes(1);
+      expect(batchFn).toHaveBeenCalledWith(Array.from({ length: 101 }, (_, index) => index + 1));
+    });
+  });
+
+  it("should allow Infinity as an explicit maxBatchSize", async () => {
+    await Context.run({ requestId: "test-explicit-infinite-batch-size" }, async () => {
+      const loader = createBatchLoader<number, string>({
+        name: "explicit-infinite-batch-size-loader",
+        batchFn: batchFn,
+        maxBatchSize: Infinity,
+      });
+
+      await Promise.all(Array.from({ length: 101 }, (_, index) => loader.load(index + 1)));
+
+      expect(batchFn).toHaveBeenCalledTimes(1);
+      expect(batchFn).toHaveBeenCalledWith(Array.from({ length: 101 }, (_, index) => index + 1));
     });
   });
 
