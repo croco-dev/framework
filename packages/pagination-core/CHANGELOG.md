@@ -1,5 +1,14 @@
 # @croco/pagination-core
 
+## 0.0.4
+
+### Patch Changes
+
+- 3d9b557: Declare zod as a runtime dependency so exported pagination schemas load in clean installs.
+- d707a0c: Published package manifests now declare the Croco framework GitHub repository metadata required for npm provenance verification.
+- Updated dependencies [d707a0c]
+  - @croco/problems-core@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes

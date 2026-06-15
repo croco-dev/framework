@@ -1,6 +1,6 @@
 {
   "name": "@croco/pagination-core",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "DB-agnostic pagination utilities with cursor and offset support",
   "repository": {
     "type": "git",

@@ -1,5 +1,19 @@
 # @croco/onboarding-core
 
+## 0.0.4
+
+### Patch Changes
+
+- 4e329aa: Persist onboarding step completion before emitting analytics and make analytics capture failures best-effort after successful state saves.
+- d707a0c: Published package manifests now declare the Croco framework GitHub repository metadata required for npm provenance verification.
+- Updated dependencies [a61dcd4]
+- Updated dependencies [d707a0c]
+- Updated dependencies [41ee87a]
+- Updated dependencies [d1552a5]
+  - @croco/framework-context@0.0.4
+  - @croco/analytics-core@0.0.4
+  - @croco/problems-core@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @croco/events-tx
 
+## 0.0.4
+
+### Patch Changes
+
+- d707a0c: Published package manifests now declare the Croco framework GitHub repository metadata required for npm provenance verification.
+- Updated dependencies [2ceb6c4]
+- Updated dependencies [38727f9]
+- Updated dependencies [d707a0c]
+  - @croco/events-core@0.0.4
+  - @croco/problems-core@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes

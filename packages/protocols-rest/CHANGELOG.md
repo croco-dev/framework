@@ -1,5 +1,19 @@
 # @croco/protocols-rest
 
+## 0.0.4
+
+### Patch Changes
+
+- d707a0c: Published package manifests now declare the Croco framework GitHub repository metadata required for npm provenance verification.
+- d117fca: LoggingInterceptor can be loaded by local quick-start example smoke runs without requiring parameter decorator transforms in downstream source loaders.
+- 1489bfa: Generated RPC clients now expose declared REST header parameters as typed inputs and send them as request headers.
+- Updated dependencies [a61dcd4]
+- Updated dependencies [d707a0c]
+- Updated dependencies [41ee87a]
+- Updated dependencies [d1552a5]
+  - @croco/framework-context@0.0.4
+  - @croco/problems-core@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes
