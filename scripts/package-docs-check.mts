@@ -19,6 +19,7 @@ type Options = {
 };
 
 type PackageJson = {
+  readonly peerDependencies?: unknown;
   readonly name?: unknown;
   readonly private?: unknown;
 };
@@ -29,6 +30,7 @@ type PackageInfo = {
   readonly hasReadme: boolean;
   readonly hasTests: boolean;
   readonly name: string;
+  readonly peerDependencies: readonly string[];
   readonly private: boolean;
   readonly shortName: string;
 };
@@ -39,6 +41,7 @@ type PackageRecord = PackageInfo & {
 };
 
 type CatalogMetadata = {
+  readonly extensionMatrix?: unknown;
   readonly schemaVersion?: unknown;
   readonly groups?: unknown;
   readonly maturity?: unknown;
@@ -52,6 +55,25 @@ type CatalogGroup = {
 type MaturityConfig = {
   readonly label: string;
   readonly packages: readonly string[];
+};
+
+type RuntimeKey = (typeof runtimeOrder)[number];
+
+type ExtensionMetadata = {
+  readonly adapter: string;
+  readonly domain: string;
+  readonly features: readonly string[];
+  readonly requiredEnv: readonly string[];
+  readonly runtimes: readonly RuntimeKey[];
+};
+
+type ExtensionRecord = PackageRecord & {
+  readonly extension: ExtensionMetadata;
+};
+
+type ExtensionMatrixState = {
+  readonly groups: readonly string[];
+  readonly packages: readonly ExtensionRecord[];
 };
 
 type DocsBaseline = {
@@ -74,6 +96,7 @@ type CoverageSet = {
 };
 
 type CatalogState = {
+  readonly extensionMatrix: ExtensionMatrixState;
   readonly groups: ReadonlyMap<string, CatalogGroup>;
   readonly maturity: ReadonlyMap<MaturityKey, MaturityConfig>;
   readonly packages: readonly PackageRecord[];
@@ -88,8 +111,19 @@ const docsDirName = "docs";
 const catalogMetadataPath = join(docsDirName, "package-catalog.json");
 const docsBaselinePath = join(docsDirName, "package-docs-baseline.json");
 const docsReportPath = join(docsDirName, "package-docs-report.md");
+const extensionMatrixDocsPath = join(
+  "packages",
+  "docs",
+  "src",
+  "content",
+  "docs",
+  "en",
+  "reference",
+  "extension-matrix.md",
+);
 const readmePath = "README.md";
 const maturityOrder = ["production", "beta", "alpha", "deprecated"] as const;
+const runtimeOrder = ["node", "lambda", "cloudflare-workers", "browser"] as const;
 const scriptRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 type MaturityKey = (typeof maturityOrder)[number];
@@ -125,6 +159,10 @@ function run(options: Options): string[] {
   validateCoverageBaseline(coverage, baseline, violations);
 
   const generatedCatalog = formatMarkdown(readmePath, generateReadmeCatalog(state));
+  const generatedExtensionMatrixDocs = formatMarkdown(
+    extensionMatrixDocsPath,
+    generateExtensionMatrixDocs(state),
+  );
   const generatedReport = formatMarkdown(
     docsReportPath,
     generateDocsReport(state, coverage, baseline),
@@ -132,6 +170,10 @@ function run(options: Options): string[] {
 
   if (options.mode === "write") {
     writeReadmeCatalog(options.rootDir, generatedCatalog);
+    writeGeneratedFile(
+      join(options.rootDir, extensionMatrixDocsPath),
+      generatedExtensionMatrixDocs,
+    );
     writeGeneratedFile(join(options.rootDir, docsReportPath), generatedReport);
     return violations;
   }
@@ -140,6 +182,14 @@ function run(options: Options): string[] {
   const expectedReadme = replaceReadmeCatalog(readme, generatedCatalog);
   if (readme !== expectedReadme) {
     violations.push(`README.md package catalog drift detected; run pnpm docs:catalog:write`);
+  }
+
+  const extensionMatrixPath = join(options.rootDir, extensionMatrixDocsPath);
+  const currentExtensionMatrix = existsSync(extensionMatrixPath)
+    ? readFileSync(extensionMatrixPath, "utf-8")
+    : "";
+  if (currentExtensionMatrix !== generatedExtensionMatrixDocs) {
+    violations.push(`${extensionMatrixDocsPath} drift detected; run pnpm docs:catalog:write`);
   }
 
   const reportPath = join(options.rootDir, docsReportPath);
@@ -205,8 +255,15 @@ function loadCatalogState(rootDir: string, violations: string[]): CatalogState {
       maturity: maturityKey,
     };
   });
+  const extensionMatrix = parseExtensionMatrix(
+    metadata.extensionMatrix,
+    groups,
+    records,
+    violations,
+  );
 
   return {
+    extensionMatrix,
     groups,
     maturity,
     packages: records,
@@ -245,6 +302,7 @@ function readPackages(rootDir: string): PackageInfo[] {
         existsSync(join(packageDir, "src", "tests")) ||
         existsSync(join(packageDir, "src", "__tests__")),
       name: pkg.name,
+      peerDependencies: readDependencyKeys(pkg.peerDependencies),
       private: pkg.private === true,
       shortName: toShortPackageName(pkg.name),
     });
@@ -322,6 +380,192 @@ function parseMaturity(
   }
 
   return maturity;
+}
+
+function parseExtensionMatrix(
+  value: unknown,
+  groups: ReadonlyMap<string, CatalogGroup>,
+  packages: readonly PackageRecord[],
+  violations: string[],
+): ExtensionMatrixState {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    violations.push(`${catalogMetadataPath}: extensionMatrix must be an object`);
+    return {
+      groups: [],
+      packages: [],
+    };
+  }
+
+  const groupValue = (value as { readonly groups?: unknown }).groups;
+  const packageValue = (value as { readonly packages?: unknown }).packages;
+  if (!isStringArray(groupValue)) {
+    violations.push(`${catalogMetadataPath}: extensionMatrix.groups must be a string array`);
+  }
+  if (!packageValue || typeof packageValue !== "object" || Array.isArray(packageValue)) {
+    violations.push(`${catalogMetadataPath}: extensionMatrix.packages must be an object`);
+    return {
+      groups: isStringArray(groupValue) ? groupValue : [],
+      packages: [],
+    };
+  }
+
+  const extensionGroups = isStringArray(groupValue) ? groupValue : [];
+  for (const group of extensionGroups) {
+    if (!groups.has(group)) {
+      violations.push(
+        `${catalogMetadataPath}: extensionMatrix.groups references missing group ${group}`,
+      );
+    }
+  }
+
+  const packageByName = new Map(packages.map((pkg) => [pkg.shortName, pkg]));
+  const extensionGroupSet = new Set(extensionGroups);
+  const targetPackages = packages.filter((pkg) => extensionGroupSet.has(pkg.group));
+  const records: ExtensionRecord[] = [];
+
+  for (const [packageName, metadataValue] of Object.entries(packageValue)) {
+    const pkg = packageByName.get(packageName);
+    if (!pkg) {
+      violations.push(
+        `${catalogMetadataPath}: extensionMatrix.packages references missing package ${packageName}`,
+      );
+      continue;
+    }
+    if (!extensionGroupSet.has(pkg.group)) {
+      violations.push(
+        `${catalogMetadataPath}: extensionMatrix.packages.${packageName} is not in an extension group`,
+      );
+      continue;
+    }
+
+    const metadata = parseExtensionMetadata(packageName, metadataValue, violations);
+    if (!metadata) {
+      continue;
+    }
+
+    records.push({
+      ...pkg,
+      extension: metadata,
+    });
+  }
+
+  const metadataPackageNames = new Set(records.map((pkg) => pkg.shortName));
+  for (const pkg of targetPackages) {
+    if (!metadataPackageNames.has(pkg.shortName)) {
+      violations.push(
+        `${catalogMetadataPath}: extensionMatrix is missing metadata for ${pkg.group} package ${pkg.shortName}`,
+      );
+    }
+  }
+
+  return {
+    groups: extensionGroups,
+    packages: records.sort(
+      (left, right) =>
+        extensionGroups.indexOf(left.group) - extensionGroups.indexOf(right.group) ||
+        left.extension.domain.localeCompare(right.extension.domain) ||
+        left.shortName.localeCompare(right.shortName),
+    ),
+  };
+}
+
+function parseExtensionMetadata(
+  packageName: string,
+  value: unknown,
+  violations: string[],
+): ExtensionMetadata | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    violations.push(
+      `${catalogMetadataPath}: extensionMatrix.packages.${packageName} must be an object`,
+    );
+    return null;
+  }
+
+  const metadata = value as Record<string, unknown>;
+  const adapter = readRequiredString(
+    metadata.adapter,
+    `extensionMatrix.packages.${packageName}.adapter`,
+    violations,
+  );
+  const domain = readRequiredString(
+    metadata.domain,
+    `extensionMatrix.packages.${packageName}.domain`,
+    violations,
+  );
+  const features = readRequiredStringArray(
+    metadata.features,
+    `extensionMatrix.packages.${packageName}.features`,
+    violations,
+  );
+  const requiredEnv = readRequiredStringArray(
+    metadata.requiredEnv,
+    `extensionMatrix.packages.${packageName}.requiredEnv`,
+    violations,
+  );
+  const runtimes = readRuntimeArray(
+    metadata.runtimes,
+    `extensionMatrix.packages.${packageName}.runtimes`,
+    violations,
+  );
+
+  if (
+    !adapter ||
+    !domain ||
+    features.length === 0 ||
+    requiredEnv.length === 0 ||
+    runtimes.length === 0
+  ) {
+    return null;
+  }
+
+  return {
+    adapter,
+    domain,
+    features,
+    requiredEnv,
+    runtimes,
+  };
+}
+
+function readRequiredString(value: unknown, key: string, violations: string[]): string {
+  if (typeof value !== "string" || value.length === 0) {
+    violations.push(`${catalogMetadataPath}: ${key} must be a non-empty string`);
+    return "";
+  }
+
+  return value;
+}
+
+function readRequiredStringArray(
+  value: unknown,
+  key: string,
+  violations: string[],
+): readonly string[] {
+  if (!isStringArray(value) || value.length === 0) {
+    violations.push(`${catalogMetadataPath}: ${key} must be a non-empty string array`);
+    return [];
+  }
+
+  return value;
+}
+
+function readRuntimeArray(
+  value: unknown,
+  key: string,
+  violations: string[],
+): readonly RuntimeKey[] {
+  const runtimes = readRequiredStringArray(value, key, violations);
+  const validRuntimes = new Set<string>(runtimeOrder);
+
+  for (const runtime of runtimes) {
+    if (!validRuntimes.has(runtime)) {
+      violations.push(
+        `${catalogMetadataPath}: ${key} contains unsupported runtime ${runtime}; expected one of ${runtimeOrder.join(", ")}`,
+      );
+    }
+  }
+
+  return runtimes.filter((runtime): runtime is RuntimeKey => validRuntimes.has(runtime));
 }
 
 function validateAssignments(
@@ -506,6 +750,16 @@ function generateReadmeCatalog(state: CatalogState): string {
     lines.push(`| ${config.label} | ${maturityDescription(maturity)} | ${count} |`);
   }
 
+  lines.push(
+    "",
+    "### Extension & Adapter Matrix",
+    "",
+    "> 이 섹션은 `docs/package-catalog.json`의 `extensionMatrix` metadata에서 생성됩니다. 성숙도와 package test 존재 여부는 별도 열로 표시합니다.",
+    "",
+    "Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수, Workers는 Cloudflare Workers, Frontend는 browser/SSR frontend integration을 의미합니다.",
+  );
+  appendExtensionMatrixTables(lines, state, "####");
+
   for (const maturity of maturityOrder) {
     const config = state.maturity.get(maturity);
     if (!config) {
@@ -540,7 +794,7 @@ function generateReadmeCatalog(state: CatalogState): string {
     "",
     "### Documentation Gate",
     "",
-    "- `pnpm docs:catalog:check`는 README 카탈로그와 문서 커버리지 리포트 drift를 검증합니다.",
+    "- `pnpm docs:catalog:check`는 README 카탈로그, extension matrix reference 문서, 문서 커버리지 리포트 drift를 검증합니다.",
     "- 신규 public package는 `docs/package-catalog.json`에 그룹/성숙도 metadata가 있어야 합니다.",
     "- 신규 public package의 README, API docs, tests 누락은 `docs/package-docs-baseline.json`에 없는 한 실패합니다.",
     "",
@@ -570,6 +824,7 @@ function generateDocsReport(
     `| Missing package README | ${coverage.missingReadme.length} |`,
     `| Missing generated API docs | ${coverage.missingApiDocs.length} |`,
     `| Missing package test directory | ${coverage.missingTests.length} |`,
+    `| Extension matrix packages | ${state.extensionMatrix.packages.length} |`,
     "",
     "New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`.",
     "",
@@ -606,8 +861,74 @@ function generateDocsReport(
     );
   }
 
+  lines.push(
+    "",
+    "## Extension Matrix",
+    "",
+    "Extension matrix metadata is maintained in `docs/package-catalog.json` and rendered to the root README plus the docs reference page.",
+    "",
+    "| Group | Packages | Without package tests |",
+    "| --- | ---: | ---: |",
+  );
+  for (const group of state.extensionMatrix.groups) {
+    const packages = state.extensionMatrix.packages.filter((pkg) => pkg.group === group);
+    lines.push(
+      `| ${group} | ${packages.length} | ${packages.filter((pkg) => !pkg.hasTests).length} |`,
+    );
+  }
+
   lines.push("");
   return lines.join("\n");
+}
+
+function generateExtensionMatrixDocs(state: CatalogState): string {
+  const lines: string[] = [
+    "---",
+    "title: Extension Matrix",
+    "description: Official Croco provider and adapter compatibility matrix.",
+    "---",
+    "",
+    "# Extension Matrix",
+    "",
+    "> Generated by `pnpm docs:catalog:write`. Do not edit this file by hand.",
+    "",
+    "This page lists Croco provider, integration, transport, and presentation adapter compatibility from `docs/package-catalog.json`. Required configuration, runtime support, package peer dependencies, maturity, and package test presence are intentionally separate so users can evaluate production readiness without treating a passing unit test as a maturity claim.",
+    "",
+    "Runtime columns: Node covers long-running server and CLI use, Lambda covers serverless functions, Workers covers Cloudflare Workers, and Frontend covers browser or SSR frontend integration.",
+  ];
+
+  appendExtensionMatrixTables(lines, state, "##");
+
+  lines.push("");
+  return lines.join("\n");
+}
+
+function appendExtensionMatrixTables(
+  lines: string[],
+  state: CatalogState,
+  headingPrefix: "##" | "####",
+): void {
+  for (const group of state.extensionMatrix.groups) {
+    const packages = state.extensionMatrix.packages.filter((pkg) => pkg.group === group);
+    if (packages.length === 0) {
+      continue;
+    }
+
+    lines.push(
+      "",
+      `${headingPrefix} ${group}`,
+      "",
+      "| Package | Domain | Adapter | Node | Lambda | Workers | Frontend | Required env/config | Peer deps | Features | Maturity | Package tests |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    );
+
+    for (const pkg of packages) {
+      const maturity = state.maturity.get(pkg.maturity)?.label ?? pkg.maturity;
+      lines.push(
+        `| \`${pkg.name}\` | ${pkg.extension.domain} | ${pkg.extension.adapter} | ${formatRuntimeSupport(pkg, "node")} | ${formatRuntimeSupport(pkg, "lambda")} | ${formatRuntimeSupport(pkg, "cloudflare-workers")} | ${formatRuntimeSupport(pkg, "browser")} | ${formatList(pkg.extension.requiredEnv)} | ${formatList(pkg.peerDependencies)} | ${formatList(pkg.extension.features)} | ${maturity} | ${formatPackageTestStatus(pkg)} |`,
+      );
+    }
+  }
 }
 
 function formatMissingPackages(
@@ -622,6 +943,18 @@ function formatMissingPackages(
     const baseline = allowedMissingPackages.has(pkg.shortName) ? "legacy baseline" : "new gap";
     return `- \`${pkg.name}\` (\`packages/${pkg.dir}\`) — ${baseline}`;
   });
+}
+
+function formatRuntimeSupport(pkg: ExtensionRecord, runtime: RuntimeKey): string {
+  return pkg.extension.runtimes.includes(runtime) ? "yes" : "-";
+}
+
+function formatList(values: readonly string[]): string {
+  return values.length > 0 ? values.join("<br>") : "-";
+}
+
+function formatPackageTestStatus(pkg: PackageRecord): string {
+  return pkg.hasTests ? "has package tests" : "no package tests";
 }
 
 function writeReadmeCatalog(rootDir: string, generatedCatalog: string): void {
@@ -700,6 +1033,14 @@ function maturityDescription(maturity: MaturityKey): string {
 
 function toShortPackageName(packageName: string): string {
   return packageName.replace(/^@croco\//, "");
+}
+
+function readDependencyKeys(value: unknown): readonly string[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.keys(value).sort((left, right) => left.localeCompare(right));
 }
 
 function readJsonFile<T>(filePath: string): T {

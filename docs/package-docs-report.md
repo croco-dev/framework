@@ -11,6 +11,7 @@
 | Missing package README         |    22 |
 | Missing generated API docs     |    84 |
 | Missing package test directory |     0 |
+| Extension matrix packages      |    38 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`.
 
@@ -149,3 +150,14 @@ None.
 | 🟡 beta             |       43 |
 | 🔴 alpha/WIP        |       31 |
 | ⚠️ deprecated       |        0 |
+
+## Extension Matrix
+
+Extension matrix metadata is maintained in `docs/package-catalog.json` and rendered to the root README plus the docs reference page.
+
+| Group        | Packages | Without package tests |
+| ------------ | -------: | --------------------: |
+| Provider     |       25 |                     0 |
+| Integration  |        5 |                     0 |
+| Transport    |        3 |                     0 |
+| Presentation |        5 |                     0 |

@@ -34,12 +34,30 @@ describe("package-docs-check.mts", () => {
     const result = runScript(root, "--write");
     const readme = readFileSync(join(root, "README.md"), "utf-8");
     const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
+    const matrix = readFileSync(
+      join(
+        root,
+        "packages",
+        "docs",
+        "src",
+        "content",
+        "docs",
+        "en",
+        "reference",
+        "extension-matrix.md",
+      ),
+      "utf-8",
+    );
 
     expect(result.status).toBe(0);
     expect(readme).toContain("<!-- CROCO:PACKAGE-CATALOG:START -->");
     expect(readme).toContain("현재 카탈로그는 **2개 public package**");
+    expect(readme).toContain("Extension & Adapter Matrix");
     expect(readme).toContain("`@croco/alpha`");
     expect(report).toContain("Missing generated API docs");
+    expect(report).toContain("Extension Matrix");
+    expect(matrix).toContain("title: Extension Matrix");
+    expect(matrix).toContain("`@croco/alpha`");
   });
 
   it("fails check mode when the README catalog was not regenerated", () => {
@@ -56,6 +74,7 @@ describe("package-docs-check.mts", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("README.md package catalog drift detected");
+    expect(result.stdout).toContain("reference/extension-matrix.md drift detected");
     expect(result.stdout).toContain("docs/package-docs-report.md drift detected");
   });
 
@@ -90,6 +109,28 @@ describe("package-docs-check.mts", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("new public packages missing README");
     expect(result.stdout).toContain("new public packages missing API docs");
+  });
+
+  it("fails when an extension group package is missing matrix metadata", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", { name: "@croco/provider" });
+    writeCatalogMetadata(root, ["provider"], {
+      extensionGroups: ["Provider"],
+      extensionPackages: [],
+      groupName: "Provider",
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "extensionMatrix is missing metadata for Provider package provider",
+    );
   });
 });
 
@@ -140,11 +181,21 @@ function writePackage(
   writeFileSync(join(packageDir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
-function writeCatalogMetadata(root: string, packageNames: readonly string[]): void {
+function writeCatalogMetadata(
+  root: string,
+  packageNames: readonly string[],
+  options: {
+    readonly extensionGroups?: readonly string[];
+    readonly extensionPackages?: readonly string[];
+    readonly groupName?: string;
+  } = {},
+): void {
+  const groupName = options.groupName ?? "Core";
+  const extensionPackages = options.extensionPackages ?? packageNames;
   writeJson(join(root, "docs", "package-catalog.json"), {
     schemaVersion: 1,
     groups: {
-      Core: {
+      [groupName]: {
         description: "Fixture core packages",
         packages: packageNames,
       },
@@ -166,6 +217,21 @@ function writeCatalogMetadata(root: string, packageNames: readonly string[]): vo
         label: "deprecated",
         packages: [],
       },
+    },
+    extensionMatrix: {
+      groups: options.extensionGroups ?? [groupName],
+      packages: Object.fromEntries(
+        extensionPackages.map((packageName) => [
+          packageName,
+          {
+            adapter: "Fixture adapter",
+            domain: "Fixture",
+            features: ["Fixture feature"],
+            requiredEnv: ["none"],
+            runtimes: ["node"],
+          },
+        ]),
+      ),
     },
   });
 }
