@@ -10,6 +10,7 @@ export class LlmStreamCompletedEvent extends DomainEvent {
     public readonly text: string,
     public readonly usage: LlmUsage,
     public readonly chunkCount?: number,
+    public readonly textTruncated = false,
   ) {
     super();
   }
