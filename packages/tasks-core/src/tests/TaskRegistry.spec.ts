@@ -189,6 +189,45 @@ describe("TaskRegistry", () => {
     );
   });
 
+  it("should throw when constructing with different task registrations that share a name", () => {
+    class FirstHandler {
+      async handle(): Promise<void> {}
+    }
+
+    class SecondHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const firstMetadata: TaskMetadata = {
+      name: "duplicate-constructor-task",
+      target: FirstHandler,
+      methodName: "handle",
+    };
+    const secondMetadata: TaskMetadata = {
+      name: "duplicate-constructor-task",
+      target: SecondHandler,
+      methodName: "handle",
+    };
+
+    expect(
+      () =>
+        new TaskRegistry([
+          {
+            name: firstMetadata.name,
+            target: FirstHandler,
+            methodName: "handle",
+            metadata: firstMetadata,
+          },
+          {
+            name: secondMetadata.name,
+            target: SecondHandler,
+            methodName: "handle",
+            metadata: secondMetadata,
+          },
+        ]),
+    ).toThrow(DuplicateTaskRegistrationProblem);
+  });
+
   it("should throw when collecting different metadata entries with the same task name", () => {
     class FirstHandler {
       @Task({ name: "duplicate-task" })
