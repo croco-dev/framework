@@ -516,6 +516,117 @@ describe("ResendProvider", () => {
       );
     });
 
+    it("should cap large batch request concurrency and preserve result order", async () => {
+      const payloads: NotificationPayload[] = Array.from({ length: 12 }, (_, index) => ({
+        to: `user${index + 1}@example.com`,
+        subject: `Batch Email ${index + 1}`,
+        content: `<h1>Email ${index + 1}</h1>`,
+      }));
+      let activeSends = 0;
+      let maxActiveSends = 0;
+
+      vi.mocked(mockResendClient.emails.send).mockImplementation(async (emailOptions) => {
+        activeSends += 1;
+        maxActiveSends = Math.max(maxActiveSends, activeSends);
+
+        await new Promise((resolve) => setTimeout(resolve, 1));
+
+        activeSends -= 1;
+
+        const messageIndex = payloads.findIndex((payload) => payload.to === emailOptions.to);
+
+        return {
+          data: { id: `msg-${messageIndex + 1}` },
+          error: null,
+        };
+      });
+
+      const results = await provider.sendBatch(payloads);
+
+      expect(maxActiveSends).toBeLessThanOrEqual(5);
+      expect(results.map((result) => result.messageId)).toEqual(
+        payloads.map((_, index) => `msg-${index + 1}`),
+      );
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(payloads.length);
+    });
+
+    it("should snapshot batch payloads before processing", async () => {
+      vi.mocked(mockResendClient.emails.send).mockImplementation(async (emailOptions) => {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+
+        return {
+          data: { id: `msg-${emailOptions.to}` },
+          error: null,
+        };
+      });
+
+      const payloads: NotificationPayload[] = Array.from({ length: 6 }, (_, index) => ({
+        to: `user${index + 1}@example.com`,
+        subject: `Batch Email ${index + 1}`,
+        content: `<h1>Email ${index + 1}</h1>`,
+      }));
+      const batchResult = provider.sendBatch(payloads);
+
+      payloads.push({
+        to: "late-user@example.com",
+        subject: "Late Email",
+        content: "<h1>Late</h1>",
+      });
+
+      const results = await batchResult;
+
+      expect(results).toHaveLength(6);
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(6);
+      expect(results.map((result) => result.messageId)).toEqual(
+        Array.from({ length: 6 }, (_, index) => `msg-user${index + 1}@example.com`),
+      );
+    });
+
+    it("should keep retryable large batch attempts within the batch concurrency cap", async () => {
+      const payloads: NotificationPayload[] = Array.from({ length: 12 }, (_, index) => ({
+        to: `user${index + 1}@example.com`,
+        subject: `Retry Batch Email ${index + 1}`,
+        content: `<h1>Email ${index + 1}</h1>`,
+      }));
+      const attemptsByRecipient = new Map<string, number>();
+      let activeSends = 0;
+      let maxActiveSends = 0;
+
+      vi.mocked(mockResendClient.emails.send).mockImplementation(async (emailOptions) => {
+        const recipient = String(emailOptions.to);
+        const attempt = (attemptsByRecipient.get(recipient) ?? 0) + 1;
+        attemptsByRecipient.set(recipient, attempt);
+        activeSends += 1;
+        maxActiveSends = Math.max(maxActiveSends, activeSends);
+
+        await new Promise((resolve) => setTimeout(resolve, 1));
+
+        activeSends -= 1;
+
+        if (attempt === 1) {
+          return {
+            data: null,
+            error: { message: "Rate limit exceeded", name: "rate_limit_exceeded" },
+          };
+        }
+
+        const messageIndex = payloads.findIndex((payload) => payload.to === emailOptions.to);
+
+        return {
+          data: { id: `msg-${messageIndex + 1}` },
+          error: null,
+        };
+      });
+
+      const results = await provider.sendBatch(payloads);
+
+      expect(maxActiveSends).toBeLessThanOrEqual(5);
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(payloads.length * 2);
+      expect(results.map((result) => result.messageId)).toEqual(
+        payloads.map((_, index) => `msg-${index + 1}`),
+      );
+    });
+
     it("should handle empty batch", async () => {
       const results = await provider.sendBatch([]);
 
