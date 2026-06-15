@@ -212,9 +212,10 @@ function writeReport(results: PackageCoverageResult[]) {
   );
 
   const reportLines = [
-    "# Core Coverage Warning Report",
+    "# Core Coverage Baseline Report",
     "",
     "- coverage 실행: gate step (`pnpm test:coverage:core`)에서 별도 실행",
+    "- PR 표시: CI job summary와 `core-coverage-warning-report` artifact에 동일 report 게시",
     "- warning-only 종료 코드: 0",
     "",
     "## 적용 대상",
@@ -254,6 +255,7 @@ function writeReport(results: PackageCoverageResult[]) {
     "",
     "## Enforce 전환 메모",
     "- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 유지한다.",
+    "- 신규 core package는 coverage summary와 baseline row가 PR summary에 표시된 뒤 core set에 추가한다.",
     "- threshold 상향은 `retry-core functions` 개선 이후 별도 태스크에서 검토한다.",
     "- baseline regression이 연속 0회가 아니라 안정적으로 해소된 이후에만 hard fail 전환을 검토한다.",
   ];
@@ -266,7 +268,7 @@ async function main() {
 
   writeReport(results);
 
-  console.log(`\n⚠️  Core coverage warning-only report written to ${resolve(reportPath)}`);
+  console.log(`\n⚠️  Core coverage baseline report written to ${resolve(reportPath)}`);
 
   const totalWarnings = results.reduce(
     (count, result) =>

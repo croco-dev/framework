@@ -6,7 +6,12 @@ on:
     paths:
       - "packages/*/src/**"
       - "benchmarks/**"
+      - "scripts/bench-threshold-check.mts"
+      - "scripts/post-benchmark-comment.mjs"
+      - "scripts/tests/**"
+      - "package.json"
       - "vitest.config.ts"
+      - "vitest.config.bench.ts"
       - "tsconfig.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/benchmark.yml"
@@ -64,8 +69,9 @@ jobs:
 
           Switch `BENCHMARK_GATE_MODE` from `warning-only` to `enforce` only after:
 
-          - Threshold coverage is defined for currently skipped benchmark cases.
-          - A stable baseline is captured from recent green runs.
+          - `benchmark-result.json` has no threshold or baseline skips.
+          - `gateFailures` has no runner failures, empty reports, threshold skips, or baseline skips.
+          - A stable baseline is captured from the latest five green benchmark workflow runs.
           - Warning-only artifacts/comments show acceptable variance for multiple PRs.
           EOF
       - name: Upload benchmark warning report

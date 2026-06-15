@@ -14,7 +14,7 @@
   "EventBusConfig.start (10 handlers)": {
     "p75": 0.009
   },
-  "EventPublisher.publish single event": {
+  "EventPublisher.publishNow single event": {
     "p75": 0.0015
   },
   "DefaultHandlerResolver.resolve × 10": {
@@ -26,10 +26,28 @@
   "CrocoApp lambdaHandler (10 controllers)": {
     "p75": 0.025
   },
-  "CrocoApp full cold-start simulation": {
-    "p75": 0.26
+  "Lambda cold-start simulation": {
+    "p75": 0.05
   },
-  "TelemetryRuntime benchmarks": {
+  "Lambda cold-start with headers": {
+    "p75": 0.05
+  },
+  "Lambda cold-start with binary body": {
+    "p75": 0.05
+  },
+  "Lambda cold-start with query params": {
+    "p75": 0.05
+  },
+  "Lambda cold-start with authorizer context": {
+    "p75": 0.05
+  },
+  "Lambda cold-start realistic scenario": {
+    "p75": 0.05
+  },
+  "TelemetryRuntime.init (lambda preset)": {
+    "p75": 30
+  },
+  "lambdaPreset config creation": {
     "p75": 0.002
   }
 }
