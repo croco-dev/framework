@@ -67,4 +67,6 @@ class AssistantService {
 
 - OpenAI, Anthropic 같은 공급자 구현은 `LlmModel`을 상속해 연결합니다.
 - 이벤트 버스를 연결하면 생성 완료와 사용량 기록을 다른 패키지로 전달할 수 있습니다.
+- 스트림 소비자가 조기 종료하거나 `StreamParams.signal`이 abort되면 upstream 모델 스트림에도 abort signal이 전달되며, 취소된 스트림은 `LlmStreamCompletedEvent`를 발행하지 않습니다.
+- 완료된 스트림의 `LlmStreamCompletedEvent.text`는 이벤트 payload 메모리 사용을 제한하기 위해 긴 응답에서 잘릴 수 있으며, 이 경우 `textTruncated`가 `true`로 설정됩니다. 사용량 계산은 전체 스트림 길이를 기준으로 유지됩니다.
 - LLM 호출 비용 추적은 `@croco/llm-metering` 패키지와 함께 사용합니다.
