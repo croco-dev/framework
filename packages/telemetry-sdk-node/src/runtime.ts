@@ -69,7 +69,8 @@ class TelemetryRuntime {
     this.config = config;
 
     if (config.enabled === false) {
-      this.initialized = true;
+      // Disabled init stores the requested config without starting the SDK, so
+      // a later enabled init can still initialize telemetry in the same process.
       return;
     }
 
@@ -144,6 +145,10 @@ class TelemetryRuntime {
     } catch (error) {
       this.initPromise = null;
       throw error;
+    } finally {
+      if (this.initialized) {
+        this.initPromise = null;
+      }
     }
   }
 
@@ -188,7 +193,20 @@ class TelemetryRuntime {
   }
 
   async shutdown(): Promise<void> {
+    const pendingInit = this.initPromise;
+    if (pendingInit) {
+      try {
+        await pendingInit;
+      } catch {
+        this.initialized = false;
+        this.initPromise = null;
+        return;
+      }
+    }
+
     if (!this.sdk) {
+      this.initialized = false;
+      this.initPromise = null;
       return;
     }
 
@@ -197,6 +215,7 @@ class TelemetryRuntime {
       this.sdk = null;
       this.processor = null;
       this.initialized = false;
+      this.initPromise = null;
     } catch (error) {
       throw this.createRuntimeProblem("shutdown", error);
     }
@@ -212,6 +231,10 @@ class TelemetryRuntime {
 
   isInitialized(): boolean {
     return this.initialized && this.config?.enabled !== false;
+  }
+
+  isEnabled(): boolean {
+    return this.isInitialized();
   }
 
   getConfig(): TelemetryConfig | null {
