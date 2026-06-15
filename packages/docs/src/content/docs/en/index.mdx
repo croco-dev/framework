@@ -9,7 +9,7 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 CROCO is an opinionated TypeScript framework that combines HTTP routing, DDD events, transactions, and **built-in SaaS primitives** (auth, billing, metering, tenant) into a single unified decorator and type system.
 
-> `npx create-croco-app my-saas-api` → 5 minutes to a production-ready SaaS backend.
+> `npx create-croco-app@latest my-saas-api --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git` → 5 minutes to a production-ready SaaS backend.
 
 ## Why Croco?
 
@@ -38,7 +38,7 @@ Every API exports as `app.lambdaHandler()`. Also runs on Docker, Cloudflare, and
     →](/en/guides/architecture/)
   </Card>
   <Card title="Package Catalog" icon="package">
-    98 packages organized by maturity: production, beta, alpha. [Browse
+    97 packages organized by maturity: production, beta, alpha. [Browse
     →](https://github.com/croco-dev/framework#readme)
   </Card>
   <Card title="Events Core" icon="broadcast">

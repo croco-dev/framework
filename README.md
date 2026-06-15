@@ -106,7 +106,7 @@ graph LR
 > **첫 번째 프로젝트 생성**:
 >
 > ```bash
-> npx create-croco-app@latest my-project --preset ddd-api --backend-deploy lambda
+> npx create-croco-app@latest my-project --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git
 > cd my-project && pnpm install && pnpm dev
 > ```
 >
