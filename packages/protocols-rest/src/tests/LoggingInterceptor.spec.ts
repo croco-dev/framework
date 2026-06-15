@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import type { ILogger } from "@croco/framework-context";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LoggingInterceptor } from "../libs/interceptors/LoggingInterceptor";
 import type { CallHandler } from "../libs/interfaces/CallHandler";
@@ -12,6 +13,8 @@ describe("LoggingInterceptor", () => {
   let mockLogger!: Pick<ILogger, "info">;
 
   beforeEach(() => {
+    Container.reset();
+
     mockLogger = {
       info: vi.fn(),
     };
@@ -31,6 +34,7 @@ describe("LoggingInterceptor", () => {
   });
 
   afterEach(() => {
+    Container.reset();
     vi.restoreAllMocks();
   });
 
@@ -147,6 +151,19 @@ describe("LoggingInterceptor", () => {
     expect(mockLogger.info).toHaveBeenCalledWith(
       "HTTP request completed",
       expect.objectContaining({ method: "DELETE", path: "/api/items/123" }),
+    );
+  });
+
+  it("should resolve its default logger from the container", async () => {
+    Container.set(LOGGER_TOKEN, mockLogger);
+    const containerBackedInterceptor = new LoggingInterceptor();
+    (mockNext.handle as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+    await containerBackedInterceptor.intercept(mockContext, mockNext);
+
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      "HTTP request completed",
+      expect.objectContaining({ method: "GET", path: "/test/path" }),
     );
   });
 });

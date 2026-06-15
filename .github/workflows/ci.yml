@@ -133,6 +133,9 @@ jobs:
       - name: First-Success Contract Verify
         run: pnpm first-success:verify
 
+      - name: Quick-start Lambda smoke
+        run: pnpm quick-start-lambda:smoke
+
       - name: Lint & Format Check
         run: |
           pnpm check

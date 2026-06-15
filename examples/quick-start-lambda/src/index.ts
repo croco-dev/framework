@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
-import { Container } from "@croco/framework-context";
+import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { Meter, Metered, setMeteringService } from "@croco/metering-core";
 import { Body, Controller, Get, Post, UseGuards } from "@croco/protocols-rest";
 import { createApp } from "@croco/transports-http";
@@ -39,7 +39,40 @@ class UserController {
   }
 }
 
+const demoLogger: ILogger = {
+  debug: (message, context) => {
+    if (context === undefined) {
+      console.debug(message);
+      return;
+    }
+    console.debug(message, context);
+  },
+  info: (message, context) => {
+    if (context === undefined) {
+      console.info(message);
+      return;
+    }
+    console.info(message, context);
+  },
+  warn: (message, context) => {
+    if (context === undefined) {
+      console.warn(message);
+      return;
+    }
+    console.warn(message, context);
+  },
+  error: (message, context) => {
+    if (context === undefined) {
+      console.error(message);
+      return;
+    }
+    console.error(message, context);
+  },
+  child: () => demoLogger,
+};
+
 setMeteringService(createMeteringService());
+Container.set(LOGGER_TOKEN, demoLogger);
 Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
 Container.set(AuthGuard, new AuthGuard());
 
@@ -53,7 +86,9 @@ Container.set(UserController, new UserController());
 export const handler = app.lambdaHandler();
 
 if (process.env.NODE_ENV !== "production") {
-  app.listen(3000).then(() => {
-    console.log("SaaS demo API running at http://localhost:3000/api");
+  const port = Number(process.env.PORT ?? 3000);
+
+  app.listen(port).then(() => {
+    console.log(`SaaS demo API running at http://localhost:${port}/api`);
   });
 }

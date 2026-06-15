@@ -43,6 +43,17 @@ Expected response: `200` with created user. The `api_user_create` meter records 
 
 > **Auth note**: Endpoints without `x-api-key: test-key` return `401`.
 
+## Validate
+
+From the repository root, run the same smoke command used by CI:
+
+```bash
+pnpm quick-start-lambda:smoke
+```
+
+The smoke installs the example dependency closure, typechecks the example, starts `pnpm dev`, and verifies
+health, auth, list, and create endpoints without real cloud credentials.
+
 ## Deploy
 
 Export the `handler` from `src/index.ts` as your AWS Lambda entry point.

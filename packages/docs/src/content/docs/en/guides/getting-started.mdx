@@ -114,7 +114,13 @@ That's it. `handler` is a standard AWS Lambda entrypoint — deploy it with SST,
 
 The quick-start-lambda example above is the **complete, runnable reference** for everything covered in this guide.
 
-Here's the full project structure from `quick-start-lambda`, bringing together auth, metering, and Lambda export in ~60 lines:
+The repository validates that reference with:
+
+```bash
+pnpm quick-start-lambda:smoke
+```
+
+Here's the full project structure from `quick-start-lambda`, bringing together auth, metering, and Lambda export in one runnable reference:
 
 ```
 my-saas-api/
