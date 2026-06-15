@@ -34,6 +34,33 @@ function read(path: string): string {
   }
 }
 
+function extractBashCommand(content: string, commandName: string): string | undefined {
+  const fences = content.matchAll(/```bash\n([\s\S]*?)```/g);
+
+  for (const fence of fences) {
+    const command = fence[1]
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.includes(commandName));
+
+    if (command) {
+      return command;
+    }
+  }
+
+  return undefined;
+}
+
+function readFlagValue(args: readonly string[], flag: string): string | undefined {
+  const flagIndex = args.indexOf(flag);
+
+  if (flagIndex === -1) {
+    return undefined;
+  }
+
+  return args[flagIndex + 1];
+}
+
 // ── Paths ────────────────────────────────────────────────────────────────────
 
 const ROOT = process.cwd();
@@ -255,6 +282,58 @@ console.log("\n📋 D. Docs contract\n");
     fail("D2", "Getting started docs missing create-croco-app command");
   } else {
     pass("D2", "Getting started docs document create-croco-app command");
+  }
+
+  const createCommand = extractBashCommand(gettingStarted, "create-croco-app");
+
+  if (!createCommand) {
+    fail("D3", "Getting started docs missing a bash create-croco-app command");
+  } else {
+    const args = createCommand.split(/\s+/);
+    const executableIndex = args.findIndex((arg) => arg.includes("create-croco-app"));
+    const projectName = executableIndex === -1 ? undefined : args[executableIndex + 1];
+    const expectedFlagValues = new Map([
+      ["--preset", "ddd-api"],
+      ["--scope", "@myorg"],
+      ["--api", "graphql"],
+      ["--backend-deploy", "lambda"],
+    ]);
+    const missingOrMismatchedFlags = [...expectedFlagValues].flatMap(([flag, expected]) => {
+      const actual = readFlagValue(args, flag);
+
+      return actual === expected ? [] : [`${flag}=${actual ?? "<missing>"}`];
+    });
+    const missingSkipFlags = ["--no-install", "--no-git"].filter((flag) => !args.includes(flag));
+
+    if (projectName !== "my-project") {
+      fail("D3a", `create-croco-app command project name is ${projectName ?? "<missing>"}`);
+    } else {
+      pass("D3a", "create-croco-app command includes project name");
+    }
+
+    if (missingOrMismatchedFlags.length > 0) {
+      fail(
+        "D3b",
+        `create-croco-app command is missing required noninteractive values: ${missingOrMismatchedFlags.join(", ")}`,
+      );
+    } else {
+      pass("D3b", "create-croco-app command includes required noninteractive values");
+    }
+
+    if (missingSkipFlags.length > 0) {
+      fail(
+        "D3c",
+        `create-croco-app command must include ${missingSkipFlags.join(" and ")} before manual install steps`,
+      );
+    } else {
+      pass("D3c", "create-croco-app command skips install and git before manual next steps");
+    }
+  }
+
+  if (gettingStarted.includes("When prompted")) {
+    fail("D4", "Getting started docs describe prompts for the noninteractive quick-start command");
+  } else {
+    pass("D4", "Getting started docs do not describe prompts for the quick-start command");
   }
 }
 
