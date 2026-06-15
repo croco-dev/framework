@@ -87,6 +87,78 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.publishConfig.exports["."].types).toBe("./dist/index.d.ts");
   });
 
+  it("normalizes storage packages to direct dist root entrypoints", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(root, "storage-core", {
+      name: "@croco/storage-core",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.main).toBe("./dist/index.js");
+    expect(pkg.module).toBe("./dist/index.mjs");
+    expect(pkg.types).toBe("./dist/index.d.ts");
+    expect(pkg.exports).toEqual({
+      ".": {
+        types: "./dist/index.d.ts",
+        import: "./dist/index.mjs",
+        require: "./dist/index.js",
+      },
+    });
+    expect(pkg.publishConfig.exports).toEqual(pkg.exports);
+  });
+
+  it("rejects storage packages whose root entrypoints point outside the shipped dist files", () => {
+    const root = createTempRoot();
+    writePackage(root, "storage-core", {
+      name: "@croco/storage-core",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("storage-core/package.json");
+    expect(result.stdout).toContain("main must point at ./dist");
+    expect(result.stdout).toContain("module must be a string");
+    expect(result.stdout).toContain('exports["."] is required');
+  });
+
   it("skips the private docs site and allows documented public non-library package exceptions", () => {
     const root = createTempRoot();
     writePackage(
