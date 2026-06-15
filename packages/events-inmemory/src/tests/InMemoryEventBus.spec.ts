@@ -713,6 +713,22 @@ describe("InMemoryEventBus", () => {
   });
 
   describe("backpressure", () => {
+    it("should reject invalid backpressure timeout configuration", () => {
+      expect(
+        () =>
+          new InMemoryEventBus<TestEvent>({
+            backpressureTimeoutMs: 0,
+          }),
+      ).toThrow("backpressureTimeoutMs must be a positive finite number");
+
+      expect(
+        () =>
+          new InMemoryEventBus<TestEvent>({
+            backpressureTimeoutMs: Number.POSITIVE_INFINITY,
+          }),
+      ).toThrow("backpressureTimeoutMs must be a positive finite number");
+    });
+
     it("should respect maxConcurrency with block strategy", async () => {
       const executionOrder: string[] = [];
 
@@ -805,35 +821,78 @@ describe("InMemoryEventBus", () => {
     it("should throw timeout problem when block strategy exceeds configured timeout", async () => {
       vi.useFakeTimers();
 
-      class SlowHandler implements EventHandler<TestEvent> {
-        async handle(): Promise<void> {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+      try {
+        class SlowHandler implements EventHandler<TestEvent> {
+          async handle(): Promise<void> {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
         }
+
+        const timeoutBus = new InMemoryEventBus<TestEvent>({
+          maxConcurrency: 1,
+          backpressureStrategy: "block",
+          backpressureTimeoutMs: 25,
+        });
+
+        Container.set(SlowHandler, new SlowHandler());
+        timeoutBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+
+        const firstPublish = timeoutBus.publish(new TestEvent("first"));
+        await vi.advanceTimersByTimeAsync(1);
+
+        const secondPublish = timeoutBus.publish(new TestEvent("second"));
+        const secondPublishExpectation = expect(secondPublish).rejects.toMatchObject({
+          message: "Backpressure wait timed out after 25ms",
+        });
+
+        await vi.advanceTimersByTimeAsync(25);
+        await secondPublishExpectation;
+
+        await vi.advanceTimersByTimeAsync(100);
+        await firstPublish;
+      } finally {
+        vi.useRealTimers();
       }
+    });
 
-      const timeoutBus = new InMemoryEventBus<TestEvent>({
-        maxConcurrency: 1,
-        backpressureStrategy: "block",
-        backpressureTimeoutMs: 25,
-      });
+    it("should time out block strategy with the default timeout when a slot never frees", async () => {
+      vi.useFakeTimers();
 
-      Container.set(SlowHandler, new SlowHandler());
-      timeoutBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+      try {
+        let resolveHandler: (() => void) | undefined;
 
-      const firstPublish = timeoutBus.publish(new TestEvent("first"));
-      await vi.advanceTimersByTimeAsync(1);
+        class BlockingHandler implements EventHandler<TestEvent> {
+          async handle(): Promise<void> {
+            await new Promise<void>((resolve) => {
+              resolveHandler = resolve;
+            });
+          }
+        }
 
-      const secondPublish = timeoutBus.publish(new TestEvent("second"));
-      const secondPublishExpectation = expect(secondPublish).rejects.toMatchObject({
-        message: "Backpressure wait timed out after 25ms",
-      });
+        const blockBus = new InMemoryEventBus<TestEvent>({
+          maxConcurrency: 1,
+          backpressureStrategy: "block",
+        });
 
-      await vi.advanceTimersByTimeAsync(25);
-      await secondPublishExpectation;
+        Container.set(BlockingHandler, new BlockingHandler());
+        blockBus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
 
-      await vi.advanceTimersByTimeAsync(100);
-      await firstPublish;
-      vi.useRealTimers();
+        const firstPublish = blockBus.publish(new TestEvent("first"));
+        await vi.advanceTimersByTimeAsync(1);
+
+        const secondPublish = blockBus.publish(new TestEvent("second"));
+        const secondPublishExpectation = expect(secondPublish).rejects.toMatchObject({
+          message: "Backpressure wait timed out after 5000ms",
+        });
+
+        await vi.advanceTimersByTimeAsync(5000);
+        await secondPublishExpectation;
+
+        resolveHandler?.();
+        await firstPublish;
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("should reject waitForSlot when AbortSignal is aborted", async () => {
@@ -858,7 +917,7 @@ describe("InMemoryEventBus", () => {
       });
     });
 
-    it("should keep existing block behavior when timeout option is omitted", async () => {
+    it("should wait for an available slot before the default timeout expires", async () => {
       const executionOrder: string[] = [];
 
       class SlowHandler implements EventHandler<TestEvent> {

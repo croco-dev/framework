@@ -20,6 +20,7 @@ config.setEventBus(
   new InMemoryEventBus({
     maxConcurrency: 10,
     backpressureStrategy: "block",
+    backpressureTimeoutMs: 5000,
   }),
 );
 ```
@@ -27,15 +28,16 @@ config.setEventBus(
 ## API 레퍼런스
 
 - `InMemoryEventBus`: `publish`, `subscribe`, `unsubscribe`, `clear` 제공
-- `InMemoryEventBusOptions`: `maxConcurrency`, `backpressureStrategy`
+- `InMemoryEventBusOptions`: `maxConcurrency`, `backpressureStrategy`, `backpressureTimeoutMs`
 - `BackpressureStrategy`: `drop`, `block`, `error`
 - `EventPublishFailedError`: 핸들러 실패를 집계해 반환하는 에러
 - `BackpressureExceededProblem`: 동시성 한도 초과 시 발생하는 Problem
+- `BackpressureTimeoutProblem`: `block` 전략의 슬롯 대기가 제한 시간을 초과하면 발생하는 Problem
 
 ## 동작 특징
 
 - 기본 `maxConcurrency`는 `100`
-- `block` 전략은 슬롯이 생길 때까지 대기
+- `block` 전략은 슬롯이 생길 때까지 대기하되, 기본 `backpressureTimeoutMs` 5000ms를 초과하면 Problem을 발생
 - `drop` 전략은 초과 이벤트를 조용히 무시
 - `error` 전략은 즉시 Problem을 발생
 - OpenTelemetry 활성 시 발행 Span과 핸들러 Span을 자동 기록
