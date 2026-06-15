@@ -119,7 +119,13 @@ describe("RateLimiter", () => {
   });
 
   describe("getStats", () => {
-    it("should return zeroed stats on store error and call onStoreError", async () => {
+    it("should return healthy zero stats without degraded metadata", async () => {
+      const result = await rateLimiter.getStats("test-store");
+
+      expect(result).toEqual({ allowed: 0, denied: 0, total: 0 });
+    });
+
+    it("should mark stats degraded on store error and call onStoreError", async () => {
       const onStoreError = vi.fn();
       rateLimiter = new RateLimiter(mockStore, keyBuilder, { onStoreError });
       const error = new Error("Store unavailable");
@@ -127,16 +133,39 @@ describe("RateLimiter", () => {
 
       const result = await rateLimiter.getStats("test-store");
 
-      expect(result).toEqual({ allowed: 0, denied: 0, total: 0 });
+      expect(result).toEqual({
+        allowed: 0,
+        denied: 0,
+        total: 0,
+        degraded: true,
+        error: {
+          name: "Error",
+          message: "Store unavailable",
+        },
+      });
       expect(onStoreError).toHaveBeenCalledWith(error);
     });
 
-    it("should return zeroed stats on store error without onStoreError", async () => {
-      vi.mocked(mockStore.getStats).mockRejectedValue(new Error("Store unavailable"));
+    it("should normalize non-Error stats failures before reporting degraded stats", async () => {
+      const onStoreError = vi.fn();
+      rateLimiter = new RateLimiter(mockStore, keyBuilder, { onStoreError });
+      vi.mocked(mockStore.getStats).mockRejectedValue("store offline");
 
       const result = await rateLimiter.getStats("test-store");
 
-      expect(result).toEqual({ allowed: 0, denied: 0, total: 0 });
+      expect(result).toEqual({
+        allowed: 0,
+        denied: 0,
+        total: 0,
+        degraded: true,
+        error: {
+          name: "Error",
+          message: "store offline",
+        },
+      });
+      expect(onStoreError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "store offline" }),
+      );
     });
   });
 });

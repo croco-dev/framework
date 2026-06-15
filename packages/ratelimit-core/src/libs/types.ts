@@ -44,10 +44,17 @@ export type RateLimitResult = {
   policyName?: string;
 };
 
+export type RateLimitStatsError = {
+  name: string;
+  message: string;
+};
+
 export type RateLimitStats = {
   allowed: number;
   denied: number;
   total: number;
+  degraded?: boolean;
+  error?: RateLimitStatsError;
 };
 
 export type KeySegment = "tenant" | "user" | "ip" | "apiKey" | "route" | "custom";
