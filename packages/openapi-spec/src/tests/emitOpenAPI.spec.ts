@@ -66,6 +66,31 @@ describe("emitOpenAPI", () => {
     expect(spec.paths?.["/users/{id}"]?.get?.summary).toBe("UsersController.getUser");
   });
 
+  it("should normalize catch-all path parameters from the canonical contract graph", () => {
+    @Controller("/assets")
+    class AssetsController {
+      @Get("/:...id")
+      getAsset(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([AssetsController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(spec.paths?.["/assets/{id}"]?.get).toMatchObject({
+      operationId: "AssetsController_getAsset",
+      parameters: [
+        {
+          in: "path",
+          name: "id",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+    });
+    expect(spec.paths?.["/assets/{...id}"]).toBeUndefined();
+  });
+
   it("should apply document metadata options", () => {
     @Controller("/accounts")
     class AccountsController {

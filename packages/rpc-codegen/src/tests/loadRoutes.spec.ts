@@ -50,6 +50,8 @@ describe("loadRoutes", () => {
         {
           name: "UsersController",
           path: "/users",
+          guards: [],
+          roles: [],
           routeIds: ["UsersController.listUsers"],
         },
       ]);

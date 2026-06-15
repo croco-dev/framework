@@ -8,6 +8,8 @@ export {
   ContractGraphDiagnosticError,
   formatContractDiagnostic,
   formatContractDiagnostics,
+  getContractPathParamNames,
+  getContractPathParams,
   getContractGraphErrors,
 } from "./libs/ContractGraph";
 export { extractRouteIR } from "./libs/extractRouteIR";
@@ -15,9 +17,11 @@ export type {
   ContractDiagnostic,
   ContractDiagnosticSeverity,
   ContractDiagnosticTarget,
+  ContractAccessMetadata,
   ContractGraph,
   ContractGraphController,
   ContractGraphRoute,
+  ContractPathParam,
   ContractGraphVersion,
 } from "./libs/ContractGraph";
 export type { ParamIR, RouteIR } from "./libs/RouteIR";

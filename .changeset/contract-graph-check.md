@@ -3,7 +3,6 @@
 "@croco/openapi-spec": patch
 "@croco/rpc-codegen": patch
 "@croco/cli": patch
-"@croco/problems-core": patch
 "create-croco-app": patch
 ---
 

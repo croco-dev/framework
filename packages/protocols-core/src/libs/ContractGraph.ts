@@ -3,7 +3,13 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
 import type { RouteIR } from "./RouteIR";
-import { type Constructor, type ControllerMetadata, REST_CONTROLLER_KEY } from "./sharedTypes";
+import {
+  type Constructor,
+  type ControllerMetadata,
+  REST_CONTROLLER_KEY,
+  REST_GUARDS_KEY,
+  REST_ROLES_KEY,
+} from "./sharedTypes";
 
 export type ContractGraphVersion = "croco.contract-graph.v1";
 export type ContractDiagnosticSeverity = "error" | "warning";
@@ -23,13 +29,26 @@ export type ContractDiagnostic = {
 export type ContractGraphController = {
   readonly name: string;
   readonly path: string;
+  readonly guards: readonly string[];
+  readonly roles: readonly string[];
   readonly routeIds: readonly string[];
+};
+
+export type ContractAccessMetadata = {
+  readonly guards: readonly string[];
+  readonly roles: readonly string[];
+};
+
+export type ContractPathParam = {
+  readonly token: string;
+  readonly name: string;
 };
 
 export type ContractGraphRoute = RouteIR & {
   readonly routeId: string;
   readonly operationId: string;
   readonly controllerPath: string;
+  readonly access: ContractAccessMetadata;
 };
 
 export type ContractGraph = {
@@ -68,12 +87,14 @@ export function buildContractGraph(controllers: readonly Constructor[]): Contrac
     }
 
     const routes = extractRouteIR(controller).map((route) =>
-      toContractGraphRoute(route, controllerMeta.path),
+      toContractGraphRoute(route, controllerMeta.path, controller),
     );
 
     graphControllers.push({
       name: controller.name,
       path: controllerMeta.path,
+      guards: getMetadataNames(Reflect.getMetadata(REST_GUARDS_KEY, controller)),
+      roles: getMetadataStrings(Reflect.getMetadata(REST_ROLES_KEY, controller)),
       routeIds: routes.map((route) => route.routeId),
     });
     graphRoutes.push(...routes);
@@ -116,7 +137,25 @@ export function formatContractDiagnostic(diagnostic: ContractDiagnostic): string
   return `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${route}: ${diagnostic.message}`;
 }
 
-function toContractGraphRoute(route: RouteIR, controllerPath: string): ContractGraphRoute {
+export function getContractPathParamNames(path: string): string[] {
+  return getContractPathParams(path).map((param) => param.name);
+}
+
+export function getContractPathParams(path: string): ContractPathParam[] {
+  return [...path.matchAll(/:([^/]+)/g)]
+    .map((match) => {
+      const token = match[1];
+
+      return { token, name: token.replace(/^\.\.\./, "") };
+    })
+    .filter((param) => param.name.length > 0);
+}
+
+function toContractGraphRoute(
+  route: RouteIR,
+  controllerPath: string,
+  controllerCtor: Constructor,
+): ContractGraphRoute {
   const routeId = `${route.controllerName}.${route.methodName}`;
 
   return {
@@ -124,6 +163,18 @@ function toContractGraphRoute(route: RouteIR, controllerPath: string): ContractG
     routeId,
     operationId: routeId.replace(/[^A-Za-z0-9_]+/g, "_"),
     controllerPath,
+    access: {
+      guards: [
+        ...getMetadataNames(Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor)),
+        ...getMetadataNames(Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor, route.methodName)),
+      ],
+      roles: [
+        ...getMetadataStrings(Reflect.getMetadata(REST_ROLES_KEY, controllerCtor)),
+        ...getMetadataStrings(
+          Reflect.getMetadata(REST_ROLES_KEY, controllerCtor, route.methodName),
+        ),
+      ],
+    },
   };
 }
 
@@ -151,7 +202,7 @@ function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
 
 function validatePathParams(route: ContractGraphRoute): ContractDiagnostic[] {
   const diagnostics: ContractDiagnostic[] = [];
-  const pathParamNames = new Set(getPathParamNames(route.path));
+  const pathParamNames = new Set(getContractPathParamNames(route.path));
   const declaredParamNames = new Set(
     route.params.filter((param) => param.kind === "path").map((param) => param.name),
   );
@@ -309,10 +360,6 @@ function validateUniqueOperationIds(routes: readonly ContractGraphRoute[]): Cont
   return diagnostics;
 }
 
-function getPathParamNames(path: string): string[] {
-  return [...path.matchAll(/:([^/]+)/g)].map((match) => match[1]).filter(Boolean);
-}
-
 function getRouteSchemas(route: ContractGraphRoute): z.ZodType[] {
   const schemas = [
     route.inputSchemas.body,
@@ -358,4 +405,36 @@ function getDiagnosticTarget(code: string): ContractDiagnosticTarget {
   }
 
   return "route";
+}
+
+function getMetadataNames(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map(getMetadataName).filter((name): name is string => name !== null);
+}
+
+function getMetadataName(value: unknown): string | null {
+  if (typeof value === "function" && value.name.length > 0) {
+    return value.name;
+  }
+
+  if (value && typeof value === "object" && "constructor" in value) {
+    const constructor = value.constructor;
+
+    if (typeof constructor === "function" && constructor.name.length > 0) {
+      return constructor.name;
+    }
+  }
+
+  return null;
+}
+
+function getMetadataStrings(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string");
 }

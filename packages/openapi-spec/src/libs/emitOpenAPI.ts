@@ -8,6 +8,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   assertContractGraphHasNoErrors,
   buildContractGraph,
+  getContractPathParams,
   type ContractGraph,
   type ContractGraphRoute,
   type ParamIR,
@@ -302,7 +303,10 @@ function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {
 }
 
 function toOpenAPIPath(path: string): string {
-  return path.replace(/:([^/]+)/g, "{$1}");
+  return getContractPathParams(path).reduce(
+    (currentPath, param) => currentPath.split(`:${param.token}`).join(`{${param.name}}`),
+    path,
+  );
 }
 
 function toHttpMethod(route: ContractGraphRoute): HttpMethod {

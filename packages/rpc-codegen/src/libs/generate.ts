@@ -2,6 +2,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
   assertContractGraphHasNoErrors,
+  getContractPathParamNames,
+  getContractPathParams,
   type ContractGraph,
   type RouteIR,
 } from "@croco/protocols-core";
@@ -78,7 +80,7 @@ function assertGeneratedClientRoutes(routes: RouteIR[]): void {
 }
 
 function assertGeneratedClientPathParams(route: RouteIR): void {
-  const pathParamNames = new Set(getRoutePathParamNames(route.path));
+  const pathParamNames = new Set(getContractPathParamNames(route.path));
   const declaredParamNames = new Set(
     route.params.filter((param) => param.kind === "path").map((param) => param.name),
   );
@@ -524,7 +526,7 @@ function getObjectShape(schema: unknown): Record<string, unknown> {
 }
 
 function getPathExpression(route: RouteIR): string {
-  const pathParams = getRoutePathParams(route.path);
+  const pathParams = getContractPathParams(route.path);
 
   if (pathParams.length === 0) {
     return `'${route.path}'`;
@@ -539,20 +541,6 @@ function getPathExpression(route: RouteIR): string {
   );
 
   return `\`${pathExpression}\``;
-}
-
-function getRoutePathParamNames(pathname: string): string[] {
-  return getRoutePathParams(pathname).map((param) => param.name);
-}
-
-function getRoutePathParams(pathname: string): { readonly token: string; readonly name: string }[] {
-  return [...pathname.matchAll(/:([^/]+)/g)]
-    .map((match) => {
-      const token = match[1];
-
-      return { token, name: token.replace(/^\.\.\./, "") };
-    })
-    .filter((param) => param.name.length > 0);
 }
 
 function getQueryStatements(route: RouteIR): string {

@@ -39,7 +39,79 @@ describe("rpc-codegen contract check CLI", () => {
     },
     CONTRACT_CHECK_TIMEOUT_MS,
   );
+
+  it(
+    "passes when a loaded controller uses a catch-all path parameter",
+    async () => {
+      fs.writeFileSync(path.join(sourceDir, "AssetsController.ts"), getCatchAllController());
+      const stdout: string[] = [];
+
+      const exitCode = await runCli(["--controllers", path.join(sourceDir, "*.ts"), "--check"], {
+        stdout: (message) => stdout.push(message),
+      });
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain(
+        "Contract graph check passed for 1 route(s) across 1 controller(s).",
+      );
+    },
+    CONTRACT_CHECK_TIMEOUT_MS,
+  );
 });
+
+function getCatchAllController(): string {
+  return `import 'reflect-metadata';
+
+const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
+
+enum ParamType {
+  PARAM = 'param',
+}
+
+type RouteMetadata = {
+  readonly method: string;
+  readonly path: string;
+  readonly methodName: string | symbol;
+};
+
+function Controller(controllerPath: string): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: controllerPath, target }, target);
+  };
+}
+
+function Get(routePath: string): MethodDecorator {
+  return (target, propertyKey) => {
+    const ctor = target.constructor;
+    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
+  };
+}
+
+function Param(name: string): ParameterDecorator {
+  return (target, propertyKey, parameterIndex) => {
+    if (!propertyKey) return;
+
+    const ctor = target.constructor;
+    const paramsMap = (Reflect.getMetadata(REST_PARAMS_KEY, ctor) as Map<string | symbol, unknown[]> | undefined) ?? new Map();
+    const params = paramsMap.get(propertyKey) ?? [];
+
+    params.push({ type: ParamType.PARAM, index: parameterIndex, name });
+    paramsMap.set(propertyKey, params);
+    Reflect.defineMetadata(REST_PARAMS_KEY, paramsMap, ctor);
+  };
+}
+
+@Controller('/assets')
+export class AssetsController {
+  @Get('/:...id')
+  getAsset(@Param('id') _id: string): void {}
+}
+`;
+}
 
 function getMultipleBodyController(): string {
   return `import 'reflect-metadata';

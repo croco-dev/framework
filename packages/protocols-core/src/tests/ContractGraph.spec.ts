@@ -8,7 +8,16 @@ import {
   ContractGraphDiagnosticError,
   formatContractDiagnostic,
 } from "../libs/ContractGraph";
-import { Body, Controller, Get, Param, Post, Query } from "./helpers/test-decorators";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Roles,
+  UseGuards,
+} from "./helpers/test-decorators";
 
 describe("buildContractGraph", () => {
   beforeEach(() => {
@@ -34,6 +43,8 @@ describe("buildContractGraph", () => {
       {
         name: "UsersController",
         path: "/users",
+        guards: [],
+        roles: [],
         routeIds: ["UsersController.getUser", "UsersController.createUser"],
       },
     ]);
@@ -48,6 +59,51 @@ describe("buildContractGraph", () => {
       controllerPath: "/users",
     });
     expect(graph.routes[1]?.inputSchemas.body).toBe(createUserSchema);
+    expect(graph.diagnostics).toEqual([]);
+  });
+
+  it("should normalize catch-all route parameters when validating path metadata", () => {
+    @Controller("/assets")
+    class AssetsController {
+      @Get("/:...id")
+      getAsset(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([AssetsController]);
+
+    expect(graph.routes[0]).toMatchObject({
+      routeId: "AssetsController.getAsset",
+      path: "/assets/:...id",
+    });
+    expect(graph.diagnostics).toEqual([]);
+    expect(() => assertContractGraphHasNoErrors(graph)).not.toThrow();
+  });
+
+  it("should expose auth and access metadata references when present", () => {
+    class AuthGuard {}
+    class AuditGuard {}
+
+    @UseGuards(AuthGuard)
+    @Roles("admin")
+    @Controller("/admin")
+    class AdminController {
+      @UseGuards(AuditGuard)
+      @Roles("owner")
+      @Get("/:id")
+      getAdminAsset(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([AdminController]);
+
+    expect(graph.controllers[0]).toMatchObject({
+      name: "AdminController",
+      guards: ["AuthGuard"],
+      roles: ["admin"],
+    });
+    expect(graph.routes[0]?.access).toEqual({
+      guards: ["AuthGuard", "AuditGuard"],
+      roles: ["admin", "owner"],
+    });
     expect(graph.diagnostics).toEqual([]);
   });
 

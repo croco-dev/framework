@@ -6,6 +6,8 @@
 export const REST_CONTROLLER_KEY = Symbol.for("croco:rest:controller");
 export const REST_ROUTES_KEY = Symbol.for("croco:rest:routes");
 export const REST_PARAMS_KEY = Symbol.for("croco:rest:params");
+export const REST_GUARDS_KEY = Symbol.for("croco:rest:guards");
+export const REST_ROLES_KEY = Symbol.for("croco:rest:roles");
 
 export enum ParamType {
   PARAM = "param",
