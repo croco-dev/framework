@@ -270,7 +270,7 @@ describe("CrocoApp benchmarks", () => {
         const event = createLambdaEvent("/bench5/");
         event.rawQueryString = "search=test&page=1&limit=20";
         event.headers = {
-          authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+          authorization: "Bearer benchmark-token",
           "content-type": "application/json",
           "user-agent": "Mozilla/5.0",
         };
