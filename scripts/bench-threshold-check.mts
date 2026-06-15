@@ -211,6 +211,44 @@ export function evaluateBenchmarkGate(
   };
 }
 
+export function evaluateBaselineUpdateReadiness(
+  reports: BenchmarkReport[],
+  runnerFailures: string[] = [],
+  expectedBenchmarkNames: string[] = [],
+): BenchmarkGateEvaluation {
+  const gateFailures: string[] = [...runnerFailures];
+  const reportedNames = new Set(reports.map((report) => report.name));
+
+  if (reports.length === 0) {
+    gateFailures.push("No benchmark reports were collected.");
+  }
+
+  for (const benchmarkName of expectedBenchmarkNames) {
+    if (!reportedNames.has(benchmarkName)) {
+      gateFailures.push(`${benchmarkName}: benchmark report was not collected.`);
+    }
+  }
+
+  for (const report of reports) {
+    if (report.thresholdStatus === "fail") {
+      gateFailures.push(
+        `${report.name}: p75 ${formatDuration(report.p75)} exceeds threshold ${formatDuration(report.threshold ?? 0)}`,
+      );
+    }
+
+    if (report.thresholdStatus === "skip") {
+      gateFailures.push(
+        `${report.name}: threshold skipped (${report.thresholdSkipReason ?? "no threshold skip reason"})`,
+      );
+    }
+  }
+
+  return {
+    allPassed: gateFailures.length === 0,
+    gateFailures,
+  };
+}
+
 function getConfiguredBenchmarkNames(thresholds: Thresholds, baseline: Baseline | null): string[] {
   const names = new Set<string>();
 
@@ -377,6 +415,19 @@ async function main() {
     );
 
     if (isUpdateBaseline) {
+      const baselineUpdateEvaluation = evaluateBaselineUpdateReadiness(
+        reports,
+        [...runnerFailures, ...benchmarkCollectionFailures],
+        expectedBenchmarkNames,
+      );
+
+      if (!baselineUpdateEvaluation.allPassed) {
+        for (const failure of baselineUpdateEvaluation.gateFailures) {
+          console.error(`❌ ${failure}`);
+        }
+        process.exit(1);
+      }
+
       saveBaseline(reports);
       process.exit(0);
     }
