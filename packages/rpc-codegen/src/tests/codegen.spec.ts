@@ -184,6 +184,27 @@ describe("generateClientFiles", () => {
     expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
   });
 
+  it("should reject generated path schemas without matching path variables", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UsersController",
+        methodName: "listUsers",
+        httpMethod: "GET",
+        path: "/users",
+        params: [],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      "Cannot generate RPC client for route UsersController.listUsers (/users): generated path schema declares 'id' but route path '/users' does not contain ':id'.",
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+  });
+
   it("should serialize POST body input", () => {
     const routes: RouteIR[] = [
       {

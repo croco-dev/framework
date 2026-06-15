@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { describe, expect, it } from "vitest";
+import { Container } from "typedi";
+import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   assertContractGraphHasNoErrors,
@@ -10,6 +11,10 @@ import {
 import { Body, Controller, Get, Param, Post, Query } from "./helpers/test-decorators";
 
 describe("buildContractGraph", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   it("should build stable controller, route id, operation id, and schema graph nodes", () => {
     const createUserSchema = z.object({ name: z.string() });
 
@@ -109,6 +114,31 @@ describe("buildContractGraph", () => {
         code: "contract-route-multiple-body-params",
         severity: "error",
         routeId: "UsersController.createUser",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should reject duplicate normalized operation ids", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/with-underscore")
+      get_user(): void {}
+    }
+
+    @Controller("/users-alt")
+    class UsersController_get {
+      @Get("/plain")
+      user(): void {}
+    }
+
+    const graph = buildContractGraph([UsersController, UsersController_get]);
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-route-duplicate-operation-id",
+        severity: "error",
+        routeId: "UsersController_get.user",
       }),
     ]);
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);

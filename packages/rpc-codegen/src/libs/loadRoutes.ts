@@ -8,33 +8,16 @@ import {
   discoverControllerConstructors,
   type RouteIR,
 } from "@croco/protocols-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { Project, type SourceFile, ts } from "ts-morph";
 
-class NoRestControllersFoundProblem extends Error {
-  readonly code = "rpc-codegen/no-rest-controllers-found";
-  readonly type = "about:blank";
-  readonly title = "Bad Request";
-  readonly status = 400;
-  readonly category = "BadRequest";
-  readonly detail: string;
-
+class NoRestControllersFoundProblem extends Problem {
   constructor(glob: string) {
-    const detail = getNoRestControllersFoundMessage(glob);
-
-    super(detail);
-    this.detail = detail;
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  toJSON(): Record<string, unknown> {
-    return {
-      type: this.type,
-      title: this.title,
-      status: this.status,
-      code: this.code,
-      detail: this.detail,
-    };
+    super(
+      "rpc-codegen/no-rest-controllers-found",
+      ProblemCategory.BadRequest,
+      getNoRestControllersFoundMessage(glob),
+    );
   }
 }
 

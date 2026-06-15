@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
 import type { RouteIR } from "./RouteIR";
@@ -38,12 +39,16 @@ export type ContractGraph = {
   readonly diagnostics: readonly ContractDiagnostic[];
 };
 
-export class ContractGraphDiagnosticError extends Error {
+export class ContractGraphDiagnosticError extends Problem {
   readonly diagnostics: readonly ContractDiagnostic[];
 
   constructor(diagnostics: readonly ContractDiagnostic[]) {
-    super(formatContractDiagnostics(diagnostics));
-    this.name = "ContractGraphDiagnosticError";
+    super(
+      "protocols-core/contract-graph-diagnostics",
+      ProblemCategory.ValidationError,
+      formatContractDiagnostics(diagnostics),
+      { extensions: { diagnostics } },
+    );
     this.diagnostics = diagnostics;
   }
 }
@@ -79,6 +84,7 @@ export function buildContractGraph(controllers: readonly Constructor[]): Contrac
   }
 
   diagnostics.push(...validateUniqueRouteIds(graphRoutes));
+  diagnostics.push(...validateUniqueOperationIds(graphRoutes));
 
   return {
     version: "croco.contract-graph.v1",
@@ -273,6 +279,31 @@ function validateUniqueRouteIds(routes: readonly ContractGraphRoute[]): Contract
     }
 
     routeIds.set(route.routeId, route);
+  }
+
+  return diagnostics;
+}
+
+function validateUniqueOperationIds(routes: readonly ContractGraphRoute[]): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const operationIds = new Map<string, ContractGraphRoute>();
+
+  for (const route of routes) {
+    const existingRoute = operationIds.get(route.operationId);
+
+    if (existingRoute) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-duplicate-operation-id",
+          "error",
+          `Operation id '${route.operationId}' is already used by ${existingRoute.controllerName}.${existingRoute.methodName}.`,
+        ),
+      );
+      continue;
+    }
+
+    operationIds.set(route.operationId, route);
   }
 
   return diagnostics;

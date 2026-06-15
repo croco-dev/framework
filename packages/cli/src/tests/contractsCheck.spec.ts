@@ -1,7 +1,8 @@
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { Container } from "typedi";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   type ContractsCheckSpawn,
   resolveRpcCodegenBinFromEntry,
@@ -9,6 +10,10 @@ import {
 } from "../commands/contractsCheck.js";
 
 describe("contractsCheck", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   it("should resolve a workspace source RPC package entry to the built RPC CLI", () => {
     const root = join("workspace", "packages", "rpc-codegen");
 

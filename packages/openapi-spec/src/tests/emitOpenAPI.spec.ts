@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Container } from "typedi";
 import {
   Body,
   Controller,
@@ -16,11 +17,15 @@ import {
   All,
 } from "@croco/protocols-rest";
 import { buildContractGraph } from "@croco/protocols-core";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
 
 describe("emitOpenAPI", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   it("should emit a GET operation with a path parameter", () => {
     @Controller("/users")
     class UsersController {

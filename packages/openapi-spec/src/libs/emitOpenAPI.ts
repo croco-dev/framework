@@ -4,6 +4,7 @@ import {
   OpenApiGeneratorV31,
   type RouteConfig,
 } from "@asteasolutions/zod-to-openapi";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   assertContractGraphHasNoErrors,
   buildContractGraph,
@@ -57,6 +58,12 @@ const DEFAULT_PROBLEM_RESPONSES = [
   { status: 422, description: "Validation error" },
   { status: 500, description: "Internal server error" },
 ] as const satisfies readonly ProblemResponseConfig[];
+
+class OpenAPIContractProblem extends Problem {
+  constructor(detail: string) {
+    super("openapi-spec/invalid-contract", ProblemCategory.ValidationError, detail);
+  }
+}
 
 export function emitOpenAPI(
   controllers: Function[],
@@ -291,7 +298,7 @@ function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {
     return kind;
   }
 
-  throw new Error(`Unsupported OpenAPI parameter kind: ${kind}`);
+  throw new OpenAPIContractProblem(`Unsupported OpenAPI parameter kind: ${kind}`);
 }
 
 function toOpenAPIPath(path: string): string {
@@ -308,12 +315,12 @@ function toHttpMethod(route: ContractGraphRoute): HttpMethod {
   }
 
   if (normalizedMethod === "all") {
-    throw new Error(
+    throw new OpenAPIContractProblem(
       `Cannot emit OpenAPI operation for @All route ${formatRoute(route)}: @All is runtime-only and cannot be represented as a concrete OpenAPI operation. Use explicit HTTP method decorators for generated contracts.`,
     );
   }
 
-  throw new Error(`Unsupported HTTP method: ${method}`);
+  throw new OpenAPIContractProblem(`Unsupported HTTP method: ${method}`);
 }
 
 function formatRoute(route: ContractGraphRoute): string {
