@@ -41,7 +41,7 @@ title: "CrocoTestingApp"
 
 ### assertProblem()
 
-> **assertProblem**(`response`, `expected?`): `Promise`\<`ProblemDetails`\>
+> **assertProblem**(`response`, `expected?`): `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
 #### Parameters
 
@@ -55,7 +55,7 @@ title: "CrocoTestingApp"
 
 #### Returns
 
-`Promise`\<`ProblemDetails`\>
+`Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
 ***
 
@@ -183,7 +183,7 @@ title: "CrocoTestingApp"
 
 ### readProblem()
 
-> **readProblem**(`response`): `Promise`\<`ProblemDetails`\>
+> **readProblem**(`response`): `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
 #### Parameters
 
@@ -193,7 +193,7 @@ title: "CrocoTestingApp"
 
 #### Returns
 
-`Promise`\<`ProblemDetails`\>
+`Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
 ***
 

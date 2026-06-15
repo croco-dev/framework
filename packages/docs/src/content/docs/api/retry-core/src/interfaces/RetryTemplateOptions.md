@@ -95,7 +95,7 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 ### retryForCategories?
 
-> `optional` **retryForCategories**: `ProblemCategory`[]
+> `optional` **retryForCategories**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
 ProblemCategory values to retry (croco integration)
 

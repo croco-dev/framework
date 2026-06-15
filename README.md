@@ -429,28 +429,28 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 | 패키지                      | 그룹        | 디렉터리                      | 문서               |
 | --------------------------- | ----------- | ----------------------------- | ------------------ |
-| `@croco/dataloader-core`    | Core        | `packages/dataloader-core`    | README, tests      |
+| `@croco/dataloader-core`    | Core        | `packages/dataloader-core`    | README, API, tests |
 | `@croco/events-core`        | Core        | `packages/events-core`        | README, API, tests |
 | `@croco/framework-context`  | Core        | `packages/framework-context`  | README, API, tests |
 | `@croco/problems-core`      | Core        | `packages/problems-core`      | README, API, tests |
-| `@croco/repository-core`    | Core        | `packages/repository-core`    | README, tests      |
+| `@croco/repository-core`    | Core        | `packages/repository-core`    | README, API, tests |
 | `@croco/retry-core`         | Core        | `packages/retry-core`         | README, API, tests |
-| `@croco/tx-core`            | Core        | `packages/tx-core`            | README, tests      |
-| `@croco/tx-drizzle`         | Core        | `packages/tx-drizzle`         | README, tests      |
-| `@croco/audit-core`         | Domain      | `packages/audit-core`         | README, tests      |
+| `@croco/tx-core`            | Core        | `packages/tx-core`            | README, API, tests |
+| `@croco/tx-drizzle`         | Core        | `packages/tx-drizzle`         | README, API, tests |
+| `@croco/audit-core`         | Domain      | `packages/audit-core`         | README, API, tests |
 | `@croco/auth-core`          | Domain      | `packages/auth-core`          | README, API, tests |
-| `@croco/billing-core`       | Domain      | `packages/billing-core`       | README, tests      |
-| `@croco/invitation-core`    | Domain      | `packages/invitation-core`    | README, tests      |
+| `@croco/billing-core`       | Domain      | `packages/billing-core`       | README, API, tests |
+| `@croco/invitation-core`    | Domain      | `packages/invitation-core`    | README, API, tests |
 | `@croco/llm-core`           | Domain      | `packages/llm-core`           | README, API, tests |
-| `@croco/llm-metering`       | Domain      | `packages/llm-metering`       | README, tests      |
-| `@croco/membership-core`    | Domain      | `packages/membership-core`    | README, tests      |
+| `@croco/llm-metering`       | Domain      | `packages/llm-metering`       | README, API, tests |
+| `@croco/membership-core`    | Domain      | `packages/membership-core`    | README, API, tests |
 | `@croco/metering-core`      | Domain      | `packages/metering-core`      | README, API, tests |
-| `@croco/metrics-core`       | Domain      | `packages/metrics-core`       | README, tests      |
+| `@croco/metrics-core`       | Domain      | `packages/metrics-core`       | README, API, tests |
 | `@croco/ratelimit-core`     | Domain      | `packages/ratelimit-core`     | README, API, tests |
-| `@croco/search-core`        | Domain      | `packages/search-core`        | README, tests      |
+| `@croco/search-core`        | Domain      | `packages/search-core`        | README, API, tests |
 | `@croco/telemetry-api`      | Integration | `packages/telemetry-api`      | README, API, tests |
 | `@croco/telemetry-sdk-node` | Integration | `packages/telemetry-sdk-node` | README, API, tests |
-| `@croco/protocols-rest`     | Protocol    | `packages/protocols-rest`     | README, tests      |
+| `@croco/protocols-rest`     | Protocol    | `packages/protocols-rest`     | README, API, tests |
 | `@croco/transports-http`    | Transport   | `packages/transports-http`    | README, API, tests |
 
 ### 🟡 beta
@@ -542,6 +542,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 - `pnpm docs:catalog:check`는 README 카탈로그, extension matrix reference 문서, 문서 커버리지 리포트 drift를 검증합니다.
 - 신규 public package는 `docs/package-catalog.json`에 그룹/성숙도 metadata가 있어야 합니다.
 - 신규 public package의 README, API docs, tests 누락은 `docs/package-docs-baseline.json`에 없는 한 실패합니다.
+- production-ready package의 API docs 누락은 legacy baseline으로 숨길 수 없고, 생성하거나 짧은 사유가 있는 `temporaryProductionApiDocExceptions`에만 임시로 둘 수 있습니다.
 
 <!-- CROCO:PACKAGE-CATALOG:END -->
 

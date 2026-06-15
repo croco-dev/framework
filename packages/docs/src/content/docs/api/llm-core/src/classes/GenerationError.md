@@ -9,7 +9,7 @@ title: "GenerationError"
 
 ## Extends
 
-- `Problem`
+- [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Constructors
 
@@ -39,11 +39,11 @@ title: "GenerationError"
 
 ### category
 
-> `readonly` **category**: `ProblemCategory`
+> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
 #### Inherited from
 
-`Problem.category`
+[`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
 ***
 
@@ -53,7 +53,7 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.cause`
+[`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
 ***
 
@@ -63,7 +63,7 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.code`
+[`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
 ***
 
@@ -73,17 +73,17 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.detail`
+[`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
 ***
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: `ProblemExtensions`
+> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
-`Problem.extensions`
+[`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
 ***
 
@@ -93,7 +93,7 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.instance`
+[`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
 ***
 
@@ -103,7 +103,7 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.message`
+[`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
 ***
 
@@ -113,7 +113,7 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.name`
+[`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
 ***
 
@@ -123,7 +123,7 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.stack`
+[`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
 ***
 
@@ -133,7 +133,7 @@ title: "GenerationError"
 
 #### Inherited from
 
-`Problem.type`
+[`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
 ***
 
@@ -159,7 +159,7 @@ not capture any frames.
 
 #### Inherited from
 
-`Problem.stackTraceLimit`
+[`Problem`](/api/problems-core/src/classes/problem/).[`stackTraceLimit`](/api/problems-core/src/classes/problem/#stacktracelimit)
 
 ## Accessors
 
@@ -175,7 +175,7 @@ not capture any frames.
 
 #### Inherited from
 
-`Problem.status`
+[`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
 ***
 
@@ -191,21 +191,21 @@ not capture any frames.
 
 #### Inherited from
 
-`Problem.title`
+[`Problem`](/api/problems-core/src/classes/problem/).[`title`](/api/problems-core/src/classes/problem/#title)
 
 ## Methods
 
 ### toJSON()
 
-> **toJSON**(): `ProblemDetails`
+> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
 #### Returns
 
-`ProblemDetails`
+[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
 #### Inherited from
 
-`Problem.toJSON`
+[`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
 ***
 
@@ -273,7 +273,7 @@ a();
 
 #### Inherited from
 
-`Problem.captureStackTrace`
+[`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
 ***
 
@@ -301,4 +301,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-`Problem.prepareStackTrace`
+[`Problem`](/api/problems-core/src/classes/problem/).[`prepareStackTrace`](/api/problems-core/src/classes/problem/#preparestacktrace)

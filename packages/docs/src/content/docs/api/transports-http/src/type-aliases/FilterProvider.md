@@ -5,7 +5,7 @@ prev: false
 title: "FilterProvider"
 ---
 
-> **FilterProvider**\<`T`\> = `Constructor`\<`T`\> \| `T`
+> **FilterProvider**\<`T`\> = [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)\<`T`\> \| `T`
 
 ## Type Parameters
 

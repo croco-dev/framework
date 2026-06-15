@@ -120,6 +120,75 @@ describe("package-docs-check.mts", () => {
     expect(result.stdout).toContain("new public packages missing API docs");
   });
 
+  it("fails when a production package missing API docs remains in the legacy baseline", () => {
+    const root = createTempRoot();
+    writePackage(root, "stable", { name: "@croco/stable" });
+    writeCatalogMetadata(root, ["stable"], {
+      productionPackages: ["stable"],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["stable"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "production-ready packages cannot remain in allowedMissingApiDocs: stable",
+    );
+    expect(result.stdout).toContain("production-ready packages missing API docs");
+  });
+
+  it("allows a justified temporary production API docs exception", () => {
+    const root = createTempRoot();
+    writePackage(root, "stable", { name: "@croco/stable" });
+    writeCatalogMetadata(root, ["stable"], {
+      productionPackages: ["stable"],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: [],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+      temporaryProductionApiDocExceptions: {
+        stable: "TypeDoc generation is blocked by an upstream parser issue.",
+      },
+    });
+
+    const result = runScript(root, "--write");
+    const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(report).toContain(
+      "`@croco/stable` (`packages/stable`) — temporary production exception: TypeDoc generation is blocked by an upstream parser issue.",
+    );
+  });
+
+  it("fails when a temporary production API docs exception is stale", () => {
+    const root = createTempRoot();
+    writePackage(root, "stable", { name: "@croco/stable" });
+    writeGeneratedApiDocs(root, "stable");
+    writeCatalogMetadata(root, ["stable"], {
+      productionPackages: ["stable"],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: [],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+      temporaryProductionApiDocExceptions: {
+        stable: "TypeDoc generation is blocked by an upstream parser issue.",
+      },
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "temporaryProductionApiDocExceptions entries must match production-ready packages currently missing API docs: stable",
+    );
+  });
+
   it("fails when an extension group package is missing matrix metadata", () => {
     const root = createTempRoot();
     writePackage(root, "provider", { name: "@croco/provider" });
@@ -258,6 +327,12 @@ function writePackage(
   writeFileSync(join(packageDir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
+function writeGeneratedApiDocs(root: string, packageDirName: string): void {
+  mkdirSync(join(root, "packages", "docs", "src", "content", "docs", "api", packageDirName), {
+    recursive: true,
+  });
+}
+
 function writeCatalogMetadata(
   root: string,
   packageNames: readonly string[],
@@ -265,10 +340,16 @@ function writeCatalogMetadata(
     readonly extensionGroups?: readonly string[];
     readonly extensionPackages?: readonly string[];
     readonly groupName?: string;
+    readonly productionPackages?: readonly string[];
   } = {},
 ): void {
   const groupName = options.groupName ?? "Core";
   const extensionPackages = options.extensionPackages ?? packageNames;
+  const productionPackages = options.productionPackages ?? [];
+  const productionPackageNames = new Set(productionPackages);
+  const betaPackages = packageNames.filter(
+    (packageName) => !productionPackageNames.has(packageName),
+  );
   writeJson(join(root, "docs", "package-catalog.json"), {
     schemaVersion: 1,
     groups: {
@@ -280,11 +361,11 @@ function writeCatalogMetadata(
     maturity: {
       production: {
         label: "production-ready",
-        packages: packageNames,
+        packages: productionPackages,
       },
       beta: {
         label: "beta",
-        packages: [],
+        packages: betaPackages,
       },
       alpha: {
         label: "alpha",
@@ -319,6 +400,7 @@ function writeDocsBaseline(
     readonly allowedMissingApiDocs: readonly string[];
     readonly allowedMissingReadme: readonly string[];
     readonly allowedMissingTests: readonly string[];
+    readonly temporaryProductionApiDocExceptions?: Record<string, string>;
   },
 ): void {
   writeJson(join(root, "docs", "package-docs-baseline.json"), {

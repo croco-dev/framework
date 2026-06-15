@@ -9,7 +9,7 @@ Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니
 
 ## Implements
 
-- `ExecutionContext`
+- [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/)
 
 ## Constructors
 
@@ -25,7 +25,7 @@ Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니
 
 ##### controllerClass
 
-`Constructor`
+[`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)
 
 ##### handlerName
 
@@ -39,17 +39,17 @@ Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니
 
 ### getClass()
 
-> **getClass**(): `Constructor`
+> **getClass**(): [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)
 
 컨트롤러 클래스 참조
 
 #### Returns
 
-`Constructor`
+[`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)
 
 #### Implementation of
 
-`ExecutionContext.getClass`
+[`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getClass`](/api/protocols-rest/src/interfaces/executioncontext/#getclass)
 
 ***
 
@@ -65,7 +65,7 @@ Guard, Interceptor, Filter가 사용할 REST 실행 컨텍스트 구현체입니
 
 #### Implementation of
 
-`ExecutionContext.getHandler`
+[`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getHandler`](/api/protocols-rest/src/interfaces/executioncontext/#gethandler)
 
 ***
 
@@ -91,7 +91,7 @@ HTTP 메서드 (GET, POST 등)
 
 #### Implementation of
 
-`ExecutionContext.getMethod`
+[`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getMethod`](/api/protocols-rest/src/interfaces/executioncontext/#getmethod)
 
 ***
 
@@ -107,7 +107,7 @@ HTTP 메서드 (GET, POST 등)
 
 #### Implementation of
 
-`ExecutionContext.getPath`
+[`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getPath`](/api/protocols-rest/src/interfaces/executioncontext/#getpath)
 
 ***
 
@@ -123,4 +123,4 @@ HTTP 메서드 (GET, POST 등)
 
 #### Implementation of
 
-`ExecutionContext.getRequest`
+[`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getRequest`](/api/protocols-rest/src/interfaces/executioncontext/#getrequest)

@@ -9,7 +9,7 @@ title: "AppConfig"
 
 ### controllers
 
-> **controllers**: `Constructor`[]
+> **controllers**: [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)[]
 
 ***
 

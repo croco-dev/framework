@@ -9,7 +9,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 ## Extends
 
-- `Problem`
+- [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Constructors
 
@@ -35,11 +35,11 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 ### category
 
-> `readonly` **category**: `InternalServerError` = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
 #### Overrides
 
-`Problem.category`
+[`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
 ***
 
@@ -49,7 +49,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Inherited from
 
-`Problem.cause`
+[`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
 ***
 
@@ -59,7 +59,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Overrides
 
-`Problem.code`
+[`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
 ***
 
@@ -69,17 +69,17 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Inherited from
 
-`Problem.detail`
+[`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
 ***
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: `ProblemExtensions`
+> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
-`Problem.extensions`
+[`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
 ***
 
@@ -89,7 +89,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Inherited from
 
-`Problem.instance`
+[`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
 ***
 
@@ -99,7 +99,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Inherited from
 
-`Problem.message`
+[`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
 ***
 
@@ -109,7 +109,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Inherited from
 
-`Problem.name`
+[`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
 ***
 
@@ -119,7 +119,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Inherited from
 
-`Problem.stack`
+[`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
 ***
 
@@ -129,7 +129,7 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 #### Inherited from
 
-`Problem.type`
+[`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
 ***
 
@@ -149,7 +149,7 @@ not capture any frames.
 
 #### Inherited from
 
-`Problem.stackTraceLimit`
+[`Problem`](/api/problems-core/src/classes/problem/).[`stackTraceLimit`](/api/problems-core/src/classes/problem/#stacktracelimit)
 
 ## Accessors
 
@@ -165,7 +165,7 @@ not capture any frames.
 
 #### Inherited from
 
-`Problem.status`
+[`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
 ***
 
@@ -181,21 +181,21 @@ not capture any frames.
 
 #### Inherited from
 
-`Problem.title`
+[`Problem`](/api/problems-core/src/classes/problem/).[`title`](/api/problems-core/src/classes/problem/#title)
 
 ## Methods
 
 ### toJSON()
 
-> **toJSON**(): `ProblemDetails`
+> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
 #### Returns
 
-`ProblemDetails`
+[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
 #### Inherited from
 
-`Problem.toJSON`
+[`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
 ***
 
@@ -263,7 +263,7 @@ a();
 
 #### Inherited from
 
-`Problem.captureStackTrace`
+[`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
 ***
 
@@ -291,4 +291,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-`Problem.prepareStackTrace`
+[`Problem`](/api/problems-core/src/classes/problem/).[`prepareStackTrace`](/api/problems-core/src/classes/problem/#preparestacktrace)

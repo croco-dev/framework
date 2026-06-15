@@ -5,7 +5,7 @@ prev: false
 title: "InterceptorProvider"
 ---
 
-> **InterceptorProvider**\<`T`\> = `Constructor`\<`T`\> \| `T`
+> **InterceptorProvider**\<`T`\> = [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)\<`T`\> \| `T`
 
 ## Type Parameters
 

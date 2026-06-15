@@ -37,7 +37,7 @@ REST 컨트롤러 메타데이터를 실행 가능한 라우트 정의로 컴파
 
 ##### controllers
 
-`Constructor`[]
+[`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)[]
 
 ##### options?
 

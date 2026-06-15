@@ -5,7 +5,7 @@ prev: false
 title: "assertProblemResponse"
 ---
 
-> **assertProblemResponse**(`response`, `expected?`): `Promise`\<`ProblemDetails`\>
+> **assertProblemResponse**(`response`, `expected?`): `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "assertProblemResponse"
 
 ## Returns
 
-`Promise`\<`ProblemDetails`\>
+`Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>

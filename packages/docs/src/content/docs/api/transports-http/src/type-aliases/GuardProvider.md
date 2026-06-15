@@ -5,7 +5,7 @@ prev: false
 title: "GuardProvider"
 ---
 
-> **GuardProvider**\<`T`\> = `Constructor`\<`T`\> \| `T`
+> **GuardProvider**\<`T`\> = [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)\<`T`\> \| `T`
 
 ## Type Parameters
 
