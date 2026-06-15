@@ -1,15 +1,16 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
-type CoverageMetric = "lines" | "branches" | "functions" | "statements";
+export type CoverageMetric = "lines" | "branches" | "functions" | "statements";
 
-type CoverageTotals = Record<CoverageMetric, { pct: number }>;
+export type CoverageTotals = Record<CoverageMetric, { pct: number }>;
 
 type CoverageSummary = {
   total: CoverageTotals;
 };
 
-type PackageCoverageResult = {
+export type PackageCoverageResult = {
   packageName: string;
   packagePath: string;
   summaryPath: string;
@@ -19,13 +20,16 @@ type PackageCoverageResult = {
   missingSummaryWarning: string | null;
 };
 
-type BaselineEntry = {
+export type BaselineEntry = {
   packageName: string;
   statements: number;
   branches: number;
   functions: number;
   lines: number;
 };
+
+const BASELINE_METRICS: CoverageMetric[] = ["statements", "branches", "functions", "lines"];
+const INTENTIONAL_ZERO_BASELINE_REASONS: Record<string, string> = {};
 
 const projectRoot = process.cwd();
 const baselinePath = join(projectRoot, "ci-reports", "coverage", "core-baseline.txt");
@@ -141,13 +145,9 @@ function getThresholdWarnings(totals: CoverageTotals): string[] {
     .map(([metric, threshold]) => `${metric} ${totals[metric].pct.toFixed(2)}% < ${threshold}%`);
 }
 
-function parseBaseline(): Map<string, BaselineEntry> {
-  if (!existsSync(baselinePath)) {
-    return new Map();
-  }
-
+export function parseBaselineContent(source: string): Map<string, BaselineEntry> {
   const baselineEntries = new Map<string, BaselineEntry>();
-  const lines = readFileSync(baselinePath, "utf-8").split(/\r?\n/);
+  const lines = source.split(/\r?\n/);
 
   for (const line of lines) {
     const cells = line
@@ -173,21 +173,72 @@ function parseBaseline(): Map<string, BaselineEntry> {
   return baselineEntries;
 }
 
+function parseBaseline(): Map<string, BaselineEntry> {
+  if (!existsSync(baselinePath)) {
+    return new Map();
+  }
+
+  return parseBaselineContent(readFileSync(baselinePath, "utf-8"));
+}
+
 const baselineByPackage = parseBaseline();
 
-function getBaselineWarnings(packageName: string, totals: CoverageTotals): string[] {
-  const baseline = baselineByPackage.get(packageName);
+export function getBaselineWarnings(
+  packageName: string,
+  totals: CoverageTotals,
+  baselineEntries: ReadonlyMap<string, BaselineEntry> = baselineByPackage,
+): string[] {
+  const baseline = baselineEntries.get(packageName);
 
   if (!baseline) {
     return ["baseline missing"];
   }
 
-  return (Object.keys(CORE_COVERAGE_THRESHOLDS) as CoverageMetric[])
-    .filter((metric) => totals[metric].pct < baseline[metric])
-    .map(
-      (metric) =>
-        `${metric} ${totals[metric].pct.toFixed(2)}% < baseline ${baseline[metric].toFixed(2)}%`,
+  return BASELINE_METRICS.filter((metric) => totals[metric].pct < baseline[metric]).map(
+    (metric) =>
+      `${metric} ${totals[metric].pct.toFixed(2)}% < baseline ${baseline[metric].toFixed(2)}%`,
+  );
+}
+
+export function validateBaselineEntries(
+  results: readonly Pick<PackageCoverageResult, "packageName" | "totals">[],
+  baselineEntries: ReadonlyMap<string, BaselineEntry>,
+  intentionalZeroBaselineReasons: Record<string, string> = INTENTIONAL_ZERO_BASELINE_REASONS,
+): string[] {
+  const errors: string[] = [];
+
+  for (const result of results) {
+    if (!result.totals) {
+      continue;
+    }
+
+    const baseline = baselineEntries.get(result.packageName);
+
+    if (!baseline) {
+      continue;
+    }
+
+    const nonNumericMetrics = BASELINE_METRICS.filter(
+      (metric) => !Number.isFinite(baseline[metric]),
     );
+
+    if (nonNumericMetrics.length > 0) {
+      errors.push(
+        `${result.packageName}: baseline ${nonNumericMetrics.join(", ")} must be numeric.`,
+      );
+    }
+
+    const zeroMetrics = BASELINE_METRICS.filter((metric) => baseline[metric] === 0);
+    const intentionalZeroReason = intentionalZeroBaselineReasons[result.packageName]?.trim();
+
+    if (zeroMetrics.length > 0 && !intentionalZeroReason) {
+      errors.push(
+        `${result.packageName}: baseline ${zeroMetrics.join(", ")} cannot be 0 when coverage summary exists. Run \`pnpm test:coverage:core\`, update \`ci-reports/coverage/core-baseline.txt\` from measured totals, then run \`pnpm test:coverage:core:warning\`. Add an intentional zero-baseline reason only for bootstrap exceptions.`,
+      );
+    }
+  }
+
+  return errors;
 }
 
 function formatWarnings(warnings: string[]): string {
@@ -198,7 +249,7 @@ function formatCoveragePct(totals: CoverageTotals | null, metric: CoverageMetric
   return totals ? totals[metric].pct.toFixed(2) : "n/a";
 }
 
-function writeReport(results: PackageCoverageResult[]) {
+function writeReport(results: PackageCoverageResult[], baselineValidationErrors: string[]) {
   mkdirSync(reportDirectory, { recursive: true });
 
   const missingSummaryWarnings = results
@@ -216,7 +267,7 @@ function writeReport(results: PackageCoverageResult[]) {
     "",
     "- coverage 실행: gate step (`pnpm test:coverage:core`)에서 별도 실행",
     "- PR 표시: CI job summary와 `core-coverage-warning-report` artifact에 동일 report 게시",
-    "- warning-only 종료 코드: 0",
+    "- warning-only 종료 코드: baseline data가 valid하면 warning 수와 무관하게 0, invalid baseline data는 1",
     "",
     "## 적용 대상",
     ...CORE_COVERAGE_PACKAGES.map((packageName) => `- ${packageName}`),
@@ -232,6 +283,7 @@ function writeReport(results: PackageCoverageResult[]) {
     "- 1차 warning-only 범위는 `vitest.config.ts`의 `CORE_COVERAGE_PACKAGES`에 포함된 패키지로 고정한다.",
     "- 전 저장소 일괄 threshold 강제는 이번 단계에서 도입하지 않는다.",
     "- baseline 부재는 실패 대신 warning으로 기록한다.",
+    "- coverage summary가 있는 패키지의 0 baseline은 `INTENTIONAL_ZERO_BASELINE_REASONS`에 bootstrap 예외 사유가 없는 한 invalid data로 실패한다.",
     "",
     "## 패키지별 결과",
     "| 패키지 | Statements | Branches | Functions | Lines | Threshold warning | Baseline warning |",
@@ -250,12 +302,18 @@ function writeReport(results: PackageCoverageResult[]) {
     thresholdWarnings.length > 0 ? "### Threshold warnings" : "### Threshold warnings\n- 없음",
     ...(thresholdWarnings.length > 0 ? thresholdWarnings : []),
     "",
+    baselineValidationErrors.length > 0
+      ? "### Baseline data errors"
+      : "### Baseline data errors\n- 없음",
+    ...baselineValidationErrors.map((warning) => `- ${warning}`),
+    "",
     baselineWarnings.length > 0 ? "### Baseline regressions" : "### Baseline regressions\n- 없음",
     ...(baselineWarnings.length > 0 ? baselineWarnings : []),
     "",
     "## Enforce 전환 메모",
     "- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 유지한다.",
     "- 신규 core package는 coverage summary와 baseline row가 PR summary에 표시된 뒤 core set에 추가한다.",
+    "- baseline을 의도적으로 갱신할 때는 `pnpm test:coverage:core`를 먼저 실행하고, 생성된 `coverage-summary.json`의 total percentages를 `ci-reports/coverage/core-baseline.txt`에 반영한 뒤 `pnpm test:coverage:core:warning`을 실행한다.",
     "- threshold 상향은 `retry-core functions` 개선 이후 별도 태스크에서 검토한다.",
     "- baseline regression이 연속 0회가 아니라 안정적으로 해소된 이후에만 hard fail 전환을 검토한다.",
   ];
@@ -265,8 +323,9 @@ function writeReport(results: PackageCoverageResult[]) {
 
 async function main() {
   const results = CORE_COVERAGE_PACKAGES.map((packageName) => readCoverageSummary(packageName));
+  const baselineValidationErrors = validateBaselineEntries(results, baselineByPackage);
 
-  writeReport(results);
+  writeReport(results, baselineValidationErrors);
 
   console.log(`\n⚠️  Core coverage baseline report written to ${resolve(reportPath)}`);
 
@@ -278,12 +337,23 @@ async function main() {
       result.baselineWarnings.length,
     0,
   );
+  const totalErrors = baselineValidationErrors.length;
 
   console.log(`⚠️  Total core coverage warnings: ${totalWarnings}`);
-  process.exit(0);
+  if (totalErrors > 0) {
+    for (const error of baselineValidationErrors) {
+      console.error(`❌ ${error}`);
+    }
+    console.error(`❌ Total core coverage baseline errors: ${totalErrors}`);
+  } else {
+    console.log("✅ Total core coverage baseline errors: 0");
+  }
+  process.exit(totalErrors > 0 ? 1 : 0);
 }
 
-main().catch((error) => {
-  console.error("Failed to generate core coverage warning report:", error);
-  process.exit(1);
-});
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main().catch((error) => {
+    console.error("Failed to generate core coverage warning report:", error);
+    process.exit(1);
+  });
+}
