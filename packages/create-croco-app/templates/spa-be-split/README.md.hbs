@@ -12,15 +12,18 @@ pnpm dev:web
 
 - API 서버: `http://localhost:3000`
 - SPA 개발 서버: Vite 기본 포트
-- RPC 클라이언트 생성: `pnpm codegen`
+- OpenAPI 문서 생성: `pnpm contract:openapi`
+- RPC 클라이언트 생성: `pnpm contract:client` 또는 `pnpm codegen`
 
 ## 코드 생성
 
 ```bash
+pnpm contract:openapi
+pnpm contract:client
 pnpm codegen
 ```
 
-`apps/api-server/src/controllers/**/*.ts`에서 REST 컨트롤러 메타데이터를 읽어 `libs/shared/provider-rpc/src`에 fetch 클라이언트를 생성합니다.
+`contract:openapi`는 `apps/api-server/src/controllers/**/*.ts`에서 REST 컨트롤러 메타데이터를 읽어 `openapi.json`을 생성합니다. `contract:client`는 같은 컨트롤러 계약에서 React Query hook을 포함한 fetch 클라이언트를 `libs/shared/provider-rpc/src`에 생성합니다. `codegen`은 기존 사용자를 위한 `contract:client` 별칭입니다.
 
 ## 구조
 

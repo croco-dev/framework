@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -55,7 +54,9 @@ export async function loadRoutes(glob: string): Promise<RouteIR[]> {
   }
 
   const rootDir = getCommonSourceDir(sourceFiles);
-  const emitDir = fs.mkdtempSync(path.join(os.tmpdir(), "croco-rpc-codegen-"));
+  const emitDir = fs.mkdtempSync(
+    path.join(getModuleResolutionRoot(rootDir), ".croco-rpc-codegen-"),
+  );
   project.compilerOptions.set({ rootDir, outDir: emitDir });
 
   try {
@@ -104,6 +105,23 @@ function getCommonSourceDir(sourceFiles: SourceFile[]): string {
   const commonDir = commonParts.join(path.sep);
 
   return path.isAbsolute(commonDir) ? commonDir : `${path.sep}${commonDir}`;
+}
+
+function getModuleResolutionRoot(sourceDir: string): string {
+  let currentDir = sourceDir;
+
+  while (true) {
+    if (fs.existsSync(path.join(currentDir, "node_modules"))) {
+      return currentDir;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return process.cwd();
+    }
+
+    currentDir = parentDir;
+  }
 }
 
 function getEmittedFilePath(rootDir: string, emitDir: string, sourceFile: SourceFile): string {

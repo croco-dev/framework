@@ -77,14 +77,21 @@ function checkSpaBeSplitStructure() {
   }
 
   checkFileExists("spa-be-split", "libs", "shared", "provider-rpc", "package.json.hbs");
+  checkFileExists("spa-be-split", "libs", "shared", "provider-rpc", "tsconfig.json.hbs");
 
   const rootPackageJson = readJsonTemplate("spa-be-split", "package.json.hbs");
   expect(rootPackageJson).toMatchObject({
     scripts: expect.objectContaining({
       "dev:api": expect.any(String),
       "dev:web": expect.any(String),
+      "contract:openapi": expect.stringContaining("croco-openapi-spec"),
+      "contract:client": expect.stringContaining("croco-rpc-codegen"),
       codegen: expect.any(String),
       test: "turbo test",
+    }),
+    devDependencies: expect.objectContaining({
+      "@croco/openapi-spec": "workspace:*",
+      "@croco/rpc-codegen": "workspace:*",
     }),
   });
   const apiPackageJson = readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
@@ -96,6 +103,24 @@ function checkSpaBeSplitStructure() {
       "@croco/testing": "workspace:*",
       vitest: expect.any(String),
     }),
+    dependencies: expect.objectContaining({
+      zod: expect.any(String),
+    }),
+  });
+  const rpcPackageJson = readJsonTemplate(
+    "spa-be-split",
+    "libs",
+    "shared",
+    "provider-rpc",
+    "package.json.hbs",
+  );
+  expect(rpcPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      typecheck: "tsc --noEmit",
+    }),
+    dependencies: expect.objectContaining({
+      "@tanstack/react-query": expect.any(String),
+    }),
   });
   checkFileContains(
     "spa-be-split",
@@ -106,6 +131,16 @@ function checkSpaBeSplitStructure() {
     "spa-be-split",
     ["apps", "api-server", "src", "app.ts"],
     /export function createCrocoApp/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "controllers", "UserController.ts"],
+    /@ResponseSchema/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "controllers", "UserController.ts"],
+    /@Body\(createUserInputSchema\)/,
   );
   checkFileExists("spa-be-split", "pnpm-workspace.yaml");
 }

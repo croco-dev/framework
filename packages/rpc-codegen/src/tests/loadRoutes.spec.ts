@@ -40,6 +40,28 @@ describe("loadRoutes", () => {
   );
 
   it(
+    "resolves controller imports from the nearest project node_modules",
+    async () => {
+      writeProtocolsRestFixture(tempRoot);
+      fs.writeFileSync(
+        path.join(sourceDir, "ImportedController.ts"),
+        getImportedControllerSource(),
+      );
+
+      const routes = await loadRoutes(path.join(sourceDir, "*.ts"));
+
+      expect(routes).toHaveLength(1);
+      expect(routes[0]).toMatchObject({
+        controllerName: "ImportedController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/imported",
+      });
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
     "fails clearly when matched files export no controllers",
     async () => {
       fs.writeFileSync(path.join(sourceDir, "Helper.ts"), "export class Helper {}\n");
@@ -66,6 +88,53 @@ async function expectNoRestControllersFound(result: Promise<unknown>): Promise<v
     title: "Bad Request",
     type: "about:blank",
   });
+}
+
+function writeProtocolsRestFixture(projectDir: string): void {
+  const packageDir = path.join(projectDir, "node_modules", "@croco", "protocols-rest");
+
+  fs.mkdirSync(packageDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(packageDir, "package.json"),
+    JSON.stringify({ name: "@croco/protocols-rest", main: "index.js" }),
+  );
+  fs.writeFileSync(path.join(packageDir, "index.js"), getProtocolsRestFixtureSource());
+}
+
+function getImportedControllerSource(): string {
+  return `import { Controller, Get } from '@croco/protocols-rest';
+
+@Controller('/imported')
+export class ImportedController {
+  @Get('/')
+  list() {
+    return [];
+  }
+}
+`;
+}
+
+function getProtocolsRestFixtureSource(): string {
+  return `const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+
+exports.Controller = function Controller(controllerPath = '') {
+  return (target) => {
+    const path = controllerPath.startsWith('/') ? controllerPath : \`/\${controllerPath}\`;
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: path === '/' ? '' : path, target }, target);
+  };
+};
+
+exports.Get = function Get(routePath = '') {
+  return (target, propertyKey, descriptor) => {
+    const path = routePath.startsWith('/') ? routePath : \`/\${routePath}\`;
+    const ctor = target.constructor;
+    const routes = Reflect.getMetadata(REST_ROUTES_KEY, ctor) ?? [];
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: path === '/' ? '' : path, methodName: propertyKey }], ctor);
+    return descriptor;
+  };
+};
+`;
 }
 
 function getMixedControllerSource(): string {

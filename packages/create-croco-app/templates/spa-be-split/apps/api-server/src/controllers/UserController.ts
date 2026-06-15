@@ -1,15 +1,31 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from "@croco/protocols-rest";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  ResponseSchema,
+} from "@croco/protocols-rest";
+import { z } from "zod";
 
-type User = {
-  readonly id: string;
-  readonly name: string;
-  readonly email: string;
-};
+const userIdSchema = z.string();
+const userSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+});
+const createUserInputSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+});
+const deletedResponseSchema = z.object({
+  deleted: z.boolean(),
+});
 
-type CreateUserInput = {
-  readonly name: string;
-  readonly email: string;
-};
+type User = z.infer<typeof userSchema>;
+type CreateUserInput = z.infer<typeof createUserInputSchema>;
 
 let users: User[] = [
   { id: "user-1", name: "Ada Lovelace", email: "ada@example.com" },
@@ -19,17 +35,20 @@ let users: User[] = [
 @Controller("/users")
 export class UserController {
   @Get()
+  @ResponseSchema(z.array(userSchema))
   list(): User[] {
     return users;
   }
 
   @Get("/:id")
-  getById(@Param("id") id: string): User | undefined {
-    return users.find((user) => user.id === id);
+  @ResponseSchema(userSchema.nullable())
+  getById(@Param("id", userIdSchema) id: string): User | null {
+    return users.find((user) => user.id === id) ?? null;
   }
 
   @Post()
-  create(@Body() input: CreateUserInput): User {
+  @ResponseSchema(userSchema)
+  create(@Body(createUserInputSchema) input: CreateUserInput): User {
     const user = {
       id: `user-${users.length + 1}`,
       name: input.name,
@@ -42,7 +61,11 @@ export class UserController {
   }
 
   @Put("/:id")
-  update(@Param("id") id: string, @Body() input: CreateUserInput): User | undefined {
+  @ResponseSchema(userSchema.nullable())
+  update(
+    @Param("id", userIdSchema) id: string,
+    @Body(createUserInputSchema) input: CreateUserInput,
+  ): User | null {
     const nextUsers = users.map((user) =>
       user.id === id ? { ...user, name: input.name, email: input.email } : user,
     );
@@ -50,11 +73,12 @@ export class UserController {
 
     users = nextUsers;
 
-    return updatedUser;
+    return updatedUser ?? null;
   }
 
   @Delete("/:id")
-  delete(@Param("id") id: string): { readonly deleted: boolean } {
+  @ResponseSchema(deletedResponseSchema)
+  delete(@Param("id", userIdSchema) id: string): z.infer<typeof deletedResponseSchema> {
     const previousLength = users.length;
     users = users.filter((user) => user.id !== id);
 
