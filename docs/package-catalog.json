@@ -133,10 +133,6 @@
         "preset-node",
         "testing"
       ]
-    },
-    "Docs": {
-      "description": "Documentation site and generated reference content",
-      "packages": ["docs"]
     }
   },
   "maturity": {
@@ -178,7 +174,6 @@
         "create-croco-app",
         "customer-health-core",
         "diagnostics-core",
-        "docs",
         "entitlements-core",
         "esbuild-plugin",
         "events-inmemory",

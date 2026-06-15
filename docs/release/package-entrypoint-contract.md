@@ -29,8 +29,13 @@ pnpm package-manifests:write
 `pnpm check` runs the check mode, and the release workflow runs the same gate before build and
 publish dry-run.
 
+`@croco/docs` is an Astro documentation site, not an importable runtime package or npm artifact. It
+must remain `private: true`, with no `publishConfig.access`, so npm, pnpm recursive publish, and
+Changesets cannot select it for publish or tagging work. If the docs manifest becomes public again,
+the package manifest and entrypoint gates should fail instead of treating it as a runtime-package
+exception.
+
 ## Exceptions
 
-- `@croco/docs` is an Astro documentation site, not an importable runtime package.
 - `create-croco-app` is a bin-only project generator. It ships `dist` and `templates`, but does
   not expose an import entrypoint because importing it would execute the CLI.

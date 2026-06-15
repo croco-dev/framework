@@ -160,7 +160,7 @@ describe("changeset-required-check.mts", () => {
     );
   });
 
-  it("passes for docs-site source changes", () => {
+  it("passes for private docs-site source changes", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "docs/site-content");
     commitFile(
@@ -275,10 +275,8 @@ function createTempRepo(): string {
   });
   writePackage(repo, "docs", {
     name: "@croco/docs",
+    private: true,
     version: "0.0.2",
-    publishConfig: {
-      access: "public",
-    },
   });
 
   git(repo, ["add", "."]);

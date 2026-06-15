@@ -2,16 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const ENTRYPOINT_EXEMPTIONS = new Map([
-  ["@croco/docs", "Astro documentation site; not imported as a runtime package."],
   ["create-croco-app", "Bin-only project generator; importing it would execute the CLI."],
 ]);
 
-export const FILES_EXEMPTIONS = new Map([
-  [
-    "@croco/docs",
-    "Astro documentation site output is not part of the package entrypoint contract.",
-  ],
-]);
+export const FILES_EXEMPTIONS = new Map();
 
 export const EXPECTED_FILES_BY_PACKAGE = new Map([
   ["create-croco-app", ["dist", "templates"]],

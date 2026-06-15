@@ -20,7 +20,7 @@ describe("package-entrypoint-smoke.mts", () => {
     }
   });
 
-  it("checks valid importable packages and reports exempt packages", () => {
+  it("checks valid importable packages and skips the private docs site", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "valid");
     writeDocsPackage(root);
@@ -29,10 +29,19 @@ describe("package-entrypoint-smoke.mts", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("✓ @croco/valid: esm 1, cjs 1, types 1");
+    expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
+  });
+
+  it("rejects a public docs site package without an entrypoint exemption", () => {
+    const root = createTempRoot();
+    writePublicDocsPackage(root);
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
     expect(result.stdout).toContain(
-      "- @croco/docs: Astro documentation site; not imported as a runtime package.",
+      "packages/docs/package.json: public package without src/index.ts needs an explicit entrypoint exemption",
     );
-    expect(result.stdout).toContain("summary checked=1 exempt=1 skippedPrivate=0");
   });
 
   it("fails when an export map points at a missing runtime entrypoint", () => {
@@ -181,11 +190,29 @@ function writeDocsPackage(root: string): void {
     `${JSON.stringify(
       {
         name: "@croco/docs",
+        private: true,
         version: "0.0.0",
         type: "module",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function writePublicDocsPackage(root: string): void {
+  const packageDir = join(root, "packages", "docs");
+  mkdirSync(packageDir, { recursive: true });
+  writeFileSync(
+    join(packageDir, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "@croco/docs",
         publishConfig: {
           access: "public",
         },
+        type: "module",
+        version: "0.0.0",
       },
       null,
       2,

@@ -1,10 +1,8 @@
 {
   "name": "@croco/docs",
   "version": "0.0.2",
+  "private": true,
   "type": "module",
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "lint": "oxlint .",
     "dev": "astro dev --host",

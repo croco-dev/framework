@@ -6,10 +6,10 @@
 ## 1. 릴리즈 워크플로우 개요
 
 이 프로젝트는 **Trunk-based Development**를 따르며, 메인 브랜치는 `trunk`입니다.
-모든 패키지는 **Fixed Mode**로 설정되어 있어, 하나의 패키지 버전이 올라가면 그룹 내 모든 패키지의 버전이 함께 올라갑니다. 이를 통해 패키지 간 버전 일관성을 유지합니다.
+패키지는 Changesets의 기본 독립 버전 관리 방식으로 운영합니다. `.changeset/config.json`의 `fixed`와 `linked` 배열은 비어 있으므로, 하나의 패키지 버전 상승이 모든 패키지 버전을 자동으로 함께 올리지는 않습니다.
 
 - **Main Branch**: `trunk`
-- **Mode**: Fixed (모든 `@croco/*` 패키지가 동일 버전 유지)
+- **Mode**: Independent (Changesets fixed/linked group 없음)
 - **Registry**: npm (public access)
 
 ---
@@ -51,8 +51,9 @@
    ```
 
 2. **패키지 선택**
-   - 변경된 패키지를 스페이스바로 선택합니다.
-   - **Fixed Mode**이므로, 하나의 패키지만 선택해도 그룹 내 다른 패키지들이 영향을 받을 수 있습니다.
+   - 릴리즈가 필요한 변경이 들어간 publishable package를 각각 스페이스바로 선택합니다.
+   - 여러 패키지의 공개 동작이나 package manifest가 함께 바뀌었다면, 해당 패키지를 모두 선택합니다.
+   - 문서, 테스트, private package, 또는 publishable package 동작에 영향을 주지 않는 루트 설정만 바뀐 경우에는 changeset이 필요하지 않을 수 있습니다. PR에서는 `pnpm changeset-required:check -- --base origin/trunk --head HEAD` 결과로 이 판단을 확인합니다.
 
 3. **버전 타입 선택**
    - **Major**: 호환되지 않는 변경 (Breaking Changes)
@@ -61,6 +62,12 @@
 
 4. **설명 작성**
    - 변경 사항에 대한 명확한 설명을 작성합니다. 이 내용은 `CHANGELOG.md`에 그대로 반영됩니다.
+
+### Release review expectations
+
+- `.changeset/config.json`과 이 가이드의 versioning mode 설명이 일치해야 합니다. 현재는 `fixed: []`, `linked: []`이므로 독립 버전 관리로 리뷰합니다.
+- Fixed 또는 linked group을 도입하려면 `.changeset/config.json`에 실제 group을 먼저 표현하고, 이 가이드에 group 영향 범위와 패키지 선택 기준을 함께 갱신해야 합니다.
+- 리뷰어는 release-significant package 변경마다 적절한 changeset entry가 있는지 확인합니다. 하나의 패키지를 선택했다는 이유만으로 관련 없는 패키지까지 자동으로 함께 bump된다고 가정하지 않습니다.
 
 ---
 
