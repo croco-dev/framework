@@ -1,6 +1,7 @@
 import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
+  ClerkPublicUserDataMissingProblem,
   ClerkTokenVerificationProblem,
   InvalidWebhookPayloadProblem,
   WebhookVerificationProblem,
@@ -43,6 +44,15 @@ describe("ClerkProblems", () => {
       const problem = new ClerkTokenVerificationProblem("jwt expired");
 
       expect(problem.detail).toBe("jwt expired");
+    });
+  });
+
+  describe("ClerkPublicUserDataMissingProblem", () => {
+    it("has correct code and category", () => {
+      const problem = new ClerkPublicUserDataMissingProblem();
+
+      expect(problem.code).toBe("auth-clerk/public-user-data-missing");
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
     });
   });
 });

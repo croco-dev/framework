@@ -1,6 +1,7 @@
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
+import { ClerkPublicUserDataMissingProblem } from "./problems/ClerkProblems";
 
 export type ClerkOrganization = {
   id: string;
@@ -293,7 +294,7 @@ export class ClerkOrganizationService {
     });
 
     if (membership.publicUserData == null) {
-      throw new Error("publicUserData is null");
+      throw new ClerkPublicUserDataMissingProblem();
     }
 
     return {
@@ -318,7 +319,7 @@ export class ClerkOrganizationService {
     });
 
     if (membership.publicUserData == null) {
-      throw new Error("publicUserData is null");
+      throw new ClerkPublicUserDataMissingProblem();
     }
 
     return {

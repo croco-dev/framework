@@ -1,6 +1,8 @@
 import { createClerkClient } from "@clerk/backend";
+import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ClerkOrganizationService } from "../libs/ClerkOrganizationService";
+import { ClerkPublicUserDataMissingProblem } from "../libs/problems/ClerkProblems";
 
 vi.mock("@clerk/backend", () => ({
   createClerkClient: vi.fn(),
@@ -235,6 +237,27 @@ describe("ClerkOrganizationService", () => {
         role: "org:admin",
       });
     });
+
+    it("throws a Problem when Clerk omits public user data", async () => {
+      const mockMembership = { ...createMockMembership("mem_missing"), publicUserData: null };
+      vi.mocked(mockClerkClient.organizations.createOrganizationMembership).mockResolvedValue(
+        mockMembership as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.createOrganizationMembership>
+        >,
+      );
+
+      const result = service.createOrganizationMembership({
+        organizationId: "org_123",
+        userId: "user_456",
+        role: "org:admin",
+      });
+
+      await expect(result).rejects.toBeInstanceOf(ClerkPublicUserDataMissingProblem);
+      await expect(result).rejects.toMatchObject({
+        code: "auth-clerk/public-user-data-missing",
+        category: ProblemCategory.InternalServerError,
+      });
+    });
   });
 
   describe("updateOrganizationMembership", () => {
@@ -253,6 +276,23 @@ describe("ClerkOrganizationService", () => {
         organizationId: "org_123",
         userId: "user_456",
         role: "org:admin",
+      });
+    });
+
+    it("throws a Problem when Clerk omits public user data", async () => {
+      const mockMembership = { ...createMockMembership("mem_missing"), publicUserData: null };
+      vi.mocked(mockClerkClient.organizations.updateOrganizationMembership).mockResolvedValue(
+        mockMembership as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.updateOrganizationMembership>
+        >,
+      );
+
+      const result = service.updateOrganizationMembership("org_123", "user_456", "org:admin");
+
+      await expect(result).rejects.toBeInstanceOf(ClerkPublicUserDataMissingProblem);
+      await expect(result).rejects.toMatchObject({
+        code: "auth-clerk/public-user-data-missing",
+        category: ProblemCategory.InternalServerError,
       });
     });
   });
