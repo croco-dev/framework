@@ -1,18 +1,13 @@
 import { validateProjectName } from "./helpers/validate.js";
+import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "./supported-options.js";
 import type { GeneratorOptions } from "./types.js";
 
-const PRESETS = ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack"] as const;
-const APIS = ["graphql", "trpc"] as const;
-const API_HOSTING = ["standalone", "nextjs"] as const;
-const BACKEND_DEPLOYS = ["docker", "lambda"] as const;
-const FRONTEND_DEPLOYS = [
-  "opennext",
-  "vercel",
-  "docker",
-  "cloudflare-meta-vite",
-  "vite-spa",
-] as const;
-const DATABASES = ["postgres", "mongodb", "redis"] as const;
+const PRESETS = SUPPORTED_CREATE_CROCO_APP_CHOICES.presets;
+const APIS = SUPPORTED_CREATE_CROCO_APP_CHOICES.apis;
+const API_HOSTING = SUPPORTED_CREATE_CROCO_APP_CHOICES.apiHosting;
+const BACKEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.backendDeploys;
+const FRONTEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys;
+const DATABASES = SUPPORTED_CREATE_CROCO_APP_CHOICES.databases;
 
 type ChoiceName = "preset" | "api" | "api-hosting" | "backend-deploy" | "frontend-deploy" | "db";
 

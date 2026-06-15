@@ -1,5 +1,6 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { mergeInto } from "../helpers/fs.js";
+import { mergeInto, renderHandlebars } from "../helpers/fs.js";
 import { TEMPLATES_DIR } from "../template-path.js";
 import type { GeneratorOptions } from "../types.js";
 
@@ -32,6 +33,20 @@ export function installFrontendDeploy(
       projectName: options.projectName,
       scope: options.scope,
     });
+    return;
+  }
+
+  if (options.frontendDeploy === "docker") {
+    const dockerDir = join(targetDir, webAppName ?? "web");
+    mkdirSync(dockerDir, { recursive: true });
+    writeFileSync(
+      join(dockerDir, "Dockerfile"),
+      renderHandlebars(join(TEMPLATES_DIR, "addons", "docker", "web", "Dockerfile"), {
+        projectName: options.projectName,
+        scope: options.scope,
+        webPackageName: `${options.scope}/${webAppName ?? "web"}`,
+      }),
+    );
     return;
   }
 

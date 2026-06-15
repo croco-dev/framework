@@ -13,11 +13,13 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getExternalCrocoPackageRange } from "../packages/create-croco-app/src/helpers/croco-ranges.ts";
+import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 
 type SmokeValidation = {
   readonly label: string;
   readonly packagePath?: readonly string[];
-  readonly args: readonly string[];
+  readonly args?: readonly string[];
+  readonly paths?: readonly string[];
 };
 
 type SmokeCase = {
@@ -52,6 +54,11 @@ type PackageJson = {
 
 const smokeCases: readonly SmokeCase[] = [
   {
+    name: "blank-basic",
+    args: ["--preset", "blank", "--scope", "@smoke", "--no-install", "--no-git"],
+    validations: [{ label: "typecheck", args: ["typecheck"] }],
+  },
+  {
     name: "graphql-lambda-api",
     args: [
       "--preset",
@@ -60,10 +67,13 @@ const smokeCases: readonly SmokeCase[] = [
       "@smoke",
       "--api",
       "graphql",
+      "--api-hosting",
+      "standalone",
       "--backend-deploy",
       "lambda",
       "--db",
-      "mongodb",
+      "postgres,mongodb,redis",
+      "--no-install",
       "--no-git",
     ],
     validations: [
@@ -72,7 +82,7 @@ const smokeCases: readonly SmokeCase[] = [
     ],
   },
   {
-    name: "trpc-nextjs-fullstack",
+    name: "trpc-nextjs-vercel-fullstack",
     args: [
       "--preset",
       "ddd-fullstack",
@@ -84,9 +94,87 @@ const smokeCases: readonly SmokeCase[] = [
       "nextjs",
       "--web-apps",
       "web",
+      "--frontend-deploy",
+      "vercel",
+      "--no-install",
       "--no-git",
     ],
     validations: [{ label: "build", args: ["build"] }],
+  },
+  {
+    name: "graphql-nextjs-opennext",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "graphql",
+      "--api-hosting",
+      "nextjs",
+      "--web-apps",
+      "web",
+      "--frontend-deploy",
+      "opennext",
+      "--no-install",
+      "--no-git",
+    ],
+    validations: [
+      {
+        label: "OpenNext deployment files",
+        packagePath: ["apps", "web"],
+        paths: ["open-next.config.ts", "wrangler.toml"],
+      },
+    ],
+  },
+  {
+    name: "trpc-nextjs-docker-frontend",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "trpc",
+      "--api-hosting",
+      "nextjs",
+      "--web-apps",
+      "web",
+      "--frontend-deploy",
+      "docker",
+      "--no-install",
+      "--no-git",
+    ],
+    validations: [{ label: "frontend Dockerfile", paths: ["web/Dockerfile"] }],
+  },
+  {
+    name: "graphql-vite-spa-docker",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "graphql",
+      "--api-hosting",
+      "standalone",
+      "--web-apps",
+      "web",
+      "--backend-deploy",
+      "docker",
+      "--frontend-deploy",
+      "vite-spa",
+      "--no-install",
+      "--no-git",
+    ],
+    validations: [
+      {
+        label: "apps/web vite config load",
+        packagePath: ["apps", "web"],
+        args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
+      },
+      { label: "vite SPA Dockerfile", paths: ["web/Dockerfile.vite-spa"] },
+    ],
   },
   {
     name: "meta-vite-web",
@@ -103,6 +191,7 @@ const smokeCases: readonly SmokeCase[] = [
       "web",
       "--frontend-deploy",
       "cloudflare-meta-vite",
+      "--no-install",
       "--no-git",
     ],
     validations: [
@@ -120,8 +209,11 @@ const smokeCases: readonly SmokeCase[] = [
       "ddd-vike-fullstack",
       "--scope",
       "@smoke",
+      "--api-hosting",
+      "standalone",
       "--frontend-deploy",
       "cloudflare-meta-vite",
+      "--no-install",
       "--no-git",
     ],
     validations: [
@@ -135,11 +227,15 @@ const smokeCases: readonly SmokeCase[] = [
 ];
 
 try {
+  assertSmokeCoverage(smokeCases);
+  printSmokeCoverageSummary(smokeCases);
+
   run(
     "pnpm",
     [
       "build",
       "--filter=create-croco-app...",
+      "--filter=@croco/frontend-vite...",
       "--filter=@croco/openapi-spec...",
       "--filter=@croco/rpc-codegen...",
       "--force",
@@ -148,10 +244,15 @@ try {
   );
   assertExists(cliPath, "create-croco-app dist CLI is missing after build");
 
+  const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides();
+
   for (const smokeCase of smokeCases) {
     const projectDir = join(smokeRoot, smokeCase.name);
 
     run("node", [cliPath, projectDir, ...smokeCase.args], rootDir);
+    rewriteExternalCrocoRanges(projectDir, generatedSmokeRangeOverrides);
+    writePnpmOverrides(projectDir, generatedSmokeRangeOverrides);
+    run("pnpm", ["install"], projectDir);
     assertExists(
       join(projectDir, "pnpm-lock.yaml"),
       `${smokeCase.name} did not create a pnpm lockfile`,
@@ -162,12 +263,7 @@ try {
     );
 
     for (const validation of smokeCase.validations) {
-      const validationDir = validation.packagePath
-        ? join(projectDir, ...validation.packagePath)
-        : projectDir;
-
-      run("pnpm", ["--dir", validationDir, ...validation.args], rootDir);
-      console.log(`create-croco-app-generated-smoke: ${smokeCase.name} ${validation.label} passed`);
+      runValidation(projectDir, smokeCase, validation);
     }
   }
 
@@ -181,6 +277,153 @@ try {
 function assertExists(path: string, message: string): void {
   if (!existsSync(path)) {
     throw new Error(message);
+  }
+}
+
+function runValidation(
+  projectDir: string,
+  smokeCase: SmokeCase,
+  validation: SmokeValidation,
+): void {
+  const validationDir = validation.packagePath
+    ? join(projectDir, ...validation.packagePath)
+    : projectDir;
+
+  if (validation.args) {
+    run("pnpm", ["--dir", validationDir, ...validation.args], rootDir);
+  }
+
+  for (const relativePath of validation.paths ?? []) {
+    assertExists(
+      join(validationDir, relativePath),
+      `${smokeCase.name} ${validation.label} did not create ${relativePath}`,
+    );
+  }
+
+  if (!validation.args && !validation.paths) {
+    throw new Error(`${smokeCase.name} ${validation.label} has no validation action`);
+  }
+
+  console.log(`create-croco-app-generated-smoke: ${smokeCase.name} ${validation.label} passed`);
+}
+
+function assertSmokeCoverage(cases: readonly SmokeCase[]): void {
+  const coverage = readSmokeCoverage(cases);
+
+  assertCovers("presets", SUPPORTED_CREATE_CROCO_APP_CHOICES.presets, coverage.presets);
+  assertCovers("apis", SUPPORTED_CREATE_CROCO_APP_CHOICES.apis, coverage.apis);
+  assertCovers("api-hosting", SUPPORTED_CREATE_CROCO_APP_CHOICES.apiHosting, coverage.apiHosting);
+  assertCovers(
+    "backend-deploy",
+    SUPPORTED_CREATE_CROCO_APP_CHOICES.backendDeploys,
+    coverage.backendDeploys,
+  );
+  assertCovers(
+    "frontend-deploy",
+    SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys,
+    coverage.frontendDeploys,
+  );
+  assertCovers("db", SUPPORTED_CREATE_CROCO_APP_CHOICES.databases, coverage.databases);
+}
+
+function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
+  const coverage = readSmokeCoverage(cases);
+
+  console.log(
+    `create-croco-app-generated-smoke: matrix cases ${cases.map(({ name }) => name).join(", ")}`,
+  );
+  console.log(
+    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; db=${coverage.databases.join(", ")}`,
+  );
+}
+
+function readSmokeCoverage(cases: readonly SmokeCase[]): {
+  readonly presets: readonly string[];
+  readonly apis: readonly string[];
+  readonly apiHosting: readonly string[];
+  readonly backendDeploys: readonly string[];
+  readonly frontendDeploys: readonly string[];
+  readonly databases: readonly string[];
+} {
+  return {
+    presets: readCoveredValues(cases, "--preset", SUPPORTED_CREATE_CROCO_APP_CHOICES.presets),
+    apis: readCoveredValues(cases, "--api", SUPPORTED_CREATE_CROCO_APP_CHOICES.apis),
+    apiHosting: readCoveredValues(
+      cases,
+      "--api-hosting",
+      SUPPORTED_CREATE_CROCO_APP_CHOICES.apiHosting,
+    ),
+    backendDeploys: readCoveredValues(
+      cases,
+      "--backend-deploy",
+      SUPPORTED_CREATE_CROCO_APP_CHOICES.backendDeploys,
+    ),
+    frontendDeploys: readCoveredValues(
+      cases,
+      "--frontend-deploy",
+      SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys,
+    ),
+    databases: readCoveredValues(cases, "--db", SUPPORTED_CREATE_CROCO_APP_CHOICES.databases, {
+      splitCommaValues: true,
+    }),
+  };
+}
+
+function readCoveredValues(
+  cases: readonly SmokeCase[],
+  flag: string,
+  supportedValues: readonly string[],
+  options: { readonly splitCommaValues?: boolean } = {},
+): readonly string[] {
+  const coveredValues = new Set<string>();
+
+  for (const smokeCase of cases) {
+    for (let index = 0; index < smokeCase.args.length; index += 1) {
+      if (smokeCase.args[index] !== flag) continue;
+
+      const value = smokeCase.args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error(`${smokeCase.name} is missing a value after ${flag}`);
+      }
+
+      const values = options.splitCommaValues
+        ? value
+            .split(",")
+            .map((part) => part.trim())
+            .filter(Boolean)
+        : [value];
+
+      for (const coveredValue of values) {
+        coveredValues.add(coveredValue);
+      }
+    }
+  }
+
+  const unsupportedValues = [...coveredValues].filter(
+    (coveredValue) => !supportedValues.includes(coveredValue),
+  );
+  if (unsupportedValues.length > 0) {
+    throw new Error(
+      `${flag} smoke coverage includes unsupported values: ${unsupportedValues.join(", ")}`,
+    );
+  }
+
+  return supportedValues.filter((supportedValue) => coveredValues.has(supportedValue));
+}
+
+function assertCovers(
+  label: string,
+  supportedValues: readonly string[],
+  coveredValues: readonly string[],
+): void {
+  const missingValues = supportedValues.filter(
+    (supportedValue) => !coveredValues.includes(supportedValue),
+  );
+
+  if (missingValues.length > 0) {
+    throw new Error(
+      `create-croco-app generated smoke matrix is missing ${label}: ${missingValues.join(", ")}`,
+    );
   }
 }
 
@@ -222,6 +465,15 @@ function runSpaBeSplitContractSmoke(): void {
 
   run("pnpm", ["--filter", "@smoke/provider-rpc", "typecheck"], projectDir);
   console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
+}
+
+function getGeneratedSmokeRangeOverrides(): Record<string, string> {
+  const packDir = join(smokeRoot, "generated-package-packs");
+
+  return {
+    "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
+    "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
+  };
 }
 
 function getContractSmokeRangeOverrides(): Record<string, string> {
@@ -334,16 +586,16 @@ function rewriteExternalCrocoRanges(
       }
 
       for (const [packageName, range] of Object.entries(dependencies)) {
-        if (
-          !packageName.startsWith("@croco/") ||
-          !range.startsWith("workspace:") ||
-          generatedPackageNames.has(packageName)
-        ) {
+        if (!packageName.startsWith("@croco/") || generatedPackageNames.has(packageName)) {
           continue;
         }
 
-        const publishedRange =
-          rangeOverrides[packageName] ?? getExternalCrocoPackageRange(packageName);
+        const rangeOverride = rangeOverrides[packageName];
+        if (!range.startsWith("workspace:") && rangeOverride === undefined) {
+          continue;
+        }
+
+        const publishedRange = rangeOverride ?? getExternalCrocoPackageRange(packageName);
         if (publishedRange === undefined) {
           throw new Error(`No published range configured for generated dependency ${packageName}`);
         }
