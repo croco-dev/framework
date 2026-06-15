@@ -32,6 +32,9 @@ describe("release-docs-check.mts", () => {
         "- **Mode**: Independent",
         "The fixed and linked arrays are empty.",
         "Select each changed publishable package를 각각 when creating a changeset.",
+        "The release workflow exports NPM_CONFIG_PROVENANCE=true.",
+        "Maintainers verify provenance with npm audit signatures.",
+        "The npm Version field shows the provenance check mark.",
       ].join("\n"),
     );
 
@@ -60,6 +63,29 @@ describe("release-docs-check.mts", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("must state `**Mode**: Independent`");
     expect(result.stdout).toContain("still describes fixed-mode versioning");
+  });
+
+  it("fails when the guide omits npm provenance verification", () => {
+    const root = createFixture(
+      {
+        fixed: [],
+        linked: [],
+      },
+      [
+        "# Release",
+        "`.changeset/config.json` is the source of truth.",
+        "- **Mode**: Independent",
+        "The fixed and linked arrays are empty.",
+        "Select each changed publishable package를 각각 when creating a changeset.",
+      ].join("\n"),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("npm provenance publish configuration");
+    expect(result.stdout).toContain("npm provenance CLI verification command");
+    expect(result.stdout).toContain("npmjs.com provenance UI verification");
   });
 
   it("fails when configured fixed groups are missing from the guide", () => {

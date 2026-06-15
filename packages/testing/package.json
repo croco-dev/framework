@@ -1,6 +1,11 @@
 {
   "name": "@croco/testing",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/testing"
+  },
   "files": [
     "dist"
   ],

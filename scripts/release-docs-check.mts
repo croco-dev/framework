@@ -98,6 +98,18 @@ function collectErrors(
     errors.push("RELEASING.md must identify .changeset/config.json as the source of truth.");
   }
 
+  if (!docs.includes("NPM_CONFIG_PROVENANCE")) {
+    errors.push("RELEASING.md must document the npm provenance publish configuration.");
+  }
+
+  if (!docs.includes("npm audit signatures")) {
+    errors.push("RELEASING.md must document the npm provenance CLI verification command.");
+  }
+
+  if (!docs.includes("Version field")) {
+    errors.push("RELEASING.md must document npmjs.com provenance UI verification.");
+  }
+
   if (!docs.includes("fixed") || !docs.includes("linked")) {
     errors.push("RELEASING.md must describe fixed/linked group behavior.");
   }

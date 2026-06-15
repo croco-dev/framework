@@ -22,25 +22,30 @@ describe("normalize-packages.mjs", () => {
 
   it("reports drift in check mode without writing files", () => {
     const root = createTempRoot();
-    const packagePath = writePackage(root, "example", {
-      name: "@croco/example",
-      version: "0.0.3",
-      files: ["dist"],
-      type: "commonjs",
-      main: "./src/index.ts",
-      types: ["dist/index.d.ts", "dist/index.d.mts"],
-      publishConfig: {
+    const packagePath = writePackage(
+      root,
+      "example",
+      {
+        name: "@croco/example",
+        version: "0.0.3",
+        files: ["dist"],
+        type: "commonjs",
         main: "./src/index.ts",
         types: ["dist/index.d.ts", "dist/index.d.mts"],
-        exports: {
-          ".": {
-            import: "./dist/index.mjs",
-            require: "./dist/index.js",
-            types: ["dist/index.d.ts", "dist/index.d.mts"],
+        publishConfig: {
+          main: "./src/index.ts",
+          types: ["dist/index.d.ts", "dist/index.d.mts"],
+          exports: {
+            ".": {
+              import: "./dist/index.mjs",
+              require: "./dist/index.js",
+              types: ["dist/index.d.ts", "dist/index.d.mts"],
+            },
           },
         },
       },
-    });
+      { repository: false },
+    );
     const before = readFileSync(packagePath, "utf-8");
 
     const result = runScript(root, "--check");
@@ -53,31 +58,37 @@ describe("normalize-packages.mjs", () => {
 
   it("normalizes publish contracts in write mode and preserves versions", () => {
     const root = createTempRoot();
-    const packagePath = writePackage(root, "example", {
-      name: "@croco/example",
-      version: "0.0.3",
-      type: "commonjs",
-      main: "./src/index.ts",
-      types: ["dist/index.d.ts", "dist/index.d.mts"],
-      publishConfig: {
-        files: ["dist"],
+    const packagePath = writePackage(
+      root,
+      "example",
+      {
+        name: "@croco/example",
+        version: "0.0.3",
+        type: "commonjs",
         main: "./src/index.ts",
         types: ["dist/index.d.ts", "dist/index.d.mts"],
-        exports: {
-          ".": {
-            import: "./dist/index.mjs",
-            require: "./dist/index.js",
-            types: ["dist/index.d.ts", "dist/index.d.mts"],
+        publishConfig: {
+          files: ["dist"],
+          main: "./src/index.ts",
+          types: ["dist/index.d.ts", "dist/index.d.mts"],
+          exports: {
+            ".": {
+              import: "./dist/index.mjs",
+              require: "./dist/index.js",
+              types: ["dist/index.d.ts", "dist/index.d.mts"],
+            },
           },
         },
       },
-    });
+      { repository: false },
+    );
 
     const result = runScript(root, "--write");
     const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
 
     expect(result.status).toBe(0);
     expect(pkg.version).toBe("0.0.3");
+    expect(pkg.repository).toEqual(repositoryFor("example"));
     expect(pkg.files).toEqual(["dist"]);
     expect(pkg.types).toBe("./dist/index.d.ts");
     expect(pkg.publishConfig.access).toBe("public");
@@ -185,6 +196,7 @@ describe("normalize-packages.mjs", () => {
       publishConfig: {
         access: "public",
       },
+      repository: repositoryFor("create-croco-app"),
     });
 
     const result = runScript(root, "--check");
@@ -218,6 +230,45 @@ describe("normalize-packages.mjs", () => {
     expect(result.stdout).toContain(
       "public packages without src/index.ts need an explicit entrypoint exemption",
     );
+  });
+
+  it("requires publishable package repository metadata for npm provenance", () => {
+    const root = createTempRoot();
+    writePackage(
+      root,
+      "missing-repository",
+      {
+        name: "@croco/missing-repository",
+        version: "0.0.3",
+        files: ["dist"],
+        type: "commonjs",
+        main: "./src/index.ts",
+        types: "./src/index.ts",
+        publishConfig: {
+          access: "public",
+          main: "./dist/index.js",
+          types: "./dist/index.d.ts",
+          exports: {
+            ".": {
+              import: "./dist/index.mjs",
+              require: "./dist/index.js",
+              types: "./dist/index.d.ts",
+            },
+          },
+        },
+      },
+      { repository: false },
+    );
+    writePackage(root, "declared-repository", publishablePackage("@croco/declared-repository"));
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("missing-repository/package.json");
+    expect(result.stdout).toContain(
+      'repository must be {"type":"git","url":"git+https://github.com/croco-dev/framework.git","directory":"packages/missing-repository"}',
+    );
+    expect(result.stdout).not.toContain("declared-repository/package.json");
   });
 
   it("requires runtime reflect-metadata dependencies for source side-effect imports", () => {
@@ -702,7 +753,11 @@ function writePackage(
   root: string,
   packageDirName: string,
   pkg: Record<string, unknown>,
-  options: { readonly sourceContent?: string; readonly sourceIndex?: boolean } = {},
+  options: {
+    readonly repository?: boolean;
+    readonly sourceContent?: string;
+    readonly sourceIndex?: boolean;
+  } = {},
 ): string {
   const packageDir = join(root, "packages", packageDirName);
   mkdirSync(packageDir, { recursive: true });
@@ -714,9 +769,50 @@ function writePackage(
   }
 
   const packagePath = join(packageDir, "package.json");
-  writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+  const manifest =
+    options.repository !== false && pkg.private !== true
+      ? withRepositoryMetadata(pkg, repositoryFor(packageDirName))
+      : pkg;
+
+  writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   return packagePath;
+}
+
+function withRepositoryMetadata(
+  pkg: Record<string, unknown>,
+  repository: Record<string, string>,
+): Record<string, unknown> {
+  const withoutRepository = { ...pkg };
+  delete withoutRepository.repository;
+  const manifest: Record<string, unknown> = {};
+  const insertAfterKey = Object.hasOwn(withoutRepository, "description")
+    ? "description"
+    : "version";
+  let inserted = false;
+
+  for (const [key, value] of Object.entries(withoutRepository)) {
+    manifest[key] = value;
+
+    if (key === insertAfterKey) {
+      manifest.repository = repository;
+      inserted = true;
+    }
+  }
+
+  if (!inserted) {
+    manifest.repository = repository;
+  }
+
+  return manifest;
+}
+
+function repositoryFor(packageDirName: string): Record<string, string> {
+  return {
+    type: "git",
+    url: "git+https://github.com/croco-dev/framework.git",
+    directory: `packages/${packageDirName}`,
+  };
 }
 
 function publishablePackage(

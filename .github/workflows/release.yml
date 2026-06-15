@@ -19,6 +19,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      NPM_CONFIG_PROVENANCE: "true"
 
     steps:
       - name: Checkout
@@ -60,6 +62,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         if: steps.release_work.outputs.should_run == 'true'
@@ -98,6 +101,19 @@ jobs:
         if: steps.release_work.outputs.should_run == 'true'
         run: pnpm test
 
+      - name: Verify npm provenance configuration
+        if: steps.release_work.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          npm_provenance="$(npm config get provenance)"
+          pnpm_provenance="$(pnpm config get provenance)"
+          echo "npm provenance: ${npm_provenance}"
+          echo "pnpm provenance: ${pnpm_provenance}"
+          if [ "$npm_provenance" != "true" ] || [ "$pnpm_provenance" != "true" ]; then
+            echo "::error::NPM_CONFIG_PROVENANCE must resolve to true before publishing."
+            exit 1
+          fi
+
       - name: Dry-run publish gate
         if: steps.release_work.outputs.should_run == 'true'
         run: pnpm -r publish --dry-run --no-git-checks
@@ -111,4 +127,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           LEFTHOOK: "0"

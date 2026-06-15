@@ -1,6 +1,11 @@
 {
   "name": "@croco/rpc-codegen",
   "version": "0.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/rpc-codegen"
+  },
   "bin": {
     "croco-rpc-codegen": "./dist/cli.js"
   },

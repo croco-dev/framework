@@ -12,6 +12,42 @@
 - **Mode**: Independent (Changesets fixed/linked group 없음)
 - **Registry**: npm (public access)
 
+### npm provenance contract
+
+Croco releases use token-based npm publishing with provenance enabled. The release workflow keeps
+`NPM_TOKEN` for Changesets publishing, grants GitHub Actions `id-token: write`, and exports
+`NPM_CONFIG_PROVENANCE=true` so the `pnpm exec changeset publish` path passes npm provenance
+configuration to each underlying `pnpm publish` call.
+
+Trusted Publishing is the preferred future credential model, but it requires npm-side trusted
+publisher configuration for the package set before `NPM_TOKEN` can be removed. Until that migration is
+completed, token publishing plus `NPM_CONFIG_PROVENANCE=true` is the supported route.
+
+The release workflow validates provenance configuration before the dry-run publish gate:
+
+```bash
+npm config get provenance
+pnpm config get provenance
+```
+
+Both commands must print `true`. If either command prints anything else, stop the release and fix the
+workflow environment before rerunning publish.
+
+After a package version is published, maintainers verify provenance in two ways:
+
+1. On npmjs.com, open the package version and check the Version field for the green provenance check
+   mark. Open the details to confirm the Build Environment, Build Summary, Source Commit, Build File,
+   and Public Ledger entries point back to `croco-dev/framework`.
+2. In a clean project that installs the released package version, run:
+
+   ```bash
+   npm audit signatures
+   ```
+
+   Missing or invalid registry signatures or provenance attestations must be treated as a release
+   incident. Deprecate the affected version if consumers could install it before the provenance issue
+   is corrected, then publish a fixed patch version through the normal Changesets release flow.
+
 ---
 
 ## 2. 일상 워크플로우 (Daily Workflow)
@@ -168,4 +204,6 @@ pnpm version-packages --dry-run
 | ----------- | ------------------------- | -------------------- |
 | `NPM_TOKEN` | npm 배포 권한이 있는 토큰 | Automation 토큰 권장 |
 
-이 토큰은 CI/CD 파이프라인에서 `.npmrc` 인증을 위해 사용됩니다.
+이 토큰은 CI/CD 파이프라인에서 `.npmrc` 인증을 위해 사용됩니다. 릴리즈 워크플로우는 같은 값을
+`NODE_AUTH_TOKEN`으로도 제공하여 `actions/setup-node`가 생성한 npm registry 설정과 Changesets
+publish 단계가 같은 인증 정보를 사용하도록 합니다.

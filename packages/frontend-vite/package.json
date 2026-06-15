@@ -1,6 +1,11 @@
 {
   "name": "@croco/frontend-vite",
   "version": "0.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/frontend-vite"
+  },
   "files": [
     "dist"
   ],

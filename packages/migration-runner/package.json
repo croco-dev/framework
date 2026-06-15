@@ -1,6 +1,11 @@
 {
   "name": "@croco/migration-runner",
   "version": "0.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/migration-runner"
+  },
   "bin": {
     "migrate": "./src/cli.ts"
   },
