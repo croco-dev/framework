@@ -87,18 +87,16 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.publishConfig.exports["."].types).toBe("./dist/index.d.ts");
   });
 
-  it("allows documented non-library package exceptions", () => {
+  it("skips the private docs site and allows documented public non-library package exceptions", () => {
     const root = createTempRoot();
     writePackage(
       root,
       "docs",
       {
         name: "@croco/docs",
+        private: true,
         version: "0.0.3",
         type: "module",
-        publishConfig: {
-          access: "public",
-        },
       },
       {
         sourceIndex: false,
@@ -120,6 +118,34 @@ describe("normalize-packages.mjs", () => {
     const result = runScript(root, "--check");
 
     expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Skipped private: 1");
+  });
+
+  it("rejects a public docs site package without a non-publish marker", () => {
+    const root = createTempRoot();
+    writePackage(
+      root,
+      "docs",
+      {
+        name: "@croco/docs",
+        version: "0.0.3",
+        type: "module",
+        publishConfig: {
+          access: "public",
+        },
+      },
+      {
+        sourceIndex: false,
+      },
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("docs/package.json");
+    expect(result.stdout).toContain(
+      "public packages without src/index.ts need an explicit entrypoint exemption",
+    );
   });
 
   it("requires runtime reflect-metadata dependencies for source side-effect imports", () => {

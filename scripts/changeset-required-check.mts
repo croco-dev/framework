@@ -6,7 +6,6 @@
  * Narrow exemptions:
  * - package docs and tests do not require a changeset;
  * - private packages do not require a changeset;
- * - docs-site package source does not require a package changeset;
  * - root-only lockfile/package-manager changes do not require a changeset here;
  * - .changeset/README.md is documentation and never counts as a release changeset.
  */
@@ -29,7 +28,6 @@ type PackageInfo = {
 };
 
 const realChangesetPattern = /^\.changeset\/[^/]+\.md$/;
-const releaseExemptPackageNames = new Set(["@croco/docs"]);
 const testFilePattern = /(?:^|[.-])(spec|test)\.[cm]?[jt]sx?$/;
 
 function log(message: string): void {
@@ -266,7 +264,7 @@ function getReleaseSignificantChanges(
 
   for (const file of changedFiles) {
     const pkg = getOwningPackage(file, packages);
-    if (!pkg || pkg.private || releaseExemptPackageNames.has(pkg.name)) {
+    if (!pkg || pkg.private) {
       continue;
     }
 

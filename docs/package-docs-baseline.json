@@ -47,7 +47,6 @@
     "customer-health-drizzle",
     "dataloader-core",
     "diagnostics-core",
-    "docs",
     "entitlements-core",
     "entitlements-drizzle",
     "esbuild-plugin",
@@ -114,5 +113,5 @@
     "tx-core",
     "tx-drizzle"
   ],
-  "allowedMissingTests": ["docs"]
+  "allowedMissingTests": []
 }
