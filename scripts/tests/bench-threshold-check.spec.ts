@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   collectBenchmarkEntries,
+  evaluateBaselineUpdateReadiness,
   evaluateBenchmarkGate,
   getBenchmarkP75,
 } from "../bench-threshold-check.mts";
@@ -57,6 +58,36 @@ describe("bench-threshold-check.mts", () => {
 
     expect(result.allPassed).toBe(false);
     expect(result.gateFailures).toContain("Missing benchmark: benchmark report was not collected.");
+  });
+
+  it("blocks baseline updates when the runner failed or no reports were collected", () => {
+    const result = evaluateBaselineUpdateReadiness(
+      [],
+      ["benchmark module failed: packages/example/src/tests/Example.bench.ts"],
+    );
+
+    expect(result.allPassed).toBe(false);
+    expect(result.gateFailures).toContain("No benchmark reports were collected.");
+    expect(result.gateFailures).toContain(
+      "benchmark module failed: packages/example/src/tests/Example.bench.ts",
+    );
+  });
+
+  it("allows baseline updates for baseline drift when thresholds still pass", () => {
+    const result = evaluateBaselineUpdateReadiness([
+      {
+        name: "Drifted benchmark",
+        p75: 1.3,
+        threshold: 2,
+        baseline: 1,
+        thresholdStatus: "pass",
+        baselineStatus: "fail",
+        thresholdDiff: -0.7,
+        baselineDiff: 0.3,
+      },
+    ]);
+
+    expect(result.allPassed).toBe(true);
   });
 
   it("reports leaf benchmark tasks that never produced p75 data", () => {

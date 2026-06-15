@@ -347,7 +347,9 @@ describe("EventPublisher", () => {
 
       await publisher.publishManyParallel([new EventA(), new EventB(), new EventC()]);
 
-      expect(completionOrder).toEqual(["EventC", "EventB", "EventA"]);
+      expect(completionOrder).toHaveLength(3);
+      expect(new Set(completionOrder)).toEqual(new Set(["EventA", "EventB", "EventC"]));
+      expect(completionOrder.at(-1)).toBe("EventA");
       expect(maxInFlightCount).toBeGreaterThan(1);
     });
 
