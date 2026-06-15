@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { basename, join, relative } from "node:path";
+import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
 import type { GeneratorOptions } from "../types.js";
@@ -95,6 +96,43 @@ function assertLambdaHandlerTarget(projectDir: string, expectedHandlerPath: stri
 
 function readPackageJson(filePath: string): PackageJson {
   return JSON.parse(readFileSync(filePath, "utf8")) as PackageJson;
+}
+
+function collectBarePackageImports(filePath: string): string[] {
+  const imports = preProcessFile(readFileSync(filePath, "utf8"), true, true)
+    .importedFiles.map(({ fileName }) => toPackageName(fileName))
+    .filter((packageName): packageName is string => packageName !== undefined);
+
+  return [...new Set(imports)];
+}
+
+function toPackageName(specifier: string): string | undefined {
+  if (
+    specifier.length === 0 ||
+    specifier.startsWith(".") ||
+    specifier.startsWith("/") ||
+    specifier.startsWith("node:")
+  ) {
+    return undefined;
+  }
+
+  const parts = specifier.split("/");
+
+  return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+}
+
+function assertViteConfigImportsDeclared(packageDir: string): void {
+  const packageJson = readPackageJson(join(packageDir, "package.json"));
+  const declaredDependencies = new Set(
+    DEPENDENCY_FIELDS.flatMap((field) => Object.keys(packageJson[field] ?? {})),
+  );
+  const importedPackages = collectBarePackageImports(join(packageDir, "vite.config.ts"));
+  const missingPackages = importedPackages.filter(
+    (packageName) => !declaredDependencies.has(packageName),
+  );
+
+  expect(importedPackages).not.toEqual([]);
+  expect(missingPackages).toEqual([]);
 }
 
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
@@ -240,6 +278,36 @@ describe("E2E: generate()", () => {
   });
 
   it(
+    "generates ddd-fullstack with Cloudflare Meta Vite declared config imports",
+    { timeout: 120_000 },
+    async () => {
+      const options: GeneratorOptions = {
+        projectName: "my-meta-vite",
+        scope: "@test",
+        preset: "ddd-fullstack",
+        webApps: ["web"],
+        api: "graphql",
+        apiHosting: "standalone",
+        frontendDeploy: "cloudflare-meta-vite",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      };
+
+      await generate(testDir, options);
+
+      const webDir = join(testDir, "apps", "web");
+      const packageJson = readPackageJson(join(webDir, "package.json"));
+
+      expect(packageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
+      assertViteConfigImportsDeclared(webDir);
+      assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+    },
+  );
+
+  it(
     "generates ddd-vike-fullstack with worker security validation opt-out",
     { timeout: 120_000 },
     async () => {
@@ -259,9 +327,14 @@ describe("E2E: generate()", () => {
       await generate(testDir, options);
 
       const workerContent = readFileSync(join(testDir, "api-worker", "src", "index.ts"), "utf8");
+      const ssrWorkerDir = join(testDir, "ssr-worker");
+      const ssrWorkerPackageJson = readPackageJson(join(ssrWorkerDir, "package.json"));
 
       expect(workerContent).toContain('securityValidation: "off"');
+      expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
+      assertViteConfigImportsDeclared(ssrWorkerDir);
       assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
     },
   );
 

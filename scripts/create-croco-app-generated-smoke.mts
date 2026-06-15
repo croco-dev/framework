@@ -4,10 +4,16 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+type SmokeValidation = {
+  readonly label: string;
+  readonly packagePath?: readonly string[];
+  readonly args: readonly string[];
+};
+
 type SmokeCase = {
   readonly name: string;
   readonly args: readonly string[];
-  readonly validation: readonly string[];
+  readonly validations: readonly SmokeValidation[];
 };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,6 +22,12 @@ const rootDir = resolve(__dirname, "..");
 const cliPath = join(rootDir, "packages", "create-croco-app", "dist", "index.js");
 const smokeRoot = mkdtempSync(join(tmpdir(), "croco-generated-app-smoke-"));
 const commandTimeoutMs = 600_000;
+const loadViteConfigScript = [
+  'import { join } from "node:path";',
+  'import { loadConfigFromFile } from "vite";',
+  'const result = await loadConfigFromFile({ command: "build", mode: "production" }, join(process.cwd(), "vite.config.ts"));',
+  'if (!result) throw new Error("vite.config.ts did not load");',
+].join(" ");
 
 const smokeCases: readonly SmokeCase[] = [
   {
@@ -33,7 +45,7 @@ const smokeCases: readonly SmokeCase[] = [
       "mongodb",
       "--no-git",
     ],
-    validation: ["build"],
+    validations: [{ label: "build", args: ["build"] }],
   },
   {
     name: "trpc-nextjs-fullstack",
@@ -50,7 +62,51 @@ const smokeCases: readonly SmokeCase[] = [
       "web",
       "--no-git",
     ],
-    validation: ["build"],
+    validations: [{ label: "build", args: ["build"] }],
+  },
+  {
+    name: "meta-vite-web",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "graphql",
+      "--api-hosting",
+      "standalone",
+      "--web-apps",
+      "web",
+      "--frontend-deploy",
+      "cloudflare-meta-vite",
+      "--no-git",
+    ],
+    validations: [
+      {
+        label: "apps/web vite config load",
+        packagePath: ["apps", "web"],
+        args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
+      },
+    ],
+  },
+  {
+    name: "meta-vite-fullstack-workers",
+    args: [
+      "--preset",
+      "ddd-vike-fullstack",
+      "--scope",
+      "@smoke",
+      "--frontend-deploy",
+      "cloudflare-meta-vite",
+      "--no-git",
+    ],
+    validations: [
+      {
+        label: "ssr-worker vite config load",
+        packagePath: ["ssr-worker"],
+        args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
+      },
+    ],
   },
 ];
 
@@ -67,9 +123,15 @@ try {
       join(projectDir, "node_modules"),
       `${smokeCase.name} did not install dependencies`,
     );
-    run("pnpm", ["--dir", projectDir, ...smokeCase.validation], rootDir);
 
-    console.log(`create-croco-app-generated-smoke: ${smokeCase.name} installed and built`);
+    for (const validation of smokeCase.validations) {
+      const validationDir = validation.packagePath
+        ? join(projectDir, ...validation.packagePath)
+        : projectDir;
+
+      run("pnpm", ["--dir", validationDir, ...validation.args], rootDir);
+      console.log(`create-croco-app-generated-smoke: ${smokeCase.name} ${validation.label} passed`);
+    }
   }
 
   console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
