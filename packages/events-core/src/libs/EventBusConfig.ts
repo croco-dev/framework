@@ -68,15 +68,8 @@ export class EventBusConfig {
       }
     }
 
+    this.startedSubscriptions.clear();
     this.eventBus = eventBus;
-
-    if (!this.eventBus) {
-      return;
-    }
-
-    for (const subscription of this.startedSubscriptions.values()) {
-      this.eventBus.subscribe(subscription);
-    }
   }
 
   public subscribe(subscription: EventSubscription): void {
