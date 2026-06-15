@@ -1,5 +1,5 @@
 import { existsSync, rmSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
 import {
   normalizeNonInteractiveOptions,
@@ -8,7 +8,17 @@ import {
   validateResolvedOptions,
 } from "../options.js";
 
+const generateMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../generator.js", () => ({
+  generate: generateMock,
+}));
+
 describe("noninteractive CLI option validation", () => {
+  beforeEach(() => {
+    generateMock.mockClear();
+  });
+
   it("rejects ddd-api generation when --api is missing", () => {
     const cliOptions = parseCliOptions("my-api", {
       preset: "ddd-api",
@@ -75,6 +85,21 @@ describe("noninteractive CLI option validation", () => {
 
     expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
       "--api-hosting nextjs requires exactly one web app",
+    );
+  });
+
+  it("rejects invalid explicit --db values with actionable messages", () => {
+    const cliOptions = parseCliOptions("my-api", {
+      preset: "ddd-api",
+      scope: "@test",
+      api: "trpc",
+      db: "mysql",
+      install: false,
+      git: false,
+    });
+
+    expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
+      'Invalid --db value "mysql". Expected postgres, mongodb or redis.',
     );
   });
 
@@ -159,6 +184,34 @@ describe("noninteractive CLI option validation", () => {
       errorSpy.mockRestore();
       rmSync(targetDir, { recursive: true, force: true });
     }
+  });
+
+  it("accepts omitted optional --db in noninteractive CLI generation", async () => {
+    const targetDir = `/tmp/croco-no-db-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const program = createProgram();
+
+    await program.parseAsync(
+      [
+        targetDir,
+        "--preset",
+        "ddd-api",
+        "--scope",
+        "@test",
+        "--api",
+        "trpc",
+        "--no-install",
+        "--no-git",
+      ],
+      { from: "user" },
+    );
+
+    expect(generateMock).toHaveBeenCalledWith(
+      targetDir,
+      expect.objectContaining({
+        projectName: targetDir.split("/").at(-1),
+        db: [],
+      }),
+    );
   });
 
   it("normalizes safe noninteractive defaults for fullstack projects", () => {
