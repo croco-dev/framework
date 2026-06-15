@@ -14,19 +14,19 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 
 ## Commands
 
-| Command                     | Description                            |
-| --------------------------- | -------------------------------------- |
-| `make controller <Name>`    | New controller class with CRUD methods |
-| `make repository <Name>`    | New repository class                   |
-| `make entity <Name>`        | New entity class                       |
-| `make event <Name>`         | New domain event class                 |
-| `make listener <Name>`      | New event handler                      |
-| `create page <Name>`        | Console web page (SSR or SPA)          |
-| `create domain <name>`      | API domain module (5 files)            |
-| `generate scaffold <Model>` | Page + domain bundle                   |
-| `codegen rpc [args]`        | Generate RPC client code               |
-| `codegen openapi [args]`    | Generate OpenAPI spec                  |
-| `migrate up\|down [args]`   | Run or rollback database migrations    |
+| Command                           | Description                                   |
+| --------------------------------- | --------------------------------------------- |
+| `make controller <Name>`          | New controller class with CRUD methods        |
+| `make repository <Name>`          | New repository class                          |
+| `make entity <Name>`              | New entity class                              |
+| `make event <Name>`               | New domain event class                        |
+| `make listener <Name>`            | New event handler                             |
+| `create page <Name>`              | Console web page (SSR or SPA)                 |
+| `create domain <name>`            | API domain module (5 files)                   |
+| `generate scaffold <Model>`       | Page + domain bundle                          |
+| `codegen rpc [args]`              | Generate RPC client code                      |
+| `codegen openapi [args]`          | Generate OpenAPI spec                         |
+| `migrate up\|down\|status [args]` | Run, rollback, or inspect database migrations |
 
 ### make — Application Artifacts
 
@@ -56,6 +56,7 @@ Creates a single source file under `apps/api-server/src/`:
 
 - `croco migrate up` runs pending migrations via `@croco/migration-runner`
 - `croco migrate down` rolls back migrations
+- `croco migrate status` shows executed and pending migration status
 
 ## Global Options
 

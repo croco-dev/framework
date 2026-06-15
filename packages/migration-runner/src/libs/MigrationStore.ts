@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DatabaseClient } from "./db-types";
+import { UnsupportedMigrationQueryResultProblem } from "./problems/UnsupportedMigrationQueryResultProblem";
 import type { MigrationRecord } from "./types";
 
 export class MigrationStore {
@@ -26,12 +27,12 @@ export class MigrationStore {
       ORDER BY executed_at ASC
     `);
 
-    if (!result) return [];
+    const rows = getResultRows(result);
 
-    return (result as Array<Record<string, unknown>>).map((row) => ({
+    return rows.map((row) => ({
       id: String(row.id),
       name: String(row.name),
-      executedAt: row.executedAt ? new Date(String(row.executedAt)) : new Date(),
+      executedAt: getExecutedAt(row),
     }));
   }
 
@@ -49,4 +50,29 @@ export class MigrationStore {
       WHERE id = ${id}
     `);
   }
+}
+
+function getResultRows(result: unknown): Record<string, unknown>[] {
+  if (result === null || result === undefined) {
+    return [];
+  }
+
+  if (Array.isArray(result)) {
+    return result as Record<string, unknown>[];
+  }
+
+  if (typeof result === "object" && result !== null && "rows" in result) {
+    const rows = (result as { readonly rows?: unknown }).rows;
+    if (Array.isArray(rows)) {
+      return rows as Record<string, unknown>[];
+    }
+  }
+
+  throw new UnsupportedMigrationQueryResultProblem();
+}
+
+function getExecutedAt(row: Record<string, unknown>): Date {
+  const value = row.executedAt ?? row.executed_at ?? row.executedat;
+
+  return value ? new Date(String(value)) : new Date();
 }
