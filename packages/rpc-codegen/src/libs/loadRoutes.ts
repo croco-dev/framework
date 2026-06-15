@@ -2,8 +2,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  buildContractGraph,
+  type Constructor,
+  type ContractGraph,
   discoverControllerConstructors,
-  extractRouteIR,
   type RouteIR,
 } from "@croco/protocols-core";
 import { Project, type SourceFile, ts } from "ts-morph";
@@ -37,6 +39,10 @@ class NoRestControllersFoundProblem extends Error {
 }
 
 export async function loadRoutes(glob: string): Promise<RouteIR[]> {
+  return [...(await loadContractGraph(glob)).routes];
+}
+
+export async function loadContractGraph(glob: string): Promise<ContractGraph> {
   const project = new Project({
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
@@ -61,7 +67,7 @@ export async function loadRoutes(glob: string): Promise<RouteIR[]> {
 
   try {
     project.emitSync();
-    const routes: RouteIR[] = [];
+    const controllerConstructors: Constructor[] = [];
     let controllerCount = 0;
 
     for (const sourceFile of sourceFiles) {
@@ -71,17 +77,14 @@ export async function loadRoutes(glob: string): Promise<RouteIR[]> {
       const controllers = discoverControllerConstructors(moduleExports);
 
       controllerCount += controllers.length;
-
-      for (const controller of controllers) {
-        routes.push(...extractRouteIR(controller));
-      }
+      controllerConstructors.push(...controllers);
     }
 
     if (controllerCount === 0) {
       throw new NoRestControllersFoundProblem(glob);
     }
 
-    return routes;
+    return buildContractGraph(controllerConstructors);
   } finally {
     fs.rmSync(emitDir, { recursive: true, force: true });
   }

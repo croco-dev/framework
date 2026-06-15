@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { defineCommand, runMain } from "citty";
 import { codegen } from "../commands/codegen.js";
+import { contracts } from "../commands/contracts.js";
 import { create } from "../commands/create.js";
 import { generate } from "../commands/generate.js";
 import { make } from "../commands/make.js";
@@ -20,6 +21,7 @@ const main = defineCommand({
     create,
     generate,
     codegen,
+    contracts,
     migrate,
   },
 });

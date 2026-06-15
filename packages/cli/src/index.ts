@@ -13,6 +13,8 @@ export { confirmOverwrite, selectMode, textInput, NoTtyError } from "./libs/prom
 export { codegen } from "./commands/codegen";
 export { codegenOpenapi } from "./commands/codegenOpenapi";
 export { codegenRpc } from "./commands/codegenRpc";
+export { contracts } from "./commands/contracts";
+export { contractsCheck, runContractsCheck } from "./commands/contractsCheck";
 export { create } from "./commands/create";
 export { createDomain } from "./commands/createDomain";
 export { createPage } from "./commands/createPage";

@@ -116,6 +116,74 @@ describe("generateClientFiles", () => {
     expect(fs.existsSync(path.join(TEMP_DIR, "hooks.ts"))).toBe(false);
   });
 
+  it("should reject routes with more than one body parameter", () => {
+    const bodySchema = z.object({ name: z.string() }) as unknown as RouteIR["inputSchema"];
+    const auditSchema = z.object({ auditId: z.string() }) as unknown as RouteIR["inputSchema"];
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UsersController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        params: [
+          { kind: "body", name: "", schema: bodySchema },
+          { kind: "body", name: "", schema: auditSchema },
+        ],
+        inputSchema: bodySchema,
+        inputSchemas: BODY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      "Cannot generate RPC client for route UsersController.createUser (/users): generated contracts support one request body per route, but 2 @Body() parameters were found.",
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+  });
+
+  it("should reject path variables without matching path parameter metadata", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UsersController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      "Cannot generate RPC client for route UsersController.getUser (/users/:id): route path declares ':id' but no @Param(\"id\") metadata was found.",
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+  });
+
+  it("should reject path variables without matching generated path schemas", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UsersController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      "Cannot generate RPC client for route UsersController.getUser (/users/:id): route path declares ':id' but no generated path schema was found.",
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+  });
+
   it("should serialize POST body input", () => {
     const routes: RouteIR[] = [
       {

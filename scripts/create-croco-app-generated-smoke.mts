@@ -445,6 +445,7 @@ function runSpaBeSplitContractSmoke(): void {
   );
 
   run("pnpm", ["install"], projectDir);
+  run("pnpm", ["contract:check"], projectDir);
   run("pnpm", ["contract:openapi"], projectDir);
   assertExists(
     join(projectDir, "openapi.json"),

@@ -1,6 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RouteIR } from "@croco/protocols-core";
+import {
+  assertContractGraphHasNoErrors,
+  type ContractGraph,
+  type RouteIR,
+} from "@croco/protocols-core";
 
 export type GenerateClientOptions = {
   readonly reactQuery?: boolean;
@@ -15,6 +19,16 @@ type ResponseHelperOptions = {
   readonly hasOutputRoutes: boolean;
   readonly hasNoOutputRoutes: boolean;
 };
+
+export function generateClientFilesFromContractGraph(
+  graph: ContractGraph,
+  outDir: string,
+  options: GenerateClientOptions = {},
+): string[] {
+  assertContractGraphHasNoErrors(graph);
+
+  return generateClientFiles([...graph.routes], outDir, options);
+}
 
 export function generateClientFiles(
   routes: RouteIR[],
@@ -41,6 +55,48 @@ function assertGeneratedClientRoutes(routes: RouteIR[]): void {
     if (route.httpMethod.toUpperCase() === "ALL") {
       throw new Error(
         `Cannot generate RPC client for @All route ${formatRoute(route)}: @All is runtime-only and cannot be represented as a concrete generated client request. Use explicit HTTP method decorators for generated contracts.`,
+      );
+    }
+
+    const bodyParamCount = route.params.filter((param) => param.kind === "body").length;
+
+    if (bodyParamCount > 1) {
+      throw new Error(
+        `Cannot generate RPC client for route ${formatRoute(route)}: generated contracts support one request body per route, but ${bodyParamCount} @Body() parameters were found.`,
+      );
+    }
+
+    assertGeneratedClientPathParams(route);
+  }
+}
+
+function assertGeneratedClientPathParams(route: RouteIR): void {
+  const pathParamNames = new Set(getRoutePathParamNames(route.path));
+  const declaredParamNames = new Set(
+    route.params.filter((param) => param.kind === "path").map((param) => param.name),
+  );
+  const schemaParamNames = new Set(
+    route.inputSchemas.path ? Object.keys(getObjectShape(route.inputSchemas.path)) : [],
+  );
+
+  for (const name of pathParamNames) {
+    if (!declaredParamNames.has(name)) {
+      throw new Error(
+        `Cannot generate RPC client for route ${formatRoute(route)}: route path declares ':${name}' but no @Param("${name}") metadata was found.`,
+      );
+    }
+
+    if (!schemaParamNames.has(name)) {
+      throw new Error(
+        `Cannot generate RPC client for route ${formatRoute(route)}: route path declares ':${name}' but no generated path schema was found.`,
+      );
+    }
+  }
+
+  for (const name of declaredParamNames) {
+    if (name.length > 0 && !pathParamNames.has(name)) {
+      throw new Error(
+        `Cannot generate RPC client for route ${formatRoute(route)}: @Param("${name}") is not present in route path '${route.path}'.`,
       );
     }
   }
@@ -476,6 +532,10 @@ function getPathParamNames(route: RouteIR): string[] {
   }
 
   return Object.keys(getObjectShape(route.inputSchemas.path));
+}
+
+function getRoutePathParamNames(pathname: string): string[] {
+  return [...pathname.matchAll(/:([^/]+)/g)].map((match) => match[1]).filter(Boolean);
 }
 
 function getQueryStatements(route: RouteIR): string {

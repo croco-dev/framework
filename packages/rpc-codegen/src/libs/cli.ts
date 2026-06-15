@@ -1,7 +1,14 @@
+import {
+  formatContractDiagnostic,
+  getContractGraphErrors,
+  type ContractGraph,
+} from "@croco/protocols-core";
+
 type CliOptions = {
   readonly controllers: string;
-  readonly outDir: string;
+  readonly outDir: string | null;
   readonly reactQuery: boolean;
+  readonly check: boolean;
 };
 
 type CliParseResult =
@@ -30,12 +37,34 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     return 1;
   }
 
-  const [{ generateClientFiles }, { loadRoutes }] = await Promise.all([
+  const [{ generateClientFilesFromContractGraph }, { loadContractGraph }] = await Promise.all([
     import("./generate"),
     import("./loadRoutes"),
   ]);
-  const routes = await loadRoutes(result.options.controllers);
-  const files = generateClientFiles(routes, result.options.outDir, {
+  const graph = await loadContractGraph(result.options.controllers);
+
+  if (result.options.check) {
+    return reportContractGraph(graph, io);
+  }
+
+  const errors = getContractGraphErrors(graph);
+
+  if (errors.length > 0) {
+    reportContractDiagnostics(graph, io);
+    io.stdout(
+      `Contract graph contains ${errors.length} error(s); fix them before generating clients.`,
+    );
+    return 1;
+  }
+
+  const outDir = result.options.outDir;
+
+  if (!outDir) {
+    printHelp(io);
+    return 1;
+  }
+
+  const files = generateClientFilesFromContractGraph(graph, outDir, {
     reactQuery: result.options.reactQuery,
   });
 
@@ -53,8 +82,9 @@ export function parseArgs(args: readonly string[]): CliParseResult {
 
   const controllers = getFlagValue(args, "--controllers");
   const outDir = getFlagValue(args, "--out");
+  const check = args.includes("--check");
 
-  if (!controllers || !outDir) {
+  if (!controllers || (!outDir && !check)) {
     return { kind: "invalid" };
   }
 
@@ -64,6 +94,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       controllers,
       outDir,
       reactQuery: args.includes("--react-query"),
+      check,
     },
   };
 }
@@ -77,10 +108,35 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
 
 function printHelp(io: CliIo): void {
   io.stdout(`Usage: croco-rpc-codegen --controllers <glob> --out <dir> [--react-query]
+       croco-rpc-codegen --controllers <glob> --check
 
 Options:
   --controllers <glob>  Controller files to load
   --out <dir>           Output directory for generated clients
   --react-query         Generate React Query hooks
+  --check               Validate the canonical contract graph without writing clients
   --help, -h            Show this help message`);
+}
+
+function reportContractGraph(graph: ContractGraph, io: CliIo): number {
+  reportContractDiagnostics(graph, io);
+
+  const errors = getContractGraphErrors(graph);
+
+  if (errors.length > 0) {
+    io.stdout(`Contract graph check failed with ${errors.length} error(s).`);
+    return 1;
+  }
+
+  io.stdout(
+    `Contract graph check passed for ${graph.routes.length} route(s) across ${graph.controllers.length} controller(s).`,
+  );
+
+  return 0;
+}
+
+function reportContractDiagnostics(graph: ContractGraph, io: CliIo): void {
+  for (const diagnostic of graph.diagnostics) {
+    io.stdout(formatContractDiagnostic(diagnostic));
+  }
 }

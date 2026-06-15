@@ -84,6 +84,7 @@ function checkSpaBeSplitStructure() {
     scripts: expect.objectContaining({
       "dev:api": expect.any(String),
       "dev:web": expect.any(String),
+      "contract:check": expect.stringContaining("--check"),
       "contract:openapi": expect.stringContaining("croco-openapi-spec"),
       "contract:client": expect.stringContaining("croco-rpc-codegen"),
       codegen: expect.any(String),
