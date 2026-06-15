@@ -8,7 +8,7 @@
 | ------------------------------ | ----: |
 | Public packages                |    98 |
 | Private packages skipped       |     1 |
-| Missing package README         |    23 |
+| Missing package README         |    22 |
 | Missing generated API docs     |    85 |
 | Missing package test directory |     1 |
 
@@ -36,7 +36,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/protocols-trpc` (`packages/protocols-trpc`) — legacy baseline
 - `@croco/rpc-codegen` (`packages/rpc-codegen`) — legacy baseline
 - `@croco/storage-core` (`packages/storage-core`) — legacy baseline
-- `@croco/transports-cloudflare-workers` (`packages/transports-cloudflare-workers`) — legacy baseline
 - `@croco/transports-graphql` (`packages/transports-graphql`) — legacy baseline
 - `@croco/triggers-qstash` (`packages/triggers-qstash`) — legacy baseline
 

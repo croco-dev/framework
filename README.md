@@ -471,7 +471,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | `@croco/tasks-qstash`                  | Provider     | `packages/tasks-qstash`                  | README, tests |
 | `@croco/triggers-qstash`               | Provider     | `packages/triggers-qstash`               | tests         |
 | `@croco/migration-runner`              | Tooling      | `packages/migration-runner`              | tests         |
-| `@croco/transports-cloudflare-workers` | Transport    | `packages/transports-cloudflare-workers` | tests         |
+| `@croco/transports-cloudflare-workers` | Transport    | `packages/transports-cloudflare-workers` | README, tests |
 
 ### Documentation Gate
 

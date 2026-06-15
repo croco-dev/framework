@@ -22,7 +22,6 @@
     "protocols-trpc",
     "rpc-codegen",
     "storage-core",
-    "transports-cloudflare-workers",
     "transports-graphql",
     "triggers-qstash"
   ],
