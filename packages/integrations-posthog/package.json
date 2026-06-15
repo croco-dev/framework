@@ -1,6 +1,11 @@
 {
   "name": "@croco/integrations-posthog",
   "version": "0.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/integrations-posthog"
+  },
   "files": [
     "dist"
   ],

@@ -1,6 +1,11 @@
 {
   "name": "@croco/cli",
   "version": "0.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "croco": "./dist/bin/croco.js"
   },

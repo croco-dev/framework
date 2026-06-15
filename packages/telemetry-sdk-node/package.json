@@ -1,6 +1,11 @@
 {
   "name": "@croco/telemetry-sdk-node",
   "version": "0.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/telemetry-sdk-node"
+  },
   "files": [
     "dist"
   ],

@@ -2,6 +2,11 @@
   "name": "@croco/ratelimit-upstash",
   "version": "0.0.3",
   "description": "Upstash rate limit store for @croco/ratelimit-core",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/ratelimit-upstash"
+  },
   "files": [
     "dist"
   ],

@@ -31,6 +31,7 @@ const DIST_INDEX_MAIN = "./dist/index.js";
 const DIST_INDEX_MODULE = "./dist/index.mjs";
 const DIST_INDEX_TYPES = "./dist/index.d.ts";
 const SRC_INDEX = "./src/index.ts";
+const REPOSITORY_URL = "git+https://github.com/croco-dev/framework.git";
 const DRIZZLE_ORM_PACKAGE = "drizzle-orm";
 const DRIZZLE_PACKAGE_SUFFIX = "-drizzle";
 const REFLECT_METADATA_PACKAGE = "reflect-metadata";
@@ -73,7 +74,7 @@ function main() {
 
     checkedCount++;
 
-    const normalized = normalizePackage(pkg, pkgPath);
+    const normalized = normalizePackage(pkg, pkgPath, rootDir);
     const normalizedContent = `${JSON.stringify(normalized, null, 2)}\n`;
     const changed = content !== normalizedContent;
 
@@ -84,7 +85,7 @@ function main() {
     }
 
     const packageToValidate = mode.write ? normalized : pkg;
-    for (const violation of validatePackage(packageToValidate, pkgPath)) {
+    for (const violation of validatePackage(packageToValidate, pkgPath, rootDir)) {
       violations.push(`${relativePath}: ${violation}`);
     }
 
@@ -159,8 +160,11 @@ function parseArgs(args) {
   };
 }
 
-function normalizePackage(pkg, pkgPath) {
-  const normalized = structuredClone(pkg);
+function normalizePackage(pkg, pkgPath, rootDir) {
+  const normalized = withRepositoryMetadata(
+    structuredClone(pkg),
+    expectedRepositoryFor(pkgPath, rootDir),
+  );
   const hasSourceEntrypoint = packageHasSourceEntrypoint(pkgPath);
 
   normalized.publishConfig = normalizeObject(normalized.publishConfig);
@@ -180,6 +184,43 @@ function normalizePackage(pkg, pkgPath) {
   }
 
   return normalized;
+}
+
+function withRepositoryMetadata(pkg, repository) {
+  const withoutRepository = { ...pkg };
+  delete withoutRepository.repository;
+  const normalized = {};
+  const insertAfterKey = Object.hasOwn(withoutRepository, "description")
+    ? "description"
+    : "version";
+  let inserted = false;
+
+  for (const [key, value] of Object.entries(withoutRepository)) {
+    normalized[key] = value;
+
+    if (key === insertAfterKey) {
+      normalized.repository = repository;
+      inserted = true;
+    }
+  }
+
+  if (!inserted) {
+    normalized.repository = repository;
+  }
+
+  return normalized;
+}
+
+function expectedRepositoryFor(pkgPath, rootDir) {
+  return {
+    type: "git",
+    url: REPOSITORY_URL,
+    directory: toPosixPath(path.relative(rootDir, path.dirname(pkgPath))),
+  };
+}
+
+function toPosixPath(value) {
+  return value.split(path.sep).join("/");
 }
 
 function normalizeObject(value) {
@@ -306,9 +347,14 @@ function directRootExportFor(pkg) {
   };
 }
 
-function validatePackage(pkg, pkgPath) {
+function validatePackage(pkg, pkgPath, rootDir) {
   const hasSourceEntrypoint = packageHasSourceEntrypoint(pkgPath);
   const violations = [];
+  const expectedRepository = expectedRepositoryFor(pkgPath, rootDir);
+
+  if (JSON.stringify(pkg.repository) !== JSON.stringify(expectedRepository)) {
+    violations.push(`repository must be ${JSON.stringify(expectedRepository)}`);
+  }
 
   if (pkg.publishConfig?.access !== "public") {
     violations.push("publishConfig.access must be public");

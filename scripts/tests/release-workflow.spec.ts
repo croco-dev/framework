@@ -41,6 +41,9 @@ describe("release workflow quality gates", () => {
       "run: pnpm typecheck",
       "- name: Test",
       "run: pnpm test",
+      "- name: Verify npm provenance configuration",
+      'npm_provenance="$(npm config get provenance)"',
+      'pnpm_provenance="$(pnpm config get provenance)"',
       "- name: Dry-run publish gate",
       "run: pnpm -r publish --dry-run --no-git-checks",
       "- name: Create Release Pull Request or Publish",
@@ -61,6 +64,16 @@ describe("release workflow quality gates", () => {
 
     expect(workflow).toContain("PR-only checks, secret-scan reports, and docs/coverage");
     expect(workflow).toContain("audit:prod intentionally ignores GHSA-gv7w-rqvm-qjhr");
+  });
+
+  it("enforces npm provenance in the Changesets publish path", () => {
+    const workflow = readReleaseWorkflow();
+
+    expect(workflow).toContain('NPM_CONFIG_PROVENANCE: "true"');
+    expect(workflow).toContain('registry-url: "https://registry.npmjs.org"');
+    expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}");
+    expect(workflow).toContain("NPM_CONFIG_PROVENANCE must resolve to true before publishing.");
+    expect(workflow).toContain("id-token: write");
   });
 
   it("runs for Changesets prerelease state changes", () => {
