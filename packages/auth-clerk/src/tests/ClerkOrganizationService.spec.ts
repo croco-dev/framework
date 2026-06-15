@@ -2,7 +2,10 @@ import { createClerkClient } from "@clerk/backend";
 import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ClerkOrganizationService } from "../libs/ClerkOrganizationService";
-import { ClerkPublicUserDataMissingProblem } from "../libs/problems/ClerkProblems";
+import {
+  ClerkExternalServiceProblem,
+  ClerkPublicUserDataMissingProblem,
+} from "../libs/problems/ClerkProblems";
 
 vi.mock("@clerk/backend", () => ({
   createClerkClient: vi.fn(),
@@ -85,7 +88,7 @@ describe("ClerkOrganizationService", () => {
       expect(result?.name).toBe("Test Org");
     });
 
-    it("should return null on error", async () => {
+    it("should return null on not found error", async () => {
       vi.mocked(mockClerkClient.organizations.getOrganization).mockRejectedValue(
         new Error("Org not found"),
       );
@@ -93,6 +96,29 @@ describe("ClerkOrganizationService", () => {
       const result = await service.getOrganization("invalid-org");
 
       expect(result).toBeNull();
+    });
+
+    it("should return null on 404 Clerk error", async () => {
+      const clerkError = { status: 404, message: "Organization not found" };
+      vi.mocked(mockClerkClient.organizations.getOrganization).mockRejectedValue(clerkError);
+
+      const result = await service.getOrganization("invalid-org");
+
+      expect(result).toBeNull();
+    });
+
+    it("should throw ClerkExternalServiceProblem on permission failure", async () => {
+      const clerkError = { status: 403, message: "Forbidden" };
+      vi.mocked(mockClerkClient.organizations.getOrganization).mockRejectedValue(clerkError);
+
+      await expect(service.getOrganization("org_123")).rejects.toThrow(ClerkExternalServiceProblem);
+    });
+
+    it("should throw ClerkExternalServiceProblem on network error", async () => {
+      const networkError = new Error("Network connection failed");
+      vi.mocked(mockClerkClient.organizations.getOrganization).mockRejectedValue(networkError);
+
+      await expect(service.getOrganization("org_123")).rejects.toThrow(ClerkExternalServiceProblem);
     });
   });
 
@@ -111,6 +137,15 @@ describe("ClerkOrganizationService", () => {
       expect(mockClerkClient.organizations.getOrganization).toHaveBeenCalledWith({
         slug: "test-org",
       });
+    });
+
+    it("should throw ClerkExternalServiceProblem on non-404 Clerk error", async () => {
+      const clerkError = { statusCode: 500, message: "Internal server error" };
+      vi.mocked(mockClerkClient.organizations.getOrganization).mockRejectedValue(clerkError);
+
+      await expect(service.getOrganizationBySlug("test-org")).rejects.toThrow(
+        ClerkExternalServiceProblem,
+      );
     });
   });
 
