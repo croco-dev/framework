@@ -17,7 +17,7 @@ export function createProgram(): Command {
 
   program
     .name("create-croco-app")
-    .description("Create a new Croco application")
+    .description("Create a pnpm-based Croco application")
     .version(getPackageVersion())
     .argument("[directory]", "Target directory")
     .option("--preset <preset>", "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack)")
@@ -32,7 +32,7 @@ export function createProgram(): Command {
     )
     .option("--db <dbs>", "Comma-separated DB types (postgres,mongodb,redis)")
     .option("--no-agent-rules", "Skip agent rules")
-    .option("--no-install", "Skip dependency installation")
+    .option("--no-install", "Skip pnpm dependency installation")
     .option("--no-git", "Skip git initialization")
     .action(async (directory: string | undefined, rawOptions: Record<string, string | boolean>) => {
       try {

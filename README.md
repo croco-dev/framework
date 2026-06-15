@@ -110,6 +110,8 @@ graph LR
 > cd my-project && pnpm install && pnpm dev
 > ```
 >
+> Generated projects are pnpm workspaces; use `--no-install` if you want to skip the automatic `pnpm install` step.
+>
 > **Route A (Scaffold)**: [Getting Started Guide](packages/docs/src/content/docs/en/guides/getting-started.mdx)에서 scaffold부터 Auth, Metering, Lambda 배포까지 단계별로 SaaS API를 구축하세요.
 >
 > **Route B (Example)**: [Quick Start Example](examples/quick-start-lambda/)에서 Auth와 Metering이 포함된 완성된 Lambda API를 `pnpm dev`로 바로 실행하세요.
