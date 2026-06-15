@@ -456,6 +456,29 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should normalize catch-all path parameters when generating fetch paths", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "AssetController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/assets/:...id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "const path = `/assets/${encodeURIComponent(String(input.path.id))}`;",
+    );
+  });
+
   it("should serialize query input when generating query parameter fetch calls", () => {
     const routes: RouteIR[] = [
       {

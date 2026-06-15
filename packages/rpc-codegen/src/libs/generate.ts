@@ -524,33 +524,35 @@ function getObjectShape(schema: unknown): Record<string, unknown> {
 }
 
 function getPathExpression(route: RouteIR): string {
-  const pathParams = getPathParamNames(route);
+  const pathParams = getRoutePathParams(route.path);
 
   if (pathParams.length === 0) {
     return `'${route.path}'`;
   }
 
   const pathExpression = pathParams.reduce(
-    (currentPath, paramName) =>
+    (currentPath, param) =>
       currentPath
-        .split(`:${paramName}`)
-        .join(`\${encodeURIComponent(String(input.path.${paramName}))}`),
+        .split(`:${param.token}`)
+        .join(`\${encodeURIComponent(String(input.path.${param.name}))}`),
     route.path,
   );
 
   return `\`${pathExpression}\``;
 }
 
-function getPathParamNames(route: RouteIR): string[] {
-  if (!route.inputSchemas.path) {
-    return [];
-  }
-
-  return Object.keys(getObjectShape(route.inputSchemas.path));
+function getRoutePathParamNames(pathname: string): string[] {
+  return getRoutePathParams(pathname).map((param) => param.name);
 }
 
-function getRoutePathParamNames(pathname: string): string[] {
-  return [...pathname.matchAll(/:([^/]+)/g)].map((match) => match[1]).filter(Boolean);
+function getRoutePathParams(pathname: string): { readonly token: string; readonly name: string }[] {
+  return [...pathname.matchAll(/:([^/]+)/g)]
+    .map((match) => {
+      const token = match[1];
+
+      return { token, name: token.replace(/^\.\.\./, "") };
+    })
+    .filter((param) => param.name.length > 0);
 }
 
 function getQueryStatements(route: RouteIR): string {
@@ -629,7 +631,7 @@ function assertNoZodImport(content: string): void {
     content.includes("import { z }") ||
     content.includes("zod")
   ) {
-    throw new Error("Generated client must not import zod.");
+    throw new RpcCodegenContractProblem("Generated client must not import zod.");
   }
 }
 
