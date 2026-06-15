@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
@@ -36,6 +36,30 @@ describe("E2E Advanced: generate()", () => {
     expect(existsSync(join(testDir, "apps", "web"))).toBe(true);
     // OpenNext config
     expect(existsSync(join(testDir, "apps", "web", "open-next.config.ts"))).toBe(true);
+  });
+
+  it("generates nextjs Docker frontend deploy file", { timeout: 120_000 }, async () => {
+    const options: GeneratorOptions = {
+      projectName: "my-docker-web",
+      scope: "@test",
+      preset: "ddd-fullstack",
+      webApps: ["web"],
+      api: "trpc",
+      apiHosting: "nextjs",
+      frontendDeploy: "docker",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    await generate(testDir, options);
+
+    const dockerfileContent = readFileSync(join(testDir, "web", "Dockerfile"), "utf8");
+
+    expect(dockerfileContent).toContain("turbo prune @test/web --docker");
+    expect(dockerfileContent).toContain("pnpm turbo build --filter=@test/web");
+    expect(dockerfileContent).not.toContain("{{scope}}");
   });
 
   it("generates trpc + multiple webapps + lambda + all DBs", { timeout: 120_000 }, async () => {
