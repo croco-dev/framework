@@ -48,9 +48,19 @@ if (!result.success) {
 }
 ```
 
+### 초기화 수명주기
+
+`init({ enabled: false })`는 설정만 저장하고 OpenTelemetry SDK를 시작하지 않습니다. 같은 프로세스에서 나중에
+`init({ enabled: true, ... })`를 호출하면 SDK를 초기화할 수 있습니다.
+
+SDK가 이미 초기화된 뒤의 추가 `init()` 호출은 기존 런타임을 유지합니다. 설정을 바꾸려면 먼저 `shutdown()`을
+호출한 뒤 다시 `init()`을 호출합니다.
+
+`isInitialized()`와 `isEnabled()`는 SDK가 실제로 초기화되어 활성화된 경우에만 `true`를 반환합니다.
+
 ## API 레퍼런스
 
-- `TelemetryRuntime`: `init`, `forceFlush`, `shutdown`, `isInitialized`, `getConfig`
+- `TelemetryRuntime`: `init`, `forceFlush`, `shutdown`, `isInitialized`, `isEnabled`, `getConfig`
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
 - `ProbabilitySampler`: 확률 기반 샘플링 구현체
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`

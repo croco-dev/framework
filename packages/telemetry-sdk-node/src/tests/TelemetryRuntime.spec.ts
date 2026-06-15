@@ -18,6 +18,7 @@ describe("TelemetryRuntime", () => {
 
   it("should return null config before initialization", () => {
     expect(runtime.getConfig()).toBeNull();
+    expect(runtime.isEnabled()).toBe(false);
   });
 
   it("should initialize with valid config", async () => {
@@ -27,6 +28,7 @@ describe("TelemetryRuntime", () => {
     });
 
     expect(runtime.isInitialized()).toBe(false);
+    expect(runtime.isEnabled()).toBe(false);
   });
 
   it("should store config after initialization", async () => {
@@ -40,6 +42,130 @@ describe("TelemetryRuntime", () => {
     expect(storedConfig).toEqual({
       ...config,
       enabled: false,
+    });
+  });
+
+  it("should initialize when telemetry is enabled after a disabled init", async () => {
+    await runtime.init({
+      serviceName: "test-service",
+      enabled: false,
+    });
+
+    await runtime.init({
+      serviceName: "test-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+
+    expect(runtime.isInitialized()).toBe(true);
+    expect(runtime.isEnabled()).toBe(true);
+    expect(runtime.getConfig()).toEqual({
+      serviceName: "test-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+  });
+
+  it("should keep enabled initialization active when a later disabled init is requested", async () => {
+    await runtime.init({
+      serviceName: "test-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+
+    await runtime.init({
+      serviceName: "test-service",
+      enabled: false,
+    });
+
+    expect(runtime.isInitialized()).toBe(true);
+    expect(runtime.isEnabled()).toBe(true);
+    expect(runtime.getConfig()).toEqual({
+      serviceName: "test-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+  });
+
+  it("should initialize again after shutdown", async () => {
+    await runtime.init({
+      serviceName: "first-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+
+    expect(runtime.isInitialized()).toBe(true);
+    expect(runtime.isEnabled()).toBe(true);
+
+    await runtime.shutdown();
+    expect(runtime.isInitialized()).toBe(false);
+    expect(runtime.isEnabled()).toBe(false);
+
+    await runtime.init({
+      serviceName: "second-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+
+    expect(runtime.isInitialized()).toBe(true);
+    expect(runtime.isEnabled()).toBe(true);
+    expect(runtime.getConfig()).toEqual({
+      serviceName: "second-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+  });
+
+  it("should wait for in-flight initialization before shutdown", async () => {
+    const config = {
+      serviceName: "first-service",
+      enabled: true,
+      trace: { enabled: false },
+    };
+    const sdk = {
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+    let releaseInit!: () => void;
+    const pendingInit = new Promise<void>((resolve) => {
+      releaseInit = () => {
+        Object.assign(runtime, {
+          config,
+          initialized: true,
+          sdk,
+        });
+        resolve();
+      };
+    });
+    Object.assign(runtime, { initPromise: pendingInit });
+
+    let shutdownSettled = false;
+    const shutdownPromise = runtime.shutdown();
+    shutdownPromise.then(() => {
+      shutdownSettled = true;
+    });
+
+    await Promise.resolve();
+    expect(shutdownSettled).toBe(false);
+
+    releaseInit();
+    await shutdownPromise;
+
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+    expect(runtime.isInitialized()).toBe(false);
+    expect(runtime.isEnabled()).toBe(false);
+
+    await runtime.init({
+      serviceName: "second-service",
+      enabled: true,
+      trace: { enabled: false },
+    });
+
+    expect(runtime.isInitialized()).toBe(true);
+    expect(runtime.isEnabled()).toBe(true);
+    expect(runtime.getConfig()).toEqual({
+      serviceName: "second-service",
+      enabled: true,
+      trace: { enabled: false },
     });
   });
 

@@ -49,6 +49,16 @@ title: "TelemetryRuntime"
 
 ***
 
+### isEnabled()
+
+> **isEnabled**(): `boolean`
+
+#### Returns
+
+`boolean`
+
+***
+
 ### isInitialized()
 
 > **isInitialized**(): `boolean`
