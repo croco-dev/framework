@@ -2,7 +2,7 @@
   "name": "@croco-example/quick-start-lambda",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc --noEmit"

@@ -95,6 +95,7 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
 {
   const readme = read(paths.readme);
   const examplePkg = read(paths.examplePkg);
+  const rootPkg = read(join(ROOT, "package.json"));
 
   // README documents pnpm install + pnpm dev
   if (!readme.includes("pnpm install")) {
@@ -123,6 +124,27 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     fail("A1c", `scripts.dev="${devScript}" does not match expected "tsx src/index.ts"`);
   } else {
     pass("A1c", `scripts.dev matches expected pattern (${devScript})`);
+  }
+
+  if (!readme.includes("pnpm quick-start-lambda:smoke")) {
+    fail("A1d", "README missing `pnpm quick-start-lambda:smoke` validation command");
+  } else {
+    pass("A1d", "README documents `pnpm quick-start-lambda:smoke`");
+  }
+
+  let rootPackageJson;
+  try {
+    rootPackageJson = JSON.parse(rootPkg);
+  } catch {
+    rootPackageJson = {};
+  }
+  const smokeScript: string | undefined = rootPackageJson.scripts?.["quick-start-lambda:smoke"];
+  if (!smokeScript) {
+    fail("A1e", "root package.json missing `quick-start-lambda:smoke` script");
+  } else if (!smokeScript.includes("scripts/quick-start-lambda-smoke.mts")) {
+    fail("A1e", `quick-start-lambda:smoke="${smokeScript}" does not run the smoke script`);
+  } else {
+    pass("A1e", "root package.json exposes `quick-start-lambda:smoke`");
   }
 }
 
@@ -275,6 +297,12 @@ console.log("\n📋 D. Docs contract\n");
     fail("D1", "Getting started docs missing reference to quick-start-lambda");
   } else {
     pass("D1", "Getting started docs reference quick-start-lambda");
+  }
+
+  if (!gettingStarted.includes("pnpm quick-start-lambda:smoke")) {
+    fail("D1b", "Getting started docs missing `pnpm quick-start-lambda:smoke` validation command");
+  } else {
+    pass("D1b", "Getting started docs document quick-start-lambda smoke command");
   }
 
   // Getting Started documents create-croco-app command

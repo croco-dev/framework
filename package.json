@@ -29,6 +29,7 @@
     "docs:catalog:check": "node --experimental-strip-types scripts/package-docs-check.mts --check",
     "docs:catalog:write": "node --experimental-strip-types scripts/package-docs-check.mts --write",
     "first-success:verify": "node --experimental-strip-types scripts/first-success-verify.mts",
+    "quick-start-lambda:smoke": "node --experimental-strip-types scripts/quick-start-lambda-smoke.mts",
     "package-entrypoints:smoke": "node --experimental-strip-types scripts/package-entrypoint-smoke.mts",
     "package-manifests:check": "node scripts/normalize-packages.mjs --check",
     "package-manifests:write": "node scripts/normalize-packages.mjs --write",
