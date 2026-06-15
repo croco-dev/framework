@@ -164,6 +164,16 @@ jobs:
         run: pnpm test:coverage:core:warning
         continue-on-error: true
 
+      - name: Publish core coverage baseline summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f ci-reports/coverage/core-warning/report.md ]; then
+            cat ci-reports/coverage/core-warning/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Core coverage baseline report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload core coverage warning report
         if: always()
         uses: actions/upload-artifact@v4

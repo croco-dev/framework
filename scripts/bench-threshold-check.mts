@@ -1,12 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { createVitest } from "vitest/node";
 
 interface Thresholds {
-  [benchmarkName: string]: {
-    p75: number;
-  };
+  [benchmarkName: string]: BenchmarkLimit;
 }
 
 interface Baseline {
@@ -15,7 +14,7 @@ interface Baseline {
   };
 }
 
-interface BenchmarkReport {
+export interface BenchmarkReport {
   name: string;
   p75: number;
   threshold?: number;
@@ -27,6 +26,30 @@ interface BenchmarkReport {
   thresholdSkipReason?: string;
   baselineSkipReason?: string;
 }
+
+export type BenchmarkGateEvaluation = {
+  allPassed: boolean;
+  gateFailures: string[];
+};
+
+export type BenchmarkEntry = { name: string; p75: number };
+
+export type BenchmarkCollection = {
+  entries: BenchmarkEntry[];
+  failures: string[];
+};
+
+export type BenchmarkCollectionTask = {
+  name: string;
+  state?: unknown;
+  result?: {
+    state?: unknown;
+    benchmark?: Record<string, unknown>;
+  };
+  tasks?: readonly BenchmarkCollectionTask[];
+};
+
+export type BenchmarkLimit = number | { p75: number };
 
 const projectRoot = process.cwd();
 const thresholdsPath = join(projectRoot, "benchmarks", "thresholds.json");
@@ -44,12 +67,7 @@ const BOX_WIDTH = 62;
 
 const EXPLICIT_THRESHOLD_SKIPS: Record<string, string> = {};
 
-const EXPLICIT_BASELINE_SKIPS: Record<string, string> = {
-  "TelemetryRuntime.init (lambda preset)":
-    "OpenTelemetry SDK init cost is environment-sensitive. Hold baseline until recent green CI runs establish stable variance.",
-  "lambdaPreset config creation":
-    "Micro-benchmark stays in sub-millisecond range. Hold baseline until recent green CI runs establish stable variance.",
-};
+const EXPLICIT_BASELINE_SKIPS: Record<string, string> = {};
 
 function getThresholdSkipReason(name: string): string {
   const explicitReason = EXPLICIT_THRESHOLD_SKIPS[name];
@@ -98,6 +116,16 @@ function loadBaseline(): Baseline | null {
   }
 }
 
+export function getBenchmarkP75(value: BenchmarkLimit, source: string): number {
+  const p75 = typeof value === "number" ? value : value.p75;
+
+  if (typeof p75 !== "number" || !Number.isFinite(p75)) {
+    throw new Error(`${source} must define a finite p75 number`);
+  }
+
+  return p75;
+}
+
 function saveBaseline(results: BenchmarkReport[]) {
   const baseline: Baseline = {};
   for (const result of results) {
@@ -125,9 +153,150 @@ function formatDiff(actual: number, expected: number): string {
   return `${sign}${percent}%`;
 }
 
+function formatUnknownError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}
+
+export function evaluateBenchmarkGate(
+  reports: BenchmarkReport[],
+  runnerFailures: string[] = [],
+  expectedBenchmarkNames: string[] = [],
+): BenchmarkGateEvaluation {
+  const gateFailures: string[] = [...runnerFailures];
+  const reportedNames = new Set(reports.map((report) => report.name));
+
+  if (reports.length === 0) {
+    gateFailures.push("No benchmark reports were collected.");
+  }
+
+  for (const benchmarkName of expectedBenchmarkNames) {
+    if (!reportedNames.has(benchmarkName)) {
+      gateFailures.push(`${benchmarkName}: benchmark report was not collected.`);
+    }
+  }
+
+  for (const report of reports) {
+    if (report.thresholdStatus === "fail") {
+      gateFailures.push(
+        `${report.name}: p75 ${formatDuration(report.p75)} exceeds threshold ${formatDuration(report.threshold ?? 0)}`,
+      );
+    }
+
+    if (report.baselineStatus === "fail") {
+      gateFailures.push(
+        `${report.name}: p75 ${formatDuration(report.p75)} exceeds baseline ${formatDuration(report.baseline ?? 0)} by more than ${(BASELINE_TOLERANCE * 100).toFixed(0)}%`,
+      );
+    }
+
+    if (report.thresholdStatus === "skip") {
+      gateFailures.push(
+        `${report.name}: threshold skipped (${report.thresholdSkipReason ?? "no threshold skip reason"})`,
+      );
+    }
+
+    if (report.baselineStatus === "skip") {
+      gateFailures.push(
+        `${report.name}: baseline skipped (${report.baselineSkipReason ?? "no baseline skip reason"})`,
+      );
+    }
+  }
+
+  return {
+    allPassed: gateFailures.length === 0,
+    gateFailures,
+  };
+}
+
+function getConfiguredBenchmarkNames(thresholds: Thresholds, baseline: Baseline | null): string[] {
+  const names = new Set<string>();
+
+  for (const name of Object.keys(thresholds)) {
+    if (!name.startsWith("_")) {
+      names.add(name);
+    }
+  }
+
+  for (const name of Object.keys(baseline ?? {})) {
+    if (!name.startsWith("_")) {
+      names.add(name);
+    }
+  }
+
+  return [...names].sort();
+}
+
+function getTaskP75(task: BenchmarkCollectionTask): number | undefined {
+  const p75 = task.result?.benchmark?.p75;
+
+  if (typeof p75 === "number" && Number.isFinite(p75)) {
+    return p75;
+  }
+
+  return undefined;
+}
+
+function getTaskState(task: BenchmarkCollectionTask): string | undefined {
+  const state = task.result?.state ?? task.state;
+
+  if (typeof state === "string" && state.length > 0) {
+    return state;
+  }
+
+  return undefined;
+}
+
+function formatTaskPath(path: readonly string[]): string {
+  return path.join(" > ");
+}
+
+export function collectBenchmarkEntries(
+  tasks: readonly BenchmarkCollectionTask[],
+  parents: readonly string[] = [],
+): BenchmarkCollection {
+  const entries: BenchmarkEntry[] = [];
+  const failures: string[] = [];
+
+  for (const task of tasks) {
+    const taskPath = [...parents, task.name];
+    const p75 = getTaskP75(task);
+    const children = task.tasks ?? [];
+
+    if (children.length > 0) {
+      const childCollection = collectBenchmarkEntries(children, taskPath);
+      failures.push(...childCollection.failures);
+
+      if (children.length === 1 && childCollection.entries.length === 1) {
+        // Single-bench suite: attribute result to the suite name (the threshold key).
+        entries.push({ name: task.name, p75: childCollection.entries[0].p75 });
+      } else if (childCollection.entries.length > 0) {
+        entries.push(...childCollection.entries);
+      } else if (p75 !== undefined) {
+        entries.push({ name: task.name, p75 });
+      }
+      continue;
+    }
+
+    if (p75 !== undefined) {
+      entries.push({ name: task.name, p75 });
+      continue;
+    }
+
+    const state = getTaskState(task);
+    const stateDetail = state ? ` (state: ${state})` : "";
+    failures.push(`${formatTaskPath(taskPath)}: benchmark p75 was not collected${stateDetail}.`);
+  }
+
+  return { entries, failures };
+}
+
 async function main() {
   const thresholds = loadThresholds();
   const baseline = loadBaseline();
+  const expectedBenchmarkNames = getConfiguredBenchmarkNames(thresholds, baseline);
 
   const vitest = await createVitest("benchmark", {
     config: "./vitest.config.bench.ts",
@@ -135,51 +304,36 @@ async function main() {
   });
 
   try {
-    await vitest.start();
+    const runResult = await vitest.start();
+    const runnerFailures = [
+      ...runResult.unhandledErrors.map(
+        (error) => `benchmark runner error: ${formatUnknownError(error)}`,
+      ),
+      ...runResult.testModules
+        .filter((module) => module.state() === "failed")
+        .map((module) => `benchmark module failed: ${module.relativeModuleId}`),
+    ];
 
     const files = vitest.state.getFiles();
     const reports: BenchmarkReport[] = [];
-    let allPassed = true;
-
-    type BenchEntry = { name: string; p75: number };
-
-    // Collects bench entries from a task tree.
-    // - Suite with 1 child bench → uses suite name (describe('key') { bench(...) } pattern)
-    // - Suite with multiple children → uses each child's own name
-    // - Leaf bench with samples → uses bench name directly
-    // In Vitest 4.x, raw samples are not stored in state; use pre-computed p75 on leaf tasks (type=test).
-    // Suite heuristic: if a describe block contains exactly one bench, attribute the result to the
-    // suite name (the threshold key). Multiple children → use each child's own name.
-    const collectEntries = (tasks: (typeof files)[number]["tasks"]): BenchEntry[] => {
-      const entries: BenchEntry[] = [];
-      for (const task of tasks) {
-        const p75: number | undefined = (
-          task.result?.benchmark as Record<string, unknown> | undefined
-        )?.p75 as number | undefined;
-        if (p75 !== undefined) {
-          entries.push({ name: task.name, p75 });
-        } else if ("tasks" in task && Array.isArray(task.tasks) && task.tasks.length > 0) {
-          const childEntries = collectEntries(task.tasks);
-          if (childEntries.length === 1) {
-            // Single-bench suite: attribute result to the suite name (the threshold key)
-            entries.push({ name: task.name, p75: childEntries[0].p75 });
-          } else {
-            entries.push(...childEntries);
-          }
-        }
-      }
-      return entries;
-    };
+    const benchmarkCollectionFailures: string[] = [];
 
     for (const file of files) {
-      for (const { name, p75 } of collectEntries(file.tasks)) {
+      const collection = collectBenchmarkEntries(
+        file.tasks as unknown as readonly BenchmarkCollectionTask[],
+      );
+      benchmarkCollectionFailures.push(...collection.failures);
+
+      for (const { name, p75 } of collection.entries) {
         const report: BenchmarkReport = {
           name,
           p75,
         };
 
-        if (thresholds[name]) {
-          const threshold = thresholds[name].p75;
+        const thresholdConfig = thresholds[name];
+
+        if (thresholdConfig !== undefined) {
+          const threshold = getBenchmarkP75(thresholdConfig, `benchmarks/thresholds.json:${name}`);
           report.threshold = threshold;
           const ciMargin = process.env.CI ? CI_THRESHOLD_MULTIPLIER : LOCAL_THRESHOLD_MULTIPLIER;
           const effectiveThreshold = threshold * ciMargin;
@@ -187,7 +341,6 @@ async function main() {
 
           if (p75 > effectiveThreshold) {
             report.thresholdStatus = "fail";
-            allPassed = false;
           } else {
             report.thresholdStatus = "pass";
           }
@@ -204,7 +357,6 @@ async function main() {
 
           if (p75 - baselineP75 > baselineP75 * BASELINE_TOLERANCE) {
             report.baselineStatus = "fail";
-            allPassed = false;
           } else {
             report.baselineStatus = "pass";
           }
@@ -218,13 +370,30 @@ async function main() {
       }
     }
 
+    const gateEvaluation = evaluateBenchmarkGate(
+      reports,
+      [...runnerFailures, ...benchmarkCollectionFailures],
+      expectedBenchmarkNames,
+    );
+
     if (isUpdateBaseline) {
       saveBaseline(reports);
       process.exit(0);
     }
 
     if (outputJsonPath) {
-      writeFileSync(outputJsonPath, JSON.stringify({ allPassed, reports }, null, 2));
+      writeFileSync(
+        outputJsonPath,
+        JSON.stringify(
+          {
+            allPassed: gateEvaluation.allPassed,
+            gateFailures: gateEvaluation.gateFailures,
+            reports,
+          },
+          null,
+          2,
+        ),
+      );
     }
 
     console.log("\n╔══════════════════════════════════════════════════════════╗");
@@ -265,16 +434,25 @@ async function main() {
     }
 
     console.log("╠══════════════════════════════════════════════════════════╣");
-    console.log(`║ Result: ${allPassed ? "ALL PASSED" : "FAILED"}${" ".repeat(40)} ║`);
+    if (gateEvaluation.gateFailures.length > 0) {
+      for (const failure of gateEvaluation.gateFailures) {
+        console.error(`❌ ${failure}`);
+      }
+    }
+    console.log(
+      `║ Result: ${gateEvaluation.allPassed ? "ALL PASSED" : "FAILED"}${" ".repeat(40)} ║`,
+    );
     console.log("╚══════════════════════════════════════════════════════════╝\n");
 
-    process.exit(allPassed ? 0 : 1);
+    process.exit(gateEvaluation.allPassed ? 0 : 1);
   } finally {
     await vitest.close();
   }
 }
 
-main().catch((err) => {
-  console.error("Error running benchmark checks:", err);
-  process.exit(1);
-});
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main().catch((err) => {
+    console.error("Error running benchmark checks:", err);
+    process.exit(1);
+  });
+}

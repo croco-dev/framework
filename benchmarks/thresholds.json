@@ -6,11 +6,15 @@
   "Container.validate (50 components)": 20,
   "CrocoApp constructor": 30,
   "CrocoApp lambdaHandler (10 controllers)": 50,
-  "CrocoApp full cold-start simulation": 80,
-  "TelemetryRuntime benchmarks": 200,
+  "Lambda cold-start simulation": 80,
+  "Lambda cold-start with headers": 80,
+  "Lambda cold-start with binary body": 80,
+  "Lambda cold-start with query params": 80,
+  "Lambda cold-start with authorizer context": 80,
+  "Lambda cold-start realistic scenario": 80,
   "TelemetryRuntime.init (lambda preset)": 200,
   "lambdaPreset config creation": 2,
   "EventBusConfig.start (10 handlers)": 10,
-  "EventPublisher.publish single event": 2,
+  "EventPublisher.publishNow single event": 2,
   "DefaultHandlerResolver.resolve × 10": 5
 }

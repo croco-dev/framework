@@ -106,6 +106,12 @@ const controllers = [
   BenchController10,
 ];
 
+const createBenchmarkApp = (appControllers = controllers) =>
+  createApp({
+    controllers: appControllers,
+    unsafeSkipSecurityValidation: true,
+  });
+
 const lambdaContext: LambdaContext = {
   callbackWaitsForEmptyEventLoop: false,
   functionName: "bench-function",
@@ -154,7 +160,7 @@ describe("CrocoApp benchmarks", () => {
       "Hono + DI lookup",
       () => {
         setupDI();
-        createApp({ controllers: [BenchController1] });
+        createBenchmarkApp([BenchController1]);
       },
       { iterations: 50, warmupIterations: 5 },
     );
@@ -165,7 +171,7 @@ describe("CrocoApp benchmarks", () => {
       "boot() + handler creation",
       () => {
         setupDI();
-        const app = createApp({ controllers });
+        const app = createBenchmarkApp();
         app.lambdaHandler();
       },
       { iterations: 30, warmupIterations: 3 },
@@ -177,7 +183,7 @@ describe("CrocoApp benchmarks", () => {
       "createApp → lambdaHandler → mock API Gateway v2 event",
       async () => {
         setupDI();
-        const app = createApp({ controllers });
+        const app = createBenchmarkApp();
         const handler = app.lambdaHandler();
         await handler(createLambdaEvent("/bench1/"), lambdaContext);
       },
@@ -190,7 +196,7 @@ describe("CrocoApp benchmarks", () => {
       "cold-start with authorization header",
       async () => {
         setupDI();
-        const app = createApp({ controllers });
+        const app = createBenchmarkApp();
         const handler = app.lambdaHandler();
         const event = createLambdaEvent("/bench1/");
         event.headers = { authorization: "Bearer token123" };
@@ -205,7 +211,7 @@ describe("CrocoApp benchmarks", () => {
       "cold-start with base64 encoded body",
       async () => {
         setupDI();
-        const app = createApp({ controllers });
+        const app = createBenchmarkApp();
         const handler = app.lambdaHandler();
         const event = createLambdaEvent("/bench1/");
         event.body = Buffer.from(JSON.stringify({ data: "test" })).toString("base64");
@@ -221,7 +227,7 @@ describe("CrocoApp benchmarks", () => {
       "cold-start with query string",
       async () => {
         setupDI();
-        const app = createApp({ controllers });
+        const app = createBenchmarkApp();
         const handler = app.lambdaHandler();
         const event = createLambdaEvent("/bench1/");
         event.rawQueryString = "page=1&limit=10";
@@ -236,7 +242,7 @@ describe("CrocoApp benchmarks", () => {
       "cold-start with JWT authorizer claims",
       async () => {
         setupDI();
-        const app = createApp({ controllers });
+        const app = createBenchmarkApp();
         const handler = app.lambdaHandler();
         const event = createLambdaEvent("/bench1/");
         event.requestContext.authorizer = {
@@ -259,12 +265,12 @@ describe("CrocoApp benchmarks", () => {
       "realistic cold-start with auth, headers, query",
       async () => {
         setupDI();
-        const app = createApp({ controllers });
+        const app = createBenchmarkApp();
         const handler = app.lambdaHandler();
         const event = createLambdaEvent("/bench5/");
         event.rawQueryString = "search=test&page=1&limit=20";
         event.headers = {
-          authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+          authorization: "Bearer benchmark-token",
           "content-type": "application/json",
           "user-agent": "Mozilla/5.0",
         };

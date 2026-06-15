@@ -25,23 +25,33 @@ function formatDiff(actual, expected) {
  */
 function statusEmoji(report) {
   if (report.thresholdStatus === "fail" || report.baselineStatus === "fail") return "❌";
-  if (report.thresholdStatus === "skip" && report.baselineStatus === "skip") return "⚠️";
+  if (report.thresholdStatus === "skip" || report.baselineStatus === "skip") return "⚠️";
   return "✅";
 }
 
 /**
- * @param {{ allPassed: boolean; reports: any[] }} result
+ * @param {{ thresholdSkipReason?: string; baselineSkipReason?: string }} report
+ */
+function statusNotes(report) {
+  const notes = [report.thresholdSkipReason, report.baselineSkipReason].filter(Boolean);
+  return notes.length > 0 ? notes.join("<br>") : "-";
+}
+
+/**
+ * @param {{ allPassed: boolean; gateFailures?: string[]; reports: any[] }} result
  * @param {string} sha
  */
-function buildCommentBody(result, sha) {
+export function buildCommentBody(result, sha) {
   const rows = result.reports
     .map((r) => {
       const threshold = r.threshold ? formatDuration(r.threshold) : "-";
       const baseline = r.baseline ? formatDuration(r.baseline) : "-";
       const baselineDiff = formatDiff(r.p75, r.baseline);
-      return `| ${r.name} | ${formatDuration(r.p75)} | ${threshold} | ${baseline} | ${baselineDiff} | ${statusEmoji(r)} |`;
+      return `| ${r.name} | ${formatDuration(r.p75)} | ${threshold} | ${baseline} | ${baselineDiff} | ${statusEmoji(r)} | ${statusNotes(r)} |`;
     })
     .join("\n");
+  const gateFailures = Array.isArray(result.gateFailures) ? result.gateFailures : [];
+  const failureLines = gateFailures.map((failure) => `- ${failure}`);
 
   const summary = result.allPassed ? "✅ All benchmarks passed" : "❌ Some benchmarks failed";
 
@@ -51,9 +61,10 @@ function buildCommentBody(result, sha) {
     "",
     summary,
     "",
-    "| Benchmark | p75 | Threshold | Baseline | vs Baseline | Status |",
-    "|-----------|-----|-----------|----------|-------------|--------|",
-    rows,
+    ...(failureLines.length > 0 ? ["### Gate failures", "", ...failureLines, ""] : []),
+    "| Benchmark | p75 | Threshold | Baseline | vs Baseline | Status | Notes |",
+    "|-----------|-----|-----------|----------|-------------|--------|-------|",
+    rows || "| _No benchmark rows collected_ | - | - | - | - | ❌ | Check workflow logs. |",
     "",
     `<sub>Updated: ${new Date().toISOString()} · Commit: ${sha.slice(0, 7)}</sub>`,
   ].join("\n");

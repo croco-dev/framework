@@ -1,70 +1,116 @@
-# Benchmark Gate Transition Guide
+# Coverage and Benchmark Gate Transition Guide
 
 ## Current State
 
-- Gate mode: `warning-only` (BENCHMARK_GATE_MODE=warning-only in .github/workflows/benchmark.yml)
-- Command: `pnpm bench:check --output-json=benchmark-result.json`
-- Step configured with `continue-on-error: true`
+- Benchmark gate mode: `warning-only` (`BENCHMARK_GATE_MODE=warning-only` in
+  `.github/workflows/benchmark.yml`).
+- Benchmark command: `pnpm bench:check --output-json=benchmark-result.json`.
+- Benchmark workflow behavior: the benchmark step keeps `continue-on-error: true` so artifacts and PR comments
+  are published even when the checker exits non-zero. The final hard-fail step only runs in `enforce` mode.
+- Benchmark result contract: `benchmark-result.json` is not enforce-ready unless every emitted benchmark row has
+  `thresholdStatus` and `baselineStatus` values other than `skip`, and no runner/module failure is recorded in
+  `gateFailures`.
+- Core coverage gate: `pnpm test:coverage:core` already enforces the configured Vitest thresholds for the core
+  package set. `pnpm test:coverage:core:warning` publishes the package baseline/threshold drift report without
+  making that report a second hard gate.
 
-## Enforce-Ready Checklist
+## Benchmark Enforce-Ready Checklist
 
-Switch `BENCHMARK_GATE_MODE` from `warning-only` to `enforce` only when ALL items below are YES:
+Switch `BENCHMARK_GATE_MODE` from `warning-only` to `enforce` only when all items below are true.
 
-### Threshold Coverage
+### Threshold And Baseline Coverage
 
-- [ ] 모든 벤치마크 케이스에 threshold 값이 정의되어 있는가?
-  - 확인 방법: `benchmark-result.json`의 각 케이스에 `thresholdStatus: "skip"`이 없는가?
-  - 미정의 케이스 처리 계획: threshold가 아직 정의되지 않은 케이스는 enforce 전환 전에 `benchmarks/thresholds.json`에 임계치 추가 필요
+- [ ] `benchmark-result.json` has no `thresholdStatus: "skip"` rows.
+- [ ] `benchmark-result.json` has no `baselineStatus: "skip"` rows.
+- [ ] `gateFailures` does not include runner failures, module failures, missing reports, threshold skips, or
+      baseline skips.
+- [ ] Every emitted benchmark row has a matching key in both `benchmarks/thresholds.json` and
+      `benchmarks/baseline.json`.
 
 ### Baseline Stability
 
-- [ ] 안정된 baseline이 최근 5개 이상의 green run에서 캡처되었는가?
-  - 확인 방법: CI artifact로 저장된 benchmark 결과에서 variance < 10%를 유지하는가?
-  - Baseline 데이터 위치: `benchmarks/baseline.json` (현재 11개 케이스 캡처됨)
+- [ ] The latest five green benchmark workflow runs for the same emitted benchmark row set have been reviewed.
+- [ ] Each row's p75 spread across those runs is at or below 10%.
+- [ ] No reviewed run contains benchmark runner errors, empty reports, threshold skips, or baseline skips.
+- [ ] Baseline updates are taken from a green workflow run, not from a noisy local-only run.
+
+Use this variance check for each benchmark row:
+
+```text
+spread = (max(p75) - min(p75)) / median(p75)
+enforce-ready when spread <= 0.10 across the latest five green runs
+```
 
 ### Variance Tolerance
 
-- [ ] 허용 가능한 variance 기준이 명시되었는가?
-  - 권장: 단일 케이스 ±5%, 전체 평균 ±3%
-  - CI 환경 변동(네트워크, 인스턴스 타입)을 고려한 multiplier 정의 여부
-  - 현재 설정: `CI_THRESHOLD_MULTIPLIER = 2` (CI에서 threshold 2배 마진 자동 적용)
+- Current baseline tolerance: `BASELINE_TOLERANCE = 0.2`.
+- Current threshold margin: local uses `1x`; CI uses `CI_THRESHOLD_MULTIPLIER = 2`.
+- Enforce promotion should not tighten either value in the same PR that flips `BENCHMARK_GATE_MODE`; first
+  prove stable warning-only output, then tighten in a follow-up.
+
+### PR Visibility
+
+- `benchmark-result.json` and `ci-reports/benchmark/summary.md` are uploaded as the benchmark warning report
+  artifact.
+- The benchmark PR comment must include `gateFailures`, skip reasons, and an explicit empty-report row when no
+  benchmarks were collected.
+- Core coverage baseline regressions are published to the CI job summary and uploaded as the
+  `core-coverage-warning-report` artifact.
 
 ### Skip Policy
 
-- [ ] 벤치마크 skip 허용 조건이 문서화되었는가?
-  - 허용 조건: 문서-only 변경, 벤치마크 무관 코드 변경
-  - skip 시 PR 코멘트에 명시적 사유 기록 필요
+- Documentation-only changes rely on the benchmark workflow `paths` filter and should not run the benchmark job.
+- Source, benchmark, config, or lockfile changes that trigger the benchmark workflow must produce a report with no
+  threshold or baseline skips.
+- New benchmark rows must land with both threshold and baseline entries, or the checker should remain non-zero in
+  warning-only mode until those entries are added.
+- Manual benchmark skip is allowed only for unavailable external infrastructure, and the PR must state why the
+  skipped run does not affect the changed code path.
 
 ### False Positive Handling
 
-- [ ] 환경 노이즈로 인한 일시적 실패 재실행 정책이 정의되었는가?
-  - 권장: 3회 중 2회 통과 시 pass로 간주
+- For an apparent noisy benchmark failure, rerun the same commit up to three total attempts.
+- Treat the benchmark as transient only when at least two of the three attempts pass without runner failures,
+  empty reports, threshold skips, or baseline skips.
+- If two attempts fail the same row against baseline or threshold, update code, threshold, or baseline policy
+  before retrying again.
 
-## Threshold-TBD Benchmark Cases
+## Core Coverage Expansion Policy
 
-아직 baseline이 캡처되지 않은 케이스 목록과 처리 계획:
+The current core coverage set is read from the `test:coverage:core` script in `package.json`.
 
-| 케이스                                  | 현재 상태                     | threshold (ms) | baseline 예정일 | 담당 |
-| --------------------------------------- | ----------------------------- | -------------- | --------------- | ---- |
-| `TelemetryRuntime.init (lambda preset)` | threshold 있음, baseline 없음 | 200            | TBD             | -    |
-| `lambdaPreset config creation`          | threshold 있음, baseline 없음 | 2              | TBD             | -    |
+Add a package to the core coverage set when at least one of these is true:
 
-> baseline이 없는 케이스는 `pnpm bench:check --update-baseline` 실행 후 `benchmarks/baseline.json`에 자동 추가된다.
+- It defines framework-level contracts used by multiple downstream packages.
+- It owns retry, events, context, auth, telemetry, transport, health, or release-critical behavior.
+- A recent regression would be user-visible or would weaken release confidence.
 
-## CI Script Alignment
+Before adding a package:
 
-모든 관련 파일이 동일한 승격 용어를 사용해야 한다:
+- [ ] Its tests pass under `CORE_COVERAGE=true`.
+- [ ] It can meet the configured 60% line/branch/function/statement thresholds, or the gap has a documented
+      follow-up before enforce promotion.
+- [ ] The package emits `coverage/coverage-summary.json` in the core coverage run.
+- [ ] The baseline report shows the package row in the PR job summary and artifact.
 
-- `.github/workflows/benchmark.yml`: `BENCHMARK_GATE_MODE` env, `enforce` 조건부 fail step
-- `scripts/bench-threshold-check.mts`: threshold/baseline 검증 로직 (`thresholdStatus: skip` 경고 출력)
-- `benchmarks/thresholds.json`: 케이스별 p75 절대 임계값 (현재 13개 케이스 정의)
-- `benchmarks/baseline.json`: 최근 green run 기준 p75 캡처값 (현재 11개 케이스)
-- 본 문서: enforce 전환 체크리스트
+## Promotion Steps
+
+1. Keep `BENCHMARK_GATE_MODE=warning-only`.
+2. Run `pnpm build`.
+3. Run `pnpm bench:check --output-json=benchmark-result.json`.
+4. Confirm `benchmark-result.json` has no threshold or baseline skips.
+5. Review the latest five green benchmark workflow artifacts for the variance rule above.
+6. Run `pnpm test:coverage:core` and `pnpm test:coverage:core:warning`.
+7. Confirm the core coverage baseline report appears in the CI job summary and artifact.
+8. Flip `BENCHMARK_GATE_MODE` to `enforce` only after the warning-only evidence is stable.
 
 ## Workflow Reference
 
-- `benchmark.yml` 라인 9-10: `BENCHMARK_GATE_MODE` env 정의
-- `benchmark.yml` 라인 28-31: `continue-on-error: true` 설정
-- `benchmark.yml` 라인 81-83: enforce 모드 조건부 fail
-- `scripts/bench-threshold-check.mts` 라인 38-40: `BASELINE_TOLERANCE = 0.2`, `CI_THRESHOLD_MULTIPLIER = 2`
-- `scripts/bench-threshold-check.mts` 라인 163-165: threshold 미정의 케이스 skip 처리
+- `.github/workflows/benchmark.yml`: `BENCHMARK_GATE_MODE`, warning-only artifact/comment publication, enforce
+  hard-fail step.
+- `.github/workflows/ci.yml`: core coverage threshold gate and core coverage baseline report publication.
+- `scripts/bench-threshold-check.mts`: benchmark runner, threshold, baseline, skip, and result validation.
+- `scripts/post-benchmark-comment.mjs`: benchmark PR comment formatter.
+- `scripts/core-coverage-warning-check.mts`: core coverage baseline/threshold report generator.
+- `benchmarks/thresholds.json`: benchmark p75 absolute thresholds in milliseconds.
+- `benchmarks/baseline.json`: benchmark p75 baselines in milliseconds from accepted green runs.
