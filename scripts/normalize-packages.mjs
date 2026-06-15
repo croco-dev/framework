@@ -10,8 +10,10 @@
  */
 
 import fs from "node:fs";
+import { builtinModules } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import {
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
@@ -40,6 +42,11 @@ const DRIZZLE_ORM_DEPENDENCY_SECTIONS = [
   "peerDependencies",
   "optionalDependencies",
 ];
+const RUNTIME_DEPENDENCY_SECTIONS = ["dependencies", "peerDependencies", "optionalDependencies"];
+const nodeBuiltinModules = new Set([
+  ...builtinModules,
+  ...builtinModules.map((moduleName) => `node:${moduleName}`),
+]);
 
 const mode = parseArgs(process.argv.slice(2));
 
@@ -347,6 +354,7 @@ function validatePackage(pkg, pkgPath) {
   validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations);
   validateDirectDistEntrypoints(pkg, violations);
   validateReflectMetadataDependency(pkg, path.dirname(pkgPath), violations);
+  validateSourceRuntimeDependencies(pkg, path.dirname(pkgPath), violations);
 
   if (pkg.name === "@croco/impersonation-core") {
     validateDistPath(pkg.types, "types", violations, { mustEndWith: ".d.ts" });
@@ -522,6 +530,177 @@ function validateReflectMetadataDependency(pkg, packageDir, violations) {
   violations.push(
     `source imports reflect-metadata but dependencies.reflect-metadata is missing: ${importList}`,
   );
+}
+
+function validateSourceRuntimeDependencies(pkg, packageDir, violations) {
+  const srcDir = path.join(packageDir, "src");
+  if (!fs.existsSync(srcDir)) {
+    return;
+  }
+
+  const declaredDependencies = runtimeDependencyNames(pkg);
+  const importedDependencies = new Map();
+
+  for (const filePath of findSourceFiles(srcDir).filter(
+    (sourcePath) => !isTestSourceFile(sourcePath, srcDir),
+  )) {
+    for (const specifier of collectRuntimeImportSpecifiers(filePath)) {
+      const dependencyName = packageNameFromSpecifier(specifier);
+      if (
+        !dependencyName ||
+        dependencyName === pkg.name ||
+        dependencyName === REFLECT_METADATA_PACKAGE ||
+        nodeBuiltinModules.has(dependencyName) ||
+        declaredDependencies.has(dependencyName)
+      ) {
+        continue;
+      }
+
+      const importFiles = importedDependencies.get(dependencyName) ?? new Set();
+      importFiles.add(path.relative(packageDir, filePath));
+      importedDependencies.set(dependencyName, importFiles);
+    }
+  }
+
+  for (const [dependencyName, importFiles] of Array.from(importedDependencies.entries()).sort(
+    ([left], [right]) => left.localeCompare(right),
+  )) {
+    violations.push(
+      `source imports ${dependencyName} at runtime but dependencies/peerDependencies/optionalDependencies is missing: ${Array.from(importFiles).sort().join(", ")}`,
+    );
+  }
+}
+
+function runtimeDependencyNames(pkg) {
+  return new Set(
+    RUNTIME_DEPENDENCY_SECTIONS.flatMap((sectionName) => dependencyNames(pkg[sectionName])).sort(),
+  );
+}
+
+function dependencyNames(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.keys(value).sort();
+}
+
+function collectRuntimeImportSpecifiers(filePath) {
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    fs.readFileSync(filePath, "utf-8"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const specifiers = [];
+
+  function visit(node) {
+    if (ts.isImportDeclaration(node)) {
+      if (isRuntimeImportDeclaration(node)) {
+        pushStringSpecifier(specifiers, node.moduleSpecifier);
+      }
+      return;
+    }
+
+    if (ts.isExportDeclaration(node)) {
+      if (node.moduleSpecifier && isRuntimeExportDeclaration(node)) {
+        pushStringSpecifier(specifiers, node.moduleSpecifier);
+      }
+      return;
+    }
+
+    if (ts.isImportEqualsDeclaration(node)) {
+      if (
+        !node.isTypeOnly &&
+        ts.isExternalModuleReference(node.moduleReference) &&
+        node.moduleReference.expression
+      ) {
+        pushStringSpecifier(specifiers, node.moduleReference.expression);
+      }
+      return;
+    }
+
+    if (ts.isCallExpression(node)) {
+      const firstArgument = node.arguments[0];
+      if (
+        firstArgument &&
+        (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+          (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+      ) {
+        pushStringSpecifier(specifiers, firstArgument);
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return specifiers;
+}
+
+function isRuntimeImportDeclaration(node) {
+  const importClause = node.importClause;
+  if (!importClause) {
+    return true;
+  }
+
+  if (importClause.isTypeOnly) {
+    return false;
+  }
+
+  if (importClause.name) {
+    return true;
+  }
+
+  if (!importClause.namedBindings) {
+    return false;
+  }
+
+  if (ts.isNamespaceImport(importClause.namedBindings)) {
+    return true;
+  }
+
+  return importClause.namedBindings.elements.some((element) => !element.isTypeOnly);
+}
+
+function isRuntimeExportDeclaration(node) {
+  if (node.isTypeOnly) {
+    return false;
+  }
+
+  if (!node.exportClause) {
+    return true;
+  }
+
+  if (ts.isNamedExports(node.exportClause)) {
+    return node.exportClause.elements.some((element) => !element.isTypeOnly);
+  }
+
+  return true;
+}
+
+function pushStringSpecifier(specifiers, expression) {
+  if (ts.isStringLiteralLike(expression)) {
+    specifiers.push(expression.text);
+  }
+}
+
+function packageNameFromSpecifier(specifier) {
+  if (specifier.startsWith(".") || specifier.startsWith("/") || specifier.startsWith("#")) {
+    return undefined;
+  }
+
+  if (specifier.startsWith("@")) {
+    const [scope, name] = specifier.split("/");
+    if (!scope || !name) {
+      return specifier;
+    }
+
+    return `${scope}/${name}`;
+  }
+
+  return specifier.split("/")[0];
 }
 
 function findReflectMetadataSourceImports(srcDir) {

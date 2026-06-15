@@ -320,6 +320,78 @@ describe("normalize-packages.mjs", () => {
     expect(result.stdout).not.toContain("decorator-runtime/package.json");
   });
 
+  it("requires direct runtime dependencies for source value imports", () => {
+    const root = createTempRoot();
+    writePackage(
+      root,
+      "dataloader-core",
+      {
+        name: "@croco/dataloader-core",
+        version: "0.0.3",
+        files: ["dist"],
+        type: "commonjs",
+        main: "./src/index.ts",
+        types: "./src/index.ts",
+        publishConfig: {
+          access: "public",
+          main: "./dist/index.js",
+          types: "./dist/index.d.ts",
+          exports: {
+            ".": {
+              import: "./dist/index.mjs",
+              require: "./dist/index.js",
+              types: "./dist/index.d.ts",
+            },
+          },
+        },
+        dependencies: {
+          "@croco/telemetry-api": "workspace:*",
+        },
+      },
+      {
+        sourceContent:
+          'import { recordError } from "@croco/telemetry-api";\nimport { context } from "@opentelemetry/api";\nexport const value = { context, recordError };\n',
+      },
+    );
+    writePackage(
+      root,
+      "type-only",
+      {
+        name: "@croco/type-only",
+        version: "0.0.3",
+        files: ["dist"],
+        type: "commonjs",
+        main: "./src/index.ts",
+        types: "./src/index.ts",
+        publishConfig: {
+          access: "public",
+          main: "./dist/index.js",
+          types: "./dist/index.d.ts",
+          exports: {
+            ".": {
+              import: "./dist/index.mjs",
+              require: "./dist/index.js",
+              types: "./dist/index.d.ts",
+            },
+          },
+        },
+      },
+      {
+        sourceContent:
+          'import type { Context } from "@opentelemetry/api";\nexport type Value = Context;\n',
+      },
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("dataloader-core/package.json");
+    expect(result.stdout).toContain(
+      "source imports @opentelemetry/api at runtime but dependencies/peerDependencies/optionalDependencies is missing: src/index.ts",
+    );
+    expect(result.stdout).not.toContain("type-only/package.json");
+  });
+
   it("requires Drizzle package manifests to use the workspace catalog policy", () => {
     const root = createTempRoot();
     writePackage(root, "catalog-drizzle", {
