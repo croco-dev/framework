@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "@croco/framework-context": ["../framework-context/src/index.ts"],
-      "@croco/problems-core": ["../problems-core/src/index.ts"]
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/repository-core": ["src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"]
