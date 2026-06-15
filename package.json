@@ -6,7 +6,7 @@
     "build": "turbo build",
     "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
-    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm architecture:check:circular && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
+    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm release-docs:check && pnpm architecture:check:circular && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
@@ -30,7 +30,8 @@
     "first-success:verify": "node --experimental-strip-types scripts/first-success-verify.mts",
     "package-entrypoints:smoke": "node --experimental-strip-types scripts/package-entrypoint-smoke.mts",
     "package-manifests:check": "node scripts/normalize-packages.mjs --check",
-    "package-manifests:write": "node scripts/normalize-packages.mjs --write"
+    "package-manifests:write": "node scripts/normalize-packages.mjs --write",
+    "release-docs:check": "node --experimental-strip-types scripts/release-docs-check.mts"
   },
   "dependencies": {
     "@vitejs/plugin-rsc": "0.5.26"
