@@ -45,7 +45,10 @@ const smokeCases: readonly SmokeCase[] = [
       "mongodb",
       "--no-git",
     ],
-    validations: [{ label: "build", args: ["build"] }],
+    validations: [
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+    ],
   },
   {
     name: "trpc-nextjs-fullstack",
