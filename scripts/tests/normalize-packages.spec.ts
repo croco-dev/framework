@@ -248,6 +248,145 @@ describe("normalize-packages.mjs", () => {
     expect(result.stdout).not.toContain("decorator-runtime/package.json");
   });
 
+  it("requires Drizzle package manifests to use the workspace catalog policy", () => {
+    const root = createTempRoot();
+    writePackage(root, "catalog-drizzle", {
+      name: "@croco/catalog-drizzle",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+      devDependencies: {
+        "drizzle-orm": "catalog:",
+      },
+      peerDependencies: {
+        "drizzle-orm": "catalog:",
+      },
+    });
+    writePackage(root, "runtime-drizzle", {
+      name: "@croco/runtime-drizzle",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+      dependencies: {
+        "drizzle-orm": "catalog:",
+      },
+    });
+    writePackage(root, "dev-only-drizzle", {
+      name: "@croco/dev-only-drizzle",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+      devDependencies: {
+        "drizzle-orm": "catalog:",
+      },
+    });
+    writePackage(root, "stale-drizzle", {
+      name: "@croco/stale-drizzle",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+      devDependencies: {
+        "drizzle-orm": "0.44.2",
+      },
+      peerDependencies: {
+        "drizzle-orm": ">=0.30.0",
+      },
+    });
+    writePackage(root, "missing-drizzle", {
+      name: "@croco/missing-drizzle",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain("catalog-drizzle/package.json");
+    expect(result.stdout).not.toContain("runtime-drizzle/package.json");
+    expect(result.stdout).toContain("dev-only-drizzle/package.json");
+    expect(result.stdout).toContain(
+      "drizzle-orm devDependencies and peerDependencies must be declared together",
+    );
+    expect(result.stdout).toContain("stale-drizzle/package.json");
+    expect(result.stdout).toContain('devDependencies.drizzle-orm must use catalog:, not "0.44.2"');
+    expect(result.stdout).toContain(
+      'peerDependencies.drizzle-orm must use catalog:, not ">=0.30.0"',
+    );
+    expect(result.stdout).toContain("missing-drizzle/package.json");
+    expect(result.stdout).toContain("drizzle-orm must be declared with catalog:");
+  });
+
   it("ignores test-only reflect-metadata imports in package manifests", () => {
     const root = createTempRoot();
     const packagePath = writePackage(root, "test-only-decorator", {

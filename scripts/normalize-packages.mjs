@@ -28,9 +28,17 @@ const DIST_INDEX_MAIN = "./dist/index.js";
 const DIST_INDEX_MODULE = "./dist/index.mjs";
 const DIST_INDEX_TYPES = "./dist/index.d.ts";
 const SRC_INDEX = "./src/index.ts";
+const DRIZZLE_ORM_PACKAGE = "drizzle-orm";
+const DRIZZLE_PACKAGE_SUFFIX = "-drizzle";
 const REFLECT_METADATA_PACKAGE = "reflect-metadata";
 const REFLECT_METADATA_IMPORT_RE =
   /^\s*import\s+(?:[^'"]+\s+from\s+)?["']reflect-metadata["']\s*;?/m;
+const DRIZZLE_ORM_DEPENDENCY_SECTIONS = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+];
 
 const mode = parseArgs(process.argv.slice(2));
 
@@ -305,6 +313,7 @@ function validatePackage(pkg, pkgPath) {
   validateNoArrayTypes(pkg, "root", violations);
   validateNoArrayTypes(pkg.publishConfig, "publishConfig", violations);
   validateExportMap(pkg.publishConfig?.exports, "publishConfig.exports", violations);
+  validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations);
   validateReflectMetadataDependency(pkg, path.dirname(pkgPath), violations);
 
   if (pkg.name === "@croco/impersonation-core") {
@@ -391,6 +400,42 @@ function validateExportMap(exportsValue, fieldName, violations) {
         mustEndWith: condition === "types" ? ".d.ts" : undefined,
       });
     }
+  }
+}
+
+function validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations) {
+  const packageDirName = path.basename(path.dirname(pkgPath));
+  if (!packageDirName.endsWith(DRIZZLE_PACKAGE_SUFFIX)) {
+    return;
+  }
+
+  const declarations = DRIZZLE_ORM_DEPENDENCY_SECTIONS.map((sectionName) => ({
+    sectionName,
+    version: pkg[sectionName]?.[DRIZZLE_ORM_PACKAGE],
+  })).filter(({ version }) => version !== undefined);
+  const hasRuntimeDependency = pkg.dependencies?.[DRIZZLE_ORM_PACKAGE] !== undefined;
+  const hasDevDependency = pkg.devDependencies?.[DRIZZLE_ORM_PACKAGE] !== undefined;
+  const hasPeerDependency = pkg.peerDependencies?.[DRIZZLE_ORM_PACKAGE] !== undefined;
+
+  if (declarations.length === 0) {
+    violations.push(
+      `${DRIZZLE_ORM_PACKAGE} must be declared with catalog: in Drizzle package manifests`,
+    );
+    return;
+  }
+
+  for (const declaration of declarations) {
+    if (declaration.version !== "catalog:") {
+      violations.push(
+        `${declaration.sectionName}.${DRIZZLE_ORM_PACKAGE} must use catalog:, not ${JSON.stringify(declaration.version)}`,
+      );
+    }
+  }
+
+  if (!hasRuntimeDependency && hasDevDependency !== hasPeerDependency) {
+    violations.push(
+      `${DRIZZLE_ORM_PACKAGE} devDependencies and peerDependencies must be declared together when it is not a runtime dependency`,
+    );
   }
 }
 
