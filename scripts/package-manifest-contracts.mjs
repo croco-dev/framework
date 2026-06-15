@@ -7,6 +7,12 @@ export const ENTRYPOINT_EXEMPTIONS = new Map([
 
 export const FILES_EXEMPTIONS = new Map();
 
+export const DIRECT_DIST_ENTRYPOINT_PACKAGES = new Set([
+  "@croco/storage-cloudinary",
+  "@croco/storage-core",
+  "@croco/storage-r2",
+]);
+
 export const EXPECTED_FILES_BY_PACKAGE = new Map([
   ["create-croco-app", ["dist", "templates"]],
   ["@croco/utils-next-font-pretendard", ["dist", "PretendardVariable.woff2"]],

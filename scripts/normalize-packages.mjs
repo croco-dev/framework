@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
   FILES_EXEMPTIONS,
   expectedFilesFor,
@@ -166,7 +167,9 @@ function normalizePackage(pkg, pkgPath) {
   normalizeTypesFields(normalized);
 
   if (!ENTRYPOINT_EXEMPTIONS.has(normalized.name) && hasSourceEntrypoint) {
-    normalizeEntrypointFields(normalized);
+    normalizeEntrypointFields(normalized, {
+      directDistRoot: DIRECT_DIST_ENTRYPOINT_PACKAGES.has(normalized.name),
+    });
   }
 
   return normalized;
@@ -223,9 +226,22 @@ function normalizeDistSpecifier(value) {
   return value;
 }
 
-function normalizeEntrypointFields(pkg) {
+function normalizeEntrypointFields(pkg, options = {}) {
   if (!pkg.type) {
     pkg.type = "commonjs";
+  }
+
+  if (options.directDistRoot) {
+    const directRootExport = directRootExportFor(pkg);
+    pkg.main = DIST_INDEX_MAIN;
+    pkg.module = DIST_INDEX_MODULE;
+    pkg.types = DIST_INDEX_TYPES;
+    pkg.exports = {
+      ".": directRootExport,
+    };
+    pkg.publishConfig.exports = {
+      ".": directRootExport,
+    };
   }
 
   if (!pkg.main) {
@@ -265,6 +281,21 @@ function publishedRootExportFor(pkg) {
     import: DIST_INDEX_MODULE,
     require: DIST_INDEX_MAIN,
     types: DIST_INDEX_TYPES,
+  };
+}
+
+function directRootExportFor(pkg) {
+  if (pkg.type === "module") {
+    return {
+      types: DIST_INDEX_TYPES,
+      import: DIST_INDEX_MAIN,
+    };
+  }
+
+  return {
+    types: DIST_INDEX_TYPES,
+    import: DIST_INDEX_MODULE,
+    require: DIST_INDEX_MAIN,
   };
 }
 
@@ -314,6 +345,7 @@ function validatePackage(pkg, pkgPath) {
   validateNoArrayTypes(pkg.publishConfig, "publishConfig", violations);
   validateExportMap(pkg.publishConfig?.exports, "publishConfig.exports", violations);
   validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations);
+  validateDirectDistEntrypoints(pkg, violations);
   validateReflectMetadataDependency(pkg, path.dirname(pkgPath), violations);
 
   if (pkg.name === "@croco/impersonation-core") {
@@ -321,6 +353,32 @@ function validatePackage(pkg, pkgPath) {
   }
 
   return violations;
+}
+
+function validateDirectDistEntrypoints(pkg, violations) {
+  if (!DIRECT_DIST_ENTRYPOINT_PACKAGES.has(pkg.name)) {
+    return;
+  }
+
+  validateDistPath(pkg.main, "main", violations);
+  validateDistPath(pkg.module, "module", violations, { mustEndWith: ".mjs" });
+  validateDistPath(pkg.types, "types", violations, { mustEndWith: ".d.ts" });
+
+  if (!pkg.exports?.["."]) {
+    violations.push('exports["."] is required');
+  }
+
+  validateNoSrcReferences(
+    {
+      exports: pkg.exports,
+      main: pkg.main,
+      module: pkg.module,
+      types: pkg.types,
+    },
+    "root publishable entrypoints",
+    violations,
+  );
+  validateExportMap(pkg.exports, "exports", violations);
 }
 
 function isDistPath(value) {
