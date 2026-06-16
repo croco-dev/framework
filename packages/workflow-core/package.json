@@ -33,10 +33,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/execution-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tasks-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
     "@croco/triggers-core": "workspace:*",
     "reflect-metadata": "^0.1.13"
   },

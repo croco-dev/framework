@@ -10,11 +10,14 @@ import {
   type ListExecutionsOptions,
 } from "@croco/execution-core";
 import { Component, Container, MetadataStorage } from "@croco/framework-context";
+import { trace } from "@opentelemetry/api";
+import type { Span, SpanOptions as OtelSpanOptions, Tracer } from "@opentelemetry/api";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { Task, TaskRegistry } from "@croco/tasks-core";
 import { Cron, OnWebhook } from "@croco/triggers-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Workflow } from "../libs/decorators/Workflow";
+import { WorkflowDiagnosticsProvider } from "../libs/diagnostics/WorkflowDiagnosticsProvider";
 import { WorkflowRegistry } from "../libs/WorkflowRegistry";
 import { WorkflowRunner } from "../libs/WorkflowRunner";
 
@@ -141,11 +144,56 @@ async function waitForWorkflowExecution(manager: ExecutionManagerImpl): Promise<
   throw new TestWorkflowProblem("workflow execution was not started");
 }
 
+function createMockSpan() {
+  const addEvent = vi.fn();
+  const end = vi.fn();
+  const recordException = vi.fn();
+  const setAttribute = vi.fn();
+  const setStatus = vi.fn();
+
+  const span: Span = {
+    spanContext: () => ({
+      traceId: "00000000000000000000000000000001",
+      spanId: "0000000000000001",
+      traceFlags: 1,
+      isRemote: false,
+    }),
+    setAttribute,
+    setAttributes: vi.fn(),
+    addEvent,
+    addLink: vi.fn(),
+    addLinks: vi.fn(),
+    setStatus,
+    updateName: vi.fn(),
+    end,
+    isRecording: vi.fn(() => true),
+    recordException,
+  } as unknown as Span;
+
+  return {
+    addEvent,
+    end,
+    recordException,
+    setAttribute,
+    setStatus,
+    span,
+  };
+}
+
+function createMockTracer(mockSpan: Span): Tracer {
+  return {
+    startSpan: () => mockSpan,
+    startActiveSpan: async <T>(_name: string, fn: (span: Span) => T, _options?: OtelSpanOptions) =>
+      fn(mockSpan),
+  } as Tracer;
+}
+
 describe("workflow-core", () => {
   let store!: InMemoryExecutionStore;
   let manager!: ExecutionManagerImpl;
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     Container.reset();
     MetadataStorage.clear();
     TaskRegistry.getInstance().reset();
@@ -446,6 +494,77 @@ describe("workflow-core", () => {
     expect(allExecutions).toHaveLength(2);
   });
 
+  it("emits workflow telemetry span attributes and lifecycle events", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+    @Component()
+    class TelemetryTasks {
+      @Task({ name: "billing.telemetry" })
+      run(payload: unknown): { handled: string } {
+        return { handled: getSubscriptionId(payload) };
+      }
+    }
+
+    @Component()
+    class TelemetryWorkflows {
+      @Workflow({
+        name: "billing-telemetry",
+        steps: ["billing.telemetry"],
+        idempotencyKey: ({ payload }) => `billing-telemetry:${getSubscriptionId(payload)}`,
+      })
+      run(): void {}
+    }
+
+    Container.set(TelemetryTasks, new TelemetryTasks());
+    Container.set(TelemetryWorkflows, new TelemetryWorkflows());
+    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await runner.execute("billing-telemetry", { subscriptionId: "sub_123" });
+
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("workflow.name", "billing-telemetry");
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("workflow.step.count", 1);
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("workflow.idempotent", true);
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("workflow.reused", false);
+    expect(mockSpan.addEvent).toHaveBeenCalledWith(
+      "workflow.execution.created",
+      expect.objectContaining({
+        "workflow.name": "billing-telemetry",
+        "workflow.execution.id": expect.any(String),
+        "workflow.execution.status": "pending",
+      }),
+    );
+    expect(mockSpan.addEvent).toHaveBeenCalledWith(
+      "workflow.execution.started",
+      expect.objectContaining({
+        "workflow.name": "billing-telemetry",
+        "workflow.execution.status": "running",
+      }),
+    );
+    expect(mockSpan.addEvent).toHaveBeenCalledWith(
+      "workflow.step.started",
+      expect.objectContaining({
+        "workflow.step.name": "billing.telemetry",
+        "workflow.step.task": "billing.telemetry",
+      }),
+    );
+    expect(mockSpan.addEvent).toHaveBeenCalledWith(
+      "workflow.step.completed",
+      expect.objectContaining({
+        "workflow.step.name": "billing.telemetry",
+        "workflow.step.task": "billing.telemetry",
+      }),
+    );
+    expect(mockSpan.addEvent).toHaveBeenCalledWith(
+      "workflow.execution.completed",
+      expect.objectContaining({
+        "workflow.name": "billing-telemetry",
+        "workflow.execution.status": "completed",
+      }),
+    );
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
   it("marks failed workflow executions and allows explicit replay creation", async () => {
     @Component()
     class FailingTasks {
@@ -498,6 +617,245 @@ describe("workflow-core", () => {
           workflowName: "billing-failure",
           replayOf: failedWorkflow.id,
           replayReason: "operator retry after provider recovery",
+        }),
+      }),
+    );
+  });
+
+  it("reports registered workflows and execution status through diagnostics", async () => {
+    @Component()
+    class DiagnosticsTasks {
+      @Task({ name: "billing.inspect" })
+      inspect(payload: unknown): { inspected: string } {
+        return { inspected: getSubscriptionId(payload) };
+      }
+
+      @Task({ name: "billing.inspect-failure" })
+      fail(): never {
+        throw new TestWorkflowProblem("billing diagnostics failure");
+      }
+    }
+
+    @Component()
+    class DiagnosticsWorkflows {
+      @Cron("*/30 * * * *")
+      @Workflow({
+        name: "billing-inspect",
+        description: "Inspect billing state",
+        steps: ["billing.inspect"],
+      })
+      inspect(): void {}
+
+      @Workflow({
+        name: "billing-inspect-failure",
+        steps: ["billing.inspect-failure"],
+      })
+      fail(): void {}
+    }
+
+    Container.set(DiagnosticsTasks, new DiagnosticsTasks());
+    Container.set(DiagnosticsWorkflows, new DiagnosticsWorkflows());
+    const registry = WorkflowRegistry.fromMetadata();
+    const runner = new WorkflowRunner(manager, registry);
+
+    await runner.execute("billing-inspect", { subscriptionId: "sub_123" });
+    await expect(runner.execute("billing-inspect-failure", {})).rejects.toThrow(
+      "billing diagnostics failure",
+    );
+
+    const health = await new WorkflowDiagnosticsProvider(manager, registry).getHealth();
+
+    expect(health.status).toBe("degraded");
+    expect(health.component).toBe("workflow");
+    expect(health.message).toBe("1 workflow execution(s) need attention");
+    expect(health.details).toEqual(
+      expect.objectContaining({
+        inspectionSupported: true,
+        registeredWorkflowCount: 2,
+        executionCount: 2,
+        attentionExecutionCount: 1,
+        executionsByStatus: expect.objectContaining({
+          completed: 1,
+          failed: 1,
+          pending: 0,
+        }),
+        workflows: expect.arrayContaining([
+          expect.objectContaining({
+            name: "billing-inspect",
+            description: "Inspect billing state",
+            stepCount: 1,
+            triggerTypes: ["cron"],
+          }),
+          expect.objectContaining({
+            name: "billing-inspect-failure",
+            stepCount: 1,
+            triggerTypes: [],
+          }),
+        ]),
+        latestExecutions: expect.arrayContaining([
+          expect.objectContaining({
+            workflowName: "billing-inspect",
+            status: "completed",
+            logCount: 4,
+            latestLog: expect.objectContaining({
+              level: "info",
+              message: "Workflow execution completed",
+            }),
+          }),
+          expect.objectContaining({
+            workflowName: "billing-inspect-failure",
+            status: "failed",
+            errorMessage: "billing diagnostics failure",
+            logCount: 3,
+            latestLog: expect.objectContaining({
+              level: "error",
+              message: "Workflow execution failed",
+            }),
+          }),
+        ]),
+      }),
+    );
+    expect(JSON.stringify(health.details)).not.toContain("sub_123");
+  });
+
+  it("paginates diagnostics execution inspection so later failures are not hidden", async () => {
+    const baseCreatedAt = Date.UTC(2026, 0, 1, 0, 0, 0);
+    for (let index = 0; index < 101; index++) {
+      const execution = await manager.create({
+        type: "workflow",
+        metadata: { workflowName: "historical-workflow" },
+      });
+      await manager.start(execution.id);
+      await manager.complete(execution.id);
+      await store.update(execution.id, {
+        createdAt: new Date(baseCreatedAt + index * 1000),
+      });
+    }
+
+    const failedExecution = await manager.create({
+      type: "workflow",
+      metadata: { workflowName: "late-failure" },
+    });
+    await manager.start(failedExecution.id);
+    await manager.fail(failedExecution.id, {
+      message: "late workflow failure",
+      retryable: false,
+    });
+    await store.update(failedExecution.id, {
+      createdAt: new Date(baseCreatedAt + 102_000),
+    });
+
+    const listWorkflowExecutions = vi.fn((options?: ListExecutionsOptions) =>
+      manager.list({ ...options, limit: options?.limit ?? 100 }),
+    );
+    const pagedExecutionManager = {
+      list: listWorkflowExecutions,
+    } as unknown as ExecutionManager;
+    const health = await new WorkflowDiagnosticsProvider(
+      pagedExecutionManager,
+      new WorkflowRegistry(),
+      {
+        executionLimit: 5,
+        executionPageSize: 100,
+      },
+    ).getHealth();
+
+    expect(health.status).toBe("degraded");
+    expect(health.details).toEqual(
+      expect.objectContaining({
+        executionCount: 102,
+        attentionExecutionCount: 1,
+        executionsByStatus: expect.objectContaining({
+          completed: 101,
+          failed: 1,
+        }),
+        latestExecutions: expect.arrayContaining([
+          expect.objectContaining({
+            workflowName: "late-failure",
+            status: "failed",
+            errorMessage: "late workflow failure",
+          }),
+        ]),
+      }),
+    );
+    expect(listWorkflowExecutions).toHaveBeenCalledWith({
+      type: "workflow",
+      limit: 100,
+      offset: 0,
+    });
+    expect(listWorkflowExecutions).toHaveBeenCalledWith({
+      type: "workflow",
+      limit: 100,
+      offset: 100,
+    });
+  });
+
+  it("stops diagnostics pagination when its abort signal is cancelled", async () => {
+    for (let index = 0; index < 120; index++) {
+      const execution = await manager.create({
+        type: "workflow",
+        metadata: { workflowName: "abortable-workflow" },
+      });
+      await manager.start(execution.id);
+      await manager.complete(execution.id);
+    }
+
+    const controller = new AbortController();
+    const listWorkflowExecutions = vi.fn(async (options?: ListExecutionsOptions) => {
+      const page = await manager.list({ ...options, limit: options?.limit ?? 50 });
+      controller.abort();
+      return page;
+    });
+    const abortableExecutionManager = {
+      list: listWorkflowExecutions,
+    } as unknown as ExecutionManager;
+
+    const health = await new WorkflowDiagnosticsProvider(
+      abortableExecutionManager,
+      new WorkflowRegistry(),
+      {
+        executionPageSize: 50,
+      },
+    ).getHealth(controller.signal);
+
+    expect(health.details).toEqual(
+      expect.objectContaining({
+        executionCount: 50,
+      }),
+    );
+    expect(listWorkflowExecutions).toHaveBeenCalledTimes(1);
+    expect(listWorkflowExecutions).toHaveBeenCalledWith({
+      type: "workflow",
+      limit: 50,
+      offset: 0,
+    });
+  });
+
+  it("degrades diagnostics when execution inspection is unavailable", async () => {
+    const executionManager = {
+      create: vi.fn(),
+      start: vi.fn(),
+      complete: vi.fn(),
+      fail: vi.fn(),
+      cancel: vi.fn(),
+      retry: vi.fn(),
+      updateProgress: vi.fn(),
+      checkpoint: vi.fn(),
+      timeout: vi.fn(),
+    } as unknown as ExecutionManager;
+    const provider = new WorkflowDiagnosticsProvider(executionManager, new WorkflowRegistry());
+
+    const health = await provider.getHealth();
+
+    expect(health).toEqual(
+      expect.objectContaining({
+        status: "degraded",
+        component: "workflow",
+        message: "Workflow execution inspection is not available",
+        details: expect.objectContaining({
+          inspectionSupported: false,
+          registeredWorkflowCount: 0,
+          workflows: [],
         }),
       }),
     );

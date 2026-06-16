@@ -2485,6 +2485,9 @@ importers:
 
   packages/workflow-core:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/execution-core':
         specifier: workspace:*
         version: link:../execution-core
@@ -2497,6 +2500,9 @@ importers:
       '@croco/tasks-core':
         specifier: workspace:*
         version: link:../tasks-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
       '@croco/triggers-core':
         specifier: workspace:*
         version: link:../triggers-core
