@@ -522,6 +522,9 @@ importers:
       '@croco/openapi-spec':
         specifier: workspace:*
         version: link:../openapi-spec
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/rpc-codegen':
         specifier: workspace:*
         version: link:../rpc-codegen

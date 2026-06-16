@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import { createDefaultDiagnosticsCollector } from "../libs/operationalEndpoints";
 import type { DiagnosticsEndpointOptions } from "../libs/operationalEndpoints";
 
 class StaticDiagnosticsProvider {
@@ -80,6 +81,50 @@ describe("Operational endpoints", () => {
     expect(missingTokenResponse.headers.get("cache-control")).toBe("no-store");
     expect(validTokenResponse.status).toBe(200);
     expect(validTokenResponse.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("serves diagnostics from the canonical and legacy endpoint paths", async () => {
+    const collector = new DiagnosticsCollector();
+    collector.registerProvider(new StaticDiagnosticsProvider());
+    const app = createApp({
+      controllers: [],
+      diagnostics: {
+        exposure: "private",
+        collector,
+      },
+    });
+
+    const canonical = await app.fetch(new Request("http://localhost/diagnostics"));
+    const legacy = await app.fetch(new Request("http://localhost/health/diagnostics"));
+
+    expect(canonical.status).toBe(200);
+    expect(legacy.status).toBe(200);
+    await expect(canonical.json()).resolves.toMatchObject({
+      summary: "degraded",
+      components: [{ component: "static" }],
+    });
+    await expect(legacy.json()).resolves.toMatchObject({
+      summary: "degraded",
+      components: [{ component: "static" }],
+    });
+  });
+
+  it("returns minimal operational metrics without exposing diagnostics details", async () => {
+    const registry = Container.get(HealthCheckRegistry);
+    registry.register("db", async () => ({ status: "up", latency: 10 }));
+    const app = createApp({ controllers: [] });
+
+    const response = await app.fetch(new Request("http://localhost/metrics"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({
+      timestamp: expect.any(String),
+      metrics: {
+        standardEndpointPathCount: 7,
+        healthCheckCount: 1,
+      },
+    });
   });
 
   it("supports custom diagnostics guards", async () => {
@@ -161,6 +206,25 @@ describe("Operational endpoints", () => {
         },
       ],
     });
+  });
+
+  it("includes runtime metadata in the default diagnostics collector", async () => {
+    const collector = createDefaultDiagnosticsCollector();
+
+    const report = await collector.getReport();
+
+    expect(report.components).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "healthy",
+          component: "runtime",
+          details: expect.objectContaining({
+            runtime: "node",
+            nodeVersion: expect.any(String),
+          }),
+        }),
+      ]),
+    );
   });
 
   it("keeps the legacy environment token mode", async () => {

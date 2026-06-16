@@ -6,6 +6,7 @@ import { create } from "../commands/create.js";
 import { generate } from "../commands/generate.js";
 import { make } from "../commands/make.js";
 import { migrate } from "../commands/migrate.js";
+import { ops } from "../commands/ops.js";
 import { GLOBAL_OPTIONS } from "../commands/options.js";
 
 const main = defineCommand({
@@ -23,6 +24,7 @@ const main = defineCommand({
     codegen,
     contracts,
     migrate,
+    ops,
   },
 });
 

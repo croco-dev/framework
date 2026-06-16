@@ -73,7 +73,13 @@ export type {
   HealthCheckStatus,
 } from "./libs/HealthCheckRegistry";
 
-export { DIAGNOSTICS_ENDPOINT_PATH, DIAGNOSTICS_TOKEN_HEADER } from "./libs/operationalEndpoints";
+export {
+  DIAGNOSTICS_ENDPOINT_PATH,
+  DIAGNOSTICS_TOKEN_HEADER,
+  METRICS_ENDPOINT_PATH,
+  OPERATIONAL_ENDPOINT_PATHS,
+  STANDARD_DIAGNOSTICS_ENDPOINT_PATH,
+} from "./libs/operationalEndpoints";
 
 export type {
   DiagnosticsAccessContext,
@@ -81,6 +87,7 @@ export type {
   DiagnosticsExposureMode,
   DiagnosticsGuard,
   OperationalLivenessResponse,
+  OperationalMetricsResponse,
   SafeDiagnosticsErrorRecord,
   SafeDiagnosticsReport,
 } from "./libs/operationalEndpoints";

@@ -13,7 +13,10 @@ import { HealthCheckRegistry } from "./HealthCheckRegistry";
 import { PipelineRunner } from "./PipelineRunner";
 import {
   DIAGNOSTICS_ENDPOINT_PATH,
+  METRICS_ENDPOINT_PATH,
+  STANDARD_DIAGNOSTICS_ENDPOINT_PATH,
   authorizeDiagnosticsRequest,
+  createOperationalMetricsResponse,
   createDefaultDiagnosticsCollector,
   resolveDiagnosticsEndpointPolicy,
   sanitizeDiagnosticsReport,
@@ -181,17 +184,30 @@ export class CrocoApp {
     if (diagnosticsPolicy.exposure !== "off") {
       const collector = diagnosticsPolicy.collector ?? createDefaultDiagnosticsCollector();
 
-      this.hono.get(DIAGNOSTICS_ENDPOINT_PATH, async (c) => {
-        if (!(await authorizeDiagnosticsRequest(c, diagnosticsPolicy))) {
-          return c.json({ error: "Forbidden" }, 403, { "Cache-Control": "no-store" });
-        }
+      const registerDiagnosticsRoute = (path: string): void => {
+        this.hono.get(path, async (c) => {
+          if (!(await authorizeDiagnosticsRequest(c, diagnosticsPolicy))) {
+            return c.json({ error: "Forbidden" }, 403, { "Cache-Control": "no-store" });
+          }
 
-        const report = await collector.getReport();
-        return c.json(sanitizeDiagnosticsReport(report, diagnosticsPolicy), 200, {
-          "Cache-Control": "no-store",
+          const report = await collector.getReport();
+          return c.json(sanitizeDiagnosticsReport(report, diagnosticsPolicy), 200, {
+            "Cache-Control": "no-store",
+          });
         });
-      });
+      };
+
+      registerDiagnosticsRoute(STANDARD_DIAGNOSTICS_ENDPOINT_PATH);
+      registerDiagnosticsRoute(DIAGNOSTICS_ENDPOINT_PATH);
     }
+
+    this.hono.get(METRICS_ENDPOINT_PATH, (c) =>
+      c.json(
+        createOperationalMetricsResponse(this.healthCheckRegistry.getRegisteredCheckCount()),
+        200,
+        { "Cache-Control": "no-store" },
+      ),
+    );
   }
 
   lambdaHandler(): LambdaHandler {

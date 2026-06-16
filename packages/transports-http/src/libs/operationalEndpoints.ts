@@ -1,14 +1,27 @@
 import {
   DiagnosticsCollector,
   type DiagnosticsReport,
+  type DiagnosticsProvider,
   type ErrorRecord,
+  type HealthStatus,
 } from "@croco/diagnostics-core";
 import { EventBusDiagnosticsProvider } from "@croco/events-core";
 import { ContainerDiagnosticsProvider } from "@croco/framework-context";
 import type { Context as HonoContext } from "hono";
 
 export const DIAGNOSTICS_ENDPOINT_PATH = "/health/diagnostics";
+export const STANDARD_DIAGNOSTICS_ENDPOINT_PATH = "/diagnostics";
+export const METRICS_ENDPOINT_PATH = "/metrics";
 export const DIAGNOSTICS_TOKEN_HEADER = "X-Diagnostics-Token";
+export const OPERATIONAL_ENDPOINT_PATHS = [
+  "/health",
+  "/health/live",
+  "/ready",
+  "/health/ready",
+  STANDARD_DIAGNOSTICS_ENDPOINT_PATH,
+  DIAGNOSTICS_ENDPOINT_PATH,
+  METRICS_ENDPOINT_PATH,
+] as const;
 
 const DEFAULT_RECENT_ERROR_LIMIT = 100;
 const DEFAULT_MESSAGE_LIMIT = 100;
@@ -44,6 +57,14 @@ export type OperationalLivenessResponse = {
   readonly status: "ok";
 };
 
+export type OperationalMetricsResponse = {
+  readonly timestamp: string;
+  readonly metrics: {
+    readonly standardEndpointPathCount: number;
+    readonly healthCheckCount: number;
+  };
+};
+
 export type SafeDiagnosticsErrorRecord = Omit<ErrorRecord, "cause">;
 
 export type SafeDiagnosticsReport = Omit<DiagnosticsReport, "recentErrors"> & {
@@ -52,6 +73,7 @@ export type SafeDiagnosticsReport = Omit<DiagnosticsReport, "recentErrors"> & {
 
 export function createDefaultDiagnosticsCollector(): DiagnosticsCollector {
   const collector = new DiagnosticsCollector();
+  collector.registerProvider(new RuntimeDiagnosticsProvider());
 
   try {
     collector.registerProvider(new ContainerDiagnosticsProvider());
@@ -66,6 +88,28 @@ export function createDefaultDiagnosticsCollector(): DiagnosticsCollector {
   }
 
   return collector;
+}
+
+class RuntimeDiagnosticsProvider implements DiagnosticsProvider {
+  readonly name = "runtime";
+
+  async getHealth(): Promise<HealthStatus> {
+    return {
+      status: "healthy",
+      component: "runtime",
+      details: getRuntimeMetadata(),
+      lastChecked: new Date().toISOString(),
+    };
+  }
+}
+
+function getRuntimeMetadata(): Record<string, unknown> {
+  return {
+    runtime: "node",
+    nodeVersion: process.version,
+    platform: process.platform,
+    arch: process.arch,
+  };
 }
 
 export function resolveDiagnosticsEndpointPolicy(
@@ -136,6 +180,18 @@ export function sanitizeDiagnosticsReport(
       code: error.code,
       message: capMessage(error.message, policy.messageLimit),
     })),
+  };
+}
+
+export function createOperationalMetricsResponse(
+  healthCheckCount: number,
+): OperationalMetricsResponse {
+  return {
+    timestamp: new Date().toISOString(),
+    metrics: {
+      standardEndpointPathCount: OPERATIONAL_ENDPOINT_PATHS.length,
+      healthCheckCount,
+    },
   };
 }
 
