@@ -4,6 +4,7 @@ import { Container } from "@croco/framework-context";
 import { recordError } from "@croco/telemetry-api";
 import { TaskNotFoundProblem, TaskRunnerDIFailureProblem } from "./problems/TasksProblems";
 import { TaskRegistry } from "./TaskRegistry";
+import type { TaskExecutionOptions } from "./types";
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
 
@@ -22,19 +23,25 @@ export class TaskRunner {
     private logger: ILogger = noopLogger,
   ) {}
 
-  async execute(taskId: string, payload: unknown): Promise<unknown> {
+  async execute(
+    taskId: string,
+    payload: unknown,
+    options: TaskExecutionOptions = {},
+  ): Promise<unknown> {
     const task = this.registry.get(taskId);
     if (!task) {
       throw new TaskNotFoundProblem(taskId);
     }
 
-    const options = task.metadata.options ?? {};
+    const taskOptions = task.metadata.options ?? {};
     const execution = await this.executionManager.create({
       type: taskId,
       payload,
-      maxAttempts: options.maxAttempts,
-      timeout: options.timeout,
-      idempotencyKey: options.idempotencyKey,
+      maxAttempts: taskOptions.maxAttempts,
+      timeout: taskOptions.timeout,
+      idempotencyKey: taskOptions.idempotencyKey,
+      ...(options.parentId !== undefined ? { parentId: options.parentId } : {}),
+      ...(options.metadata !== undefined ? { metadata: options.metadata } : {}),
     });
 
     await this.executionManager.start(execution.id);

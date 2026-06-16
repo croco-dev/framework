@@ -98,7 +98,8 @@
     "transports-cloudflare-workers",
     "transports-graphql",
     "triggers-core",
-    "triggers-qstash"
+    "triggers-qstash",
+    "workflow-core"
   ],
   "temporaryProductionApiDocExceptions": {},
   "allowedMissingTests": []

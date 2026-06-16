@@ -6,10 +6,10 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |    97 |
+| Public packages                |    98 |
 | Private packages skipped       |     2 |
 | Missing package README         |    22 |
-| Missing generated API docs     |    72 |
+| Missing generated API docs     |    73 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    38 |
 
@@ -114,6 +114,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/transports-graphql` (`packages/transports-graphql`) — legacy baseline
 - `@croco/triggers-core` (`packages/triggers-core`) — legacy baseline
 - `@croco/triggers-qstash` (`packages/triggers-qstash`) — legacy baseline
+- `@croco/workflow-core` (`packages/workflow-core`) — legacy baseline
 
 ## Missing Test Directory
 
@@ -124,7 +125,7 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       21 |
-| Domain       |       24 |
+| Domain       |       25 |
 | Provider     |       25 |
 | Integration  |        5 |
 | Protocol     |        6 |
@@ -135,7 +136,7 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       43 |
+| 🟡 beta             |       44 |
 | 🔴 alpha/WIP        |       31 |
 | ⚠️ deprecated       |        0 |
 

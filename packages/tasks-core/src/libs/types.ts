@@ -33,6 +33,20 @@ export type TaskReference = {
 };
 
 /**
+ * Runtime options for a single task execution.
+ */
+export type TaskExecutionOptions = {
+  /**
+   * Optional parent execution ID when this task is part of a workflow or batch.
+   */
+  parentId?: string;
+  /**
+   * Optional execution metadata for inspection and operations views.
+   */
+  metadata?: Record<string, unknown>;
+};
+
+/**
  * Task metadata stored by the decorator.
  */
 export type TaskMetadata = {
