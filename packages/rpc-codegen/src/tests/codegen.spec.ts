@@ -456,6 +456,38 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should not rewrite path parameters with matching prefixes", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "PairController",
+        methodName: "compare",
+        httpMethod: "GET",
+        path: "/pairs/:id/:id2",
+        params: [
+          { kind: "path", name: "id", schema: null },
+          { kind: "path", name: "id2", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string(), id2: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "const path = `/pairs/${encodeURIComponent(String(input.path.id))}/${encodeURIComponent(String(input.path.id2))}`;",
+    );
+    expect(content).not.toContain("${encodeURIComponent(String(input.path.id))}2");
+  });
+
   it("should normalize catch-all path parameters when generating fetch paths", () => {
     const routes: RouteIR[] = [
       {

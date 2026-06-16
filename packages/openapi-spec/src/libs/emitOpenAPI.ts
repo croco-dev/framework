@@ -303,10 +303,15 @@ function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {
 }
 
 function toOpenAPIPath(path: string): string {
-  return getContractPathParams(path).reduce(
-    (currentPath, param) => currentPath.split(`:${param.token}`).join(`{${param.name}}`),
-    path,
+  const paramsByToken = new Map(
+    getContractPathParams(path).map((param) => [param.token, param.name]),
   );
+
+  return path.replace(/:([^/]+)/g, (tokenWithPrefix, token: string) => {
+    const name = paramsByToken.get(token);
+
+    return name ? `{${name}}` : tokenWithPrefix;
+  });
 }
 
 function toHttpMethod(route: ContractGraphRoute): HttpMethod {

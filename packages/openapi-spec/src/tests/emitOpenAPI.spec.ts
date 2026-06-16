@@ -91,6 +91,34 @@ describe("emitOpenAPI", () => {
     expect(spec.paths?.["/assets/{...id}"]).toBeUndefined();
   });
 
+  it("should not rewrite path parameters with matching prefixes", () => {
+    @Controller("/pairs")
+    class PairsController {
+      @Get("/:id/:id2")
+      compare(@Param("id") _id: string, @Param("id2") _id2: string): void {}
+    }
+
+    const graph = buildContractGraph([PairsController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(spec.paths?.["/pairs/{id}/{id2}"]?.get?.parameters).toEqual([
+      {
+        in: "path",
+        name: "id",
+        required: true,
+        schema: { type: "string" },
+      },
+      {
+        in: "path",
+        name: "id2",
+        required: true,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(spec.paths?.["/pairs/{id}/{id}2"]).toBeUndefined();
+  });
+
   it("should apply document metadata options", () => {
     @Controller("/accounts")
     class AccountsController {

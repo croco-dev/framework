@@ -532,13 +532,12 @@ function getPathExpression(route: RouteIR): string {
     return `'${route.path}'`;
   }
 
-  const pathExpression = pathParams.reduce(
-    (currentPath, param) =>
-      currentPath
-        .split(`:${param.token}`)
-        .join(`\${encodeURIComponent(String(input.path.${param.name}))}`),
-    route.path,
-  );
+  const paramsByToken = new Map(pathParams.map((param) => [param.token, param.name]));
+  const pathExpression = route.path.replace(/:([^/]+)/g, (tokenWithPrefix, token: string) => {
+    const name = paramsByToken.get(token);
+
+    return name ? `\${encodeURIComponent(String(input.path.${name}))}` : tokenWithPrefix;
+  });
 
   return `\`${pathExpression}\``;
 }

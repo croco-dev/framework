@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { Container } from "typedi";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   assertContractGraphHasNoErrors,
@@ -22,6 +22,7 @@ import {
 describe("buildContractGraph", () => {
   beforeEach(() => {
     Container.reset();
+    vi.restoreAllMocks();
   });
 
   it("should build stable controller, route id, operation id, and schema graph nodes", () => {
