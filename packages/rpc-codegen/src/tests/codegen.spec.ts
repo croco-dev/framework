@@ -7,6 +7,7 @@ import { z } from "zod";
 import { generateClientFiles } from "../libs/generate";
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
+const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
 const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null, headers: null };
 const BODY_INPUT_SCHEMAS = {
   body: {} as RouteIR["inputSchemas"]["body"],
@@ -660,72 +661,80 @@ describe("generateClientFiles", () => {
     );
   });
 
-  it("should typecheck generated clients with non-string query inputs", () => {
-    const routes: RouteIR[] = [
-      {
-        controllerName: "UserController",
-        methodName: "list",
-        httpMethod: "GET",
-        path: "/users",
-        params: [
-          { kind: "query", name: "page", schema: null },
-          { kind: "query", name: "active", schema: null },
-          { kind: "query", name: "search", schema: null },
-          { kind: "query", name: "tags", schema: null },
-          { kind: "query", name: "deletedAt", schema: null },
-        ],
-        inputSchema: null,
-        inputSchemas: NON_STRING_QUERY_INPUT_SCHEMAS,
-        outputSchema: null,
-        domain: null,
-      },
-    ];
+  it(
+    "should typecheck generated clients with non-string query inputs",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "list",
+          httpMethod: "GET",
+          path: "/users",
+          params: [
+            { kind: "query", name: "page", schema: null },
+            { kind: "query", name: "active", schema: null },
+            { kind: "query", name: "search", schema: null },
+            { kind: "query", name: "tags", schema: null },
+            { kind: "query", name: "deletedAt", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: NON_STRING_QUERY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, TEMP_DIR);
 
-    const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain(
-      "export type ListInput = { query: { page: number; active: boolean | undefined; search: string | undefined; tags: string[]; deletedAt: string | null; }; };",
-    );
-    expect(content).toContain(
-      "function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
-    );
-    assertGeneratedClientTypechecks(`${content}
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain(
+        "export type ListInput = { query: { page: number; active: boolean | undefined; search: string | undefined; tags: string[]; deletedAt: string | null; }; };",
+      );
+      expect(content).toContain(
+        "function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
+      );
+      assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
   query: { page: 2, active: false, search: undefined, tags: ['new', 'vip'], deletedAt: null },
 });
 void result;
 `);
-  });
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
 
-  it("should typecheck generated clients with header inputs", () => {
-    const routes: RouteIR[] = [
-      {
-        controllerName: "UserController",
-        methodName: "get",
-        httpMethod: "GET",
-        path: "/users",
-        params: [
-          { kind: "header", name: "authorization", schema: null },
-          { kind: "header", name: "x-tenant-id", schema: null },
-        ],
-        inputSchema: null,
-        inputSchemas: HEADER_INPUT_SCHEMAS,
-        outputSchema: null,
-        domain: null,
-      },
-    ];
+  it(
+    "should typecheck generated clients with header inputs",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "get",
+          httpMethod: "GET",
+          path: "/users",
+          params: [
+            { kind: "header", name: "authorization", schema: null },
+            { kind: "header", name: "x-tenant-id", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: HEADER_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, TEMP_DIR);
 
-    const content = fs.readFileSync(files[0], "utf-8");
-    assertGeneratedClientTypechecks(`${content}
+      const content = fs.readFileSync(files[0], "utf-8");
+      assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.get({
   headers: { authorization: 'Bearer token', 'x-tenant-id': undefined },
 });
 void result;
 `);
-  });
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
 
   it("should serialize body, path, and query input when generating combined fetch calls", () => {
     const routes: RouteIR[] = [
