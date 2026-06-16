@@ -28,6 +28,7 @@ const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
 type PackageJson = {
   name?: string;
+  scripts?: Record<string, string>;
 } & Partial<Record<DependencyField, Record<string, string>>>;
 
 function collectFiles(directory: string): string[] {
@@ -174,6 +175,17 @@ function assertSourceBareImportsDeclared(packageDir: string): void {
     );
 
   expect(missingDependencies).toEqual([]);
+}
+
+function assertAllSourceBareImportsDeclared(projectDir: string): void {
+  const packageDirs = collectFiles(projectDir)
+    .filter((filePath) => filePath.endsWith("package.json"))
+    .map((filePath) => filePath.slice(0, -"package.json".length - 1))
+    .filter((packageDir) => existsSync(join(packageDir, "src")));
+
+  for (const packageDir of packageDirs) {
+    assertSourceBareImportsDeclared(packageDir);
+  }
 }
 
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
@@ -462,6 +474,59 @@ describe("E2E: generate()", () => {
 
     expect(existsSync(join(testDir, "sst.config.ts"))).toBe(true);
     assertLambdaHandlerTarget(testDir, "apps/api/src/handler.handler");
+  });
+
+  it("generates SaaS preset with runnable demo smoke commands", { timeout: 120_000 }, async () => {
+    const options: GeneratorOptions = {
+      projectName: "my-saas",
+      scope: "@test",
+      preset: "saas",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    await generate(testDir, options);
+
+    const rootPackageJson = readPackageJson(join(testDir, "package.json"));
+    const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+
+    expect(rootPackageJson.scripts).toMatchObject({
+      typecheck: "turbo typecheck",
+      build: "turbo build",
+      test: "turbo test",
+      "demo:seed": "pnpm --filter @test/api-server demo:seed",
+      "demo:smoke": "pnpm contract:check && pnpm --filter @test/api-server demo:smoke",
+    });
+    expect(apiPackageJson.dependencies).toMatchObject({
+      "@croco/tenant-core": "^0.0.2",
+      "@croco/auth-core": "^0.0.2",
+      "@croco/access-core": "^0.0.2",
+      "@croco/billing-core": "^0.0.2",
+      "@croco/metering-core": "^0.0.2",
+      "@croco/entitlements-core": "^0.0.2",
+      "@croco/health-core": "^0.0.2",
+      "@croco/diagnostics-core": "^0.0.2",
+    });
+    expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "controllers", "SaasController.ts")),
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(testDir, "apps", "api-server", "src", "controllers", "OperationsController.ts"),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "tests", "SaasDemo.spec.ts")),
+    ).toBe(true);
+    expect(existsSync(join(testDir, "libs", "shared", "provider-rpc"))).toBe(true);
+    assertNoHandlebarsPlaceholders(testDir);
+    assertNoExternalCrocoWorkspaceRanges(testDir);
+    assertAllSourceBareImportsDeclared(testDir);
   });
 
   it(

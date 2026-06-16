@@ -57,6 +57,11 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
           label: "DDD Vike Fullstack",
           hint: "API Worker + SSR Worker",
         },
+        {
+          value: "saas",
+          label: "SaaS Golden Path",
+          hint: "Tenant, auth, access, billing, metering, entitlements demo",
+        },
       ],
     }));
   if (p.isCancel(preset)) {
@@ -87,6 +92,45 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       apiHosting: "standalone",
       db: [],
       agentRules: false,
+      installDeps: installDeps as boolean,
+      initGit: initGit as boolean,
+    };
+  }
+
+  if (preset === "saas") {
+    const agentRules =
+      cliArgs.agentRules ??
+      (await p.confirm({
+        message: "Add AI agent rules? (.cursor/rules, AGENTS.md)",
+        initialValue: true,
+      }));
+    if (p.isCancel(agentRules)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
+    const installDeps =
+      cliArgs.installDeps ?? (await p.confirm({ message: "Install dependencies?" }));
+    if (p.isCancel(installDeps)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
+    const initGit = cliArgs.initGit ?? (await p.confirm({ message: "Initialize git repository?" }));
+    if (p.isCancel(initGit)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
+    p.outro(pc.green("✓ Project configuration complete"));
+    return {
+      projectName: projectName as string,
+      scope: scope as string,
+      preset: "saas",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: agentRules as boolean,
       installDeps: installDeps as boolean,
       initGit: initGit as boolean,
     };

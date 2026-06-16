@@ -36,6 +36,15 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   // Step 2: root workspace baseline + 프리셋 분기
   mergeInto(join(TEMPLATES_DIR, "blank"), resolvedTarget, vars);
 
+  if (options.preset === "saas") {
+    mergeInto(join(TEMPLATES_DIR, "saas"), resolvedTarget, vars);
+    if (options.agentRules) {
+      installAgentRules(resolvedTarget, vars);
+    }
+    await finalize(resolvedTarget, options);
+    return;
+  }
+
   if (options.preset !== "blank") {
     mergeInto(join(TEMPLATES_DIR, "base-ddd"), resolvedTarget, vars);
   }

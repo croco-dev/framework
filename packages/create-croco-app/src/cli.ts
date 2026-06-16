@@ -20,7 +20,10 @@ export function createProgram(): Command {
     .description("Create a pnpm-based Croco application")
     .version(getPackageVersion())
     .argument("[directory]", "Target directory")
-    .option("--preset <preset>", "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack)")
+    .option(
+      "--preset <preset>",
+      "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|saas)",
+    )
     .option("--scope <scope>", "Package scope (e.g. @myorg)")
     .option("--api <api>", "API type (graphql|trpc)")
     .option("--api-hosting <hosting>", "API hosting (standalone|nextjs)")

@@ -224,6 +224,17 @@ const smokeCases: readonly SmokeCase[] = [
       },
     ],
   },
+  {
+    name: "saas-golden-path",
+    args: ["--preset", "saas", "--scope", "@smoke", "--no-install", "--no-git"],
+    validations: [
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "test", args: ["test"] },
+      { label: "OpenAPI contract", args: ["contract:openapi"] },
+      { label: "demo flow", args: ["demo:smoke"] },
+    ],
+  },
 ];
 
 try {

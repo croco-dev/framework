@@ -192,18 +192,91 @@ function checkContainerFullstackStructure() {
   checkSsrRouteComponent("container-fullstack");
 }
 
-describe.each(["spa-be-split", "ssr-lambda", "container-fullstack"])("Template: %s", (template) => {
-  it("should have required structure", () => {
-    if (template === "spa-be-split") {
-      checkSpaBeSplitStructure();
-      return;
-    }
+function checkSaasStructure() {
+  checkFileExists("saas", "package.json.hbs");
+  checkFileExists("saas", "README.md.hbs");
+  checkFileExists("saas", "apps", "api-server", "package.json.hbs");
+  checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "controllers", "OperationsController.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "tests", "SaasDemo.spec.ts");
+  checkFileExists("saas", "libs", "shared", "provider-rpc", "package.json.hbs");
 
-    if (template === "ssr-lambda") {
-      checkSsrLambdaStructure();
-      return;
-    }
-
-    checkContainerFullstackStructure();
+  const rootPackageJson = readJsonTemplate("saas", "package.json.hbs");
+  expect(rootPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "contract:check": expect.stringMatching(
+        /^pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+      ),
+      "contract:client": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--out/,
+      ),
+      "contract:openapi": expect.stringMatching(
+        /^pnpm contract:check && NODE_PATH=\.\/node_modules croco-openapi-spec[\s\S]*--out openapi\.json/,
+      ),
+      "demo:seed": expect.any(String),
+      "demo:smoke": expect.stringMatching(/contract:check[\s\S]*api-server demo:smoke/),
+      typecheck: "turbo typecheck",
+      build: "turbo build",
+      test: "turbo test",
+    }),
+    devDependencies: expect.objectContaining({
+      "@croco/openapi-spec": "workspace:*",
+      "@croco/rpc-codegen": "workspace:*",
+    }),
   });
-});
+
+  const apiPackageJson = readJsonTemplate("saas", "apps", "api-server", "package.json.hbs");
+  expect(apiPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "demo:seed": "tsx src/demo/seed.ts",
+      "demo:smoke": "tsx src/demo/smoke.ts",
+      test: "vitest run",
+    }),
+    dependencies: expect.objectContaining({
+      "@croco/tenant-core": "workspace:*",
+      "@croco/auth-core": "workspace:*",
+      "@croco/access-core": "workspace:*",
+      "@croco/billing-core": "workspace:*",
+      "@croco/metering-core": "workspace:*",
+      "@croco/entitlements-core": "workspace:*",
+      "@croco/health-core": "workspace:*",
+      "@croco/diagnostics-core": "workspace:*",
+      "@croco/protocols-rest": "workspace:*",
+      "@croco/transports-http": "workspace:*",
+    }),
+  });
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EntitlementManager/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /BillingService/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "controllers", "OperationsController.ts"],
+    /\/diagnostics/,
+  );
+}
+
+describe.each(["spa-be-split", "ssr-lambda", "container-fullstack", "saas"])(
+  "Template: %s",
+  (template) => {
+    it("should have required structure", () => {
+      if (template === "spa-be-split") {
+        checkSpaBeSplitStructure();
+        return;
+      }
+
+      if (template === "ssr-lambda") {
+        checkSsrLambdaStructure();
+        return;
+      }
+
+      if (template === "saas") {
+        checkSaasStructure();
+        return;
+      }
+
+      checkContainerFullstackStructure();
+    });
+  },
+);
