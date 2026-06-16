@@ -6,6 +6,7 @@ import type {
   ReplayExecutionParams,
 } from "@croco/execution-core";
 import { TaskRunner } from "@croco/tasks-core";
+import { withSpan } from "@croco/telemetry-api";
 import {
   WorkflowNotFoundProblem,
   WorkflowReplayUnsupportedProblem,
@@ -21,6 +22,13 @@ import type {
 type LoggableExecutionManager = ExecutionManager & Pick<ExecutionInspectionManager, "recordLog">;
 
 type ReplayableExecutionManager = ExecutionManager & ExecutionReplayManager;
+
+type TelemetryAttributeValue = string | number | boolean;
+
+type WorkflowTelemetrySpan = {
+  setAttribute(name: string, value: TelemetryAttributeValue): void;
+  addEvent(name: string, attributes?: Record<string, TelemetryAttributeValue>): void;
+};
 
 function supportsRecordLog(manager: ExecutionManager): manager is LoggableExecutionManager {
   return typeof (manager as { recordLog?: unknown }).recordLog === "function";
@@ -43,6 +51,34 @@ function toExecutionError(error: unknown) {
   };
 }
 
+function setWorkflowTelemetryAttributes(
+  span: WorkflowTelemetrySpan,
+  workflow: WorkflowDefinition,
+): void {
+  span.setAttribute("workflow.name", workflow.name);
+  span.setAttribute("workflow.method", workflow.methodName);
+  span.setAttribute("workflow.step.count", workflow.steps.length);
+  span.setAttribute("workflow.trigger.count", workflow.triggers.length);
+
+  const triggerTypes = workflow.triggers.map((trigger) => trigger.type).join(",");
+  if (triggerTypes.length > 0) {
+    span.setAttribute("workflow.trigger.types", triggerTypes);
+  }
+}
+
+function getExecutionTelemetryAttributes(
+  workflow: WorkflowDefinition,
+  execution: Execution,
+): Record<string, TelemetryAttributeValue> {
+  return {
+    "workflow.name": workflow.name,
+    "workflow.execution.id": execution.id,
+    "workflow.execution.status": execution.status,
+    "workflow.execution.attempts": execution.attempts,
+    "workflow.execution.max_attempts": execution.maxAttempts,
+  };
+}
+
 export class WorkflowRunner {
   constructor(
     private readonly executionManager: ExecutionManager,
@@ -54,7 +90,22 @@ export class WorkflowRunner {
   ) {}
 
   async execute(workflowName: string, payload: unknown): Promise<WorkflowRunResult> {
+    return withSpan(async (span) => this.executeWithTelemetry(workflowName, payload, span), {
+      name: `workflow:${workflowName}`,
+      attributes: {
+        "workflow.name": workflowName,
+      },
+    });
+  }
+
+  private async executeWithTelemetry(
+    workflowName: string,
+    payload: unknown,
+    span: WorkflowTelemetrySpan,
+  ): Promise<WorkflowRunResult> {
     const workflow = this.getWorkflow(workflowName);
+    setWorkflowTelemetryAttributes(span, workflow);
+
     const idempotencyKey = this.resolveIdempotencyKey(workflow, payload);
     const invocationId = idempotencyKey ? createInvocationId(workflow.name) : undefined;
     const execution = await this.executionManager.create({
@@ -71,8 +122,13 @@ export class WorkflowRunner {
         ...(invocationId !== undefined ? { workflowInvocationId: invocationId } : {}),
       },
     });
+    const executionAttributes = getExecutionTelemetryAttributes(workflow, execution);
+    span.setAttribute("workflow.execution.id", execution.id);
+    span.setAttribute("workflow.idempotent", idempotencyKey !== undefined);
 
     if (idempotencyKey !== undefined && execution.metadata?.workflowInvocationId !== invocationId) {
+      span.setAttribute("workflow.reused", true);
+      span.addEvent("workflow.execution.reused", executionAttributes);
       return {
         executionId: execution.id,
         workflow,
@@ -83,6 +139,8 @@ export class WorkflowRunner {
     }
 
     if (execution.status !== "pending") {
+      span.setAttribute("workflow.reused", true);
+      span.addEvent("workflow.execution.reused", executionAttributes);
       return {
         executionId: execution.id,
         workflow,
@@ -92,7 +150,11 @@ export class WorkflowRunner {
       };
     }
 
+    span.addEvent("workflow.execution.created", executionAttributes);
+
     const running = await this.executionManager.start(execution.id);
+    span.setAttribute("workflow.reused", false);
+    span.addEvent("workflow.execution.started", getExecutionTelemetryAttributes(workflow, running));
     const steps: WorkflowStepResult[] = [];
 
     await this.recordLog(running.id, "info", "Workflow execution started", {
@@ -101,23 +163,40 @@ export class WorkflowRunner {
 
     try {
       for (const step of workflow.steps) {
+        const stepAttributes = {
+          "workflow.name": workflow.name,
+          "workflow.execution.id": running.id,
+          "workflow.step.name": step.name,
+          "workflow.step.task": step.task,
+        };
+        span.addEvent("workflow.step.started", stepAttributes);
         await this.recordLog(running.id, "info", "Workflow step started", {
           step: step.name,
           task: step.task,
         });
 
-        const result = await this.taskRunner.execute(
-          step.task,
-          this.resolveStepInput(workflow, running, payload, step, steps),
-          {
-            parentId: running.id,
-            metadata: {
-              workflowName: workflow.name,
-              workflowExecutionId: running.id,
-              workflowStep: step.name,
+        let result: unknown;
+        try {
+          result = await this.taskRunner.execute(
+            step.task,
+            this.resolveStepInput(workflow, running, payload, step, steps),
+            {
+              parentId: running.id,
+              metadata: {
+                workflowName: workflow.name,
+                workflowExecutionId: running.id,
+                workflowStep: step.name,
+              },
             },
-          },
-        );
+          );
+        } catch (error) {
+          span.addEvent("workflow.step.failed", {
+            ...stepAttributes,
+            "workflow.error.message": error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        }
+        span.addEvent("workflow.step.completed", stepAttributes);
 
         steps.push({
           step: step.name,
@@ -136,6 +215,10 @@ export class WorkflowRunner {
         steps,
       };
       const completed = await this.executionManager.complete(running.id, result);
+      span.addEvent(
+        "workflow.execution.completed",
+        getExecutionTelemetryAttributes(workflow, completed),
+      );
       await this.recordLog(running.id, "info", "Workflow execution completed", {
         workflowName: workflow.name,
       });
@@ -152,7 +235,11 @@ export class WorkflowRunner {
         workflowName: workflow.name,
         error: error instanceof Error ? error.message : String(error),
       });
-      await this.executionManager.fail(running.id, toExecutionError(error));
+      const failed = await this.executionManager.fail(running.id, toExecutionError(error));
+      span.addEvent("workflow.execution.failed", {
+        ...getExecutionTelemetryAttributes(workflow, failed),
+        "workflow.error.message": error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }

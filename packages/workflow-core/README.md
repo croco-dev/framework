@@ -9,6 +9,8 @@ Croco-native workflow definitions that connect trigger metadata, task execution,
 - Task step validation against `@croco/tasks-core` registrations.
 - Parent `workflow` execution records with child task executions through `TaskRunner`.
 - Optional execution logs, idempotency keys, cancellation, and replay delegation through `@croco/execution-core`.
+- `WorkflowDiagnosticsProvider` for exposing registered workflows and workflow execution status through `@croco/diagnostics-core`.
+- Telemetry spans and lifecycle events for workflow execution, step execution, reuse, completion, and failure.
 
 ## Install
 
@@ -46,3 +48,19 @@ class BillingWorkflows {
 const runner = new WorkflowRunner(executionManager);
 await runner.execute("billing-webhook", { subscriptionId: "sub_123" });
 ```
+
+## Operations
+
+```typescript
+import { DiagnosticsCollector } from "@croco/diagnostics-core";
+import { WorkflowDiagnosticsProvider, WorkflowRegistry } from "@croco/workflow-core";
+
+const collector = new DiagnosticsCollector();
+collector.registerProvider(
+  new WorkflowDiagnosticsProvider(executionManager, WorkflowRegistry.fromMetadata()),
+);
+```
+
+The provider reports workflow names, trigger types, execution status counts, replay links, failure
+messages, log counts, and the latest log message. It does not include workflow payloads, results, or
+structured log data in diagnostics output.
