@@ -1,4 +1,12 @@
-import type { CreateExecutionParams, Execution, ExecutionError, ProgressInfo } from "../types";
+import type {
+  AddExecutionLogParams,
+  CreateExecutionParams,
+  Execution,
+  ExecutionError,
+  ListExecutionsOptions,
+  ProgressInfo,
+  ReplayExecutionParams,
+} from "../types";
 
 /**
  * ExecutionManager defines the lifecycle management interface for executions.
@@ -99,4 +107,43 @@ export interface ExecutionManager {
    * @throws Error if execution not found or state transition is invalid
    */
   timeout(id: string): Promise<Execution>;
+}
+
+/**
+ * Optional inspection capabilities for execution managers.
+ */
+export interface ExecutionInspectionManager {
+  /**
+   * Get a single execution by ID.
+   *
+   * @throws Error if execution not found
+   */
+  get(id: string): Promise<Execution>;
+
+  /**
+   * List executions for inspection and operations views.
+   */
+  list(options?: ListExecutionsOptions): Promise<Execution[]>;
+
+  /**
+   * Append a structured log entry to an execution.
+   *
+   * @throws Error if execution not found
+   */
+  recordLog(id: string, params: AddExecutionLogParams): Promise<Execution>;
+}
+
+/**
+ * Optional replay capabilities for execution managers.
+ */
+export interface ExecutionReplayManager {
+  /**
+   * Create a new pending execution linked to a failed or timed-out source execution.
+   *
+   * Replay intentionally does not copy idempotencyKey, so operators can replay a failed
+   * execution without returning the original record through deduplication.
+   *
+   * @throws Error if execution not found or source execution is not replayable
+   */
+  replay(id: string, params?: ReplayExecutionParams): Promise<Execution>;
 }

@@ -1,11 +1,19 @@
 import { ExecutionProblems } from "./ExecutionProblem";
-import type { ExecutionManager } from "./interfaces/ExecutionManager";
-import type { ExecutionStore } from "./interfaces/ExecutionStore";
 import type {
+  ExecutionInspectionManager,
+  ExecutionManager,
+  ExecutionReplayManager,
+} from "./interfaces/ExecutionManager";
+import type { ExecutionLogStore, ExecutionStore } from "./interfaces/ExecutionStore";
+import type {
+  AddExecutionLogParams,
   CreateExecutionParams,
   Execution,
   ExecutionError,
+  ExecutionLogEntry,
+  ListExecutionsOptions,
   ExecutionStatus,
+  ReplayExecutionParams,
   ProgressInfo,
 } from "./types";
 
@@ -53,6 +61,25 @@ function calculatePercent(current: number, total: number): number {
   return Math.min(100, Math.round((current / total) * 100));
 }
 
+function toIsoTimestamp(timestamp?: Date | string): string {
+  if (timestamp === undefined) {
+    return new Date().toISOString();
+  }
+
+  return timestamp instanceof Date ? timestamp.toISOString() : timestamp;
+}
+
+function isReplayableStatus(status: ExecutionStatus): boolean {
+  return status === "failed" || status === "timed_out";
+}
+
+function supportsExecutionLogStore(
+  store: ExecutionStore,
+): store is ExecutionStore & ExecutionLogStore {
+  const candidate = store as ExecutionStore & { appendLog?: unknown };
+  return typeof candidate.appendLog === "function";
+}
+
 /**
  * ExecutionManagerImpl provides lifecycle management for executions.
  *
@@ -64,8 +91,18 @@ function calculatePercent(current: number, total: number): number {
  * - Checkpoint management for batch resume
  * - Automatic retry transition on failure
  */
-export class ExecutionManagerImpl implements ExecutionManager {
+export class ExecutionManagerImpl
+  implements ExecutionManager, ExecutionInspectionManager, ExecutionReplayManager
+{
   constructor(private readonly store: ExecutionStore) {}
+
+  async get(id: string): Promise<Execution> {
+    return this.findExisting(id);
+  }
+
+  async list(options?: ListExecutionsOptions): Promise<Execution[]> {
+    return this.store.list(options);
+  }
 
   async create(params: CreateExecutionParams): Promise<Execution> {
     const { idempotencyKey, maxAttempts = 1, timeout, ...rest } = params;
@@ -87,11 +124,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async start(id: string): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    const execution = await this.findExisting(id);
 
     // Allow: pending → running, retrying → running
     const targetStatus: ExecutionStatus = "running";
@@ -108,11 +141,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async complete(id: string, result?: unknown): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    const execution = await this.findExisting(id);
 
     validateTransition(execution.status, "completed");
 
@@ -124,11 +153,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async fail(id: string, error: ExecutionError): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    const execution = await this.findExisting(id);
 
     // Check if should retry
     if (error.retryable && execution.attempts < execution.maxAttempts) {
@@ -149,11 +174,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async cancel(id: string, reason?: string): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    const execution = await this.findExisting(id);
 
     validateTransition(execution.status, "cancelled");
 
@@ -169,11 +190,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async retry(id: string): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    const execution = await this.findExisting(id);
 
     if (execution.attempts >= execution.maxAttempts) {
       throw ExecutionProblems.maxRetriesExceeded("Maximum retry attempts exceeded");
@@ -190,11 +207,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async updateProgress(id: string, progress: ProgressInfo): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    await this.findExisting(id);
 
     const percent = progress.percent ?? calculatePercent(progress.current, progress.total);
 
@@ -207,11 +220,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async checkpoint(id: string, key: string, value: unknown): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    const execution = await this.findExisting(id);
 
     return this.store.update(id, {
       checkpoints: {
@@ -222,11 +231,7 @@ export class ExecutionManagerImpl implements ExecutionManager {
   }
 
   async timeout(id: string): Promise<Execution> {
-    const execution = await this.store.findById(id);
-
-    if (!execution) {
-      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
-    }
+    const execution = await this.findExisting(id);
 
     validateTransition(execution.status, "timed_out");
 
@@ -238,5 +243,71 @@ export class ExecutionManagerImpl implements ExecutionManager {
         retryable: true,
       },
     });
+  }
+
+  async recordLog(id: string, params: AddExecutionLogParams): Promise<Execution> {
+    if (!supportsExecutionLogStore(this.store)) {
+      throw ExecutionProblems.conflict(
+        "Execution store does not support atomic execution log append",
+      );
+    }
+
+    const entry: ExecutionLogEntry = {
+      timestamp: toIsoTimestamp(params.timestamp),
+      level: params.level ?? "info",
+      message: params.message,
+      ...(params.data !== undefined ? { data: params.data } : {}),
+    };
+
+    return this.store.appendLog(id, entry);
+  }
+
+  async replay(id: string, params: ReplayExecutionParams = {}): Promise<Execution> {
+    const execution = await this.findExisting(id);
+
+    if (!isReplayableStatus(execution.status)) {
+      throw ExecutionProblems.invalidStateTransition(
+        `Cannot replay execution in '${execution.status}' status`,
+      );
+    }
+
+    const replayedAt = new Date().toISOString();
+    const logData = params.reason
+      ? { sourceExecutionId: execution.id, reason: params.reason }
+      : { sourceExecutionId: execution.id };
+
+    return this.create({
+      type: execution.type,
+      payload: params.payload !== undefined ? params.payload : execution.payload,
+      maxAttempts: execution.maxAttempts,
+      timeout: execution.timeout,
+      parentId: execution.parentId,
+      replayOf: execution.id,
+      metadata: {
+        ...execution.metadata,
+        ...params.metadata,
+        replayOf: execution.id,
+        replayedAt,
+        ...(params.reason ? { replayReason: params.reason } : {}),
+      },
+      logs: [
+        {
+          timestamp: replayedAt,
+          level: "info",
+          message: "Execution replay created",
+          data: logData,
+        },
+      ],
+    });
+  }
+
+  private async findExisting(id: string): Promise<Execution> {
+    const execution = await this.store.findById(id);
+
+    if (!execution) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+
+    return execution;
   }
 }

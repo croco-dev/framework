@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CreateExecutionParams, Execution, ExecutionError, ExecutionStore } from "../index";
+import type {
+  CreateExecutionParams,
+  Execution,
+  ExecutionError,
+  ExecutionLogEntry,
+  ExecutionLogStore,
+  ExecutionStore,
+  ListExecutionsOptions,
+} from "../index";
 import { ExecutionManagerImpl } from "../index";
 
-class MockExecutionStore implements ExecutionStore {
+class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
   private executions: Map<string, Execution> = new Map();
   private idCounter = 0;
 
@@ -19,6 +27,8 @@ class MockExecutionStore implements ExecutionStore {
       timeout: params.timeout,
       scheduledFor: params.scheduledFor,
       idempotencyKey: params.idempotencyKey,
+      replayOf: params.replayOf,
+      logs: params.logs,
       parentId: params.parentId,
       metadata: params.metadata,
       attempts: 0,
@@ -53,8 +63,38 @@ class MockExecutionStore implements ExecutionStore {
     return updated;
   }
 
-  async list(): Promise<Execution[]> {
-    return Array.from(this.executions.values());
+  async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
+    const existing = this.executions.get(id);
+    if (!existing) {
+      throw new Error(`Execution with id '${id}' not found`);
+    }
+
+    return this.update(id, {
+      logs: [...(existing.logs ?? []), entry],
+    });
+  }
+
+  async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
+    let executions = Array.from(this.executions.values());
+
+    if (options.status) {
+      executions = executions.filter((execution) => execution.status === options.status);
+    }
+
+    if (options.type) {
+      executions = executions.filter((execution) => execution.type === options.type);
+    }
+
+    if (options.parentId !== undefined) {
+      executions = executions.filter((execution) => execution.parentId === options.parentId);
+    }
+
+    if (options.replayOf !== undefined) {
+      executions = executions.filter((execution) => execution.replayOf === options.replayOf);
+    }
+
+    const offset = options.offset ?? 0;
+    return executions.slice(offset, options.limit ? offset + options.limit : undefined);
   }
 
   async delete(id: string): Promise<void> {
@@ -103,6 +143,50 @@ describe("ExecutionManagerImpl", () => {
       const second = await manager.create({ type: "task", idempotencyKey: "key-2" });
 
       expect(first.id).not.toBe(second.id);
+    });
+
+    it("creates execution with replay link and initial logs", async () => {
+      const execution = await manager.create({
+        type: "workflow",
+        replayOf: "source-exec",
+        logs: [
+          {
+            timestamp: "2026-01-01T00:00:00.000Z",
+            level: "info",
+            message: "created from replay",
+          },
+        ],
+      });
+
+      expect(execution.replayOf).toBe("source-exec");
+      expect(execution.logs).toEqual([
+        {
+          timestamp: "2026-01-01T00:00:00.000Z",
+          level: "info",
+          message: "created from replay",
+        },
+      ]);
+    });
+  });
+
+  describe("inspect", () => {
+    it("gets execution by id", async () => {
+      const execution = await manager.create({ type: "task" });
+
+      await expect(manager.get(execution.id)).resolves.toEqual(execution);
+    });
+
+    it("lists executions through the store", async () => {
+      const first = await manager.create({ type: "task" });
+      const second = await manager.create({ type: "workflow" });
+
+      await expect(manager.list()).resolves.toEqual([first, second]);
+    });
+
+    it("throws not found when getting a missing execution", async () => {
+      await expect(manager.get("missing-execution")).rejects.toThrow(
+        "Execution with id 'missing-execution' not found",
+      );
     });
   });
 
@@ -376,6 +460,162 @@ describe("ExecutionManagerImpl", () => {
 
       await expect(manager.timeout(execution.id)).rejects.toThrow(
         "Cannot transition from 'completed' to 'timed_out'",
+      );
+    });
+  });
+
+  describe("recordLog", () => {
+    it("appends structured logs with deterministic timestamp", async () => {
+      const execution = await manager.create({
+        type: "workflow",
+        logs: [
+          {
+            timestamp: "2026-01-01T00:00:00.000Z",
+            level: "info",
+            message: "created",
+          },
+        ],
+      });
+
+      const updated = await manager.recordLog(execution.id, {
+        timestamp: new Date("2026-01-01T00:00:01.000Z"),
+        level: "warn",
+        message: "retry scheduled",
+        data: { attempt: 2 },
+      });
+
+      expect(updated.logs).toEqual([
+        {
+          timestamp: "2026-01-01T00:00:00.000Z",
+          level: "info",
+          message: "created",
+        },
+        {
+          timestamp: "2026-01-01T00:00:01.000Z",
+          level: "warn",
+          message: "retry scheduled",
+          data: { attempt: 2 },
+        },
+      ]);
+    });
+
+    it("defaults log level to info", async () => {
+      const execution = await manager.create({ type: "task" });
+
+      const updated = await manager.recordLog(execution.id, {
+        timestamp: "2026-01-01T00:00:00.000Z",
+        message: "queued",
+      });
+
+      expect(updated.logs?.[0]).toEqual({
+        timestamp: "2026-01-01T00:00:00.000Z",
+        level: "info",
+        message: "queued",
+      });
+    });
+
+    it("fails explicitly when the store cannot append logs atomically", async () => {
+      const storeWithoutLogAppend = {
+        create: vi.fn(),
+        findById: vi.fn(),
+        findByIdempotencyKey: vi.fn(),
+        update: vi.fn(),
+        list: vi.fn(),
+        delete: vi.fn(),
+      } as unknown as ExecutionStore;
+      const managerWithoutLogAppend = new ExecutionManagerImpl(storeWithoutLogAppend);
+
+      await expect(
+        managerWithoutLogAppend.recordLog("exec-1", {
+          message: "cannot be appended safely",
+        }),
+      ).rejects.toThrow("Execution store does not support atomic execution log append");
+    });
+  });
+
+  describe("replay", () => {
+    it("creates a new pending execution from a failed execution", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+      const execution = await manager.create({
+        type: "billing-sync",
+        payload: { accountId: "acct-1" },
+        maxAttempts: 3,
+        timeout: 30_000,
+        idempotencyKey: "billing-sync:acct-1",
+        metadata: { source: "webhook" },
+      });
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: "provider unavailable", retryable: false });
+
+      const replayed = await manager.replay(execution.id, {
+        reason: "operator requested replay",
+        metadata: { operator: "ops-user" },
+      });
+
+      expect(replayed.id).not.toBe(execution.id);
+      expect(replayed.status).toBe("pending");
+      expect(replayed.type).toBe("billing-sync");
+      expect(replayed.payload).toEqual({ accountId: "acct-1" });
+      expect(replayed.maxAttempts).toBe(3);
+      expect(replayed.timeout).toBe(30_000);
+      expect(replayed.idempotencyKey).toBeUndefined();
+      expect(replayed.replayOf).toBe(execution.id);
+      expect(replayed.metadata).toEqual({
+        source: "webhook",
+        operator: "ops-user",
+        replayOf: execution.id,
+        replayedAt: "2026-01-01T00:00:00.000Z",
+        replayReason: "operator requested replay",
+      });
+      expect(replayed.logs).toEqual([
+        {
+          timestamp: "2026-01-01T00:00:00.000Z",
+          level: "info",
+          message: "Execution replay created",
+          data: {
+            sourceExecutionId: execution.id,
+            reason: "operator requested replay",
+          },
+        },
+      ]);
+      await expect(manager.list({ replayOf: execution.id })).resolves.toEqual([replayed]);
+    });
+
+    it("allows payload override when replaying a failed execution", async () => {
+      const execution = await manager.create({
+        type: "workflow",
+        payload: { attempt: "original" },
+      });
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: "error", retryable: false });
+
+      const replayed = await manager.replay(execution.id, {
+        payload: { attempt: "manual-replay" },
+      });
+
+      expect(replayed.payload).toEqual({ attempt: "manual-replay" });
+    });
+
+    it("allows replaying timed-out executions", async () => {
+      const execution = await manager.create({ type: "scheduled-job" });
+      await manager.start(execution.id);
+      await manager.timeout(execution.id);
+
+      const replayed = await manager.replay(execution.id);
+
+      expect(replayed.replayOf).toBe(execution.id);
+      expect(replayed.status).toBe("pending");
+    });
+
+    it("rejects replay for completed executions", async () => {
+      const execution = await manager.create({ type: "task" });
+      await manager.start(execution.id);
+      await manager.complete(execution.id);
+
+      await expect(manager.replay(execution.id)).rejects.toThrow(
+        "Cannot replay execution in 'completed' status",
       );
     });
   });
