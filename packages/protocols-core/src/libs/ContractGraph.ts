@@ -326,7 +326,9 @@ function validateSchemaEffects(route: ContractGraphRoute): ContractDiagnostic[] 
   const diagnostics: ContractDiagnostic[] = [];
 
   for (const schema of getRouteSchemas(route)) {
-    if (isZodEffects(schema)) {
+    const effectsCount = countZodEffects(schema);
+
+    for (let index = 0; index < effectsCount; index += 1) {
       diagnostics.push(
         createRouteDiagnostic(
           route,
@@ -435,6 +437,74 @@ function isZodEffects(schema: z.ZodType): boolean {
   return schema.constructor.name === "ZodEffects";
 }
 
+function countZodEffects(schema: z.ZodType, seen = new Set<z.ZodType>()): number {
+  if (seen.has(schema)) {
+    return 0;
+  }
+
+  seen.add(schema);
+
+  const currentCount = isZodEffects(schema) ? 1 : 0;
+  const nestedCount = getNestedZodSchemas(schema).reduce(
+    (count, nestedSchema) => count + countZodEffects(nestedSchema, seen),
+    0,
+  );
+
+  return currentCount + nestedCount;
+}
+
+function getNestedZodSchemas(schema: z.ZodType): z.ZodType[] {
+  const definition = getZodDefinition(schema);
+
+  if (!definition) {
+    return [];
+  }
+
+  const nestedSchemas = [
+    ...Object.values(getZodObjectShape(definition)),
+    definition.innerType,
+    definition.schema,
+    definition.type,
+    definition.element,
+    ...(Array.isArray(definition.options) ? definition.options : []),
+  ];
+
+  return nestedSchemas.filter(isZodType);
+}
+
+type ZodDefinition = {
+  readonly shape?: unknown;
+  readonly innerType?: unknown;
+  readonly schema?: unknown;
+  readonly type?: unknown;
+  readonly element?: unknown;
+  readonly options?: unknown;
+};
+
+function getZodDefinition(schema: z.ZodType): ZodDefinition | undefined {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return undefined;
+  }
+
+  return schema._def as ZodDefinition;
+}
+
+function getZodObjectShape(definition: ZodDefinition): Record<string, unknown> {
+  const shape = typeof definition.shape === "function" ? definition.shape() : definition.shape;
+
+  return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
+}
+
+function isZodType(value: unknown): value is z.ZodType {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as { readonly safeParse?: unknown };
+
+  return typeof candidate.safeParse === "function";
+}
+
 function createRouteDiagnostic(
   route: ContractGraphRoute,
   code: string,
@@ -485,19 +555,29 @@ function getMetadataReference(
   owner: ContractMetadataOwner,
   index: number,
 ): ContractMetadataReference | null {
-  if (typeof value === "function" && value.name.length > 0) {
-    return createGuardReference("constructor", value.name, declaredAt, owner, index);
+  if (typeof value === "function") {
+    return createGuardReference("constructor", getMetadataName(value), declaredAt, owner, index);
   }
 
   if (value && typeof value === "object" && "constructor" in value) {
     const constructor = value.constructor;
 
-    if (typeof constructor === "function" && constructor.name.length > 0) {
-      return createGuardReference("instance", constructor.name, declaredAt, owner, index);
+    if (typeof constructor === "function") {
+      return createGuardReference(
+        "instance",
+        getMetadataName(constructor),
+        declaredAt,
+        owner,
+        index,
+      );
     }
   }
 
   return null;
+}
+
+function getMetadataName(value: { readonly name: string }): string {
+  return value.name.length > 0 ? value.name : "anonymous";
 }
 
 function createGuardReference(

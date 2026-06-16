@@ -142,6 +142,35 @@ describe("buildContractGraph", () => {
     expect(graph.diagnostics).toEqual([]);
   });
 
+  it("should preserve unnamed guard metadata references", () => {
+    const unnamedGuard = function Guard() {};
+    Object.defineProperty(unnamedGuard, "name", { value: "" });
+
+    @UseGuards(unnamedGuard)
+    @Controller("/admin")
+    class AdminController {
+      @Get("/")
+      getAdmin(): void {}
+    }
+
+    const graph = buildContractGraph([AdminController]);
+
+    expect(unnamedGuard.name).toBe("");
+    expect(graph.controllers[0]?.guards).toEqual([
+      {
+        type: "rest.guard",
+        id: "rest.guard:controller:AdminController:0:constructor:anonymous",
+        kind: "constructor",
+        name: "anonymous",
+        declaredAt: "controller",
+        owner: { controllerName: "AdminController" },
+        index: 0,
+      },
+    ]);
+    expect(graph.routes[0]?.access.guards[0]?.name).toBe("anonymous");
+    expect(graph.diagnostics).toEqual([]);
+  });
+
   it("should report unsupported and drift-prone route metadata as diagnostics", () => {
     @Controller("/hooks")
     class HooksController {
@@ -186,6 +215,28 @@ describe("buildContractGraph", () => {
     expect(formatContractDiagnostic(graph.diagnostics[0])).toContain(
       "WARNING contract-schema-zod-effects-unwrapped ProfilesController.createProfile",
     );
+  });
+
+  it("should warn when generated contracts unwrap nested Zod effects", () => {
+    @Controller("/profiles")
+    class ProfilesController {
+      @Post("/")
+      createProfile(
+        @Body(z.object({ name: z.string().transform((value) => value.trim()) }))
+        _body: { name: string },
+      ): void {}
+    }
+
+    const graph = buildContractGraph([ProfilesController]);
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-schema-zod-effects-unwrapped",
+        severity: "warning",
+        routeId: "ProfilesController.createProfile",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).not.toThrow();
   });
 
   it("should reject routes with more than one request body parameter", () => {
@@ -236,28 +287,25 @@ describe("buildContractGraph", () => {
   });
 
   it("should reject duplicate controller names used as contract identity", () => {
-    let FirstController!: new () => unknown;
-    let SecondController!: new () => unknown;
-
-    {
+    const FirstController = (() => {
       @Controller("/first")
       class DuplicateController {
         @Get("/one")
         one(): void {}
       }
 
-      FirstController = DuplicateController;
-    }
+      return DuplicateController;
+    })();
 
-    {
+    const SecondController = (() => {
       @Controller("/second")
       class DuplicateController {
         @Get("/two")
         two(): void {}
       }
 
-      SecondController = DuplicateController;
-    }
+      return DuplicateController;
+    })();
 
     const graph = buildContractGraph([FirstController, SecondController]);
 

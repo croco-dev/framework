@@ -497,11 +497,15 @@ function getObjectTypeScript(schema: unknown): string {
 }
 
 function formatObjectKey(key: string): string {
-  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) {
+  if (isJavaScriptIdentifier(key)) {
     return key;
   }
 
   return `'${key.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
+
+function isJavaScriptIdentifier(value: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
 }
 
 function getObjectShape(schema: unknown): Record<string, unknown> {
@@ -536,10 +540,16 @@ function getPathExpression(route: RouteIR): string {
   const pathExpression = route.path.replace(/:([^/]+)/g, (tokenWithPrefix, token: string) => {
     const name = paramsByToken.get(token);
 
-    return name ? `\${encodeURIComponent(String(input.path.${name}))}` : tokenWithPrefix;
+    return name ? `\${encodeURIComponent(String(${getPathInputAccessor(name)}))}` : tokenWithPrefix;
   });
 
   return `\`${pathExpression}\``;
+}
+
+function getPathInputAccessor(name: string): string {
+  return isJavaScriptIdentifier(name)
+    ? `input.path.${name}`
+    : `input.path[${formatObjectKey(name)}]`;
 }
 
 function getQueryStatements(route: RouteIR): string {

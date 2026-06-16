@@ -470,7 +470,9 @@ describe("generateClientFiles", () => {
         inputSchema: null,
         inputSchemas: {
           body: null,
-          path: z.object({ id: z.string(), id2: z.string() }) as any,
+          path: z.object({ id: z.string(), id2: z.string() }) as unknown as NonNullable<
+            RouteIR["inputSchemas"]["path"]
+          >,
           query: null,
           headers: null,
         },
@@ -486,6 +488,36 @@ describe("generateClientFiles", () => {
       "const path = `/pairs/${encodeURIComponent(String(input.path.id))}/${encodeURIComponent(String(input.path.id2))}`;",
     );
     expect(content).not.toContain("${encodeURIComponent(String(input.path.id))}2");
+  });
+
+  it("should bracket-access path parameters that are not JavaScript identifiers", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/:user-id",
+        params: [{ kind: "path", name: "user-id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ "user-id": z.string() }) as unknown as NonNullable<
+            RouteIR["inputSchemas"]["path"]
+          >,
+          query: null,
+          headers: null,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "const path = `/users/${encodeURIComponent(String(input.path['user-id']))}`;",
+    );
   });
 
   it("should normalize catch-all path parameters when generating fetch paths", () => {
