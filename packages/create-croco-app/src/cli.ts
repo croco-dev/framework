@@ -1,15 +1,6 @@
 import { intro, outro } from "@clack/prompts";
 import { Command } from "commander";
-import { generate } from "./generator.js";
-import {
-  isNonInteractiveOptions,
-  normalizeNonInteractiveOptions,
-  parseCliOptions,
-  validateCliOptions,
-  validateResolvedOptions,
-} from "./options.js";
 import { getPackageVersion } from "./package-version.js";
-import { runPrompts } from "./prompts.js";
 import type { GeneratorOptions } from "./types.js";
 
 export function createProgram(): Command {
@@ -20,7 +11,10 @@ export function createProgram(): Command {
     .description("Create a pnpm-based Croco application")
     .version(getPackageVersion())
     .argument("[directory]", "Target directory")
-    .option("--preset <preset>", "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack)")
+    .option(
+      "--preset <preset>",
+      "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|saas)",
+    )
     .option("--scope <scope>", "Package scope (e.g. @myorg)")
     .option("--api <api>", "API type (graphql|trpc)")
     .option("--api-hosting <hosting>", "API hosting (standalone|nextjs)")
@@ -38,6 +32,13 @@ export function createProgram(): Command {
       try {
         intro("create-croco-app");
 
+        const {
+          isNonInteractiveOptions,
+          normalizeNonInteractiveOptions,
+          parseCliOptions,
+          validateCliOptions,
+          validateResolvedOptions,
+        } = await import("./options.js");
         const cliOptions = parseCliOptions(directory, rawOptions);
         validateCliOptions(cliOptions);
 
@@ -46,12 +47,14 @@ export function createProgram(): Command {
         if (isNonInteractiveOptions(cliOptions)) {
           options = normalizeNonInteractiveOptions(cliOptions);
         } else {
+          const { runPrompts } = await import("./prompts.js");
           // Interactive mode
           options = await runPrompts(cliOptions);
           validateResolvedOptions(options);
         }
 
         const targetDir = directory ?? options.projectName;
+        const { generate } = await import("./generator.js");
         await generate(targetDir, options);
 
         outro(`Project created in ${targetDir} 🎉`);

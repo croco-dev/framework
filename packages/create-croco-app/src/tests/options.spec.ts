@@ -1,3 +1,4 @@
+import { Problem } from "@croco/problems-core";
 import { existsSync, rmSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
@@ -23,6 +24,7 @@ describe("noninteractive CLI option validation", () => {
     const help = createProgram().helpInformation();
 
     expect(help).toContain("Create a pnpm-based Croco application");
+    expect(help).toContain("blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|saas");
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
     expect(help).not.toContain("--package-manager");
@@ -246,4 +248,65 @@ describe("noninteractive CLI option validation", () => {
       initGit: false,
     });
   });
+
+  it("normalizes safe noninteractive defaults for SaaS projects", () => {
+    const cliOptions = parseCliOptions("my-saas", {
+      preset: "saas",
+      scope: "@test",
+      install: false,
+      git: false,
+      agentRules: false,
+    });
+
+    expect(normalizeNonInteractiveOptions(cliOptions)).toMatchObject({
+      projectName: "my-saas",
+      scope: "@test",
+      preset: "saas",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+  });
+
+  it("rejects configurable API flags for SaaS projects", () => {
+    const cliOptions = parseCliOptions("my-saas", {
+      preset: "saas",
+      scope: "@test",
+      api: "trpc",
+      install: false,
+      git: false,
+    });
+
+    expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
+      "--api is not supported with the saas preset",
+    );
+    let error: unknown;
+    try {
+      normalizeNonInteractiveOptions(cliOptions);
+    } catch (err) {
+      error = err;
+    }
+    expect(error).toBeInstanceOf(Problem);
+  });
+
+  it.each([
+    [{ api: "trpc" }, "--api is not supported with the saas preset"],
+    [{ webApps: "web" }, "--web-apps is not supported with the saas preset"],
+    [{ db: "postgres" }, "--db is not supported with the saas preset"],
+    [{ backendDeploy: "lambda" }, "--backend-deploy is not supported with the saas preset"],
+    [{ frontendDeploy: "vercel" }, "--frontend-deploy is not supported with the saas preset"],
+  ] as const)(
+    "rejects partial interactive SaaS CLI options before prompting: %o",
+    (rawOptions, expectedMessage) => {
+      const cliOptions = parseCliOptions(undefined, {
+        preset: "saas",
+        ...rawOptions,
+      });
+
+      expect(() => validateCliOptions(cliOptions)).toThrow(expectedMessage);
+    },
+  );
 });

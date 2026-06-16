@@ -1,7 +1,7 @@
 export type GeneratorOptions = {
   projectName: string;
   scope: string;
-  preset: "ddd-fullstack" | "ddd-vike-fullstack" | "ddd-api" | "blank";
+  preset: "ddd-fullstack" | "ddd-vike-fullstack" | "ddd-api" | "saas" | "blank";
   webApps: string[];
   api?: "graphql" | "trpc";
   apiHosting: "standalone" | "nextjs";

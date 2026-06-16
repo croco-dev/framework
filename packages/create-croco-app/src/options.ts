@@ -1,4 +1,5 @@
 import { validateProjectName } from "./helpers/validate.js";
+import { InvalidSaasPresetOptionProblem } from "./libs/problems/InvalidSaasPresetOptionProblem.js";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "./supported-options.js";
 import type { GeneratorOptions } from "./types.js";
 
@@ -82,6 +83,10 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
   for (const db of cliOptions.db ?? []) {
     readChoice("db", db, DATABASES);
   }
+
+  if (cliOptions.preset === "saas") {
+    assertSaasOptions(cliOptions);
+  }
 }
 
 export function validateResolvedOptions(options: GeneratorOptions): void {
@@ -130,6 +135,11 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
     return;
   }
 
+  if (options.preset === "saas") {
+    assertSaasOptions(options);
+    return;
+  }
+
   if (options.preset === "ddd-fullstack") {
     if (!options.api) throw new Error("--api is required for ddd-api and ddd-fullstack");
     if (options.apiHosting === "nextjs" && options.webApps.length !== 1) {
@@ -170,6 +180,22 @@ export function normalizeNonInteractiveOptions(
       apiHosting: "standalone",
       db: [],
       agentRules: cliOptions.agentRules ?? false,
+      installDeps: cliOptions.installDeps ?? true,
+      initGit: cliOptions.initGit ?? true,
+    };
+  }
+
+  if (preset === "saas") {
+    assertSaasOptions(cliOptions);
+
+    return {
+      projectName,
+      scope,
+      preset,
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: cliOptions.agentRules ?? true,
       installDeps: cliOptions.installDeps ?? true,
       initGit: cliOptions.initGit ?? true,
     };
@@ -227,6 +253,30 @@ function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
   }
   if (cliOptions.db && cliOptions.db.length > 0) {
     throw new Error("--db is not supported with the blank preset");
+  }
+}
+
+function assertSaasOptions(options: Partial<GeneratorOptions>): void {
+  if (options.api)
+    throw new InvalidSaasPresetOptionProblem("--api is not supported with the saas preset");
+  if (options.apiHosting && options.apiHosting !== "standalone") {
+    throw new InvalidSaasPresetOptionProblem(
+      "--api-hosting is not configurable with the saas preset",
+    );
+  }
+  if (options.backendDeploy)
+    throw new InvalidSaasPresetOptionProblem(
+      "--backend-deploy is not supported with the saas preset",
+    );
+  if (options.frontendDeploy)
+    throw new InvalidSaasPresetOptionProblem(
+      "--frontend-deploy is not supported with the saas preset",
+    );
+  if (options.webApps && options.webApps.length > 0) {
+    throw new InvalidSaasPresetOptionProblem("--web-apps is not supported with the saas preset");
+  }
+  if (options.db && options.db.length > 0) {
+    throw new InvalidSaasPresetOptionProblem("--db is not supported with the saas preset");
   }
 }
 
