@@ -1,36 +1,19 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { discoverControllerConstructors, type Constructor } from "@croco/protocols-core";
 import { Project, type SourceFile, ts } from "ts-morph";
 
 type Controller = Constructor;
 
-class NoRestControllersFoundProblem extends Error {
-  readonly code = "openapi-spec/no-rest-controllers-found";
-  readonly type = "about:blank";
-  readonly title = "Bad Request";
-  readonly status = 400;
-  readonly category = "BadRequest";
-  readonly detail: string;
-
+class NoRestControllersFoundProblem extends Problem {
   constructor(glob: string) {
-    const detail = getNoRestControllersFoundMessage(glob);
-
-    super(detail);
-    this.detail = detail;
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  toJSON(): Record<string, unknown> {
-    return {
-      type: this.type,
-      title: this.title,
-      status: this.status,
-      code: this.code,
-      detail: this.detail,
-    };
+    super(
+      "openapi-spec/no-rest-controllers-found",
+      ProblemCategory.BadRequest,
+      getNoRestControllersFoundMessage(glob),
+    );
   }
 }
 

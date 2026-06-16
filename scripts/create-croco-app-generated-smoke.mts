@@ -237,6 +237,7 @@ try {
       "--filter=create-croco-app...",
       "--filter=@croco/frontend-vite...",
       "--filter=@croco/openapi-spec...",
+      "--filter=@croco/problems-core...",
       "--filter=@croco/rpc-codegen...",
       "--force",
     ],
@@ -445,6 +446,7 @@ function runSpaBeSplitContractSmoke(): void {
   );
 
   run("pnpm", ["install"], projectDir);
+  run("pnpm", ["contract:check"], projectDir);
   run("pnpm", ["contract:openapi"], projectDir);
   assertExists(
     join(projectDir, "openapi.json"),
@@ -481,6 +483,7 @@ function getContractSmokeRangeOverrides(): Record<string, string> {
 
   return {
     "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
+    "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
     "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
     "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
   };

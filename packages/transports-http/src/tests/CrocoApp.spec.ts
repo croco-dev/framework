@@ -87,6 +87,11 @@ describe("CrocoApp", () => {
       return { id, name: "Test User" };
     }
 
+    @Get("/assets/:...id")
+    getAsset(@Param("id") id: string) {
+      return { id };
+    }
+
     @Post("/users")
     createUser(@Body() body: unknown) {
       return { created: true, data: body };
@@ -347,6 +352,16 @@ describe("CrocoApp", () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({ id: "123", name: "Test User" });
+  });
+
+  it("should extract catch-all path params under the declared parameter name", async () => {
+    const app = createApp({ controllers: [TestController] });
+
+    const response = await app.fetch(new Request("http://localhost/api/assets/icons/logo.svg"));
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual({ id: "icons/logo.svg" });
   });
 
   it("should return headers without a response body for HEAD requests", async () => {

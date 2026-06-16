@@ -5,8 +5,9 @@
   "scripts": {
     "dev:api": "pnpm --filter {{scope}}/api-server dev",
     "dev:web": "pnpm --filter {{scope}}/console-web dev",
-    "contract:openapi": "croco-openapi-spec --controllers 'apps/api-server/src/controllers/**/*.ts' --out openapi.json --title '{{projectName}} API' --version 0.1.0 --server http://localhost:3000",
-    "contract:client": "croco-rpc-codegen --controllers 'apps/api-server/src/controllers/**/*.ts' --out libs/shared/provider-rpc/src --react-query",
+    "contract:check": "croco-rpc-codegen --controllers 'apps/api-server/src/controllers/**/*.ts' --check",
+    "contract:openapi": "pnpm contract:check && croco-openapi-spec --controllers 'apps/api-server/src/controllers/**/*.ts' --out openapi.json --title '{{projectName}} API' --version 0.1.0 --server http://localhost:3000",
+    "contract:client": "pnpm contract:check && croco-rpc-codegen --controllers 'apps/api-server/src/controllers/**/*.ts' --out libs/shared/provider-rpc/src --react-query",
     "codegen": "pnpm contract:client",
     "build": "turbo build",
     "test": "turbo test",

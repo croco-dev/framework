@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadRoutes } from "../libs/loadRoutes";
+import { loadContractGraph, loadRoutes } from "../libs/loadRoutes";
 
 let tempRoot!: string;
 let sourceDir!: string;
@@ -35,6 +35,32 @@ describe("loadRoutes", () => {
         httpMethod: "GET",
         path: "/users",
       });
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
+    "loads the canonical contract graph for exported controllers",
+    async () => {
+      fs.writeFileSync(path.join(sourceDir, "UsersController.ts"), getMixedControllerSource());
+
+      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"));
+
+      expect(graph.controllers).toEqual([
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.listUsers"],
+        },
+      ]);
+      expect(graph.routes[0]).toMatchObject({
+        routeId: "UsersController.listUsers",
+        operationId: "UsersController_listUsers",
+        path: "/users",
+      });
+      expect(graph.diagnostics).toEqual([]);
     },
     LOAD_ROUTES_TIMEOUT_MS,
   );

@@ -1,2 +1,2 @@
 export type { GenerateClientOptions } from "./libs/generate";
-export { generateClientFiles } from "./libs/generate";
+export { generateClientFiles, generateClientFilesFromContractGraph } from "./libs/generate";

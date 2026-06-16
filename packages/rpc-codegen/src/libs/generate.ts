@@ -1,6 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RouteIR } from "@croco/protocols-core";
+import {
+  assertContractGraphHasNoErrors,
+  getContractPathParamNames,
+  getContractPathParams,
+  type ContractGraph,
+  type RouteIR,
+} from "@croco/protocols-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export type GenerateClientOptions = {
   readonly reactQuery?: boolean;
@@ -15,6 +22,22 @@ type ResponseHelperOptions = {
   readonly hasOutputRoutes: boolean;
   readonly hasNoOutputRoutes: boolean;
 };
+
+class RpcCodegenContractProblem extends Problem {
+  constructor(detail: string) {
+    super("rpc-codegen/invalid-contract", ProblemCategory.ValidationError, detail);
+  }
+}
+
+export function generateClientFilesFromContractGraph(
+  graph: ContractGraph,
+  outDir: string,
+  options: GenerateClientOptions = {},
+): string[] {
+  assertContractGraphHasNoErrors(graph);
+
+  return generateClientFiles([...graph.routes], outDir, options);
+}
 
 export function generateClientFiles(
   routes: RouteIR[],
@@ -39,8 +62,58 @@ export function generateClientFiles(
 function assertGeneratedClientRoutes(routes: RouteIR[]): void {
   for (const route of routes) {
     if (route.httpMethod.toUpperCase() === "ALL") {
-      throw new Error(
+      throw new RpcCodegenContractProblem(
         `Cannot generate RPC client for @All route ${formatRoute(route)}: @All is runtime-only and cannot be represented as a concrete generated client request. Use explicit HTTP method decorators for generated contracts.`,
+      );
+    }
+
+    const bodyParamCount = route.params.filter((param) => param.kind === "body").length;
+
+    if (bodyParamCount > 1) {
+      throw new RpcCodegenContractProblem(
+        `Cannot generate RPC client for route ${formatRoute(route)}: generated contracts support one request body per route, but ${bodyParamCount} @Body() parameters were found.`,
+      );
+    }
+
+    assertGeneratedClientPathParams(route);
+  }
+}
+
+function assertGeneratedClientPathParams(route: RouteIR): void {
+  const pathParamNames = new Set(getContractPathParamNames(route.path));
+  const declaredParamNames = new Set(
+    route.params.filter((param) => param.kind === "path").map((param) => param.name),
+  );
+  const schemaParamNames = new Set(
+    route.inputSchemas.path ? Object.keys(getObjectShape(route.inputSchemas.path)) : [],
+  );
+
+  for (const name of pathParamNames) {
+    if (!declaredParamNames.has(name)) {
+      throw new RpcCodegenContractProblem(
+        `Cannot generate RPC client for route ${formatRoute(route)}: route path declares ':${name}' but no @Param("${name}") metadata was found.`,
+      );
+    }
+
+    if (!schemaParamNames.has(name)) {
+      throw new RpcCodegenContractProblem(
+        `Cannot generate RPC client for route ${formatRoute(route)}: route path declares ':${name}' but no generated path schema was found.`,
+      );
+    }
+  }
+
+  for (const name of declaredParamNames) {
+    if (name.length > 0 && !pathParamNames.has(name)) {
+      throw new RpcCodegenContractProblem(
+        `Cannot generate RPC client for route ${formatRoute(route)}: @Param("${name}") is not present in route path '${route.path}'.`,
+      );
+    }
+  }
+
+  for (const name of schemaParamNames) {
+    if (!pathParamNames.has(name)) {
+      throw new RpcCodegenContractProblem(
+        `Cannot generate RPC client for route ${formatRoute(route)}: generated path schema declares '${name}' but route path '${route.path}' does not contain ':${name}'.`,
       );
     }
   }
@@ -424,11 +497,15 @@ function getObjectTypeScript(schema: unknown): string {
 }
 
 function formatObjectKey(key: string): string {
-  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) {
+  if (isJavaScriptIdentifier(key)) {
     return key;
   }
 
   return `'${key.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
+
+function isJavaScriptIdentifier(value: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
 }
 
 function getObjectShape(schema: unknown): Record<string, unknown> {
@@ -453,29 +530,26 @@ function getObjectShape(schema: unknown): Record<string, unknown> {
 }
 
 function getPathExpression(route: RouteIR): string {
-  const pathParams = getPathParamNames(route);
+  const pathParams = getContractPathParams(route.path);
 
   if (pathParams.length === 0) {
     return `'${route.path}'`;
   }
 
-  const pathExpression = pathParams.reduce(
-    (currentPath, paramName) =>
-      currentPath
-        .split(`:${paramName}`)
-        .join(`\${encodeURIComponent(String(input.path.${paramName}))}`),
-    route.path,
-  );
+  const paramsByToken = new Map(pathParams.map((param) => [param.token, param.name]));
+  const pathExpression = route.path.replace(/:([^/]+)/g, (tokenWithPrefix, token: string) => {
+    const name = paramsByToken.get(token);
+
+    return name ? `\${encodeURIComponent(String(${getPathInputAccessor(name)}))}` : tokenWithPrefix;
+  });
 
   return `\`${pathExpression}\``;
 }
 
-function getPathParamNames(route: RouteIR): string[] {
-  if (!route.inputSchemas.path) {
-    return [];
-  }
-
-  return Object.keys(getObjectShape(route.inputSchemas.path));
+function getPathInputAccessor(name: string): string {
+  return isJavaScriptIdentifier(name)
+    ? `input.path.${name}`
+    : `input.path[${formatObjectKey(name)}]`;
 }
 
 function getQueryStatements(route: RouteIR): string {
@@ -554,7 +628,7 @@ function assertNoZodImport(content: string): void {
     content.includes("import { z }") ||
     content.includes("zod")
   ) {
-    throw new Error("Generated client must not import zod.");
+    throw new RpcCodegenContractProblem("Generated client must not import zod.");
   }
 }
 

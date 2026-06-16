@@ -4,7 +4,15 @@ import {
   OpenApiGeneratorV31,
   type RouteConfig,
 } from "@asteasolutions/zod-to-openapi";
-import { extractRouteIR, type ParamIR, type RouteIR } from "@croco/protocols-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import {
+  assertContractGraphHasNoErrors,
+  buildContractGraph,
+  getContractPathParams,
+  type ContractGraph,
+  type ContractGraphRoute,
+  type ParamIR,
+} from "@croco/protocols-core";
 import { type ZodType, z } from "zod";
 
 extendZodWithOpenApi(z);
@@ -52,14 +60,30 @@ const DEFAULT_PROBLEM_RESPONSES = [
   { status: 500, description: "Internal server error" },
 ] as const satisfies readonly ProblemResponseConfig[];
 
+class OpenAPIContractProblem extends Problem {
+  constructor(detail: string) {
+    super("openapi-spec/invalid-contract", ProblemCategory.ValidationError, detail);
+  }
+}
+
 export function emitOpenAPI(
   controllers: Function[],
   options: EmitOpenAPIOptions = {},
 ): OpenAPIDocument {
-  const registry = new OpenAPIRegistry();
-  const routes = controllers.flatMap((controller) =>
-    extractRouteIR(controller as ControllerConstructor),
+  return emitOpenAPIFromContractGraph(
+    buildContractGraph(controllers as ControllerConstructor[]),
+    options,
   );
+}
+
+export function emitOpenAPIFromContractGraph(
+  graph: ContractGraph,
+  options: EmitOpenAPIOptions = {},
+): OpenAPIDocument {
+  assertContractGraphHasNoErrors(graph);
+
+  const registry = new OpenAPIRegistry();
+  const routes = [...graph.routes];
   const problemDetailsRef = registerProblemDetailsSchema(registry);
   const defaultResponses = toDefaultResponses(options, problemDetailsRef);
 
@@ -166,19 +190,22 @@ function toProblemResponseConfig(
   );
 }
 
-function toRouteConfig(route: RouteIR, defaultResponses: RouteResponses): RouteConfig {
+function toRouteConfig(route: ContractGraphRoute, defaultResponses: RouteResponses): RouteConfig {
   return {
     method: toHttpMethod(route),
     path: toOpenAPIPath(route.path),
-    operationId: `${route.controllerName}_${route.methodName}`,
-    summary: `${route.controllerName}.${route.methodName}`,
+    operationId: route.operationId,
+    summary: route.routeId,
     tags: [route.domain ?? route.controllerName],
     responses: toResponseConfig(route, defaultResponses),
     ...(route.params.length > 0 || route.inputSchema ? { request: toRequestConfig(route) } : {}),
   };
 }
 
-function toResponseConfig(route: RouteIR, defaultResponses: RouteResponses): RouteResponses {
+function toResponseConfig(
+  route: ContractGraphRoute,
+  defaultResponses: RouteResponses,
+): RouteResponses {
   const outputSchema = unwrapZodEffects(route.outputSchema);
 
   return {
@@ -198,7 +225,7 @@ function toResponseConfig(route: RouteIR, defaultResponses: RouteResponses): Rou
   };
 }
 
-function toTags(routes: RouteIR[]): { name: string; description: string }[] {
+function toTags(routes: ContractGraphRoute[]): { name: string; description: string }[] {
   const tagNames = new Set(routes.map((route) => route.domain ?? route.controllerName));
 
   return [...tagNames].map((name) => ({
@@ -207,7 +234,7 @@ function toTags(routes: RouteIR[]): { name: string; description: string }[] {
   }));
 }
 
-function toRequestConfig(route: RouteIR): RouteConfig["request"] {
+function toRequestConfig(route: ContractGraphRoute): RouteConfig["request"] {
   const params = toZodObject(route.params.filter((param) => param.kind === "path"));
   const query = toZodObject(route.params.filter((param) => param.kind === "query"));
   const headers = toZodObject(route.params.filter((param) => param.kind === "header"));
@@ -272,14 +299,22 @@ function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {
     return kind;
   }
 
-  throw new Error(`Unsupported OpenAPI parameter kind: ${kind}`);
+  throw new OpenAPIContractProblem(`Unsupported OpenAPI parameter kind: ${kind}`);
 }
 
 function toOpenAPIPath(path: string): string {
-  return path.replace(/:([^/]+)/g, "{$1}");
+  const paramsByToken = new Map(
+    getContractPathParams(path).map((param) => [param.token, param.name]),
+  );
+
+  return path.replace(/:([^/]+)/g, (tokenWithPrefix, token: string) => {
+    const name = paramsByToken.get(token);
+
+    return name ? `{${name}}` : tokenWithPrefix;
+  });
 }
 
-function toHttpMethod(route: RouteIR): HttpMethod {
+function toHttpMethod(route: ContractGraphRoute): HttpMethod {
   const method = route.httpMethod;
   const normalizedMethod = method.toLowerCase();
   const httpMethod = HTTP_METHODS.find((candidate) => candidate === normalizedMethod);
@@ -289,14 +324,14 @@ function toHttpMethod(route: RouteIR): HttpMethod {
   }
 
   if (normalizedMethod === "all") {
-    throw new Error(
+    throw new OpenAPIContractProblem(
       `Cannot emit OpenAPI operation for @All route ${formatRoute(route)}: @All is runtime-only and cannot be represented as a concrete OpenAPI operation. Use explicit HTTP method decorators for generated contracts.`,
     );
   }
 
-  throw new Error(`Unsupported HTTP method: ${method}`);
+  throw new OpenAPIContractProblem(`Unsupported HTTP method: ${method}`);
 }
 
-function formatRoute(route: RouteIR): string {
+function formatRoute(route: ContractGraphRoute): string {
   return `${route.controllerName}.${route.methodName} (${route.path})`;
 }

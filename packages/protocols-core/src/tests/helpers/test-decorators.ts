@@ -5,7 +5,9 @@ import {
   type ParamMetadata,
   ParamType,
   REST_CONTROLLER_KEY,
+  REST_GUARDS_KEY,
   REST_PARAMS_KEY,
+  REST_ROLES_KEY,
   REST_ROUTES_KEY,
   type RouteMetadata,
 } from "../../libs/sharedTypes";
@@ -40,6 +42,28 @@ export function Body(schema?: z.ZodType): ParameterDecorator {
 
 export function Header(name: string, schema?: z.ZodType): ParameterDecorator {
   return createParamDecorator(ParamType.HEADER, name, schema);
+}
+
+export function UseGuards(...guards: Function[]): ClassDecorator & MethodDecorator {
+  return (target: object, propertyKey?: string | symbol) => {
+    if (propertyKey) {
+      Reflect.defineMetadata(REST_GUARDS_KEY, guards, target.constructor, propertyKey);
+      return;
+    }
+
+    Reflect.defineMetadata(REST_GUARDS_KEY, guards, target);
+  };
+}
+
+export function Roles(...roles: string[]): ClassDecorator & MethodDecorator {
+  return (target: object, propertyKey?: string | symbol) => {
+    if (propertyKey) {
+      Reflect.defineMetadata(REST_ROLES_KEY, roles, target.constructor, propertyKey);
+      return;
+    }
+
+    Reflect.defineMetadata(REST_ROLES_KEY, roles, target);
+  };
 }
 
 function createRouteDecorator(method: string, path: string): MethodDecorator {

@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Container } from "typedi";
 import {
   Body,
   Controller,
@@ -15,11 +16,16 @@ import {
   ResponseSchema,
   All,
 } from "@croco/protocols-rest";
-import { describe, expect, it } from "vitest";
+import { buildContractGraph } from "@croco/protocols-core";
+import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { emitOpenAPI } from "../libs/emitOpenAPI";
+import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
 
 describe("emitOpenAPI", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   it("should emit a GET operation with a path parameter", () => {
     @Controller("/users")
     class UsersController {
@@ -43,6 +49,74 @@ describe("emitOpenAPI", () => {
         },
       ],
     });
+  });
+
+  it("should consume the canonical contract graph as its source of truth", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([UsersController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(graph.routes[0]?.routeId).toBe("UsersController.getUser");
+    expect(spec.paths?.["/users/{id}"]?.get?.operationId).toBe("UsersController_getUser");
+    expect(spec.paths?.["/users/{id}"]?.get?.summary).toBe("UsersController.getUser");
+  });
+
+  it("should normalize catch-all path parameters from the canonical contract graph", () => {
+    @Controller("/assets")
+    class AssetsController {
+      @Get("/:...id")
+      getAsset(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([AssetsController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(spec.paths?.["/assets/{id}"]?.get).toMatchObject({
+      operationId: "AssetsController_getAsset",
+      parameters: [
+        {
+          in: "path",
+          name: "id",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+    });
+    expect(spec.paths?.["/assets/{...id}"]).toBeUndefined();
+  });
+
+  it("should not rewrite path parameters with matching prefixes", () => {
+    @Controller("/pairs")
+    class PairsController {
+      @Get("/:id/:id2")
+      compare(@Param("id") _id: string, @Param("id2") _id2: string): void {}
+    }
+
+    const graph = buildContractGraph([PairsController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(spec.paths?.["/pairs/{id}/{id2}"]?.get?.parameters).toEqual([
+      {
+        in: "path",
+        name: "id",
+        required: true,
+        schema: { type: "string" },
+      },
+      {
+        in: "path",
+        name: "id2",
+        required: true,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(spec.paths?.["/pairs/{id}/{id}2"]).toBeUndefined();
   });
 
   it("should apply document metadata options", () => {
@@ -275,7 +349,34 @@ describe("emitOpenAPI", () => {
     }
 
     expect(() => emitOpenAPI([HooksController])).toThrow(
-      "Cannot emit OpenAPI operation for @All route HooksController.handleHook (/hooks/:id): @All is runtime-only and cannot be represented as a concrete OpenAPI operation. Use explicit HTTP method decorators for generated contracts.",
+      "ERROR contract-route-unsupported-all-method HooksController.handleHook: @All is runtime-only and cannot be represented as a concrete generated contract. Use explicit HTTP method decorators for OpenAPI and typed clients.",
+    );
+  });
+
+  it("should reject path parameters that drift from controller metadata", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(@Param("userId") _userId: string): void {}
+    }
+
+    expect(() => emitOpenAPI([UsersController])).toThrow(
+      "ERROR contract-route-missing-path-param UsersController.getUser: Route path declares ':id' but no @Param(\"id\") metadata was found.",
+    );
+  });
+
+  it("should reject routes with more than one body parameter", () => {
+    @Controller("/users")
+    class UsersController {
+      @Post("/")
+      createUser(
+        @Body(z.object({ name: z.string() })) _body: { name: string },
+        @Body(z.object({ auditId: z.string() })) _audit: { auditId: string },
+      ): void {}
+    }
+
+    expect(() => emitOpenAPI([UsersController])).toThrow(
+      "ERROR contract-route-multiple-body-params UsersController.createUser: Generated contracts support one request body per route, but 2 @Body() parameters were found.",
     );
   });
 

@@ -2,41 +2,30 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  buildContractGraph,
+  type Constructor,
+  type ContractGraph,
   discoverControllerConstructors,
-  extractRouteIR,
   type RouteIR,
 } from "@croco/protocols-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { Project, type SourceFile, ts } from "ts-morph";
 
-class NoRestControllersFoundProblem extends Error {
-  readonly code = "rpc-codegen/no-rest-controllers-found";
-  readonly type = "about:blank";
-  readonly title = "Bad Request";
-  readonly status = 400;
-  readonly category = "BadRequest";
-  readonly detail: string;
-
+class NoRestControllersFoundProblem extends Problem {
   constructor(glob: string) {
-    const detail = getNoRestControllersFoundMessage(glob);
-
-    super(detail);
-    this.detail = detail;
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  toJSON(): Record<string, unknown> {
-    return {
-      type: this.type,
-      title: this.title,
-      status: this.status,
-      code: this.code,
-      detail: this.detail,
-    };
+    super(
+      "rpc-codegen/no-rest-controllers-found",
+      ProblemCategory.BadRequest,
+      getNoRestControllersFoundMessage(glob),
+    );
   }
 }
 
 export async function loadRoutes(glob: string): Promise<RouteIR[]> {
+  return [...(await loadContractGraph(glob)).routes];
+}
+
+export async function loadContractGraph(glob: string): Promise<ContractGraph> {
   const project = new Project({
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
@@ -61,7 +50,7 @@ export async function loadRoutes(glob: string): Promise<RouteIR[]> {
 
   try {
     project.emitSync();
-    const routes: RouteIR[] = [];
+    const controllerConstructors: Constructor[] = [];
     let controllerCount = 0;
 
     for (const sourceFile of sourceFiles) {
@@ -71,17 +60,14 @@ export async function loadRoutes(glob: string): Promise<RouteIR[]> {
       const controllers = discoverControllerConstructors(moduleExports);
 
       controllerCount += controllers.length;
-
-      for (const controller of controllers) {
-        routes.push(...extractRouteIR(controller));
-      }
+      controllerConstructors.push(...controllers);
     }
 
     if (controllerCount === 0) {
       throw new NoRestControllersFoundProblem(glob);
     }
 
-    return routes;
+    return buildContractGraph(controllerConstructors);
   } finally {
     fs.rmSync(emitDir, { recursive: true, force: true });
   }
