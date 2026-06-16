@@ -134,11 +134,16 @@ function sortExecutionsByCreatedAt(
 async function listAllWorkflowExecutions(
   manager: InspectableExecutionManager,
   pageSize: number,
+  signal?: AbortSignal,
 ): Promise<Execution[]> {
   const executions: Execution[] = [];
   let offset = 0;
 
   for (;;) {
+    if (signal?.aborted) {
+      return executions;
+    }
+
     const page = await manager.list({
       type: WORKFLOW_EXECUTION_TYPE,
       limit: pageSize,
@@ -147,7 +152,7 @@ async function listAllWorkflowExecutions(
 
     executions.push(...page);
 
-    if (page.length < pageSize) {
+    if (signal?.aborted || page.length < pageSize) {
       return executions;
     }
 
@@ -164,7 +169,7 @@ export class WorkflowDiagnosticsProvider implements DiagnosticsProvider {
     private readonly options: WorkflowDiagnosticsProviderOptions = {},
   ) {}
 
-  async getHealth(): Promise<HealthStatus> {
+  async getHealth(signal?: AbortSignal): Promise<HealthStatus> {
     const workflows = this.registry.getAll().map((workflow) => ({
       name: workflow.name,
       description: workflow.description,
@@ -191,7 +196,11 @@ export class WorkflowDiagnosticsProvider implements DiagnosticsProvider {
       1,
       this.options.executionPageSize ?? DEFAULT_EXECUTION_PAGE_SIZE,
     );
-    const executions = await listAllWorkflowExecutions(this.executionManager, executionPageSize);
+    const executions = await listAllWorkflowExecutions(
+      this.executionManager,
+      executionPageSize,
+      signal,
+    );
     const statusCounts = createStatusCounts(executions);
     const attentionExecutionCount = getAttentionExecutionCount(statusCounts);
     const status = attentionExecutionCount > 0 ? "degraded" : "healthy";

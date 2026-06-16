@@ -61,6 +61,6 @@ collector.registerProvider(
 );
 ```
 
-The provider reports workflow names, trigger types, execution status counts, replay links, failure
-messages, log counts, and the latest log message. It does not include workflow payloads, results, or
-structured log data in diagnostics output.
+The provider reports workflow names, trigger types, execution status counts, replay references
+(`replayOf`), failure messages, log counts, and the latest log message. It does not include workflow
+payloads, results, or structured log data in diagnostics output.

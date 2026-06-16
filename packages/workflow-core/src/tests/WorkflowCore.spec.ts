@@ -790,6 +790,47 @@ describe("workflow-core", () => {
     });
   });
 
+  it("stops diagnostics pagination when its abort signal is cancelled", async () => {
+    for (let index = 0; index < 120; index++) {
+      const execution = await manager.create({
+        type: "workflow",
+        metadata: { workflowName: "abortable-workflow" },
+      });
+      await manager.start(execution.id);
+      await manager.complete(execution.id);
+    }
+
+    const controller = new AbortController();
+    const listWorkflowExecutions = vi.fn(async (options?: ListExecutionsOptions) => {
+      const page = await manager.list({ ...options, limit: options?.limit ?? 50 });
+      controller.abort();
+      return page;
+    });
+    const abortableExecutionManager = {
+      list: listWorkflowExecutions,
+    } as unknown as ExecutionManager;
+
+    const health = await new WorkflowDiagnosticsProvider(
+      abortableExecutionManager,
+      new WorkflowRegistry(),
+      {
+        executionPageSize: 50,
+      },
+    ).getHealth(controller.signal);
+
+    expect(health.details).toEqual(
+      expect.objectContaining({
+        executionCount: 50,
+      }),
+    );
+    expect(listWorkflowExecutions).toHaveBeenCalledTimes(1);
+    expect(listWorkflowExecutions).toHaveBeenCalledWith({
+      type: "workflow",
+      limit: 50,
+      offset: 0,
+    });
+  });
+
   it("degrades diagnostics when execution inspection is unavailable", async () => {
     const executionManager = {
       create: vi.fn(),
