@@ -30,6 +30,7 @@ import {
   InMemoryUsageStorage,
   NoopTxAdapter,
 } from "./inMemoryAdapters";
+import { SaasDemoSmokeProblem } from "./problems";
 
 const TEAM_PLAN_ID = "team";
 const API_REQUESTS_METER_ID = "api_requests";
@@ -127,12 +128,12 @@ class DemoNotificationService extends NotificationService {
 }
 
 class DemoEventPublisher extends EventPublisher {
-  constructor(private readonly eventBusConfig: EventBusConfig) {
+  constructor(private readonly demoEventBus: InMemoryEventBus) {
     super();
   }
 
   override async publish(event: DomainEvent): Promise<void> {
-    await this.eventBusConfig.getEventBus().publish(event);
+    await this.demoEventBus.publish(event);
   }
 
   async publishNow(event: DomainEvent): Promise<void> {
@@ -148,8 +149,9 @@ class DemoEventPublisher extends EventPublisher {
 
 function createDemoEventPublisher(): EventPublisher {
   const eventBusConfig = EventBusConfig.getInstance();
-  eventBusConfig.setEventBus(new InMemoryEventBus());
-  return new DemoEventPublisher(eventBusConfig);
+  const eventBus = new InMemoryEventBus();
+  eventBusConfig.setEventBus(eventBus);
+  return new DemoEventPublisher(eventBus);
 }
 
 export type SaasRuntime = {
@@ -480,6 +482,6 @@ export function assertSaasDemoSnapshot(snapshot: SaasDemoSnapshot): void {
   ].filter((failure): failure is string => failure !== undefined);
 
   if (failures.length > 0) {
-    throw new Error(`SaaS demo smoke failed: ${failures.join("; ")}`);
+    throw new SaasDemoSmokeProblem(failures);
   }
 }

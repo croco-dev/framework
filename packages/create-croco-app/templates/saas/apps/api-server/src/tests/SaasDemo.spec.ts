@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { Container } from "typedi";
+import { beforeEach, describe, expect, it } from "vitest";
 import { assertSaasDemoSnapshot, createSaasRuntime, runSaasDemoFlow } from "../saasDemo";
 
 describe("SaaS golden path demo", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   it("creates tenant and owner membership", async () => {
     const snapshot = await runSaasDemoFlow(createSaasRuntime());
 

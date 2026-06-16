@@ -232,6 +232,7 @@ const smokeCases: readonly SmokeCase[] = [
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
       { label: "OpenAPI contract", args: ["contract:openapi"] },
+      { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
     ],
   },

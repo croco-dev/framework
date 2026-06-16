@@ -243,10 +243,16 @@ function checkSaasStructure() {
       "@croco/entitlements-core": "workspace:*",
       "@croco/health-core": "workspace:*",
       "@croco/diagnostics-core": "workspace:*",
+      "@croco/problems-core": "workspace:*",
       "@croco/protocols-rest": "workspace:*",
+      "@croco/telemetry-sdk-node": "workspace:*",
       "@croco/transports-http": "workspace:*",
     }),
+    devDependencies: expect.objectContaining({
+      typedi: "^0.10.0",
+    }),
   });
+  checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EntitlementManager/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /BillingService/);

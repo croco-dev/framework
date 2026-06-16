@@ -21,6 +21,7 @@ import {
 } from "@croco/metering-core";
 import type { Tenant, TenantFilter, TenantSettings, TenantStore } from "@croco/tenant-core";
 import type { TxAdapter } from "@croco/tx-core";
+import { TenantAlreadyExistsProblem, TenantNotFoundProblem } from "./problems";
 
 function createTenantId(slug: string): string {
   return `tenant_${slug.replace(/[^a-z0-9_-]/g, "_")}`;
@@ -73,6 +74,9 @@ export class InMemoryTenantStore implements TenantStore {
       createdAt: now,
       updatedAt: now,
     };
+    if (this.tenants.has(tenant.id)) {
+      throw new TenantAlreadyExistsProblem(tenant.id);
+    }
 
     this.tenants.set(tenant.id, tenant);
     return tenant;
@@ -83,7 +87,7 @@ export class InMemoryTenantStore implements TenantStore {
     data: Partial<Omit<Tenant, "id" | "createdAt" | "updatedAt">>,
   ): Promise<Tenant> {
     const previous = await this.findById(id);
-    if (!previous) throw new Error(`Tenant ${id} not found`);
+    if (!previous) throw new TenantNotFoundProblem(id);
 
     const tenant = {
       ...previous,
@@ -101,7 +105,7 @@ export class InMemoryTenantStore implements TenantStore {
 
   async updateSettings(id: string, settings: Partial<TenantSettings>): Promise<Tenant> {
     const previous = await this.findById(id);
-    if (!previous) throw new Error(`Tenant ${id} not found`);
+    if (!previous) throw new TenantNotFoundProblem(id);
 
     return this.update(id, {
       settings: {

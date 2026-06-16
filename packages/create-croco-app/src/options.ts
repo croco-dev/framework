@@ -1,4 +1,5 @@
 import { validateProjectName } from "./helpers/validate.js";
+import { InvalidSaasPresetOptionProblem } from "./libs/problems/InvalidSaasPresetOptionProblem.js";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "./supported-options.js";
 import type { GeneratorOptions } from "./types.js";
 
@@ -256,19 +257,26 @@ function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
 }
 
 function assertSaasOptions(options: Partial<GeneratorOptions>): void {
-  if (options.api) throw new Error("--api is not supported with the saas preset");
+  if (options.api)
+    throw new InvalidSaasPresetOptionProblem("--api is not supported with the saas preset");
   if (options.apiHosting && options.apiHosting !== "standalone") {
-    throw new Error("--api-hosting is not configurable with the saas preset");
+    throw new InvalidSaasPresetOptionProblem(
+      "--api-hosting is not configurable with the saas preset",
+    );
   }
   if (options.backendDeploy)
-    throw new Error("--backend-deploy is not supported with the saas preset");
+    throw new InvalidSaasPresetOptionProblem(
+      "--backend-deploy is not supported with the saas preset",
+    );
   if (options.frontendDeploy)
-    throw new Error("--frontend-deploy is not supported with the saas preset");
+    throw new InvalidSaasPresetOptionProblem(
+      "--frontend-deploy is not supported with the saas preset",
+    );
   if (options.webApps && options.webApps.length > 0) {
-    throw new Error("--web-apps is not supported with the saas preset");
+    throw new InvalidSaasPresetOptionProblem("--web-apps is not supported with the saas preset");
   }
   if (options.db && options.db.length > 0) {
-    throw new Error("--db is not supported with the saas preset");
+    throw new InvalidSaasPresetOptionProblem("--db is not supported with the saas preset");
   }
 }
 

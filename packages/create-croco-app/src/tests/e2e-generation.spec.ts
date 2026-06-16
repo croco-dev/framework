@@ -510,7 +510,10 @@ describe("E2E: generate()", () => {
       "@croco/entitlements-core": "^0.0.2",
       "@croco/health-core": "^0.0.2",
       "@croco/diagnostics-core": "^0.0.2",
+      "@croco/problems-core": "^0.0.2",
+      "@croco/telemetry-sdk-node": "^0.0.2",
     });
+    expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
     expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "controllers", "SaasController.ts")),

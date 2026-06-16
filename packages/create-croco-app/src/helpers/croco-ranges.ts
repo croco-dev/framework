@@ -17,6 +17,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/metering-core": "^0.0.2",
   "@croco/notifications-core": "^0.0.2",
   "@croco/openapi-spec": "^0.0.2",
+  "@croco/problems-core": "^0.0.2",
   "@croco/protocols-core": "^0.0.2",
   "@croco/protocols-rest": "^0.0.2",
   "@croco/ratelimit-core": "^0.0.2",

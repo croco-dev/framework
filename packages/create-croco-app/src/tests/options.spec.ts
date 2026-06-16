@@ -1,3 +1,4 @@
+import { Problem } from "@croco/problems-core";
 import { existsSync, rmSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
@@ -282,6 +283,13 @@ describe("noninteractive CLI option validation", () => {
     expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
       "--api is not supported with the saas preset",
     );
+    let error: unknown;
+    try {
+      normalizeNonInteractiveOptions(cliOptions);
+    } catch (err) {
+      error = err;
+    }
+    expect(error).toBeInstanceOf(Problem);
   });
 
   it.each([

@@ -1,14 +1,6 @@
 import { intro, outro } from "@clack/prompts";
 import { Command } from "commander";
-import {
-  isNonInteractiveOptions,
-  normalizeNonInteractiveOptions,
-  parseCliOptions,
-  validateCliOptions,
-  validateResolvedOptions,
-} from "./options.js";
 import { getPackageVersion } from "./package-version.js";
-import { runPrompts } from "./prompts.js";
 import type { GeneratorOptions } from "./types.js";
 
 export function createProgram(): Command {
@@ -40,6 +32,13 @@ export function createProgram(): Command {
       try {
         intro("create-croco-app");
 
+        const {
+          isNonInteractiveOptions,
+          normalizeNonInteractiveOptions,
+          parseCliOptions,
+          validateCliOptions,
+          validateResolvedOptions,
+        } = await import("./options.js");
         const cliOptions = parseCliOptions(directory, rawOptions);
         validateCliOptions(cliOptions);
 
@@ -48,6 +47,7 @@ export function createProgram(): Command {
         if (isNonInteractiveOptions(cliOptions)) {
           options = normalizeNonInteractiveOptions(cliOptions);
         } else {
+          const { runPrompts } = await import("./prompts.js");
           // Interactive mode
           options = await runPrompts(cliOptions);
           validateResolvedOptions(options);
