@@ -1,6 +1,5 @@
 import { intro, outro } from "@clack/prompts";
 import { Command } from "commander";
-import { generate } from "./generator.js";
 import {
   isNonInteractiveOptions,
   normalizeNonInteractiveOptions,
@@ -55,6 +54,7 @@ export function createProgram(): Command {
         }
 
         const targetDir = directory ?? options.projectName;
+        const { generate } = await import("./generator.js");
         await generate(targetDir, options);
 
         outro(`Project created in ${targetDir} 🎉`);
