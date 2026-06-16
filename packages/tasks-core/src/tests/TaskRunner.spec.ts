@@ -86,6 +86,29 @@ describe("TaskRunner", () => {
     });
   });
 
+  it("should pass parent execution metadata when provided", async () => {
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await runner.execute(
+      "test-task",
+      { data: "test" },
+      {
+        parentId: "workflow-1",
+        metadata: { workflowName: "billing-sync", workflowStep: "sync" },
+      },
+    );
+
+    expect(mockExecutionManager.create).toHaveBeenCalledWith({
+      type: "test-task",
+      payload: { data: "test" },
+      maxAttempts: undefined,
+      timeout: undefined,
+      idempotencyKey: undefined,
+      parentId: "workflow-1",
+      metadata: { workflowName: "billing-sync", workflowStep: "sync" },
+    });
+  });
+
   it("should throw error for non-existent task", async () => {
     const runner = new TaskRunner(mockExecutionManager, registry);
 

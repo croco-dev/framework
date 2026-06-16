@@ -53,7 +53,8 @@
         "search-core",
         "storage-core",
         "tasks-core",
-        "triggers-core"
+        "triggers-core",
+        "workflow-core"
       ]
     },
     "Provider": {
@@ -209,7 +210,8 @@
         "tenant-core",
         "testing",
         "transports-graphql",
-        "triggers-core"
+        "triggers-core",
+        "workflow-core"
       ]
     },
     "alpha": {

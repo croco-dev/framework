@@ -337,14 +337,14 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **97개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **98개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Package Groups
 
 | 그룹         | 역할                                                                                       | 패키지 수 |
 | ------------ | ------------------------------------------------------------------------------------------ | --------: |
 | Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities |        21 |
-| Domain       | Business-domain APIs and package-level abstractions                                        |        24 |
+| Domain       | Business-domain APIs and package-level abstractions                                        |        25 |
 | Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        25 |
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
 | Protocol     | API protocol definitions and code generation                                               |         6 |
@@ -357,7 +357,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | 상태                | 의미                                | 패키지 수 |
 | ------------------- | ----------------------------------- | --------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |        43 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |        44 |
 | 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        31 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
@@ -481,6 +481,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/storage-core`         | Domain       | `packages/storage-core`         | tests              |
 | `@croco/tasks-core`           | Domain       | `packages/tasks-core`           | README, tests      |
 | `@croco/triggers-core`        | Domain       | `packages/triggers-core`        | README, tests      |
+| `@croco/workflow-core`        | Domain       | `packages/workflow-core`        | README, tests      |
 | `@croco/features-posthog`     | Integration  | `packages/features-posthog`     | README, tests      |
 | `@croco/integrations-posthog` | Integration  | `packages/integrations-posthog` | tests              |
 | `@croco/meta-vite`            | Presentation | `packages/meta-vite`            | README, tests      |
