@@ -1,11 +1,13 @@
 import {
   type CreateExecutionParams,
   type Execution,
+  type ExecutionLogEntry,
+  type ExecutionLogStore,
   ExecutionProblems,
   ExecutionStore,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { ulid } from "ulid";
 import type { ExecutionRow, NewExecutionRow } from "./schema";
 import { executions } from "./schema";
@@ -62,7 +64,10 @@ type ExecutionDb = {
 /**
  * 실행 요청을 Drizzle 테이블에 저장하는 구현체입니다.
  */
-export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionStore {
+export class DrizzleExecutionStore<TDb extends ExecutionDb>
+  extends ExecutionStore
+  implements ExecutionLogStore
+{
   /**
    * Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
    */
@@ -100,6 +105,8 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
       timeout: params.timeout ?? null,
       scheduledFor: params.scheduledFor ?? null,
       idempotencyKey: params.idempotencyKey ?? null,
+      replayOf: params.replayOf ?? null,
+      logs: params.logs ?? null,
       parentId: params.parentId ?? null,
       metadata: params.metadata ?? null,
       checkpoints: null,
@@ -175,6 +182,8 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
       ...(data.completedAt !== undefined ? { completedAt: data.completedAt } : {}),
       ...(data.scheduledFor !== undefined ? { scheduledFor: data.scheduledFor } : {}),
       ...(data.timeout !== undefined ? { timeout: data.timeout } : {}),
+      ...(data.replayOf !== undefined ? { replayOf: data.replayOf } : {}),
+      ...(data.logs !== undefined ? { logs: data.logs } : {}),
       ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
       ...(data.checkpoints !== undefined ? { checkpoints: data.checkpoints } : {}),
       ...(data.progress !== undefined ? { progress: data.progress } : {}),
@@ -183,6 +192,25 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
     const result = (await this.dbOp
       .update(executions)
       .set(updateData)
+      .where(eq(executions.id, id))
+      .returning()) as ExecutionRow[];
+
+    if (result.length === 0) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+
+    return this.mapToExecution(result[0]);
+  }
+
+  /**
+   * 실행 로그를 원자적으로 추가합니다.
+   */
+  async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
+    const result = (await this.dbOp
+      .update(executions)
+      .set({
+        logs: sql`coalesce(${executions.logs}, '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb`,
+      })
       .where(eq(executions.id, id))
       .returning()) as ExecutionRow[];
 
@@ -212,6 +240,14 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
         options.parentId === null
           ? isNull(executions.parentId)
           : eq(executions.parentId, options.parentId),
+      );
+    }
+
+    if (options.replayOf !== undefined) {
+      conditions.push(
+        options.replayOf === null
+          ? isNull(executions.replayOf)
+          : eq(executions.replayOf, options.replayOf),
       );
     }
 
@@ -261,6 +297,8 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb> extends ExecutionSto
       scheduledFor: row.scheduledFor ?? undefined,
       timeout: row.timeout ?? undefined,
       idempotencyKey: row.idempotencyKey ?? undefined,
+      replayOf: row.replayOf ?? undefined,
+      logs: (row.logs as Execution["logs"]) ?? undefined,
       parentId: row.parentId ?? undefined,
       metadata: (row.metadata as Execution["metadata"]) ?? undefined,
       checkpoints: (row.checkpoints as Execution["checkpoints"]) ?? undefined,

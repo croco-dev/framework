@@ -139,6 +139,29 @@ describe("DrizzleExecutionStore", () => {
       expect(result.metadata).toEqual({ source: "api" });
     });
 
+    it("should create execution replay fields and initial logs", async () => {
+      const result = await store.create({
+        type: "workflow",
+        replayOf: "source-execution-id",
+        logs: [
+          {
+            timestamp: "2026-01-01T00:00:00.000Z",
+            level: "info",
+            message: "Execution replay created",
+          },
+        ],
+      });
+
+      expect(result.replayOf).toBe("source-execution-id");
+      expect(result.logs).toEqual([
+        {
+          timestamp: "2026-01-01T00:00:00.000Z",
+          level: "info",
+          message: "Execution replay created",
+        },
+      ]);
+    });
+
     it("should return existing execution when idempotency key conflicts during insert", async () => {
       const existing = createMockExecution({
         id: "existing-execution-id",
@@ -298,6 +321,14 @@ describe("DrizzleExecutionStore", () => {
       const execution = createMockExecution({
         payload: { task: "keep-me" },
         result: { ok: true },
+        replayOf: "source-exec",
+        logs: [
+          {
+            timestamp: "2026-01-01T00:00:00.000Z",
+            level: "info",
+            message: "keep me",
+          },
+        ],
         metadata: { source: "api" },
       });
       const updated = { ...execution, status: "completed" as ExecutionStatus };
@@ -319,6 +350,40 @@ describe("DrizzleExecutionStore", () => {
       });
     });
 
+    it("should update replay fields and logs", async () => {
+      const execution = createMockExecution();
+      const logs = [
+        {
+          timestamp: "2026-01-01T00:00:00.000Z",
+          level: "warn" as const,
+          message: "operator replay requested",
+        },
+      ];
+      const updated = { ...execution, replayOf: "source-exec", logs };
+
+      const setMock = vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve([updated])),
+        })),
+      }));
+      const updateMock = vi.fn(() => ({
+        set: setMock,
+      }));
+      mockDb.update = updateMock;
+
+      const result = await store.update(execution.id, {
+        replayOf: "source-exec",
+        logs,
+      });
+
+      expect(setMock).toHaveBeenCalledWith({
+        replayOf: "source-exec",
+        logs,
+      });
+      expect(result.replayOf).toBe("source-exec");
+      expect(result.logs).toEqual(logs);
+    });
+
     it("should throw error when execution not found", async () => {
       const updateMock = vi.fn(() => ({
         set: vi.fn(() => ({
@@ -332,6 +397,54 @@ describe("DrizzleExecutionStore", () => {
       await expect(store.update("non-existent-id", { status: "completed" })).rejects.toThrow(
         ExecutionProblem,
       );
+    });
+  });
+
+  describe("appendLog", () => {
+    it("should append execution logs through a single update", async () => {
+      const execution = createMockExecution();
+      const entry = {
+        timestamp: "2026-01-01T00:00:00.000Z",
+        level: "info" as const,
+        message: "operator replay requested",
+      };
+      const updated = { ...execution, logs: [entry] };
+
+      const setMock = vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve([updated])),
+        })),
+      }));
+      const updateMock = vi.fn(() => ({
+        set: setMock,
+      }));
+      mockDb.update = updateMock;
+
+      const result = await store.appendLog(execution.id, entry);
+
+      expect(setMock).toHaveBeenCalledWith({
+        logs: expect.anything(),
+      });
+      expect(result.logs).toEqual([entry]);
+    });
+
+    it("should throw error when appending logs to a missing execution", async () => {
+      const updateMock = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(() => Promise.resolve([])),
+          })),
+        })),
+      }));
+      mockDb.update = updateMock;
+
+      await expect(
+        store.appendLog("missing-execution", {
+          timestamp: "2026-01-01T00:00:00.000Z",
+          level: "error",
+          message: "missing",
+        }),
+      ).rejects.toThrow(ExecutionProblem);
     });
   });
 
@@ -371,6 +484,25 @@ describe("DrizzleExecutionStore", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe("pending");
+    });
+
+    it("should filter by replay source", async () => {
+      const replayExecutions = [createMockExecution({ replayOf: "source-exec" })];
+      const selectMock = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            orderBy: vi.fn(() => ({
+              limit: vi.fn(() => Promise.resolve(replayExecutions)),
+            })),
+          })),
+        })),
+      }));
+      mockDb.select = selectMock;
+
+      const result = await store.list({ replayOf: "source-exec" });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].replayOf).toBe("source-exec");
     });
 
     it("should support pagination with limit and offset", async () => {

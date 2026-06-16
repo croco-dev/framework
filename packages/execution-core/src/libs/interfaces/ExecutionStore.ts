@@ -1,4 +1,9 @@
-import type { CreateExecutionParams, Execution, ListExecutionsOptions } from "../types";
+import type {
+  CreateExecutionParams,
+  Execution,
+  ExecutionLogEntry,
+  ListExecutionsOptions,
+} from "../types";
 
 /**
  * ExecutionStore defines the storage abstraction for execution records.
@@ -57,4 +62,14 @@ export abstract class ExecutionStore {
    * @throws Error if execution not found or deletion fails
    */
   abstract delete(id: string): Promise<void>;
+}
+
+/**
+ * Optional store capability for atomic execution log append.
+ *
+ * Stores that support recordLog should implement this with an atomic append operation,
+ * not a read-modify-write replacement of the full logs array.
+ */
+export interface ExecutionLogStore {
+  appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution>;
 }

@@ -21,6 +21,51 @@ export type ExecutionStatus =
   | "timed_out";
 
 /**
+ * Log severity recorded against an execution.
+ */
+export type ExecutionLogLevel = "debug" | "info" | "warn" | "error";
+
+/**
+ * Append-only execution log entry for inspectable workflow/task history.
+ */
+export interface ExecutionLogEntry {
+  /** ISO timestamp for when this log entry was recorded */
+  timestamp: string;
+  /** Severity level */
+  level: ExecutionLogLevel;
+  /** Human-readable log message */
+  message: string;
+  /** Optional structured log data */
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Parameters for recording an execution log entry.
+ */
+export interface AddExecutionLogParams {
+  /** Severity level (default: info) */
+  level?: ExecutionLogLevel;
+  /** Human-readable log message */
+  message: string;
+  /** Optional structured log data */
+  data?: Record<string, unknown>;
+  /** Optional timestamp override for deterministic tests or imported logs */
+  timestamp?: Date | string;
+}
+
+/**
+ * Parameters for replaying a failed execution.
+ */
+export interface ReplayExecutionParams {
+  /** Optional replay reason stored in metadata and initial log entry */
+  reason?: string;
+  /** Optional payload override. Defaults to the original execution payload. */
+  payload?: unknown;
+  /** Optional metadata merged before system replay metadata */
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * Error details for failed executions.
  */
 export interface ExecutionError {
@@ -64,6 +109,10 @@ export interface CreateExecutionParams {
   scheduledFor?: Date;
   /** Optional idempotency key for deduplication */
   idempotencyKey?: string;
+  /** Optional original execution ID when this execution is a replay */
+  replayOf?: string;
+  /** Initial log entries */
+  logs?: ExecutionLogEntry[];
   /** Optional parent execution ID for nested executions */
   parentId?: string;
   /** Optional metadata */
@@ -80,6 +129,8 @@ export interface ListExecutionsOptions {
   type?: string;
   /** Filter by parent ID */
   parentId?: string;
+  /** Filter by original execution ID when listing replay executions */
+  replayOf?: string | null;
   /** Limit results */
   limit?: number;
   /** Offset for pagination */
@@ -118,6 +169,10 @@ export interface Execution {
   timeout?: number;
   /** Optional idempotency key for deduplication */
   idempotencyKey?: string;
+  /** Original execution ID when this execution was created by replay */
+  replayOf?: string;
+  /** Append-only inspection log */
+  logs?: ExecutionLogEntry[];
   /** Optional parent execution ID */
   parentId?: string;
   /** Optional metadata */

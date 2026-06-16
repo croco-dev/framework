@@ -10,6 +10,8 @@
 - **진행률 추적**: 진행률 정보 자동 계산 및 추적
 - **체크포인트**: 배치 작업 재개를 위한 체크포인트 관리
 - **멱등성 지원**: idempotency key를 통한 중복 실행 방지
+- **실행 로그**: 실행별 append-only 로그로 inspect 가능한 이력 제공
+- **명시적 리플레이**: 실패/타임아웃 실행에서 새 실행을 생성하고 원본을 `replayOf`로 연결
 - **확장 가능한 저장소**: `ExecutionStore` 인터페이스를 통해 다양한 백엔드(DynamoDB, Redis, RDBMS 등) 지원
 
 ## 설치
@@ -223,6 +225,33 @@ const execution = await store.findById(execution.id);
 console.log(execution.metadata?.cancellationReason); // 'User requested cancellation'
 ```
 
+### 실행 조회와 로그
+
+```typescript
+const execution = await manager.get(executionId);
+const failedExecutions = await manager.list({ status: "failed", type: "billing-sync" });
+
+await manager.recordLog(execution.id, {
+  level: "warn",
+  message: "Provider webhook failed; waiting for operator replay",
+  data: { provider: "stripe" },
+});
+```
+
+### 실패 실행 리플레이
+
+```typescript
+const replayed = await manager.replay(failedExecution.id, {
+  reason: "operator replay after provider recovery",
+});
+const replays = await manager.list({ replayOf: failedExecution.id });
+
+console.log(replayed.status); // 'pending'
+console.log(replayed.replayOf === failedExecution.id); // true
+console.log(replayed.idempotencyKey); // undefined - 리플레이는 원본 dedupe key를 복사하지 않음
+console.log(replays[0].id === replayed.id); // true
+```
+
 ## API
 
 ### ExecutionManager
@@ -238,6 +267,20 @@ console.log(execution.metadata?.cancellationReason); // 'User requested cancella
 | `updateProgress(id, progress)` | 진행률 업데이트. percent 자동 계산                                                     |
 | `checkpoint(id, key, value)`   | 체크포인트 저장                                                                        |
 | `timeout(id)`                  | 타임아웃 상태 전이 (`timed_out`)                                                       |
+
+### ExecutionInspectionManager
+
+| 메서드                  | 설명                                          |
+| ----------------------- | --------------------------------------------- |
+| `get(id)`               | 실행 ID로 단일 실행 조회                      |
+| `list(options?)`        | 상태, 타입, 부모/리플레이 기준 실행 목록 조회 |
+| `recordLog(id, params)` | 실행 inspect 로그 추가                        |
+
+### ExecutionReplayManager
+
+| 메서드                | 설명                                          |
+| --------------------- | --------------------------------------------- |
+| `replay(id, params?)` | 실패/타임아웃 실행에서 새 `pending` 실행 생성 |
 
 ### 타입
 
@@ -265,6 +308,15 @@ interface ProgressInfo {
   percent?: number; // 생략 시 자동 계산
 }
 
+type ExecutionLogLevel = "debug" | "info" | "warn" | "error";
+
+interface ExecutionLogEntry {
+  timestamp: string;
+  level: ExecutionLogLevel;
+  message: string;
+  data?: Record<string, unknown>;
+}
+
 interface Execution {
   id: string;
   type: string;
@@ -279,6 +331,8 @@ interface Execution {
   completedAt?: Date;
   timeout?: number;
   idempotencyKey?: string;
+  replayOf?: string;
+  logs?: ExecutionLogEntry[];
   parentId?: string;
   metadata?: Record<string, unknown>;
   checkpoints?: Record<string, unknown>;
