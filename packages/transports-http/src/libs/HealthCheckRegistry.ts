@@ -42,6 +42,10 @@ export class HealthCheckRegistry {
     this.service.register(new RegisteredHealthCheckIndicator(name, check), options);
   }
 
+  getRegisteredCheckCount(): number {
+    return this.checks.size;
+  }
+
   async check(): Promise<HealthCheckRegistryResult> {
     return this.service.check();
   }

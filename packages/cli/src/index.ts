@@ -27,4 +27,20 @@ export { makeEvent } from "./commands/makeEvent";
 export { makeListener } from "./commands/makeListener";
 export { makeRepository } from "./commands/makeRepository";
 export { migrate } from "./commands/migrate";
+export {
+  formatOpsStatusReport,
+  getOpsStatusExitCode,
+  ops,
+  opsStatus,
+  runOpsStatus,
+} from "./commands/ops";
 export { GLOBAL_OPTIONS } from "./commands/options";
+
+export type {
+  OpsEndpointName,
+  OpsEndpointSnapshot,
+  OpsStatusFetch,
+  OpsStatusReport,
+  OpsStatusSummary,
+  RunOpsStatusOptions,
+} from "./commands/ops";
