@@ -12,6 +12,14 @@ pnpm demo:smoke
 `demo:smoke`는 REST contract graph를 검사하고, generated client를 만든 뒤, SaaS demo flow를 실행합니다.
 CLI smoke는 서버를 시작하지 않으며, in-memory provider profile만 사용합니다.
 
+## Operational Smoke
+
+```bash
+pnpm ops:smoke
+```
+
+`ops:smoke`는 diagnostics를 token mode로 켜고 unauthenticated 요청이 `403`으로 거부되는지 확인한 뒤, `croco ops check` contract로 `/health`, `/ready`, `/diagnostics`를 검증합니다.
+
 ## Demo Flow
 
 ```bash
@@ -100,6 +108,7 @@ pnpm typecheck
 pnpm build
 pnpm test
 pnpm demo:smoke
+pnpm ops:smoke
 ```
 
 이 preset은 실행 가능한 local/in-memory provider만 포함합니다. production auth provider, persistent storage migration, external billing webhook routing, multi-region deployment 자동화는 명시적으로 포함하지 않습니다.

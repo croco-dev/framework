@@ -511,7 +511,9 @@ describe("E2E: generate()", () => {
       build: "turbo build",
       test: "turbo test",
       "demo:seed": "pnpm --filter @test/api-server demo:seed",
-      "demo:smoke": "pnpm contract:check && pnpm --filter @test/api-server demo:smoke",
+      "demo:smoke":
+        "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+      "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
     });
     expect(apiPackageJson.dependencies).toMatchObject({
       "@croco/tenant-core": "^0.0.2",
@@ -524,9 +526,12 @@ describe("E2E: generate()", () => {
       "@croco/health-core": "^0.0.2",
       "@croco/diagnostics-core": "^0.0.2",
       "@croco/problems-core": "^0.0.2",
+      "@croco/ratelimit-core": "^0.0.2",
       "@croco/telemetry-sdk-node": "^0.0.2",
     });
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
+    expect(apiPackageJson.devDependencies?.["@croco/cli"]).toBe("^0.0.3");
+    expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
     expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
     expect(existsSync(join(testDir, "apps", "api-server", "src", "providerProfiles.ts"))).toBe(
       true,
@@ -534,6 +539,9 @@ describe("E2E: generate()", () => {
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "demo", "saasSmokeContract.ts")),
     ).toBe(true);
+    expect(existsSync(join(testDir, "apps", "api-server", "src", "demo", "ops-smoke.ts"))).toBe(
+      true,
+    );
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "controllers", "SaasController.ts")),
     ).toBe(true);

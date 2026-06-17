@@ -18,7 +18,12 @@ import {
   type UsageHistoryPeriod,
 } from "@croco/entitlements-core";
 import { ExecutionManagerImpl } from "@croco/execution-core";
-import { EventBusConfig, EventPublisher, type DomainEvent } from "@croco/events-core";
+import {
+  EventBusConfig,
+  EventBusStats,
+  EventPublisher,
+  type DomainEvent,
+} from "@croco/events-core";
 import { HealthCheckService } from "@croco/health-core";
 import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
 import {
@@ -201,31 +206,18 @@ class DemoNotificationService extends NotificationService {
   override async send(..._args: Parameters<NotificationService["send"]>): Promise<void> {}
 }
 
-class DemoEventPublisher extends EventPublisher {
-  constructor(private readonly demoEventBus: InMemoryEventBus) {
-    super();
-  }
-
-  override async publish(event: DomainEvent): Promise<void> {
-    await this.demoEventBus.publish(event);
-  }
-
-  async publishNow(event: DomainEvent): Promise<void> {
-    await this.publish(event);
-  }
-
-  override async publishMany(events: DomainEvent[]): Promise<void> {
-    for (const event of events) {
-      await this.publish(event);
-    }
-  }
+class DemoEventHandler {
+  handle(_event: DomainEvent): void {}
 }
 
 function createDemoEventPublisher(): EventPublisher {
-  const eventBusConfig = EventBusConfig.getInstance();
+  const eventBusConfig = new EventBusConfig();
   const eventBus = new InMemoryEventBus();
+  EventBusConfig.setInstance(eventBusConfig);
+  EventBusConfig.setStats(new EventBusStats());
   eventBusConfig.setEventBus(eventBus);
-  return new DemoEventPublisher(eventBus);
+  eventBusConfig.subscribe({ eventName: "*", handlerClass: DemoEventHandler });
+  return new EventPublisher(eventBusConfig);
 }
 
 export type SaasRuntime = {

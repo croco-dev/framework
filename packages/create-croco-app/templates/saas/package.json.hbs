@@ -11,7 +11,8 @@
     "contract:client": "NODE_PATH=./node_modules node ./node_modules/@croco/rpc-codegen/dist/cli.js --controllers 'apps/api-server/src/controllers/**/*.ts' --out libs/shared/provider-rpc/src",
     "codegen": "pnpm contract:client",
     "demo:seed": "pnpm --filter {{scope}}/api-server demo:seed",
-    "demo:smoke": "pnpm contract:check && pnpm --filter {{scope}}/api-server demo:smoke",
+    "demo:smoke": "pnpm contract:check && pnpm --filter {{scope}}/api-server demo:smoke && pnpm --filter {{scope}}/api-server ops:smoke",
+    "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
     "build": "turbo build",
     "test": "turbo test",
     "typecheck": "turbo typecheck"

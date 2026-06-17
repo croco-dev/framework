@@ -8,6 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "demo:seed": "tsx src/demo/seed.ts",
     "demo:smoke": "tsx src/demo/smoke.ts",
+    "ops:smoke": "tsx src/demo/ops-smoke.ts",
     "build": "tsup src/index.ts --format esm,cjs --clean --dts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -27,6 +28,7 @@
     "@croco/notifications-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
     "@croco/telemetry-sdk-node": "workspace:*",
     "@croco/tenant-core": "workspace:*",
     "@croco/transports-http": "workspace:*",
@@ -35,6 +37,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@croco/cli": "workspace:*",
     "@types/node": "^22",
     "tsup": "^8.5.1",
     "tsx": "^4.0.0",

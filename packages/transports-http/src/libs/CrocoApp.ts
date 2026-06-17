@@ -182,7 +182,9 @@ export class CrocoApp {
 
     const diagnosticsPolicy = resolveDiagnosticsEndpointPolicy(this.config.diagnostics);
     if (diagnosticsPolicy.exposure !== "off") {
-      const collector = diagnosticsPolicy.collector ?? createDefaultDiagnosticsCollector();
+      const collector =
+        diagnosticsPolicy.collector ??
+        createDefaultDiagnosticsCollector(diagnosticsPolicy.providers ?? []);
 
       const registerDiagnosticsRoute = (path: string): void => {
         this.hono.get(path, async (c) => {
@@ -356,23 +358,36 @@ export class CrocoApp {
  * 기본 의존성을 해석해 CrocoApp 인스턴스를 생성합니다.
  */
 export function createApp(config: AppConfig): CrocoApp {
-  return new CrocoApp(config, resolveLogger(), resolveErrorHandler(), resolveHealthCheckRegistry());
+  const logger = resolveLogger();
+
+  return new CrocoApp(config, logger, resolveErrorHandler(logger), resolveHealthCheckRegistry());
 }
 
 function resolveLogger(): ILogger {
-  if (!Container.has(LOGGER_TOKEN)) {
-    Container.set(LOGGER_TOKEN, Container.get(Logger));
+  const registeredLogger = Container.getOptional(LOGGER_TOKEN);
+  if (registeredLogger) {
+    return registeredLogger;
   }
 
-  return Container.get(LOGGER_TOKEN);
+  const logger = Container.has(Logger) ? Container.get(Logger) : new SilentLogger();
+  Container.set(LOGGER_TOKEN, logger);
+  return logger;
 }
 
-function resolveErrorHandler(): ErrorHandler {
-  return Container.get(ErrorHandler);
+function resolveErrorHandler(logger: ILogger): ErrorHandler {
+  const registeredErrorHandler = Container.getOptional(ErrorHandler);
+  if (registeredErrorHandler) {
+    return registeredErrorHandler;
+  }
+
+  return Container.set(ErrorHandler, new ErrorHandler(logger));
 }
 
 function resolveHealthCheckRegistry(): HealthCheckRegistry {
-  return Container.get(HealthCheckRegistry);
+  return (
+    Container.getOptional(HealthCheckRegistry) ??
+    Container.set(HealthCheckRegistry, new HealthCheckRegistry())
+  );
 }
 
 function createRouteCompileContainer(): NonNullable<CompileOptions["container"]> {
@@ -381,4 +396,18 @@ function createRouteCompileContainer(): NonNullable<CompileOptions["container"]>
       return Container.getOptional(type) ?? new type();
     },
   };
+}
+
+class SilentLogger implements ILogger {
+  debug(): void {}
+
+  info(): void {}
+
+  warn(): void {}
+
+  error(): void {}
+
+  child(): ILogger {
+    return this;
+  }
 }

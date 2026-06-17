@@ -125,6 +125,39 @@ describe("RateLimitMiddleware", () => {
       expect(rateLimitHeaders?.["X-RateLimit-Limit"]).toBeDefined();
       expect(rateLimitHeaders?.["X-RateLimit-Remaining"]).toBeDefined();
     });
+
+    it("should skip rate limiting when the skip predicate matches", async () => {
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("strict", 1, 60000),
+        skip: (ctx) => ctx.req.path === "/ops/health",
+      });
+
+      const ctx = {
+        req: {
+          method: "GET",
+          path: "/ops/health",
+          headers: { "x-forwarded-for": "127.0.0.1" },
+          url: "http://localhost/ops/health",
+        },
+        res: { status: 200, headers: {} },
+        raw: { header: () => {}, json: () => new Response() },
+        set: () => {},
+        get: () => undefined,
+        header: (name: string) => (name === "x-forwarded-for" ? "127.0.0.1" : undefined),
+      } as unknown as Parameters<typeof middleware>[0];
+
+      let nextCalls = 0;
+
+      await middleware(ctx, async () => {
+        nextCalls += 1;
+      });
+      await middleware(ctx, async () => {
+        nextCalls += 1;
+      });
+
+      expect(nextCalls).toBe(2);
+    });
   });
 
   describe("integration with CrocoApp", () => {

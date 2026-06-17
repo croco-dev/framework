@@ -1,22 +1,50 @@
 import "reflect-metadata";
 import {
+  createSlidingWindowPolicy,
+  RateLimiter,
+  RateLimitKeyBuilder,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import {
   bodyLimitMiddleware,
   corsMiddleware,
   createApp,
   mb,
+  type MiddlewareFunction,
+  rateLimitHttpMiddleware,
   securityHeadersMiddleware,
 } from "@croco/transports-http";
 import { JobsController } from "./controllers/JobsController";
 import { OperationsController } from "./controllers/OperationsController";
 import { SaasController } from "./controllers/SaasController";
+import { defaultSaasRuntime } from "./saasDemo";
+
+const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/diagnostics"]);
 
 export function createCrocoApp() {
+  const rateLimiter = new RateLimiter(
+    new SlidingWindowInMemoryStore(),
+    new RateLimitKeyBuilder(["ip"]),
+  );
+
   return createApp({
     controllers: [OperationsController, JobsController, SaasController],
+    diagnostics: {
+      providers: defaultSaasRuntime.diagnosticsCollector.getProviders(),
+    },
     middlewares: [
       securityHeadersMiddleware(),
       corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
       bodyLimitMiddleware({ limit: mb(1) }),
+      createApiRateLimitMiddleware(rateLimiter),
     ],
+  });
+}
+
+function createApiRateLimitMiddleware(rateLimiter: RateLimiter): MiddlewareFunction {
+  return rateLimitHttpMiddleware({
+    rateLimiter,
+    policy: createSlidingWindowPolicy("api", 100, 60_000),
+    skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path),
   });
 }

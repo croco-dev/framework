@@ -33,6 +33,12 @@ title: "DiagnosticsEndpointOptions"
 
 ***
 
+### providers?
+
+> `readonly` `optional` **providers**: readonly `DiagnosticsProvider`[]
+
+***
+
 ### recentErrorLimit?
 
 > `readonly` `optional` **recentErrorLimit**: `number`

@@ -1,64 +1,29 @@
 import { defineCommand } from "citty";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import {
+  DEFAULT_TOKEN_HEADER,
+  formatOpsStatusReport,
+  getOpsStatusExitCode,
+  parseOpsTimeoutMs,
+  runOpsCheck,
+  runOpsStatus,
+} from "../libs/ops.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
-const DEFAULT_TIMEOUT_MS = 5000;
-const DEFAULT_TOKEN_HEADER = "X-Diagnostics-Token";
-const OPS_ENDPOINTS = [
-  { name: "health", path: "/health" },
-  { name: "ready", path: "/ready" },
-  { name: "diagnostics", path: "/diagnostics" },
-  { name: "metrics", path: "/metrics" },
-] as const;
+export {
+  formatOpsStatusReport,
+  getOpsStatusExitCode,
+  runOpsCheck,
+  runOpsStatus,
+} from "../libs/ops.js";
 
-export type OpsEndpointName = (typeof OPS_ENDPOINTS)[number]["name"];
-
-export type OpsEndpointSnapshot = {
-  readonly name: OpsEndpointName;
-  readonly url: string;
-  readonly httpStatus: number | null;
-  readonly ok: boolean;
-  readonly body: unknown;
-  readonly error?: string;
-};
-
-export type OpsStatusSummary = "healthy" | "degraded" | "unhealthy";
-
-export type OpsStatusReport = {
-  readonly target: string;
-  readonly timestamp: string;
-  readonly summary: OpsStatusSummary;
-  readonly endpoints: readonly OpsEndpointSnapshot[];
-};
-
-export type OpsStatusFetch = (input: string, init?: RequestInit) => Promise<Response>;
-
-export type RunOpsStatusOptions = {
-  readonly fetch?: OpsStatusFetch;
-  readonly timeoutMs?: number;
-  readonly token?: string;
-  readonly tokenHeader?: string;
-};
-
-class InvalidOpsTimeoutProblem extends Problem {
-  constructor(value: unknown) {
-    super(
-      "cli/invalid-ops-timeout",
-      ProblemCategory.BadRequest,
-      `Invalid timeout: ${String(value)}`,
-    );
-  }
-}
-
-class InvalidOpsTargetUrlProblem extends Problem {
-  constructor(target: string) {
-    super(
-      "cli/invalid-ops-target-url",
-      ProblemCategory.BadRequest,
-      `Invalid Croco app URL: ${target}`,
-    );
-  }
-}
+export type {
+  OpsEndpointName,
+  OpsEndpointSnapshot,
+  OpsStatusFetch,
+  OpsStatusReport,
+  OpsStatusSummary,
+  RunOpsStatusOptions,
+} from "../libs/ops.js";
 
 export const opsStatus = defineCommand({
   meta: {
@@ -94,7 +59,54 @@ export const opsStatus = defineCommand({
     const report = await runOpsStatus(String(args.url ?? ""), {
       token: typeof args.token === "string" ? args.token : undefined,
       tokenHeader: typeof args.tokenHeader === "string" ? args.tokenHeader : DEFAULT_TOKEN_HEADER,
-      timeoutMs: parseTimeoutMs(args.timeout),
+      timeoutMs: parseOpsTimeoutMs(args.timeout),
+    });
+
+    console.log(args.json ? JSON.stringify(report, null, 2) : formatOpsStatusReport(report));
+    process.exitCode = getOpsStatusExitCode(report.summary);
+  },
+});
+
+export const opsCheck = defineCommand({
+  meta: {
+    name: "check",
+    description: "Check Croco operational endpoints for CI",
+  },
+  args: {
+    ...GLOBAL_OPTIONS,
+    url: {
+      type: "positional",
+      required: true,
+      description: "Croco app base URL",
+    },
+    json: {
+      type: "boolean",
+      description: "Print the machine-readable check report",
+    },
+    metrics: {
+      type: "boolean",
+      description: "Also check the optional /metrics endpoint",
+    },
+    token: {
+      type: "string",
+      description: "Diagnostics token",
+    },
+    tokenHeader: {
+      type: "string",
+      default: DEFAULT_TOKEN_HEADER,
+      description: "Diagnostics token header",
+    },
+    timeout: {
+      type: "string",
+      description: "Per-endpoint timeout in milliseconds",
+    },
+  },
+  async run({ args }) {
+    const report = await runOpsCheck(String(args.url ?? ""), {
+      includeMetrics: Boolean(args.metrics),
+      token: typeof args.token === "string" ? args.token : undefined,
+      tokenHeader: typeof args.tokenHeader === "string" ? args.tokenHeader : DEFAULT_TOKEN_HEADER,
+      timeoutMs: parseOpsTimeoutMs(args.timeout),
     });
 
     console.log(args.json ? JSON.stringify(report, null, 2) : formatOpsStatusReport(report));
@@ -111,223 +123,7 @@ export const ops = defineCommand({
     ...GLOBAL_OPTIONS,
   },
   subCommands: {
+    check: opsCheck,
     status: opsStatus,
   },
 });
-
-export async function runOpsStatus(
-  target: string,
-  options: RunOpsStatusOptions = {},
-): Promise<OpsStatusReport> {
-  const targetUrl = parseTargetUrl(target);
-  const fetchEndpoint = options.fetch ?? fetch;
-  const timeoutMs = parseTimeoutMs(options.timeoutMs ?? DEFAULT_TIMEOUT_MS) ?? DEFAULT_TIMEOUT_MS;
-  const tokenHeader = options.tokenHeader ?? DEFAULT_TOKEN_HEADER;
-  const snapshots = await Promise.all(
-    OPS_ENDPOINTS.map(async (endpoint) =>
-      fetchOperationalEndpoint({
-        endpoint,
-        fetchEndpoint,
-        targetUrl,
-        timeoutMs,
-        token: options.token,
-        tokenHeader,
-      }),
-    ),
-  );
-
-  return {
-    target: targetUrl.toString(),
-    timestamp: new Date().toISOString(),
-    summary: summarizeOpsStatus(snapshots),
-    endpoints: snapshots,
-  };
-}
-
-export function formatOpsStatusReport(report: OpsStatusReport): string {
-  const lines = [
-    `Croco ops status: ${report.summary}`,
-    `Target: ${report.target}`,
-    `Checked: ${report.timestamp}`,
-    "",
-  ];
-
-  for (const endpoint of report.endpoints) {
-    const httpStatus = endpoint.httpStatus === null ? "ERR" : String(endpoint.httpStatus);
-    const status = describeEndpointStatus(endpoint);
-    const suffix = endpoint.error ? ` - ${endpoint.error}` : "";
-    lines.push(`${endpoint.name.padEnd(11)} ${httpStatus.padEnd(3)} ${status}${suffix}`);
-  }
-
-  return lines.join("\n");
-}
-
-export function getOpsStatusExitCode(summary: OpsStatusSummary): number {
-  return summary === "healthy" ? 0 : 1;
-}
-
-function parseTimeoutMs(value: unknown): number | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new InvalidOpsTimeoutProblem(value);
-  }
-
-  return parsed;
-}
-
-function parseTargetUrl(target: string): URL {
-  try {
-    return new URL(target);
-  } catch {
-    throw new InvalidOpsTargetUrlProblem(target);
-  }
-}
-
-async function fetchOperationalEndpoint({
-  endpoint,
-  fetchEndpoint,
-  targetUrl,
-  timeoutMs,
-  token,
-  tokenHeader,
-}: {
-  readonly endpoint: (typeof OPS_ENDPOINTS)[number];
-  readonly fetchEndpoint: OpsStatusFetch;
-  readonly targetUrl: URL;
-  readonly timeoutMs: number;
-  readonly token?: string;
-  readonly tokenHeader: string;
-}): Promise<OpsEndpointSnapshot> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const headers = new Headers({ Accept: "application/json" });
-
-  if (token && endpoint.name === "diagnostics") {
-    headers.set(tokenHeader, token);
-  }
-
-  const url = resolveEndpointUrl(targetUrl, endpoint.path);
-
-  try {
-    const response = await fetchEndpoint(url, {
-      headers,
-      signal: controller.signal,
-    });
-    const body = await readResponseBody(response);
-
-    return {
-      name: endpoint.name,
-      url,
-      httpStatus: response.status,
-      ok: response.ok,
-      body,
-    };
-  } catch (error) {
-    return {
-      name: endpoint.name,
-      url,
-      httpStatus: null,
-      ok: false,
-      body: null,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function resolveEndpointUrl(targetUrl: URL, path: string): string {
-  const url = new URL(targetUrl.toString());
-  const basePath = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
-  url.pathname = `${basePath}${path}`;
-  url.search = "";
-  url.hash = "";
-  return url.toString();
-}
-
-async function readResponseBody(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (text.length === 0) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
-  }
-}
-
-function summarizeOpsStatus(endpoints: readonly OpsEndpointSnapshot[]): OpsStatusSummary {
-  if (endpoints.some((endpoint) => isEndpointUnhealthy(endpoint))) {
-    return "unhealthy";
-  }
-
-  if (endpoints.some((endpoint) => isEndpointDegraded(endpoint))) {
-    return "degraded";
-  }
-
-  return "healthy";
-}
-
-function isEndpointUnhealthy(endpoint: OpsEndpointSnapshot): boolean {
-  if (!endpoint.ok) {
-    return endpoint.name === "health" || endpoint.name === "ready";
-  }
-
-  const status = readStringField(endpoint.body, "status");
-  const summary = readStringField(endpoint.body, "summary");
-
-  return status === "down" || status === "unhealthy" || summary === "issues_detected";
-}
-
-function isEndpointDegraded(endpoint: OpsEndpointSnapshot): boolean {
-  if (!endpoint.ok) {
-    return true;
-  }
-
-  const status = readStringField(endpoint.body, "status");
-  const summary = readStringField(endpoint.body, "summary");
-
-  return status === "degraded" || summary === "degraded";
-}
-
-function describeEndpointStatus(endpoint: OpsEndpointSnapshot): string {
-  if (!endpoint.ok) {
-    return "unavailable";
-  }
-
-  const status = readStringField(endpoint.body, "status");
-  const summary = readStringField(endpoint.body, "summary");
-
-  if (status) {
-    return status;
-  }
-
-  if (summary) {
-    return summary;
-  }
-
-  if (endpoint.name === "metrics") {
-    return "available";
-  }
-
-  return "ok";
-}
-
-function readStringField(value: unknown, key: string): string | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  const field = value[key];
-  return typeof field === "string" ? field : undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
