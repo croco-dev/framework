@@ -24,7 +24,7 @@ describe("noninteractive CLI option validation", () => {
     const help = createProgram().helpInformation();
 
     expect(help).toContain("Create a pnpm-based Croco application");
-    expect(help).toContain("blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|saas");
+    expect(help).toContain("blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|saas|ai-saas");
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
     expect(help).not.toContain("--package-manager");
@@ -271,6 +271,28 @@ describe("noninteractive CLI option validation", () => {
     });
   });
 
+  it("normalizes safe noninteractive defaults for AI SaaS projects", () => {
+    const cliOptions = parseCliOptions("my-ai-saas", {
+      preset: "ai-saas",
+      scope: "@test",
+      install: false,
+      git: false,
+      agentRules: false,
+    });
+
+    expect(normalizeNonInteractiveOptions(cliOptions)).toMatchObject({
+      projectName: "my-ai-saas",
+      scope: "@test",
+      preset: "ai-saas",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+  });
+
   it("rejects configurable API flags for SaaS projects", () => {
     const cliOptions = parseCliOptions("my-saas", {
       preset: "saas",
@@ -309,4 +331,18 @@ describe("noninteractive CLI option validation", () => {
       expect(() => validateCliOptions(cliOptions)).toThrow(expectedMessage);
     },
   );
+
+  it("rejects configurable API flags for AI SaaS projects", () => {
+    const cliOptions = parseCliOptions("my-ai-saas", {
+      preset: "ai-saas",
+      scope: "@test",
+      api: "trpc",
+      install: false,
+      git: false,
+    });
+
+    expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
+      "--api is not supported with the ai-saas preset",
+    );
+  });
 });

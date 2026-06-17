@@ -32,6 +32,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, "..");
 const cliPath = join(rootDir, "packages", "create-croco-app", "dist", "index.js");
+const turboPath = join(rootDir, "node_modules", "turbo", "bin", "turbo");
 const smokeRoot = mkdtempSync(join(tmpdir(), "croco-generated-app-smoke-"));
 const commandTimeoutMs = 600_000;
 const loadViteConfigScript = [
@@ -252,6 +253,24 @@ const smokeCases: readonly SmokeCase[] = [
       { label: "demo flow", args: ["demo:smoke"] },
     ],
   },
+  {
+    name: "ai-saas-golden-path",
+    args: ["--preset", "ai-saas", "--scope", "@smoke", "--no-install", "--no-git"],
+    validations: [
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "test", args: ["test"] },
+      {
+        label: "Contract snapshot",
+        args: ["contract:snapshot"],
+        paths: ["contract-graph.snapshot.json"],
+      },
+      { label: "Contract diff", args: ["contract:diff"] },
+      { label: "OpenAPI contract", args: ["contract:openapi"] },
+      { label: "AI demo flow", args: ["ai:smoke"] },
+      { label: "full demo flow", args: ["demo:smoke"] },
+    ],
+  },
 ];
 
 try {
@@ -259,14 +278,17 @@ try {
   printSmokeCoverageSummary(smokeCases);
 
   run(
-    "pnpm",
+    process.execPath,
     [
+      turboPath,
       "build",
       "--filter=@croco/cli...",
       "--filter=create-croco-app...",
       "--filter=@croco/frontend-cloudflare...",
       "--filter=@croco/frontend-react...",
       "--filter=@croco/frontend-vite...",
+      "--filter=@croco/llm-core...",
+      "--filter=@croco/llm-metering...",
       "--filter=@croco/meta-vite...",
       "--filter=@croco/lifecycle-core...",
       "--filter=@croco/openapi-spec...",
@@ -526,7 +548,10 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
     "@croco/health-core": `file:${packWorkspacePackage("@croco/health-core", "health-core", packDir)}`,
     "@croco/lifecycle-core": `file:${packWorkspacePackage("@croco/lifecycle-core", "lifecycle-core", packDir)}`,
+    "@croco/llm-core": `file:${packWorkspacePackage("@croco/llm-core", "llm-core", packDir)}`,
+    "@croco/llm-metering": `file:${packWorkspacePackage("@croco/llm-metering", "llm-metering", packDir)}`,
     "@croco/meta-vite": `file:${packWorkspacePackage("@croco/meta-vite", "meta-vite", packDir)}`,
+    "@croco/metering-core": `file:${packWorkspacePackage("@croco/metering-core", "metering-core", packDir)}`,
     "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
     "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
     "@croco/presentation-preset": `file:${packWorkspacePackage("@croco/presentation-preset", "presentation-preset", packDir)}`,
@@ -535,6 +560,7 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/protocols-rest": `file:${packWorkspacePackage("@croco/protocols-rest", "protocols-rest", packDir)}`,
     "@croco/ratelimit-core": `file:${packWorkspacePackage("@croco/ratelimit-core", "ratelimit-core", packDir)}`,
     "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
+    "@croco/telemetry-api": `file:${packWorkspacePackage("@croco/telemetry-api", "telemetry-api", packDir)}`,
     "@croco/telemetry-sdk-node": `file:${packWorkspacePackage("@croco/telemetry-sdk-node", "telemetry-sdk-node", packDir)}`,
     "@croco/transports-http": `file:${packWorkspacePackage("@croco/transports-http", "transports-http", packDir)}`,
   };
