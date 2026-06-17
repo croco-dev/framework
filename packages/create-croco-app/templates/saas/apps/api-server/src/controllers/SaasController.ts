@@ -1,8 +1,9 @@
 import { Controller, Get, Post, ResponseSchema } from "@croco/protocols-rest";
 import { saasDemoSnapshotSchema } from "./schemas";
 
-async function assertDemoEndpointsEnabled(): Promise<void> {
-  if (process.env.NODE_ENV === "production") {
+export async function assertDemoEndpointsEnabled(): Promise<void> {
+  const { isSaasDemoEndpointEnabled } = await import("../providerProfiles");
+  if (!isSaasDemoEndpointEnabled()) {
     const { DemoEndpointDisabledProblem } = await import("../problems");
     throw new DemoEndpointDisabledProblem();
   }

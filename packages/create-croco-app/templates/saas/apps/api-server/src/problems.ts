@@ -5,7 +5,11 @@ export class DemoEndpointDisabledProblem extends Problem {
   readonly category = ProblemCategory.Forbidden;
 
   constructor() {
-    super(undefined, undefined, "SaaS demo endpoints are disabled in production.");
+    super(
+      undefined,
+      undefined,
+      "SaaS demo endpoints require SAAS_DEMO_ENDPOINTS_ENABLED=true and remain disabled in production.",
+    );
   }
 }
 

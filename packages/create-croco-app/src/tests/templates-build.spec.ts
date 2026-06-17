@@ -197,6 +197,8 @@ function checkSaasStructure() {
   checkFileExists("saas", "README.md.hbs");
   checkFileExists("saas", "apps", "api-server", "package.json.hbs");
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "demo", "saasSmokeContract.ts");
   checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "OperationsController.ts");
@@ -256,6 +258,14 @@ function checkSaasStructure() {
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EntitlementManager/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /BillingService/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /SeatLimitChecker/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "providerProfiles.ts"],
+    /drizzle-polar-upstash/,
+  );
+  checkFileContains("saas", ["README.md.hbs"], /SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter/);
+  checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "controllers", "OperationsController.ts"],

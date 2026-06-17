@@ -1,8 +1,9 @@
-import { assertSaasDemoSnapshot, runSaasDemoFlow } from "../saasDemo";
+import { runSaasDemoFlow } from "../saasDemo";
+import { assertSaasSmokeContract } from "./saasSmokeContract";
 
 async function main(): Promise<void> {
   const snapshot = await runSaasDemoFlow();
-  assertSaasDemoSnapshot(snapshot);
+  assertSaasSmokeContract(snapshot);
 
   console.log("SaaS golden path smoke passed");
 }

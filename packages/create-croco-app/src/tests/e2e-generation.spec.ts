@@ -515,6 +515,12 @@ describe("E2E: generate()", () => {
     });
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
     expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
+    expect(existsSync(join(testDir, "apps", "api-server", "src", "providerProfiles.ts"))).toBe(
+      true,
+    );
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "demo", "saasSmokeContract.ts")),
+    ).toBe(true);
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "controllers", "SaasController.ts")),
     ).toBe(true);

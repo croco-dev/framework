@@ -1,5 +1,12 @@
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
+import { assertDemoEndpointsEnabled } from "../controllers/SaasController";
+import { DemoEndpointDisabledProblem } from "../problems";
+import {
+  getSaasProviderProfile,
+  isSaasDemoEndpointEnabled,
+  SAAS_DEMO_ENDPOINTS_ENABLED_ENV,
+} from "../providerProfiles";
 import { assertSaasDemoSnapshot, createSaasRuntime, runSaasDemoFlow } from "../saasDemo";
 
 describe("SaaS golden path demo", () => {
@@ -13,6 +20,10 @@ describe("SaaS golden path demo", () => {
     expect(snapshot.tenant.slug).toBe("acme");
     expect(snapshot.tenant.status).toBe("trial");
     expect(snapshot.membership.ownerRole).toBe("owner");
+    expect(snapshot.contract).toEqual({
+      version: "saas-smoke-contract/v1",
+      providerProfile: "in-memory",
+    });
   });
 
   it("creates invitation and member membership", async () => {
@@ -22,6 +33,19 @@ describe("SaaS golden path demo", () => {
     expect(snapshot.invitation.invitedUserId).toBe("user_member");
     expect(snapshot.membership.memberRole).toBe("member");
     expect(snapshot.membership.memberCount).toBe(2);
+  });
+
+  it("enforces membership seats from entitlement quota", async () => {
+    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+
+    expect(snapshot.membership.seatLimit).toMatchObject({
+      quota: 2,
+      usage: 3,
+      exceeded: true,
+      remaining: 0,
+      failureCode: "SEAT_LIMIT_EXCEEDED",
+      rejectedUserId: "user_over_limit",
+    });
   });
 
   it("allows configured permission for invited member", async () => {
@@ -55,6 +79,7 @@ describe("SaaS golden path demo", () => {
       remaining: 97,
       planId: "team",
     });
+    expect(snapshot.billing.entitlementPlanId).toBe("team");
   });
 
   it("exposes health and diagnostics endpoints", async () => {
@@ -65,5 +90,60 @@ describe("SaaS golden path demo", () => {
       diagnosticsSummary: "all_healthy",
     });
     expect(() => assertSaasDemoSnapshot(snapshot)).not.toThrow();
+  });
+
+  it("documents supported and provider-backed profile seams", () => {
+    expect(getSaasProviderProfile("in-memory")).toMatchObject({
+      status: "supported",
+      env: expect.arrayContaining([SAAS_DEMO_ENDPOINTS_ENABLED_ENV]),
+      commands: expect.arrayContaining(["pnpm demo:smoke"]),
+    });
+    expect(getSaasProviderProfile("drizzle-polar-upstash")).toMatchObject({
+      status: "documented-seam",
+      packages: expect.arrayContaining([
+        "@croco/billing-polar",
+        "@croco/metering-upstash",
+        "@croco/ratelimit-upstash",
+        "@croco/tasks-qstash",
+        "@croco/tx-drizzle",
+      ]),
+      env: expect.arrayContaining(["DATABASE_URL", "POLAR_ACCESS_TOKEN", "UPSTASH_REDIS_REST_URL"]),
+    });
+  });
+
+  it("keeps demo endpoints closed unless explicitly enabled outside production", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousFlag = process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
+
+    try {
+      delete process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
+      process.env.NODE_ENV = "development";
+      expect(isSaasDemoEndpointEnabled()).toBe(false);
+      await expect(assertDemoEndpointsEnabled()).rejects.toBeInstanceOf(
+        DemoEndpointDisabledProblem,
+      );
+
+      process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = "true";
+      expect(isSaasDemoEndpointEnabled()).toBe(true);
+      await expect(assertDemoEndpointsEnabled()).resolves.toBeUndefined();
+
+      process.env.NODE_ENV = "production";
+      expect(isSaasDemoEndpointEnabled()).toBe(false);
+      await expect(assertDemoEndpointsEnabled()).rejects.toBeInstanceOf(
+        DemoEndpointDisabledProblem,
+      );
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+
+      if (previousFlag === undefined) {
+        delete process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
+      } else {
+        process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = previousFlag;
+      }
+    }
   });
 });
