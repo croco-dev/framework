@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { contractsCheck } from "./contractsCheck.js";
+import { contractsDiff } from "./contractsDiff.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 export const contracts = defineCommand({
@@ -12,5 +13,6 @@ export const contracts = defineCommand({
   },
   subCommands: {
     check: contractsCheck,
+    diff: contractsDiff,
   },
 });

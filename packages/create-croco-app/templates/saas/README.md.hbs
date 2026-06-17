@@ -32,11 +32,13 @@ seed는 다음 순서로 실행됩니다.
 
 ```bash
 pnpm contract:check
+pnpm contract:snapshot
+pnpm contract:diff
 pnpm contract:openapi
 pnpm contract:client
 ```
 
-컨트롤러 계약은 `apps/api-server/src/controllers/**/*.ts`에서 생성됩니다. `contract:client`는 `libs/shared/provider-rpc/src`에 fetch client를 생성합니다.
+컨트롤러 계약은 `apps/api-server/src/controllers/**/*.ts`에서 생성됩니다. `contract:snapshot`은 release gate에서 사용할 `contract-graph.snapshot.json`을 생성하고, `contract:diff`는 커밋된 스냅샷과 현재 컨트롤러 계약의 breaking drift를 비교합니다. `contract:client`는 `libs/shared/provider-rpc/src`에 fetch client를 생성합니다.
 
 ## Validation
 

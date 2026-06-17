@@ -1,69 +1,198 @@
-import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
-import { createRequire } from "node:module";
-import { basename, dirname, join } from "node:path";
+import { dirname, resolve } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { defineCommand } from "citty";
+import {
+  createContractGraphSnapshot,
+  formatContractDiagnostic,
+  getContractGraphErrors,
+  stringifyContractGraphSnapshot,
+  type ContractGraph,
+} from "@croco/protocols-core";
 import { GLOBAL_OPTIONS } from "./options.js";
 
-const require = createRequire(import.meta.url);
+export type ContractGraphLoader = (glob: string) => Promise<ContractGraph>;
 
-export type ContractsCheckSpawn = (
-  command: string,
-  args: string[],
-  options: SpawnOptions,
-) => ChildProcess;
+export type ContractsCheckIo = {
+  readonly stdout: (message: string) => void;
+  readonly stderr: (message: string) => void;
+  readonly writeFile: (path: string, content: string) => void;
+  readonly mkdir: (path: string) => void;
+  readonly cwd: string;
+};
+
+type ContractsCheckOptions = {
+  readonly controllers: string;
+  readonly json: boolean;
+  readonly out: string | null;
+};
+
+type ContractsCheckParseResult =
+  | { readonly kind: "help" }
+  | { readonly kind: "invalid"; readonly message: string }
+  | { readonly kind: "run"; readonly options: ContractsCheckOptions };
+
+const defaultIo: ContractsCheckIo = {
+  stdout: (message) => console.log(message),
+  stderr: (message) => console.error(message),
+  writeFile: (path, content) => writeFileSync(path, content),
+  mkdir: (path) => mkdirSync(path, { recursive: true }),
+  cwd: process.cwd(),
+};
 
 export const contractsCheck = defineCommand({
   meta: {
     name: "check",
-    description: "Validate the canonical contract graph without generating artifacts",
+    description: "Validate and snapshot the canonical contract graph",
   },
   args: {
     ...GLOBAL_OPTIONS,
   },
-  run({ rawArgs }) {
-    runContractsCheck(rawArgs);
+  async run({ rawArgs }) {
+    process.exitCode = await runContractsCheck(rawArgs);
   },
 });
 
-export function runContractsCheck(
-  args: string[],
+export async function runContractsCheck(
+  args: readonly string[],
   options: {
-    readonly resolveBin?: () => string;
-    readonly spawn?: ContractsCheckSpawn;
-    readonly setExitCode?: (code: number) => void;
-    readonly writeError?: (message: string) => void;
+    readonly loadContractGraph?: ContractGraphLoader;
+    readonly io?: Partial<ContractsCheckIo>;
   } = {},
-): void {
-  const resolveBin = options.resolveBin ?? resolveRpcCodegenBin;
-  const spawnChild = options.spawn ?? spawn;
-  const setExitCode =
-    options.setExitCode ??
-    ((code: number) => {
-      process.exitCode = code;
-    });
-  const writeError = options.writeError ?? ((message: string) => console.error(message));
-  const child = spawnChild(process.execPath, [resolveBin(), "--check", ...args], {
-    stdio: "inherit",
-  });
+): Promise<number> {
+  const parsed = parseContractsCheckArgs(args);
+  const io = { ...defaultIo, ...options.io };
 
-  child.on("exit", (code) => {
-    setExitCode(code ?? 1);
-  });
+  if (parsed.kind === "help") {
+    printContractsCheckHelp(io);
+    return 0;
+  }
 
-  child.on("error", (error) => {
-    writeError(error.message);
-    setExitCode(1);
-  });
+  if (parsed.kind === "invalid") {
+    io.stderr(parsed.message);
+    printContractsCheckHelp(io);
+    return 1;
+  }
+
+  const loadContractGraph = options.loadContractGraph ?? loadContractGraphFromRpcCodegen;
+  const graph = await loadContractGraph(parsed.options.controllers);
+  const snapshot = createContractGraphSnapshot(graph);
+  const snapshotJson = stringifyContractGraphSnapshot(snapshot);
+
+  if (parsed.options.json) {
+    if (parsed.options.out) {
+      writeOutputFile(parsed.options.out, snapshotJson, io);
+      io.stdout(`Wrote contract graph snapshot to ${resolvePath(parsed.options.out, io.cwd)}.`);
+    } else {
+      io.stdout(snapshotJson.trimEnd());
+    }
+  } else {
+    reportContractDiagnostics(graph, io);
+  }
+
+  const errors = getContractGraphErrors(graph);
+
+  if (errors.length > 0) {
+    if (!parsed.options.json) {
+      io.stdout(`Contract graph check failed with ${errors.length} error(s).`);
+    }
+
+    return 1;
+  }
+
+  if (!parsed.options.json) {
+    io.stdout(
+      `Contract graph check passed for ${graph.routes.length} route(s) across ${graph.controllers.length} controller(s).`,
+    );
+  }
+
+  return 0;
 }
 
-export function resolveRpcCodegenBin(): string {
-  return resolveRpcCodegenBinFromEntry(require.resolve("@croco/rpc-codegen"));
+export function parseContractsCheckArgs(args: readonly string[]): ContractsCheckParseResult {
+  if (args.includes("--help") || args.includes("-h")) {
+    return { kind: "help" };
+  }
+
+  const controllers = getFlagValue(args, "--controllers") ?? getFirstPosition(args);
+  const out = getFlagValue(args, "--out");
+
+  if (!controllers) {
+    return {
+      kind: "invalid",
+      message:
+        "Missing controller glob. Pass --controllers <glob> or a positional controller glob.",
+    };
+  }
+
+  return {
+    kind: "run",
+    options: {
+      controllers,
+      out,
+      json: args.includes("--json") || out !== null,
+    },
+  };
 }
 
-export function resolveRpcCodegenBinFromEntry(entry: string): string {
-  const entryDir = dirname(entry);
+function printContractsCheckHelp(io: ContractsCheckIo): void {
+  io.stdout(`Usage: croco contracts check --controllers <glob> [--json] [--out <path>]
+       croco contracts check <glob> [--json] [--out <path>]
 
-  return basename(entryDir) === "src"
-    ? join(dirname(entryDir), "dist", "cli.js")
-    : join(entryDir, "cli.js");
+Options:
+  --controllers <glob>  Controller files to load
+  --json                Print a stable ContractGraph snapshot JSON report
+  --out <path>          Write the stable snapshot JSON report to a file
+  --help, -h            Show this help message`);
+}
+
+function reportContractDiagnostics(graph: ContractGraph, io: ContractsCheckIo): void {
+  for (const diagnostic of graph.diagnostics) {
+    io.stdout(formatContractDiagnostic(diagnostic));
+  }
+}
+
+async function loadContractGraphFromRpcCodegen(glob: string): Promise<ContractGraph> {
+  const { loadContractGraph } = await import("@croco/rpc-codegen");
+
+  return loadContractGraph(glob);
+}
+
+function writeOutputFile(path: string, content: string, io: ContractsCheckIo): void {
+  const resolvedPath = resolvePath(path, io.cwd);
+  io.mkdir(dirname(resolvedPath));
+  io.writeFile(resolvedPath, content);
+}
+
+function resolvePath(path: string, cwd: string): string {
+  return resolve(cwd, path);
+}
+
+function getFlagValue(args: readonly string[], flag: string): string | null {
+  const index = args.indexOf(flag);
+  const value = index >= 0 ? args[index + 1] : undefined;
+
+  return value && !value.startsWith("--") ? value : null;
+}
+
+function getFirstPosition(args: readonly string[]): string | null {
+  const valueFlags = new Set(["--controllers", "--out"]);
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (!arg) {
+      continue;
+    }
+
+    if (valueFlags.has(arg)) {
+      index += 1;
+      continue;
+    }
+
+    if (!arg.startsWith("-")) {
+      return arg;
+    }
+  }
+
+  return null;
 }

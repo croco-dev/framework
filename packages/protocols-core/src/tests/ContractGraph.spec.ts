@@ -8,6 +8,11 @@ import {
   ContractGraphDiagnosticError,
   formatContractDiagnostic,
 } from "../libs/ContractGraph";
+import { diffContractGraphSnapshots } from "../libs/ContractGraphDiff";
+import {
+  createContractGraphSnapshot,
+  stringifyContractGraphSnapshot,
+} from "../libs/ContractGraphSnapshot";
 import {
   Body,
   Controller,
@@ -15,6 +20,7 @@ import {
   Param,
   Post,
   Query,
+  ResponseSchema,
   Roles,
   UseGuards,
 } from "./helpers/test-decorators";
@@ -318,5 +324,348 @@ describe("buildContractGraph", () => {
       }),
     ]);
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should create byte-stable sorted JSON snapshots for the same controller metadata", () => {
+    @Controller("/admin")
+    class AdminController {
+      @Get("/")
+      listAdmins(): void {}
+    }
+
+    @Controller("/users")
+    class UsersController {
+      @Post("/")
+      createUser(
+        @Body(z.object({ email: z.string().optional(), name: z.string() }))
+        _body: { name: string; email?: string },
+      ): void {}
+
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const first = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(buildContractGraph([UsersController, AdminController])),
+    );
+    const second = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(buildContractGraph([AdminController, UsersController])),
+    );
+    const snapshot = JSON.parse(first);
+
+    expect(first).toBe(second);
+    expect(snapshot).toMatchObject({
+      snapshotVersion: "croco.contract-graph.snapshot.v1",
+      graphVersion: "croco.contract-graph.v1",
+      controllerCount: 2,
+      routeCount: 3,
+      operationIds: [
+        "AdminController_listAdmins",
+        "UsersController_createUser",
+        "UsersController_getUser",
+      ],
+    });
+  });
+
+  it("should classify added routes as non-breaking and removed routes as breaking", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Get("/")
+        listUsers(): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Get("/")
+        listUsers(): void {}
+
+        @Post("/")
+        createUser(@Body(z.object({ name: z.string() })) _body: { name: string }): void {}
+      }
+
+      return UsersController;
+    })();
+    const baseline = createContractGraphSnapshot(buildContractGraph([BaselineController]));
+    const current = createContractGraphSnapshot(buildContractGraph([CurrentController]));
+
+    const additiveDiff = diffContractGraphSnapshots(baseline, current);
+    const removalDiff = diffContractGraphSnapshots(current, baseline);
+
+    expect(additiveDiff.hasBreakingChanges).toBe(false);
+    expect(additiveDiff.nonBreakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-route-added",
+        routeId: "UsersController.createUser",
+      }),
+    ]);
+    expect(removalDiff.hasBreakingChanges).toBe(true);
+    expect(removalDiff.breakingChanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "contract-route-removed",
+          routeId: "UsersController.createUser",
+        }),
+        expect.objectContaining({
+          code: "contract-operation-id-removed",
+          operationId: "UsersController_createUser",
+        }),
+      ]),
+    );
+  });
+
+  it("should classify HTTP method and path changes as breaking", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Get("/:id")
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/:id/details")
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+
+    const diff = diffContractGraphSnapshots(
+      createContractGraphSnapshot(buildContractGraph([BaselineController])),
+      createContractGraphSnapshot(buildContractGraph([CurrentController])),
+    );
+
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "contract-route-method-path-changed",
+          routeId: "UsersController.getUser",
+        }),
+      ]),
+    );
+  });
+
+  it("should classify required request expansion as breaking and optional fields as non-breaking", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(@Body(z.object({ name: z.string() })) _body: { name: string }): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(
+          @Body(
+            z.object({
+              age: z.number().optional(),
+              email: z.string(),
+              name: z.string(),
+            }),
+          )
+          _body: { name: string; email: string; age?: number },
+        ): void {}
+      }
+
+      return UsersController;
+    })();
+
+    const diff = diffContractGraphSnapshots(
+      createContractGraphSnapshot(buildContractGraph([BaselineController])),
+      createContractGraphSnapshot(buildContractGraph([CurrentController])),
+    );
+
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-request-required-field-added",
+        fieldPath: "email",
+        location: "body",
+      }),
+    ]);
+    expect(diff.nonBreakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-request-optional-field-added",
+        fieldPath: "age",
+        location: "body",
+      }),
+    ]);
+  });
+
+  it("should classify request field schema changes as breaking", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(
+          @Body(
+            z.object({
+              age: z.string(),
+              profile: z.object({ nickname: z.string() }),
+            }),
+          )
+          _body: { age: string; profile: { nickname: string } },
+        ): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(
+          @Body(
+            z.object({
+              age: z.number(),
+              profile: z.object({ nickname: z.number() }),
+            }),
+          )
+          _body: { age: number; profile: { nickname: number } },
+        ): void {}
+      }
+
+      return UsersController;
+    })();
+
+    const diff = diffContractGraphSnapshots(
+      createContractGraphSnapshot(buildContractGraph([BaselineController])),
+      createContractGraphSnapshot(buildContractGraph([CurrentController])),
+    );
+
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "contract-request-field-schema-incompatible",
+          fieldPath: "age",
+          location: "body",
+        }),
+        expect.objectContaining({
+          code: "contract-request-field-schema-incompatible",
+          fieldPath: "profile.nickname",
+          location: "body",
+        }),
+      ]),
+    );
+  });
+
+  it("should classify top-level request schema changes as breaking", () => {
+    const BaselineController = (() => {
+      @Controller("/search")
+      class SearchController {
+        @Post("/")
+        search(@Body(z.string()) _body: string): void {}
+      }
+
+      return SearchController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/search")
+      class SearchController {
+        @Post("/")
+        search(@Body(z.number()) _body: number): void {}
+      }
+
+      return SearchController;
+    })();
+
+    const diff = diffContractGraphSnapshots(
+      createContractGraphSnapshot(buildContractGraph([BaselineController])),
+      createContractGraphSnapshot(buildContractGraph([CurrentController])),
+    );
+
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-request-schema-incompatible",
+        location: "body",
+        routeId: "SearchController.search",
+      }),
+    ]);
+  });
+
+  it("should classify response schema removals as incompatible", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @ResponseSchema(z.object({ id: z.string(), name: z.string() }))
+        @Get("/:id")
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @ResponseSchema(z.object({ id: z.string() }))
+        @Get("/:id")
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+
+    const diff = diffContractGraphSnapshots(
+      createContractGraphSnapshot(buildContractGraph([BaselineController])),
+      createContractGraphSnapshot(buildContractGraph([CurrentController])),
+    );
+
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-response-schema-incompatible",
+        routeId: "UsersController.getUser",
+      }),
+    ]);
+  });
+
+  it("should classify nullable response expansions as incompatible", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @ResponseSchema(z.object({ name: z.string() }))
+        @Get("/:id")
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @ResponseSchema(z.object({ name: z.string().nullable() }))
+        @Get("/:id")
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+
+    const diff = diffContractGraphSnapshots(
+      createContractGraphSnapshot(buildContractGraph([BaselineController])),
+      createContractGraphSnapshot(buildContractGraph([CurrentController])),
+    );
+
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-response-schema-incompatible",
+        routeId: "UsersController.getUser",
+      }),
+    ]);
   });
 });
