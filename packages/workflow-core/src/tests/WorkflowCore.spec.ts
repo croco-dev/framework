@@ -498,12 +498,15 @@ describe("workflow-core", () => {
     let attempts = 0;
     const handledSubscriptions: string[] = [];
 
-    class RetryableBillingProviderProblem extends Error {
+    class RetryableBillingProviderProblem extends Problem {
       readonly retryable = true;
 
       constructor() {
-        super("billing provider retryable outage");
-        this.name = "RetryableBillingProviderProblem";
+        super(
+          "workflow-core/test-retryable-billing-provider",
+          ProblemCategory.InternalServerError,
+          "billing provider retryable outage",
+        );
       }
     }
 
