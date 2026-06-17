@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { generateScaffold } from "./generateScaffold.js";
+import { generateUsageDashboard } from "./generateUsageDashboard.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 export const generate = defineCommand({
@@ -12,5 +13,6 @@ export const generate = defineCommand({
   },
   subCommands: {
     scaffold: generateScaffold,
+    "usage-dashboard": generateUsageDashboard,
   },
 });

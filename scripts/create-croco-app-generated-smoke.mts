@@ -239,6 +239,14 @@ const smokeCases: readonly SmokeCase[] = [
     name: "saas-golden-path",
     args: ["--preset", "saas", "--scope", "@smoke", "--no-install", "--no-git"],
     validations: [
+      {
+        label: "usage dashboard generator",
+        args: ["exec", "croco", "generate", "usage-dashboard", "--no-page"],
+        paths: [
+          "apps/api-server/src/controllers/UsageDashboardController.ts",
+          "apps/api-server/src/usage-dashboard/UsageDashboardService.ts",
+        ],
+      },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },

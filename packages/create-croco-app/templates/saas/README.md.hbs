@@ -20,6 +20,17 @@ pnpm ops:smoke
 
 `ops:smoke`는 diagnostics를 token mode로 켜고 unauthenticated 요청이 `403`으로 거부되는지 확인한 뒤, `croco ops check` contract로 `/health`, `/ready`, `/diagnostics`를 검증합니다.
 
+## Usage Dashboard
+
+```bash
+pnpm exec croco generate usage-dashboard --no-page
+SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter {{scope}}/api-server dev
+curl -X POST http://localhost:3000/saas/demo/seed
+curl -H 'x-tenant-id: tenant_acme' http://localhost:3000/ops/usage
+```
+
+`croco generate usage-dashboard`는 `/ops/usage` API를 생성합니다. 이 SaaS preset은 API-only baseline이므로 `--no-page`를 사용합니다. 로컬 개발 서버에서 `/saas/demo/seed`를 호출하면 같은 in-memory runtime에 `x-tenant-id: tenant_acme` 또는 `?tenantId=tenant_acme`로 조회할 수 있는 tenant, plan, subscription, 정상 quota 사용량, 초과 quota warning 사용량이 준비됩니다.
+
 ## Demo Flow
 
 ```bash
