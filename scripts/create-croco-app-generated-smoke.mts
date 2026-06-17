@@ -231,6 +231,12 @@ const smokeCases: readonly SmokeCase[] = [
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
+      {
+        label: "Contract snapshot",
+        args: ["contract:snapshot"],
+        paths: ["contract-graph.snapshot.json"],
+      },
+      { label: "Contract diff", args: ["contract:diff"] },
       { label: "OpenAPI contract", args: ["contract:openapi"] },
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
@@ -246,6 +252,7 @@ try {
     "pnpm",
     [
       "build",
+      "--filter=@croco/cli...",
       "--filter=create-croco-app...",
       "--filter=@croco/frontend-vite...",
       "--filter=@croco/openapi-spec...",
@@ -459,6 +466,12 @@ function runSpaBeSplitContractSmoke(): void {
 
   run("pnpm", ["install"], projectDir);
   run("pnpm", ["contract:check"], projectDir);
+  run("pnpm", ["contract:snapshot"], projectDir);
+  assertExists(
+    join(projectDir, "contract-graph.snapshot.json"),
+    "REST SPA contract smoke did not create contract-graph.snapshot.json",
+  );
+  run("pnpm", ["contract:diff"], projectDir);
   run("pnpm", ["contract:openapi"], projectDir);
   assertExists(
     join(projectDir, "openapi.json"),
@@ -485,8 +498,13 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
   const packDir = join(smokeRoot, "generated-package-packs");
 
   return {
+    "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
     "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
+    "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
+    "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
     "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
+    "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
+    "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
   };
 }
 
@@ -494,6 +512,8 @@ function getContractSmokeRangeOverrides(): Record<string, string> {
   const packDir = join(smokeRoot, "contract-package-packs");
 
   return {
+    "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
+    "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
     "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
     "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
     "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,

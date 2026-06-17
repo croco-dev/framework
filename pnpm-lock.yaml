@@ -525,6 +525,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-core':
+        specifier: workspace:*
+        version: link:../protocols-core
       '@croco/rpc-codegen':
         specifier: workspace:*
         version: link:../rpc-codegen

@@ -85,12 +85,19 @@ function checkSpaBeSplitStructure() {
       "dev:api": expect.any(String),
       "dev:web": expect.any(String),
       "contract:check": expect.stringMatching(/croco-rpc-codegen[\s\S]*--check/),
+      "contract:snapshot": expect.stringMatching(
+        /^croco contracts check[\s\S]*--json --out contract-graph\.snapshot\.json$/,
+      ),
+      "contract:diff": expect.stringMatching(
+        /^croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers/,
+      ),
       "contract:openapi": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-openapi-spec/),
       "contract:client": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-rpc-codegen/),
       codegen: expect.any(String),
       test: "turbo test",
     }),
     devDependencies: expect.objectContaining({
+      "@croco/cli": "workspace:*",
       "@croco/openapi-spec": "workspace:*",
       "@croco/rpc-codegen": "workspace:*",
     }),
@@ -211,6 +218,12 @@ function checkSaasStructure() {
       "contract:check": expect.stringMatching(
         /^pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
+      "contract:snapshot": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules croco contracts check[\s\S]*--json --out contract-graph\.snapshot\.json$/,
+      ),
+      "contract:diff": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers/,
+      ),
       "contract:client": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--out/,
       ),
@@ -224,6 +237,7 @@ function checkSaasStructure() {
       test: "turbo test",
     }),
     devDependencies: expect.objectContaining({
+      "@croco/cli": "workspace:*",
       "@croco/openapi-spec": "workspace:*",
       "@croco/rpc-codegen": "workspace:*",
     }),

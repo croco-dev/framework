@@ -1,74 +1,117 @@
-import type { ChildProcess, SpawnOptions } from "node:child_process";
-import { EventEmitter } from "node:events";
-import { join } from "node:path";
+import type { ContractDiagnostic, ContractGraph } from "@croco/protocols-core";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  type ContractsCheckSpawn,
-  resolveRpcCodegenBinFromEntry,
-  runContractsCheck,
-} from "../commands/contractsCheck.js";
+import { runContractsCheck } from "../commands/contractsCheck.js";
 
 describe("contractsCheck", () => {
   beforeEach(() => {
     Container.reset();
   });
 
-  it("should resolve a workspace source RPC package entry to the built RPC CLI", () => {
-    const root = join("workspace", "packages", "rpc-codegen");
+  it("should validate a contract graph with text output", async () => {
+    const stdout: string[] = [];
 
-    expect(resolveRpcCodegenBinFromEntry(join(root, "src", "index.ts"))).toBe(
-      join(root, "dist", "cli.js"),
-    );
-  });
-
-  it("should spawn the RPC check mode with forwarded args and preserve its exit code", () => {
-    const child = new EventEmitter() as unknown as ChildProcess;
-    const calls: SpawnCall[] = [];
-    const exitCodes: number[] = [];
-    const spawnCheck: ContractsCheckSpawn = (command, args, options) => {
-      calls.push({ command, args, options });
-      return child;
-    };
-
-    runContractsCheck(["--controllers", "src/**/*.ts"], {
-      resolveBin: () => "/pkg/dist/cli.js",
-      spawn: spawnCheck,
-      setExitCode: (code) => exitCodes.push(code),
-    });
-    child.emit("exit", 7);
-
-    expect(calls).toEqual([
-      {
-        command: process.execPath,
-        args: ["/pkg/dist/cli.js", "--check", "--controllers", "src/**/*.ts"],
-        options: { stdio: "inherit" },
+    const exitCode = await runContractsCheck(["--controllers", "src/**/*.ts"], {
+      loadContractGraph: async () => createGraph(),
+      io: {
+        stdout: (message) => stdout.push(message),
+        stderr: (message) => stdout.push(message),
       },
-    ]);
-    expect(exitCodes).toEqual([7]);
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual(["Contract graph check passed for 1 route(s) across 1 controller(s)."]);
   });
 
-  it("should report spawn errors as command failures", () => {
-    const child = new EventEmitter() as unknown as ChildProcess;
-    const errors: string[] = [];
-    const exitCodes: number[] = [];
-    const spawnCheck: ContractsCheckSpawn = () => child;
+  it("should write a stable JSON snapshot report", async () => {
+    const stdout: string[] = [];
+    const writes = new Map<string, string>();
+    const mkdirs: string[] = [];
 
-    runContractsCheck([], {
-      resolveBin: () => "/pkg/dist/cli.js",
-      spawn: spawnCheck,
-      setExitCode: (code) => exitCodes.push(code),
-      writeError: (message) => errors.push(message),
+    const exitCode = await runContractsCheck(
+      ["--controllers", "src/**/*.ts", "--json", "--out", "artifacts/contracts.json"],
+      {
+        loadContractGraph: async () => createGraph(),
+        io: {
+          cwd: "/workspace/app",
+          mkdir: (path) => mkdirs.push(path),
+          writeFile: (path, content) => writes.set(path, content),
+          stdout: (message) => stdout.push(message),
+        },
+      },
+    );
+
+    const content = writes.get("/workspace/app/artifacts/contracts.json");
+
+    expect(exitCode).toBe(0);
+    expect(mkdirs).toEqual(["/workspace/app/artifacts"]);
+    expect(stdout).toEqual([
+      "Wrote contract graph snapshot to /workspace/app/artifacts/contracts.json.",
+    ]);
+    expect(content).toBeDefined();
+    expect(JSON.parse(content ?? "{}")).toMatchObject({
+      snapshotVersion: "croco.contract-graph.snapshot.v1",
+      routeCount: 1,
+      operationIds: ["UsersController_listUsers"],
     });
-    child.emit("error", new Error("spawn failed"));
+  });
 
-    expect(errors).toEqual(["spawn failed"]);
-    expect(exitCodes).toEqual([1]);
+  it("should exit non-zero when contract graph errors exist", async () => {
+    const stdout: string[] = [];
+    const diagnostics: ContractDiagnostic[] = [
+      {
+        code: "contract-route-missing-path-param",
+        severity: "error",
+        target: "route",
+        routeId: "UsersController.getUser",
+        message: "Route path declares ':id' but no @Param(\"id\") metadata was found.",
+      },
+    ];
+
+    const exitCode = await runContractsCheck(["src/**/*.ts"], {
+      loadContractGraph: async () => createGraph(diagnostics),
+      io: {
+        stdout: (message) => stdout.push(message),
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([
+      "ERROR contract-route-missing-path-param UsersController.getUser: Route path declares ':id' but no @Param(\"id\") metadata was found.",
+      "Contract graph check failed with 1 error(s).",
+    ]);
   });
 });
 
-type SpawnCall = {
-  readonly command: string;
-  readonly args: string[];
-  readonly options: SpawnOptions;
-};
+function createGraph(diagnostics: ContractDiagnostic[] = []): ContractGraph {
+  return {
+    version: "croco.contract-graph.v1",
+    controllers: [
+      {
+        name: "UsersController",
+        path: "/users",
+        guards: [],
+        roles: [],
+        routeIds: ["UsersController.listUsers"],
+      },
+    ],
+    routes: [
+      {
+        routeId: "UsersController.listUsers",
+        operationId: "UsersController_listUsers",
+        controllerName: "UsersController",
+        methodName: "listUsers",
+        httpMethod: "GET",
+        path: "/users",
+        controllerPath: "/users",
+        access: { guards: [], roles: [] },
+        params: [],
+        inputSchema: null,
+        inputSchemas: { body: null, path: null, query: null, headers: null },
+        outputSchema: null,
+        domain: null,
+      },
+    ],
+    diagnostics,
+  };
+}

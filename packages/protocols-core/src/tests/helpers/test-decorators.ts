@@ -12,6 +12,8 @@ import {
   type RouteMetadata,
 } from "../../libs/sharedTypes";
 
+const RESPONSE_SCHEMA_KEY = Symbol.for("croco:rest:responseSchema");
+
 export function Controller(path: string): ClassDecorator {
   return (target) => {
     const metadata: ControllerMetadata = { path, target };
@@ -42,6 +44,12 @@ export function Body(schema?: z.ZodType): ParameterDecorator {
 
 export function Header(name: string, schema?: z.ZodType): ParameterDecorator {
   return createParamDecorator(ParamType.HEADER, name, schema);
+}
+
+export function ResponseSchema(schema: z.ZodType): MethodDecorator {
+  return (target, propertyKey) => {
+    Reflect.defineMetadata(RESPONSE_SCHEMA_KEY, schema, target.constructor, propertyKey);
+  };
 }
 
 export function UseGuards(...guards: Function[]): ClassDecorator & MethodDecorator {

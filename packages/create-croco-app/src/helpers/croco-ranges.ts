@@ -2,6 +2,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/access-core": "^0.0.2",
   "@croco/auth-core": "^0.0.2",
   "@croco/billing-core": "^0.0.2",
+  "@croco/cli": "^0.0.2",
   "@croco/diagnostics-core": "^0.0.2",
   "@croco/entitlements-core": "^0.0.2",
   "@croco/events-core": "^0.0.2",

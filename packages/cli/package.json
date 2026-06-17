@@ -38,6 +38,7 @@
     "@croco/migration-runner": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
     "citty": "^0.1.6",
     "ts-morph": "^24.0.0"
