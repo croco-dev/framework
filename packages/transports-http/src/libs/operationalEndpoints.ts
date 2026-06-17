@@ -25,7 +25,8 @@ export const OPERATIONAL_ENDPOINT_PATHS = [
 
 const DEFAULT_RECENT_ERROR_LIMIT = 100;
 const DEFAULT_MESSAGE_LIMIT = 100;
-const SENSITIVE_KEY_PATTERN = /authorization|cookie|credential|password|secret|token|api[-_]?key/i;
+const SENSITIVE_KEY_PATTERN =
+  /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
 
 export type DiagnosticsExposureMode = "off" | "private" | "token" | "custom";
 
@@ -44,6 +45,7 @@ export type DiagnosticsEndpointOptions = {
   readonly tokenHeader?: string;
   readonly guard?: DiagnosticsGuard;
   readonly collector?: DiagnosticsCollector;
+  readonly providers?: readonly DiagnosticsProvider[];
   readonly recentErrorLimit?: number;
   readonly messageLimit?: number;
 };
@@ -51,7 +53,7 @@ export type DiagnosticsEndpointOptions = {
 export type DiagnosticsEndpointPolicy = Required<
   Pick<DiagnosticsEndpointOptions, "exposure" | "tokenHeader" | "recentErrorLimit" | "messageLimit">
 > &
-  Pick<DiagnosticsEndpointOptions, "token" | "guard" | "collector">;
+  Pick<DiagnosticsEndpointOptions, "token" | "guard" | "collector" | "providers">;
 
 export type OperationalLivenessResponse = {
   readonly status: "ok";
@@ -71,7 +73,9 @@ export type SafeDiagnosticsReport = Omit<DiagnosticsReport, "recentErrors"> & {
   readonly recentErrors: readonly SafeDiagnosticsErrorRecord[];
 };
 
-export function createDefaultDiagnosticsCollector(): DiagnosticsCollector {
+export function createDefaultDiagnosticsCollector(
+  providers: readonly DiagnosticsProvider[] = [],
+): DiagnosticsCollector {
   const collector = new DiagnosticsCollector();
   collector.registerProvider(new RuntimeDiagnosticsProvider());
 
@@ -85,6 +89,10 @@ export function createDefaultDiagnosticsCollector(): DiagnosticsCollector {
     collector.registerProvider(new EventBusDiagnosticsProvider());
   } catch {
     /* provider unavailable */
+  }
+
+  for (const provider of providers) {
+    collector.registerProvider(provider);
   }
 
   return collector;
@@ -128,6 +136,7 @@ export function resolveDiagnosticsEndpointPolicy(
     tokenHeader: options?.tokenHeader ?? DIAGNOSTICS_TOKEN_HEADER,
     guard: options?.guard,
     collector: options?.collector,
+    providers: options?.providers,
     recentErrorLimit: options?.recentErrorLimit ?? DEFAULT_RECENT_ERROR_LIMIT,
     messageLimit: options?.messageLimit ?? DEFAULT_MESSAGE_LIMIT,
   };

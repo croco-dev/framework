@@ -1,6 +1,12 @@
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
-import { formatOpsStatusReport, getOpsStatusExitCode, ops, runOpsStatus } from "../commands/ops.js";
+import {
+  formatOpsStatusReport,
+  getOpsStatusExitCode,
+  ops,
+  runOpsCheck,
+  runOpsStatus,
+} from "../commands/ops.js";
 import type { OpsStatusFetch } from "../commands/ops.js";
 
 describe("ops status", () => {
@@ -45,6 +51,12 @@ describe("ops status", () => {
       "http://localhost:3000/api/diagnostics",
       "http://localhost:3000/api/metrics",
     ]);
+    expect(report.endpoints.map((endpoint) => [endpoint.name, endpoint.required])).toEqual([
+      ["health", true],
+      ["ready", true],
+      ["diagnostics", false],
+      ["metrics", false],
+    ]);
     expect(calls).toHaveLength(4);
     expect(new Headers(calls[0].init?.headers).get("X-Diagnostics-Token")).toBeNull();
     expect(new Headers(calls[1].init?.headers).get("X-Diagnostics-Token")).toBeNull();
@@ -71,6 +83,118 @@ describe("ops status", () => {
     expect(formatOpsStatusReport(report)).toContain("diagnostics 404 unavailable");
   });
 
+  it("marks optional operational endpoints with failing payloads as degraded", async () => {
+    const fetchStatus: OpsStatusFetch = async (input) => {
+      if (input.endsWith("/health")) {
+        return Response.json({ status: "ok" });
+      }
+      if (input.endsWith("/ready")) {
+        return Response.json({ status: "up", results: [] });
+      }
+
+      return Response.json({ summary: "issues_detected", components: [] });
+    };
+
+    const report = await runOpsStatus("http://localhost:3000", { fetch: fetchStatus });
+
+    expect(report.summary).toBe("degraded");
+    expect(formatOpsStatusReport(report)).toContain("diagnostics 200 issues_detected");
+  });
+
+  it("checks required CI endpoints without metrics by default", async () => {
+    const calls: FetchCall[] = [];
+    const fetchStatus: OpsStatusFetch = async (input, init) => {
+      calls.push({ input, init });
+
+      if (input.endsWith("/health")) {
+        return Response.json({ status: "ok" });
+      }
+      if (input.endsWith("/ready")) {
+        return Response.json({ status: "up", results: [] });
+      }
+
+      return Response.json({ summary: "all_healthy", components: [], recentErrors: [] });
+    };
+
+    const report = await runOpsCheck("http://localhost:3000", {
+      fetch: fetchStatus,
+      token: "ops-secret",
+    });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.endpoints.map((endpoint) => endpoint.name)).toEqual([
+      "health",
+      "ready",
+      "diagnostics",
+    ]);
+    expect(report.endpoints.map((endpoint) => endpoint.required)).toEqual([true, true, true]);
+    expect(new Headers(calls[2].init?.headers).get("X-Diagnostics-Token")).toBe("ops-secret");
+  });
+
+  it("can include optional metrics in CI checks", async () => {
+    const fetchStatus: OpsStatusFetch = async (input) => {
+      if (input.endsWith("/health")) {
+        return Response.json({ status: "ok" });
+      }
+      if (input.endsWith("/ready")) {
+        return Response.json({ status: "up", results: [] });
+      }
+      if (input.endsWith("/diagnostics")) {
+        return Response.json({ summary: "all_healthy", components: [], recentErrors: [] });
+      }
+
+      return Response.json({ error: "metrics unavailable" }, { status: 503 });
+    };
+
+    const report = await runOpsCheck("http://localhost:3000", {
+      fetch: fetchStatus,
+      includeMetrics: true,
+    });
+
+    expect(report.summary).toBe("degraded");
+    expect(report.endpoints.map((endpoint) => [endpoint.name, endpoint.required])).toEqual([
+      ["health", true],
+      ["ready", true],
+      ["diagnostics", true],
+      ["metrics", false],
+    ]);
+  });
+
+  it("marks missing diagnostics as unhealthy for CI checks", async () => {
+    const fetchStatus: OpsStatusFetch = async (input) => {
+      if (input.endsWith("/health")) {
+        return Response.json({ status: "ok" });
+      }
+      if (input.endsWith("/ready")) {
+        return Response.json({ status: "up", results: [] });
+      }
+
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    };
+
+    const report = await runOpsCheck("http://localhost:3000", { fetch: fetchStatus });
+
+    expect(report.summary).toBe("unhealthy");
+    expect(formatOpsStatusReport(report)).toContain("diagnostics 403 unavailable");
+  });
+
+  it("marks required operational endpoints with failing payloads as unhealthy", async () => {
+    const fetchStatus: OpsStatusFetch = async (input) => {
+      if (input.endsWith("/health")) {
+        return Response.json({ status: "ok" });
+      }
+      if (input.endsWith("/ready")) {
+        return Response.json({ status: "up", results: [] });
+      }
+
+      return Response.json({ summary: "issues_detected", components: [] });
+    };
+
+    const report = await runOpsCheck("http://localhost:3000", { fetch: fetchStatus });
+
+    expect(report.summary).toBe("unhealthy");
+  });
+
   it("marks a failing readiness endpoint as unhealthy", async () => {
     const fetchStatus: OpsStatusFetch = async (input) => {
       if (input.endsWith("/ready")) {
@@ -86,7 +210,7 @@ describe("ops status", () => {
   });
 
   it("registers the status subcommand under ops", () => {
-    expect(Object.keys(ops.subCommands ?? {})).toEqual(["status"]);
+    expect(Object.keys(ops.subCommands ?? {})).toEqual(["check", "status"]);
   });
 
   it("uses non-zero exit codes for degraded and unhealthy summaries", () => {

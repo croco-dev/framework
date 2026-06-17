@@ -211,6 +211,7 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "OperationsController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "JobsController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "tests", "SaasDemo.spec.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "demo", "ops-smoke.ts");
   checkFileExists("saas", "libs", "shared", "provider-rpc", "package.json.hbs");
 
   const rootPackageJson = readJsonTemplate("saas", "package.json.hbs");
@@ -233,6 +234,7 @@ function checkSaasStructure() {
       ),
       "demo:seed": expect.any(String),
       "demo:smoke": expect.stringMatching(/contract:check[\s\S]*api-server demo:smoke/),
+      "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
       typecheck: "turbo typecheck",
       build: "turbo build",
       test: "turbo test",
@@ -249,6 +251,7 @@ function checkSaasStructure() {
     scripts: expect.objectContaining({
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
+      "ops:smoke": "tsx src/demo/ops-smoke.ts",
       test: "vitest run",
     }),
     dependencies: expect.objectContaining({
@@ -263,10 +266,12 @@ function checkSaasStructure() {
       "@croco/diagnostics-core": "workspace:*",
       "@croco/problems-core": "workspace:*",
       "@croco/protocols-rest": "workspace:*",
+      "@croco/ratelimit-core": "workspace:*",
       "@croco/telemetry-sdk-node": "workspace:*",
       "@croco/transports-http": "workspace:*",
     }),
     devDependencies: expect.objectContaining({
+      "@croco/cli": "workspace:*",
       typedi: "^0.10.0",
     }),
   });
@@ -283,6 +288,18 @@ function checkSaasStructure() {
   checkFileContains("saas", ["README.md.hbs"], /SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /billing-sync/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EventBusStats/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "app.ts"],
+    /defaultSaasRuntime\.diagnosticsCollector\.getProviders/,
+  );
+  checkFileContains("saas", ["apps", "api-server", "src", "app.ts"], /rateLimitHttpMiddleware/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "app.ts"],
+    /OPERATIONAL_RATE_LIMIT_BYPASS_PATHS/,
+  );
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "controllers", "OperationsController.ts"],
@@ -292,6 +309,17 @@ function checkSaasStructure() {
     "saas",
     ["apps", "api-server", "src", "controllers", "JobsController.ts"],
     /\/ops\/jobs/,
+  );
+  checkFileContains("saas", ["apps", "api-server", "src", "demo", "ops-smoke.ts"], /runOpsCheck/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
+    /@croco\/cli\/ops/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
+    /Expected unauthenticated diagnostics to return 403/,
   );
 }
 

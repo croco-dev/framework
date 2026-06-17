@@ -1,5 +1,4 @@
-import { Component } from "@croco/framework-context";
-import type { Logger } from "@croco/framework-logger";
+import { Component, type ILogger } from "@croco/framework-context";
 import { Problem, ProblemCategoryMapper, type ProblemDetails } from "@croco/problems-core";
 import type { CrocoHttpContext } from "./types";
 
@@ -8,7 +7,7 @@ import type { CrocoHttpContext } from "./types";
  * 일반 예외와 Problem 예외를 HTTP 응답으로 변환하는 기본 에러 핸들러입니다.
  */
 export class ErrorHandler {
-  constructor(private readonly logger: Logger) {}
+  constructor(private readonly logger: ILogger) {}
 
   handleError(error: unknown, ctx: CrocoHttpContext): Response {
     if (error instanceof Problem) {

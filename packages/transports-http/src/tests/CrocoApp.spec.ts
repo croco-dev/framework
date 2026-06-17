@@ -275,6 +275,27 @@ describe("CrocoApp", () => {
     return directory;
   }
 
+  it("should bootstrap operational routes without pre-registered transport services", async () => {
+    Container.reset();
+    Container.register(Logger, "singleton");
+
+    const app = createApp({
+      controllers: [],
+      securityValidation: "off",
+    });
+
+    const health = await app.fetch(new Request("http://localhost/health"));
+    const ready = await app.fetch(new Request("http://localhost/ready"));
+    const metrics = await app.fetch(new Request("http://localhost/metrics"));
+
+    expect(health.status).toBe(200);
+    expect(ready.status).toBe(200);
+    expect(metrics.status).toBe(200);
+    expect(Container.has(LOGGER_TOKEN)).toBe(true);
+    expect(Container.has(ErrorHandler)).toBe(true);
+    expect(Container.has(HealthCheckRegistry)).toBe(true);
+  });
+
   it("should handle GET request", async () => {
     const app = createApp({ controllers: [TestController] });
 

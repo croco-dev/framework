@@ -28,6 +28,7 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 | `codegen openapi [args]`                | Generate OpenAPI spec                         |
 | `migrate up\|down\|status [args]`       | Run, rollback, or inspect database migrations |
 | `jobs list\|show\|logs\|cancel\|replay` | Inspect and recover Croco background jobs     |
+| `ops check\|status <url>`               | Validate or inspect operational endpoints     |
 
 ### make — Application Artifacts
 
@@ -77,6 +78,12 @@ croco jobs list --url http://localhost:3000/ops
 
 Set `CROCO_JOBS_URL` to omit `--url`. `--json` prints machine-readable output. `list` and `show`
 return a non-zero exit code when any reported job needs operator attention.
+
+### ops — Operational Checks
+
+- `croco ops check http://localhost:3000 --token "$CROCO_DIAGNOSTICS_TOKEN" --json` checks `/health`, `/ready`, and `/diagnostics` and exits non-zero when required endpoints fail.
+- Add `--metrics` to include optional `/metrics` in the report.
+- `croco ops status http://localhost:3000 --json` reads the same operational surface for inspection and includes `/metrics` by default.
 
 ## Global Options
 
@@ -132,6 +139,6 @@ The CLI runs `detect()` starting from `--cwd` (or the current directory) and wal
 
 Commands like `create domain` use codemods to register controllers in the API server entry file. If the entry file uses an unsupported import or module pattern, the codemod may skip registration. Check the entry file format or disable auto-registration with `--no-register`.
 
-### private: true packages
+### CLI package usage
 
-The `@croco/cli` package itself has `"private": true` and is not published to npm. Use it via `pnpm exec croco` inside the monorepo, or install from a local build.
+Use `pnpm exec croco` inside a Croco workspace, or install `@croco/cli` as a dev dependency when a generated project needs CLI helpers in package scripts.

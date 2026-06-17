@@ -17,7 +17,7 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 ##### logger
 
-`Logger`
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 #### Returns
 

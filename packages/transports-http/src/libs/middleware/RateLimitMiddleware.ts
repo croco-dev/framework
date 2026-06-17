@@ -6,11 +6,14 @@ import type {
   RateLimitPolicy,
 } from "@croco/ratelimit-core";
 import { createRateLimitMiddleware } from "@croco/ratelimit-core";
-import type { MiddlewareFunction } from "../types";
+import type { CrocoHttpContext, MiddlewareFunction } from "../types";
+
+export type RateLimitSkipPredicate = (ctx: CrocoHttpContext) => boolean | Promise<boolean>;
 
 export type RateLimitHttpOptions = CreateMiddlewareOptions & {
   skipSuccessfulRequests?: boolean;
   skipFailedRequests?: boolean;
+  skip?: RateLimitSkipPredicate;
 };
 
 export interface CrocoHttpContextAdapter extends HttpContext {
@@ -35,10 +38,15 @@ function createContextAdapter(ctx: CrocoHttpContextAdapter): HttpContext {
  * `@croco/ratelimit-core` 미들웨어를 Croco HTTP 컨텍스트에 맞게 연결합니다.
  */
 export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): MiddlewareFunction {
-  const { skipSuccessfulRequests, skipFailedRequests, ...createOptions } = options;
+  const { skipSuccessfulRequests, skipFailedRequests, skip, ...createOptions } = options;
   const baseMiddleware = createRateLimitMiddleware(createOptions);
 
   return async (ctx, next): Promise<void> => {
+    if (skip && (await skip(ctx))) {
+      await next();
+      return;
+    }
+
     const adapter = createContextAdapter(ctx as CrocoHttpContextAdapter);
     const wrappedNext = async (): Promise<void> => {
       await next();
@@ -73,13 +81,14 @@ export type RateLimitMiddlewareFactoryOptions = {
   defaultPolicy: RateLimitPolicy;
   skipSuccessfulRequests?: boolean;
   skipFailedRequests?: boolean;
+  skip?: RateLimitSkipPredicate;
 };
 
 /**
  * 기본 정책을 캡슐화한 레이트 리밋 미들웨어 팩토리를 생성합니다.
  */
 export function createRateLimitMiddlewareFactory(options: RateLimitMiddlewareFactoryOptions) {
-  const { rateLimiter, defaultPolicy, skipSuccessfulRequests, skipFailedRequests } = options;
+  const { rateLimiter, defaultPolicy, skipSuccessfulRequests, skipFailedRequests, skip } = options;
 
   return (policyOverride?: RateLimitPolicy): MiddlewareFunction => {
     return rateLimitHttpMiddleware({
@@ -87,6 +96,7 @@ export function createRateLimitMiddlewareFactory(options: RateLimitMiddlewareFac
       policy: policyOverride ?? defaultPolicy,
       skipSuccessfulRequests,
       skipFailedRequests,
+      skip,
     });
   };
 }

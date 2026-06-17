@@ -44,7 +44,9 @@ export {
   formatOpsStatusReport,
   getOpsStatusExitCode,
   ops,
+  opsCheck,
   opsStatus,
+  runOpsCheck,
   runOpsStatus,
 } from "./commands/ops";
 export { GLOBAL_OPTIONS } from "./commands/options";

@@ -51,17 +51,35 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 
 ## 운영 endpoint contract
 
-| Endpoint                  | 등록 조건 | 응답 contract                                                                | 상태 코드        |
-| ------------------------- | --------- | ---------------------------------------------------------------------------- | ---------------- |
-| `GET /health`             | 항상      | `{ "status": "ok" }`                                                         | `200`            |
-| `GET /health/live`        | 항상      | `{ "status": "ok" }`                                                         | `200`            |
-| `GET /ready`              | 항상      | `{ "status": "ok" \| "error", "checks": Record<string, HealthCheckResult> }` | `200` 또는 `503` |
-| `GET /health/ready`       | 항상      | `/ready`와 동일                                                              | `200` 또는 `503` |
-| `GET /health/diagnostics` | opt-in    | `DiagnosticsReport`에서 redaction 적용 후 반환                               | `200` 또는 `403` |
+| Endpoint                  | 등록 조건 | 응답 contract                                                                                             | 상태 코드        |
+| ------------------------- | --------- | --------------------------------------------------------------------------------------------------------- | ---------------- |
+| `GET /health`             | 항상      | `{ "status": "ok" }`                                                                                      | `200`            |
+| `GET /health/live`        | 항상      | `{ "status": "ok" }`                                                                                      | `200`            |
+| `GET /ready`              | 항상      | `{ "status": "up" \| "down", "results": HealthIndicatorResult[] }`                                        | `200` 또는 `503` |
+| `GET /health/ready`       | 항상      | `/ready`와 동일                                                                                           | `200` 또는 `503` |
+| `GET /health/diagnostics` | opt-in    | `DiagnosticsReport`에서 redaction 적용 후 반환                                                            | `200` 또는 `403` |
+| `GET /diagnostics`        | opt-in    | `/health/diagnostics`와 동일한 표준 경로                                                                  | `200` 또는 `403` |
+| `GET /metrics`            | 항상      | `{ "timestamp": string, "metrics": { "standardEndpointPathCount": number, "healthCheckCount": number } }` | `200`            |
 
 Readiness는 `@croco/health-core`의 `HealthCheckService` 실행 semantics를 사용합니다.
 `@croco/transports-http`의 `HealthCheckRegistry`는 기존 `register(name, fn, options)` API와
 HTTP response shape를 유지하면서 health-core에 체크 실행과 timeout/abort 처리를 위임합니다.
+
+## CLI 운영 체크
+
+CI에서는 `croco ops check`를 사용해 운영 endpoint contract를 검증합니다.
+
+```bash
+croco ops check http://localhost:3000 \
+  --token "$CROCO_DIAGNOSTICS_TOKEN" \
+  --json
+```
+
+- 기본 체크 대상은 `/health`, `/ready`, `/diagnostics`입니다.
+- `--metrics`를 추가하면 선택적으로 `/metrics`도 결과에 포함합니다.
+- `--json` 출력은 `target`, `timestamp`, `summary`, `endpoints[]`를 포함합니다. 각 endpoint에는 `name`, `url`, `required`, `httpStatus`, `ok`, `body`, `error`가 포함됩니다.
+- required endpoint가 응답하지 않거나 readiness/diagnostics가 실패 상태를 보고하면 프로세스가 non-zero로 종료됩니다.
+- SaaS 생성 앱은 `pnpm ops:smoke`로 토큰 보호 diagnostics와 `ops check` contract를 함께 검증합니다.
 
 ## 보안 및 에러 제한
 
@@ -70,7 +88,7 @@ HTTP response shape를 유지하면서 health-core에 체크 실행과 timeout/a
 - `token` exposure는 기본 헤더 `X-Diagnostics-Token`을 검사합니다. `tokenHeader`로 헤더명을 바꿀 수 있습니다.
 - `custom` exposure는 앱이 제공한 guard 함수가 true를 반환할 때만 허용합니다.
 - 에러 메시지(`message`)의 노출을 통한 민감 정보 유출을 막기 위해 진단 결과의 오류 메시지는 기본 최대 **100자**로 제한(cap)되며, Stack Trace와 `cause`는 절대 포함되지 않습니다.
-- `details` 안의 `token`, `secret`, `password`, `authorization`, `cookie`, `credential`, `apiKey` 계열 key는 `[Redacted]`로 대체됩니다.
+- `details` 안의 `token`, `secret`, `password`, `authorization`, `cookie`, `credential`, `api[-_]?key`, `private[-_]?key`, `access[-_]?key`, `connection[-_]?string`, `dsn`, `database[-_]?url`, `redis[-_]?url`, `mongo(db)?[-_]?url`, `postgres(ql)?[-_]?url` 계열 key는 `[Redacted]`로 대체됩니다.
 - `recentErrors`는 기본 최대 **100개**를 최신순으로 반환합니다. 저장소는 고정 크기 ring buffer이므로 retention도 최근 100개입니다.
 
 ## 환경변수 설정
@@ -94,6 +112,8 @@ const app = createApp({
   },
 });
 ```
+
+앱이 `WorkflowDiagnosticsProvider`, `TelemetryDiagnosticsProvider`처럼 선택적 패키지의 provider를 사용하는 경우 `diagnostics.providers`에 추가하면 기본 runtime/container/event bus provider와 함께 등록됩니다. 기본 collector 전체를 교체해야 할 때만 `diagnostics.collector`를 직접 전달합니다.
 
 ## Provider별 진단 정보
 

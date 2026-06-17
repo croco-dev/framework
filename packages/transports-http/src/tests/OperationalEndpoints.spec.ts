@@ -23,6 +23,14 @@ class StaticDiagnosticsProvider {
         nested: {
           authorization: "Bearer secret",
           ok: true,
+          providerAccessToken: "provider-token",
+          OPENAI_API_KEY: "provider-key",
+          DATABASE_URL: "postgres://user:password@localhost/app",
+          connectionString: "redis://localhost:6379",
+          payloads: [
+            { password: "nested-password", safe: "visible" },
+            { webhookSecret: "nested-secret" },
+          ],
         },
       },
       lastChecked: "2026-06-15T00:00:00.000Z",
@@ -192,6 +200,14 @@ describe("Operational endpoints", () => {
             nested: {
               authorization: "[Redacted]",
               ok: true,
+              providerAccessToken: "[Redacted]",
+              OPENAI_API_KEY: "[Redacted]",
+              DATABASE_URL: "[Redacted]",
+              connectionString: "[Redacted]",
+              payloads: [
+                { password: "[Redacted]", safe: "visible" },
+                { webhookSecret: "[Redacted]" },
+              ],
             },
           },
           lastChecked: "2026-06-15T00:00:00.000Z",
@@ -225,6 +241,38 @@ describe("Operational endpoints", () => {
         }),
       ]),
     );
+  });
+
+  it("adds configured diagnostics providers to the default collector", async () => {
+    const app = createApp({
+      controllers: [],
+      diagnostics: {
+        exposure: "private",
+        providers: [
+          {
+            name: "provider-runtime",
+            async getHealth() {
+              return {
+                status: "healthy" as const,
+                component: "provider-runtime",
+                details: { ready: true },
+                lastChecked: "2026-06-15T00:00:00.000Z",
+              };
+            },
+          },
+        ],
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/diagnostics"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      components: expect.arrayContaining([
+        expect.objectContaining({ component: "runtime" }),
+        expect.objectContaining({ component: "provider-runtime" }),
+      ]),
+    });
   });
 
   it("keeps the legacy environment token mode", async () => {
