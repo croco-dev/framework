@@ -9,6 +9,8 @@ description: Official Croco provider and adapter compatibility matrix.
 
 This page lists Croco provider, integration, transport, and presentation adapter compatibility from `docs/package-catalog.json`. Required configuration, runtime support, package peer dependencies, maturity, and package test presence are intentionally separate so users can evaluate production readiness without treating a passing unit test as a maturity claim.
 
+Provider promotion criteria are defined in [Provider Maturity Gates](../provider-maturity/).
+
 Runtime columns: Node covers long-running server and CLI use, Lambda covers serverless functions, Workers covers Cloudflare Workers, and Frontend covers browser or SSR frontend integration.
 
 ## Provider

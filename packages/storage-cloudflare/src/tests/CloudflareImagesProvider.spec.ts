@@ -1,7 +1,14 @@
 import { Container } from "@croco/framework-context";
 import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from "@croco/storage-core";
+import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CloudflareImagesProvider } from "../libs/CloudflareImagesProvider";
+
+type StoredCloudflareImage = {
+  readonly contentType?: string;
+  readonly data: Buffer;
+  readonly uploaded: string;
+};
 
 describe("CloudflareImagesProvider", () => {
   let provider!: CloudflareImagesProvider;
@@ -46,6 +53,29 @@ describe("CloudflareImagesProvider", () => {
   afterEach(() => {
     global.fetch = originalFetch;
     vi.unstubAllGlobals();
+  });
+
+  describe("storage provider conformance", () => {
+    it.each(
+      createStorageProviderConformanceSuite({
+        createProvider: () => {
+          useInMemoryCloudflareImagesBackend(mockFetch, mockOptions.accountHash);
+          mockCryptoImportKey.mockResolvedValue({} as CryptoKey);
+          mockCryptoSign.mockResolvedValue(new ArrayBuffer(32));
+          return provider;
+        },
+        keyPrefix: "cloudflare-images-conformance",
+        metadata: {
+          contentType: "unsupported",
+          customMetadata: "unsupported",
+        },
+        providerName: "storage-cloudflare",
+        publicUrl: "https://imagedelivery.net/test-account-hash/",
+        signedUrl: /signature=/,
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
   });
 
   describe("constructor", () => {
@@ -790,3 +820,107 @@ describe("CloudflareImagesProvider", () => {
     });
   });
 });
+
+function useInMemoryCloudflareImagesBackend(
+  fetchMock: ReturnType<typeof vi.fn>,
+  accountHash: string,
+): void {
+  const images = new Map<string, StoredCloudflareImage>();
+
+  fetchMock.mockImplementation(async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+
+    if (method === "POST" && url.endsWith("/images/v1")) {
+      const body = init?.body;
+      if (!(body instanceof FormData)) {
+        return jsonResponse({ success: false, errors: ["missing form data"] }, 400);
+      }
+
+      const file = body.get("file");
+      if (!(file instanceof File)) {
+        return jsonResponse({ success: false, errors: ["missing file"] }, 400);
+      }
+
+      images.set(file.name, {
+        contentType: file.type || undefined,
+        data: Buffer.from(await file.arrayBuffer()),
+        uploaded: "2026-01-01T00:00:00.000Z",
+      });
+
+      return jsonResponse({
+        success: true,
+        result: {
+          filename: file.name,
+          id: file.name,
+          uploaded: "2026-01-01T00:00:00.000Z",
+        },
+        errors: [],
+        messages: [],
+      });
+    }
+
+    if (method === "DELETE" && url.includes("/images/v1/")) {
+      images.delete(decodeURIComponent(url.split("/images/v1/")[1] ?? ""));
+      return jsonResponse({ success: true, errors: [] });
+    }
+
+    if (method === "GET" && url.includes("/images/v1/")) {
+      const key = decodeURIComponent(url.split("/images/v1/")[1] ?? "");
+      const image = images.get(key);
+      if (!image) {
+        return new Response(null, { status: 404 });
+      }
+
+      return jsonResponse({
+        success: true,
+        result: {
+          filename: key,
+          id: key,
+          size: image.data.length,
+          uploaded: image.uploaded,
+          variants: [],
+        },
+        errors: [],
+      });
+    }
+
+    const imageKey = parseCloudflareDeliveryKey(url, accountHash);
+    if (imageKey) {
+      const image = images.get(imageKey);
+      if (!image) {
+        return new Response(null, { status: 404 });
+      }
+
+      return new Response(new Uint8Array(image.data), {
+        headers: image.contentType ? { "Content-Type": image.contentType } : undefined,
+      });
+    }
+
+    return new Response("Not found", { status: 404 });
+  });
+}
+
+function parseCloudflareDeliveryKey(url: string, accountHash: string): string | null {
+  const parsed = new URL(url);
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  const accountHashIndex = segments.indexOf(accountHash);
+
+  if (accountHashIndex === -1 || accountHashIndex + 2 > segments.length) {
+    return null;
+  }
+
+  const keySegments = segments.slice(accountHashIndex + 1, -1);
+  if (keySegments.length === 0) {
+    return null;
+  }
+
+  return keySegments.map(decodeURIComponent).join("/");
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    headers: { "Content-Type": "application/json" },
+    status,
+  });
+}

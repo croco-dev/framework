@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
+      "@croco/storage-core": resolve(currentDir, "../storage-core/src/index.ts"),
     },
   },
   test: {

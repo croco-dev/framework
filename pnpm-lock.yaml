@@ -2106,6 +2106,10 @@ importers:
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core
+    devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
 
   packages/storage-cloudinary:
     dependencies:
@@ -2158,6 +2162,9 @@ importers:
         specifier: workspace:*
         version: link:../storage-core
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.3
@@ -2275,6 +2282,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/storage-core':
+        specifier: workspace:*
+        version: link:../storage-core
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
