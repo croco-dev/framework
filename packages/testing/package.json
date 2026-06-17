@@ -36,6 +36,7 @@
     "@croco/framework-logger": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/storage-core": "workspace:*",
     "@croco/transports-http": "workspace:*",
     "reflect-metadata": "0.2.2"
   },

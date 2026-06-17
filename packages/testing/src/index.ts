@@ -16,3 +16,11 @@ export {
   type TestingProvider,
   type TestingRequestOptions,
 } from "./libs/testing";
+export {
+  createStorageProviderConformanceSuite,
+  type StorageProviderConformanceCase,
+  type StorageProviderConformanceOptions,
+  type StorageProviderOptionalMetadataExpectation,
+  type StorageProviderConformanceSuite,
+  type StorageProviderUrlExpectation,
+} from "./libs/provider-conformance";

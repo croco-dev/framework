@@ -2,10 +2,12 @@ import "reflect-metadata";
 import { Container, Context, Token } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param } from "@croco/protocols-rest";
+import { InMemoryStorageProvider } from "@croco/storage-core";
 import { describe, expect, it } from "vitest";
 import {
   assertOpenAPIRoute,
   assertProblemResponse,
+  createStorageProviderConformanceSuite,
   createRpcTestFetch,
   createTestingApp,
   resetCrocoTestingContext,
@@ -164,5 +166,23 @@ describe("@croco/testing", () => {
     });
 
     expect(Container.get(TOKEN_VALUE)).toEqual({ value: "registered" });
+  });
+
+  describe("storage provider conformance", () => {
+    it.each(
+      createStorageProviderConformanceSuite({
+        createProvider: () => new InMemoryStorageProvider("https://storage.example.com"),
+        keyPrefix: "testing-conformance",
+        metadata: {
+          contentType: "required",
+          customMetadata: "required",
+        },
+        providerName: "in-memory-storage",
+        publicUrl: "https://storage.example.com/",
+        signedUrl: "expires=",
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
   });
 });

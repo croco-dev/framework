@@ -3,6 +3,7 @@ import type { ConfigService } from "@croco/framework-config";
 import { Container } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
 import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from "@croco/storage-core";
+import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyR2BodyProblem } from "../libs/problems/EmptyR2BodyProblem";
 import { MissingR2ConfigProblem } from "../libs/problems/MissingR2ConfigProblem";
@@ -15,15 +16,44 @@ vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: class {
     send = mockSend;
   },
-  GetObjectCommand: class {},
-  PutObjectCommand: class {},
-  DeleteObjectCommand: class {},
-  HeadObjectCommand: class {},
+  GetObjectCommand: class {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
+  PutObjectCommand: class {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
+  DeleteObjectCommand: class {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
+  HeadObjectCommand: class {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
 }));
 
 vi.mock("@aws-sdk/s3-request-presigner", () => ({
-  getSignedUrl: vi.fn().mockResolvedValue("https://signed-url.example.com"),
+  getSignedUrl: vi.fn(async (_client: unknown, command: MockS3Command) => {
+    return `https://signed-url.example.com/${command.input.Key}`;
+  }),
 }));
+
+type MockS3Command = {
+  readonly constructor: {
+    readonly name: string;
+  };
+  readonly input: {
+    readonly Body?: Buffer | Readable;
+    readonly ContentType?: string;
+    readonly Key?: string;
+    readonly Metadata?: Record<string, string>;
+  };
+};
+
+type StoredR2Object = {
+  readonly data: Buffer;
+  readonly contentType?: string;
+  readonly lastModified: Date;
+  readonly metadata?: Record<string, string>;
+};
 
 describe("R2StorageProvider", () => {
   let provider!: R2StorageProvider;
@@ -53,6 +83,27 @@ describe("R2StorageProvider", () => {
     } as unknown as Logger;
 
     provider = new R2StorageProvider(configService, logger);
+  });
+
+  describe("storage provider conformance", () => {
+    it.each(
+      createStorageProviderConformanceSuite({
+        createProvider: () => {
+          useInMemoryR2Backend();
+          return provider;
+        },
+        keyPrefix: "r2-conformance",
+        metadata: {
+          contentType: "required",
+          customMetadata: "required",
+        },
+        providerName: "storage-r2",
+        publicUrl: "https://test-bucket.test-account-id.r2.dev/",
+        signedUrl: "https://signed-url.example.com",
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
   });
 
   describe("constructor", () => {
@@ -97,7 +148,7 @@ describe("R2StorageProvider", () => {
   describe("getSignedUrl", () => {
     it("should generate signed URL with expiration", async () => {
       const url = await provider.getSignedUrl("test/file.txt", { expiresIn: 3600 });
-      expect(url).toBe("https://signed-url.example.com");
+      expect(url).toBe("https://signed-url.example.com/test/file.txt");
     });
   });
 
@@ -293,3 +344,77 @@ describe("R2StorageProvider", () => {
     });
   });
 });
+
+function useInMemoryR2Backend(): void {
+  const objects = new Map<string, StoredR2Object>();
+
+  mockSend.mockImplementation(async (command: MockS3Command) => {
+    const key = command.input.Key;
+
+    if (!key) {
+      throw new Error("R2 command is missing Key");
+    }
+
+    if (command.constructor.name === "PutObjectCommand") {
+      const body = command.input.Body;
+
+      if (!body) {
+        throw new Error("R2 PutObjectCommand is missing Body");
+      }
+
+      objects.set(key, {
+        contentType: command.input.ContentType,
+        data: await readBody(body),
+        lastModified: new Date("2026-01-01T00:00:00.000Z"),
+        metadata: command.input.Metadata,
+      });
+      return {};
+    }
+
+    if (command.constructor.name === "GetObjectCommand") {
+      const object = objects.get(key);
+      if (!object) {
+        throw { $metadata: { httpStatusCode: 404 }, name: "NotFound" };
+      }
+
+      return {
+        Body: Readable.from([object.data]),
+      };
+    }
+
+    if (command.constructor.name === "HeadObjectCommand") {
+      const object = objects.get(key);
+      if (!object) {
+        throw { $metadata: { httpStatusCode: 404 }, name: "NotFound" };
+      }
+
+      return {
+        ContentLength: object.data.length,
+        ContentType: object.contentType,
+        ETag: `"${key}"`,
+        LastModified: object.lastModified,
+        Metadata: object.metadata,
+      };
+    }
+
+    if (command.constructor.name === "DeleteObjectCommand") {
+      objects.delete(key);
+      return {};
+    }
+
+    throw new Error(`Unsupported R2 command: ${command.constructor.name}`);
+  });
+}
+
+async function readBody(body: Buffer | Readable): Promise<Buffer> {
+  if (Buffer.isBuffer(body)) {
+    return body;
+  }
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks);
+}

@@ -50,6 +50,7 @@
     "@croco/storage-core": "workspace:*"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "@types/node": "^22.10.5"
   }
 }
