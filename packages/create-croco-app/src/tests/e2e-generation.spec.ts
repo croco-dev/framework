@@ -361,7 +361,13 @@ describe("E2E: generate()", () => {
       const packageJson = readPackageJson(join(webDir, "package.json"));
 
       expect(packageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
+      expect(packageJson.scripts?.["presentation:smoke"]).toBe(
+        "tsx src/smoke/presentationSmoke.ts",
+      );
+      expect(packageJson.devDependencies?.tsx).toBe("^4.20.3");
+      expect(existsSync(join(webDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
       assertViteConfigImportsDeclared(webDir);
+      assertSourceBareImportsDeclared(webDir);
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },
@@ -392,7 +398,13 @@ describe("E2E: generate()", () => {
 
       expect(workerContent).toContain('securityValidation: "off"');
       expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
+      expect(ssrWorkerPackageJson.scripts?.["presentation:smoke"]).toBe(
+        "tsx src/smoke/presentationSmoke.ts",
+      );
+      expect(ssrWorkerPackageJson.devDependencies?.tsx).toBe("^4.20.3");
+      expect(existsSync(join(ssrWorkerDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
       assertViteConfigImportsDeclared(ssrWorkerDir);
+      assertSourceBareImportsDeclared(ssrWorkerDir);
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },

@@ -49,6 +49,30 @@ describe("lambda adapter", () => {
     expect(pageHandler).not.toHaveBeenCalled();
   });
 
+  it("passes the original Lambda event and context to matching API handlers", async () => {
+    const event = createHttpApiEvent({ rawPath: "/api/runtime" });
+    const lambdaContext = { awsRequestId: "lambda-request-1" };
+    const apiHandler = {
+      match: (request: Request) => new URL(request.url).pathname === "/api/runtime",
+      handle: vi.fn(async (_request: Request, receivedEvent: unknown, receivedContext: unknown) =>
+        Response.json({
+          eventMatches: receivedEvent === event,
+          contextMatches: receivedContext === lambdaContext,
+        }),
+      ),
+    };
+    const pageHandler = vi.fn<CrocoFetchHandler>(async () => new Response("page"));
+    const handler = createLambdaComposedHandler({ apiHandlers: [apiHandler], pageHandler });
+
+    const response = await handler(event, lambdaContext);
+
+    expect(pageHandler).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toEqual({
+      eventMatches: true,
+      contextMatches: true,
+    });
+  });
+
   it("falls back to page handler when no API handler matches", async () => {
     const apiHandler = {
       match: () => false,

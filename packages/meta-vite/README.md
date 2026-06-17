@@ -135,6 +135,32 @@ const response = await handler(new Request("https://example.com/api/hello"));
 - **Lambda**: `createLambdaComposedHandler({ apiHandlers, pageHandler })` — API Gateway v2/v1 event conversion. Response is buffered (no streaming).
 - **Node**: `createNodeComposedHandler({ apiHandlers, pageHandler })` — Returns `{ fetch }` for `@hono/node-server` or Node.js `http.createServer`.
 
+## Production Runtime Matrix
+
+Detailed promotion gates live in [Presentation Runtime Support](../docs/src/content/docs/en/reference/presentation-runtime-support.md). The package-level support contract is:
+
+| Capability        | Node                                                                                                          | Lambda                                                                                                    | Cloudflare Workers                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                           | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
+| SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                       | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
+| ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence. | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
+| RSC routes        | Beta with React 19.                                                                                           | Beta and buffered; no streaming claim.                                                                    | Beta with Worker `Response` streaming; development reload remains full reload.                          |
+| Server actions    | Supported through `createServerActionHandler()`.                                                              | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
+| API routes        | API-first/page-fallback composition.                                                                          | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
+| Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                  | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
+| Cache persistence | In-memory is local/single-process only; Redis is the shipped durable adapter.                                 | In-memory is warm-container only; Redis is the shipped durable adapter.                                   | No shipped durable Worker cache adapter. Supply a Worker-safe store before claiming durable ISR.        |
+
+## ISR v1 Contract
+
+`@croco/meta-vite` intentionally keeps ISR v1 as exact-key TTL caching:
+
+- cacheable requests are `GET` or `HEAD` without `Authorization` or `Cookie`;
+- only `2xx` responses are cached;
+- concurrent same-key misses rely on the cache store's `getOrSet()` singleflight behavior;
+- `InMemoryCacheStore` is for local, development, or single-process deployments only;
+- `RedisCacheStoreAdapter` is the shipped durable adapter for Node and Lambda;
+- pattern invalidation is available only through durable adapters that explicitly expose it, such as the Redis adapter.
+
 ## Limitations (v1)
 
 - **React-only**: v1 supports React 19+ only. No Vue/Svelte support.
