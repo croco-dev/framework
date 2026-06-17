@@ -49,6 +49,10 @@ const runner = new WorkflowRunner(executionManager);
 await runner.execute("billing-webhook", { subscriptionId: "sub_123" });
 ```
 
+Retryable workflow failures use the parent execution's `maxAttempts`. If a retryable failure leaves an
+idempotent workflow in `retrying`, calling `execute()` again with the same idempotency key resumes the
+same parent execution for the next attempt instead of returning it as a reused execution.
+
 ## Operations
 
 ```typescript
