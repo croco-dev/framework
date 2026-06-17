@@ -71,6 +71,15 @@ export type SaasDemoSnapshot = {
     failurePolicyState: string;
     logCount: number;
   };
+  lifecycle: {
+    ruleId: string;
+    firstRunStatus: string;
+    duplicateRunStatus: string;
+    duplicateSkipReason: string;
+    emittedActionType: string;
+    emittedActionCount: number;
+    visibleRunCount: number;
+  };
 };
 
 export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
@@ -120,6 +129,27 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
       ? "billing sync job is not inspectable as succeeded"
       : undefined,
     snapshot.jobs.logCount < 2 ? "billing sync job logs were not recorded" : undefined,
+    snapshot.lifecycle.ruleId !== "saas-risk-onboarding-follow-up"
+      ? "lifecycle risk rule did not match"
+      : undefined,
+    snapshot.lifecycle.firstRunStatus !== "succeeded"
+      ? "lifecycle risk action did not succeed"
+      : undefined,
+    snapshot.lifecycle.duplicateRunStatus !== "skipped"
+      ? "lifecycle duplicate event was not suppressed"
+      : undefined,
+    snapshot.lifecycle.duplicateSkipReason !== "idempotency_key_reused"
+      ? "lifecycle duplicate event did not retain idempotency evidence"
+      : undefined,
+    snapshot.lifecycle.emittedActionType !== "cs.follow_up"
+      ? "lifecycle action was not emitted to the CS follow-up sink"
+      : undefined,
+    snapshot.lifecycle.emittedActionCount !== 1
+      ? "lifecycle action was not emitted exactly once"
+      : undefined,
+    snapshot.lifecycle.visibleRunCount < 2
+      ? "lifecycle runs are not visible to diagnostics/store inspection"
+      : undefined,
   ].filter((failure): failure is string => failure !== undefined);
 
   if (failures.length > 0) {

@@ -27,6 +27,15 @@ import {
 import { HealthCheckService } from "@croco/health-core";
 import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
 import {
+  InMemoryLifecycleActionSink,
+  InMemoryLifecycleRunStore,
+  LifecycleDiagnosticsProvider,
+  LifecycleRuleEvaluator,
+  LifecycleRuleRegistry,
+  createHealthStatusChangedSignal,
+  createLifecycleContext,
+} from "@croco/lifecycle-core";
+import {
   InMemoryMembershipStore,
   MembershipManager,
   SeatLimitChecker,
@@ -59,6 +68,8 @@ const TEAM_PLAN_ID = "team";
 const SEATS_FEATURE_KEY = "seats";
 const API_REQUESTS_METER_ID = "api_requests";
 const API_REQUESTS_FEATURE_KEY = "api.requests";
+const LIFECYCLE_RISK_RULE_ID = "saas-risk-onboarding-follow-up";
+const LIFECYCLE_RISK_ACTION_ID = "create-cs-follow-up";
 const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   "active",
   "trialing",
@@ -240,6 +251,10 @@ export type SaasRuntime = {
   diagnosticsCollector: DiagnosticsCollector;
   executionManager: ExecutionManagerImpl;
   jobs: InMemoryJobsOperations;
+  lifecycleRuleRegistry: LifecycleRuleRegistry;
+  lifecycleRunStore: InMemoryLifecycleRunStore;
+  lifecycleActionSink: InMemoryLifecycleActionSink;
+  lifecycleEvaluator: LifecycleRuleEvaluator;
 };
 
 export function createSaasRuntime(): SaasRuntime {
@@ -340,6 +355,37 @@ export function createSaasRuntime(): SaasRuntime {
     },
   });
   const executionManager = new ExecutionManagerImpl(new InMemoryExecutionStore());
+  const lifecycleRuleRegistry = new LifecycleRuleRegistry();
+  const lifecycleRunStore = new InMemoryLifecycleRunStore();
+  const lifecycleActionSink = new InMemoryLifecycleActionSink();
+  lifecycleRuleRegistry.register({
+    id: LIFECYCLE_RISK_RULE_ID,
+    description: "Create a CS follow-up when a tenant becomes at risk during onboarding",
+    severity: "high",
+    triggers: [{ type: "health.status.changed" }, { type: "health.score.dropped" }],
+    cooldown: { durationMs: 24 * 60 * 60 * 1000 },
+    when: (context) =>
+      context.health?.status === "at_risk" && context.onboarding?.isCompleted !== true,
+    actions: (context) => [
+      {
+        id: LIFECYCLE_RISK_ACTION_ID,
+        type: "cs.follow_up",
+        title: "Contact at-risk tenant",
+        payload: {
+          tenantId: context.tenantId,
+          status: context.health?.status,
+          score: context.health?.score,
+          currentStepId: context.onboarding?.currentStepId,
+        },
+      },
+    ],
+  });
+  const lifecycleEvaluator = new LifecycleRuleEvaluator({
+    registry: lifecycleRuleRegistry,
+    runStore: lifecycleRunStore,
+    actionAdapter: lifecycleActionSink,
+  });
+  diagnosticsCollector.registerProvider(new LifecycleDiagnosticsProvider(lifecycleRunStore));
 
   return {
     providerProfile,
@@ -361,6 +407,10 @@ export function createSaasRuntime(): SaasRuntime {
     diagnosticsCollector,
     executionManager,
     jobs: new InMemoryJobsOperations(),
+    lifecycleRuleRegistry,
+    lifecycleRunStore,
+    lifecycleActionSink,
+    lifecycleEvaluator,
   };
 }
 
@@ -477,6 +527,46 @@ export async function runSaasDemoFlow(
       period: "billing_cycle",
     });
     const entitlement = await runtime.entitlementManager.check(tenant.id, API_REQUESTS_FEATURE_KEY);
+    const lifecycleSignal = createHealthStatusChangedSignal({
+      signalId: `health-risk:${tenant.id}`,
+      tenantId: tenant.id,
+      oldStatus: "healthy",
+      newStatus: "at_risk",
+      score: 62,
+    });
+    const lifecycleContext = createLifecycleContext({
+      signal: lifecycleSignal,
+      health: {
+        status: "at_risk",
+        score: 62,
+        previousScore: 84,
+        dropPercentage: 26.19,
+      },
+      onboarding: {
+        status: "in_progress",
+        isCompleted: false,
+        currentStepId: "invite-team-member",
+      },
+      billing: {
+        status: subscriptionStatus ?? "active",
+        planId: TEAM_PLAN_ID,
+      },
+      usage: [
+        {
+          meterId: API_REQUESTS_METER_ID,
+          usage: currentUsage,
+          quota: entitlement.quota,
+          remaining: entitlement.remaining,
+          exceeded: entitlement.exceeded,
+        },
+      ],
+    });
+    const lifecycleFirstRun = await runtime.lifecycleEvaluator.evaluate(lifecycleContext);
+    const lifecycleDuplicateRun = await runtime.lifecycleEvaluator.evaluate(lifecycleContext);
+    const lifecycleRuns = await runtime.lifecycleRunStore.list({ tenantId: tenant.id });
+    const lifecycleActions = runtime.lifecycleActionSink
+      .getEmissions()
+      .filter((emission) => emission.tenantId === tenant.id);
     const health = await runtime.healthService.check();
     const diagnostics = await runtime.diagnosticsCollector.getReport();
 
@@ -542,6 +632,15 @@ export async function runSaasDemoFlow(
         status: billingSyncJob.status,
         failurePolicyState: billingSyncJob.failurePolicy.state,
         logCount: billingSyncJob.logCount,
+      },
+      lifecycle: {
+        ruleId: lifecycleFirstRun.runs[0]?.ruleId ?? "none",
+        firstRunStatus: lifecycleFirstRun.runs[0]?.status ?? "none",
+        duplicateRunStatus: lifecycleDuplicateRun.runs[0]?.status ?? "none",
+        duplicateSkipReason: lifecycleDuplicateRun.runs[0]?.skipReason ?? "none",
+        emittedActionType: lifecycleActions[0]?.action.type ?? "none",
+        emittedActionCount: lifecycleActions.length,
+        visibleRunCount: lifecycleRuns.length,
       },
     };
   });

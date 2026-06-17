@@ -63,6 +63,7 @@
     "health-core",
     "impersonation-core",
     "integrations-posthog",
+    "lifecycle-core",
     "invitation-drizzle",
     "membership-drizzle",
     "meta-vite",
