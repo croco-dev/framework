@@ -62,6 +62,11 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
           label: "SaaS Golden Path",
           hint: "Tenant, auth, access, billing, metering, entitlements demo",
         },
+        {
+          value: "ai-saas",
+          label: "AI SaaS Golden Path",
+          hint: "SaaS baseline plus tenant-metered LLM proxy demo",
+        },
       ],
     }));
   if (p.isCancel(preset)) {
@@ -97,7 +102,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     };
   }
 
-  if (preset === "saas") {
+  if (preset === "saas" || preset === "ai-saas") {
     const agentRules =
       cliArgs.agentRules ??
       (await p.confirm({
@@ -126,7 +131,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     return {
       projectName: projectName as string,
       scope: scope as string,
-      preset: "saas",
+      preset: preset as "saas" | "ai-saas",
       webApps: [],
       apiHosting: "standalone",
       db: [],

@@ -13,6 +13,7 @@ const DATABASES = SUPPORTED_CREATE_CROCO_APP_CHOICES.databases;
 type ChoiceName = "preset" | "api" | "api-hosting" | "backend-deploy" | "frontend-deploy" | "db";
 
 type RawCliOptions = Record<string, string | boolean | undefined>;
+type SaasPreset = Extract<GeneratorOptions["preset"], "saas" | "ai-saas">;
 
 export function parseCliOptions(
   directory: string | undefined,
@@ -84,8 +85,8 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
     readChoice("db", db, DATABASES);
   }
 
-  if (cliOptions.preset === "saas") {
-    assertSaasOptions(cliOptions);
+  if (isSaasPreset(cliOptions.preset)) {
+    assertSaasOptions(cliOptions, cliOptions.preset);
   }
 }
 
@@ -135,8 +136,8 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
     return;
   }
 
-  if (options.preset === "saas") {
-    assertSaasOptions(options);
+  if (isSaasPreset(options.preset)) {
+    assertSaasOptions(options, options.preset);
     return;
   }
 
@@ -185,8 +186,8 @@ export function normalizeNonInteractiveOptions(
     };
   }
 
-  if (preset === "saas") {
-    assertSaasOptions(cliOptions);
+  if (isSaasPreset(preset)) {
+    assertSaasOptions(cliOptions, preset);
 
     return {
       projectName,
@@ -256,27 +257,37 @@ function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
   }
 }
 
-function assertSaasOptions(options: Partial<GeneratorOptions>): void {
+function isSaasPreset(preset: GeneratorOptions["preset"] | undefined): preset is SaasPreset {
+  return preset === "saas" || preset === "ai-saas";
+}
+
+function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPreset): void {
+  const presetName = preset;
+
   if (options.api)
-    throw new InvalidSaasPresetOptionProblem("--api is not supported with the saas preset");
+    throw new InvalidSaasPresetOptionProblem(
+      `--api is not supported with the ${presetName} preset`,
+    );
   if (options.apiHosting && options.apiHosting !== "standalone") {
     throw new InvalidSaasPresetOptionProblem(
-      "--api-hosting is not configurable with the saas preset",
+      `--api-hosting is not configurable with the ${presetName} preset`,
     );
   }
   if (options.backendDeploy)
     throw new InvalidSaasPresetOptionProblem(
-      "--backend-deploy is not supported with the saas preset",
+      `--backend-deploy is not supported with the ${presetName} preset`,
     );
   if (options.frontendDeploy)
     throw new InvalidSaasPresetOptionProblem(
-      "--frontend-deploy is not supported with the saas preset",
+      `--frontend-deploy is not supported with the ${presetName} preset`,
     );
   if (options.webApps && options.webApps.length > 0) {
-    throw new InvalidSaasPresetOptionProblem("--web-apps is not supported with the saas preset");
+    throw new InvalidSaasPresetOptionProblem(
+      `--web-apps is not supported with the ${presetName} preset`,
+    );
   }
   if (options.db && options.db.length > 0) {
-    throw new InvalidSaasPresetOptionProblem("--db is not supported with the saas preset");
+    throw new InvalidSaasPresetOptionProblem(`--db is not supported with the ${presetName} preset`);
   }
 }
 

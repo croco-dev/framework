@@ -563,6 +563,72 @@ describe("E2E: generate()", () => {
   });
 
   it(
+    "generates AI SaaS preset with tenant-metered AI smoke commands",
+    { timeout: 120_000 },
+    async () => {
+      const options: GeneratorOptions = {
+        projectName: "my-ai-saas",
+        scope: "@test",
+        preset: "ai-saas",
+        webApps: [],
+        apiHosting: "standalone",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      };
+
+      await generate(testDir, options);
+
+      const rootPackageJson = readPackageJson(join(testDir, "package.json"));
+      const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
+
+      expect(rootPackageJson.scripts).toMatchObject({
+        "ai:smoke": "pnpm --filter @test/api-server ai:smoke",
+        "demo:smoke":
+          "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server ai:smoke",
+      });
+      expect(apiPackageJson.dependencies).toMatchObject({
+        "@croco/llm-core": "^0.0.2",
+        "@croco/llm-metering": "^0.0.2",
+        "@croco/framework-context": "^0.0.2",
+        "@croco/lifecycle-core": "^0.0.1",
+        "@croco/metering-core": "^0.0.2",
+        "@croco/protocols-rest": "^0.0.2",
+        "@croco/telemetry-api": "^0.0.2",
+        "@croco/tenant-core": "^0.0.2",
+      });
+      expect(apiPackageJson.scripts?.["ai:smoke"]).toBe("tsx src/demo/ai-smoke.ts");
+      expect(appSource).toMatch(/AiController/);
+      expect(appSource).toMatch(
+        /\[OperationsController, JobsController, SaasController, AiController\]/,
+      );
+      expect(existsSync(join(testDir, "README.md"))).toBe(true);
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "aiSaas.ts"))).toBe(true);
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "aiProblems.ts"))).toBe(true);
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "controllers", "AiController.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "controllers", "aiSchemas.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "demo", "aiSmokeContract.ts")),
+      ).toBe(true);
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "demo", "ai-smoke.ts"))).toBe(
+        true,
+      );
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "tests", "AiSaas.spec.ts")),
+      ).toBe(true);
+      assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+      assertAllSourceBareImportsDeclared(testDir);
+    },
+  );
+
+  it(
     "preserves generated workspace dependencies when the app scope is @croco",
     { timeout: 120_000 },
     async () => {

@@ -326,7 +326,60 @@ function checkSaasStructure() {
   );
 }
 
-describe.each(["spa-be-split", "ssr-lambda", "container-fullstack", "saas"])(
+function checkAiSaasStructure() {
+  checkFileExists("ai-saas", "package.json.hbs");
+  checkFileExists("ai-saas", "README.md.hbs");
+  checkFileExists("ai-saas", "apps", "api-server", "package.json.hbs");
+  checkFileExists("ai-saas", "apps", "api-server", "src", "aiSaas.ts");
+  checkFileExists("ai-saas", "apps", "api-server", "src", "aiProblems.ts");
+  checkFileExists("ai-saas", "apps", "api-server", "src", "controllers", "AiController.ts");
+  checkFileExists("ai-saas", "apps", "api-server", "src", "controllers", "aiSchemas.ts");
+  checkFileExists("ai-saas", "apps", "api-server", "src", "demo", "ai-smoke.ts");
+  checkFileExists("ai-saas", "apps", "api-server", "src", "demo", "aiSmokeContract.ts");
+  checkFileExists("ai-saas", "apps", "api-server", "src", "tests", "AiSaas.spec.ts");
+
+  const rootPackageJson = readJsonTemplate("ai-saas", "package.json.hbs");
+  expect(rootPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "ai:smoke": "pnpm --filter {{scope}}/api-server ai:smoke",
+      "demo:smoke": expect.stringMatching(/api-server ai:smoke$/),
+      "contract:openapi": expect.stringMatching(/AI SaaS API/),
+    }),
+  });
+
+  const apiPackageJson = readJsonTemplate("ai-saas", "apps", "api-server", "package.json.hbs");
+  expect(apiPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "ai:smoke": "tsx src/demo/ai-smoke.ts",
+      "ops:smoke": "tsx src/demo/ops-smoke.ts",
+      test: "vitest run",
+    }),
+    dependencies: expect.objectContaining({
+      "@croco/framework-context": "workspace:*",
+      "@croco/lifecycle-core": "workspace:*",
+      "@croco/llm-core": "workspace:*",
+      "@croco/llm-metering": "workspace:*",
+      "@croco/metering-core": "workspace:*",
+      "@croco/telemetry-api": "workspace:*",
+      "@croco/tenant-core": "workspace:*",
+    }),
+  });
+
+  checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
+  checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /PROMPT_TOKENS/);
+  checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /COST_USD/);
+  checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /buildAiIdempotencyKey/);
+  checkFileContains(
+    "ai-saas",
+    ["apps", "api-server", "src", "demo", "aiSmokeContract.ts"],
+    /rawPromptStored/,
+  );
+  checkFileContains("ai-saas", ["README.md.hbs"], /OPENAI_API_KEY/);
+  checkFileContains("ai-saas", ["README.md.hbs"], /ANTHROPIC_API_KEY/);
+  checkFileContains("ai-saas", ["README.md.hbs"], /Do not expose provider API keys/);
+}
+
+describe.each(["spa-be-split", "ssr-lambda", "container-fullstack", "saas", "ai-saas"])(
   "Template: %s",
   (template) => {
     it("should have required structure", () => {
@@ -342,6 +395,11 @@ describe.each(["spa-be-split", "ssr-lambda", "container-fullstack", "saas"])(
 
       if (template === "saas") {
         checkSaasStructure();
+        return;
+      }
+
+      if (template === "ai-saas") {
+        checkAiSaasStructure();
         return;
       }
 
