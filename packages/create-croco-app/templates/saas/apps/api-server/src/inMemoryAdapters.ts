@@ -7,6 +7,12 @@ import type {
   RelationTuple,
   RevokeRequest,
 } from "@croco/access-core";
+import type {
+  CreateExecutionParams,
+  Execution,
+  ExecutionStore,
+  ListExecutionsOptions,
+} from "@croco/execution-core";
 import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
 import {
   MeterRepository,
@@ -336,6 +342,80 @@ export class InMemoryRedisClient implements RedisClient {
     }
 
     return [1] as TResult;
+  }
+}
+
+export class InMemoryExecutionStore implements ExecutionStore {
+  private readonly executions = new Map<string, Execution>();
+  private idCounter = 0;
+
+  async create(params: CreateExecutionParams): Promise<Execution> {
+    if (params.idempotencyKey) {
+      const existing = await this.findByIdempotencyKey(params.idempotencyKey);
+      if (existing) {
+        return existing;
+      }
+    }
+
+    const execution: Execution = {
+      id: `exec_${++this.idCounter}`,
+      type: params.type,
+      status: "pending",
+      payload: params.payload,
+      attempts: 0,
+      maxAttempts: params.maxAttempts ?? 1,
+      timeout: params.timeout,
+      scheduledFor: params.scheduledFor,
+      idempotencyKey: params.idempotencyKey,
+      parentId: params.parentId,
+      metadata: params.metadata,
+      createdAt: new Date(),
+    };
+
+    this.executions.set(execution.id, execution);
+    return execution;
+  }
+
+  async findById(id: string): Promise<Execution | null> {
+    return this.executions.get(id) ?? null;
+  }
+
+  async findByIdempotencyKey(key: string): Promise<Execution | null> {
+    return (
+      [...this.executions.values()].find((execution) => execution.idempotencyKey === key) ?? null
+    );
+  }
+
+  async update(id: string, data: Partial<Execution>): Promise<Execution> {
+    const execution = await this.findById(id);
+    if (!execution) {
+      throw new Error(`Execution with id '${id}' not found`);
+    }
+
+    const updated = { ...execution, ...data };
+    this.executions.set(id, updated);
+    return updated;
+  }
+
+  async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
+    let executions = [...this.executions.values()];
+
+    if (options.status) {
+      executions = executions.filter((execution) => execution.status === options.status);
+    }
+    if (options.type) {
+      executions = executions.filter((execution) => execution.type === options.type);
+    }
+    if (options.parentId !== undefined) {
+      executions = executions.filter((execution) => execution.parentId === options.parentId);
+    }
+
+    const offset = options.offset ?? 0;
+    return executions.slice(offset, options.limit ? offset + options.limit : undefined);
+  }
+
+  async delete(id: string): Promise<void> {
+    this.executions.delete(id);
   }
 }
 

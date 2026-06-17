@@ -17,6 +17,7 @@ import {
   type UsageHistoryEntry,
   type UsageHistoryPeriod,
 } from "@croco/entitlements-core";
+import { ExecutionManagerImpl } from "@croco/execution-core";
 import { EventBusConfig, EventPublisher, type DomainEvent } from "@croco/events-core";
 import { HealthCheckService } from "@croco/health-core";
 import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
@@ -39,12 +40,14 @@ import {
 import {
   InMemoryAccessProvider,
   InMemoryEventBus,
+  InMemoryExecutionStore,
   InMemoryMeterRepository,
   InMemoryRedisClient,
   InMemoryTenantStore,
   InMemoryUsageStorage,
   NoopTxAdapter,
 } from "./inMemoryAdapters";
+import { InMemoryJobsOperations, type JobDetails } from "./jobs";
 import { getSaasProviderProfile, type SaasProviderProfile } from "./providerProfiles";
 
 const TEAM_PLAN_ID = "team";
@@ -243,6 +246,8 @@ export type SaasRuntime = {
   seatLimitChecker: SeatLimitChecker;
   healthService: HealthCheckService;
   diagnosticsCollector: DiagnosticsCollector;
+  executionManager: ExecutionManagerImpl;
+  jobs: InMemoryJobsOperations;
 };
 
 export function createSaasRuntime(): SaasRuntime {
@@ -342,6 +347,7 @@ export function createSaasRuntime(): SaasRuntime {
       };
     },
   });
+  const executionManager = new ExecutionManagerImpl(new InMemoryExecutionStore());
 
   return {
     providerProfile,
@@ -361,6 +367,8 @@ export function createSaasRuntime(): SaasRuntime {
     seatLimitChecker,
     healthService,
     diagnosticsCollector,
+    executionManager,
+    jobs: new InMemoryJobsOperations(),
   };
 }
 
@@ -454,6 +462,7 @@ export async function runSaasDemoFlow(
     });
 
     const subscriptionStatus = await runtime.billingService.getSubscriptionStatus(tenant.id);
+    const billingSyncJob = await runBillingSyncJob(runtime, tenant.id);
 
     await runtime.meterRegistry.register({
       tenantId: tenant.id,
@@ -535,8 +544,71 @@ export async function runSaasDemoFlow(
         healthStatus: health.status,
         diagnosticsSummary: diagnostics.summary,
       },
+      jobs: {
+        id: billingSyncJob.id,
+        type: billingSyncJob.type,
+        status: billingSyncJob.status,
+        failurePolicyState: billingSyncJob.failurePolicy.state,
+        logCount: billingSyncJob.logCount,
+      },
     };
   });
+}
+
+async function runBillingSyncJob(runtime: SaasRuntime, tenantId: string): Promise<JobDetails> {
+  const execution = await runtime.executionManager.create({
+    type: "billing-sync",
+    payload: { tenantId },
+    maxAttempts: 2,
+    idempotencyKey: `billing-sync:${tenantId}`,
+    metadata: { workflowName: "billing.sync" },
+  });
+  runtime.jobs.create({
+    id: execution.id,
+    type: "billing-sync",
+    payload: { tenantId },
+    maxAttempts: 2,
+    metadata: { workflowName: "billing.sync" },
+  });
+
+  await runtime.executionManager.start(execution.id);
+  runtime.jobs.start(execution.id);
+  runtime.jobs.recordLog(execution.id, {
+    message: "Billing sync started",
+    data: { tenantId },
+  });
+
+  try {
+    const subscriptionStatus = await runtime.billingService.getSubscriptionStatus(tenantId);
+    if (subscriptionStatus !== "active") {
+      await runtime.executionManager.fail(execution.id, {
+        message: "Billing subscription is not active",
+        code: "BILLING_INACTIVE",
+        retryable: false,
+      });
+      return runtime.jobs.fail(execution.id, {
+        message: "Billing subscription is not active",
+        code: "BILLING_INACTIVE",
+      });
+    }
+
+    runtime.jobs.recordLog(execution.id, {
+      message: "Billing subscription active",
+      data: { tenantId, subscriptionStatus },
+    });
+    await runtime.executionManager.complete(execution.id, { subscriptionStatus });
+    return runtime.jobs.complete(execution.id, { subscriptionStatus });
+  } catch (error) {
+    await runtime.executionManager.fail(execution.id, {
+      message: error instanceof Error ? error.message : String(error),
+      retryable: true,
+    });
+    runtime.jobs.fail(execution.id, {
+      message: error instanceof Error ? error.message : String(error),
+      retryable: true,
+    });
+    throw error;
+  }
 }
 
 export function assertSaasDemoSnapshot(snapshot: SaasDemoSnapshot): void {

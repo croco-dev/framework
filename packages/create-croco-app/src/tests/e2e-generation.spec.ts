@@ -508,6 +508,7 @@ describe("E2E: generate()", () => {
       "@croco/billing-core": "^0.0.2",
       "@croco/metering-core": "^0.0.2",
       "@croco/entitlements-core": "^0.0.2",
+      "@croco/execution-core": "^0.0.2",
       "@croco/health-core": "^0.0.2",
       "@croco/diagnostics-core": "^0.0.2",
       "@croco/problems-core": "^0.0.2",
@@ -528,6 +529,9 @@ describe("E2E: generate()", () => {
       existsSync(
         join(testDir, "apps", "api-server", "src", "controllers", "OperationsController.ts"),
       ),
+    ).toBe(true);
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "controllers", "JobsController.ts")),
     ).toBe(true);
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "tests", "SaasDemo.spec.ts")),

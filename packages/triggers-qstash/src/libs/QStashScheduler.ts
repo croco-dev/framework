@@ -34,12 +34,30 @@ export type QStashSchedulerOptions = {
    * If provided, the scheduler can create executions when syncing schedules.
    */
   readonly executionManager?: ExecutionManager;
+
+  /**
+   * Default sync mode. Defaults to 'apply' for backwards compatibility.
+   */
+  readonly mode?: ScheduleSyncMode;
+};
+
+export type ScheduleSyncMode = "dry-run" | "apply";
+
+export type ScheduleSyncOptions = {
+  /**
+   * Whether sync should only return the diff or also apply it to QStash.
+   */
+  readonly mode?: ScheduleSyncMode;
 };
 
 /**
  * Result of a schedule sync operation.
  */
 export type ScheduleSyncResult = {
+  readonly mode: ScheduleSyncMode;
+
+  readonly applied: boolean;
+
   /**
    * Number of schedules created.
    */
@@ -79,10 +97,14 @@ export type ScheduleSyncDetail = {
 
   readonly action: "created" | "updated" | "deleted" | "skipped" | "failed";
 
+  readonly applied: boolean;
+
   /**
    * Cron expression.
    */
   readonly expression: string;
+
+  readonly currentExpression?: string;
 
   /**
    * Target class name.
@@ -115,12 +137,14 @@ export class QStashScheduler {
   private readonly webhookUrl: string;
   private readonly schedulePrefix: string;
   private readonly executionManager?: ExecutionManager;
+  private readonly mode: ScheduleSyncMode;
 
   constructor(options: QStashSchedulerOptions) {
     this.client = options.client;
     this.webhookUrl = options.webhookUrl;
     this.schedulePrefix = options.schedulePrefix ?? "croco-trigger";
     this.executionManager = options.executionManager;
+    this.mode = options.mode ?? "apply";
   }
 
   /**
@@ -131,7 +155,8 @@ export class QStashScheduler {
    *
    * @returns Sync result with counts and details
    */
-  async sync(): Promise<ScheduleSyncResult> {
+  async sync(options: ScheduleSyncOptions = {}): Promise<ScheduleSyncResult> {
+    const mode = options.mode ?? this.mode;
     const cronTriggers = this.getAllCronTriggers();
     const scheduleMap = this.buildScheduleMap(cronTriggers);
 
@@ -139,6 +164,8 @@ export class QStashScheduler {
     const existingSchedules = await this.listQStashSchedules();
 
     const result: ScheduleSyncResult = {
+      mode,
+      applied: mode === "apply",
       created: 0,
       updated: 0,
       deleted: 0,
@@ -150,7 +177,7 @@ export class QStashScheduler {
     // Create or update schedules
     for (const [scheduleId, metadata] of scheduleMap.entries()) {
       const existing = existingSchedules.get(scheduleId);
-      const detail = await this.syncSchedule(scheduleId, metadata, existing);
+      const detail = await this.syncSchedule(scheduleId, metadata, existing, mode);
       result.details.push(detail);
 
       switch (detail.action) {
@@ -170,9 +197,9 @@ export class QStashScheduler {
     }
 
     // Delete schedules that are no longer in code
-    for (const scheduleId of existingSchedules.keys()) {
+    for (const [scheduleId, existing] of existingSchedules.entries()) {
       if (!scheduleMap.has(scheduleId)) {
-        const detail = await this.deleteSchedule(scheduleId);
+        const detail = await this.deleteSchedule(scheduleId, existing, mode);
         result.details.push(detail);
 
         if (detail.action === "deleted") {
@@ -270,13 +297,16 @@ export class QStashScheduler {
     scheduleId: string,
     metadata: CronTriggerMetadata,
     existing?: { cron: string },
+    mode: ScheduleSyncMode = "apply",
   ): Promise<ScheduleSyncDetail> {
     const methodName = String(metadata.methodName);
     const triggerName = this.getTriggerIdentifier(metadata);
     const baseDetail: ScheduleSyncDetail = {
       name: scheduleId,
       action: "skipped",
+      applied: false,
       expression: metadata.expression,
+      currentExpression: existing?.cron,
       target: triggerName,
       method: methodName,
     };
@@ -286,6 +316,10 @@ export class QStashScheduler {
 
     try {
       if (!existing) {
+        if (mode === "dry-run") {
+          return { ...baseDetail, action: "created" };
+        }
+
         await this.client.schedules.create({
           scheduleId,
           cron: metadata.expression,
@@ -298,10 +332,14 @@ export class QStashScheduler {
           body: JSON.stringify(payload),
         });
 
-        return { ...baseDetail, action: "created" };
+        return { ...baseDetail, action: "created", applied: true };
       }
 
       if (existing.cron !== metadata.expression) {
+        if (mode === "dry-run") {
+          return { ...baseDetail, action: "updated" };
+        }
+
         await this.client.schedules.create({
           scheduleId,
           cron: metadata.expression,
@@ -314,7 +352,7 @@ export class QStashScheduler {
           body: JSON.stringify(payload),
         });
 
-        return { ...baseDetail, action: "updated" };
+        return { ...baseDetail, action: "updated", applied: true };
       }
 
       return baseDetail;
@@ -327,18 +365,28 @@ export class QStashScheduler {
   /**
    * Delete a schedule from QStash.
    */
-  private async deleteSchedule(scheduleId: string): Promise<ScheduleSyncDetail> {
+  private async deleteSchedule(
+    scheduleId: string,
+    existing: { cron: string },
+    mode: ScheduleSyncMode = "apply",
+  ): Promise<ScheduleSyncDetail> {
     const baseDetail: ScheduleSyncDetail = {
       name: scheduleId,
       action: "deleted",
+      applied: false,
       expression: "",
+      currentExpression: existing.cron,
       target: "unknown",
       method: "unknown",
     };
 
     try {
+      if (mode === "dry-run") {
+        return baseDetail;
+      }
+
       await this.client.schedules.delete(scheduleId);
-      return baseDetail;
+      return { ...baseDetail, applied: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return { ...baseDetail, action: "failed", error: errorMessage };

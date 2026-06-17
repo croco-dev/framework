@@ -252,6 +252,29 @@ console.log(replayed.idempotencyKey); // undefined - 리플레이는 원본 dedu
 console.log(replays[0].id === replayed.id); // true
 ```
 
+### Jobs v1 운영 표면
+
+`createExecutionJobsOperations`는 실행 매니저를 운영자가 쓰는 Jobs API로 감쌉니다. 목록과 상세 조회에는
+실패 정책(`failurePolicy`)이 포함되어 `retrying`, `timed_out`, `retry_exhausted`,
+`dead_lettered` 상태를 숨기지 않습니다.
+
+```typescript
+import { createExecutionJobsOperations, ExecutionManagerImpl } from "@croco/execution-core";
+
+const manager = new ExecutionManagerImpl(store);
+const jobs = createExecutionJobsOperations(manager);
+
+const report = await jobs.list({ type: "billing-sync" });
+const details = await jobs.show("exec_123");
+const logs = await jobs.logs("exec_123");
+
+await jobs.cancel("exec_123", { reason: "operator stop" });
+await jobs.replay("exec_456", { reason: "provider restored" });
+```
+
+`jobs.replay`는 `failed` 또는 `timed_out` 실행에서만 새 `pending` 실행을 생성합니다. 새 실행은
+`replayOf`로 원본을 가리키며 원본 `idempotencyKey`는 복사하지 않습니다.
+
 ## API
 
 ### ExecutionManager
@@ -281,6 +304,16 @@ console.log(replays[0].id === replayed.id); // true
 | 메서드                | 설명                                          |
 | --------------------- | --------------------------------------------- |
 | `replay(id, params?)` | 실패/타임아웃 실행에서 새 `pending` 실행 생성 |
+
+### JobsOperations
+
+| 메서드                | 설명                                |
+| --------------------- | ----------------------------------- |
+| `list(options?)`      | 실행 목록과 attention 요약 조회     |
+| `show(id)`            | 실행 상세, 로그 수, 실패 정책 조회  |
+| `logs(id)`            | append-only 실행 로그 조회          |
+| `cancel(id, params?)` | 실행 취소와 취소 사유 기록          |
+| `replay(id, params?)` | 실패/타임아웃 실행에서 새 실행 생성 |
 
 ### 타입
 

@@ -93,6 +93,69 @@ export const saasDemoSnapshotSchema = z.object({
     healthStatus: z.enum(["up", "down"]),
     diagnosticsSummary: z.enum(["all_healthy", "degraded", "issues_detected"]),
   }),
+  jobs: z.object({
+    id: z.string(),
+    type: z.string(),
+    status: z.string(),
+    failurePolicyState: z.string(),
+    logCount: z.number(),
+  }),
 });
 
 export type SaasDemoSnapshotDto = z.infer<typeof saasDemoSnapshotSchema>;
+
+export const jobFailurePolicySchema = z.object({
+  state: z.string(),
+  needsAttention: z.boolean(),
+  retryable: z.boolean(),
+  replayable: z.boolean(),
+  recoveryAction: z.string(),
+  reason: z.string(),
+});
+
+export const jobSummarySchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  status: z.string(),
+  workflowName: z.string().optional(),
+  attempts: z.number(),
+  maxAttempts: z.number(),
+  createdAt: z.string(),
+  startedAt: z.string().optional(),
+  completedAt: z.string().optional(),
+  replayOf: z.string().optional(),
+  errorMessage: z.string().optional(),
+  logCount: z.number(),
+  failurePolicy: jobFailurePolicySchema,
+});
+
+export const jobLogEntrySchema = z.object({
+  timestamp: z.string(),
+  level: z.string(),
+  message: z.string(),
+  data: z.record(z.unknown()).optional(),
+});
+
+export const jobDetailsSchema = jobSummarySchema.extend({
+  payload: z.unknown().optional(),
+  result: z.unknown().optional(),
+  error: z.unknown().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  checkpoints: z.record(z.unknown()).optional(),
+  progress: z.unknown().optional(),
+  logs: z.array(jobLogEntrySchema),
+});
+
+export const jobListReportSchema = z.object({
+  summary: z.enum(["healthy", "attention"]),
+  generatedAt: z.string(),
+  total: z.number(),
+  attentionCount: z.number(),
+  jobs: z.array(jobSummarySchema),
+});
+
+export const jobActionSchema = z.object({
+  reason: z.string().optional(),
+});
+
+export type JobActionDto = z.infer<typeof jobActionSchema>;

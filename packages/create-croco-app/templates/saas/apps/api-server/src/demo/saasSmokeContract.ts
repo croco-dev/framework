@@ -64,6 +64,13 @@ export type SaasDemoSnapshot = {
     healthStatus: "up" | "down";
     diagnosticsSummary: "all_healthy" | "degraded" | "issues_detected";
   };
+  jobs: {
+    id: string;
+    type: string;
+    status: string;
+    failurePolicyState: string;
+    logCount: number;
+  };
 };
 
 export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
@@ -108,6 +115,11 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
     snapshot.operations.diagnosticsSummary !== "all_healthy"
       ? "diagnostics summary is not healthy"
       : undefined,
+    snapshot.jobs.status !== "completed" ? "billing sync job did not complete" : undefined,
+    snapshot.jobs.failurePolicyState !== "succeeded"
+      ? "billing sync job is not inspectable as succeeded"
+      : undefined,
+    snapshot.jobs.logCount < 2 ? "billing sync job logs were not recorded" : undefined,
   ].filter((failure): failure is string => failure !== undefined);
 
   if (failures.length > 0) {

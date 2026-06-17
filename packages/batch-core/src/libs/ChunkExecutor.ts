@@ -1,4 +1,9 @@
-import type { ExecutionManager } from "@croco/execution-core";
+import {
+  ExecutionProblems,
+  type Execution,
+  type ExecutionInspectionManager,
+  type ExecutionManager,
+} from "@croco/execution-core";
 import type { Checkpointable } from "./interfaces/ItemReader";
 import type { Step } from "./Step";
 import { createStepExecutionError } from "./StepFailure";
@@ -17,10 +22,12 @@ function isCheckpointable(obj: unknown): obj is Checkpointable {
 export class ChunkExecutor {
   constructor(private executionManager: ExecutionManager) {}
 
-  async execute<I, O>(executionId: string, step: Step<I, O>): Promise<void> {
-    // 1. Start execution (or get current state if already running?)
-    // Usually we start it. If it fails, the caller handles it.
-    const execution = await this.executionManager.start(executionId);
+  async execute<I, O>(
+    executionId: string,
+    step: Step<I, O>,
+    options: ChunkExecutorOptions = {},
+  ): Promise<void> {
+    const execution = await this.resolveExecution(executionId, options);
 
     // 2. Restore checkpoint if available
     const checkpointKey = `${step.name}.cursor`;
@@ -88,10 +95,9 @@ export class ChunkExecutor {
         processedCount += items.length;
       }
 
-      // 4. Complete execution
-      // Note: If this is part of a multi-step job, we shouldn't complete here.
-      // But assuming ChunkExecutor runs a single-step task for now.
-      await this.executionManager.complete(executionId, { processedCount });
+      if (options.completeExecution ?? true) {
+        await this.executionManager.complete(executionId, { processedCount });
+      }
     } catch (error) {
       // Fail execution
       await this.executionManager.fail(executionId, {
@@ -131,4 +137,50 @@ export class ChunkExecutor {
   private hasValidTotal(total: number | undefined): total is number {
     return typeof total === "number" && Number.isFinite(total) && total > 0;
   }
+
+  private async resolveExecution(
+    executionId: string,
+    options: ChunkExecutorOptions,
+  ): Promise<Execution> {
+    if (options.startExecution ?? true) {
+      return this.executionManager.start(executionId);
+    }
+
+    const inspectionManager = this.executionManager as ExecutionManager &
+      Partial<Pick<ExecutionInspectionManager, "get">>;
+
+    if (typeof inspectionManager.get !== "function") {
+      throw ExecutionProblems.conflict(
+        "Execution manager does not support continuing an already-started batch execution",
+      );
+    }
+
+    const execution = await inspectionManager.get(executionId);
+    if (execution.status !== "running") {
+      throw ExecutionProblems.invalidStateTransition(
+        `Cannot continue batch execution from '${execution.status}' status`,
+      );
+    }
+
+    return execution;
+  }
 }
+
+export type ChunkExecutorOptions = {
+  /**
+   * Start the execution before processing the step.
+   *
+   * Defaults to true. Multi-step jobs that keep the parent execution open with
+   * completeExecution: false should pass false for later steps so the executor
+   * reads the current running execution instead of attempting running -> running.
+   */
+  readonly startExecution?: boolean;
+
+  /**
+   * Complete the execution after this step finishes.
+   *
+   * Defaults to true for single-step batch jobs. Multi-step jobs should pass false
+   * for intermediate steps and complete the parent execution after orchestration succeeds.
+   */
+  readonly completeExecution?: boolean;
+};

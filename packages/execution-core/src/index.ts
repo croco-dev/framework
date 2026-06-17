@@ -1,6 +1,24 @@
 export { ExecutionManagerImpl } from "./libs/ExecutionManagerImpl";
 export type { ExecutionProblemCode } from "./libs/ExecutionProblem";
 export { ExecutionProblem, ExecutionProblems } from "./libs/ExecutionProblem";
+export {
+  createExecutionJobsOperations,
+  describeJob,
+  getJobFailurePolicy,
+  summarizeJob,
+} from "./libs/JobsOperations";
+export type {
+  CancelJobParams,
+  ExecutionJobsManager,
+  JobDetails,
+  JobFailurePolicy,
+  JobFailurePolicyState,
+  JobListOptions,
+  JobListReport,
+  JobRecoveryAction,
+  JobsOperations,
+  JobSummary,
+} from "./libs/JobsOperations";
 export type {
   ExecutionInspectionManager,
   ExecutionManager,

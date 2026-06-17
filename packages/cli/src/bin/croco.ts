@@ -4,6 +4,7 @@ import { codegen } from "../commands/codegen.js";
 import { contracts } from "../commands/contracts.js";
 import { create } from "../commands/create.js";
 import { generate } from "../commands/generate.js";
+import { jobs } from "../commands/jobs.js";
 import { make } from "../commands/make.js";
 import { migrate } from "../commands/migrate.js";
 import { ops } from "../commands/ops.js";
@@ -25,6 +26,7 @@ const main = defineCommand({
     contracts,
     migrate,
     ops,
+    jobs,
   },
 });
 
