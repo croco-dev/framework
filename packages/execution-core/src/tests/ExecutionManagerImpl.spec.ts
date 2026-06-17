@@ -8,7 +8,7 @@ import type {
   ExecutionStore,
   ListExecutionsOptions,
 } from "../index";
-import { ExecutionManagerImpl } from "../index";
+import { createExecutionJobsOperations, ExecutionManagerImpl } from "../index";
 
 class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
   private executions: Map<string, Execution> = new Map();
@@ -617,6 +617,187 @@ describe("ExecutionManagerImpl", () => {
       await expect(manager.replay(execution.id)).rejects.toThrow(
         "Cannot replay execution in 'completed' status",
       );
+    });
+  });
+
+  describe("jobs operations", () => {
+    it("summarizes healthy jobs and jobs needing operator attention", async () => {
+      const completed = await manager.create({ type: "workflow" });
+      await manager.start(completed.id);
+      await manager.complete(completed.id);
+
+      const retrying = await manager.create({ type: "workflow", maxAttempts: 3 });
+      await manager.start(retrying.id);
+      await manager.fail(retrying.id, { message: "provider timeout", retryable: true });
+
+      const retryExhausted = await manager.create({ type: "billing-sync", maxAttempts: 1 });
+      await manager.start(retryExhausted.id);
+      await manager.fail(retryExhausted.id, {
+        message: "provider still unavailable",
+        retryable: true,
+      });
+
+      const deadLettered = await manager.create({ type: "onboarding-email" });
+      await manager.start(deadLettered.id);
+      await manager.fail(deadLettered.id, {
+        message: "invalid recipient",
+        retryable: false,
+      });
+
+      const timedOut = await manager.create({ type: "usage-rollup", maxAttempts: 2 });
+      await manager.start(timedOut.id);
+      await manager.timeout(timedOut.id);
+
+      const jobs = createExecutionJobsOperations(manager);
+      const report = await jobs.list({ limit: 10 });
+
+      expect(report.summary).toBe("attention");
+      expect(report.total).toBe(5);
+      expect(report.attentionCount).toBe(4);
+      expect(report.jobs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: completed.id,
+            failurePolicy: expect.objectContaining({
+              state: "succeeded",
+              needsAttention: false,
+              recoveryAction: "none",
+            }),
+          }),
+          expect.objectContaining({
+            id: retrying.id,
+            status: "retrying",
+            failurePolicy: expect.objectContaining({
+              state: "retrying",
+              needsAttention: true,
+              retryable: true,
+              replayable: false,
+              recoveryAction: "wait",
+            }),
+          }),
+          expect.objectContaining({
+            id: retryExhausted.id,
+            status: "failed",
+            errorMessage: "provider still unavailable",
+            failurePolicy: expect.objectContaining({
+              state: "retry_exhausted",
+              needsAttention: true,
+              retryable: false,
+              replayable: true,
+              recoveryAction: "replay",
+            }),
+          }),
+          expect.objectContaining({
+            id: deadLettered.id,
+            status: "failed",
+            failurePolicy: expect.objectContaining({
+              state: "dead_lettered",
+              needsAttention: true,
+              replayable: true,
+              reason: "Job failed with a non-retryable error",
+            }),
+          }),
+          expect.objectContaining({
+            id: timedOut.id,
+            status: "timed_out",
+            failurePolicy: expect.objectContaining({
+              state: "timed_out",
+              needsAttention: true,
+              retryable: true,
+              replayable: true,
+              recoveryAction: "retry",
+            }),
+          }),
+        ]),
+      );
+    });
+
+    it("shows job details and logs without exposing payloads in summaries", async () => {
+      const execution = await manager.create({
+        type: "workflow",
+        payload: { tenantId: "tenant_secret" },
+        metadata: { workflowName: "billing.sync" },
+      });
+      await manager.start(execution.id);
+      await manager.recordLog(execution.id, {
+        timestamp: "2026-01-01T00:00:00.000Z",
+        message: "Billing sync started",
+      });
+
+      const jobs = createExecutionJobsOperations(manager);
+      const report = await jobs.list();
+      const details = await jobs.show(execution.id);
+      const logs = await jobs.logs(execution.id);
+
+      expect(report.jobs[0]).toEqual(
+        expect.objectContaining({
+          id: execution.id,
+          workflowName: "billing.sync",
+          logCount: 1,
+        }),
+      );
+      expect(JSON.stringify(report.jobs[0])).not.toContain("tenant_secret");
+      expect(details.payload).toEqual({ tenantId: "tenant_secret" });
+      expect(logs).toEqual([
+        {
+          timestamp: "2026-01-01T00:00:00.000Z",
+          level: "info",
+          message: "Billing sync started",
+        },
+      ]);
+    });
+
+    it("cancels and replays jobs through the public operations contract", async () => {
+      const running = await manager.create({ type: "workflow" });
+      await manager.start(running.id);
+
+      const failed = await manager.create({
+        type: "workflow",
+        payload: { run: "original" },
+      });
+      await manager.start(failed.id);
+      await manager.fail(failed.id, { message: "downstream failure", retryable: false });
+
+      const jobs = createExecutionJobsOperations(manager);
+      const cancelled = await jobs.cancel(running.id, { reason: "operator stop" });
+      const replayed = await jobs.replay(failed.id, { reason: "provider restored" });
+
+      expect(cancelled.status).toBe("cancelled");
+      expect(cancelled.metadata).toEqual({ cancellationReason: "operator stop" });
+      expect(replayed.status).toBe("pending");
+      expect(replayed.replayOf).toBe(failed.id);
+      expect(replayed.failurePolicy).toEqual(
+        expect.objectContaining({
+          state: "pending",
+          needsAttention: false,
+        }),
+      );
+    });
+
+    it("fails visibly when inspection or replay support is unavailable", async () => {
+      const lifecycleOnlyManager = {
+        create: vi.fn(),
+        start: vi.fn(),
+        complete: vi.fn(),
+        fail: vi.fn(),
+        cancel: vi.fn(),
+        retry: vi.fn(),
+        updateProgress: vi.fn(),
+        checkpoint: vi.fn(),
+        timeout: vi.fn(),
+      };
+      const inspectOnlyManager = {
+        ...lifecycleOnlyManager,
+        get: vi.fn(),
+        list: vi.fn().mockResolvedValue([]),
+      };
+
+      await expect(createExecutionJobsOperations(lifecycleOnlyManager).list()).rejects.toThrow(
+        "Execution manager does not support job inspection",
+      );
+      await expect(
+        createExecutionJobsOperations(inspectOnlyManager).replay("exec-1"),
+      ).rejects.toThrow("Execution manager does not support job replay");
     });
   });
 

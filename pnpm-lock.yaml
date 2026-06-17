@@ -538,6 +538,9 @@ importers:
         specifier: ^24.0.0
         version: 24.0.0
     devDependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.3

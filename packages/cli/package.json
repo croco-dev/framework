@@ -44,6 +44,7 @@
     "ts-morph": "^24.0.0"
   },
   "devDependencies": {
+    "@croco/execution-core": "workspace:*",
     "@types/node": "^22.0.0",
     "tsup": "^8.3.5",
     "typedi": "0.10.0",

@@ -1,5 +1,6 @@
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
+import { JobsController } from "../controllers/JobsController";
 import { assertDemoEndpointsEnabled } from "../controllers/SaasController";
 import { DemoEndpointDisabledProblem } from "../problems";
 import {
@@ -7,7 +8,12 @@ import {
   isSaasDemoEndpointEnabled,
   SAAS_DEMO_ENDPOINTS_ENABLED_ENV,
 } from "../providerProfiles";
-import { assertSaasDemoSnapshot, createSaasRuntime, runSaasDemoFlow } from "../saasDemo";
+import {
+  assertSaasDemoSnapshot,
+  createSaasRuntime,
+  defaultSaasRuntime,
+  runSaasDemoFlow,
+} from "../saasDemo";
 
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
@@ -145,5 +151,45 @@ describe("SaaS golden path demo", () => {
         process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = previousFlag;
       }
     }
+  });
+
+  it("runs an inspectable billing sync background job", async () => {
+    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+
+    expect(snapshot.jobs).toMatchObject({
+      type: "billing-sync",
+      status: "completed",
+      failurePolicyState: "succeeded",
+      logCount: 2,
+    });
+  });
+
+  it("exposes the billing sync job through operations controller", async () => {
+    const seeded = await runSaasDemoFlow(defaultSaasRuntime);
+    const controller = new JobsController();
+
+    const listReport = (await controller.list(undefined, "billing-sync")) as {
+      summary: string;
+      total: number;
+      jobs: readonly { id: string; failurePolicy: { state: string } }[];
+    };
+
+    expect(listReport).toMatchObject({
+      summary: "healthy",
+      total: 1,
+      jobs: [
+        {
+          id: seeded.jobs.id,
+          failurePolicy: { state: "succeeded" },
+        },
+      ],
+    });
+
+    const logs = await controller.logs(seeded.jobs.id);
+
+    expect(logs.map((entry) => entry.message)).toEqual([
+      "Billing sync started",
+      "Billing subscription active",
+    ]);
   });
 });

@@ -209,6 +209,7 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "OperationsController.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "controllers", "JobsController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "tests", "SaasDemo.spec.ts");
   checkFileExists("saas", "libs", "shared", "provider-rpc", "package.json.hbs");
 
@@ -257,6 +258,7 @@ function checkSaasStructure() {
       "@croco/billing-core": "workspace:*",
       "@croco/metering-core": "workspace:*",
       "@croco/entitlements-core": "workspace:*",
+      "@croco/execution-core": "workspace:*",
       "@croco/health-core": "workspace:*",
       "@croco/diagnostics-core": "workspace:*",
       "@croco/problems-core": "workspace:*",
@@ -280,10 +282,16 @@ function checkSaasStructure() {
   );
   checkFileContains("saas", ["README.md.hbs"], /SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /billing-sync/);
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "controllers", "OperationsController.ts"],
     /\/diagnostics/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "controllers", "JobsController.ts"],
+    /\/ops\/jobs/,
   );
 }
 

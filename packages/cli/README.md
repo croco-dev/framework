@@ -14,19 +14,20 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 
 ## Commands
 
-| Command                           | Description                                   |
-| --------------------------------- | --------------------------------------------- |
-| `make controller <Name>`          | New controller class with CRUD methods        |
-| `make repository <Name>`          | New repository class                          |
-| `make entity <Name>`              | New entity class                              |
-| `make event <Name>`               | New domain event class                        |
-| `make listener <Name>`            | New event handler                             |
-| `create page <Name>`              | Console web page (SSR or SPA)                 |
-| `create domain <name>`            | API domain module (5 files)                   |
-| `generate scaffold <Model>`       | Page + domain bundle                          |
-| `codegen rpc [args]`              | Generate RPC client code                      |
-| `codegen openapi [args]`          | Generate OpenAPI spec                         |
-| `migrate up\|down\|status [args]` | Run, rollback, or inspect database migrations |
+| Command                                 | Description                                   |
+| --------------------------------------- | --------------------------------------------- |
+| `make controller <Name>`                | New controller class with CRUD methods        |
+| `make repository <Name>`                | New repository class                          |
+| `make entity <Name>`                    | New entity class                              |
+| `make event <Name>`                     | New domain event class                        |
+| `make listener <Name>`                  | New event handler                             |
+| `create page <Name>`                    | Console web page (SSR or SPA)                 |
+| `create domain <name>`                  | API domain module (5 files)                   |
+| `generate scaffold <Model>`             | Page + domain bundle                          |
+| `codegen rpc [args]`                    | Generate RPC client code                      |
+| `codegen openapi [args]`                | Generate OpenAPI spec                         |
+| `migrate up\|down\|status [args]`       | Run, rollback, or inspect database migrations |
+| `jobs list\|show\|logs\|cancel\|replay` | Inspect and recover Croco background jobs     |
 
 ### make — Application Artifacts
 
@@ -57,6 +58,25 @@ Creates a single source file under `apps/api-server/src/`:
 - `croco migrate up` runs pending migrations via `@croco/migration-runner`
 - `croco migrate down` rolls back migrations
 - `croco migrate status` shows executed and pending migration status
+
+### jobs — Background Job Operations
+
+Jobs commands inspect a Croco app that exposes the Jobs v1 `/jobs` operations surface. The CLI
+appends `/jobs` to the supplied URL, so pass the app base URL for `/jobs` or the operations base URL
+for generated SaaS apps that expose `/ops/jobs`.
+
+```bash
+croco jobs list --url https://api.example.com --status failed
+croco jobs show exec_123 --url https://api.example.com
+croco jobs logs exec_123 --url https://api.example.com
+croco jobs cancel exec_123 --url https://api.example.com --reason "operator stop"
+croco jobs replay exec_123 --url https://api.example.com --reason "provider restored"
+
+croco jobs list --url http://localhost:3000/ops
+```
+
+Set `CROCO_JOBS_URL` to omit `--url`. `--json` prints machine-readable output. `list` and `show`
+return a non-zero exit code when any reported job needs operator attention.
 
 ## Global Options
 

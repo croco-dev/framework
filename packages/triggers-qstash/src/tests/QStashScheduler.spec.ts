@@ -281,6 +281,8 @@ describe("QStashScheduler", () => {
 
     const result = await scheduler.sync();
 
+    expect(result.mode).toBe("apply");
+    expect(result.applied).toBe(true);
     expect(result.updated).toBe(1);
     expect(result.failed).toBe(0);
     expect(create).toHaveBeenCalledWith(
@@ -289,6 +291,94 @@ describe("QStashScheduler", () => {
         cron: "*/10 * * * *",
       }),
     );
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it("dry-run은 create/update/delete diff를 반환하지만 QStash를 변경하지 않아야 한다", async () => {
+    class NewDryRunScheduleJob {
+      async run(): Promise<void> {}
+    }
+
+    class UpdatedDryRunScheduleJob {
+      async run(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "*/5 * * * *",
+      methodName: "run",
+      target: NewDryRunScheduleJob.prototype,
+      options: {},
+    });
+    triggerRegistry.register({
+      type: "cron",
+      expression: "*/10 * * * *",
+      methodName: "run",
+      target: UpdatedDryRunScheduleJob.prototype,
+      options: {},
+    });
+
+    const create = vi.fn().mockResolvedValue({});
+    const deleteSchedule = vi.fn().mockResolvedValue({});
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId: "croco-trigger:UpdatedDryRunScheduleJob:run:run",
+            cron: "*/30 * * * *",
+          },
+          {
+            scheduleId: "croco-trigger:OrphanDryRunScheduleJob:run:run",
+            cron: "0 * * * *",
+          },
+        ]),
+        create,
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "dry-run" });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        mode: "dry-run",
+        applied: false,
+        created: 1,
+        updated: 1,
+        deleted: 1,
+        skipped: 0,
+        failed: 0,
+      }),
+    );
+    expect(result.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "croco-trigger:NewDryRunScheduleJob:run:run",
+          action: "created",
+          applied: false,
+          expression: "*/5 * * * *",
+        }),
+        expect.objectContaining({
+          name: "croco-trigger:UpdatedDryRunScheduleJob:run:run",
+          action: "updated",
+          applied: false,
+          expression: "*/10 * * * *",
+          currentExpression: "*/30 * * * *",
+        }),
+        expect.objectContaining({
+          name: "croco-trigger:OrphanDryRunScheduleJob:run:run",
+          action: "deleted",
+          applied: false,
+          currentExpression: "0 * * * *",
+        }),
+      ]),
+    );
+    expect(create).not.toHaveBeenCalled();
     expect(deleteSchedule).not.toHaveBeenCalled();
   });
 

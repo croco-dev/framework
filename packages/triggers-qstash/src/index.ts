@@ -6,6 +6,8 @@
 /** Scheduler configuration and synchronization result types. */
 export type {
   QStashSchedulerOptions,
+  ScheduleSyncMode,
+  ScheduleSyncOptions,
   ScheduleSyncDetail,
   ScheduleSyncResult,
 } from "./libs/QStashScheduler";

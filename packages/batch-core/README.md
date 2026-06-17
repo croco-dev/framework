@@ -98,3 +98,16 @@ const importStep = new Step({
   },
 });
 ```
+
+### 4. 멀티 스텝 체크포인트 경계
+
+`ChunkExecutor`는 기본적으로 단일 스텝 배치 작업을 실행한다고 보고 스텝이 끝나면 실행을
+`completed`로 전이합니다. 여러 스텝이 하나의 실행을 공유한다면 중간 스텝에서 실행을 완료하지
+않도록 `completeExecution: false`를 전달하고, 이후 스텝은 이미 `running` 상태인 실행을 재사용하도록
+`startExecution: false`를 전달합니다. 체크포인트는 `step.name.cursor` 키로 저장되므로 각 스텝의
+재시작 지점은 분리됩니다.
+
+```typescript
+await chunkExecutor.execute(executionId, extractStep, { completeExecution: false });
+await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
+```

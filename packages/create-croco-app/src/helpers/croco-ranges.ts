@@ -5,6 +5,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/cli": "^0.0.2",
   "@croco/diagnostics-core": "^0.0.2",
   "@croco/entitlements-core": "^0.0.2",
+  "@croco/execution-core": "^0.0.2",
   "@croco/events-core": "^0.0.2",
   "@croco/framework-context": "^0.0.2",
   "@croco/framework-logger": "^0.0.2",

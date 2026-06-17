@@ -6,12 +6,13 @@ import {
   mb,
   securityHeadersMiddleware,
 } from "@croco/transports-http";
+import { JobsController } from "./controllers/JobsController";
 import { OperationsController } from "./controllers/OperationsController";
 import { SaasController } from "./controllers/SaasController";
 
 export function createCrocoApp() {
   return createApp({
-    controllers: [OperationsController, SaasController],
+    controllers: [OperationsController, JobsController, SaasController],
     middlewares: [
       securityHeadersMiddleware(),
       corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),

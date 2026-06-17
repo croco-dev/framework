@@ -20,6 +20,19 @@ export { createDomain } from "./commands/createDomain";
 export { createPage } from "./commands/createPage";
 export { generate } from "./commands/generate";
 export { generateScaffold } from "./commands/generateScaffold";
+export {
+  formatJobDetails,
+  formatJobLogs,
+  formatJobsListReport,
+  getJobExitCode,
+  getJobsListExitCode,
+  jobs,
+  runJobsCancel,
+  runJobsList,
+  runJobsLogs,
+  runJobsReplay,
+  runJobsShow,
+} from "./commands/jobs";
 export { make } from "./commands/make";
 export { makeController } from "./commands/makeController";
 export { makeEntity } from "./commands/makeEntity";
@@ -35,6 +48,18 @@ export {
   runOpsStatus,
 } from "./commands/ops";
 export { GLOBAL_OPTIONS } from "./commands/options";
+
+export type {
+  JobDetails,
+  JobFailurePolicy,
+  JobListReport,
+  JobLogEntry,
+  JobsCommandClient,
+  JobsListFilters,
+  JobsStatusFetch,
+  JobSummary,
+  RunJobsOptions,
+} from "./commands/jobs";
 
 export type {
   OpsEndpointName,

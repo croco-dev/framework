@@ -26,6 +26,24 @@ export class InvalidPortProblem extends Problem {
   }
 }
 
+export class InvalidJobsQueryProblem extends Problem {
+  readonly code = "saas-demo/invalid-jobs-query";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(name: string, value: string) {
+    super(undefined, undefined, `Invalid jobs ${name}: ${value}.`);
+  }
+}
+
+export class JobNotFoundProblem extends Problem {
+  readonly code = "saas-demo/job-not-found";
+  readonly category = ProblemCategory.NotFound;
+
+  constructor(jobId: string) {
+    super(undefined, undefined, `Job ${jobId} not found.`);
+  }
+}
+
 export class TenantAlreadyExistsProblem extends Problem {
   readonly code = "saas-demo/tenant-already-exists";
   readonly category = ProblemCategory.Conflict;
