@@ -123,10 +123,16 @@ export class WorkflowRunner {
       },
     });
     const executionAttributes = getExecutionTelemetryAttributes(workflow, execution);
+    const canResumeRetryingExecution =
+      execution.status === "retrying" && execution.metadata?.workflowName === workflow.name;
     span.setAttribute("workflow.execution.id", execution.id);
     span.setAttribute("workflow.idempotent", idempotencyKey !== undefined);
 
-    if (idempotencyKey !== undefined && execution.metadata?.workflowInvocationId !== invocationId) {
+    if (
+      idempotencyKey !== undefined &&
+      execution.metadata?.workflowInvocationId !== invocationId &&
+      !canResumeRetryingExecution
+    ) {
       span.setAttribute("workflow.reused", true);
       span.addEvent("workflow.execution.reused", executionAttributes);
       return {
@@ -138,7 +144,7 @@ export class WorkflowRunner {
       };
     }
 
-    if (execution.status !== "pending") {
+    if (execution.status !== "pending" && !canResumeRetryingExecution) {
       span.setAttribute("workflow.reused", true);
       span.addEvent("workflow.execution.reused", executionAttributes);
       return {

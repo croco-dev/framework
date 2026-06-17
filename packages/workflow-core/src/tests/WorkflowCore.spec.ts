@@ -494,6 +494,170 @@ describe("workflow-core", () => {
     expect(allExecutions).toHaveLength(2);
   });
 
+  it("re-enters an idempotent workflow when the existing execution is retrying", async () => {
+    let attempts = 0;
+    const handledSubscriptions: string[] = [];
+
+    class RetryableBillingProviderProblem extends Problem {
+      readonly retryable = true;
+
+      constructor() {
+        super(
+          "workflow-core/test-retryable-billing-provider",
+          ProblemCategory.InternalServerError,
+          "billing provider retryable outage",
+        );
+      }
+    }
+
+    @Component()
+    class WebhookTasks {
+      @Task({ name: "billing.retry-webhook", maxAttempts: 2 })
+      handleWebhook(payload: unknown): { handled: string; attempt: number } {
+        attempts += 1;
+        const subscriptionId = getSubscriptionId(payload);
+        handledSubscriptions.push(`${subscriptionId}:${attempts}`);
+
+        if (attempts === 1) {
+          throw new RetryableBillingProviderProblem();
+        }
+
+        return { handled: subscriptionId, attempt: attempts };
+      }
+    }
+
+    @Component()
+    class WebhookWorkflows {
+      @OnWebhook("/webhooks/billing", "POST", { auth: true })
+      @Workflow({
+        name: "billing-retry-webhook",
+        steps: ["billing.retry-webhook"],
+        maxAttempts: 2,
+        idempotencyKey: ({ payload }) => `billing-webhook:${getSubscriptionId(payload)}`,
+      })
+      webhook(): void {}
+    }
+
+    Container.set(WebhookTasks, new WebhookTasks());
+    Container.set(WebhookWorkflows, new WebhookWorkflows());
+    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(
+      runner.execute("billing-retry-webhook", { subscriptionId: "sub_123" }),
+    ).rejects.toThrow("billing provider retryable outage");
+
+    const [retryingWorkflow] = await manager.list({ type: "workflow" });
+    const retryingChildren = await manager.list({ parentId: retryingWorkflow.id });
+
+    expect(retryingWorkflow).toEqual(
+      expect.objectContaining({
+        status: "retrying",
+        attempts: 1,
+        maxAttempts: 2,
+      }),
+    );
+    expect(retryingChildren).toEqual([
+      expect.objectContaining({
+        type: "billing.retry-webhook",
+        status: "retrying",
+        parentId: retryingWorkflow.id,
+      }),
+    ]);
+
+    const retried = await runner.execute("billing-retry-webhook", { subscriptionId: "sub_123" });
+    const completedWorkflow = await manager.get(retryingWorkflow.id);
+    const childExecutions = await manager.list({ parentId: retryingWorkflow.id });
+
+    expect(retried).toEqual(
+      expect.objectContaining({
+        executionId: retryingWorkflow.id,
+        reused: false,
+      }),
+    );
+    expect(completedWorkflow).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        attempts: 2,
+      }),
+    );
+    expect(childExecutions).toEqual([
+      expect.objectContaining({
+        type: "billing.retry-webhook",
+        status: "retrying",
+        parentId: retryingWorkflow.id,
+      }),
+      expect.objectContaining({
+        type: "billing.retry-webhook",
+        status: "completed",
+        parentId: retryingWorkflow.id,
+      }),
+    ]);
+    expect(handledSubscriptions).toEqual(["sub_123:1", "sub_123:2"]);
+  });
+
+  it("does not resume a retrying execution from a different workflow with the same idempotency key", async () => {
+    @Component()
+    class WebhookTasks {
+      @Task({ name: "billing.retry-collision" })
+      handleWebhook(): void {}
+    }
+
+    @Component()
+    class WebhookWorkflows {
+      @OnWebhook("/webhooks/billing", "POST", { auth: true })
+      @Workflow({
+        name: "billing-retry-collision",
+        steps: ["billing.retry-collision"],
+        maxAttempts: 2,
+        idempotencyKey: ({ payload }) => `billing-webhook:${getSubscriptionId(payload)}`,
+      })
+      webhook(): void {}
+    }
+
+    Container.set(WebhookTasks, new WebhookTasks());
+    Container.set(WebhookWorkflows, new WebhookWorkflows());
+
+    const existingExecution: Execution = {
+      id: "workflow-existing",
+      type: "workflow",
+      status: "retrying",
+      payload: { subscriptionId: "sub_123" },
+      attempts: 1,
+      maxAttempts: 2,
+      createdAt: new Date(),
+      idempotencyKey: "billing-webhook:sub_123",
+      metadata: {
+        workflowName: "other-workflow",
+        workflowInvocationId: "existing-invocation",
+      },
+    };
+    const executionManager = {
+      create: vi.fn().mockResolvedValue(existingExecution),
+      start: vi.fn(),
+      complete: vi.fn(),
+      fail: vi.fn(),
+      cancel: vi.fn(),
+      retry: vi.fn(),
+      updateProgress: vi.fn(),
+      checkpoint: vi.fn(),
+      timeout: vi.fn(),
+    } as unknown as ExecutionManager;
+    const runner = new WorkflowRunner(executionManager, WorkflowRegistry.fromMetadata());
+
+    const result = await runner.execute("billing-retry-collision", {
+      subscriptionId: "sub_123",
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        executionId: "workflow-existing",
+        reused: true,
+        steps: [],
+      }),
+    );
+    expect(executionManager.start).not.toHaveBeenCalled();
+  });
+
   it("emits workflow telemetry span attributes and lifecycle events", async () => {
     const mockSpan = createMockSpan();
     vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
