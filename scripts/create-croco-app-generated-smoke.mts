@@ -200,6 +200,11 @@ const smokeCases: readonly SmokeCase[] = [
         packagePath: ["apps", "web"],
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
       },
+      {
+        label: "apps/web presentation smoke",
+        packagePath: ["apps", "web"],
+        args: ["presentation:smoke"],
+      },
     ],
   },
   {
@@ -221,6 +226,11 @@ const smokeCases: readonly SmokeCase[] = [
         label: "ssr-worker vite config load",
         packagePath: ["ssr-worker"],
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
+      },
+      {
+        label: "ssr-worker presentation smoke",
+        packagePath: ["ssr-worker"],
+        args: ["presentation:smoke"],
       },
     ],
   },
@@ -254,7 +264,10 @@ try {
       "build",
       "--filter=@croco/cli...",
       "--filter=create-croco-app...",
+      "--filter=@croco/frontend-cloudflare...",
+      "--filter=@croco/frontend-react...",
       "--filter=@croco/frontend-vite...",
+      "--filter=@croco/meta-vite...",
       "--filter=@croco/openapi-spec...",
       "--filter=@croco/problems-core...",
       "--filter=@croco/rpc-codegen...",
@@ -498,10 +511,18 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
   const packDir = join(smokeRoot, "generated-package-packs");
 
   return {
+    "@croco/cache-core": `file:${packWorkspacePackage("@croco/cache-core", "cache-core", packDir)}`,
     "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
+    "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
+    "@croco/framework-context": `file:${packWorkspacePackage("@croco/framework-context", "framework-context", packDir)}`,
+    "@croco/framework-preset": `file:${packWorkspacePackage("@croco/framework-preset", "framework-preset", packDir)}`,
+    "@croco/frontend-cloudflare": `file:${packWorkspacePackage("@croco/frontend-cloudflare", "frontend-cloudflare", packDir)}`,
+    "@croco/frontend-react": `file:${packWorkspacePackage("@croco/frontend-react", "frontend-react", packDir)}`,
     "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
+    "@croco/meta-vite": `file:${packWorkspacePackage("@croco/meta-vite", "meta-vite", packDir)}`,
     "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
     "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
+    "@croco/presentation-preset": `file:${packWorkspacePackage("@croco/presentation-preset", "presentation-preset", packDir)}`,
     "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
     "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
     "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,

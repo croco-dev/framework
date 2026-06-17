@@ -974,7 +974,7 @@ function generateReadmeCatalog(state: CatalogState): string {
     "",
     "### Maturity Guide",
     "",
-    "성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready를 의미하지 않습니다.",
+    "성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)와 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready를 의미하지 않습니다.",
     "",
     "| 상태 | 의미 | 패키지 수 |",
     "| --- | --- | ---: |",
@@ -1134,7 +1134,7 @@ function generateExtensionMatrixDocs(state: CatalogState): string {
     "",
     "This page lists Croco provider, integration, transport, and presentation adapter compatibility from `docs/package-catalog.json`. Required configuration, runtime support, package peer dependencies, maturity, and package test presence are intentionally separate so users can evaluate production readiness without treating a passing unit test as a maturity claim.",
     "",
-    "Provider promotion criteria are defined in [Provider Maturity Gates](../provider-maturity/).",
+    "Provider promotion criteria are defined in [Provider Maturity Gates](../provider-maturity/). Presentation runtime and promotion criteria are defined in [Presentation Runtime Support](../presentation-runtime-support/).",
     "",
     "Runtime columns: Node covers long-running server and CLI use, Lambda covers serverless functions, Workers covers Cloudflare Workers, and Frontend covers browser or SSR frontend integration.",
   ];

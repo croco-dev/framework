@@ -359,7 +359,12 @@
         "adapter": "Cloudflare SSR handler",
         "runtimes": ["cloudflare-workers"],
         "requiredEnv": ["API_WORKER binding optional", "ASSETS binding optional"],
-        "features": ["SSR fetch handler", "service binding routing", "asset fallback"]
+        "features": [
+          "SSR fetch handler",
+          "service binding routing",
+          "asset fallback",
+          "streaming response smoke"
+        ]
       },
       "frontend-react": {
         "domain": "Frontend React",
@@ -373,7 +378,11 @@
         "adapter": "Vite integration helpers",
         "runtimes": ["node", "browser", "cloudflare-workers"],
         "requiredEnv": ["none"],
-        "features": ["Vite config helpers", "Cloudflare Vite compatibility"]
+        "features": [
+          "Vite config helpers",
+          "Cloudflare Vite compatibility",
+          "generated smoke profile"
+        ]
       },
       "integrations-posthog": {
         "domain": "PostHog",
@@ -400,8 +409,17 @@
         "domain": "Frontend routing",
         "adapter": "Meta Vite runtime",
         "runtimes": ["node", "lambda", "cloudflare-workers", "browser"],
-        "requiredEnv": ["optional Redis-compatible ISR adapter config"],
-        "features": ["route registry", "server actions", "SSR/RSC streaming", "ISR adapters"]
+        "requiredEnv": [
+          "optional Redis-compatible ISR adapter config",
+          "Worker-safe IsrCacheStore required for durable Workers ISR"
+        ],
+        "features": [
+          "route registry",
+          "server actions",
+          "SSR/RSC streaming",
+          "ISR v1 exact-key TTL",
+          "generated page/API/action/ISR smoke"
+        ]
       },
       "metering-drizzle": {
         "domain": "Metering",
@@ -443,7 +461,12 @@
         "adapter": "Backend/frontend preset composition",
         "runtimes": ["node", "lambda", "cloudflare-workers", "browser"],
         "requiredEnv": ["none"],
-        "features": ["preset composition", "contract wiring", "generated app support"]
+        "features": [
+          "preset composition",
+          "contract wiring",
+          "generated app support",
+          "output contract validation"
+        ]
       },
       "ratelimit-upstash": {
         "domain": "Rate limiting",
