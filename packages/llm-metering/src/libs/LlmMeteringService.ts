@@ -9,7 +9,17 @@ import {
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
 } from "./problems/LlmMeteringProblems";
-import type { LlmEmbeddingUsageRecord, LlmUsageRecord } from "./types";
+import {
+  COMPLETION_TOKENS,
+  COST_USD,
+  EMBEDDING_TOKENS,
+  PROMPT_TOKENS,
+  type LlmEmbeddingUsageRecord,
+  type LlmMeteringFailurePolicy,
+  type LlmMeterUsageDelta,
+  type LlmQuotaPolicy,
+  type LlmUsageRecord,
+} from "./types";
 
 type MeterRecordAttempt = {
   meterId: string;
@@ -41,6 +51,8 @@ export type LlmMeteringServiceOptions = {
   meteringService: MeteringService;
   eventBus?: EventBus;
   pricingTable?: PricingTable;
+  quotaPolicy?: LlmQuotaPolicy;
+  failurePolicy?: LlmMeteringFailurePolicy;
   defaultPricing?: {
     inputPricePerToken: number;
     outputPricePerToken: number;
@@ -65,11 +77,15 @@ export class LlmMeteringService {
   private readonly eventBus?: EventBus;
   private readonly pricingTable: PricingTable;
   private readonly defaultPricing: LlmMeteringServiceOptions["defaultPricing"];
+  private readonly quotaPolicy?: LlmQuotaPolicy;
+  private readonly failurePolicy: LlmMeteringFailurePolicy;
 
   constructor(options: LlmMeteringServiceOptions) {
     this.meteringService = options.meteringService;
     this.eventBus = options.eventBus;
     this.pricingTable = options.pricingTable ?? defaultPricingTable;
+    this.quotaPolicy = options.quotaPolicy;
+    this.failurePolicy = options.failurePolicy ?? "fail-closed";
     this.defaultPricing = options.defaultPricing ?? {
       inputPricePerToken: 0.000001,
       outputPricePerToken: 0.000002,
@@ -111,21 +127,52 @@ export class LlmMeteringService {
     );
 
     // 3. 3개 meter 기록 (병렬)
+    const operationType = metadata?.operationType ?? "generate";
     const baseMetadata = {
       provider,
       model: modelId,
       accuracy: usage.accuracy ?? "UNKNOWN",
-      operationType: metadata?.operationType ?? "generate",
       ...metadata,
+      operationType,
     };
+    this.assertValidMeterValue(PROMPT_TOKENS, usage.promptTokens, operationType);
+    this.assertValidMeterValue(COMPLETION_TOKENS, usage.completionTokens, operationType);
+    this.assertValidMeterValue(COST_USD, costUsd, operationType);
+    const meterDeltas: LlmMeterUsageDelta[] = [
+      {
+        meterId: PROMPT_TOKENS,
+        value: usage.promptTokens,
+        operation: baseMetadata.operationType,
+      },
+      {
+        meterId: COMPLETION_TOKENS,
+        value: usage.completionTokens,
+        operation: baseMetadata.operationType,
+      },
+      {
+        meterId: COST_USD,
+        value: costUsd,
+        operation: baseMetadata.operationType,
+      },
+    ];
+
+    await this.enforceQuota({
+      tenantId,
+      modelId,
+      provider,
+      operation: baseMetadata.operationType,
+      idempotencyKey,
+      meters: meterDeltas,
+      metadata: baseMetadata,
+    });
 
     const recordAttempts: MeterRecordAttempt[] = [
       // Prompt tokens
       {
-        meterId: "llm.prompt_tokens",
+        meterId: PROMPT_TOKENS,
         promise: this.meteringService.record({
           tenantId,
-          meterId: "llm.prompt_tokens",
+          meterId: PROMPT_TOKENS,
           value: usage.promptTokens,
           idempotencyKey: `${idempotencyKey}:prompt`,
           metadata: baseMetadata,
@@ -134,10 +181,10 @@ export class LlmMeteringService {
 
       // Completion tokens
       {
-        meterId: "llm.completion_tokens",
+        meterId: COMPLETION_TOKENS,
         promise: this.meteringService.record({
           tenantId,
-          meterId: "llm.completion_tokens",
+          meterId: COMPLETION_TOKENS,
           value: usage.completionTokens,
           idempotencyKey: `${idempotencyKey}:completion`,
           metadata: baseMetadata,
@@ -146,10 +193,10 @@ export class LlmMeteringService {
 
       // Cost USD
       {
-        meterId: "llm.cost_usd",
+        meterId: COST_USD,
         promise: this.meteringService.record({
           tenantId,
-          meterId: "llm.cost_usd",
+          meterId: COST_USD,
           value: costUsd,
           idempotencyKey: `${idempotencyKey}:cost`,
           metadata: baseMetadata,
@@ -225,24 +272,48 @@ export class LlmMeteringService {
       accuracy: accuracy ?? "UNKNOWN",
       operationType: "embed",
     };
+    this.assertValidMeterValue(EMBEDDING_TOKENS, embeddingTokens, baseMetadata.operationType);
+    this.assertValidMeterValue(COST_USD, costUsd, baseMetadata.operationType);
+    const meterDeltas: LlmMeterUsageDelta[] = [
+      {
+        meterId: EMBEDDING_TOKENS,
+        value: embeddingTokens,
+        operation: baseMetadata.operationType,
+      },
+      {
+        meterId: COST_USD,
+        value: costUsd,
+        operation: baseMetadata.operationType,
+      },
+    ];
+
+    await this.enforceQuota({
+      tenantId,
+      modelId,
+      provider,
+      operation: baseMetadata.operationType,
+      idempotencyKey,
+      meters: meterDeltas,
+      metadata: baseMetadata,
+    });
 
     await this.assertRecordAttempts(
       [
         {
-          meterId: "llm.embedding_tokens",
+          meterId: EMBEDDING_TOKENS,
           promise: this.meteringService.record({
             tenantId,
-            meterId: "llm.embedding_tokens",
+            meterId: EMBEDDING_TOKENS,
             value: embeddingTokens,
             idempotencyKey: `${idempotencyKey}:tokens`,
             metadata: baseMetadata,
           }),
         },
         {
-          meterId: "llm.cost_usd",
+          meterId: COST_USD,
           promise: this.meteringService.record({
             tenantId,
-            meterId: "llm.cost_usd",
+            meterId: COST_USD,
             value: costUsd,
             idempotencyKey: `${idempotencyKey}:cost`,
             metadata: baseMetadata,
@@ -299,14 +370,37 @@ export class LlmMeteringService {
       pricing,
     );
 
+    this.assertValidMeterValue(COST_USD, costUsd, "cost_tracking");
+
     // 3. cost_usd meter 기록
+    await this.enforceQuota({
+      tenantId,
+      modelId,
+      provider,
+      operation: "cost_tracking",
+      idempotencyKey,
+      meters: [
+        {
+          meterId: COST_USD,
+          value: costUsd,
+          operation: "cost_tracking",
+        },
+      ],
+      metadata: {
+        provider,
+        model: modelId,
+        accuracy: usage.accuracy ?? "UNKNOWN",
+        operationType: "cost_tracking",
+      },
+    });
+
     await this.assertRecordAttempts(
       [
         {
-          meterId: "llm.cost_usd",
+          meterId: COST_USD,
           promise: this.meteringService.record({
             tenantId,
-            meterId: "llm.cost_usd",
+            meterId: COST_USD,
             value: costUsd,
             idempotencyKey: `${idempotencyKey}:cost`,
             metadata: {
@@ -339,18 +433,68 @@ export class LlmMeteringService {
    * - tenantId별 quota 조회
    * - 초과 시 LlmQuotaExceededProblem throw
    */
-  async checkQuota(tenantId: string, meterId: string, quotaLimit: number): Promise<boolean> {
+  async checkQuota(
+    tenantId: string,
+    meterId: string,
+    quotaLimit: number,
+    requestedUsage = 0,
+  ): Promise<boolean> {
+    if (!Number.isFinite(requestedUsage) || requestedUsage < 0) {
+      throw new LlmQuotaExceededProblem(meterId, requestedUsage, quotaLimit);
+    }
+
     const currentUsage = await this.meteringService.getUsage({
       tenantId,
       meterId,
       period: "billing_cycle",
     });
+    const projectedUsage = currentUsage + requestedUsage;
 
-    if (currentUsage > quotaLimit) {
-      throw new LlmQuotaExceededProblem(meterId, currentUsage, quotaLimit);
+    if (projectedUsage > quotaLimit) {
+      throw new LlmQuotaExceededProblem(meterId, projectedUsage, quotaLimit);
     }
 
     return true;
+  }
+
+  private async enforceQuota(context: {
+    tenantId: string;
+    modelId: string;
+    provider: string;
+    operation: string;
+    idempotencyKey: string;
+    meters: readonly LlmMeterUsageDelta[];
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    if (!this.quotaPolicy) {
+      return;
+    }
+
+    try {
+      await this.quotaPolicy.enforce(context);
+    } catch (error) {
+      if (error instanceof LlmQuotaExceededProblem) {
+        throw error;
+      }
+
+      throw new LlmMeteringRecordFailedProblem(
+        context.operation,
+        context.meters.map((meter) => meter.meterId),
+        error,
+      );
+    }
+  }
+
+  private assertValidMeterValue(meterId: string, value: number, operation: string): void {
+    if (Number.isFinite(value) && value >= 0) {
+      return;
+    }
+
+    throw new LlmMeteringRecordFailedProblem(
+      operation,
+      [meterId],
+      new TypeError(`Invalid LLM metering value for '${meterId}': ${String(value)}`),
+    );
   }
 
   private async assertRecordAttempts(
@@ -361,6 +505,10 @@ export class LlmMeteringService {
     const firstRejectedIndex = results.findIndex((result) => result.status === "rejected");
 
     if (firstRejectedIndex === -1) {
+      return;
+    }
+
+    if (this.failurePolicy !== "fail-closed") {
       return;
     }
 

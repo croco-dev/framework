@@ -263,11 +263,15 @@ function checkSaasStructure() {
       "@croco/entitlements-core": "workspace:*",
       "@croco/execution-core": "workspace:*",
       "@croco/health-core": "workspace:*",
+      "@croco/framework-context": "workspace:*",
       "@croco/lifecycle-core": "workspace:*",
       "@croco/diagnostics-core": "workspace:*",
+      "@croco/llm-core": "workspace:*",
+      "@croco/llm-metering": "workspace:*",
       "@croco/problems-core": "workspace:*",
       "@croco/protocols-rest": "workspace:*",
       "@croco/ratelimit-core": "workspace:*",
+      "@croco/telemetry-api": "workspace:*",
       "@croco/telemetry-sdk-node": "workspace:*",
       "@croco/transports-http": "workspace:*",
     }),
@@ -279,6 +283,8 @@ function checkSaasStructure() {
   checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EntitlementManager/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LlmService/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LlmMeteringService/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /BillingService/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /SeatLimitChecker/);
   checkFileContains(

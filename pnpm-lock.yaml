@@ -2295,6 +2295,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/llm-core':
+        specifier: workspace:*
+        version: link:../llm-core
       '@croco/openapi-spec':
         specifier: workspace:*
         version: link:../openapi-spec

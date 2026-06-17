@@ -66,6 +66,8 @@ class AssistantService {
 ## 구현 포인트
 
 - OpenAI, Anthropic 같은 공급자 구현은 `LlmModel`을 상속해 연결합니다.
+- 신규 공급자 패키지는 `@croco/testing`의 `createLlmProviderConformanceSuite`를 통과해야 합니다.
+- OpenAI는 첫 실공급자 패키지 대상이지만, Responses API/도구 호출/임베딩/스트리밍 normalization을 별도 패키지에서 검증한 뒤 추가합니다. 결정 근거는 [docs/llm-governance.md](../../docs/llm-governance.md)를 참고하세요.
 - 이벤트 버스를 연결하면 생성 완료와 사용량 기록을 다른 패키지로 전달할 수 있습니다.
 - 스트림 소비자가 조기 종료하거나 `StreamParams.signal`이 abort되면 upstream 모델 스트림에도 abort signal이 전달되며, 취소된 스트림은 `LlmStreamCompletedEvent`를 발행하지 않습니다.
 - 완료된 스트림의 `LlmStreamCompletedEvent.text`는 이벤트 payload 메모리 사용을 제한하기 위해 긴 응답에서 잘릴 수 있으며, 이 경우 `textTruncated`가 `true`로 설정됩니다. 사용량 계산은 전체 스트림 길이를 기준으로 유지됩니다.

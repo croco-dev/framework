@@ -81,6 +81,18 @@ export const saasDemoSnapshotSchema = z.object({
     recordedValue: z.number(),
     currentUsage: z.number(),
   }),
+  ai: z.object({
+    provider: z.string().min(1),
+    modelId: z.string().min(1),
+    responseText: z.string().min(1),
+    promptTokens: z.number().int().positive(),
+    completionTokens: z.number().int().nonnegative(),
+    totalTokens: z.number().int().positive(),
+    costUsd: z.number().positive(),
+    promptUsage: z.number().int().nonnegative(),
+    promptQuota: z.number().int().positive(),
+    quotaFailureCode: z.string().min(1),
+  }),
   entitlement: z.object({
     featureKey: z.string(),
     granted: z.boolean(),

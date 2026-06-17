@@ -46,7 +46,7 @@ export { LlmMeteringService } from "./libs/LlmMeteringService";
 /**
  * 기본 가격표와 가격 계산기 구현체입니다.
  */
-export { defaultPricingTable, PricingTable } from "./libs/PricingTable";
+export { defaultPricingTable, PricingTable, samplePricingRegistry } from "./libs/PricingTable";
 
 /**
  * LLM 미터링 과정에서 사용하는 Problem 하위 타입들입니다.
@@ -56,6 +56,7 @@ export {
   LlmMeteringRecordFailedProblem,
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
+  PricingRegistryConflictProblem,
 } from "./libs/problems/LlmMeteringProblems";
 
 /**
@@ -72,10 +73,17 @@ export {
  * 비용 예산, 모델 단가, 사용량 기록 타입입니다.
  */
 export type {
+  LlmMeterId,
+  LlmMeteringFailurePolicy,
+  LlmMeterUsageDelta,
   LlmCostBudget,
   LlmEmbeddingUsageRecord,
+  LlmQuotaPolicy,
+  LlmQuotaPolicyContext,
   LlmUsageRecord,
   ModelPricing,
+  PricingRegistryDefinition,
+  PricingRegistryEntry,
   UsageAccuracy,
 } from "./libs/types";
 

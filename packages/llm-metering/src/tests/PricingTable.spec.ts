@@ -1,11 +1,87 @@
 import { describe, expect, it } from "vitest";
-import { PricingTable } from "../libs/PricingTable";
+import { PricingTable, samplePricingRegistry } from "../libs/PricingTable";
+import { PricingRegistryConflictProblem } from "../libs/problems/LlmMeteringProblems";
 import type { LlmEmbeddingUsageRecord, LlmUsageRecord } from "../libs/types";
 
 describe("PricingTable", () => {
   const createPricingTable = (): PricingTable => new PricingTable();
 
   describe("getPrice", () => {
+    it("should expose the versioned sample registry metadata", () => {
+      const pricingTable = createPricingTable();
+
+      expect(pricingTable.version).toBe(samplePricingRegistry.version);
+      expect(pricingTable.source).toBe(samplePricingRegistry.source);
+      expect(pricingTable.effectiveDate).toBe(samplePricingRegistry.effectiveDate);
+      expect(pricingTable.notes).toBe(samplePricingRegistry.notes);
+      expect(pricingTable.toRegistry()).toMatchObject({
+        version: samplePricingRegistry.version,
+        source: samplePricingRegistry.source,
+        effectiveDate: samplePricingRegistry.effectiveDate,
+        notes: samplePricingRegistry.notes,
+      });
+    });
+
+    it("should build pricing from an injected versioned registry", () => {
+      const pricingTable = PricingTable.fromRegistry({
+        version: "tenant-pricing-2026-06-18",
+        source: "internal-price-book",
+        effectiveDate: "2026-06-18",
+        notes: "tenant-specific negotiated rates",
+        entries: [
+          {
+            provider: "openai",
+            modelId: "gpt-governed",
+            inputPricePerToken: 0.1,
+            outputPricePerToken: 0.2,
+            currency: "USD",
+            effectiveDate: "2026-06-18",
+          },
+        ],
+      });
+
+      expect(pricingTable.version).toBe("tenant-pricing-2026-06-18");
+      expect(pricingTable.source).toBe("internal-price-book");
+      expect(pricingTable.effectiveDate).toBe("2026-06-18");
+      expect(pricingTable.notes).toBe("tenant-specific negotiated rates");
+      expect(pricingTable.getPrice("openai", "gpt-governed")).toEqual({
+        inputPricePerToken: 0.1,
+        outputPricePerToken: 0.2,
+        currency: "USD",
+        effectiveDate: "2026-06-18",
+      });
+      expect(pricingTable.toRegistry()).toMatchObject({
+        version: "tenant-pricing-2026-06-18",
+        source: "internal-price-book",
+        effectiveDate: "2026-06-18",
+        notes: "tenant-specific negotiated rates",
+      });
+    });
+
+    it("should reject duplicate provider and model registry entries", () => {
+      expect(() =>
+        PricingTable.fromRegistry({
+          version: "conflicting-registry",
+          entries: [
+            {
+              provider: "openai",
+              modelId: "gpt-duplicate",
+              inputPricePerToken: 0.1,
+              outputPricePerToken: 0.2,
+              currency: "USD",
+            },
+            {
+              provider: "openai",
+              modelId: "gpt-duplicate",
+              inputPricePerToken: 0.3,
+              outputPricePerToken: 0.4,
+              currency: "USD",
+            },
+          ],
+        }),
+      ).toThrow(PricingRegistryConflictProblem);
+    });
+
     it("should return pricing for GPT-4", () => {
       const pricingTable = createPricingTable();
       const pricing = pricingTable.getPrice("openai", "gpt-4");

@@ -74,6 +74,21 @@ describe("SaaS golden path demo", () => {
     });
   });
 
+  it("records AI usage and blocks over-quota LLM usage", async () => {
+    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+
+    expect(snapshot.ai).toMatchObject({
+      provider: "in-memory",
+      modelId: "demo-assistant",
+      responseText: "Usage is under control.",
+      promptQuota: 50,
+      quotaFailureCode: "llm-metering/quota-exceeded",
+    });
+    expect(snapshot.ai.promptUsage).toBe(snapshot.ai.promptTokens);
+    expect(snapshot.ai.totalTokens).toBe(snapshot.ai.promptTokens + snapshot.ai.completionTokens);
+    expect(snapshot.ai.costUsd).toBeGreaterThan(0);
+  });
+
   it("returns entitlement status after usage is recorded", async () => {
     const snapshot = await runSaasDemoFlow(createSaasRuntime());
 
@@ -103,7 +118,13 @@ describe("SaaS golden path demo", () => {
       "storage.gb",
     );
 
-    expect(meters.map((meter) => meter.meterId).sort()).toEqual(["api_requests", "storage_gb"]);
+    expect(meters.map((meter) => meter.meterId).sort()).toEqual([
+      "api_requests",
+      "llm.completion_tokens",
+      "llm.cost_usd",
+      "llm.prompt_tokens",
+      "storage_gb",
+    ]);
     expect(meters.find((meter) => meter.meterId === "api_requests")?.metadata).toMatchObject({
       featureKey: "api.requests",
       unit: "request",
@@ -111,6 +132,20 @@ describe("SaaS golden path demo", () => {
     expect(meters.find((meter) => meter.meterId === "storage_gb")?.metadata).toMatchObject({
       featureKey: "storage.gb",
       unit: "GB",
+    });
+    expect(meters.find((meter) => meter.meterId === "llm.prompt_tokens")?.metadata).toMatchObject({
+      provider: "in-memory",
+      unit: "token",
+    });
+    expect(
+      meters.find((meter) => meter.meterId === "llm.completion_tokens")?.metadata,
+    ).toMatchObject({
+      provider: "in-memory",
+      unit: "token",
+    });
+    expect(meters.find((meter) => meter.meterId === "llm.cost_usd")?.metadata).toMatchObject({
+      provider: "in-memory",
+      unit: "usd",
     });
     expect(storageUsage).toBe(105);
     expect(storageEntitlement).toMatchObject({

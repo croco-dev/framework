@@ -1,12 +1,14 @@
 import "reflect-metadata";
 import { Container, Context, Token } from "@croco/framework-context";
+import { InMemoryLlmModel, type GenerateParams, type GenerateResult } from "@croco/llm-core";
 import { ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param } from "@croco/protocols-rest";
 import { InMemoryStorageProvider } from "@croco/storage-core";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   assertOpenAPIRoute,
   assertProblemResponse,
+  createLlmProviderConformanceSuite,
   createStorageProviderConformanceSuite,
   createRpcTestFetch,
   createTestingApp,
@@ -18,6 +20,15 @@ class GreetingService {
 
   greet(name: string): string {
     return `${this.prefix}, ${name}`;
+  }
+}
+
+class FailingLlmModel extends InMemoryLlmModel {
+  override async generate(_params: GenerateParams): Promise<GenerateResult> {
+    throw ProblemFactory.internalServerError(
+      "testing/llm-provider-failed",
+      "provider generate failed",
+    );
   }
 }
 
@@ -58,6 +69,10 @@ function greetingProviders(prefix = "Hello") {
 }
 
 describe("@croco/testing", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   it("creates an isolated app that injects controller requests without manual bootstrap", async () => {
     const app = createTestingApp({
       controllers: [GreetingController],
@@ -180,6 +195,77 @@ describe("@croco/testing", () => {
         providerName: "in-memory-storage",
         publicUrl: "https://storage.example.com/",
         signedUrl: "expires=",
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
+  });
+
+  describe("LLM provider conformance", () => {
+    const modelId = "conformance-model";
+    const createModel = () =>
+      new InMemoryLlmModel(modelId, {
+        "croco conformance generate": "governed response",
+        "croco conformance stream": "streaming governed response",
+        "croco conformance object": '{"ok":true,"label":"croco"}',
+        "croco conformance tool": 'lookup:{"topic":"croco"}',
+      });
+
+    it.each(
+      createLlmProviderConformanceSuite({
+        createFailingModel: () => new FailingLlmModel(modelId),
+        createModel,
+        modelId,
+        providerName: "in-memory-llm",
+        prompts: {
+          generate: {
+            prompt: "croco conformance generate",
+            expectedText: "governed response",
+          },
+          stream: {
+            prompt: "croco conformance stream",
+            minimumChunks: 2,
+          },
+          object: {
+            prompt: "croco conformance object",
+            schema: { type: "object" },
+            assertObject: (value) => {
+              expect(value).toEqual({ ok: true, label: "croco" });
+            },
+          },
+          tool: {
+            prompt: "croco conformance tool",
+            tools: [
+              {
+                name: "lookup",
+                description: "Lookup a topic",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    topic: { type: "string" },
+                  },
+                  required: ["topic"],
+                },
+              },
+            ],
+            assertToolResult: (result) => {
+              expect(result.toolCalls).toEqual([
+                {
+                  name: "lookup",
+                  arguments: { topic: "croco" },
+                },
+              ]);
+            },
+          },
+          embed: {
+            text: "croco embedding",
+            expectedDimensions: 1536,
+          },
+          embedMany: {
+            texts: ["croco one", "croco two"],
+            expectedDimensions: 1536,
+          },
+        },
       }).cases,
     )("$name", async ({ run }) => {
       await run();
