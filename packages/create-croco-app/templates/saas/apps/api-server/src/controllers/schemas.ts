@@ -35,6 +35,10 @@ export const diagnosticsSchema = z.object({
 });
 
 export const saasDemoSnapshotSchema = z.object({
+  contract: z.object({
+    version: z.literal("saas-smoke-contract/v1"),
+    providerProfile: z.string(),
+  }),
   tenant: z.object({
     id: z.string(),
     slug: z.string(),
@@ -49,6 +53,14 @@ export const saasDemoSnapshotSchema = z.object({
     ownerRole: z.string(),
     memberRole: z.string(),
     memberCount: z.number(),
+    seatLimit: z.object({
+      usage: z.number(),
+      quota: z.number(),
+      exceeded: z.boolean(),
+      remaining: z.number(),
+      failureCode: z.string(),
+      rejectedUserId: z.string(),
+    }),
   }),
   auth: z.object({
     permission: z.string(),
@@ -62,6 +74,7 @@ export const saasDemoSnapshotSchema = z.object({
   billing: z.object({
     checkoutUrl: z.string(),
     subscriptionStatus: z.string(),
+    entitlementPlanId: z.string().nullable(),
   }),
   metering: z.object({
     meterId: z.string(),
