@@ -6,10 +6,10 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |    98 |
+| Public packages                |    99 |
 | Private packages skipped       |     2 |
 | Missing package README         |    22 |
-| Missing generated API docs     |    73 |
+| Missing generated API docs     |    74 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    38 |
 
@@ -80,6 +80,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/impersonation-core` (`packages/impersonation-core`) — legacy baseline
 - `@croco/integrations-posthog` (`packages/integrations-posthog`) — legacy baseline
 - `@croco/invitation-drizzle` (`packages/invitation-drizzle`) — legacy baseline
+- `@croco/lifecycle-core` (`packages/lifecycle-core`) — legacy baseline
 - `@croco/membership-drizzle` (`packages/membership-drizzle`) — legacy baseline
 - `@croco/meta-vite` (`packages/meta-vite`) — legacy baseline
 - `@croco/metering-drizzle` (`packages/metering-drizzle`) — legacy baseline
@@ -125,7 +126,7 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       21 |
-| Domain       |       25 |
+| Domain       |       26 |
 | Provider     |       25 |
 | Integration  |        5 |
 | Protocol     |        6 |
@@ -136,7 +137,7 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       44 |
+| 🟡 beta             |       45 |
 | 🔴 alpha/WIP        |       31 |
 | ⚠️ deprecated       |        0 |
 

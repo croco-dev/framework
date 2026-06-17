@@ -1,6 +1,6 @@
 # {{projectName}}
 
-Croco SaaS Golden Path baseline입니다. 생성 직후 tenant, membership, invitation, auth/RBAC, access, billing, metering, entitlements, background jobs, health, diagnostics 흐름을 한 번에 검증할 수 있습니다.
+Croco SaaS Golden Path baseline입니다. 생성 직후 tenant, membership, invitation, auth/RBAC, access, billing, metering, entitlements, lifecycle retention actions, background jobs, health, diagnostics 흐름을 한 번에 검증할 수 있습니다.
 
 ## Quickstart
 
@@ -37,8 +37,9 @@ seed는 다음 순서로 실행됩니다.
 7. billing subscription 상태를 entitlement plan context로 동기화
 8. seat quota 초과가 명시적으로 실패하는지 확인
 9. entitlement 상태 확인
-10. billing-sync background job 실행 및 inspect
-11. health/diagnostics 상태 확인
+10. at-risk health signal을 lifecycle rule로 평가하고 CS follow-up action을 1회 emit
+11. billing-sync background job 실행 및 inspect
+12. health/diagnostics 상태 확인
 
 ## API Contract
 

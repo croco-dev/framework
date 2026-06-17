@@ -14,6 +14,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/frontend-vite": "^0.0.2",
   "@croco/health-core": "^0.0.2",
   "@croco/invitation-core": "^0.0.2",
+  "@croco/lifecycle-core": "^0.0.1",
   "@croco/membership-core": "^0.0.2",
   "@croco/meta-vite": "^0.0.2",
   "@croco/metering-core": "^0.0.2",

@@ -263,6 +263,7 @@ function checkSaasStructure() {
       "@croco/entitlements-core": "workspace:*",
       "@croco/execution-core": "workspace:*",
       "@croco/health-core": "workspace:*",
+      "@croco/lifecycle-core": "workspace:*",
       "@croco/diagnostics-core": "workspace:*",
       "@croco/problems-core": "workspace:*",
       "@croco/protocols-rest": "workspace:*",
@@ -288,6 +289,8 @@ function checkSaasStructure() {
   checkFileContains("saas", ["README.md.hbs"], /SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /billing-sync/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LifecycleRuleEvaluator/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /cs\.follow_up/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EventBusStats/);
   checkFileContains(
     "saas",
