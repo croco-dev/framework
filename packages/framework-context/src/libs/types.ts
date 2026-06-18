@@ -4,6 +4,43 @@ export type Scope = "singleton" | "request" | "transient";
 
 export type Constructor<T = unknown> = new (...args: never[]) => T;
 
+export type DependencyTokenKind = "constructor" | "typedi-token" | "string" | "symbol";
+
+export type DependencyProviderKind =
+  | "component"
+  | "registered-value"
+  | "lazy"
+  | "typedi"
+  | "missing";
+
+export type DependencyResolutionStepStatus = "selected" | "missing" | "circular" | "scope-mismatch";
+
+export type DependencyResolutionTraceStatus =
+  | "ready"
+  | "resolved"
+  | "failed"
+  | "missing"
+  | "circular"
+  | "scope-mismatch";
+
+export type DependencyResolutionStep = {
+  readonly token: string;
+  readonly tokenKind: DependencyTokenKind;
+  readonly provider: DependencyProviderKind;
+  readonly status: DependencyResolutionStepStatus;
+  readonly reason: string;
+  readonly path: readonly string[];
+  readonly scope?: Scope;
+  readonly dependencyOf?: string;
+  readonly parameterIndex?: number;
+};
+
+export type DependencyResolutionTrace = {
+  readonly root: string;
+  readonly status: DependencyResolutionTraceStatus;
+  readonly steps: readonly DependencyResolutionStep[];
+};
+
 export interface ComponentOptions {
   scope?: Scope;
 }

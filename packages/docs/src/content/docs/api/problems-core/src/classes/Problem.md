@@ -41,6 +41,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`EventPublishFailedError`](/api/events-inmemory/src/classes/eventpublishfailederror/)
 - [`BackpressureExceededProblem`](/api/events-inmemory/src/classes/backpressureexceededproblem/)
 - [`BackpressureTimeoutProblem`](/api/events-inmemory/src/classes/backpressuretimeoutproblem/)
+- [`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/)
+- [`ContainerScopeMismatchProblem`](/api/framework-context/src/classes/containerscopemismatchproblem/)
 - [`CircularDependencyProblem`](/api/framework-context/src/classes/circulardependencyproblem/)
 - [`MiddlewareProblem`](/api/framework-context/src/classes/middlewareproblem/)
 - [`ShutdownConfigurationConflictProblem`](/api/framework-context/src/classes/shutdownconfigurationconflictproblem/)
