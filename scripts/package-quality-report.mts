@@ -42,12 +42,26 @@ export type DependencyBoundaryResult = {
   readonly violations: readonly DependencyBoundaryViolation[];
 };
 
+export type PublicApiGuardResult = {
+  readonly status: "pass" | "fail" | "not-collected";
+  readonly packageCount: number | null;
+  readonly changedPackages: number | null;
+  readonly runtimeAdded: number | null;
+  readonly runtimeRemoved: number | null;
+  readonly typeAdded: number | null;
+  readonly typeRemoved: number | null;
+  readonly snapshotPath: string;
+  readonly reportPath: string;
+  readonly updateCommand: string;
+};
+
 export type PackageQualityReport = {
   readonly generatedAt: string;
   readonly rootDir: string;
   readonly summaryDir: string;
   readonly rows: readonly PackageQualityRow[];
   readonly boundaries: readonly DependencyBoundaryResult[];
+  readonly publicApi: PublicApiGuardResult;
   readonly gateOutcomes: Readonly<Record<string, string>>;
 };
 
@@ -88,6 +102,7 @@ const QUALITY_TASKS: readonly QualityTask[] = ["build", "typecheck", "test"];
 const reportDirectory = join("ci-reports", "package-quality");
 const turboRunsDirectory = join(".turbo", "runs");
 const workspaceFileName = "pnpm-workspace.yaml";
+const publicApiSummaryPath = join(reportDirectory, "public-api-summary.json");
 
 const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
   {
@@ -555,6 +570,61 @@ function readGateOutcomes(): Record<string, string> {
   };
 }
 
+function readNumberField(value: Record<string, unknown>, fieldName: string): number | null {
+  return typeof value[fieldName] === "number" ? value[fieldName] : null;
+}
+
+function readStringField(
+  value: Record<string, unknown>,
+  fieldName: string,
+  fallback: string,
+): string {
+  return typeof value[fieldName] === "string" ? value[fieldName] : fallback;
+}
+
+function readPublicApiGuardResult(rootDir: string): PublicApiGuardResult {
+  const summaryPath = join(rootDir, publicApiSummaryPath);
+
+  if (!existsSync(summaryPath)) {
+    return {
+      status: "not-collected",
+      packageCount: null,
+      changedPackages: null,
+      runtimeAdded: null,
+      runtimeRemoved: null,
+      typeAdded: null,
+      typeRemoved: null,
+      snapshotPath: "public-api-surface.snapshot.json",
+      reportPath: toPosixPath(publicApiSummaryPath.replace(/summary\.json$/, "diff.md")),
+      updateCommand: "pnpm public-api:write",
+    };
+  }
+
+  const summary = readJsonFile(summaryPath);
+  if (!isRecord(summary)) {
+    throw new Error(`${publicApiSummaryPath} must contain an object`);
+  }
+
+  const status = summary.status === "pass" || summary.status === "fail" ? summary.status : "fail";
+
+  return {
+    status,
+    packageCount: readNumberField(summary, "packageCount"),
+    changedPackages: readNumberField(summary, "changedPackages"),
+    runtimeAdded: readNumberField(summary, "runtimeAdded"),
+    runtimeRemoved: readNumberField(summary, "runtimeRemoved"),
+    typeAdded: readNumberField(summary, "typeAdded"),
+    typeRemoved: readNumberField(summary, "typeRemoved"),
+    snapshotPath: readStringField(summary, "snapshotPath", "public-api-surface.snapshot.json"),
+    reportPath: readStringField(
+      summary,
+      "reportPath",
+      toPosixPath(publicApiSummaryPath.replace(/summary\.json$/, "diff.md")),
+    ),
+    updateCommand: readStringField(summary, "updateCommand", "pnpm public-api:write"),
+  };
+}
+
 export function createPackageQualityReport(
   options: Pick<CheckOptions, "rootDir" | "summaryDir">,
 ): PackageQualityReport {
@@ -569,6 +639,7 @@ export function createPackageQualityReport(
     summaryDir: options.summaryDir,
     rows,
     boundaries: scanDependencyBoundaries(options.rootDir),
+    publicApi: readPublicApiGuardResult(options.rootDir),
     gateOutcomes: readGateOutcomes(),
   };
 }
@@ -649,19 +720,58 @@ function formatBoundaryEvidence(result: DependencyBoundaryResult): string {
     .join("<br>");
 }
 
+function formatNullableCount(value: number | null): string {
+  return value === null ? "not-collected" : String(value);
+}
+
+function formatPublicApiStatus(result: PublicApiGuardResult): string {
+  if (result.status === "not-collected") {
+    return "not-collected";
+  }
+
+  if (result.status === "pass") {
+    return "pass";
+  }
+
+  return `fail; ${formatNullableCount(result.changedPackages)} package(s) changed`;
+}
+
+function formatPublicApiEvidence(result: PublicApiGuardResult): string {
+  if (result.status === "not-collected") {
+    return "run `pnpm public-api:check` to collect snapshot drift";
+  }
+
+  return `snapshot \`${result.snapshotPath}\`; report \`${result.reportPath}\``;
+}
+
+function formatPublicApiSection(result: PublicApiGuardResult): string[] {
+  return [
+    "## Public API surface guard",
+    `- Status: ${formatPublicApiStatus(result)}`,
+    `- Packages scanned: ${formatNullableCount(result.packageCount)}`,
+    `- Packages with API drift: ${formatNullableCount(result.changedPackages)}`,
+    `- Runtime exports added/removed: ${formatNullableCount(result.runtimeAdded)} / ${formatNullableCount(result.runtimeRemoved)}`,
+    `- Type exports added/removed: ${formatNullableCount(result.typeAdded)} / ${formatNullableCount(result.typeRemoved)}`,
+    `- Snapshot: \`${result.snapshotPath}\``,
+    `- Diff report: \`${result.reportPath}\``,
+    `- Intentional update procedure: run \`${result.updateCommand}\`, review the runtime/type diff, and include a changeset when a publishable package's import surface, types, or behavior changes.`,
+  ];
+}
+
 export function buildReportMarkdown(report: PackageQualityReport): string {
   const lines = [
     "# Package Quality Dashboard",
     "",
     `- Generated at: ${report.generatedAt}`,
     `- Turbo summary directory: \`${toPosixPath(relative(report.rootDir, report.summaryDir))}\``,
-    "- Source: Turbo run summaries plus repository dependency boundary scans.",
+    "- Source: Turbo run summaries plus repository dependency boundary and public API surface scans.",
     "",
     "## Gate summary",
     "| Gate | Scope | CI mode | Current outcome | Evidence |",
     "| --- | --- | --- | --- | --- |",
     `| \`changeset-required:check\` | publishable package behavior changes | blocking on PR | ${report.gateOutcomes["changeset-required:check"]} | links public package changes to a required non-README changeset |`,
-    `| \`pnpm check\` | repository policy, lint, format, dependency boundaries | blocking on PR/trunk | ${report.gateOutcomes["pnpm check"]} | includes \`dependency-boundaries:check\` |`,
+    `| \`pnpm check\` | repository policy, lint, format, dependency boundaries, public API drift | blocking on PR/trunk | ${report.gateOutcomes["pnpm check"]} | includes \`dependency-boundaries:check\` and \`public-api:check\` |`,
+    `| \`public-api:check\` | package public export surface drift | blocking through \`pnpm check\` | ${formatPublicApiStatus(report.publicApi)} | ${formatPublicApiEvidence(report.publicApi)} |`,
     `| \`build\` | package build tasks | blocking on PR/trunk | ${report.gateOutcomes.build} | Turbo \`build\` summary below |`,
     `| \`typecheck\` | package TypeScript tasks | blocking on PR/trunk | ${report.gateOutcomes.typecheck} | Turbo \`typecheck\` summary below |`,
     `| \`test\` | package test tasks | blocking on PR/trunk | ${report.gateOutcomes.test} | Turbo \`test\` summary below |`,
@@ -685,6 +795,8 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
       (result) =>
         `| \`${result.id}\` | \`${result.packageName}\` | ${formatBoundaryStatus(result)} | ${formatBoundaryEvidence(result)} |`,
     ),
+    "",
+    ...formatPublicApiSection(report.publicApi),
     "",
     "## Package matrix",
     "| Package | Build | Typecheck | Test | Notes |",

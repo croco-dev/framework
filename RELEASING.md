@@ -104,6 +104,7 @@ After a package version is published, maintainers verify provenance in two ways:
 - `.changeset/config.json`과 이 가이드의 versioning mode 설명이 일치해야 합니다. 현재는 `fixed: []`, `linked: []`이므로 독립 버전 관리로 리뷰합니다.
 - Fixed 또는 linked group을 도입하려면 `.changeset/config.json`에 실제 group을 먼저 표현하고, 이 가이드에 group 영향 범위와 패키지 선택 기준을 함께 갱신해야 합니다.
 - 리뷰어는 release-significant package 변경마다 적절한 changeset entry가 있는지 확인합니다. 하나의 패키지를 선택했다는 이유만으로 관련 없는 패키지까지 자동으로 함께 bump된다고 가정하지 않습니다.
+- `pnpm public-api:check`는 publishable package의 `src/index.ts` export surface를 `public-api-surface.snapshot.json`과 비교합니다. 의도된 export 변경이면 `pnpm public-api:write`로 snapshot을 갱신하고, runtime/type export diff가 import surface, 타입, 또는 공개 동작을 바꾸는지 기준으로 changeset 필요 여부를 리뷰합니다.
 
 ---
 
