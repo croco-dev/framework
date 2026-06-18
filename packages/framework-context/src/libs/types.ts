@@ -56,7 +56,9 @@ export type UserContext = {
   [key: string]: unknown;
 };
 
-export type RuntimePlatform = "node" | "lambda" | "cloudflare-workers" | (string & {});
+export type KnownRuntimePlatform = "node" | "lambda" | "cloudflare-workers";
+
+export type RuntimePlatform = KnownRuntimePlatform | (string & {});
 
 export type RuntimeTraceContext = {
   traceId?: string;
@@ -72,6 +74,8 @@ export type RuntimeCapabilities = {
   flush: boolean;
   shutdown: boolean;
 };
+
+export type RuntimeCapabilityName = keyof RuntimeCapabilities;
 
 export type RuntimeNativeContext = Record<string, unknown>;
 

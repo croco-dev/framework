@@ -41,6 +41,14 @@ class RuntimeController {
 | AWS Lambda         | `lambda`             | `process.env`         | API Gateway request id or `awsRequestId` | app logger | active HTTP server span    | queued and drained before response conversion | drains queued work and logs rejections | no-op      |
 | Cloudflare Workers | `cloudflare-workers` | Worker binding object | `x-request-id` or generated id           | app logger | `traceparent` when present | delegates to `ExecutionContext.waitUntil`     | no-op                                  | no-op      |
 
+The code-level source of truth for these runtime and capability names is
+`RUNTIME_CAPABILITY_SUPPORT` from `@croco/framework-context`. `RuntimeContextInit<"cloudflare-workers">`
+cannot declare `flush: true` or provide a `flush` hook, while `RuntimeContextInit<"lambda">` can declare
+`flush: true` only with a concrete flush implementation.
+Custom adapter platforms can still use a custom `platform` string, but they must pass an explicit
+capability support config when creating a runtime context so unsupported hooks are rejected instead of
+falling back silently.
+
 ## Native Context
 
 Use `runtime.native` only at adapter boundaries:
@@ -50,6 +58,9 @@ Use `runtime.native` only at adapter boundaries:
 
 Prefer capability checks before reading runtime-specific objects. Missing features are represented as
 `capabilities.<name> === false` and no-op hooks, not as hidden platform assumptions.
+Adapter authors must not advertise unsupported capabilities as available. Croco rejects erased JavaScript
+inputs that claim a platform/capability combination the matrix does not support or claim a hook-backed
+capability without a hook implementation.
 
 ## Lambda Telemetry Flush
 

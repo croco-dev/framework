@@ -1,28 +1,96 @@
 import type {
   ILogger,
+  KnownRuntimePlatform,
   RuntimeCapabilities,
+  RuntimeCapabilityName,
+  RuntimeCapabilityOverridesFor,
+  RuntimeCapabilitySupport,
+  RuntimeCapabilitySupportForPlatform,
   RuntimeContext,
   RuntimeNativeContext,
   RuntimePlatform,
   RuntimeTraceContext,
 } from "@croco/framework-context";
+import {
+  getRuntimeCapabilitySupport,
+  isKnownRuntimePlatform,
+  RUNTIME_CAPABILITY_NAMES,
+} from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 const CROCO_RUNTIME_CONTEXT_ENV_KEY: unique symbol = Symbol(
   "@croco/transports-http/runtimeContext",
 );
 
-export type RuntimeContextInit = {
-  platform: RuntimePlatform;
+type RuntimeCapabilitySupportInput<TPlatform extends RuntimePlatform> =
+  TPlatform extends KnownRuntimePlatform
+    ? { capabilitySupport?: never }
+    : { capabilitySupport: RuntimeCapabilitySupport };
+
+type RuntimeCapabilityOverridesWithHook<
+  TPlatform extends RuntimePlatform,
+  TCapability extends RuntimeCapabilityName,
+> = Omit<RuntimeCapabilityOverridesFor<TPlatform>, TCapability> & {
+  readonly [TKey in TCapability]?: true;
+};
+
+type RuntimeCapabilityOverridesWithoutHook<
+  TPlatform extends RuntimePlatform,
+  TCapability extends RuntimeCapabilityName,
+> = Omit<RuntimeCapabilityOverridesFor<TPlatform>, TCapability> & {
+  readonly [TKey in TCapability]?: false;
+};
+
+type HookBackedRuntimeCapability<
+  TPlatform extends RuntimePlatform,
+  TCapability extends RuntimeCapabilityName,
+  THookName extends string,
+  THook,
+> = RuntimeCapabilitySupportForPlatform<TPlatform>[TCapability] extends false
+  ? { readonly [TKey in THookName]?: never }
+  :
+      | ({
+          readonly [TKey in THookName]: THook;
+        } & {
+          readonly capabilities?: RuntimeCapabilityOverridesWithHook<TPlatform, TCapability>;
+        })
+      | ({
+          readonly [TKey in THookName]?: never;
+        } & {
+          readonly capabilities?: RuntimeCapabilityOverridesWithoutHook<TPlatform, TCapability>;
+        });
+
+type RuntimeCapabilityHooks<TPlatform extends RuntimePlatform> = HookBackedRuntimeCapability<
+  TPlatform,
+  "waitUntil",
+  "waitUntil",
+  (promise: Promise<unknown>) => void
+> &
+  HookBackedRuntimeCapability<TPlatform, "flush", "flush", () => Promise<void> | void> &
+  HookBackedRuntimeCapability<TPlatform, "shutdown", "shutdown", () => Promise<void> | void>;
+
+type RuntimeContextInitForPlatform<TPlatform extends RuntimePlatform> = {
+  platform: TPlatform;
   requestId?: string;
   env?: Record<string, unknown>;
   logger?: ILogger;
   trace?: RuntimeTraceContext;
-  capabilities?: Partial<RuntimeCapabilities>;
+  capabilities?: RuntimeCapabilityOverridesFor<TPlatform>;
   native?: RuntimeNativeContext;
-  waitUntil?: (promise: Promise<unknown>) => void;
-  flush?: () => Promise<void> | void;
-  shutdown?: () => Promise<void> | void;
-};
+} & RuntimeCapabilitySupportInput<TPlatform> &
+  RuntimeCapabilityHooks<TPlatform>;
+
+export type RuntimeContextInit<TPlatform extends RuntimePlatform = RuntimePlatform> =
+  TPlatform extends RuntimePlatform ? RuntimeContextInitForPlatform<TPlatform> : never;
+
+export class RuntimeCapabilityProblem extends Problem {
+  readonly code = "transports-http/runtime-capability-invalid";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(detail: string) {
+    super(undefined, undefined, detail);
+  }
+}
 
 type RuntimeContextEnvCarrier = {
   [CROCO_RUNTIME_CONTEXT_ENV_KEY]?: RuntimeContextInit;
@@ -49,6 +117,8 @@ export function createRuntimeContext(init: RuntimeContextInit): RuntimeContext {
     shutdown: init.capabilities?.shutdown ?? init.shutdown !== undefined,
   };
 
+  assertRuntimeCapabilities(init, capabilities);
+
   return {
     platform: init.platform,
     requestId: init.requestId ?? "",
@@ -57,13 +127,9 @@ export function createRuntimeContext(init: RuntimeContextInit): RuntimeContext {
     trace: init.trace,
     capabilities,
     native: init.native,
-    waitUntil: init.waitUntil ?? (() => undefined),
-    flush: async () => {
-      await init.flush?.();
-    },
-    shutdown: async () => {
-      await init.shutdown?.();
-    },
+    waitUntil: (promise) => runRuntimeWaitUntil(init, promise),
+    flush: async () => runRuntimeFlush(init),
+    shutdown: async () => runRuntimeShutdown(init),
   };
 }
 
@@ -75,6 +141,81 @@ export function withRuntimeContextEnv(
     ...env,
     [CROCO_RUNTIME_CONTEXT_ENV_KEY]: runtimeContext,
   };
+}
+
+function assertRuntimeCapabilities(
+  init: RuntimeContextInit,
+  capabilities: RuntimeCapabilities,
+): void {
+  const support = getRuntimeCapabilitySupportForInit(init);
+
+  for (const capability of RUNTIME_CAPABILITY_NAMES) {
+    const implemented = hasRuntimeCapabilityImplementation(init, capability);
+
+    if (!support[capability] && (capabilities[capability] || implemented)) {
+      throw new RuntimeCapabilityProblem(
+        `Runtime platform '${init.platform}' does not support capability '${capability}'.`,
+      );
+    }
+
+    if (capabilities[capability] && !implemented) {
+      throw new RuntimeCapabilityProblem(
+        `Runtime platform '${init.platform}' declares capability '${capability}' without an implementation.`,
+      );
+    }
+  }
+}
+
+function getRuntimeCapabilitySupportForInit(init: RuntimeContextInit): RuntimeCapabilities {
+  if (isKnownRuntimePlatform(init.platform)) {
+    return getRuntimeCapabilitySupport(init.platform);
+  }
+
+  if (init.capabilitySupport) {
+    return init.capabilitySupport;
+  }
+
+  throw new RuntimeCapabilityProblem(
+    `Runtime platform '${init.platform}' requires explicit capability support.`,
+  );
+}
+
+function hasRuntimeCapabilityImplementation(
+  init: RuntimeContextInit,
+  capability: RuntimeCapabilityName,
+): boolean {
+  switch (capability) {
+    case "env":
+      return init.env !== undefined;
+    case "logger":
+      return init.logger !== undefined;
+    case "trace":
+      return init.trace !== undefined;
+    case "waitUntil":
+      return init.waitUntil !== undefined;
+    case "flush":
+      return init.flush !== undefined;
+    case "shutdown":
+      return init.shutdown !== undefined;
+  }
+}
+
+function runRuntimeWaitUntil(init: RuntimeContextInit, promise: Promise<unknown>): void {
+  if (typeof init.waitUntil === "function") {
+    init.waitUntil(promise);
+  }
+}
+
+async function runRuntimeFlush(init: RuntimeContextInit): Promise<void> {
+  if (typeof init.flush === "function") {
+    await init.flush();
+  }
+}
+
+async function runRuntimeShutdown(init: RuntimeContextInit): Promise<void> {
+  if (typeof init.shutdown === "function") {
+    await init.shutdown();
+  }
 }
 
 export function getRuntimeContextInitFromEnv(env: unknown): RuntimeContextInit | undefined {

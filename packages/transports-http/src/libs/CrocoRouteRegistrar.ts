@@ -282,17 +282,27 @@ export class CrocoRouteRegistrar {
     const init = existingRuntimeContext ?? this.inferRuntimeContext(c);
     const trace = this.resolveTrace(init.trace, traceContext);
 
-    return createRuntimeContext({
+    return createRuntimeContext(this.withResolvedRuntimeContext(init, fallbackRequestId, trace));
+  }
+
+  private withResolvedRuntimeContext(
+    init: RuntimeContextInit,
+    fallbackRequestId: string,
+    trace: RuntimeTraceContext | undefined,
+  ): RuntimeContextInit {
+    const capabilities = {
+      ...init.capabilities,
+      logger: init.capabilities?.logger ?? true,
+      trace: init.capabilities?.trace ?? trace !== undefined,
+    } as NonNullable<RuntimeContextInit["capabilities"]>;
+
+    return {
       ...init,
       requestId: init.requestId ?? fallbackRequestId,
       logger: init.logger ?? this.logger,
       trace,
-      capabilities: {
-        ...init.capabilities,
-        logger: init.capabilities?.logger ?? true,
-        trace: init.capabilities?.trace ?? trace !== undefined,
-      },
-    });
+      capabilities,
+    } as RuntimeContextInit;
   }
 
   private resolveTrace(

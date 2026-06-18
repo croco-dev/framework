@@ -324,6 +324,9 @@ bindings.
   your own adapters.
 - Do not use `@croco/telemetry-sdk-node` in Workers. It wraps the OpenTelemetry Node SDK and is
   intended for Node and Lambda.
+- Do not declare Worker runtime contexts with `flush: true`; the shared `RUNTIME_CAPABILITY_SUPPORT`
+  matrix marks `flush` as Lambda-only, and `RuntimeContextInit<"cloudflare-workers">` rejects that
+  combination during typecheck.
 - `nodejs_compat` is required for this recipe. `nodejs_als` is only enough for code that imports
   `AsyncLocalStorage` and no other Node APIs.
 - Node.js compatibility in Workers is explicit and partial. Even with `nodejs_compat`, do not depend

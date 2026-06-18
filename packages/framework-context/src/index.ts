@@ -201,6 +201,14 @@ export {
   POLICY_KINDS,
   POLICY_TARGET_KINDS,
 } from "./libs/RuntimePolicy";
+export {
+  getRuntimeCapabilitySupport,
+  isKnownRuntimePlatform,
+  isRuntimeCapabilitySupported,
+  RUNTIME_CAPABILITY_NAMES,
+  RUNTIME_CAPABILITY_SUPPORT,
+  RUNTIME_PLATFORMS,
+} from "./libs/runtimeCapabilities";
 
 /**
  * 종료 훅을 등록하고 프로세스 시그널에서 graceful shutdown을 실행하는 매니저 클래스입니다.
@@ -317,7 +325,19 @@ export type {
 } from "./libs/RuntimePolicy";
 
 export type {
+  RuntimeCapabilitiesForPlatform,
+  RuntimeCapabilityOverridesFor,
+  RuntimeCapabilitySupport,
+  RuntimeCapabilitySupportForPlatform,
+  RuntimeCapabilitySupportMatrix,
+  SupportedRuntimeCapabilityName,
+  UnsupportedRuntimeCapabilityName,
+} from "./libs/runtimeCapabilities";
+
+export type {
+  KnownRuntimePlatform,
   RuntimeCapabilities,
+  RuntimeCapabilityName,
   RuntimeContext,
   RuntimeInspectorRecorder,
   RuntimeInspectorRecorderEventInput,
