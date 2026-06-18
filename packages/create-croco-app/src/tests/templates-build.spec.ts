@@ -91,6 +91,10 @@ function checkSpaBeSplitStructure() {
       "contract:diff": expect.stringMatching(
         /^croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers/,
       ),
+      "contract:verify": expect.stringMatching(
+        /^pnpm contract:diff && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+      ),
+      "ci:contracts": "pnpm contract:verify",
       "contract:openapi": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-openapi-spec/),
       "contract:client": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-rpc-codegen/),
       codegen: expect.any(String),
@@ -226,6 +230,10 @@ function checkSaasStructure() {
       "contract:diff": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers/,
       ),
+      "contract:verify": expect.stringMatching(
+        /^pnpm contract:diff && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+      ),
+      "ci:contracts": "pnpm contract:verify",
       "contract:client": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--out/,
       ),
@@ -349,6 +357,8 @@ function checkAiSaasStructure() {
     scripts: expect.objectContaining({
       "ai:smoke": "pnpm --filter {{scope}}/api-server ai:smoke",
       "demo:smoke": expect.stringMatching(/api-server ai:smoke$/),
+      "contract:verify": expect.stringMatching(/^pnpm contract:diff && pnpm contract:openapi/),
+      "ci:contracts": "pnpm contract:verify",
       "contract:openapi": expect.stringMatching(/AI SaaS API/),
     }),
   });

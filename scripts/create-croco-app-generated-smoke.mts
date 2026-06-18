@@ -255,8 +255,7 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:snapshot"],
         paths: ["contract-graph.snapshot.json"],
       },
-      { label: "Contract diff", args: ["contract:diff"] },
-      { label: "OpenAPI contract", args: ["contract:openapi"] },
+      { label: "Contract verify", args: ["contract:verify"] },
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
     ],
@@ -273,8 +272,7 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:snapshot"],
         paths: ["contract-graph.snapshot.json"],
       },
-      { label: "Contract diff", args: ["contract:diff"] },
-      { label: "OpenAPI contract", args: ["contract:openapi"] },
+      { label: "Contract verify", args: ["contract:verify"] },
       { label: "AI demo flow", args: ["ai:smoke"] },
       { label: "full demo flow", args: ["demo:smoke"] },
     ],
@@ -516,14 +514,12 @@ function runSpaBeSplitContractSmoke(): void {
     join(projectDir, "contract-graph.snapshot.json"),
     "REST SPA contract smoke did not create contract-graph.snapshot.json",
   );
-  run("pnpm", ["contract:diff"], projectDir);
-  run("pnpm", ["contract:openapi"], projectDir);
+  run("pnpm", ["contract:verify"], projectDir);
   assertExists(
     join(projectDir, "openapi.json"),
     "REST SPA contract smoke did not create openapi.json",
   );
 
-  run("pnpm", ["contract:client"], projectDir);
   const generatedClientPath = join(projectDir, "libs", "shared", "provider-rpc", "src", "user.ts");
   assertExists(
     generatedClientPath,
@@ -534,8 +530,6 @@ function runSpaBeSplitContractSmoke(): void {
     generatedClientPath,
     "export type CreateInput = { name: string; email: string; };",
   );
-
-  run("pnpm", ["--filter", "@smoke/provider-rpc", "typecheck"], projectDir);
   console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
 }
 
