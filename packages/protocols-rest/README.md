@@ -55,6 +55,66 @@ const pipe = createValidationPipe(schema);
 const page = validateRequest(schema, { page: "1" });
 ```
 
+### 타입 기반 라우트 계약
+
+```typescript
+import {
+  Body,
+  Controller,
+  defineRouteContract,
+  Get,
+  HttpMethod,
+  Param,
+  Post,
+  ResponseSchema,
+  routeBodySchema,
+  routeParam,
+  routeResponseSchema,
+  type RouteBody,
+  type RouteMethodReturn,
+  type RouteParam,
+} from "@croco/protocols-rest";
+import { z } from "zod";
+
+const userSchema = z.object({ id: z.string(), name: z.string() });
+const createUserSchema = z.object({ name: z.string() });
+
+const getUser = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/users/:id",
+  params: z.object({ id: z.string() }),
+  response: userSchema,
+});
+
+const createUser = defineRouteContract({
+  method: HttpMethod.POST,
+  path: "/users",
+  body: createUserSchema,
+  response: userSchema,
+});
+
+@Controller("/users")
+class UserController {
+  @Get(getUser.path)
+  @ResponseSchema(routeResponseSchema(getUser))
+  find(
+    @Param(routeParam(getUser, "id")) id: RouteParam<typeof getUser, "id">,
+  ): RouteMethodReturn<typeof getUser> {
+    return { id, name: "Ada" };
+  }
+
+  @Post(createUser.path)
+  @ResponseSchema(routeResponseSchema(createUser))
+  create(
+    @Body(routeBodySchema(createUser)) body: RouteBody<typeof createUser>,
+  ): RouteMethodReturn<typeof createUser> {
+    return { id: "user-1", name: body.name };
+  }
+}
+```
+
+`defineRouteContract`는 path params, query, body, response, Problem union을 TypeScript 계약으로 연결합니다. `routeParam(getUser, "userId")`처럼 path에 없는 이름이나 response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. 런타임 값 검증은 기존처럼 Zod schema와 pipe가 담당합니다.
+
 ## API 레퍼런스
 
 - 데코레이터: `Controller`, `Get`, `Post`, `Put`, `Patch`, `Delete`, `Options`, `Head`, `All`
@@ -64,4 +124,4 @@ const page = validateRequest(schema, { page: "1" });
 - 메타데이터 조회: `getControllerMeta`, `getRouteMeta`, `getParamsMeta`, `getGuards`, `getPipes`, `getInterceptors`, `getFilters`, `isController`
 - 검증 유틸리티: `createValidator`, `validateRequest`, `validateResponse`, `createValidationPipe`
 - 검증 Problem: `ValidationProblem`, `RequestValidationProblem`, `ResponseValidationProblem`
-- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `TypedRouteConfig`
+- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `TypedRouteConfig`, `RouteContractSpec`, `RouteMethodReturn`

@@ -8169,6 +8169,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "defineRouteContract",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
           "name": "Delete",
           "exportKind": "named",
           "source": "./HttpMethod",
@@ -8391,6 +8397,42 @@
           "declarationKind": "class"
         },
         {
+          "name": "routeBodySchema",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routeParam",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routePathParamsSchema",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routeQueryParam",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routeQuerySchema",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routeResponseSchema",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
           "name": "UseFilters",
           "exportKind": "named",
           "source": "./Lifecycle",
@@ -8582,6 +8624,11 @@
           "source": "./PipeTransform"
         },
         {
+          "name": "ProblemConstructor",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
           "name": "ProblemLike",
           "exportKind": "named",
           "source": "./HttpExceptionFilter"
@@ -8598,9 +8645,74 @@
           "localName": "ResponseSchema"
         },
         {
+          "name": "RouteBody",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteContractHandler",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteContractRequest",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteContractResult",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteContractSpec",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
           "name": "RouteHandler",
           "exportKind": "named",
           "source": "./RouteTypes"
+        },
+        {
+          "name": "RouteMethodReturn",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteParam",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RoutePathParamName",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RoutePathParams",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteProblem",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteQuery",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteQueryParam",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteResponse",
+          "exportKind": "named",
+          "source": "./RouteContract"
         },
         {
           "name": "RouteSchema",

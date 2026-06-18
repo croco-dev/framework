@@ -1,0 +1,24 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "routeBodySchema"
+---
+
+> **routeBodySchema**\<`TContract`\>(`contract`): `TContract`\[`"body"`\]
+
+## Type Parameters
+
+### TContract
+
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)\<[`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/), `string`, `AnyZodObject`, `AnyZodObject`, `ZodType`\<`any`, `ZodTypeDef`, `any`\>, `ZodType`\<`any`, `ZodTypeDef`, `any`\>, readonly [`ProblemConstructor`](/api/protocols-rest/src/type-aliases/problemconstructor/)\<[`Problem`](/api/problems-core/src/classes/problem/)\>[]\> & `object`
+
+## Parameters
+
+### contract
+
+`TContract`
+
+## Returns
+
+`TContract`\[`"body"`\]
