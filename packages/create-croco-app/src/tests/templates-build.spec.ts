@@ -119,6 +119,17 @@ function checkSpaBeSplitStructure() {
       zod: expect.any(String),
     }),
   });
+  const consolePackageJson = readJsonTemplate(
+    "spa-be-split",
+    "apps",
+    "console-web",
+    "package.json.hbs",
+  );
+  expect(consolePackageJson).toMatchObject({
+    dependencies: expect.objectContaining({
+      "{{scope}}/provider-rpc": "workspace:*",
+    }),
+  });
   const rpcPackageJson = readJsonTemplate(
     "spa-be-split",
     "libs",
@@ -127,6 +138,8 @@ function checkSpaBeSplitStructure() {
     "package.json.hbs",
   );
   expect(rpcPackageJson).toMatchObject({
+    main: "./src/index.ts",
+    types: "./src/index.ts",
     scripts: expect.objectContaining({
       typecheck: "tsc --noEmit",
     }),
@@ -287,6 +300,17 @@ function checkSaasStructure() {
       "@croco/cli": "workspace:*",
       typedi: "^0.10.0",
     }),
+  });
+  const rpcPackageJson = readJsonTemplate(
+    "saas",
+    "libs",
+    "shared",
+    "provider-rpc",
+    "package.json.hbs",
+  );
+  expect(rpcPackageJson).toMatchObject({
+    main: "./src/index.ts",
+    types: "./src/index.ts",
   });
   checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);

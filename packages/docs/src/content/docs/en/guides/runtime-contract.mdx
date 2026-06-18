@@ -57,7 +57,7 @@ Prefer capability checks before reading runtime-specific objects. Missing featur
 owned by `@croco/telemetry-sdk-node`, so Lambda apps should connect `TelemetryRuntime.forceFlush()` at the
 transport boundary:
 
-```typescript
+```typescript no-check
 import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();

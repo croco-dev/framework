@@ -41,6 +41,19 @@ The committed baseline is `contract-graph.snapshot.json`. `openapi.json` and gen
 files may be committed when consumers need checked-in artifacts, but CI should regenerate them from
 the server controllers rather than treating hand-edited generated output as authoritative.
 
+## Typed RPC clients
+
+`contract:client` reads the same REST controller metadata and writes a fetch client with generated
+request and response types. A controller route such as `GET /users/:id` with `@Param("id",
+z.string())`, `@Body(z.object(...))`, and `@ResponseSchema(...)` becomes a generated client method
+whose path params, body, and successful response are checked by TypeScript.
+
+Generated clients do not import Zod or validate successful responses again at runtime. If
+`@croco/rpc-codegen` cannot represent a Zod schema as a JSON-safe TypeScript type, generation fails
+instead of widening the contract to an implicit fallback type. RFC 7807 responses are represented as
+`RpcClientProblemError` rejections with `RpcProblemDetails`, so Problem responses are not returned as
+successful response values.
+
 ## Direct CLI usage
 
 ```bash

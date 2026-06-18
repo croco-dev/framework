@@ -47,7 +47,8 @@ export function generateClientFiles(
   assertGeneratedClientRoutes(routes);
   fs.mkdirSync(outDir, { recursive: true });
 
-  return groupRoutesByDomain(routes).map((domainRoutes) => {
+  const domainRouteGroups = groupRoutesByDomain(routes);
+  const files = domainRouteGroups.map((domainRoutes) => {
     const filePath = path.join(outDir, `${domainRoutes.domain}.ts`);
     const content = generateDomainClient(domainRoutes, options);
 
@@ -57,6 +58,15 @@ export function generateClientFiles(
 
     return filePath;
   });
+  const supportPath = path.join(outDir, "rpc.ts");
+  const supportContent = generateRpcSupport();
+  const indexPath = path.join(outDir, "index.ts");
+  const indexContent = generateClientIndex(domainRouteGroups);
+
+  fs.writeFileSync(supportPath, supportContent);
+  fs.writeFileSync(indexPath, indexContent);
+
+  return [...files, supportPath, indexPath];
 }
 
 function assertGeneratedClientRoutes(routes: RouteIR[]): void {
@@ -137,7 +147,7 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const types = [...inputTypes, ...outputTypes];
-  const responseHelpers = getResponseHelpers({
+  const responseHelperImports = getResponseHelperImports({
     hasOutputRoutes: domainRoutes.routes.some((route) => route.outputSchema),
     hasNoOutputRoutes: domainRoutes.routes.some((route) => !route.outputSchema),
   });
@@ -192,48 +202,42 @@ function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<str
     : "";
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
 
-  return `${imports}${types.join("\n")}
-${responseHelpers}${queryHelpers}${headerHelpers}
+  return `${imports}${responseHelperImports}${types.join("\n")}
+${queryHelpers}${headerHelpers}
 export const ${clientName} = {
 ${clientMethods}
 };
 ${hooks}`;
 }
 
-function getResponseHelpers(options: ResponseHelperOptions): string {
-  const jsonResponseHelper = options.hasOutputRoutes
-    ? `async function handleJsonResponse<T = unknown>(response: Response): Promise<T> {
-  if (!response.ok) {
-    return rejectErrorResponse(response);
-  }
+function generateClientIndex(domainRoutes: readonly DomainRoutes[]): string {
+  const clientExports = domainRoutes.map(
+    (domainRoute) => `export { ${domainRoute.domain}Client } from './${domainRoute.domain}';`,
+  );
+  const namespaceExports = domainRoutes.map(
+    (domainRoute) => `export * as ${domainRoute.domain}Rpc from './${domainRoute.domain}';`,
+  );
 
-  return response.json() as Promise<T>;
+  return `export * from './rpc';
+${[...clientExports, ...namespaceExports].join("\n")}
+`;
 }
 
-`
-    : "";
-  const optionalJsonResponseHelper = options.hasNoOutputRoutes
-    ? `async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
-  if (!response.ok) {
-    return rejectErrorResponse(response);
+function getResponseHelperImports(options: ResponseHelperOptions): string {
+  const helpers: string[] = [];
+
+  if (options.hasOutputRoutes) {
+    helpers.push("handleJsonResponse");
   }
 
-  if (response.status === 204) {
-    return undefined;
+  if (options.hasNoOutputRoutes) {
+    helpers.push("readOptionalJsonResponse");
   }
 
-  const body = await response.text();
-
-  if (body.length === 0) {
-    return undefined;
-  }
-
-  return JSON.parse(body) as unknown;
+  return helpers.length === 0 ? "" : `import { ${helpers.join(", ")} } from './rpc';\n`;
 }
 
-`
-    : "";
-
+function generateRpcSupport(): string {
   return `export type RpcProblemDetails = {
   type: string;
   title: string;
@@ -267,7 +271,32 @@ export class RpcClientResponseError extends Error {
   }
 }
 
-${jsonResponseHelper}${optionalJsonResponseHelper}
+export async function handleJsonResponse<T = unknown>(response: Response): Promise<T> {
+  if (!response.ok) {
+    return rejectErrorResponse(response);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
+  if (!response.ok) {
+    return rejectErrorResponse(response);
+  }
+
+  if (response.status === 204) {
+    return undefined;
+  }
+
+  const body = await response.text();
+
+  if (body.length === 0) {
+    return undefined;
+  }
+
+  return JSON.parse(body) as unknown;
+}
+
 async function rejectErrorResponse(response: Response): Promise<never> {
   let body: unknown;
 
@@ -437,6 +466,38 @@ function zodTypeToTypeScript(schema: unknown): string {
     return "boolean";
   }
 
+  if (schemaName === "ZodUnknown" || schemaName === "ZodAny") {
+    return "unknown";
+  }
+
+  if (schemaName === "ZodNever") {
+    return "never";
+  }
+
+  if (schemaName === "ZodNull") {
+    return "null";
+  }
+
+  if (schemaName === "ZodUndefined" || schemaName === "ZodVoid") {
+    return "undefined";
+  }
+
+  if (schemaName === "ZodLiteral") {
+    return literalValueToTypeScript(getLiteralValue(schema));
+  }
+
+  if (schemaName === "ZodEnum") {
+    return unionTypes(getEnumValues(schema).map(literalValueToTypeScript));
+  }
+
+  if (schemaName === "ZodNativeEnum") {
+    return unionTypes(getNativeEnumValues(schema).map(literalValueToTypeScript));
+  }
+
+  if (schemaName === "ZodUnion" || schemaName === "ZodDiscriminatedUnion") {
+    return unionTypes(getUnionOptions(schema).map(zodTypeToTypeScript));
+  }
+
   if (schemaName === "ZodOptional") {
     return `${zodTypeToTypeScript(getInnerSchema(schema))} | undefined`;
   }
@@ -449,15 +510,27 @@ function zodTypeToTypeScript(schema: unknown): string {
     return zodTypeToTypeScript(getInnerSchema(schema));
   }
 
+  if (schemaName === "ZodEffects" || schemaName === "ZodBranded" || schemaName === "ZodReadonly") {
+    return zodTypeToTypeScript(getInnerSchema(schema));
+  }
+
   if (schemaName === "ZodArray") {
     return `${zodTypeToTypeScript(getArrayElementSchema(schema))}[]`;
+  }
+
+  if (schemaName === "ZodRecord") {
+    const valueSchema = getRecordValueSchema(schema);
+
+    return `Record<string, ${valueSchema === undefined ? "unknown" : zodTypeToTypeScript(valueSchema)}>`;
   }
 
   if (schemaName === "ZodObject") {
     return getObjectTypeScript(schema);
   }
 
-  return "unknown";
+  throw new RpcCodegenContractProblem(
+    `Cannot generate RPC client type for unsupported schema ${schemaName || "unknown schema"}. Use a JSON-safe Zod schema supported by @croco/rpc-codegen or remove the schema from generated contracts.`,
+  );
 }
 
 function getSchemaName(schema: unknown): string {
@@ -473,9 +546,13 @@ function getInnerSchema(schema: unknown): unknown {
     return undefined;
   }
 
-  const definition = schema._def as { readonly innerType?: unknown };
+  const definition = schema._def as {
+    readonly innerType?: unknown;
+    readonly schema?: unknown;
+    readonly type?: unknown;
+  };
 
-  return definition.innerType;
+  return definition.innerType ?? definition.schema ?? definition.type;
 }
 
 function getArrayElementSchema(schema: unknown): unknown {
@@ -486,6 +563,101 @@ function getArrayElementSchema(schema: unknown): unknown {
   const definition = schema._def as { readonly element?: unknown; readonly type?: unknown };
 
   return definition.element ?? definition.type;
+}
+
+function getRecordValueSchema(schema: unknown): unknown {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return undefined;
+  }
+
+  const definition = schema._def as { readonly valueType?: unknown };
+
+  return definition.valueType;
+}
+
+function getLiteralValue(schema: unknown): unknown {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return undefined;
+  }
+
+  const definition = schema._def as {
+    readonly value?: unknown;
+    readonly values?: readonly unknown[];
+  };
+
+  return definition.value ?? definition.values?.[0];
+}
+
+function getEnumValues(schema: unknown): unknown[] {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return [];
+  }
+
+  const definition = schema._def as {
+    readonly entries?: Record<string, unknown>;
+    readonly values?: readonly unknown[];
+  };
+
+  return definition.values ? [...definition.values] : Object.values(definition.entries ?? {});
+}
+
+function getNativeEnumValues(schema: unknown): unknown[] {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return [];
+  }
+
+  const definition = schema._def as { readonly values?: Record<string, unknown> };
+
+  return [...new Set(Object.values(definition.values ?? {}).filter(isLiteralTypeValue))];
+}
+
+function getUnionOptions(schema: unknown): unknown[] {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return [];
+  }
+
+  const definition = schema._def as {
+    readonly options?: readonly unknown[] | ReadonlyMap<unknown, unknown>;
+  };
+
+  if (definition.options instanceof Map) {
+    return [...definition.options.values()];
+  }
+
+  return [...(definition.options ?? [])];
+}
+
+function unionTypes(types: readonly string[]): string {
+  const uniqueTypes = [...new Set(types)];
+
+  return uniqueTypes.length === 0 ? "never" : uniqueTypes.join(" | ");
+}
+
+function literalValueToTypeScript(value: unknown): string {
+  if (typeof value === "string") {
+    return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (value === null) {
+    return "null";
+  }
+
+  throw new RpcCodegenContractProblem(
+    `Cannot generate RPC client type for unsupported literal value ${String(value)}.`,
+  );
+}
+
+function isLiteralTypeValue(value: unknown): value is string | number | boolean | null {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    value === null
+  );
 }
 
 function getObjectTypeScript(schema: unknown): string {
