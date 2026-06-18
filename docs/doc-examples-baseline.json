@@ -156,13 +156,6 @@
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
-      "file": "packages/docs/src/content/docs/en/guides/runtime-contract.mdx",
-      "blockIndex": 1,
-      "language": "typescript",
-      "openingLine": 14,
-      "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
-    },
-    {
       "file": "README.md",
       "blockIndex": 1,
       "language": "typescript",
