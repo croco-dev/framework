@@ -7,4 +7,4 @@ title: "UsageAccuracy"
 
 > **UsageAccuracy** = [`UsageAccuracy`](/api/llm-core/src/type-aliases/usageaccuracy/)
 
-비용 예산, 모델 단가, 사용량 기록 타입입니다.
+LLM provider가 보고한 사용량 값의 정확도 수준입니다.

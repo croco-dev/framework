@@ -7,4 +7,4 @@ title: "LlmMeteringFailurePolicy"
 
 > **LlmMeteringFailurePolicy** = `"fail-closed"`
 
-비용 예산, 모델 단가, 사용량 기록 타입입니다.
+LLM 메터링 기록 실패 시 적용하는 처리 정책입니다.

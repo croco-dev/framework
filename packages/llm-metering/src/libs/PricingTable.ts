@@ -7,7 +7,10 @@ import type {
 } from "./types";
 import { PricingRegistryConflictProblem } from "./problems/LlmMeteringProblems";
 
-export const samplePricingRegistry = {
+/**
+ * 로컬 테스트와 예제에 사용하는 버전 고정 샘플 가격 레지스트리입니다.
+ */
+export const samplePricingRegistry: PricingRegistryDefinition = {
   version: "sample-openai-anthropic-2024-legacy",
   source:
     "Croco sample data for local tests and demos; applications should inject current pricing.",
@@ -79,7 +82,7 @@ export const samplePricingRegistry = {
       currency: "USD",
     },
   ],
-} satisfies PricingRegistryDefinition;
+};
 
 function createPricingFromRegistry(
   registry: PricingRegistryDefinition,
