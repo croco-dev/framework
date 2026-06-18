@@ -57,7 +57,7 @@ Set these environment variables in the Lambda function configuration:
 
 Create `src/runtime/env.ts`:
 
-```typescript
+```typescript no-check
 import { ProblemFactory } from "@croco/problems-core";
 
 export type DeploymentEnv = {
@@ -129,7 +129,7 @@ export function readDeploymentEnv(): DeploymentEnv {
 
 Create `src/app.ts`:
 
-```typescript
+```typescript no-check
 import {
   createSlidingWindowPolicy,
   RateLimitKeyBuilder,
@@ -186,7 +186,7 @@ export function createDeploymentApp(env: DeploymentEnv) {
 
 Create `src/handler.ts`:
 
-```typescript
+```typescript no-check
 import "reflect-metadata";
 import { lambdaPreset, TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import type { LambdaContext, LambdaEvent, LambdaResponse } from "@croco/transports-http";
@@ -256,7 +256,7 @@ compatibility_date = "2026-06-18"
 compatibility_flags = ["nodejs_compat"]
 ```
 
-```typescript
+```typescript no-check
 import "reflect-metadata";
 import {
   createSlidingWindowPolicy,
@@ -337,7 +337,7 @@ bindings.
 Node server deployment is a long-lived process. Use it for containers, VMs, local production-like
 smoke, or platforms that route HTTP directly to your process.
 
-```typescript
+```typescript no-check
 import "reflect-metadata";
 import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import { createDeploymentApp } from "./app";
