@@ -7,6 +7,7 @@ import {
   type Constructor,
 } from "@croco/protocols-core";
 import type { CompiledRouteInfo } from "./metadata-reader";
+import { createProjectIntentMap } from "./intent-map";
 import {
   readControllerConstructors,
   readControllersMetadataFromConstructors,
@@ -38,6 +39,7 @@ export type RouteRegistrationTable = {
 
 type CompileRoutesOptions = {
   readonly controllerPaths: readonly string[];
+  readonly sourcePaths?: readonly string[];
   readonly outputDir: string;
 };
 
@@ -192,6 +194,12 @@ export async function compileRoutes(options: CompileRoutesOptions): Promise<void
 
   const controllers = readControllersMetadataFromConstructors(controllerConstructors);
   const routeRegistrationTable = createRouteRegistrationTable(controllers, contractGraph);
+  const intentMap = createProjectIntentMap({
+    projectRoot: options.outputDir,
+    sourcePaths: await resolveIntentSourcePaths(options),
+    contractGraph,
+    routeRegistrationTable,
+  });
 
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
@@ -204,10 +212,90 @@ export async function compileRoutes(options: CompileRoutesOptions): Promise<void
     "utf-8",
   );
   await fs.writeFile(
+    path.join(outDir, "intent-map.json"),
+    `${JSON.stringify(intentMap, null, 2)}\n`,
+    "utf-8",
+  );
+  await fs.writeFile(
     path.join(outDir, "routes.js"),
     generateModuleFromRouteRegistrationTable(routeRegistrationTable),
     "utf-8",
   );
+}
+
+async function resolveIntentSourcePaths(options: CompileRoutesOptions): Promise<string[]> {
+  if (options.sourcePaths) {
+    return [...options.sourcePaths];
+  }
+
+  return uniqueStrings([
+    ...options.controllerPaths,
+    ...(await discoverProjectSourcePaths(options.outputDir)),
+  ]);
+}
+
+async function discoverProjectSourcePaths(projectRoot: string): Promise<string[]> {
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const sourceRoot = path.join(projectRoot, "src");
+
+  try {
+    const sourceRootStat = await fs.stat(sourceRoot);
+
+    if (!sourceRootStat.isDirectory()) {
+      return [];
+    }
+  } catch {
+    return [];
+  }
+
+  return collectSourceFiles(sourceRoot);
+}
+
+async function collectSourceFiles(sourceRoot: string): Promise<string[]> {
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const entries = await fs.readdir(sourceRoot, { withFileTypes: true });
+  const sourcePaths: string[] = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(sourceRoot, entry.name);
+
+    if (entry.isDirectory()) {
+      if (!isSkippedSourceDirectory(entry.name)) {
+        sourcePaths.push(...(await collectSourceFiles(entryPath)));
+      }
+
+      continue;
+    }
+
+    if (entry.isFile() && isIntentSourceFile(entry.name)) {
+      sourcePaths.push(entryPath);
+    }
+  }
+
+  return sourcePaths.sort(compareStrings);
+}
+
+function isSkippedSourceDirectory(name: string): boolean {
+  return name === "node_modules" || name === "dist" || name === ".croco" || name === "coverage";
+}
+
+function isIntentSourceFile(name: string): boolean {
+  return (
+    /\.(?:c|m)?tsx?$/.test(name) &&
+    !name.endsWith(".d.ts") &&
+    !name.endsWith(".spec.ts") &&
+    !name.endsWith(".test.ts")
+  );
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)].sort(compareStrings);
+}
+
+function compareStrings(left: string, right: string): number {
+  return left.localeCompare(right);
 }
 
 function validateSupportedMethods(table: RouteRegistrationTable): ContractDiagnostic[] {
@@ -217,7 +305,8 @@ function validateSupportedMethods(table: RouteRegistrationTable): ContractDiagno
       createRouteRegistrationDiagnostic(
         entry,
         "route-registration-unsupported-method",
-        `Route registration '${entry.id}' uses unsupported HTTP method '${entry.method}'. Use explicit HTTP method decorators supported by the generated table.`,
+        `Route registration '${entry.id}' uses unsupported HTTP method '${entry.method}'. ` +
+          "Use explicit HTTP method decorators supported by the generated table.",
       ),
     );
 }

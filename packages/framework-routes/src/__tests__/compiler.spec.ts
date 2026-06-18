@@ -153,8 +153,13 @@ describe("compiler", () => {
 
     try {
       const moduleUrl = new URL("./fixtures/SampleController.ts", import.meta.url).href;
+      const intentFixtureUrl = new URL("./fixtures/IntentMapModule.ts", import.meta.url).href;
 
-      await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
+      await compileRoutes({
+        controllerPaths: [moduleUrl],
+        sourcePaths: [moduleUrl, intentFixtureUrl],
+        outputDir,
+      });
 
       const code = await readFile(join(outputDir, ".croco", "build", "routes.js"), "utf-8");
       const table = JSON.parse(
@@ -162,6 +167,9 @@ describe("compiler", () => {
           join(outputDir, ".croco", "build", "route-registration-table.json"),
           "utf-8",
         ),
+      );
+      const intentMap = JSON.parse(
+        await readFile(join(outputDir, ".croco", "build", "intent-map.json"), "utf-8"),
       );
 
       expect(code).toContain("export function registerRoutes(app)");
@@ -173,6 +181,28 @@ describe("compiler", () => {
         entries: [
           { id: "SampleController.hello", method: "GET", path: "/api/hello" },
           { id: "SampleController.createUser", method: "POST", path: "/api/users" },
+        ],
+      });
+      expect(intentMap).toMatchObject({
+        version: "croco.intent-map.v1",
+        summary: { controllers: 1, routes: 2, providers: 3, eventHandlers: 1 },
+        generatedArtifacts: expect.arrayContaining([
+          expect.objectContaining({
+            kind: "intent-map",
+            path: ".croco/build/intent-map.json",
+          }),
+        ]),
+        controllers: [
+          expect.objectContaining({
+            id: "SampleController",
+            routeIds: ["SampleController.createUser", "SampleController.hello"],
+          }),
+        ],
+        providers: expect.arrayContaining([
+          expect.objectContaining({ id: "UserService", dependencies: ["UserRepository"] }),
+        ]),
+        eventHandlers: [
+          expect.objectContaining({ id: "UserCreatedHandler", eventName: "user.created" }),
         ],
       });
     } finally {
