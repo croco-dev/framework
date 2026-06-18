@@ -2383,6 +2383,30 @@
       "entrypoint": "packages/diagnostics-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "createDiagnosticMessage",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "function"
+        },
+        {
+          "name": "CROCO_DIAGNOSTIC_CODE_DEFINITIONS",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "const"
+        },
+        {
+          "name": "DIAGNOSTIC_CODE_CHANGE_POLICY",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "const"
+        },
+        {
+          "name": "DIAGNOSTIC_CODE_PATTERN",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "const"
+        },
+        {
           "name": "DiagnosticsCollector",
           "exportKind": "named",
           "source": "./libs/DiagnosticsCollector",
@@ -2399,13 +2423,77 @@
           "exportKind": "named",
           "source": "./libs/ErrorHistoryRingBuffer",
           "declarationKind": "class"
+        },
+        {
+          "name": "formatDiagnosticMessage",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "function"
+        },
+        {
+          "name": "formatDiagnosticSourceLocation",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getDiagnosticCodeDefinition",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "function"
+        },
+        {
+          "name": "isDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
         {
+          "name": "CreateDiagnosticMessageOptions",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
+        },
+        {
+          "name": "DiagnosticCategory",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
+        },
+        {
+          "name": "DiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
+        },
+        {
+          "name": "DiagnosticCodeDefinition",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
+        },
+        {
+          "name": "DiagnosticFixExample",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
+        },
+        {
+          "name": "DiagnosticMessage",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
+        },
+        {
           "name": "DiagnosticsCollectorOptions",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "DiagnosticSeverity",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
+        },
+        {
+          "name": "DiagnosticSourceLocation",
+          "exportKind": "named",
+          "source": "./libs/DiagnosticCodes"
         },
         {
           "name": "DiagnosticsProvider",
