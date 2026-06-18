@@ -69,6 +69,10 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 > **isInitialized**: `boolean`
 
+##### lastResolutionTrace?
+
+> `optional` **lastResolutionTrace**: [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
+
 ##### registeredServiceCount
 
 > **registeredServiceCount**: `number`
@@ -76,6 +80,16 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 ##### scopes
 
 > **scopes**: `string`[]
+
+***
+
+### getLastResolutionTrace()
+
+> `static` **getLastResolutionTrace**(): [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
+
+#### Returns
+
+[`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
 ***
 
@@ -120,6 +134,28 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 #### Returns
 
 `T`
+
+***
+
+### getResolutionTrace()
+
+> `static` **getResolutionTrace**\<`T`\>(`token`): [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### token
+
+`TokenIdentifier`\<`T`\>
+
+#### Returns
+
+[`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
 ***
 

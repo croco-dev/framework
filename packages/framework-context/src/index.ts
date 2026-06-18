@@ -32,7 +32,7 @@ export { Token } from "typedi";
  * }
  * ```
  */
-export { Inject } from "typedi";
+export { Inject } from "./libs/decorators/Inject";
 
 /**
  * 컴포넌트 scope에 맞춰 의존성을 조회하고 관리하는 DI 컨테이너 클래스입니다.
@@ -209,6 +209,10 @@ export { MiddlewareChain } from "./libs/Middleware";
  * ```
  */
 export { ShutdownManager } from "./libs/ShutdownManager";
+export {
+  ContainerResolutionProblem,
+  ContainerScopeMismatchProblem,
+} from "./libs/problems/ContainerResolutionProblem";
 export { CircularDependencyProblem } from "./libs/problems/CircularDependencyProblem";
 export { MiddlewareProblem } from "./libs/problems/MiddlewareProblems";
 export {
@@ -233,6 +237,17 @@ export {
  * ```
  */
 export type { ComponentMetadata } from "./libs/types";
+
+export type { ContainerResolutionFailureReason } from "./libs/problems/ContainerResolutionProblem";
+
+export type {
+  DependencyProviderKind,
+  DependencyResolutionStep,
+  DependencyResolutionStepStatus,
+  DependencyResolutionTrace,
+  DependencyResolutionTraceStatus,
+  DependencyTokenKind,
+} from "./libs/types";
 
 /**
  * `@Component` 데코레이터에 전달하는 컴포넌트 옵션 타입입니다.
