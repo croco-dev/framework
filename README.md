@@ -23,6 +23,19 @@ Croco는 AWS Lambda 지향 TypeScript 애플리케이션에서 HTTP 진입점, D
 - **이벤트 주도 아키텍처(EDA)와 Unit of Work 트랜잭션 관리 기본 제공**
 - **타입 정의만으로 REST/GraphQL API와 문서 자동 생성 지원**
 
+### 🧭 핵심 설계 원칙
+
+Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 명시하고 검증하며, 사람과 LLM이 모두 이해할 수 있는 실행 가능한 계약을 중심으로 동작해야 합니다.
+
+- **Shift left**: route, DI, policy, runtime capability, package boundary 오류는 가능하면 runtime 예외보다 typecheck, build, lint, codegen, CI 단계에서 먼저 실패해야 합니다.
+- **Type is the product**: public API, RPC contract, Problem code, capability, scope, middleware graph는 문서에만 남기지 않고 소비자가 볼 수 있는 타입과 stable artifact로 드러나야 합니다.
+- **Explicit over implicit**: decorator와 reflection은 편의 계층일 뿐입니다. 최종 controller, provider, event handler, route, manifest, registration table은 검사 가능한 명시적 산출물로 설명되어야 합니다.
+- **Contracts over conventions alone**: route contract, OpenAPI/RPC snapshot, Problem union, public package entrypoint처럼 깨지는 계약은 사람이 눈으로 맞추는 약속보다 자동 검증되는 contract로 관리합니다.
+- **Failure is a first-class model**: 실패는 일반 `Error`나 silent fallback으로 숨기지 않고 `Problem`, retry, timeout, circuit breaker, idempotency, exhaustive handling으로 모델링합니다.
+- **Observable by default**: request lifecycle, trace, retry, event, Problem, DI scope, telemetry flush 경계는 운영자가 원인을 추적할 수 있는 evidence를 남겨야 합니다.
+- **Generated, not hand-wired**: client, OpenAPI/RPC spec, manifest, intent map, docs example, registration table 같은 glue code는 수동 동기화보다 생성과 drift gate를 우선합니다.
+- **Production path first**: toy example보다 배포, runtime limitation, compatibility, migration, CI quality gate, zero-credential smoke path를 먼저 설계합니다.
+
 ### 🆚 설계 철학 비교
 
 |                     | Croco                          | NestJS                 | Hono                   | tRPC           |
