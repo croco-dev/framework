@@ -5,7 +5,7 @@ prev: false
 title: "getPolicyExecutionPlan"
 ---
 
-> **getPolicyExecutionPlan**(`table`, `target`, `capabilities`): [`PolicyExecutionPlan`](/api/framework-context/src/type-aliases/policyexecutionplan/)
+> **getPolicyExecutionPlan**(`table`, `target`, `capabilities`): [`PolicyExecutionPlan`](/api/framework-context/src/type-aliases/policyexecutionplan/) \| `undefined`
 
 ## Parameters
 
@@ -23,4 +23,4 @@ title: "getPolicyExecutionPlan"
 
 ## Returns
 
-[`PolicyExecutionPlan`](/api/framework-context/src/type-aliases/policyexecutionplan/)
+[`PolicyExecutionPlan`](/api/framework-context/src/type-aliases/policyexecutionplan/) \| `undefined`
