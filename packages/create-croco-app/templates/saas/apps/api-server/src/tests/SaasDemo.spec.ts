@@ -88,6 +88,42 @@ describe("SaaS golden path demo", () => {
     expect(snapshot.billing.entitlementPlanId).toBe("team");
   });
 
+  it("seeds dashboard-ready normal and over-quota usage states", async () => {
+    const runtime = createSaasRuntime();
+    const snapshot = await runSaasDemoFlow(runtime);
+
+    const meters = await runtime.meterRegistry.getByTenant(snapshot.tenant.id);
+    const storageUsage = await runtime.meteringService.getUsage({
+      tenantId: snapshot.tenant.id,
+      meterId: "storage_gb",
+      period: "billing_cycle",
+    });
+    const storageEntitlement = await runtime.entitlementManager.check(
+      snapshot.tenant.id,
+      "storage.gb",
+    );
+
+    expect(meters.map((meter) => meter.meterId).sort()).toEqual(["api_requests", "storage_gb"]);
+    expect(meters.find((meter) => meter.meterId === "api_requests")?.metadata).toMatchObject({
+      featureKey: "api.requests",
+      unit: "request",
+    });
+    expect(meters.find((meter) => meter.meterId === "storage_gb")?.metadata).toMatchObject({
+      featureKey: "storage.gb",
+      unit: "GB",
+    });
+    expect(storageUsage).toBe(105);
+    expect(storageEntitlement).toMatchObject({
+      featureKey: "storage.gb",
+      granted: true,
+      quota: 100,
+      usage: 105,
+      remaining: 0,
+      exceeded: true,
+      overagePolicy: "WARN",
+    });
+  });
+
   it("exposes health and diagnostics endpoints", async () => {
     const snapshot = await runSaasDemoFlow(createSaasRuntime());
 

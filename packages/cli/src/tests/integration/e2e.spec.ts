@@ -13,6 +13,7 @@ import { generateEvent } from "../../commands/makeEvent.js";
 import { generateListener } from "../../commands/makeListener.js";
 import { generateRepository } from "../../commands/makeRepository.js";
 import { runGenerateScaffold } from "../../commands/generateScaffold.js";
+import { runGenerateUsageDashboard } from "../../commands/generateUsageDashboard.js";
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL("../../../../../", import.meta.url));
@@ -178,6 +179,7 @@ describe("container-fullstack generator e2e", () => {
     await generateRepository("Order", { cwd });
     await generateEvent("OrderCreated", { cwd });
     await generateListener("OrderCreated", { cwd });
+    await runGenerateUsageDashboard({ cwd });
     await runCreatePage("Dashboard", { cwd, mode: "ssr" });
     await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
 
@@ -232,16 +234,21 @@ async function createWorkspace(): Promise<string> {
   await fs.writeFile(
     path.join(cwd, "apps", "api-server", "package.json"),
     packageManifest([
+      "@croco/billing-core",
+      "@croco/entitlements-core",
       "@croco/events-core",
+      "@croco/metering-core",
+      "@croco/problems-core",
       "@croco/protocols-rest",
       "@croco/repository-core",
+      "@croco/tenant-core",
       "@croco/transports-http",
       "typedi",
     ]),
   );
   await fs.writeFile(
     path.join(cwd, "apps", "console-web", "package.json"),
-    packageManifest(["@croco/frontend-vite", "@croco/meta-vite"]),
+    packageManifest(["@croco/frontend-vite", "@croco/meta-vite", "react"]),
   );
   await fs.writeFile(
     path.join(cwd, "apps", "console-web", "pages", "index.ts"),
@@ -305,10 +312,14 @@ function generatedContractDeclarations(): string {
   type Element = unknown;
 
   interface IntrinsicElements {
-    h1: unknown;
-    main: unknown;
-    p: unknown;
+    [elementName: string]: { readonly [key: string]: unknown };
   }
+}
+
+declare module 'react' {
+  export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
+  export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T;
+  export function useState<T>(initial: T): [T, (value: T) => void];
 }
 
 declare module '@croco/protocols-rest' {
@@ -321,7 +332,10 @@ declare module '@croco/protocols-rest' {
 }
 
 declare module '@croco/transports-http' {
-  export type CrocoHttpContext = unknown;
+  export type CrocoHttpContext = {
+    header(name: string): string | undefined;
+    query(name: string): string | undefined;
+  };
 
   export function createApp(): {
     addControllers(controllers: readonly Function[]): void;
@@ -365,6 +379,99 @@ declare module '@croco/meta-vite' {
 
 declare module 'typedi' {
   export function Service(): ClassDecorator;
+}
+
+declare module '@croco/problems-core' {
+  export type ProblemOptions = {
+    readonly cause?: Error;
+  };
+
+  export abstract class Problem extends Error {
+    constructor(code?: string, category?: ProblemCategory, detail?: string, options?: ProblemOptions);
+  }
+
+  export enum ProblemCategory {
+    ValidationError = 'ValidationError',
+    NotFound = 'NotFound',
+    InternalServerError = 'InternalServerError',
+  }
+}
+
+declare module '@croco/billing-core' {
+  export type Subscription = {
+    readonly planId: string;
+    readonly status: 'active' | 'past_due' | 'canceled' | 'revoked' | 'trialing';
+    readonly currentPeriodEnd: Date;
+  };
+
+  export class BillingService {
+    getSubscription(tenantId: string): Promise<Subscription | null>;
+  }
+}
+
+declare module '@croco/entitlements-core' {
+  export type OveragePolicy = 'BLOCK' | 'WARN' | 'ALLOW_WITH_OVERAGE';
+
+  export type EntitlementCheckResult = {
+    readonly granted: boolean;
+    readonly featureKey: string;
+    readonly type: 'boolean' | 'metered' | 'static';
+    readonly usage?: number;
+    readonly quota?: number;
+    readonly remaining?: number;
+    readonly value?: number;
+    readonly planId?: string;
+    readonly reason?: string;
+    readonly overagePolicy?: OveragePolicy;
+  };
+
+  export class EntitlementManager {
+    check(tenantId: string, featureKey: string): Promise<EntitlementCheckResult>;
+  }
+}
+
+declare module '@croco/metering-core' {
+  export type UsageQueryOptions = {
+    readonly tenantId: string;
+    readonly meterId: string;
+    readonly period: 'hour' | 'day' | 'billing_cycle';
+  };
+
+  export type MeterDefinition = {
+    readonly id: string;
+    readonly tenantId: string;
+    readonly meterId: string;
+    readonly type: 'COUNT' | 'UNIQUE_COUNT' | 'CUSTOM_EVENT';
+    readonly quota?: number;
+    readonly allowOverQuota?: boolean;
+    readonly metadata?: Record<string, unknown>;
+    readonly createdAt: Date;
+    readonly updatedAt: Date;
+  };
+
+  export class MeterRegistry {
+    getByTenant(tenantId: string): Promise<MeterDefinition[]>;
+  }
+
+  export class MeteringService {
+    getUsage(options: UsageQueryOptions): Promise<number>;
+  }
+}
+
+declare module '@croco/tenant-core' {
+  export type Tenant = {
+    readonly id: string;
+    readonly slug: string;
+    readonly name: string;
+    readonly status: string;
+    readonly settings: {
+      readonly features?: readonly string[];
+    };
+  };
+
+  export interface TenantStore {
+    findById(id: string): Promise<Tenant | null>;
+  }
 }
 `;
 }

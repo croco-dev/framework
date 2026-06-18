@@ -21,6 +21,10 @@ export { createPage } from "./commands/createPage";
 export { generate } from "./commands/generate";
 export { generateScaffold } from "./commands/generateScaffold";
 export {
+  generateUsageDashboard,
+  runGenerateUsageDashboard,
+} from "./commands/generateUsageDashboard";
+export {
   formatJobDetails,
   formatJobLogs,
   formatJobsListReport,

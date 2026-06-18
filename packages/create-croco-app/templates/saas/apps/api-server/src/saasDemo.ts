@@ -70,6 +70,8 @@ const API_REQUESTS_METER_ID = "api_requests";
 const API_REQUESTS_FEATURE_KEY = "api.requests";
 const LIFECYCLE_RISK_RULE_ID = "saas-risk-onboarding-follow-up";
 const LIFECYCLE_RISK_ACTION_ID = "create-cs-follow-up";
+const STORAGE_GB_METER_ID = "storage_gb";
+const STORAGE_GB_FEATURE_KEY = "storage.gb";
 const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   "active",
   "trialing",
@@ -304,6 +306,13 @@ export function createSaasRuntime(): SaasRuntime {
       overagePolicy: "WARN",
     },
     {
+      featureKey: STORAGE_GB_FEATURE_KEY,
+      type: "metered",
+      meterId: STORAGE_GB_METER_ID,
+      quota: 100,
+      overagePolicy: "WARN",
+    },
+    {
       featureKey: "tenant.invites",
       type: "boolean",
     },
@@ -428,7 +437,7 @@ export async function runSaasDemoFlow(
     status: "trial",
     settings: {
       timezone: "UTC",
-      features: ["tenant.invites", API_REQUESTS_FEATURE_KEY],
+      features: ["tenant.invites", API_REQUESTS_FEATURE_KEY, STORAGE_GB_FEATURE_KEY],
     },
   });
 
@@ -512,7 +521,7 @@ export async function runSaasDemoFlow(
       type: "COUNT",
       quota: 100,
       allowOverQuota: false,
-      metadata: { unit: "request" },
+      metadata: { featureKey: API_REQUESTS_FEATURE_KEY, unit: "request" },
     });
     const usageRecord = await runtime.meteringService.record({
       tenantId: tenant.id,
@@ -527,6 +536,23 @@ export async function runSaasDemoFlow(
       period: "billing_cycle",
     });
     const entitlement = await runtime.entitlementManager.check(tenant.id, API_REQUESTS_FEATURE_KEY);
+
+    await runtime.meterRegistry.register({
+      tenantId: tenant.id,
+      meterId: STORAGE_GB_METER_ID,
+      type: "COUNT",
+      quota: 100,
+      allowOverQuota: true,
+      metadata: { featureKey: STORAGE_GB_FEATURE_KEY, unit: "GB" },
+    });
+    await runtime.meteringService.record({
+      tenantId: tenant.id,
+      meterId: STORAGE_GB_METER_ID,
+      value: 105,
+      idempotencyKey: "demo-storage-gb",
+      metadata: { source: "demo:seed" },
+    });
+
     const lifecycleSignal = createHealthStatusChangedSignal({
       signalId: `health-risk:${tenant.id}`,
       tenantId: tenant.id,
