@@ -1692,6 +1692,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "doctor",
+          "exportKind": "named",
+          "source": "./commands/doctor",
+          "declarationKind": "const"
+        },
+        {
+          "name": "formatDoctorReport",
+          "exportKind": "named",
+          "source": "./commands/doctor",
+          "declarationKind": "function"
+        },
+        {
           "name": "formatJobDetails",
           "exportKind": "named",
           "source": "./commands/jobs",
@@ -1732,6 +1744,12 @@
           "exportKind": "named",
           "source": "./commands/generateUsageDashboard",
           "declarationKind": "const"
+        },
+        {
+          "name": "getDoctorExitCode",
+          "exportKind": "named",
+          "source": "./commands/doctor",
+          "declarationKind": "function"
         },
         {
           "name": "getJobExitCode",
@@ -1848,6 +1866,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "runDoctor",
+          "exportKind": "named",
+          "source": "./commands/doctor",
+          "declarationKind": "function"
+        },
+        {
           "name": "runGenerateUsageDashboard",
           "exportKind": "named",
           "source": "./commands/generateUsageDashboard",
@@ -1941,6 +1965,46 @@
       ],
       "typeExports": [
         {
+          "name": "DoctorCheckResult",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
+          "name": "DoctorCheckStatus",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
+          "name": "DoctorDiagnostic",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
+          "name": "DoctorLocation",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
+          "name": "DoctorPackage",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
+          "name": "DoctorReport",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
+          "name": "DoctorSeverity",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
+          "name": "DoctorSummary",
+          "exportKind": "named",
+          "source": "./commands/doctor"
+        },
+        {
           "name": "JobDetails",
           "exportKind": "named",
           "source": "./commands/jobs"
@@ -2004,6 +2068,11 @@
           "name": "OpsStatusSummary",
           "exportKind": "named",
           "source": "./commands/ops"
+        },
+        {
+          "name": "RunDoctorOptions",
+          "exportKind": "named",
+          "source": "./commands/doctor"
         },
         {
           "name": "RunJobsOptions",
@@ -3314,10 +3383,22 @@
       "entrypoint": "packages/framework-context/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertPolicyRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "CircularDependencyProblem",
           "exportKind": "named",
           "source": "./libs/problems/CircularDependencyProblem",
           "declarationKind": "class"
+        },
+        {
+          "name": "compilePolicyTable",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
         },
         {
           "name": "Component",
@@ -3361,6 +3442,18 @@
           "declarationKind": "class"
         },
         {
+          "name": "createPolicyTarget",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "definePolicy",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "DEV_INSPECTOR_TOKEN",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
@@ -3370,6 +3463,12 @@
           "name": "finishRuntimeInspectionRequest",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getPolicyExecutionPlan",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
           "declarationKind": "function"
         },
         {
@@ -3407,6 +3506,42 @@
           "exportKind": "named",
           "source": "./libs/decorators/OnShutdown",
           "declarationKind": "function"
+        },
+        {
+          "name": "POLICY_EXECUTION_ORDER",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "const"
+        },
+        {
+          "name": "POLICY_KINDS",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "const"
+        },
+        {
+          "name": "POLICY_TARGET_KINDS",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "const"
+        },
+        {
+          "name": "PolicyCapabilityProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RuntimePolicyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolicyConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RuntimePolicyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolicyDefinitionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RuntimePolicyProblems",
+          "declarationKind": "class"
         },
         {
           "name": "recordRuntimeInspectionEvent",
@@ -3478,6 +3613,11 @@
           "source": "./libs/problems/ContainerResolutionProblem"
         },
         {
+          "name": "DefinePolicyOptions",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
           "name": "DependencyProviderKind",
           "exportKind": "named",
           "source": "./libs/types"
@@ -3528,9 +3668,69 @@
           "source": "./libs/types"
         },
         {
+          "name": "PolicyDefinition",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyExecutionEntry",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyExecutionPlan",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyFailurePropagation",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyFailurePropagationEntry",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyKind",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyRuntimeCapability",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicySource",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyTable",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyTarget",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "PolicyTargetKind",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
           "name": "RequestContext",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "RetryPolicyDefinition",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
         },
         {
           "name": "RuntimeCapabilities",
@@ -3618,6 +3818,11 @@
           "source": "./libs/types"
         },
         {
+          "name": "RuntimePolicy",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
           "name": "RuntimeTraceContext",
           "exportKind": "named",
           "source": "./libs/types"
@@ -3631,6 +3836,16 @@
           "name": "ShutdownHook",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "TimeoutPolicy",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "TracingPolicy",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
         },
         {
           "name": "TransactionContext",
@@ -3826,7 +4041,31 @@
       "entrypoint": "packages/framework-routes/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertRouteRegistrationTable",
+          "exportKind": "named",
+          "source": "./compiler",
+          "declarationKind": "function"
+        },
+        {
           "name": "compileRoutes",
+          "exportKind": "named",
+          "source": "./compiler",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createDefaultGeneratedArtifacts",
+          "exportKind": "named",
+          "source": "./intent-map",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createProjectIntentMap",
+          "exportKind": "named",
+          "source": "./intent-map",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createRouteRegistrationTable",
           "exportKind": "named",
           "source": "./compiler",
           "declarationKind": "function"
@@ -3838,13 +4077,37 @@
           "declarationKind": "function"
         },
         {
+          "name": "generateModuleFromRouteRegistrationTable",
+          "exportKind": "named",
+          "source": "./compiler",
+          "declarationKind": "function"
+        },
+        {
           "name": "generateRouteRegistrationCode",
           "exportKind": "named",
           "source": "./compiler",
           "declarationKind": "function"
         },
         {
+          "name": "readControllerConstructors",
+          "exportKind": "named",
+          "source": "./metadata-reader",
+          "declarationKind": "function"
+        },
+        {
           "name": "readControllerMetadata",
+          "exportKind": "named",
+          "source": "./metadata-reader",
+          "declarationKind": "function"
+        },
+        {
+          "name": "readControllersMetadata",
+          "exportKind": "named",
+          "source": "./metadata-reader",
+          "declarationKind": "function"
+        },
+        {
+          "name": "readControllersMetadataFromConstructors",
           "exportKind": "named",
           "source": "./metadata-reader",
           "declarationKind": "function"
@@ -3865,6 +4128,116 @@
           "name": "CompiledRouteInfo",
           "exportKind": "named",
           "source": "./metadata-reader"
+        },
+        {
+          "name": "CreateProjectIntentMapOptions",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapController",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapEntityRef",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapEventHandler",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapFile",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapFileRole",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapGeneratedArtifact",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapGeneratedArtifactKind",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapProvider",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapPublicSymbol",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapPublicSymbolKind",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapRelationship",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapRelationshipKind",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapRoute",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapSensitiveDataPolicy",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapSourceLocation",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "IntentMapVersion",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "ProjectIntentMap",
+          "exportKind": "named",
+          "source": "./intent-map"
+        },
+        {
+          "name": "RouteRegistrationCategory",
+          "exportKind": "named",
+          "source": "./compiler"
+        },
+        {
+          "name": "RouteRegistrationEntry",
+          "exportKind": "named",
+          "source": "./compiler"
+        },
+        {
+          "name": "RouteRegistrationTable",
+          "exportKind": "named",
+          "source": "./compiler"
+        },
+        {
+          "name": "RouteRegistrationTableVersion",
+          "exportKind": "named",
+          "source": "./compiler"
         }
       ]
     },
