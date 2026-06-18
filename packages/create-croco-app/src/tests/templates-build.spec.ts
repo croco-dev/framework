@@ -60,6 +60,8 @@ function checkSsrRouteComponent(template: string) {
 }
 
 function checkSpaBeSplitStructure() {
+  checkFileExists("spa-be-split", "sst.config.ts.hbs");
+  checkFileExists("spa-be-split", "sst-env.d.ts");
   checkFileExists("spa-be-split", "apps", "api-server", "package.json.hbs");
   readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
   checkFileContains(
@@ -67,10 +69,41 @@ function checkSpaBeSplitStructure() {
     ["apps", "api-server", "src", "app.ts"],
     /@croco\/transports-http/,
   );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "app.ts"],
+    /globalFilters:\s*\[HttpExceptionFilter\]/,
+  );
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createCrocoApp/);
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "lambda.ts"],
+    /export const handler/,
+  );
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "lambda.ts"], /forceFlush/);
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "env.ts"],
+    /InvalidEnvironmentProblem/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "problems.ts"],
+    /ProblemCategory/,
+  );
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /Repository/);
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /RetryTemplate/);
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /EventPublisher/);
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /InMemoryEventBus/);
   checkFileExists("spa-be-split", "apps", "console-web", "package.json.hbs");
   checkFileExists("spa-be-split", "apps", "console-web", "src", "main.tsx");
   checkFileExists("spa-be-split", "apps", "console-web", "vite.config.ts.hbs");
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "console-web", "src", "api", "client.ts"],
+    /ApiProblemError/,
+  );
 
   for (const directory of ["service", "domain", "datasource", "feature", "page", "ui"]) {
     checkDirectoryExists("spa-be-split", "libs", "sample-domain", directory);
@@ -82,8 +115,10 @@ function checkSpaBeSplitStructure() {
   const rootPackageJson = readJsonTemplate("spa-be-split", "package.json.hbs");
   expect(rootPackageJson).toMatchObject({
     scripts: expect.objectContaining({
+      dev: "turbo dev",
       "dev:api": expect.any(String),
       "dev:web": expect.any(String),
+      "dev:smoke": expect.stringMatching(/api-server dev:smoke[\s\S]*console-web dev:smoke/),
       "contract:check": expect.stringMatching(/croco-rpc-codegen[\s\S]*--check/),
       "contract:snapshot": expect.stringMatching(
         /^croco contracts check[\s\S]*--json --out contract-graph\.snapshot\.json$/,
@@ -98,6 +133,7 @@ function checkSpaBeSplitStructure() {
       "contract:openapi": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-openapi-spec/),
       "contract:client": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-rpc-codegen/),
       codegen: expect.any(String),
+      lint: "biome lint .",
       test: "turbo test",
     }),
     devDependencies: expect.objectContaining({
@@ -109,13 +145,20 @@ function checkSpaBeSplitStructure() {
   const apiPackageJson = readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
+      "dev:smoke": "tsx src/dev-smoke.ts",
       test: "vitest run",
     }),
     devDependencies: expect.objectContaining({
-      "@croco/testing": "workspace:*",
       vitest: expect.any(String),
     }),
     dependencies: expect.objectContaining({
+      "@croco/events-core": "workspace:*",
+      "@croco/events-inmemory": "workspace:*",
+      "@croco/problems-core": "workspace:*",
+      "@croco/repository-core": "workspace:*",
+      "@croco/retry-core": "workspace:*",
+      "@croco/telemetry-api": "workspace:*",
+      "@croco/telemetry-sdk-node": "workspace:*",
       zod: expect.any(String),
     }),
   });
@@ -150,7 +193,12 @@ function checkSpaBeSplitStructure() {
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "tests", "app.spec.ts"],
-    /createTestingApp/,
+    /createCrocoApp/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "tests", "app.spec.ts"],
+    /starter\/user-not-found/,
   );
   checkFileContains(
     "spa-be-split",
@@ -168,6 +216,10 @@ function checkSpaBeSplitStructure() {
     /@Body\(createUserInputSchema\)/,
   );
   checkFileExists("spa-be-split", "pnpm-workspace.yaml");
+  checkFileContains("spa-be-split", ["README.md.hbs"], /운영형 앱 스타터/);
+  checkFileContains("spa-be-split", ["README.md.hbs"], /비범위/);
+  checkFileContains("spa-be-split", ["README.md.hbs"], /HttpExceptionFilter/);
+  checkFileContains("spa-be-split", ["README.md.hbs"], /TelemetryRuntime\.forceFlush/);
 }
 
 function checkSsrLambdaStructure() {

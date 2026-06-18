@@ -1,14 +1,22 @@
-import { useState } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import { useUsers } from './api/useUsers';
 
 const projectName = '{{projectName}}';
+
+const pageStyle: CSSProperties = {
+  maxWidth: 720,
+  margin: '4rem auto',
+  fontFamily: 'system-ui, sans-serif',
+};
+const labelStyle: CSSProperties = { color: '#15803d', fontWeight: 700 };
+const formStyle: CSSProperties = { display: 'grid', gap: 12, marginBlock: 24 };
 
 export default function App() {
   const { users, loading, error, createUser } = useUsers();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await createUser({ name, email });
     setName('');
@@ -16,12 +24,12 @@ export default function App() {
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: '4rem auto', fontFamily: 'system-ui, sans-serif' }}>
-      <p style={{ color: '#15803d', fontWeight: 700 }}>Croco SPA + API</p>
+    <main style={pageStyle}>
+      <p style={labelStyle}>Croco SPA + API</p>
       <h1>{projectName}</h1>
       <p>React SPA에서 Croco REST API 서버의 사용자 목록을 호출합니다.</p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, marginBlock: 24 }}>
+      <form onSubmit={handleSubmit} style={formStyle}>
         <input value={name} onChange={(event) => setName(event.target.value)} placeholder="User name" required />
         <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" required />
         <button type="submit">Create user</button>

@@ -1,10 +1,24 @@
 const DEFAULT_API_BASE_PATH = "http://localhost:3000";
 
+type ProblemDetails = {
+  status: number;
+  title: string;
+  code: string;
+  detail?: string;
+};
+
 type ViteImportMeta = ImportMeta & {
   env?: {
     VITE_API_URL?: string;
   };
 };
+
+export class ApiProblemError extends Error {
+  constructor(readonly problem: ProblemDetails) {
+    super(problem.detail ?? problem.title);
+    this.name = "ApiProblemError";
+  }
+}
 
 function ensureTrailingSlash(value: string): string {
   return value.endsWith("/") ? value : `${value}/`;
@@ -20,7 +34,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(new URL(path.replace(/^\//, ""), resolveApiBaseUrl()), init);
 
   if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}`);
+    const problem = (await response.json()) as ProblemDetails;
+    throw new ApiProblemError(problem);
   }
 
   return response.json() as Promise<T>;

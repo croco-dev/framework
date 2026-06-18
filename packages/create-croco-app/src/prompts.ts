@@ -58,6 +58,11 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
           hint: "API Worker + SSR Worker",
         },
         {
+          value: "production-app",
+          label: "Production App",
+          hint: "REST API + React SPA with telemetry, Problems, smoke checks, and Lambda entrypoint",
+        },
+        {
           value: "saas",
           label: "SaaS Golden Path",
           hint: "Tenant, auth, access, billing, metering, entitlements demo",
@@ -102,7 +107,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     };
   }
 
-  if (preset === "saas" || preset === "ai-saas") {
+  if (preset === "production-app" || preset === "saas" || preset === "ai-saas") {
     const agentRules =
       cliArgs.agentRules ??
       (await p.confirm({
@@ -131,7 +136,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     return {
       projectName: projectName as string,
       scope: scope as string,
-      preset: preset as "saas" | "ai-saas",
+      preset: preset as "production-app" | "saas" | "ai-saas",
       webApps: [],
       apiHosting: "standalone",
       db: [],

@@ -36,7 +36,7 @@ type PackageJsonWithScripts = {
 };
 
 const CREATE_CROCO_APP_CHOICES = new Map<string, readonly string[]>([
-  ["--preset", ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack"]],
+  ["--preset", ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack", "production-app"]],
   ["--api", ["graphql", "trpc"]],
   ["--api-hosting", ["standalone", "nextjs"]],
   ["--backend-deploy", ["docker", "lambda"]],

@@ -1,23 +1,39 @@
 # {{projectName}}
 
-Croco REST API와 Vite React SPA를 분리한 pnpm workspace 템플릿입니다. API와 프론트엔드를 독립적으로 실행하고 배포하면서, `rpc-codegen`으로 fetch 클라이언트를 생성하는 구조를 제공합니다.
+Croco 운영형 앱 스타터입니다. REST API, Vite React SPA, contract-first RPC client, telemetry 초기화/flush, RFC 7807 Problem 실패 처리, repository/retry/events 예시, Lambda 엔트리포인트를 하나의 pnpm workspace에서 연결합니다.
+
+이 스타터의 목적은 첫 프로젝트가 단순 hello world가 아니라 운영 기본값을 확인할 수 있는 기준 구현이 되도록 하는 것입니다. SaaS billing, 외부 auth, 영구 DB migration, 실제 OTLP collector, CDN 배포 자동화는 비범위이며 각 서비스 요구사항에 맞게 provider seam에서 연결합니다.
 
 ## 개발
 
 ```bash
 pnpm install
+pnpm dev:smoke
 pnpm dev:api
 pnpm dev:web
 ```
 
 - API 서버: `http://localhost:3000`
 - SPA 개발 서버: Vite 기본 포트
+- dev smoke: API 앱의 seeded data와 Vite dev config를 검증합니다.
 - 계약 그래프 검증: `pnpm contract:check`
 - 계약 스냅샷 생성: `pnpm contract:snapshot`
 - 계약 drift 검사: `pnpm contract:diff`
 - CI 계약 검증: `pnpm contract:verify` 또는 `pnpm ci:contracts`
 - OpenAPI 문서 생성: `pnpm contract:openapi`
 - RPC 클라이언트 생성: `pnpm contract:client` 또는 `pnpm codegen`
+- 테스트: `pnpm test`
+- 타입 검사: `pnpm typecheck`
+- lint: `pnpm lint`
+
+## 운영 기본값
+
+- `apps/api-server/src/app.ts`: 보안 헤더, CORS, 본문 크기 제한, rate limit middleware와 `HttpExceptionFilter`를 기본 적용합니다.
+- `apps/api-server/src/env.ts`: `PORT`, `WEB_ORIGIN`, telemetry 관련 env를 zod로 검증하고 잘못된 값은 `InvalidEnvironmentProblem`으로 실패합니다.
+- `apps/api-server/src/index.ts`: local Node 서버 시작 전에 `TelemetryRuntime.init()`을 호출합니다. 기본값은 zero-credential 실행을 위해 tracing off이며, `TELEMETRY_ENABLED=true` 또는 OTLP endpoint가 있으면 trace export를 켭니다.
+- `apps/api-server/src/lambda.ts`: `createCrocoApp().lambdaHandler()`를 내보내고 Lambda 응답 전 `TelemetryRuntime.forceFlush()`를 호출합니다.
+- `apps/api-server/src/users.ts`: `@croco/repository-core` 계약, `RetryTemplate`, `EventPublisher` + `InMemoryEventBus`, `recordEvent`를 하나의 사용자 생성 loop에 연결합니다.
+- `apps/console-web/src/api/client.ts`: API 실패를 status-only `Error`로 숨기지 않고 Problem payload를 `ApiProblemError`로 보존합니다.
 
 ## 코드 생성
 
@@ -35,7 +51,7 @@ Artifact 책임은 다음과 같습니다.
 - `openapi.json`: 외부 소비자나 배포 산출물이 필요하면 커밋하고, 아니면 CI/build에서 재생성합니다.
 - `libs/shared/provider-rpc/src`: 웹 앱이나 다른 workspace package가 import하는 generated client이므로 이 템플릿에서는 생성 후 typecheck합니다. 커밋 여부와 무관하게 `contract:verify`가 항상 현재 서버 계약에서 다시 생성합니다.
 
-`contract:openapi`는 `apps/api-server/src/controllers/**/*.ts`에서 REST 컨트롤러 메타데이터를 읽어 `openapi.json`을 생성합니다. `contract:client`는 같은 컨트롤러 계약에서 fetch 클라이언트를 `libs/shared/provider-rpc/src`에 생성합니다. `codegen`은 기존 사용자를 위한 `contract:client` 별칭입니다.
+`contract:openapi`는 `apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}`에서 REST 컨트롤러 메타데이터를 읽어 `openapi.json`을 생성합니다. `contract:client`는 같은 컨트롤러 계약에서 React Query hook을 포함한 fetch 클라이언트를 `libs/shared/provider-rpc/src`에 생성합니다. `codegen`은 기존 사용자를 위한 `contract:client` 별칭입니다.
 
 `contract:client`는 생성 직후 `{{scope}}/provider-rpc`를 typecheck합니다. 예를 들어 `UserController`의 `@Get("/:id")`, `@Param("id", userIdSchema)`, `@Body(createUserInputSchema)`, `@ResponseSchema(userSchema)` 계약은 다음처럼 `userClient` 타입으로 이어집니다.
 
@@ -75,6 +91,8 @@ libs/shared/provider-rpc  rpc-codegen 산출물 위치
 ## 빌드
 
 ```bash
+pnpm lint
+pnpm test
 pnpm build
 pnpm typecheck
 ```
@@ -92,9 +110,9 @@ pnpm typecheck
 
 ### API
 
-기본 템플릿은 Node 서버로 실행됩니다.
+기본 템플릿은 Node 서버와 Lambda 엔트리포인트를 모두 포함합니다.
 
-- AWS Lambda: `@croco/transports-http`의 Lambda 핸들러를 노출하는 엔트리로 교체해 배포합니다.
+- AWS Lambda: `sst.config.ts`가 `apps/api-server/src/lambda.handler`를 가리킵니다. Lambda에서는 telemetry force flush가 활성화됩니다.
 - Cloudflare Workers: Workers 전송 어댑터를 사용하는 API 엔트리를 추가해 배포합니다.
 - Docker container: `apps/api-server` 빌드 산출물을 Node 컨테이너에서 실행합니다.
 

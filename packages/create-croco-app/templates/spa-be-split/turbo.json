@@ -11,6 +11,13 @@
       "persistent": true,
       "cache": false
     },
+    "dev:smoke": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
     "test": {
       "dependsOn": ["build", "^build", "^test"]
     },
