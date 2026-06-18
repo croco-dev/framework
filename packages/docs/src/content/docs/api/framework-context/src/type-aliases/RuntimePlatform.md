@@ -5,4 +5,4 @@ prev: false
 title: "RuntimePlatform"
 ---
 
-> **RuntimePlatform** = `"node"` \| `"lambda"` \| `"cloudflare-workers"` \| `string` & `object`
+> **RuntimePlatform** = [`KnownRuntimePlatform`](/api/framework-context/src/type-aliases/knownruntimeplatform/) \| `string` & `object`

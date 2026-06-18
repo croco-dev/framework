@@ -3472,9 +3472,27 @@
           "declarationKind": "function"
         },
         {
+          "name": "getRuntimeCapabilitySupport",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "function"
+        },
+        {
           "name": "Inject",
           "exportKind": "named",
           "source": "./libs/decorators/Inject",
+          "declarationKind": "function"
+        },
+        {
+          "name": "isKnownRuntimePlatform",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "function"
+        },
+        {
+          "name": "isRuntimeCapabilitySupported",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
           "declarationKind": "function"
         },
         {
@@ -3548,6 +3566,24 @@
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
           "declarationKind": "function"
+        },
+        {
+          "name": "RUNTIME_CAPABILITY_NAMES",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "const"
+        },
+        {
+          "name": "RUNTIME_CAPABILITY_SUPPORT",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "const"
+        },
+        {
+          "name": "RUNTIME_PLATFORMS",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "const"
         },
         {
           "name": "RuntimeInspector",
@@ -3658,6 +3694,11 @@
           "source": "./libs/ILogger"
         },
         {
+          "name": "KnownRuntimePlatform",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "LifecycleHooks",
           "exportKind": "named",
           "source": "./libs/types"
@@ -3736,6 +3777,36 @@
           "name": "RuntimeCapabilities",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "RuntimeCapabilitiesForPlatform",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities"
+        },
+        {
+          "name": "RuntimeCapabilityName",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RuntimeCapabilityOverridesFor",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities"
+        },
+        {
+          "name": "RuntimeCapabilitySupport",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities"
+        },
+        {
+          "name": "RuntimeCapabilitySupportForPlatform",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities"
+        },
+        {
+          "name": "RuntimeCapabilitySupportMatrix",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities"
         },
         {
           "name": "RuntimeContext",
@@ -3838,6 +3909,11 @@
           "source": "./libs/types"
         },
         {
+          "name": "SupportedRuntimeCapabilityName",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities"
+        },
+        {
           "name": "TimeoutPolicy",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy"
@@ -3851,6 +3927,11 @@
           "name": "TransactionContext",
           "exportKind": "named",
           "source": "./libs/TransactionContext"
+        },
+        {
+          "name": "UnsupportedRuntimeCapabilityName",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities"
         }
       ]
     },
