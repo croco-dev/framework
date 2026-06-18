@@ -1,0 +1,31 @@
+{
+  "name": "@croco-example/saas-billing-golden-path",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc --noEmit",
+    "test": "vitest run src/tests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/events-inmemory": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/retry-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
+    "@croco/transports-http": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@croco/testing": "workspace:*",
+    "@types/node": "^22",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "4.0.16"
+  }
+}
