@@ -117,9 +117,13 @@ function createFixture(options: FixtureOptions = {}): string {
       '@Controller("/api/users")',
       "@Get()",
       "@UseGuards(AuthGuard)",
+      "list() { return []; }",
+      "",
       "@Post()",
+      "@UseGuards(AuthGuard)",
       '@Meter({ meterId: "api_user_create" })',
       '@Metered({ meterId: "api_user_create" })',
+      "create() { return {}; }",
       "",
     ].join("\n"),
   );

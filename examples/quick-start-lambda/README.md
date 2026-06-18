@@ -8,7 +8,7 @@ This example is intentionally small, but the files are arranged so each Croco la
 
 | Layer        | Example role                                           | Files and packages                                                                                     |
 | ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Framework    | Dependency injection, component metadata, logger token | `@croco/framework-context`, `src/app/bootstrap.ts`, `src/domain/UserService.ts`                        |
+| Framework    | Dependency injection, component metadata, logger token | `@croco/framework-context`, `src/app/bootstrap.ts`                                                     |
 | Protocols    | REST controller metadata and parameter decorators      | `@croco/protocols-rest`, `src/protocols/HealthController.ts`, `src/protocols/UserController.ts`        |
 | Transports   | Runtime execution for local HTTP and AWS Lambda        | `@croco/transports-http`, `createApp()` in `src/app/bootstrap.ts`, `lambdaHandler()` in `src/index.ts` |
 | Integrations | Replaceable auth and metering adapters                 | `src/integrations/TestAuthProvider.ts`, `src/integrations/inMemoryMetering.ts`                         |

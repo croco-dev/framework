@@ -90,6 +90,7 @@ graph LR
 
 - **protocols-rest**: `@Controller`, `@Get` 등 REST API 정의를 위한 데코레이터를 제공합니다.
 - **protocols-graphql**: **Yoga** 런타임을 활용한 Code-first GraphQL 정의를 지원합니다.
+- **protocols-trpc**: tRPC 스타일 RPC 계약을 정의하고 타입 안전한 API 표면을 구성할 수 있게 합니다.
 
 ### 3. Transports (실행 계층)
 
@@ -97,6 +98,7 @@ graph LR
 
 - **transports-http**: **Hono** 기반의 고성능 실행 엔진입니다. AWS Lambda (API Gateway v2) 핸들러 생성기를 내장하고 있습니다.
 - **transports-graphql**: GraphQL 프로토콜을 실제 런타임에 연결하는 실행 어댑터를 제공합니다.
+- **transports-cloudflare-workers**: Cloudflare Workers 런타임에서 Croco 핸들러를 실행하는 어댑터를 제공합니다.
 
 ### 4. Integrations (통합 계층)
 

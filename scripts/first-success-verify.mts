@@ -31,6 +31,10 @@ type ParsedCreateCrocoAppCommand = {
   readonly flags: Map<string, string | boolean>;
 };
 
+type PackageJsonWithScripts = {
+  readonly scripts?: Record<string, string | undefined>;
+};
+
 const CREATE_CROCO_APP_CHOICES = new Map<string, readonly string[]>([
   ["--preset", ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack"]],
   ["--api", ["graphql", "trpc"]],
@@ -417,9 +421,9 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
   }
 
   // Example package.json dev script maps to tsx src/index.ts
-  let pkg;
+  let pkg: PackageJsonWithScripts;
   try {
-    pkg = JSON.parse(examplePkg);
+    pkg = JSON.parse(examplePkg) as PackageJsonWithScripts;
   } catch {
     pkg = {};
   }
@@ -438,9 +442,9 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     pass("A1d", "README documents `pnpm quick-start-lambda:smoke`");
   }
 
-  let rootPackageJson;
+  let rootPackageJson: PackageJsonWithScripts;
   try {
-    rootPackageJson = JSON.parse(rootPkg);
+    rootPackageJson = JSON.parse(rootPkg) as PackageJsonWithScripts;
   } catch {
     rootPackageJson = {};
   }
@@ -510,9 +514,18 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     pass("A4a", "UserController has @Post()");
   }
 
-  // Verify @UseGuards(AuthGuard) on or near @Post()
-  // We need to find the Post section - check for both in the file
-  if (!userController.includes("@UseGuards(AuthGuard)")) {
+  const createMethodIndex = userController.indexOf("create(");
+  const createBlockStart =
+    createMethodIndex === -1
+      ? 0
+      : Math.max(0, userController.lastIndexOf("\n\n", createMethodIndex));
+  const createDecoratorBlock =
+    createMethodIndex === -1 ? "" : userController.slice(createBlockStart, createMethodIndex);
+
+  if (
+    !createDecoratorBlock.includes("@Post()") ||
+    !createDecoratorBlock.includes("@UseGuards(AuthGuard)")
+  ) {
     fail("A4b", "create() missing @UseGuards(AuthGuard)");
   } else {
     pass("A4b", "create() has @UseGuards(AuthGuard)");
