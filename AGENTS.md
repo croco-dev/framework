@@ -25,6 +25,21 @@ pnpm typecheck          # 전체 패키지
 pnpm typecheck --filter=@croco/events-core  # 단일 패키지
 ```
 
+## Croco Design Principles
+
+Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 명시하고 검증하며, 사람과 LLM이 모두 이해 가능한 실행 가능한 계약을 중심으로 동작하는 프레임워크다. 구현 판단은 아래 기준을 따른다.
+
+- **Type-first**: route, RPC, Problem, DI token/scope, policy, runtime capability, package entrypoint는 가능한 한 타입으로 드러낸다. 문서에만 존재하는 계약은 충분하지 않다.
+- **Build-time-first**: 잘못된 decorator 조합, 누락된 registration, package boundary 침범, contract drift, runtime capability mismatch는 runtime fallback보다 typecheck, build, lint, codegen, CI에서 먼저 실패하게 한다.
+- **Explicit artifacts**: decorator/reflection 편의를 유지하더라도 최종 controller/handler/provider/route/manifest/registration table/intent map은 검사 가능한 산출물로 표현한다.
+- **Contracts over conventions**: route contract, OpenAPI/RPC snapshot, Problem union, public API snapshot, package manifest normalization처럼 깨지는 표면은 자동 검증되는 contract를 둔다.
+- **Failure as a model**: 일반 `Error`, catch-all, silent fallback으로 실패를 숨기지 않는다. `Problem`, retry, timeout, circuit breaker, idempotency, exhaustive handling, 안정적 diagnostic code로 복구 경로를 드러낸다.
+- **Observable by default**: request lifecycle, trace, retry, event, Problem, DI scope, telemetry init/flush 경계는 원인 추적 가능한 evidence를 남긴다. 관측 실패를 비즈니스 성공처럼 보이게 하지 않는다.
+- **LLM-readable architecture**: 안정적인 에러 코드, source location, manifest, intent map, 타입 기반 문서, deterministic generated output을 선호한다. 사람과 LLM이 같은 구조를 읽고 같은 수정 지점을 찾을 수 있어야 한다.
+- **Generated, not hand-wired**: client, OpenAPI/RPC, docs examples, registration table, package catalog 같은 glue code는 수동 동기화보다 generation과 drift gate를 우선한다.
+- **Production path first**: 예제와 preset은 배포, runtime limitation, telemetry flush, CI quality gate, migration, compatibility, zero-credential smoke를 먼저 통과해야 한다.
+- **Composable boundaries**: adapter, middleware graph, policy, runtime capability, package layering 경계를 명확히 하며 core package가 provider/runtime 구현체에 오염되지 않게 한다.
+
 ## Code Style
 
 Biome 설정 기준:
