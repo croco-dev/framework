@@ -28,3 +28,7 @@ title: "TestingAppOptions"
 ### resetContainer?
 
 > `readonly` `optional` **resetContainer**: `boolean`
+
+### transactionContext?
+
+> `readonly` `optional` **transactionContext**: [`TestingTransactionContext`](/api/testing/src/classes/testingtransactioncontext/) \| [`TestingTransactionContextOptions`](/api/testing/src/type-aliases/testingtransactioncontextoptions/) \| `false`

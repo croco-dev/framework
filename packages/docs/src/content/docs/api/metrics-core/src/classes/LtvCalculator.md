@@ -58,7 +58,7 @@ ARPA as Money value
 
 ### calculateLTV()
 
-> **calculateLTV**(`config`): `Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/)\>
+> **calculateLTV**(`config`): `Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/) \| `null`\>
 
 Calculate Lifetime Value (LTV).
 
@@ -75,6 +75,6 @@ LTV calculation configuration
 
 #### Returns
 
-`Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/)\>
+`Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/) \| `null`\>
 
 LTV as Money value, or null if churn rate is 0 (infinite LTV)

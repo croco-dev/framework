@@ -50,7 +50,7 @@ const simulation = await calculator.simulate({ churnChange: -20 });
 
 ### calculateRevenueCC()
 
-> **calculateRevenueCC**(`config`): `Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)\>
+> **calculateRevenueCC**(`config`): `Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/) \| `null`\>
 
 Calculate Revenue Carrying Capacity.
 
@@ -62,7 +62,7 @@ Calculate Revenue Carrying Capacity.
 
 #### Returns
 
-`Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)\>
+`Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/) \| `null`\>
 
 Revenue CC result, or null if NRR = 100% (infinite capacity)
 
@@ -74,7 +74,7 @@ Capacity = Monthly New MRR / (1 - NRR)
 
 ### calculateUserCC()
 
-> **calculateUserCC**(`config`): `Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)\>
+> **calculateUserCC**(`config`): `Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/) \| `null`\>
 
 Calculate User Carrying Capacity.
 
@@ -88,7 +88,7 @@ Configuration for calculation
 
 #### Returns
 
-`Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)\>
+`Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/) \| `null`\>
 
 User CC result, or null if churn rate is 0 (infinite capacity)
 

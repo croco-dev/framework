@@ -5,13 +5,13 @@ prev: false
 title: "finishRuntimeInspectionRequest"
 ---
 
-> **finishRuntimeInspectionRequest**(`inspector`, `input`, `onFailure?`): [`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/)
+> **finishRuntimeInspectionRequest**(`inspector`, `input`, `onFailure?`): [`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/) \| `undefined`
 
 ## Parameters
 
 ### inspector
 
-[`RuntimeInspector`](/api/framework-context/src/classes/runtimeinspector/)
+[`RuntimeInspector`](/api/framework-context/src/classes/runtimeinspector/) | `undefined`
 
 ### input
 
@@ -23,4 +23,4 @@ title: "finishRuntimeInspectionRequest"
 
 ## Returns
 
-[`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/)
+[`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/) \| `undefined`

@@ -5,7 +5,7 @@ prev: false
 title: "getHeaderValue"
 ---
 
-> **getHeaderValue**(`request`, `headerName`): `string`
+> **getHeaderValue**(`request`, `headerName`): `string` \| `null`
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "getHeaderValue"
 
 ## Returns
 
-`string`
+`string` \| `null`

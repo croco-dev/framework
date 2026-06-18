@@ -19,7 +19,7 @@ Metered 메서드 데코레이터와 서비스 바인딩 헬퍼입니다.
 
 ### service
 
-[`MeteringService`](/api/metering-core/src/classes/meteringservice/)
+[`MeteringService`](/api/metering-core/src/classes/meteringservice/) | `null`
 
 ### fn
 

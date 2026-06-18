@@ -86,7 +86,7 @@ Get customer portal URL.
 
 ### getSubscription()
 
-> **getSubscription**(`tenantId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+> **getSubscription**(`tenantId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 Get full subscription details.
 
@@ -98,13 +98,13 @@ Get full subscription details.
 
 #### Returns
 
-`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 ***
 
 ### getSubscriptionStatus()
 
-> **getSubscriptionStatus**(`tenantId`): `Promise`\<[`SubscriptionStatus`](/api/billing-core/src/type-aliases/subscriptionstatus/)\>
+> **getSubscriptionStatus**(`tenantId`): `Promise`\<[`SubscriptionStatus`](/api/billing-core/src/type-aliases/subscriptionstatus/) \| `null`\>
 
 Get subscription status for a tenant.
 
@@ -116,7 +116,7 @@ Get subscription status for a tenant.
 
 #### Returns
 
-`Promise`\<[`SubscriptionStatus`](/api/billing-core/src/type-aliases/subscriptionstatus/)\>
+`Promise`\<[`SubscriptionStatus`](/api/billing-core/src/type-aliases/subscriptionstatus/) \| `null`\>
 
 ***
 

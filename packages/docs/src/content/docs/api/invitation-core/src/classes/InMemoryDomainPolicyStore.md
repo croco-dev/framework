@@ -73,7 +73,7 @@ title: "InMemoryDomainPolicyStore"
 
 ### findByTenantAndDomain()
 
-> **findByTenantAndDomain**(`tenantId`, `domain`): `Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/)\>
+> **findByTenantAndDomain**(`tenantId`, `domain`): `Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/) \| `null`\>
 
 #### Parameters
 
@@ -87,7 +87,7 @@ title: "InMemoryDomainPolicyStore"
 
 #### Returns
 
-`Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/)\>
+`Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/) \| `null`\>
 
 #### Overrides
 

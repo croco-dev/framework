@@ -21,7 +21,7 @@ title: "HttpContext"
 
 ### get()
 
-> **get**\<`T`\>(`key`): `T`
+> **get**\<`T`\>(`key`): `T` \| `undefined`
 
 #### Type Parameters
 
@@ -37,13 +37,13 @@ title: "HttpContext"
 
 #### Returns
 
-`T`
+`T` \| `undefined`
 
 ***
 
 ### header()
 
-> **header**(`name`): `string`
+> **header**(`name`): `string` \| `undefined`
 
 #### Parameters
 
@@ -53,7 +53,7 @@ title: "HttpContext"
 
 #### Returns
 
-`string`
+`string` \| `undefined`
 
 ***
 
@@ -75,7 +75,7 @@ title: "HttpContext"
 
 ### param()
 
-> **param**(`name`): `string`
+> **param**(`name`): `string` \| `undefined`
 
 #### Parameters
 
@@ -85,13 +85,13 @@ title: "HttpContext"
 
 #### Returns
 
-`string`
+`string` \| `undefined`
 
 ***
 
 ### query()
 
-> **query**(`name`): `string`
+> **query**(`name`): `string` \| `undefined`
 
 #### Parameters
 
@@ -101,7 +101,7 @@ title: "HttpContext"
 
 #### Returns
 
-`string`
+`string` \| `undefined`
 
 ***
 

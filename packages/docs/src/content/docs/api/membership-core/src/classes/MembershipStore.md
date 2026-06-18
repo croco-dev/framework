@@ -128,7 +128,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 ### findByTenantAndUser()
 
-> `abstract` **findByTenantAndUser**(`tenantId`, `userId`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+> `abstract` **findByTenantAndUser**(`tenantId`, `userId`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
 #### Parameters
 
@@ -142,7 +142,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 #### Returns
 
-`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
 ***
 

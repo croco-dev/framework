@@ -26,7 +26,7 @@ Array of all plans
 
 ### getPlan()
 
-> **getPlan**(`planId`): `Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/)\>
+> **getPlan**(`planId`): `Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
 
 Get a plan by ID.
 
@@ -40,7 +40,7 @@ The plan identifier
 
 #### Returns
 
-`Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/)\>
+`Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
 
 The plan or null if not found
 
@@ -48,7 +48,7 @@ The plan or null if not found
 
 ### getPlanAtDate()
 
-> **getPlanAtDate**(`planId`, `date`): `Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/)\>
+> **getPlanAtDate**(`planId`, `date`): `Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
 
 Get a plan as it was configured at a specific point in time.
 Useful for handling historical pricing (e.g., legacy subscriptions).
@@ -69,6 +69,6 @@ The date to query historical pricing for
 
 #### Returns
 
-`Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/)\>
+`Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
 
 The plan at the given date or null if not found

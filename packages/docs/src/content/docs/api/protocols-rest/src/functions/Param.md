@@ -17,7 +17,7 @@ title: "Param"
 
 ### schema?
 
-`ZodType`
+`ZodType`\<`any`, `ZodTypeDef`, `any`\>
 
 ## Returns
 

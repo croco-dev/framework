@@ -90,7 +90,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 ### findAccountByExternalId()
 
-> `abstract` **findAccountByExternalId**(`externalCustomerId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+> `abstract` **findAccountByExternalId**(`externalCustomerId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 #### Parameters
 
@@ -100,13 +100,13 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 #### Returns
 
-`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 ***
 
 ### findAccountByTenantId()
 
-> `abstract` **findAccountByTenantId**(`tenantId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+> `abstract` **findAccountByTenantId**(`tenantId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 #### Parameters
 
@@ -116,7 +116,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 #### Returns
 
-`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 ***
 
@@ -138,7 +138,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 ### findSubscription()
 
-> `abstract` **findSubscription**(`billingAccountId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+> `abstract` **findSubscription**(`billingAccountId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 #### Parameters
 
@@ -148,13 +148,13 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 #### Returns
 
-`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 ***
 
 ### findSubscriptionByExternalId()
 
-> `abstract` **findSubscriptionByExternalId**(`externalSubscriptionId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+> `abstract` **findSubscriptionByExternalId**(`externalSubscriptionId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 #### Parameters
 
@@ -164,7 +164,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 #### Returns
 
-`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 ***
 

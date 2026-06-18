@@ -5,7 +5,7 @@ prev: false
 title: "findRecoverMethod"
 ---
 
-> **findRecoverMethod**(`target`, `error`): [`RecoverMetadata`](/api/retry-core/src/interfaces/recovermetadata/)
+> **findRecoverMethod**(`target`, `error`): [`RecoverMetadata`](/api/retry-core/src/interfaces/recovermetadata/) \| `undefined`
 
 Find the best matching
 
@@ -21,7 +21,7 @@ Find the best matching
 
 ## Returns
 
-[`RecoverMetadata`](/api/retry-core/src/interfaces/recovermetadata/)
+[`RecoverMetadata`](/api/retry-core/src/interfaces/recovermetadata/) \| `undefined`
 
 ## Recover
 

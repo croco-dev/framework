@@ -17,7 +17,7 @@ title: "Query"
 
 ### schema?
 
-`ZodType`
+`ZodType`\<`any`, `ZodTypeDef`, `any`\>
 
 ## Returns
 

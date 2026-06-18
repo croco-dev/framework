@@ -25,11 +25,11 @@ title: "TelemetryRuntime"
 
 ### getConfig()
 
-> **getConfig**(): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/)
+> **getConfig**(): [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
 
 #### Returns
 
-[`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/)
+[`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
 
 ***
 

@@ -37,7 +37,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 ### findById()
 
-> `abstract` **findById**(`id`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
+> `abstract` **findById**(`id`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
 #### Parameters
 
@@ -47,13 +47,13 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 #### Returns
 
-`Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
+`Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
 ***
 
 ### findByShortToken()
 
-> `abstract` **findByShortToken**(`shortToken`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
+> `abstract` **findByShortToken**(`shortToken`): `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
 #### Parameters
 
@@ -63,7 +63,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 #### Returns
 
-`Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
+`Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
 ***
 

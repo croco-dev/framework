@@ -1,18 +1,30 @@
 import "reflect-metadata";
-import { Container, Context, Token } from "@croco/framework-context";
-import { InMemoryLlmModel, type GenerateParams, type GenerateResult } from "@croco/llm-core";
+import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
+import type { TransactionContext } from "@croco/framework-context";
+import { DomainEvent, RegisterEventHandler } from "@croco/events-core";
+import type { EventHandler } from "@croco/events-core";
+import { InMemoryLlmModel } from "@croco/llm-core";
+import type { GenerateParams, GenerateResult } from "@croco/llm-core";
 import { ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param } from "@croco/protocols-rest";
 import { InMemoryStorageProvider } from "@croco/storage-core";
-import { beforeEach, describe, expect, it } from "vitest";
+import { recordEvent, withSpan } from "@croco/telemetry-api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertOpenAPIRoute,
   assertProblemResponse,
+  createEventTestingHarness,
   createLlmProviderConformanceSuite,
   createStorageProviderConformanceSuite,
   createRpcTestFetch,
   createTestingApp,
+  createTestingRequestContext,
+  createTestingTransactionContext,
+  installTestingTelemetryCapture,
   resetCrocoTestingContext,
+  runWithTestingContext,
+  TestingTransactionContext,
+  type TestLogger,
 } from "../index";
 
 class GreetingService {
@@ -38,6 +50,17 @@ type TokenValue = {
 
 const TOKEN_VALUE = new Token<TokenValue>("testing.value");
 
+class MockTestLogger implements TestLogger {
+  readonly debug = vi.fn();
+  readonly info = vi.fn();
+  readonly warn = vi.fn();
+  readonly error = vi.fn();
+
+  child(): TestLogger {
+    return this;
+  }
+}
+
 @Controller("/greetings")
 class GreetingController {
   constructor(private readonly service: GreetingService) {}
@@ -57,6 +80,22 @@ class GreetingController {
 
 async function readJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
+}
+
+function createDeferred() {
+  let resolve: (() => void) | undefined;
+  const promise = new Promise<void>((resolver) => {
+    resolve = resolver;
+  });
+
+  if (!resolve) {
+    throw ProblemFactory.internalServerError(
+      "testing/deferred-resolver-not-initialized",
+      "Deferred resolver was not initialized.",
+    );
+  }
+
+  return { promise, resolve };
 }
 
 function greetingProviders(prefix = "Hello") {
@@ -181,6 +220,283 @@ describe("@croco/testing", () => {
     });
 
     expect(Container.get(TOKEN_VALUE)).toEqual({ value: "registered" });
+  });
+
+  it("runs deterministic request contexts without leaking AsyncLocalStorage state", async () => {
+    const requestContext = createTestingRequestContext({
+      requestId: "testing-request-1",
+      tenantId: "tenant-a",
+    });
+
+    expect(Context.isActive()).toBe(false);
+    await expect(
+      runWithTestingContext(async () => {
+        const runtime = Context.getRuntimeContext();
+        runtime?.waitUntil(Promise.resolve("flushed"));
+        await runtime?.flush();
+
+        return {
+          requestId: Context.getRequestId(),
+          tenantId: Context.getTenantId(),
+          waitUntil: runtime?.capabilities.waitUntil,
+        };
+      }, requestContext),
+    ).resolves.toEqual({
+      requestId: "testing-request-1",
+      tenantId: "tenant-a",
+      waitUntil: true,
+    });
+    expect(Context.isActive()).toBe(false);
+  });
+
+  it("resets transaction context hooks between testing contexts", async () => {
+    const committed: string[] = [];
+    const transactionContext = createTestingTransactionContext({ inTransaction: true });
+
+    resetCrocoTestingContext({ transactionContext });
+    const registered = Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN);
+    registered.onAfterCommit(() => {
+      committed.push("first");
+    });
+
+    expect(transactionContext.getPendingAfterCommitHookCount()).toBe(1);
+    await transactionContext.flushAfterCommitHooks();
+    expect(committed).toEqual(["first"]);
+
+    resetCrocoTestingContext();
+    const fresh = Container.get<TestingTransactionContext>(TRANSACTION_CONTEXT_TOKEN);
+    expect(fresh).toBeInstanceOf(TestingTransactionContext);
+    expect(fresh).not.toBe(transactionContext);
+    expect(fresh.isInTransaction()).toBe(false);
+    expect(fresh.getPendingAfterCommitHookCount()).toBe(0);
+  });
+
+  it("runs testing transaction hooks after the outer transaction context is cleared", async () => {
+    const transactionContext = createTestingTransactionContext();
+    const committed: string[] = [];
+    const observedTransactionStates: boolean[] = [];
+
+    await transactionContext.runInTransaction(async () => {
+      expect(transactionContext.isInTransaction()).toBe(true);
+      transactionContext.onAfterCommit(() => {
+        committed.push("root");
+        observedTransactionStates.push(transactionContext.isInTransaction());
+      });
+
+      await transactionContext.runInTransaction(async () => {
+        expect(transactionContext.isInTransaction()).toBe(true);
+        transactionContext.onAfterCommit(() => {
+          committed.push("nested");
+          observedTransactionStates.push(transactionContext.isInTransaction());
+        });
+      });
+
+      expect(transactionContext.getPendingAfterCommitHookCount()).toBe(2);
+      expect(committed).toEqual([]);
+    });
+
+    expect(committed).toEqual(["root", "nested"]);
+    expect(observedTransactionStates).toEqual([false, false]);
+    expect(transactionContext.isInTransaction()).toBe(false);
+    expect(transactionContext.getPendingAfterCommitHookCount()).toBe(0);
+  });
+
+  it("throws a Problem when registering a testing transaction hook outside a transaction", () => {
+    const transactionContext = createTestingTransactionContext();
+
+    expect(() => {
+      transactionContext.onAfterCommit(() => {});
+    }).toThrow(
+      "Testing transaction context is not active. Use runInTransaction() or createTestingTransactionContext({ inTransaction: true }).",
+    );
+  });
+
+  it("runs every testing transaction hook before reporting after-commit failures", async () => {
+    const transactionContext = createTestingTransactionContext();
+    const logger = new MockTestLogger();
+    const committed: string[] = [];
+
+    resetCrocoTestingContext({ logger, transactionContext });
+
+    await expect(
+      transactionContext.runInTransaction(async () => {
+        transactionContext.onAfterCommit(() => {
+          committed.push("first");
+          throw ProblemFactory.internalServerError(
+            "testing/after-commit-hook-failed",
+            "hook failed",
+          );
+        });
+        transactionContext.onAfterCommit(() => {
+          committed.push("second");
+        });
+      }),
+    ).rejects.toMatchObject({
+      code: "testing/after-commit-hooks-failed",
+      detail: "1 testing afterCommit hook(s) failed after transaction commit",
+      extensions: expect.objectContaining({
+        committed: true,
+        failureCount: 1,
+      }),
+    });
+
+    expect(committed).toEqual(["first", "second"]);
+    expect(logger.error).toHaveBeenCalledWith("AfterCommit hook failed:", {
+      error: expect.objectContaining({ code: "testing/after-commit-hook-failed" }),
+    });
+  });
+
+  it("isolates testing transaction hooks between overlapping transactions", async () => {
+    const transactionContext = createTestingTransactionContext();
+    const firstRegistered = createDeferred();
+    const secondRegistered = createDeferred();
+    const firstComplete = createDeferred();
+    const firstHooks: string[] = [];
+    const secondHooks: string[] = [];
+    let secondBodyComplete = false;
+
+    const first = transactionContext
+      .runInTransaction(async () => {
+        transactionContext.onAfterCommit(() => {
+          firstHooks.push("first-1");
+        });
+        firstRegistered.resolve();
+
+        await secondRegistered.promise;
+        transactionContext.onAfterCommit(() => {
+          firstHooks.push("first-2");
+        });
+      })
+      .finally(firstComplete.resolve);
+
+    const second = transactionContext.runInTransaction(async () => {
+      await firstRegistered.promise;
+      transactionContext.onAfterCommit(() => {
+        secondHooks.push(secondBodyComplete ? "second-1" : "second-1-before-complete");
+      });
+      secondRegistered.resolve();
+
+      await firstComplete.promise;
+      secondBodyComplete = true;
+      transactionContext.onAfterCommit(() => {
+        secondHooks.push(secondBodyComplete ? "second-2" : "second-2-before-complete");
+      });
+    });
+
+    await Promise.all([first, second]);
+
+    expect(firstHooks).toEqual(["first-1", "first-2"]);
+    expect(secondHooks).toEqual(["second-1", "second-2"]);
+    expect(transactionContext.isInTransaction()).toBe(false);
+  });
+
+  it("dispatches decorated event handlers through an isolated in-memory event bus", async () => {
+    class UserCreatedEvent extends DomainEvent {
+      static eventName = "testing.user.created";
+
+      constructor(readonly userId: string) {
+        super();
+      }
+    }
+
+    class CapturedEvents {
+      readonly userIds: string[] = [];
+    }
+
+    @RegisterEventHandler(UserCreatedEvent)
+    class CaptureUserCreatedHandler implements EventHandler<UserCreatedEvent> {
+      constructor(private readonly capturedEvents: CapturedEvents) {}
+
+      handle(event: UserCreatedEvent): void {
+        this.capturedEvents.userIds.push(event.userId);
+      }
+    }
+
+    const capturedEvents = new CapturedEvents();
+    const harness = await createEventTestingHarness<UserCreatedEvent>({
+      handlers: [CaptureUserCreatedHandler],
+      providers: [
+        { token: CapturedEvents, useValue: capturedEvents },
+        {
+          token: CaptureUserCreatedHandler,
+          useValue: new CaptureUserCreatedHandler(capturedEvents),
+        },
+      ],
+      transactionContext: { inTransaction: true },
+    });
+
+    await harness.dispatch(new UserCreatedEvent("user-1"));
+    harness.publishAfterCommit(new UserCreatedEvent("user-2"));
+
+    expect(capturedEvents.userIds).toEqual(["user-1"]);
+    await harness.flushAfterCommitHooks();
+    expect(capturedEvents.userIds).toEqual(["user-1", "user-2"]);
+  });
+
+  it("captures telemetry spans without a real telemetry SDK exporter", async () => {
+    const capture = installTestingTelemetryCapture();
+
+    await capture.run(async () => {
+      await withSpan(
+        async () => {
+          await Promise.resolve();
+          recordEvent("testing.event", { ok: true });
+          return "ok";
+        },
+        { name: "testing.operation" },
+      );
+    });
+
+    expect(capture.spans).toHaveLength(1);
+    expect(capture.spans[0]).toMatchObject({
+      ended: true,
+      events: [
+        {
+          attributes: { ok: true },
+          name: "testing.event",
+        },
+      ],
+      name: "testing.operation",
+    });
+  });
+
+  it("isolates overlapping telemetry capture runs", async () => {
+    const firstCapture = installTestingTelemetryCapture();
+    const secondCapture = installTestingTelemetryCapture();
+    const secondCaptureActive = createDeferred();
+    const firstSpanRecorded = createDeferred();
+
+    await Promise.all([
+      firstCapture.run(async () => {
+        await secondCaptureActive.promise;
+        await withSpan(
+          async () => {
+            recordEvent("testing.capture", { capture: "first" });
+          },
+          { name: "testing.first" },
+        );
+        firstSpanRecorded.resolve();
+      }),
+      secondCapture.run(async () => {
+        secondCaptureActive.resolve();
+        await firstSpanRecorded.promise;
+        await withSpan(
+          async () => {
+            recordEvent("testing.capture", { capture: "second" });
+          },
+          { name: "testing.second" },
+        );
+      }),
+    ]);
+
+    expect(firstCapture.spans.map((span) => span.name)).toEqual(["testing.first"]);
+    expect(secondCapture.spans.map((span) => span.name)).toEqual(["testing.second"]);
+    expect(firstCapture.spans[0]?.events).toEqual([
+      { attributes: { capture: "first" }, name: "testing.capture" },
+    ]);
+    expect(secondCapture.spans[0]?.events).toEqual([
+      { attributes: { capture: "second" }, name: "testing.capture" },
+    ]);
   });
 
   describe("storage provider conformance", () => {

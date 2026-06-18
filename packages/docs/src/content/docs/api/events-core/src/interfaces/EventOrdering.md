@@ -58,7 +58,7 @@ title: "EventOrdering"
 
 ### getPartitionStatus()
 
-> **getPartitionStatus**(`partitionKey`): `Promise`\<[`PartitionStatus`](/api/events-core/src/type-aliases/partitionstatus/)\>
+> **getPartitionStatus**(`partitionKey`): `Promise`\<[`PartitionStatus`](/api/events-core/src/type-aliases/partitionstatus/) \| `undefined`\>
 
 특정 파티션의 처리 상태를 조회합니다.
 
@@ -72,7 +72,7 @@ title: "EventOrdering"
 
 #### Returns
 
-`Promise`\<[`PartitionStatus`](/api/events-core/src/type-aliases/partitionstatus/)\>
+`Promise`\<[`PartitionStatus`](/api/events-core/src/type-aliases/partitionstatus/) \| `undefined`\>
 
 파티션 상태
 

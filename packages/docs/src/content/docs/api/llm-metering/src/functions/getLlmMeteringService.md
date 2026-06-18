@@ -5,10 +5,10 @@ prev: false
 title: "getLlmMeteringService"
 ---
 
-> **getLlmMeteringService**(): [`LlmMeteringService`](/api/llm-metering/src/classes/llmmeteringservice/)
+> **getLlmMeteringService**(): [`LlmMeteringService`](/api/llm-metering/src/classes/llmmeteringservice/) \| `null`
 
 LlmMeteringService 인스턴스 조회
 
 ## Returns
 
-[`LlmMeteringService`](/api/llm-metering/src/classes/llmmeteringservice/)
+[`LlmMeteringService`](/api/llm-metering/src/classes/llmmeteringservice/) \| `null`

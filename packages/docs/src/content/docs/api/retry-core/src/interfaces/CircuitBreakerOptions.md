@@ -23,7 +23,7 @@ title: "CircuitBreakerOptions"
 
 ### fallback?
 
-> `optional` **fallback**: [`CircuitBreakerFallback`](/api/retry-core/src/type-aliases/circuitbreakerfallback/)
+> `optional` **fallback**: [`CircuitBreakerFallback`](/api/retry-core/src/type-aliases/circuitbreakerfallback/)\<`unknown`\>
 
 ***
 

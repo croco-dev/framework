@@ -109,7 +109,7 @@ title: "PricingTable"
 
 ### getPrice()
 
-> **getPrice**(`provider`, `modelId`): [`ModelPricing`](/api/llm-metering/src/type-aliases/modelpricing/)
+> **getPrice**(`provider`, `modelId`): [`ModelPricing`](/api/llm-metering/src/type-aliases/modelpricing/) \| `null`
 
 #### Parameters
 
@@ -123,7 +123,7 @@ title: "PricingTable"
 
 #### Returns
 
-[`ModelPricing`](/api/llm-metering/src/type-aliases/modelpricing/)
+[`ModelPricing`](/api/llm-metering/src/type-aliases/modelpricing/) \| `null`
 
 ***
 

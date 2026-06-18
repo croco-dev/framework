@@ -11,7 +11,7 @@ title: "SessionProvider"
 
 ### getSession()
 
-> **getSession**(`sessionId`): `Promise`\<[`Session`](/api/auth-core/src/type-aliases/session/)\>
+> **getSession**(`sessionId`): `Promise`\<[`Session`](/api/auth-core/src/type-aliases/session/) \| `null`\>
 
 #### Parameters
 
@@ -21,7 +21,7 @@ title: "SessionProvider"
 
 #### Returns
 
-`Promise`\<[`Session`](/api/auth-core/src/type-aliases/session/)\>
+`Promise`\<[`Session`](/api/auth-core/src/type-aliases/session/) \| `null`\>
 
 ***
 

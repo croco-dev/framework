@@ -5,6 +5,7 @@
     "paths": {
       "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
       "@croco/events-core": ["../events-core/src/index.ts"],
+      "@croco/events-inmemory": ["../events-inmemory/src/index.ts"],
       "@croco/framework-context": ["../framework-context/src/index.ts"],
       "@croco/framework-logger": ["../framework-logger/src/index.ts"],
       "@croco/health-core": ["../health-core/src/index.ts"],

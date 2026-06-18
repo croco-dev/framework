@@ -35,7 +35,7 @@ title: "RuntimeInspector"
 
 ### finishRequest()
 
-> **finishRequest**(`input`): [`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/)
+> **finishRequest**(`input`): [`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/) \| `undefined`
 
 #### Parameters
 
@@ -45,7 +45,7 @@ title: "RuntimeInspector"
 
 #### Returns
 
-[`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/)
+[`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/) \| `undefined`
 
 ***
 

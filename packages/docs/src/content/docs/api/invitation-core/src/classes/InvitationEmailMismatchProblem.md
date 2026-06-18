@@ -25,11 +25,11 @@ title: "InvitationEmailMismatchProblem"
 
 ##### expectedEmail
 
-`string`
+`string` | `null`
 
 ##### providedEmail
 
-`string`
+`string` | `null`
 
 #### Returns
 

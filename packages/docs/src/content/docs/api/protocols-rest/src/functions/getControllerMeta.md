@@ -5,7 +5,7 @@ prev: false
 title: "getControllerMeta"
 ---
 
-> **getControllerMeta**(`target`): [`ControllerMetadata`](/api/protocols-rest/src/interfaces/controllermetadata/)
+> **getControllerMeta**(`target`): [`ControllerMetadata`](/api/protocols-rest/src/interfaces/controllermetadata/) \| `undefined`
 
 클래스에 등록된 컨트롤러 메타데이터를 조회합니다.
 
@@ -17,4 +17,4 @@ title: "getControllerMeta"
 
 ## Returns
 
-[`ControllerMetadata`](/api/protocols-rest/src/interfaces/controllermetadata/)
+[`ControllerMetadata`](/api/protocols-rest/src/interfaces/controllermetadata/) \| `undefined`

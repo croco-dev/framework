@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       "@croco/diagnostics-core": resolve(currentDir, "../diagnostics-core/src/index.ts"),
       "@croco/events-core": resolve(currentDir, "../events-core/src/index.ts"),
+      "@croco/events-inmemory": resolve(currentDir, "../events-inmemory/src/index.ts"),
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
       "@croco/framework-logger": resolve(currentDir, "../framework-logger/src/index.ts"),
       "@croco/health-core": resolve(currentDir, "../health-core/src/index.ts"),

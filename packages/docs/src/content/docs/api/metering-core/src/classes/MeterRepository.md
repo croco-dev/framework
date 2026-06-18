@@ -38,7 +38,7 @@ metering-core는 이 추상 클래스만 의존
 
 ### findByMeterIdAndTenant()
 
-> `abstract` **findByMeterIdAndTenant**(`meterId`, `tenantId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)\>
+> `abstract` **findByMeterIdAndTenant**(`meterId`, `tenantId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/) \| `null`\>
 
 Meter 정의 조회 (tenantId + meterId로 검색)
 
@@ -54,7 +54,7 @@ Meter 정의 조회 (tenantId + meterId로 검색)
 
 #### Returns
 
-`Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)\>
+`Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/) \| `null`\>
 
 ***
 

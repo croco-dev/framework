@@ -29,7 +29,7 @@ title: "RoleRegistry"
 
 ### getRole()
 
-> **getRole**(`name`): [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/)
+> **getRole**(`name`): [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
 #### Parameters
 
@@ -39,7 +39,7 @@ title: "RoleRegistry"
 
 #### Returns
 
-[`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/)
+[`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
 ***
 

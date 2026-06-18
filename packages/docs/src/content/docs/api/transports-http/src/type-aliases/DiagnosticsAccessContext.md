@@ -29,7 +29,7 @@ title: "DiagnosticsAccessContext"
 
 ### header()
 
-> **header**(`name`): `string`
+> **header**(`name`): `string` \| `undefined`
 
 #### Parameters
 
@@ -39,4 +39,4 @@ title: "DiagnosticsAccessContext"
 
 #### Returns
 
-`string`
+`string` \| `undefined`

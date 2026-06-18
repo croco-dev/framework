@@ -139,7 +139,7 @@ MRR 변동 데이터 배열
 
 ### getSnapshot()
 
-> `abstract` **getSnapshot**(`tenantId`, `date`): `Promise`\<[`MetricsSnapshot`](/api/metrics-core/src/type-aliases/metricssnapshot/)\>
+> `abstract` **getSnapshot**(`tenantId`, `date`): `Promise`\<[`MetricsSnapshot`](/api/metrics-core/src/type-aliases/metricssnapshot/) \| `null`\>
 
 특정 날짜의 메트릭 스냅샷 조회
 
@@ -159,7 +159,7 @@ MRR 변동 데이터 배열
 
 #### Returns
 
-`Promise`\<[`MetricsSnapshot`](/api/metrics-core/src/type-aliases/metricssnapshot/)\>
+`Promise`\<[`MetricsSnapshot`](/api/metrics-core/src/type-aliases/metricssnapshot/) \| `null`\>
 
 스냅샷 데이터, 없으면 null
 

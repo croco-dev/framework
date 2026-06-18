@@ -95,7 +95,7 @@ ARPA as Money value
 
 ### calculateChurn()
 
-> **calculateChurn**(`startingMRR`, `movement`, `type`): `Promise`\<`number`\>
+> **calculateChurn**(`startingMRR`, `movement`, `type`): `Promise`\<`number` \| `null`\>
 
 #### Parameters
 
@@ -113,13 +113,13 @@ ARPA as Money value
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 ***
 
 ### calculateGRR()
 
-> **calculateGRR**(`startingMRR`, `movement`): `Promise`\<`number`\>
+> **calculateGRR**(`startingMRR`, `movement`): `Promise`\<`number` \| `null`\>
 
 Calculate Gross Revenue Retention (GRR) for a period.
 
@@ -141,7 +141,7 @@ MRR movement data for the period
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 GRR as percentage (0-100), or null if starting MRR is zero
 
@@ -149,7 +149,7 @@ GRR as percentage (0-100), or null if starting MRR is zero
 
 ### calculateLTV()
 
-> **calculateLTV**(`config`): `Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/)\>
+> **calculateLTV**(`config`): `Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/) \| `null`\>
 
 Calculate Lifetime Value (LTV).
 
@@ -166,7 +166,7 @@ LTV calculation configuration
 
 #### Returns
 
-`Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/)\>
+`Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/) \| `null`\>
 
 LTV as Money value, or null if churn rate is 0 (infinite LTV)
 
@@ -200,7 +200,7 @@ Total MRR as Money value
 
 ### calculateNRR()
 
-> **calculateNRR**(`startingMRR`, `movement`): `Promise`\<`number`\>
+> **calculateNRR**(`startingMRR`, `movement`): `Promise`\<`number` \| `null`\>
 
 Calculate Net Revenue Retention (NRR) for a period.
 
@@ -222,7 +222,7 @@ MRR movement data for the period
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 NRR as percentage (can be >100%), or null if starting MRR is zero
 
@@ -230,7 +230,7 @@ NRR as percentage (can be >100%), or null if starting MRR is zero
 
 ### calculateQuickRatio()
 
-> **calculateQuickRatio**(`movement`): `Promise`\<`number`\>
+> **calculateQuickRatio**(`movement`): `Promise`\<`number` \| `null`\>
 
 Calculate Quick Ratio for a period.
 
@@ -250,7 +250,7 @@ MRR movement data for the period
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 Quick Ratio, or null if denominator is zero
 
@@ -290,7 +290,7 @@ Optional tenant ID
 
 ### getCarryingCapacity()
 
-> **getCarryingCapacity**(`config`): `Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)\>
+> **getCarryingCapacity**(`config`): `Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/) \| `null`\>
 
 Get User Carrying Capacity.
 
@@ -304,7 +304,7 @@ Configuration for calculation
 
 #### Returns
 
-`Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)\>
+`Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/) \| `null`\>
 
 User CC result, or null if churn rate is 0 (infinite capacity)
 
@@ -332,9 +332,9 @@ Whether previous subscription was churned
 
 ##### previousAmount
 
-`number`
-
 Previous plan amount (if any)
+
+`number` | `null`
 
 ##### newAmount
 

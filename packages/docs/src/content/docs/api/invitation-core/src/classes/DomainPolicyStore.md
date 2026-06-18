@@ -61,7 +61,7 @@ title: "DomainPolicyStore"
 
 ### findByTenantAndDomain()
 
-> `abstract` **findByTenantAndDomain**(`tenantId`, `domain`): `Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/)\>
+> `abstract` **findByTenantAndDomain**(`tenantId`, `domain`): `Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/) \| `null`\>
 
 #### Parameters
 
@@ -75,7 +75,7 @@ title: "DomainPolicyStore"
 
 #### Returns
 
-`Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/)\>
+`Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/) \| `null`\>
 
 ***
 

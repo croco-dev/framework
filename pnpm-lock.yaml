@@ -2292,6 +2292,12 @@ importers:
 
   packages/testing:
     dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/events-inmemory':
+        specifier: workspace:*
+        version: link:../events-inmemory
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -2310,9 +2316,15 @@ importers:
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.0
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2

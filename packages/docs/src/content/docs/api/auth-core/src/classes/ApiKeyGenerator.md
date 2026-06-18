@@ -63,7 +63,7 @@ title: "ApiKeyGenerator"
 
 ### parse()
 
-> **parse**(`rawKey`): `object`
+> **parse**(`rawKey`): \{ `longToken`: `string`; `prefix`: `string`; `shortToken`: `string`; \} \| `null`
 
 #### Parameters
 
@@ -73,16 +73,4 @@ title: "ApiKeyGenerator"
 
 #### Returns
 
-`object`
-
-##### longToken
-
-> **longToken**: `string`
-
-##### prefix
-
-> **prefix**: `string`
-
-##### shortToken
-
-> **shortToken**: `string`
+\{ `longToken`: `string`; `prefix`: `string`; `shortToken`: `string`; \} \| `null`

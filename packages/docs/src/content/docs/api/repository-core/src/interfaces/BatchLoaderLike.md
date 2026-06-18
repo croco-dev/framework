@@ -25,7 +25,7 @@ The value type
 
 ### load()
 
-> **load**(`key`): `Promise`\<`V`\>
+> **load**(`key`): `Promise`\<`V` \| `null`\>
 
 Load a single value by key.
 
@@ -39,6 +39,6 @@ The key to load
 
 #### Returns
 
-`Promise`\<`V`\>
+`Promise`\<`V` \| `null`\>
 
 The value if found, null otherwise

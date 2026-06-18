@@ -29,7 +29,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 ##### eventBus?
 
-[`EventBus`](/api/events-core/src/interfaces/eventbus/)
+[`EventBus`](/api/events-core/src/interfaces/eventbus/)\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>
 
 ##### logger?
 
@@ -107,7 +107,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 ### verify()
 
-> **verify**(`rawKey`, `ip?`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)\>
+> **verify**(`rawKey`, `ip?`): `Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/) \| `null`\>
 
 #### Parameters
 
@@ -121,4 +121,4 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 #### Returns
 
-`Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)\>
+`Promise`\<[`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/) \| `null`\>

@@ -17,7 +17,7 @@ title: "ParamResolver"
 
 ##### createPipeInstance?
 
-(`pipe`) => [`PipeTransform`](/api/protocols-rest/src/interfaces/pipetransform/)\<`unknown`, `unknown`\>
+(`pipe`) => [`PipeTransform`](/api/protocols-rest/src/interfaces/pipetransform/)\<`unknown`, `unknown`\> \| `null` \| `undefined`
 
 #### Returns
 
