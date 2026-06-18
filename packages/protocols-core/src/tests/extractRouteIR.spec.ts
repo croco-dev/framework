@@ -1,8 +1,18 @@
 import "reflect-metadata";
+import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractRouteIR } from "../libs/extractRouteIR";
-import { Body, Controller, Get, Header, Param, Post, Query } from "./helpers/test-decorators";
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  ProblemResponse,
+  Query,
+} from "./helpers/test-decorators";
 
 const RESPONSE_SCHEMA_KEY = Symbol.for("croco:rest:responseSchema");
 
@@ -188,6 +198,32 @@ describe("extractRouteIR", () => {
 
     expect(routes).toHaveLength(1);
     expect(routes[0]?.outputSchema).toBeNull();
+  });
+
+  it("should extract declared Problem responses with category-derived HTTP status", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "The user id does not exist.",
+        status: 500,
+      })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const routes = extractRouteIR(UsersController);
+
+    expect(routes).toHaveLength(1);
+    expect(routes[0]?.problemResponses).toEqual([
+      {
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "The user id does not exist.",
+        status: 404,
+      },
+    ]);
   });
 
   it("should return an empty array for a class without route metadata", () => {

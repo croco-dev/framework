@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { Problem, ProblemCategory } from "../index";
+import {
+  assertProblemExhaustive,
+  Problem,
+  ProblemCategory,
+  type TypedProblemDetails,
+} from "../index";
 
 class NotFoundProblem extends Problem {
   constructor(resource: string) {
@@ -75,6 +80,20 @@ describe("Problem", () => {
     expect(() => {
       throw new NotFoundProblem("Item");
     }).toThrow("The requested Item could not be found");
+  });
+
+  it("should expose typed Problem details and a never-based exhaustive helper", () => {
+    const details: TypedProblemDetails<"RESOURCE_NOT_FOUND", 404> = {
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      code: "RESOURCE_NOT_FOUND",
+    };
+
+    expect(details.code).toBe("RESOURCE_NOT_FOUND");
+    expect(() => assertProblemExhaustive({ code: "OTHER" } as never)).toThrow(
+      "Unhandled Problem variant: OTHER",
+    );
   });
 });
 

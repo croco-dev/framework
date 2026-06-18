@@ -1,3 +1,4 @@
+import type { ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 
 export interface RouteIR {
@@ -9,6 +10,7 @@ export interface RouteIR {
   inputSchema: z.ZodType | null;
   inputSchemas: RouteInputSchemas;
   outputSchema: z.ZodType | null;
+  problemResponses?: readonly ProblemResponseIR[];
   domain: string | null;
 }
 
@@ -24,3 +26,15 @@ export interface ParamIR {
   name: string;
   schema: z.ZodType | null;
 }
+
+export type ProblemResponseIR<
+  Code extends string = string,
+  Category extends ProblemCategory = ProblemCategory,
+  Status extends number = number,
+> = {
+  readonly code: Code;
+  readonly category: Category;
+  readonly status: Status;
+  readonly description?: string;
+  readonly type?: string;
+};

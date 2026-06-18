@@ -40,6 +40,11 @@ export const REST_ROLES_KEY = Symbol.for("croco:rest:roles");
 
 export const RESPONSE_SCHEMA_KEY = Symbol.for("croco:rest:responseSchema");
 
+/**
+ * 라우트에서 발생 가능한 도메인 Problem 응답 메타데이터를 저장하는 Reflect 키입니다.
+ */
+export const PROBLEM_RESPONSES_KEY = Symbol.for("croco:rest:problemResponses");
+
 export enum HttpMethod {
   GET = "GET",
   POST = "POST",

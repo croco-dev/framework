@@ -74,7 +74,7 @@ describe("rpc-codegen e2e", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     const rpcContent = fs.readFileSync(path.join(outDir, "rpc.ts"), "utf-8");
     expect(content).toContain(
-      "import { handleJsonResponse, readOptionalJsonResponse } from './rpc';",
+      "import { handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
     );
     expect(content).toContain(
       "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; headers: { 'x-request-id': string; }; };",
@@ -89,20 +89,38 @@ describe("rpc-codegen e2e", () => {
       "return fetch(url, { method: 'GET', headers: serializeHeaders(input.headers) }).then((response) => readOptionalJsonResponse(response));",
     );
     expect(content).toContain(
+      "return fetch(url, { method: 'GET', headers: serializeHeaders(input.headers) }).then((response) => readOptionalJsonResult<GetUserProblem>(response, getUserProblemDeclarations));",
+    );
+    expect(content).toContain(
       "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
     );
     expect(content).toContain(
       "health: (): Promise<unknown | undefined> => fetch('/health', { method: 'GET' }).then((response) => readOptionalJsonResponse(response)),",
+    );
+    expect(content).toContain(
+      "healthResult: (): Promise<HealthResult> => fetch('/health', { method: 'GET' }).then((response) => readOptionalJsonResult<HealthProblem>(response, healthProblemDeclarations)),",
     );
     expect(content).not.toContain("zod");
     assertGeneratedClientTypechecks(
       `${content}
 async function exerciseGeneratedClient() {
   const created = await testClient.createUser({ name: 'Ada Lovelace' });
+  const createdResult = await testClient.createUserResult({ name: 'Ada Lovelace' });
   const createdId: string = created.id;
   const createdName: string = created.name;
+  const createdResultBranch: CreateUserResult = createdResult;
+
+  if (createdResult.ok) {
+    const resultId: string = createdResult.data.id;
+    void resultId;
+  }
 
   await testClient.getUser({
+    path: { id: createdId },
+    query: { include: undefined },
+    headers: { 'x-request-id': 'request-1' },
+  });
+  const getUserResult: Promise<GetUserResult> = testClient.getUserResult({
     path: { id: createdId },
     query: { include: undefined },
     headers: { 'x-request-id': 'request-1' },
@@ -118,6 +136,8 @@ async function exerciseGeneratedClient() {
   const badCreatedId: number = created.id;
 
   void createdName;
+  void createdResultBranch;
+  void getUserResult;
   void badCreatedId;
 }
 void exerciseGeneratedClient;

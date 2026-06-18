@@ -4,6 +4,7 @@
 export {
   HttpMethod,
   ParamType,
+  PROBLEM_RESPONSES_KEY,
   RESPONSE_SCHEMA_KEY,
   REST_CONTROLLER_KEY,
   REST_FILTERS_KEY,

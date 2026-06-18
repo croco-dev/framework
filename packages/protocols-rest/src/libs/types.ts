@@ -1,4 +1,5 @@
 import type { Guard } from "@croco/framework-context";
+import type { ProblemCategory } from "@croco/problems-core";
 import type { HttpMethod, ParamType } from "./constants";
 import type { ExceptionFilter } from "./interfaces/ExceptionFilter";
 import type { Interceptor } from "./interfaces/Interceptor";
@@ -15,6 +16,28 @@ export interface RouteMetadata {
   methodName: string | symbol;
   statusCode?: number;
 }
+
+export type ProblemResponseMetadata<
+  Code extends string = string,
+  Category extends ProblemCategory = ProblemCategory,
+  Status extends number = number,
+> = {
+  readonly code: Code;
+  readonly category: Category;
+  readonly status: Status;
+  readonly description?: string;
+  readonly type?: string;
+};
+
+export type ProblemResponseOptions<
+  Code extends string = string,
+  Category extends ProblemCategory = ProblemCategory,
+> = {
+  readonly code: Code;
+  readonly category: Category;
+  readonly description?: string;
+  readonly type?: string;
+};
 
 export interface ParamMetadata {
   type: ParamType;

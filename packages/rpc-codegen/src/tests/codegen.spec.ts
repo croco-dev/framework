@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -8,9 +9,16 @@ import { generateClientFiles } from "../libs/generate";
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
-const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null, headers: null };
+const EMPTY_INPUT_SCHEMAS = {
+  body: null,
+  path: null,
+  query: null,
+  headers: null,
+};
 const BODY_INPUT_SCHEMAS: RouteIR["inputSchemas"] = {
-  body: z.object({ name: z.string() }) as unknown as RouteIR["inputSchemas"]["body"],
+  body: z.object({
+    name: z.string(),
+  }) as unknown as RouteIR["inputSchemas"]["body"],
   path: null,
   query: null,
   headers: null,
@@ -43,7 +51,10 @@ const HEADER_INPUT_SCHEMAS = {
   body: null,
   path: null,
   query: null,
-  headers: z.object({ authorization: z.string(), "x-tenant-id": z.string().optional() }) as any,
+  headers: z.object({
+    authorization: z.string(),
+    "x-tenant-id": z.string().optional(),
+  }) as any,
 };
 const COMBINED_INPUT_SCHEMAS = {
   body: z.object({ name: z.string() }) as any,
@@ -92,13 +103,18 @@ describe("generateClientFiles", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
     expect(content).toContain("export const userClient = {");
-    expect(content).toContain("import { readOptionalJsonResponse } from './rpc';");
+    expect(content).toContain(
+      "import { readOptionalJsonResponse, readOptionalJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+    );
     expect(rpcContent).toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).toContain("export class RpcClientResponseError extends Error");
     expect(rpcContent).toContain("if (isRpcProblemDetails(body))");
     expect(content).not.toContain("async function handleJsonResponse<T = unknown>");
     expect(content).toContain(
       "list: (): Promise<unknown | undefined> => fetch('/users', { method: 'GET' }).then((response) => readOptionalJsonResponse(response)),",
+    );
+    expect(content).toContain(
+      "listResult: (): Promise<ListResult> => fetch('/users', { method: 'GET' }).then((response) => readOptionalJsonResult<ListProblem>(response, listProblemDeclarations)),",
     );
   });
 
@@ -124,8 +140,12 @@ describe("generateClientFiles", () => {
   });
 
   it("should reject routes with more than one body parameter", () => {
-    const bodySchema = z.object({ name: z.string() }) as unknown as RouteIR["inputSchema"];
-    const auditSchema = z.object({ auditId: z.string() }) as unknown as RouteIR["inputSchema"];
+    const bodySchema = z.object({
+      name: z.string(),
+    }) as unknown as RouteIR["inputSchema"];
+    const auditSchema = z.object({
+      auditId: z.string(),
+    }) as unknown as RouteIR["inputSchema"];
     const routes: RouteIR[] = [
       {
         controllerName: "UsersController",
@@ -277,6 +297,37 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should reject generated Result method names that collide with route methods", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "user",
+      },
+      {
+        controllerName: "UserController",
+        methodName: "getResult",
+        httpMethod: "GET",
+        path: "/users/:id/result",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "user",
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      "Cannot generate RPC client for domain 'user': member 'getResult' would be generated for UserController.getResult (/users/:id/result) as a route method, but UserController.get (/users/:id) already generates that member as a result method.",
+    );
+  });
+
   it(
     "should generate a package barrel that typechecks with duplicate route type names",
     () => {
@@ -289,7 +340,9 @@ describe("generateClientFiles", () => {
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
-          outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+          outputSchema: z.object({
+            id: z.string(),
+          }) as unknown as RouteIR["outputSchema"],
           domain: "user",
         },
         {
@@ -300,7 +353,9 @@ describe("generateClientFiles", () => {
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
-          outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+          outputSchema: z.object({
+            id: z.string(),
+          }) as unknown as RouteIR["outputSchema"],
           domain: "order",
         },
       ];
@@ -454,6 +509,112 @@ describe("generateClientFiles", () => {
     expect(content).not.toContain("readOptionalJsonResponse(response: Response)");
   });
 
+  it(
+    "should generate typed Problem result unions for exhaustive client handling",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "get",
+          httpMethod: "GET",
+          path: "/users/:id",
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+          problemResponses: [
+            {
+              code: "USER_NOT_FOUND",
+              category: ProblemCategory.NotFound,
+              status: 404,
+            },
+            {
+              code: "USER_FORBIDDEN",
+              category: ProblemCategory.Forbidden,
+              status: 403,
+            },
+          ],
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      const source = `import { assertExhaustiveProblem } from './rpc';
+${content}
+async function exerciseGeneratedProblemResult() {
+  const result = await userClient.getResult({ path: { id: 'missing' } });
+
+  if (result.ok) {
+    const userName: string = result.data.name;
+    void userName;
+    return;
+  }
+
+  if (result.kind === 'external') {
+    const externalStatus: number = result.response.status;
+    void externalStatus;
+    return;
+  }
+
+  switch (result.code) {
+    case 'USER_NOT_FOUND': {
+      const code: 'USER_NOT_FOUND' = result.problem.code;
+      const category: 'NotFound' = result.category;
+      const status: 404 = result.status;
+      void code;
+      void category;
+      void status;
+      return;
+    }
+    case 'USER_FORBIDDEN': {
+      const code: 'USER_FORBIDDEN' = result.problem.code;
+      const category: 'Forbidden' = result.declaration.category;
+      const status: 403 = result.problem.status;
+      void code;
+      void category;
+      void status;
+      return;
+    }
+    default:
+      return assertExhaustiveProblem(result);
+  }
+}
+
+function handleMissingProblemBranch(failure: Extract<GetResult, { ok: false; kind: 'problem' }>) {
+  switch (failure.code) {
+    case 'USER_NOT_FOUND':
+      return failure.problem.detail;
+    default:
+      // @ts-expect-error USER_FORBIDDEN remains unhandled, so the default branch is not never.
+      return assertExhaustiveProblem(failure);
+  }
+}
+
+void exerciseGeneratedProblemResult;
+void handleMissingProblemBranch;
+`;
+
+      expect(content).toContain(
+        "import { handleJsonResponse, handleJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+      );
+      expect(content).toContain(
+        "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
+      );
+      expect(content).toContain(
+        "export type GetProblemDetails = RpcProblemDetailsFor<GetProblem>;",
+      );
+      expect(content).toContain("export type GetResult = RpcClientResult<GetOutput, GetProblem>;");
+      expect(content).toContain("getResult: (input: GetInput): Promise<GetResult> =>");
+      expect(content).toContain(
+        "handleJsonResult<GetOutput, GetProblem>(response, getProblemDeclarations)",
+      );
+      assertGeneratedClientTypechecks(source);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
   it("should generate JSON-safe literal, enum, union, and record output types", () => {
     const routes: RouteIR[] = [
       {
@@ -492,7 +653,9 @@ describe("generateClientFiles", () => {
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
-        outputSchema: z.object({ checkedAt: z.date() }) as unknown as RouteIR["outputSchema"],
+        outputSchema: z.object({
+          checkedAt: z.date(),
+        }) as unknown as RouteIR["outputSchema"],
         domain: null,
       },
     ];
@@ -569,9 +732,10 @@ describe("generateClientFiles", () => {
         inputSchema: null,
         inputSchemas: {
           body: null,
-          path: z.object({ id: z.string(), id2: z.string() }) as unknown as NonNullable<
-            RouteIR["inputSchemas"]["path"]
-          >,
+          path: z.object({
+            id: z.string(),
+            id2: z.string(),
+          }) as unknown as NonNullable<RouteIR["inputSchemas"]["path"]>,
           query: null,
           headers: null,
         },
@@ -788,12 +952,18 @@ describe("generateClientFiles", () => {
       expect(content).toContain(
         "export type ListInput = { query: { page: number; active: boolean | undefined; search: string | undefined; tags: string[]; deletedAt: string | null; }; };",
       );
-      expect(content).toContain("import { readOptionalJsonResponse } from './rpc';");
+      expect(content).toContain(
+        "import { readOptionalJsonResponse, readOptionalJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+      );
       assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
   query: { page: 2, active: false, search: undefined, tags: ['new', 'vip'], deletedAt: null },
 });
+const resultBranch: Promise<ListResult> = userClient.listResult({
+  query: { page: 2, active: false, search: undefined, tags: ['new', 'vip'], deletedAt: null },
+});
 void result;
+void resultBranch;
 `);
     },
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,

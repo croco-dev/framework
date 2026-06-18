@@ -5,5 +5,6 @@ export { Controller } from "./Controller";
 export { All, Delete, Get, Head, Options, Patch, Post, Put } from "./HttpMethod";
 export { UseFilters, UseGuards, UseInterceptors, UsePipes } from "./Lifecycle";
 export { Body, Ctx, Header, Param, Query, Raw } from "./Params";
+export { ProblemResponse, ProblemResponses } from "./ProblemResponse";
 export { ResponseSchema } from "./ResponseSchema";
 export { Roles } from "./Roles";

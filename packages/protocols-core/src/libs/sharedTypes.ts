@@ -1,3 +1,5 @@
+import type { ProblemCategory } from "@croco/problems-core";
+
 /**
  * @croco/protocols-rest와 동일한 Symbol.for() 키를 사용합니다.
  * Symbol.for()는 전역 Symbol 레지스트리를 사용하므로 별도 import 없이
@@ -8,6 +10,7 @@ export const REST_ROUTES_KEY = Symbol.for("croco:rest:routes");
 export const REST_PARAMS_KEY = Symbol.for("croco:rest:params");
 export const REST_GUARDS_KEY = Symbol.for("croco:rest:guards");
 export const REST_ROLES_KEY = Symbol.for("croco:rest:roles");
+export const PROBLEM_RESPONSES_KEY = Symbol.for("croco:rest:problemResponses");
 
 export enum ParamType {
   PARAM = "param",
@@ -31,6 +34,14 @@ export interface RouteMetadata {
   methodName: string | symbol;
   statusCode?: number;
 }
+
+export type ProblemResponseMetadata = {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly status?: number;
+  readonly description?: string;
+  readonly type?: string;
+};
 
 export interface ParamMetadata {
   type: ParamType;

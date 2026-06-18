@@ -4,6 +4,8 @@ import {
   type ControllerMetadata,
   type ParamMetadata,
   ParamType,
+  PROBLEM_RESPONSES_KEY,
+  type ProblemResponseMetadata,
   REST_CONTROLLER_KEY,
   REST_GUARDS_KEY,
   REST_PARAMS_KEY,
@@ -49,6 +51,22 @@ export function Header(name: string, schema?: z.ZodType): ParameterDecorator {
 export function ResponseSchema(schema: z.ZodType): MethodDecorator {
   return (target, propertyKey) => {
     Reflect.defineMetadata(RESPONSE_SCHEMA_KEY, schema, target.constructor, propertyKey);
+  };
+}
+
+export function ProblemResponse(response: ProblemResponseMetadata): MethodDecorator {
+  return (target, propertyKey) => {
+    const existing =
+      (Reflect.getMetadata(PROBLEM_RESPONSES_KEY, target.constructor, propertyKey) as
+        | ProblemResponseMetadata[]
+        | undefined) ?? [];
+
+    Reflect.defineMetadata(
+      PROBLEM_RESPONSES_KEY,
+      [...existing, response],
+      target.constructor,
+      propertyKey,
+    );
   };
 }
 

@@ -1,13 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   assertContractGraphHasNoErrors,
+  type ContractGraph,
   getContractPathParamNames,
   getContractPathParams,
-  type ContractGraph,
   type RouteIR,
 } from "@croco/protocols-core";
-import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export type GenerateClientOptions = {
   readonly reactQuery?: boolean;
@@ -87,6 +87,31 @@ function assertGeneratedClientRoutes(routes: RouteIR[]): void {
 
     assertGeneratedClientPathParams(route);
   }
+
+  for (const domainRoutes of groupRoutesByDomain(routes)) {
+    assertGeneratedClientMethodNames(domainRoutes);
+  }
+}
+
+function assertGeneratedClientMethodNames(domainRoutes: DomainRoutes): void {
+  const members = new Map<string, { readonly route: RouteIR; readonly kind: string }>();
+
+  for (const route of domainRoutes.routes) {
+    for (const member of [
+      { name: route.methodName, kind: "route method" },
+      { name: getResultMethodName(route), kind: "result method" },
+    ]) {
+      const existing = members.get(member.name);
+
+      if (existing) {
+        throw new RpcCodegenContractProblem(
+          `Cannot generate RPC client for domain '${domainRoutes.domain}': member '${member.name}' would be generated for ${formatRoute(route)} as a ${member.kind}, but ${formatRoute(existing.route)} already generates that member as a ${existing.kind}. Rename one route method because generated Result methods reserve the '<methodName>Result' member pattern.`,
+        );
+      }
+
+      members.set(member.name, { route, kind: member.kind });
+    }
+  }
 }
 
 function assertGeneratedClientPathParams(route: RouteIR): void {
@@ -146,7 +171,9 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const clientName = `${domainRoutes.domain}Client`;
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
-  const types = [...inputTypes, ...outputTypes];
+  const problemTypes = domainRoutes.routes.map(generateProblemTypes);
+  const problemDeclarations = domainRoutes.routes.map(generateProblemDeclarations).join("\n");
+  const types = [...inputTypes, ...outputTypes, ...problemTypes];
   const responseHelperImports = getResponseHelperImports({
     hasOutputRoutes: domainRoutes.routes.some((route) => route.outputSchema),
     hasNoOutputRoutes: domainRoutes.routes.some((route) => !route.outputSchema),
@@ -203,6 +230,7 @@ function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<str
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
 
   return `${imports}${responseHelperImports}${types.join("\n")}
+${problemDeclarations}
 ${queryHelpers}${headerHelpers}
 export const ${clientName} = {
 ${clientMethods}
@@ -228,24 +256,84 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
 
   if (options.hasOutputRoutes) {
     helpers.push("handleJsonResponse");
+    helpers.push("handleJsonResult");
   }
 
   if (options.hasNoOutputRoutes) {
     helpers.push("readOptionalJsonResponse");
+    helpers.push("readOptionalJsonResult");
   }
+
+  helpers.push("type RpcClientResult", "type RpcDeclaredProblem", "type RpcProblemDetailsFor");
 
   return helpers.length === 0 ? "" : `import { ${helpers.join(", ")} } from './rpc';\n`;
 }
 
 function generateRpcSupport(): string {
-  return `export type RpcProblemDetails = {
+  return `export type RpcProblemDetails<
+  Code extends string = string,
+  Status extends number = number,
+> = {
   type: string;
   title: string;
-  status: number;
-  code: string;
+  status: Status;
+  code: Code;
   detail?: string;
   instance?: string;
 } & Record<string, unknown>;
+
+export type RpcDeclaredProblem<
+  Code extends string = string,
+  Category extends string = string,
+  Status extends number = number,
+> = {
+  readonly code: Code;
+  readonly category: Category;
+  readonly status: Status;
+  readonly description?: string;
+  readonly type?: string;
+};
+
+export type RpcProblemDetailsFor<Problem extends RpcDeclaredProblem> =
+  Problem extends RpcDeclaredProblem
+    ? RpcProblemDetails<Problem['code'], Problem['status']>
+    : never;
+
+export type RpcClientSuccess<T> = {
+  readonly ok: true;
+  readonly data: T;
+  readonly response: Response;
+};
+
+export type RpcClientProblemFailure<Problem extends RpcDeclaredProblem> =
+  Problem extends RpcDeclaredProblem
+    ? {
+        readonly ok: false;
+        readonly kind: 'problem';
+        readonly code: Problem['code'];
+        readonly category: Problem['category'];
+        readonly status: Problem['status'];
+        readonly problem: RpcProblemDetailsFor<Problem>;
+        readonly declaration: Problem;
+        readonly response: Response;
+      }
+    : never;
+
+export type RpcClientExternalFailure = {
+  readonly ok: false;
+  readonly kind: 'external';
+  readonly error: RpcClientResponseError | RpcClientProblemError;
+  readonly response: Response;
+  readonly body?: unknown;
+};
+
+export type RpcClientFailure<Problem extends RpcDeclaredProblem = never> =
+  | ([Problem] extends [never] ? never : RpcClientProblemFailure<Problem>)
+  | RpcClientExternalFailure;
+
+export type RpcClientResult<T, Problem extends RpcDeclaredProblem = never> =
+  | RpcClientSuccess<T>
+  | RpcClientFailure<Problem>;
 
 export class RpcClientProblemError extends Error {
   readonly problem: RpcProblemDetails;
@@ -279,6 +367,20 @@ export async function handleJsonResponse<T = unknown>(response: Response): Promi
   return response.json() as Promise<T>;
 }
 
+export async function handleJsonResult<
+  T = unknown,
+  Problem extends RpcDeclaredProblem = never,
+>(
+  response: Response,
+  declaredProblems: readonly Problem[] = [],
+): Promise<RpcClientResult<T, Problem>> {
+  if (!response.ok) {
+    return readErrorResult(response, declaredProblems);
+  }
+
+  return { ok: true, data: (await response.json()) as T, response };
+}
+
 export async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
   if (!response.ok) {
     return rejectErrorResponse(response);
@@ -297,6 +399,34 @@ export async function readOptionalJsonResponse(response: Response): Promise<unkn
   return JSON.parse(body) as unknown;
 }
 
+export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem = never>(
+  response: Response,
+  declaredProblems: readonly Problem[] = [],
+): Promise<RpcClientResult<unknown | undefined, Problem>> {
+  if (!response.ok) {
+    return readErrorResult(response, declaredProblems);
+  }
+
+  if (response.status === 204) {
+    return { ok: true, data: undefined, response };
+  }
+
+  const body = await response.text();
+
+  if (body.length === 0) {
+    return { ok: true, data: undefined, response };
+  }
+
+  return { ok: true, data: JSON.parse(body) as unknown, response };
+}
+
+export function assertExhaustiveProblem(problem: never): never {
+  const value = problem as { readonly code?: unknown } | undefined;
+  const suffix = typeof value?.code === 'string' ? \`: \${value.code}\` : '';
+
+  throw new Error(\`Unhandled RPC Problem variant\${suffix}\`);
+}
+
 async function rejectErrorResponse(response: Response): Promise<never> {
   let body: unknown;
 
@@ -311,6 +441,66 @@ async function rejectErrorResponse(response: Response): Promise<never> {
   }
 
   throw new RpcClientResponseError(response, body);
+}
+
+async function readErrorResult<Problem extends RpcDeclaredProblem>(
+  response: Response,
+  declaredProblems: readonly Problem[],
+): Promise<RpcClientFailure<Problem>> {
+  let body: unknown;
+
+  try {
+    body = await response.json();
+  } catch {
+    return {
+      ok: false,
+      kind: 'external',
+      error: new RpcClientResponseError(response),
+      response,
+    };
+  }
+
+  if (isRpcProblemDetails(body)) {
+    const declaration = findDeclaredProblem(body, declaredProblems);
+
+    if (declaration) {
+      return {
+        ok: false,
+        kind: 'problem',
+        code: declaration.code,
+        category: declaration.category,
+        status: declaration.status,
+        problem: body as RpcProblemDetailsFor<Problem>,
+        declaration,
+        response,
+      } as RpcClientFailure<Problem>;
+    }
+
+    return {
+      ok: false,
+      kind: 'external',
+      error: new RpcClientProblemError(body, response),
+      response,
+      body,
+    };
+  }
+
+  return {
+    ok: false,
+    kind: 'external',
+    error: new RpcClientResponseError(response, body),
+    response,
+    body,
+  };
+}
+
+function findDeclaredProblem<Problem extends RpcDeclaredProblem>(
+  problem: RpcProblemDetails,
+  declaredProblems: readonly Problem[],
+): Problem | undefined {
+  return declaredProblems.find(
+    (declaration) => declaration.code === problem.code && declaration.status === problem.status,
+  );
 }
 
 function isRpcProblemDetails(value: unknown): value is RpcProblemDetails {
@@ -358,22 +548,72 @@ function generateOutputType(route: RouteIR): string {
   return `export type ${getOutputTypeName(route)} = ${zodTypeToTypeScript(route.outputSchema)};`;
 }
 
+function generateProblemTypes(route: RouteIR): string {
+  const problemResponses = route.problemResponses ?? [];
+  const problemUnion =
+    problemResponses.length === 0
+      ? "never"
+      : unionTypes(
+          problemResponses.map(
+            (problem) =>
+              `RpcDeclaredProblem<${literalValueToTypeScript(problem.code)}, ${literalValueToTypeScript(problem.category)}, ${problem.status}>`,
+          ),
+        );
+
+  return `export type ${getProblemTypeName(route)} = ${problemUnion};
+export type ${getProblemDetailsTypeName(route)} = RpcProblemDetailsFor<${getProblemTypeName(route)}>;
+export type ${getResultTypeName(route)} = RpcClientResult<${getSuccessType(route)}, ${getProblemTypeName(route)}>;`;
+}
+
+function generateProblemDeclarations(route: RouteIR): string {
+  const declarations = (route.problemResponses ?? [])
+    .map((problem) => {
+      const fields = [
+        `code: ${literalValueToTypeScript(problem.code)}`,
+        `category: ${literalValueToTypeScript(problem.category)}`,
+        `status: ${problem.status}`,
+      ];
+
+      if (problem.description) {
+        fields.push(`description: ${literalValueToTypeScript(problem.description)}`);
+      }
+
+      if (problem.type) {
+        fields.push(`type: ${literalValueToTypeScript(problem.type)}`);
+      }
+
+      return `  { ${fields.join(", ")} }`;
+    })
+    .join(",\n");
+
+  return `export const ${getProblemDeclarationsName(route)} = [
+${declarations}
+] as const satisfies readonly RpcDeclaredProblem[];`;
+}
+
 function generateClientMethod(route: RouteIR): string {
   const input = needsInput(route)
     ? `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`
     : "";
   const fetchOptions = getFetchOptions(route);
   const response = getResponseExpression(route);
+  const resultResponse = getResultResponseExpression(route);
   const returnType = getReturnType(route);
+  const resultReturnType = getResultReturnType(route);
 
   if (hasStructuredInput(route)) {
     return `  ${route.methodName}: (${input}): ${returnType} => {
     const path = ${getPathExpression(route)};
 ${getQueryStatements(route)}    return fetch(${getUrlExpression(route)}, ${fetchOptions}).then((response) => ${response});
+  },
+  ${getResultMethodName(route)}: (${input}): ${resultReturnType} => {
+    const path = ${getPathExpression(route)};
+${getQueryStatements(route)}    return fetch(${getUrlExpression(route)}, ${fetchOptions}).then((response) => ${resultResponse});
   },`;
   }
 
-  return `  ${route.methodName}: (${input}): ${returnType} => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${response}),`;
+  return `  ${route.methodName}: (${input}): ${returnType} => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${response}),
+  ${getResultMethodName(route)}: (${input}): ${resultReturnType} => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${resultResponse}),`;
 }
 
 function getFetchOptions(route: RouteIR): string {
@@ -419,12 +659,35 @@ function getResponseExpression(route: RouteIR): string {
   return `handleJsonResponse<${getOutputTypeName(route)}>(response)`;
 }
 
+function getResultResponseExpression(route: RouteIR): string {
+  const problemDeclarations = getProblemDeclarationsName(route);
+  const problemType = getProblemTypeName(route);
+
+  if (!route.outputSchema) {
+    return `readOptionalJsonResult<${problemType}>(response, ${problemDeclarations})`;
+  }
+
+  return `handleJsonResult<${getOutputTypeName(route)}, ${problemType}>(response, ${problemDeclarations})`;
+}
+
 function getReturnType(route: RouteIR): string {
   if (!route.outputSchema) {
     return "Promise<unknown | undefined>";
   }
 
   return `Promise<${getOutputTypeName(route)}>`;
+}
+
+function getResultReturnType(route: RouteIR): string {
+  return `Promise<${getResultTypeName(route)}>`;
+}
+
+function getSuccessType(route: RouteIR): string {
+  if (!route.outputSchema) {
+    return "unknown | undefined";
+  }
+
+  return getOutputTypeName(route);
 }
 
 function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {
@@ -560,7 +823,10 @@ function getArrayElementSchema(schema: unknown): unknown {
     return undefined;
   }
 
-  const definition = schema._def as { readonly element?: unknown; readonly type?: unknown };
+  const definition = schema._def as {
+    readonly element?: unknown;
+    readonly type?: unknown;
+  };
 
   return definition.element ?? definition.type;
 }
@@ -606,7 +872,9 @@ function getNativeEnumValues(schema: unknown): unknown[] {
     return [];
   }
 
-  const definition = schema._def as { readonly values?: Record<string, unknown> };
+  const definition = schema._def as {
+    readonly values?: Record<string, unknown>;
+  };
 
   return [...new Set(Object.values(definition.values ?? {}).filter(isLiteralTypeValue))];
 }
@@ -788,6 +1056,26 @@ function getInputTypeName(route: RouteIR): string {
 
 function getOutputTypeName(route: RouteIR): string {
   return `${toPascalCase(route.methodName)}Output`;
+}
+
+function getProblemTypeName(route: RouteIR): string {
+  return `${toPascalCase(route.methodName)}Problem`;
+}
+
+function getProblemDetailsTypeName(route: RouteIR): string {
+  return `${toPascalCase(route.methodName)}ProblemDetails`;
+}
+
+function getResultTypeName(route: RouteIR): string {
+  return `${toPascalCase(route.methodName)}Result`;
+}
+
+function getProblemDeclarationsName(route: RouteIR): string {
+  return `${route.methodName}ProblemDeclarations`;
+}
+
+function getResultMethodName(route: RouteIR): string {
+  return `${route.methodName}Result`;
 }
 
 function formatRoute(route: RouteIR): string {

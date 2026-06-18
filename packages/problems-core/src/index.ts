@@ -36,12 +36,11 @@
  * ```
  */
 export { HttpStatus } from "./libs/HttpStatus";
-export type { ProblemDetails, ProblemOptions } from "./libs/Problem";
-
+export type { ProblemDetails, ProblemOptions, TypedProblemDetails } from "./libs/Problem";
 /**
  * RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
  */
-export { Problem } from "./libs/Problem";
+export { assertProblemExhaustive, Problem } from "./libs/Problem";
 
 /**
  * Problem을 HTTP 의미에 맞게 분류하는 카테고리 열거형입니다.
