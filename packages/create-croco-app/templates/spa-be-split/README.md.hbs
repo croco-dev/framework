@@ -15,6 +15,7 @@ pnpm dev:web
 - 계약 그래프 검증: `pnpm contract:check`
 - 계약 스냅샷 생성: `pnpm contract:snapshot`
 - 계약 drift 검사: `pnpm contract:diff`
+- CI 계약 검증: `pnpm contract:verify` 또는 `pnpm ci:contracts`
 - OpenAPI 문서 생성: `pnpm contract:openapi`
 - RPC 클라이언트 생성: `pnpm contract:client` 또는 `pnpm codegen`
 
@@ -22,14 +23,19 @@ pnpm dev:web
 
 ```bash
 pnpm contract:check
-pnpm contract:snapshot
-pnpm contract:diff
-pnpm contract:openapi
-pnpm contract:client
+pnpm contract:verify
 pnpm codegen
 ```
 
-`contract:check`는 생성 전에 canonical contract graph 진단을 실행합니다. `contract:snapshot`은 `contract-graph.snapshot.json`을 생성하고, `contract:diff`는 커밋된 스냅샷과 현재 컨트롤러 계약의 breaking drift를 비교합니다. `contract:openapi`는 `apps/api-server/src/controllers/**/*.ts`에서 REST 컨트롤러 메타데이터를 읽어 `openapi.json`을 생성합니다. `contract:client`는 같은 컨트롤러 계약에서 React Query hook을 포함한 fetch 클라이언트를 `libs/shared/provider-rpc/src`에 생성합니다. `codegen`은 기존 사용자를 위한 `contract:client` 별칭입니다.
+`contract:check`는 생성 전에 canonical contract graph 진단을 실행합니다. 의도적인 계약 변경은 `contract:snapshot`으로 `contract-graph.snapshot.json`을 갱신한 뒤 커밋합니다. CI에서는 snapshot을 다시 쓰지 않는 `contract:verify` 또는 `ci:contracts`를 실행해 커밋된 스냅샷과 현재 컨트롤러 계약의 breaking drift를 먼저 비교하고, 통과한 계약에서 `openapi.json`과 React Query hook을 포함한 fetch 클라이언트를 생성합니다.
+
+Artifact 책임은 다음과 같습니다.
+
+- `contract-graph.snapshot.json`: breaking change 기준선이므로 커밋합니다.
+- `openapi.json`: 외부 소비자나 배포 산출물이 필요하면 커밋하고, 아니면 CI/build에서 재생성합니다.
+- `libs/shared/provider-rpc/src`: 웹 앱이나 다른 workspace package가 import하는 generated client이므로 이 템플릿에서는 생성 후 typecheck합니다. 커밋 여부와 무관하게 `contract:verify`가 항상 현재 서버 계약에서 다시 생성합니다.
+
+`contract:openapi`는 `apps/api-server/src/controllers/**/*.ts`에서 REST 컨트롤러 메타데이터를 읽어 `openapi.json`을 생성합니다. `contract:client`는 같은 컨트롤러 계약에서 fetch 클라이언트를 `libs/shared/provider-rpc/src`에 생성합니다. `codegen`은 기존 사용자를 위한 `contract:client` 별칭입니다.
 
 ## 구조
 
