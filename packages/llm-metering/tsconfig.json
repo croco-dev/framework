@@ -1,10 +1,20 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "module": "esnext",
     "moduleResolution": "bundler",
     "outDir": "./dist",
-    "rootDir": "./src"
+    "paths": {
+      "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
+      "@croco/events-core": ["../events-core/src/index.ts"],
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/framework-logger": ["../framework-logger/src/index.ts"],
+      "@croco/llm-core": ["../llm-core/src/index.ts"],
+      "@croco/metering-core": ["../metering-core/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/telemetry-api": ["../telemetry-api/src/index.ts"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -24,3 +24,10 @@ export {
   type StorageProviderConformanceSuite,
   type StorageProviderUrlExpectation,
 } from "./libs/provider-conformance";
+export {
+  createLlmProviderConformanceSuite,
+  type LlmProviderConformanceCase,
+  type LlmProviderConformanceOptions,
+  type LlmProviderConformancePromptSet,
+  type LlmProviderConformanceSuite,
+} from "./libs/llm-provider-conformance";

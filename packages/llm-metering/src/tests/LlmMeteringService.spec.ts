@@ -183,6 +183,114 @@ describe("LlmMeteringService", () => {
         }),
       );
     });
+
+    it("should enforce quota policy before recording meters", async () => {
+      const quotaPolicy = {
+        enforce: vi
+          .fn()
+          .mockRejectedValue(new LlmQuotaExceededProblem("llm.prompt_tokens", 105, 100)),
+      };
+      const guardedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        eventBus: mockEventBus,
+        quotaPolicy,
+      });
+
+      await expect(
+        guardedMeteringService.recordUsage({
+          tenantId: "tenant-123",
+          modelId: "gpt-4",
+          provider: "openai",
+          usage: {
+            promptTokens: 105,
+            completionTokens: 5,
+            totalTokens: 110,
+          },
+          idempotencyKey: "quota-key-123",
+          metadata: { operationType: "generate" },
+        }),
+      ).rejects.toThrow(LlmQuotaExceededProblem);
+
+      expect(quotaPolicy.enforce).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: "tenant-123",
+          modelId: "gpt-4",
+          provider: "openai",
+          operation: "generate",
+          meters: [
+            { meterId: "llm.prompt_tokens", value: 105, operation: "generate" },
+            { meterId: "llm.completion_tokens", value: 5, operation: "generate" },
+            { meterId: "llm.cost_usd", value: expect.any(Number), operation: "generate" },
+          ],
+        }),
+      );
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it("should normalize unexpected quota policy failures to metering record problems", async () => {
+      const quotaPolicy = {
+        enforce: vi.fn().mockRejectedValue(new Error("quota store unavailable")),
+      };
+      const guardedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        eventBus: mockEventBus,
+        quotaPolicy,
+      });
+
+      await expect(
+        guardedMeteringService.recordUsage({
+          tenantId: "tenant-123",
+          modelId: "gpt-4",
+          provider: "openai",
+          usage: {
+            promptTokens: 10,
+            completionTokens: 5,
+            totalTokens: 15,
+          },
+          idempotencyKey: "quota-store-key-123",
+          metadata: { operationType: "generate" },
+        }),
+      ).rejects.toThrow(LlmMeteringRecordFailedProblem);
+
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it("should reject invalid generated meter values before quota or record writes", async () => {
+      const quotaPolicy = {
+        enforce: vi.fn(),
+      };
+      const guardedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        eventBus: mockEventBus,
+        quotaPolicy,
+      });
+
+      await expect(
+        guardedMeteringService.recordUsage({
+          tenantId: "tenant-123",
+          modelId: "gpt-4",
+          provider: "openai",
+          usage: {
+            promptTokens: -1,
+            completionTokens: 5,
+            totalTokens: 4,
+          },
+          idempotencyKey: "invalid-generated-key",
+        }),
+      ).rejects.toMatchObject({
+        code: "llm-metering/record-failed",
+        extensions: {
+          operation: "generate",
+          meterIds: ["llm.prompt_tokens"],
+        },
+      });
+
+      expect(quotaPolicy.enforce).not.toHaveBeenCalled();
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).not.toHaveBeenCalled();
+    });
   });
 
   describe("recordEmbeddingUsage", () => {
@@ -233,6 +341,26 @@ describe("LlmMeteringService", () => {
         }),
       ).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
+
+    it("should reject non-finite embedding meter values before record writes", async () => {
+      await expect(
+        meteringService.recordEmbeddingUsage({
+          tenantId: "tenant-123",
+          modelId: "text-embedding-3-small",
+          provider: "openai",
+          embeddingTokens: Number.NaN,
+          idempotencyKey: "invalid-embed-key",
+        }),
+      ).rejects.toMatchObject({
+        code: "llm-metering/record-failed",
+        extensions: {
+          operation: "embed",
+          meterIds: ["llm.embedding_tokens"],
+        },
+      });
+
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+    });
   });
 
   describe("checkQuota", () => {
@@ -263,6 +391,24 @@ describe("LlmMeteringService", () => {
       const result = await meteringService.checkQuota("tenant-123", "llm.prompt_tokens", 10000);
 
       expect(result).toBe(true);
+    });
+
+    it("should include requested usage when checking projected quota", async () => {
+      (mockMeteringCore.getUsage as Mock).mockResolvedValue(95);
+
+      await expect(
+        meteringService.checkQuota("tenant-123", "llm.prompt_tokens", 100, 6),
+      ).rejects.toThrow(LlmQuotaExceededProblem);
+    });
+
+    it("should reject negative or non-finite requested usage", async () => {
+      await expect(
+        meteringService.checkQuota("tenant-123", "llm.prompt_tokens", 100, -1),
+      ).rejects.toThrow(LlmQuotaExceededProblem);
+      await expect(
+        meteringService.checkQuota("tenant-123", "llm.prompt_tokens", 100, Number.NaN),
+      ).rejects.toThrow(LlmQuotaExceededProblem);
+      expect(mockMeteringCore.getUsage).not.toHaveBeenCalled();
     });
   });
 
@@ -366,6 +512,30 @@ describe("LlmMeteringService", () => {
       await expect(meteringService.trackCost(usageEvent)).rejects.toThrow(
         LlmMeteringRecordFailedProblem,
       );
+    });
+
+    it("should reject non-finite cost values before record writes", async () => {
+      await expect(
+        meteringService.trackCost({
+          tenantId: "tenant-123",
+          modelId: "gpt-4",
+          provider: "openai",
+          usage: {
+            promptTokens: Number.POSITIVE_INFINITY,
+            completionTokens: 1,
+            totalTokens: Number.POSITIVE_INFINITY,
+          },
+          idempotencyKey: "invalid-cost-key",
+        }),
+      ).rejects.toMatchObject({
+        code: "llm-metering/record-failed",
+        extensions: {
+          operation: "cost_tracking",
+          meterIds: ["llm.cost_usd"],
+        },
+      });
+
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
     });
   });
 });

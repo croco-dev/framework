@@ -56,6 +56,18 @@ export type SaasDemoSnapshot = {
     recordedValue: number;
     currentUsage: number;
   };
+  ai: {
+    provider: string;
+    modelId: string;
+    responseText: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    costUsd: number;
+    promptUsage: number;
+    promptQuota: number;
+    quotaFailureCode: string;
+  };
   entitlement: Pick<
     EntitlementCheckResult,
     "featureKey" | "granted" | "quota" | "usage" | "remaining" | "planId"
@@ -119,6 +131,22 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
       ? "billing subscription did not sync the entitlement plan"
       : undefined,
     snapshot.metering.currentUsage !== 3 ? "usage was not recorded" : undefined,
+    snapshot.ai.provider !== "in-memory" ? "AI provider was not the demo provider" : undefined,
+    snapshot.ai.modelId.length === 0 ? "AI model id was empty" : undefined,
+    snapshot.ai.responseText.length === 0 ? "AI response text was empty" : undefined,
+    snapshot.ai.promptTokens <= 0 ? "AI prompt tokens were not recorded" : undefined,
+    snapshot.ai.completionTokens <= 0 ? "AI completion tokens were not recorded" : undefined,
+    snapshot.ai.totalTokens !== snapshot.ai.promptTokens + snapshot.ai.completionTokens
+      ? "AI total tokens do not match prompt plus completion tokens"
+      : undefined,
+    snapshot.ai.costUsd <= 0 ? "AI cost was not recorded" : undefined,
+    snapshot.ai.promptUsage !== snapshot.ai.promptTokens
+      ? "AI prompt usage did not match the recorded prompt meter"
+      : undefined,
+    snapshot.ai.promptQuota !== 50 ? "AI prompt quota was not enforced" : undefined,
+    snapshot.ai.quotaFailureCode !== "llm-metering/quota-exceeded"
+      ? "AI over-quota failure was not explicit"
+      : undefined,
     !snapshot.entitlement.granted ? "entitlement was not granted" : undefined,
     snapshot.operations.healthStatus !== "up" ? "health endpoint is not up" : undefined,
     snapshot.operations.diagnosticsSummary !== "all_healthy"

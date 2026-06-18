@@ -524,9 +524,13 @@ describe("E2E: generate()", () => {
       "@croco/entitlements-core": "^0.0.2",
       "@croco/execution-core": "^0.0.2",
       "@croco/health-core": "^0.0.2",
+      "@croco/framework-context": "^0.0.2",
       "@croco/diagnostics-core": "^0.0.2",
+      "@croco/llm-core": "^0.0.2",
+      "@croco/llm-metering": "^0.0.2",
       "@croco/problems-core": "^0.0.2",
       "@croco/ratelimit-core": "^0.0.2",
+      "@croco/telemetry-api": "^0.0.2",
       "@croco/telemetry-sdk-node": "^0.0.2",
     });
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");

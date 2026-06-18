@@ -65,3 +65,20 @@ export class PricingNotFoundProblem extends Problem {
     );
   }
 }
+
+export class PricingRegistryConflictProblem extends Problem {
+  constructor(provider: string, modelId: string, version: string) {
+    super(
+      "llm-metering/pricing-registry-conflict",
+      ProblemCategory.Conflict,
+      `Duplicate pricing entry for provider '${provider}' and model '${modelId}' in registry '${version}'`,
+      {
+        extensions: {
+          provider,
+          modelId,
+          version,
+        },
+      },
+    );
+  }
+}

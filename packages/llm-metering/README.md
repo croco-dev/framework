@@ -16,6 +16,8 @@ import { LlmMeteringService } from "@croco/llm-metering";
 const metering = new LlmMeteringService({
   meteringService,
   eventBus,
+  pricingTable,
+  quotaPolicy,
 });
 
 await metering.recordUsage({
@@ -73,4 +75,8 @@ class LlmFacade {
 
 - 내부적으로 `@croco/metering-core`에 `llm.prompt_tokens`, `llm.completion_tokens`, `llm.cost_usd` 같은 meter를 기록합니다.
 - 스트리밍 응답과 임베딩 결과 모두 같은 서비스에서 다룰 수 있습니다.
-- 가격표를 커스텀하면 공급자별 실제 과금 단가를 반영할 수 있습니다.
+- `PricingTable.fromRegistry()`로 version/source/effectiveDate가 있는 가격 registry를 주입합니다. 기본 `samplePricingRegistry`는 테스트와 데모용 sample data이며 현재 공급자 가격으로 간주하지 않습니다.
+- `quotaPolicy`는 기록 전 projected usage를 검사합니다. `metering-core` meter quota도 함께 등록하면 기록 중 quota도 fail-closed로 유지됩니다.
+- 미터링 실패 정책은 명시적 fail-closed입니다. 현재 지원되는 정책은 `failurePolicy: "fail-closed"`이며, quota policy 또는 meter write가 실패하면 `LlmMeteringRecordFailedProblem`/`LlmQuotaExceededProblem`으로 실패 meter와 quota 정보를 보존합니다.
+- `LlmTelemetryBridge`는 `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`, `gen_ai.usage.cost_usd`, `gen_ai.client.user`, `gen_ai.usage.accuracy` 속성과 `llm.usage` 이벤트를 기록합니다.
+- 전체 provider/pricing/quota/telemetry 가이드는 [docs/llm-governance.md](../../docs/llm-governance.md)를 참고하세요.

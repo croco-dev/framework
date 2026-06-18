@@ -296,6 +296,39 @@ describe("@AiMetered decorator", () => {
       await expect(service.generate()).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
 
+    it("should throw when stream metering fails after completion", async () => {
+      class TestService {
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield { delta: "Hello " };
+          yield {
+            delta: "world",
+            usage: {
+              promptTokens: 10,
+              completionTokens: 10,
+              totalTokens: 20,
+            },
+          };
+        }
+      }
+
+      vi.mocked(mockMeteringService.record).mockRejectedValue(new Error("Stream metering failed"));
+
+      const service = new TestService();
+      const stream = await Promise.resolve(service.stream());
+      const consumeStream = async () => {
+        for await (const _chunk of stream) {
+          // Consume the stream so completion metering runs.
+        }
+      };
+
+      await expect(consumeStream()).rejects.toThrow(LlmMeteringRecordFailedProblem);
+    });
+
     it("should work when LlmMeteringService is not set", async () => {
       // Clear service
       setLlmMeteringService(null as unknown as LlmMeteringService);
