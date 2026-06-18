@@ -6,11 +6,23 @@ import {
   SpanStatusCode,
   trace,
 } from "@opentelemetry/api";
-import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import {
+  Container,
+  Context as FrameworkContext,
+  type ILogger,
+  LOGGER_TOKEN,
+} from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { Context as HonoContext } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HttpContext } from "../libs/HttpContext";
 import { telemetryMiddleware } from "../libs/middleware/telemetry";
+
+class TestProblem extends Problem {
+  constructor() {
+    super("test/problem", ProblemCategory.BadRequest, "Test problem");
+  }
+}
 
 describe("TelemetryMiddleware", () => {
   const createContext = (headers = new Headers()): HttpContext => {
@@ -29,6 +41,7 @@ describe("TelemetryMiddleware", () => {
       },
       text: vi.fn(),
       json: vi.fn(),
+      header: vi.fn(),
       redirect: vi.fn(),
     };
 
@@ -154,6 +167,10 @@ describe("TelemetryMiddleware", () => {
       name: "TypeError",
       message: setupError.message,
     });
+    expect(ctx.raw.header).toHaveBeenCalledWith(
+      "X-Croco-Telemetry-Degraded",
+      "telemetry_setup_failed",
+    );
     expect(logger.warn).toHaveBeenCalledWith(
       "[TelemetryMiddleware] Telemetry setup failed; continuing in degraded mode",
       expect.objectContaining({
@@ -195,6 +212,10 @@ describe("TelemetryMiddleware", () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(ctx.get("telemetryDegraded")).toBe(true);
     expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(ctx.raw.header).toHaveBeenCalledWith(
+      "X-Croco-Telemetry-Degraded",
+      "telemetry_setup_failed",
+    );
     expect(consoleWarn).toHaveBeenCalledWith(
       "[TelemetryMiddleware] Telemetry setup failed; continuing in degraded mode",
       expect.objectContaining({
@@ -242,5 +263,74 @@ describe("TelemetryMiddleware", () => {
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(ctx.get("telemetryDegraded")).toBeUndefined();
+  });
+
+  it("should expose server span trace metadata through the framework request context", async () => {
+    setupSpan();
+    const ctx = createContext();
+    let traceId: string | null = null;
+    let runtimeTraceId: string | undefined;
+
+    await FrameworkContext.run(
+      {
+        requestId: "request-1",
+        runtime: {
+          platform: "node",
+          requestId: "request-1",
+          capabilities: {
+            env: true,
+            logger: false,
+            trace: false,
+            waitUntil: false,
+            flush: false,
+            shutdown: false,
+          },
+          waitUntil: () => undefined,
+          flush: async () => undefined,
+          shutdown: async () => undefined,
+        },
+      },
+      async () => {
+        await telemetryMiddleware("/health")(ctx, async () => {
+          traceId = FrameworkContext.getActiveTraceId();
+          runtimeTraceId = FrameworkContext.getRuntimeContext()?.trace?.traceId;
+        });
+      },
+    );
+
+    expect(traceId).toBe("11111111111111111111111111111111");
+    expect(runtimeTraceId).toBe("11111111111111111111111111111111");
+    expect(ctx.get("spanId")).toBe("3333333333333333");
+  });
+
+  it("should record Problem metadata when the request pipeline fails", async () => {
+    const span = setupSpan();
+    const ctx = createContext();
+    const problem = new TestProblem();
+
+    await expect(
+      telemetryMiddleware("/health")(ctx, async () => {
+        throw problem;
+      }),
+    ).rejects.toBe(problem);
+
+    expect(ctx.res.status).toBe(400);
+    expect(span.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "TestProblem",
+        message: "Test problem",
+      }),
+    );
+    expect(span.setAttribute).toHaveBeenCalledWith("http.status_code", 400);
+    expect(span.setAttribute).toHaveBeenCalledWith("croco.failure.kind", "problem");
+    expect(span.setAttribute).toHaveBeenCalledWith("croco.problem.code", "test/problem");
+    expect(span.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.UNSET });
+    expect(span.addEvent).toHaveBeenCalledWith(
+      "croco.problem",
+      expect.objectContaining({
+        "croco.problem.code": "test/problem",
+        "http.status_code": 400,
+      }),
+    );
   });
 });

@@ -27,6 +27,7 @@ import {
 import { serve } from "@hono/node-server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
+import { toLambdaHandler } from "../libs/adapters/LambdaAdapter";
 import { CrocoRouteRegistrar } from "../libs/CrocoRouteRegistrar";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
@@ -66,6 +67,11 @@ describe("CrocoApp", () => {
     @Get("/hello")
     hello() {
       return { message: "Hello, World!" };
+    }
+
+    @Get("/empty")
+    empty() {
+      return null;
     }
 
     @Get("/runtime-context")
@@ -241,6 +247,19 @@ describe("CrocoApp", () => {
     };
   }
 
+  function createRequestContext(method: string, path: string): LambdaEvent["requestContext"] {
+    const baseEvent = createLambdaEvent();
+
+    return {
+      ...baseEvent.requestContext,
+      http: {
+        ...baseEvent.requestContext.http,
+        method,
+        path,
+      },
+    };
+  }
+
   function createRequiredSecurityMiddlewares() {
     const rateLimiter = new RateLimiter(
       new SlidingWindowInMemoryStore(),
@@ -306,6 +325,51 @@ describe("CrocoApp", () => {
     expect(json).toEqual({ message: "Hello, World!" });
   });
 
+  it("should run HTTP middlewares around the controller handler", async () => {
+    const afterStatuses: number[] = [];
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [
+        async (ctx, next) => {
+          await next();
+          afterStatuses.push(ctx.res.status);
+        },
+      ],
+      securityValidation: "off",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/empty"));
+
+    expect(response.status).toBe(204);
+    expect(afterStatuses).toEqual([204]);
+  });
+
+  it("should preserve middleware short-circuit responses", async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [bodyLimitMiddleware({ limit: 4 })],
+      securityValidation: "off",
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": "16",
+        },
+        body: JSON.stringify({ ok: true }),
+      }),
+    );
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({
+      error: "Request body too large",
+      limit: 4,
+      received: 16,
+    });
+  });
+
   it("should expose Node runtime context with request id and trace metadata", async () => {
     const app = createApp({ controllers: [TestController] });
     const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
@@ -329,6 +393,57 @@ describe("CrocoApp", () => {
       env: true,
       logger: true,
     });
+  });
+
+  it("should run the Lambda handler flush callback after queued runtime work", async () => {
+    const flush = vi.fn().mockResolvedValue(undefined);
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler({ flush });
+
+    const response = await handler(
+      createLambdaEvent({
+        rawPath: "/lambda/runtime-context",
+        requestContext: createRequestContext("GET", "/lambda/runtime-context"),
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(lambdaWaitUntilCompleted).toBe(true);
+    expect(flush).toHaveBeenCalledTimes(1);
+  });
+
+  it("should pass Lambda handler options through the public helper", async () => {
+    const flush = vi.fn().mockResolvedValue(undefined);
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = toLambdaHandler(app, { flush });
+
+    const response = await handler(
+      createLambdaEvent({
+        rawPath: "/lambda/runtime-context",
+        requestContext: createRequestContext("GET", "/lambda/runtime-context"),
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(flush).toHaveBeenCalledTimes(1);
+  });
+
+  it("should fail the Lambda handler when the flush callback fails", async () => {
+    const flush = vi.fn().mockRejectedValue(new Error("telemetry flush failed"));
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler({ flush });
+
+    await expect(
+      handler(
+        createLambdaEvent({
+          rawPath: "/lambda/runtime-context",
+          requestContext: createRequestContext("GET", "/lambda/runtime-context"),
+        }),
+        lambdaContext,
+      ),
+    ).rejects.toThrow("telemetry flush failed");
   });
 
   it("should bootstrap when all required security middlewares are configured", async () => {

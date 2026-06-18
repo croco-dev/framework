@@ -1,5 +1,21 @@
-import { context, propagation, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
-import { Container, LOGGER_TOKEN, type ILogger } from "@croco/framework-context";
+import {
+  context,
+  type Exception,
+  propagation,
+  type Span,
+  type SpanContext,
+  SpanKind,
+  SpanStatusCode,
+  trace,
+} from "@opentelemetry/api";
+import {
+  Container,
+  Context as FrameworkContext,
+  LOGGER_TOKEN,
+  type ILogger,
+  type RuntimeTraceContext,
+} from "@croco/framework-context";
+import { Problem, ProblemCategoryMapper } from "@croco/problems-core";
 import type { CrocoHttpContext, MiddlewareFunction } from "../types";
 
 export interface TraceParent {
@@ -51,6 +67,7 @@ type HeaderCarrier = Headers | Record<string, string>;
 const TELEMETRY_DEGRADED_REASON = "telemetry_setup_failed";
 const TELEMETRY_DEGRADED_MESSAGE =
   "[TelemetryMiddleware] Telemetry setup failed; continuing in degraded mode";
+const TELEMETRY_DEGRADED_HEADER = "X-Croco-Telemetry-Degraded";
 
 type TelemetrySetupErrorInfo = {
   name: string;
@@ -114,29 +131,26 @@ export const telemetryMiddleware =
         parentContext,
       );
 
-      ctx.set("traceId", span.spanContext().traceId);
+      applyRequestTraceContext(ctx, span.spanContext());
+      span.addEvent("croco.http.request.start", {
+        "http.method": ctx.req.method,
+        "http.route": route,
+        "http.target": ctx.req.path,
+      });
 
       return await context.with(trace.setSpan(context.active(), span), async () => {
         try {
           nextCalled = true;
           await next();
 
-          const status = ctx.res.status;
-          span.setStatus({
-            code: status >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.UNSET,
-          });
-          span.setAttribute("http.status_code", status);
+          recordHttpCompletion(span, ctx.res.status);
         } catch (error) {
-          ctx.res.status = 500;
-          const spanError = error instanceof Error ? error : new Error(String(error));
-
-          span.recordException(spanError);
-          span.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: spanError.message,
-          });
+          recordHttpFailure(span, error, ctx);
           throw error;
         } finally {
+          span.addEvent("croco.http.request.end", {
+            "http.status_code": ctx.res.status,
+          });
           span.end();
         }
       });
@@ -151,9 +165,158 @@ export const telemetryMiddleware =
       ctx.set("telemetryDegraded", true);
       recordTelemetryDegradation(ctx, route, fallbackTraceId, error);
 
-      await next();
+      try {
+        await next();
+      } finally {
+        setTelemetryDegradedHeader(ctx);
+      }
     }
   };
+
+function applyRequestTraceContext(ctx: CrocoHttpContext, spanContext: SpanContext): void {
+  if (!isValidTraceContext(spanContext)) {
+    applyExistingTraceContext(ctx);
+    return;
+  }
+
+  const traceContext: RuntimeTraceContext = {
+    traceId: spanContext.traceId,
+    spanId: spanContext.spanId,
+    traceFlags: spanContext.traceFlags,
+  };
+
+  ctx.set("traceId", spanContext.traceId);
+  ctx.set("spanId", spanContext.spanId);
+  ctx.set("traceFlags", spanContext.traceFlags);
+
+  const requestContext = FrameworkContext.get();
+  if (!requestContext) {
+    return;
+  }
+
+  requestContext.traceId = spanContext.traceId;
+  requestContext.spanId = spanContext.spanId;
+  requestContext.traceFlags = spanContext.traceFlags;
+
+  if (requestContext.runtime) {
+    requestContext.runtime.trace = traceContext;
+    requestContext.runtime.capabilities.trace = true;
+  }
+}
+
+function applyExistingTraceContext(ctx: CrocoHttpContext): void {
+  const requestContext = FrameworkContext.get();
+  const traceContext = requestContext?.runtime?.trace ?? requestContext;
+
+  if (!traceContext?.traceId) {
+    return;
+  }
+
+  ctx.set("traceId", traceContext.traceId);
+
+  if (traceContext.spanId) {
+    ctx.set("spanId", traceContext.spanId);
+  }
+
+  if (traceContext.traceFlags !== undefined) {
+    ctx.set("traceFlags", traceContext.traceFlags);
+  }
+}
+
+function isValidTraceContext(spanContext: SpanContext): boolean {
+  return (
+    spanContext.traceId !== "00000000000000000000000000000000" &&
+    spanContext.spanId !== "0000000000000000"
+  );
+}
+
+function recordHttpCompletion(span: Span, status: number): void {
+  span.setAttribute("http.status_code", status);
+  span.setStatus({
+    code: status >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.UNSET,
+  });
+}
+
+function recordHttpFailure(span: Span, error: unknown, ctx: CrocoHttpContext): void {
+  const status = resolveFailureStatus(error);
+  ctx.res.status = status;
+  span.setAttribute("http.status_code", status);
+
+  if (isProblem(error)) {
+    const problem = error;
+
+    span.recordException(toException(problem));
+    span.setAttribute("croco.failure.kind", "problem");
+    span.setAttribute("croco.problem.code", problem.code);
+    span.setAttribute("croco.problem.category", problem.category);
+    span.addEvent("croco.problem", {
+      "croco.problem.code": problem.code,
+      "croco.problem.category": problem.category,
+      "http.status_code": status,
+    });
+    setFailureStatus(span, status, problem.message);
+    return;
+  }
+
+  if (error instanceof Response) {
+    span.setAttribute("croco.failure.kind", "response");
+    span.addEvent("croco.http.response.thrown", {
+      "http.status_code": status,
+    });
+    setFailureStatus(span, status);
+    return;
+  }
+
+  const spanError = error instanceof Error ? error : new Error(String(error));
+
+  span.recordException(toException(spanError));
+  span.setAttribute("croco.failure.kind", "error");
+  setFailureStatus(span, status, spanError.message);
+}
+
+function resolveFailureStatus(error: unknown): number {
+  if (error instanceof Response) {
+    return error.status;
+  }
+
+  if (isProblem(error)) {
+    return ProblemCategoryMapper.toHttpStatus(error.category);
+  }
+
+  return 500;
+}
+
+function isProblem(error: unknown): error is Problem {
+  return error instanceof Problem;
+}
+
+function toException(error: Error): Exception {
+  return {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  };
+}
+
+function setFailureStatus(span: Span, status: number, message?: string): void {
+  if (status >= 500) {
+    span.setStatus({
+      code: SpanStatusCode.ERROR,
+      ...(message ? { message } : {}),
+    });
+    return;
+  }
+
+  span.setStatus({ code: SpanStatusCode.UNSET });
+}
+
+function setTelemetryDegradedHeader(ctx: CrocoHttpContext): void {
+  try {
+    ctx.raw.header(TELEMETRY_DEGRADED_HEADER, TELEMETRY_DEGRADED_REASON);
+  } catch {
+    // Header emission is best-effort because telemetry setup has already failed.
+  }
+}
 
 function recordTelemetryDegradation(
   ctx: CrocoHttpContext,

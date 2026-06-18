@@ -11,6 +11,16 @@ Lambda 런타임 이벤트와 컨텍스트를 읽는 유틸리티, 타입, 그�
 
 ## Properties
 
+### flush()?
+
+> `optional` **flush**: () => `Promise`\<`void`\> | `void`
+
+#### Returns
+
+`Promise`\<`void`\> | `void`
+
+---
+
 ### logger?
 
 > `optional` **logger**: [`ILogger`](/api/framework-context/src/interfaces/ilogger/)

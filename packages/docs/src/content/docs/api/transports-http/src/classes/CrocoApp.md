@@ -59,7 +59,7 @@ title: "CrocoApp"
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### getHono()
 
@@ -69,17 +69,23 @@ title: "CrocoApp"
 
 `Hono`
 
-***
+---
 
 ### lambdaHandler()
 
-> **lambdaHandler**(): [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
+> **lambdaHandler**(`options?`): [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
+
+#### Parameters
+
+##### options?
+
+[`LambdaHandlerOptions`](/api/transports-http/src/type-aliases/lambdahandleroptions/) = `{}`
 
 #### Returns
 
 [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
 
-***
+---
 
 ### listen()
 
