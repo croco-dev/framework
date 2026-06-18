@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Container } from "@croco/framework-context";
+import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -131,6 +131,51 @@ describe("ErrorHandler", () => {
 
       const response = errorHandler.handleError(problem, mockCtx);
       expect(response.status).toBe(400);
+    });
+
+    it("should include request trace metadata in Problem Details", async () => {
+      const store = new Map<string, unknown>([["traceId", "trace-1"]]);
+      mockCtx.get = ((key: string) => store.get(key)) as CrocoHttpContext["get"];
+
+      const response = await FrameworkContext.run({ requestId: "request-1" }, () =>
+        errorHandler.handleError(new TestProblem("metadata"), mockCtx),
+      );
+      const body = await response.json();
+
+      expect(body).toEqual(
+        expect.objectContaining({
+          traceId: "trace-1",
+          requestId: "request-1",
+        }),
+      );
+    });
+
+    it("should include sanitized telemetry degradation metadata in Problem Details", async () => {
+      const store = new Map<string, unknown>([
+        ["telemetryDegraded", true],
+        ["telemetryDegradedReason", "telemetry_setup_failed"],
+        [
+          "telemetryDegradedError",
+          {
+            name: "TypeError",
+            message: "header access failure",
+          },
+        ],
+      ]);
+      mockCtx.get = ((key: string) => store.get(key)) as CrocoHttpContext["get"];
+
+      const response = errorHandler.handleError(new TestProblem("metadata"), mockCtx);
+      const body = await response.json();
+
+      expect(body).toEqual(
+        expect.objectContaining({
+          telemetry: {
+            degraded: true,
+            reason: "telemetry_setup_failed",
+          },
+        }),
+      );
+      expect(JSON.stringify(body)).not.toContain("header access failure");
     });
   });
 });

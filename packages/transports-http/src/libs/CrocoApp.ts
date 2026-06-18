@@ -6,7 +6,7 @@ import { Logger } from "@croco/framework-logger";
 import { ProblemFactory } from "@croco/problems-core";
 import { Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
-import { CrocoLambdaAdapter } from "./CrocoLambdaAdapter";
+import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
 import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
 import { ErrorHandler } from "./ErrorHandler";
 import { HealthCheckRegistry } from "./HealthCheckRegistry";
@@ -212,9 +212,9 @@ export class CrocoApp {
     );
   }
 
-  lambdaHandler(): LambdaHandler {
+  lambdaHandler(options: LambdaHandlerOptions = {}): LambdaHandler {
     this.boot();
-    return this.lambdaAdapter.createHandler({ logger: this.logger });
+    return this.lambdaAdapter.createHandler({ ...options, logger: options.logger ?? this.logger });
   }
 
   getHono(): Hono {

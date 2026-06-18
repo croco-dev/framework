@@ -59,6 +59,15 @@ const app = createApp({
 export const handler = app.lambdaHandler();
 ```
 
+### 요청 관측성과 Problem 메타데이터
+
+등록된 컨트롤러 요청은 기본 HTTP server span 안에서 실행됩니다. 요청 중 `Problem` 또는 일반 에러가
+발생하면 span에는 HTTP status와 Croco Problem code/category가 기록되고, Problem Details 응답에는
+추적에 사용할 `traceId`와 `requestId`가 포함됩니다.
+
+Telemetry 설정 자체가 실패하면 요청은 degraded mode로 계속 처리되지만 `X-Croco-Telemetry-Degraded`
+응답 헤더와 Problem Details의 `telemetry.degraded` 메타데이터로 실패 증거를 남깁니다.
+
 ### RuntimeContext
 
 컨트롤러, guard, interceptor, service에서는 `@croco/framework-context`의
@@ -79,6 +88,26 @@ console.log(runtime?.requestId);
 | ------- | ------------- | ------------------------------------------ | ----------- | --------------------------------------- |
 | Node    | `process.env` | `x-request-id` 또는 generated id           | no-op       | no-op                                   |
 | Lambda  | `process.env` | API Gateway request id 또는 `awsRequestId` | queued work | queued work drain, rejected work logged |
+
+Lambda에서 OpenTelemetry span export까지 보장하려면 `@croco/telemetry-sdk-node`의
+`TelemetryRuntime.forceFlush()`를 handler flush callback으로 연결합니다. 이 callback이 실패하면 Lambda
+handler도 실패하므로 관측 실패가 성공 응답으로 숨겨지지 않습니다.
+
+```typescript
+import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";
+
+const telemetry = TelemetryRuntime.getInstance();
+await telemetry.init(lambdaPreset({ serviceName: "orders" }));
+
+export const handler = app.lambdaHandler({
+  flush: async () => {
+    const result = await telemetry.forceFlush(5000);
+    if (!result.success) {
+      throw result.error ?? new Error("telemetry flush failed");
+    }
+  },
+});
+```
 
 ### Node 서버 실행
 

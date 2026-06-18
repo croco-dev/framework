@@ -1,6 +1,17 @@
-import { Component, type ILogger } from "@croco/framework-context";
+import { Component, Context as FrameworkContext, type ILogger } from "@croco/framework-context";
 import { Problem, ProblemCategoryMapper, type ProblemDetails } from "@croco/problems-core";
 import type { CrocoHttpContext } from "./types";
+
+type TelemetryFailureMetadata = {
+  degraded: true;
+  reason: string;
+};
+
+type FailureMetadata = {
+  traceId?: string;
+  requestId?: string;
+  telemetry?: TelemetryFailureMetadata;
+};
 
 @Component()
 /**
@@ -24,6 +35,7 @@ export class ErrorHandler {
         title: "Internal Server Error",
         status: 500,
         detail: "An unexpected error occurred",
+        ...this.createFailureMetadata(ctx),
       },
       500,
     );
@@ -51,6 +63,7 @@ export class ErrorHandler {
       detail: problem.detail,
       instance: ctx.req.url,
       ...safeExtensions,
+      ...this.createFailureMetadata(ctx),
     };
 
     return ctx.jsonResponse(body, status);
@@ -65,8 +78,44 @@ export class ErrorHandler {
         title: "Internal Server Error",
         status: 500,
         detail: "An internal error occurred",
+        ...this.createFailureMetadata(ctx),
       },
       500,
     );
+  }
+
+  private createFailureMetadata(ctx: CrocoHttpContext): FailureMetadata {
+    const metadata: FailureMetadata = {};
+    const traceId =
+      this.readContextValue<string>(ctx, "traceId") ??
+      FrameworkContext.getActiveTraceId() ??
+      undefined;
+    const requestId = FrameworkContext.getRequestId() ?? undefined;
+
+    if (traceId) {
+      metadata.traceId = traceId;
+    }
+
+    if (requestId) {
+      metadata.requestId = requestId;
+    }
+
+    if (this.readContextValue<boolean>(ctx, "telemetryDegraded")) {
+      metadata.telemetry = {
+        degraded: true,
+        reason: this.readContextValue<string>(ctx, "telemetryDegradedReason") ?? "unknown",
+      };
+    }
+
+    return metadata;
+  }
+
+  private readContextValue<T>(ctx: CrocoHttpContext, key: string): T | undefined {
+    try {
+      const reader = (ctx as Partial<CrocoHttpContext>).get;
+      return reader?.call(ctx, key) as T | undefined;
+    } catch {
+      return undefined;
+    }
   }
 }

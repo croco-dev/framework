@@ -48,20 +48,15 @@ export class CrocoRouteRegistrar {
 
       return FrameworkContext.run(requestContext, async () => {
         try {
-          await this.executeMiddlewares(ctx, middlewares);
-          const result = await route.handler(ctx);
-
-          if (result instanceof Response) {
-            return result;
-          }
-
-          if (result === undefined || result === null) {
-            ctx.res.status = 204;
-            return ctx.text("", 204);
-          }
-
-          return ctx.jsonResponse(result);
+          return await this.executeMiddlewares(ctx, middlewares, async () => {
+            const result = await route.handler(ctx);
+            return this.toResponse(ctx, result);
+          });
         } catch (error) {
+          if (error instanceof Response) {
+            return error;
+          }
+
           return this.errorHandler.handleError(error, ctx);
         }
       });
@@ -112,17 +107,62 @@ export class CrocoRouteRegistrar {
   private async executeMiddlewares(
     ctx: HttpContext,
     middlewares: MiddlewareFunction[],
-  ): Promise<void> {
-    let index = 0;
+    terminal: () => Promise<Response>,
+  ): Promise<Response> {
+    let index = -1;
+    let response: Response | undefined;
 
-    const next = async (): Promise<void> => {
-      if (index < middlewares.length) {
-        const middleware = middlewares[index++];
-        await middleware(ctx, next);
+    const dispatch = async (nextIndex: number): Promise<void> => {
+      if (nextIndex <= index) {
+        throw ProblemFactory.internalServerError(
+          "transports-http/middleware-next-called-multiple-times",
+          "Middleware called next() multiple times",
+        );
       }
+
+      index = nextIndex;
+
+      const middleware = middlewares[nextIndex];
+      if (!middleware) {
+        response = await terminal();
+        return;
+      }
+
+      await middleware(ctx, () => dispatch(nextIndex + 1));
     };
 
-    await next();
+    await dispatch(0);
+
+    return response ?? this.toShortCircuitResponse(ctx);
+  }
+
+  private toResponse(ctx: HttpContext, result: unknown): Response {
+    if (result instanceof Response) {
+      ctx.res.status = result.status;
+      return result;
+    }
+
+    if (result === undefined || result === null) {
+      ctx.res.status = 204;
+      return this.toEmptyResponse(ctx);
+    }
+
+    return ctx.jsonResponse(result);
+  }
+
+  private toShortCircuitResponse(ctx: HttpContext): Response {
+    if (ctx.res.status === 204) {
+      return this.toEmptyResponse(ctx);
+    }
+
+    return ctx.text("", ctx.res.status);
+  }
+
+  private toEmptyResponse(ctx: HttpContext): Response {
+    return new Response(null, {
+      status: 204,
+      headers: ctx.raw.res.headers,
+    });
   }
 
   private resolveRuntimeContext(

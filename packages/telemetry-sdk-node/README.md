@@ -48,6 +48,20 @@ if (!result.success) {
 }
 ```
 
+`@croco/transports-http`의 Lambda handler와 함께 사용할 때는 handler flush callback에 연결합니다.
+flush 실패는 handler 실패로 전파되어 trace export 실패가 성공 응답처럼 숨겨지지 않습니다.
+
+```typescript
+export const handler = app.lambdaHandler({
+  flush: async () => {
+    const result = await telemetry.forceFlush(5000);
+    if (!result.success) {
+      throw result.error ?? new Error("telemetry flush failed");
+    }
+  },
+});
+```
+
 ### 초기화 수명주기
 
 `init({ enabled: false })`는 설정만 저장하고 OpenTelemetry SDK를 시작하지 않습니다. 같은 프로세스에서 나중에

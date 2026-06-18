@@ -41,7 +41,7 @@ LLM Metering 서비스
 
 ### checkQuota()
 
-> **checkQuota**(`tenantId`, `meterId`, `quotaLimit`): `Promise`\<`boolean`\>
+> **checkQuota**(`tenantId`, `meterId`, `quotaLimit`, `requestedUsage?`): `Promise`\<`boolean`\>
 
 Quota 체크
 
@@ -58,6 +58,10 @@ Quota 체크
 ##### quotaLimit
 
 `number`
+
+##### requestedUsage?
+
+`number` = `0`
 
 #### Returns
 

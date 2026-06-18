@@ -11,7 +11,7 @@ title: "PricingTable"
 
 ### Constructor
 
-> **new PricingTable**(`pricing?`): `PricingTable`
+> **new PricingTable**(`pricing?`, `options?`): `PricingTable`
 
 #### Parameters
 
@@ -19,9 +19,51 @@ title: "PricingTable"
 
 `Map`\<`string`, `Map`\<`string`, [`ModelPricing`](/api/llm-metering/src/type-aliases/modelpricing/)\>\> = `...`
 
+##### options?
+
+###### effectiveDate?
+
+`string`
+
+###### notes?
+
+`string`
+
+###### source?
+
+`string`
+
+###### version?
+
+`string`
+
 #### Returns
 
 `PricingTable`
+
+## Properties
+
+### effectiveDate?
+
+> `readonly` `optional` **effectiveDate**: `string`
+
+***
+
+### notes?
+
+> `readonly` `optional` **notes**: `string`
+
+***
+
+### source?
+
+> `readonly` `optional` **source**: `string`
+
+***
+
+### version
+
+> `readonly` **version**: `string`
 
 ## Methods
 
@@ -106,3 +148,29 @@ title: "PricingTable"
 #### Returns
 
 `void`
+
+***
+
+### toRegistry()
+
+> **toRegistry**(): [`PricingRegistryDefinition`](/api/llm-metering/src/type-aliases/pricingregistrydefinition/)
+
+#### Returns
+
+[`PricingRegistryDefinition`](/api/llm-metering/src/type-aliases/pricingregistrydefinition/)
+
+***
+
+### fromRegistry()
+
+> `static` **fromRegistry**(`registry`): `PricingTable`
+
+#### Parameters
+
+##### registry
+
+[`PricingRegistryDefinition`](/api/llm-metering/src/type-aliases/pricingregistrydefinition/)
+
+#### Returns
+
+`PricingTable`

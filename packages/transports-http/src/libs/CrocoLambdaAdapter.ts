@@ -43,6 +43,7 @@ export type TypedLambdaHandler = (
 
 export type LambdaHandlerOptions = {
   logger?: ILogger;
+  flush?: () => Promise<void> | void;
 };
 
 const WAIT_UNTIL_REJECTION_MESSAGE = "Lambda waitUntil task rejected";
@@ -133,6 +134,7 @@ export class CrocoLambdaAdapter {
 
       const response = await this.hono.fetch(request, executionEnv);
       await runtimeContext.flush?.();
+      await options.flush?.();
 
       const contentType = response.headers.get("content-type") ?? "";
       const isBinary = isBinaryContentType(contentType);

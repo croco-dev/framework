@@ -17,6 +17,12 @@ title: "ModelPricing"
 
 ***
 
+### effectiveDate?
+
+> `optional` **effectiveDate**: `string`
+
+***
+
 ### inputPricePerToken
 
 > **inputPricePerToken**: `number`
@@ -26,3 +32,9 @@ title: "ModelPricing"
 ### outputPricePerToken
 
 > **outputPricePerToken**: `number`
+
+***
+
+### source?
+
+> `optional` **source**: `string`
