@@ -13,6 +13,12 @@ title: "AppConfig"
 
 ***
 
+### devInspector?
+
+> `optional` **devInspector**: [`DevInspectorEndpointOptions`](/api/transports-http/src/type-aliases/devinspectorendpointoptions/)
+
+***
+
 ### diagnostics?
 
 > `optional` **diagnostics**: [`DiagnosticsEndpointOptions`](/api/transports-http/src/type-aliases/diagnosticsendpointoptions/)

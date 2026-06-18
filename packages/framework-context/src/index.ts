@@ -53,6 +53,13 @@ export { Inject } from "typedi";
 export { Container } from "./libs/Container";
 
 export { ContainerDiagnosticsProvider } from "./libs/diagnostics/ContainerDiagnosticsProvider";
+export {
+  DEV_INSPECTOR_TOKEN,
+  RuntimeInspector,
+  finishRuntimeInspectionRequest,
+  recordRuntimeInspectionEvent,
+  startRuntimeInspectionRequest,
+} from "./libs/RuntimeInspector";
 
 /**
  * TypeDI 컨테이너 인스턴스 타입입니다.
@@ -262,10 +269,25 @@ export type { Constructor } from "./libs/types";
 export type {
   RuntimeCapabilities,
   RuntimeContext,
+  RuntimeInspectorRecorder,
+  RuntimeInspectorRecorderEventInput,
   RuntimeNativeContext,
   RuntimePlatform,
   RuntimeTraceContext,
 } from "./libs/types";
+export type {
+  RuntimeInspectionOutcome,
+  RuntimeInspectionRecord,
+  RuntimeInspectorEventInput,
+  RuntimeInspectorEventKind,
+  RuntimeInspectorEventOutcome,
+  RuntimeInspectorFailureReporter,
+  RuntimeInspectorOptions,
+  RuntimeInspectorRequestFinish,
+  RuntimeInspectorRequestStart,
+  RuntimeInspectorSnapshot,
+  RuntimeInspectorTimelineEvent,
+} from "./libs/RuntimeInspector";
 
 /**
  * 요청 라이프사이클 전후와 에러 상황에 실행할 훅 타입입니다.

@@ -81,6 +81,14 @@ export {
   STANDARD_DIAGNOSTICS_ENDPOINT_PATH,
 } from "./libs/operationalEndpoints";
 
+export {
+  DEV_INSPECTOR_ENDPOINT_PATH,
+  DEV_INSPECTOR_TOKEN_HEADER,
+  authorizeDevInspectorRequest,
+  resolveDevInspector,
+  resolveDevInspectorEndpointPolicy,
+} from "./libs/devInspectorEndpoint";
+
 export type {
   DiagnosticsAccessContext,
   DiagnosticsEndpointOptions,
@@ -91,6 +99,12 @@ export type {
   SafeDiagnosticsErrorRecord,
   SafeDiagnosticsReport,
 } from "./libs/operationalEndpoints";
+
+export type {
+  DevInspectorEndpointOptions,
+  DevInspectorEndpointPolicy,
+  DevInspectorExposureMode,
+} from "./libs/devInspectorEndpoint";
 
 /**
  * 요청 본문 크기를 제한하는 미들웨어와 바이트 단위 헬퍼입니다.

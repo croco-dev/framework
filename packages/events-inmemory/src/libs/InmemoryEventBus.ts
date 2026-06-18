@@ -5,8 +5,14 @@ import type {
   EventSubscription,
 } from "@croco/events-core";
 import { EventBusConfig, EventSubscriptionIndex } from "@croco/events-core";
-import type { ILogger } from "@croco/framework-context";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import type { ILogger, RuntimeInspector, RuntimeInspectorRecorder } from "@croco/framework-context";
+import {
+  Container,
+  Context as CrocoContext,
+  DEV_INSPECTOR_TOKEN,
+  LOGGER_TOKEN,
+  recordRuntimeInspectionEvent,
+} from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { TraceInfo } from "@croco/telemetry-api";
 import { getActiveTraceInfo, getTracer } from "@croco/telemetry-api";
@@ -104,13 +110,53 @@ export class InMemoryEventBus<
     const traceInfo = getActiveTraceInfo();
     const baseEvent = this.createEventWithTraceContext(event, traceInfo);
     const handlerClasses = this.resolveSubscribers(eventName);
+    const inspector = this.resolveRuntimeInspector();
+    const startedAt = Date.now();
 
-    await this.tracer.startActiveSpan(
-      `event.publish:${eventName}`,
-      { attributes: this.createPublishSpanAttributes(event, traceInfo) },
-      async (publishSpan: Span) =>
-        this.finishPublishSpan(publishSpan, handlerClasses, baseEvent, eventName),
-    );
+    this.recordInspectionEvent(inspector, {
+      kind: "event.publish",
+      outcome: "started",
+      name: eventName,
+      details: {
+        subscriberCount: handlerClasses.length,
+        eventTimestamp: event.timestamp,
+        traceId: traceInfo.traceId,
+      },
+    });
+
+    try {
+      await this.tracer.startActiveSpan(
+        `event.publish:${eventName}`,
+        { attributes: this.createPublishSpanAttributes(event, traceInfo) },
+        async (publishSpan: Span) =>
+          this.finishPublishSpan(publishSpan, handlerClasses, baseEvent, eventName),
+      );
+      this.recordInspectionEvent(inspector, {
+        kind: "event.publish",
+        outcome: "succeeded",
+        name: eventName,
+        durationMs: Date.now() - startedAt,
+        details: {
+          subscriberCount: handlerClasses.length,
+        },
+      });
+    } catch (error) {
+      const normalizedError = this.normalizeError(error);
+      this.recordInspectionEvent(inspector, {
+        kind: "event.publish",
+        outcome: "failed",
+        name: eventName,
+        durationMs: Date.now() - startedAt,
+        details: {
+          subscriberCount: handlerClasses.length,
+          error: {
+            name: normalizedError.name,
+            message: normalizedError.message,
+          },
+        },
+      });
+      throw normalizedError;
+    }
   }
 
   private async finishPublishSpan(
@@ -241,11 +287,36 @@ export class InMemoryEventBus<
     const handlerName = handlerClass.name;
     const handlerId = `${handlerName}-${++this.handlerCounter}`;
     const startTime = Date.now();
+    const inspector = this.resolveRuntimeInspector();
 
     this.runningHandlers.set(handlerId, { eventName, handlerName, startTime });
+    this.recordInspectionEvent(inspector, {
+      kind: "event.handler",
+      outcome: "started",
+      name: handlerName,
+      details: {
+        eventName,
+      },
+    });
 
     try {
-      return await this.executeSubscriber(handlerClass, baseEvent, eventName);
+      const failure = await this.executeSubscriber(handlerClass, baseEvent, eventName);
+      this.recordInspectionEvent(inspector, {
+        kind: "event.handler",
+        outcome: failure ? "failed" : "succeeded",
+        name: handlerName,
+        durationMs: Date.now() - startTime,
+        details: {
+          eventName,
+          error: failure
+            ? {
+                name: failure.error.name,
+                message: failure.error.message,
+              }
+            : undefined,
+        },
+      });
+      return failure;
     } finally {
       this.runningHandlers.delete(handlerId);
       this.notifySlotAvailable();
@@ -407,6 +478,20 @@ export class InMemoryEventBus<
     }
 
     return new Error(String(error));
+  }
+
+  private resolveRuntimeInspector(): RuntimeInspectorRecorder | undefined {
+    return (
+      CrocoContext.get()?.runtimeInspector ??
+      Container.getOptional<RuntimeInspector>(DEV_INSPECTOR_TOKEN)
+    );
+  }
+
+  private recordInspectionEvent(
+    inspector: RuntimeInspectorRecorder | undefined,
+    input: Parameters<typeof recordRuntimeInspectionEvent>[1],
+  ): void {
+    recordRuntimeInspectionEvent(inspector, input);
   }
 
   subscribe(subscription: EventSubscription<TEvent>): void {
