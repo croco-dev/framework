@@ -1,4 +1,9 @@
 {
+  "compilerOptions": {
+    "paths": {
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
+  },
   "exclude": ["node_modules"],
   "extends": "../../tsconfig/tsconfig.node.json",
   "include": ["src/**/*.ts"]

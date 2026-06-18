@@ -119,6 +119,64 @@ const app = createApp({
 
 앱이 `WorkflowDiagnosticsProvider`, `TelemetryDiagnosticsProvider`처럼 선택적 패키지의 provider를 사용하는 경우 `diagnostics.providers`에 추가하면 기본 runtime/container/event bus provider와 함께 등록됩니다. 기본 collector 전체를 교체해야 할 때만 `diagnostics.collector`를 직접 전달합니다.
 
+## CROCO\_\* 진단 코드 표준
+
+빌드타임 체크, codegen, doctor, runtime diagnostics가 사람이 읽는 문장만 출력하면 원인과 수정 위치가 바뀔 때 추적하기 어렵습니다. Croco 진단은 안정적인 `CROCO_<AREA>_<NNN>` 코드를 기준으로 같은 메시지 구조를 사용해야 합니다.
+
+표준 메시지 필드:
+
+- `code`: `CROCO_DI_001`, `CROCO_ROUTE_004`처럼 대문자 영역과 세 자리 번호를 사용합니다.
+- `severity`: `error`, `warning`, `info` 중 하나입니다. CI/build를 실패시키는 항목은 `error`를 사용합니다.
+- `category`: dependency-injection, routing, build-time, runtime, telemetry, events처럼 사용자가 수정 지점을 좁힐 수 있는 영역입니다.
+- `location`: 가능한 경우 `file`, `line`, `column`, `packageName`, `symbol`을 포함합니다. 위치를 모르면 `unknown`을 명시합니다.
+- `cause`: 무엇이 깨졌는지 한 문장으로 설명합니다.
+- `action`: 사용자가 다음에 실행하거나 수정할 복구 액션을 한 문장으로 제시합니다.
+- `docs` 또는 `searchKeywords`: 문서 URL이 아직 안정적이지 않으면 코드와 관련 키워드를 함께 제공합니다.
+
+표준 출력 예시:
+
+```text
+ERROR CROCO_ROUTE_004 - Route path parameter is not bound
+Category: routing
+Cause: A route path declares a path parameter but the controller method metadata does not bind that parameter.
+Location: packages/api/src/UsersController.ts:12:8#UsersController.getUser (@croco/example-api)
+Action: Add the matching path parameter decorator or rename the path token so generated contracts and runtime routing agree.
+Docs: docs/troubleshooting/diagnostics.md#croco_route_004
+Search: CROCO_ROUTE_004, missing path param, @Param, route contract
+```
+
+`@croco/diagnostics-core`는 이 형식을 위한 `DiagnosticCodeDefinition`, `DiagnosticSourceLocation`, `createDiagnosticMessage()`, `formatDiagnosticMessage()`를 제공합니다. 새 check/build/runtime 진단은 같은 필드를 직접 만들거나 이 helper로 포맷해야 합니다.
+
+초기 표준 코드 예시:
+
+| Code              | Category             | Severity | Cause 요약                                  | Recovery action 요약                             |
+| ----------------- | -------------------- | -------- | ------------------------------------------- | ------------------------------------------------ |
+| `CROCO_DI_001`    | dependency-injection | error    | 등록되지 않은 provider를 resolve함          | provider 등록, module export, optional lookup    |
+| `CROCO_ROUTE_004` | routing              | error    | path parameter와 controller metadata 불일치 | `@Param` 추가 또는 path token rename             |
+| `CROCO_BUILD_002` | build-time           | error    | generated artifact가 source와 drift됨       | package-specific write command 실행 후 diff 검토 |
+
+### `CROCO_DI_001`
+
+Cause: DI container가 active scope에서 등록되지 않은 provider token을 resolve하려고 했습니다.
+Fix: provider를 resolve 전에 등록하고, module boundary를 넘는 provider는 owning module에서 export합니다. 선택 dependency는 명시적인 optional lookup 경로로만 처리합니다.
+
+### `CROCO_ROUTE_004`
+
+Cause: route path에 선언된 parameter와 controller method metadata가 일치하지 않습니다.
+Fix: path token과 같은 이름의 `@Param` binding을 추가하거나, generated contract와 runtime route가 같은 이름을 보도록 path token을 rename합니다.
+
+### `CROCO_BUILD_002`
+
+Cause: build-time generated artifact가 현재 source에서 다시 생성한 결과와 다릅니다.
+Fix: package-specific write command를 실행하고 generated diff를 검토한 뒤 source change와 함께 commit합니다. public API drift는 `pnpm public-api:write`로 갱신합니다.
+
+### 변경 정책
+
+- 코드는 append-only입니다. 한번 공개된 `CROCO_*` 코드는 다른 의미로 재사용하거나 이름을 바꾸지 않습니다.
+- cause/action 문구, docs link, search keyword, fix example은 더 정확하게 보강할 수 있습니다.
+- category나 기본 severity를 바꾸면 downstream suppression, CI gate, 문서 검색이 깨질 수 있으므로 새 코드를 발급합니다.
+- 코드 제거가 필요하면 최소 한 릴리스 동안 deprecated로 문서화하고 replacement code를 명시합니다.
+
 ## 로컬 Dev Inspector
 
 `@croco/transports-http`는 개발 중 요청 하나의 주요 runtime event를 한 출력으로 확인할 수 있는 `GET /dev/inspector`를 제공합니다.
