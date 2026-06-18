@@ -21,7 +21,7 @@ title: "RequestValidationProblem"
 
 ##### source
 
-`"query"` | `"body"` | `"params"` | `"headers"`
+`"headers"` | `"query"` | `"body"` | `"params"`
 
 ##### issues
 

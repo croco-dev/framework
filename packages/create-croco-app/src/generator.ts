@@ -48,6 +48,15 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
     return;
   }
 
+  if (options.preset === "production-app") {
+    mergeInto(join(TEMPLATES_DIR, "spa-be-split"), resolvedTarget, vars);
+    if (options.agentRules) {
+      installAgentRules(resolvedTarget, vars);
+    }
+    await finalize(resolvedTarget, options);
+    return;
+  }
+
   if (options.preset !== "blank") {
     mergeInto(join(TEMPLATES_DIR, "base-ddd"), resolvedTarget, vars);
   }

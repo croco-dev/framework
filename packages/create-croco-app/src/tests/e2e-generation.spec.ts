@@ -488,6 +488,87 @@ describe("E2E: generate()", () => {
     assertLambdaHandlerTarget(testDir, "apps/api/src/handler.handler");
   });
 
+  it(
+    "generates production app starter with operational defaults",
+    { timeout: 120_000 },
+    async () => {
+      const options: GeneratorOptions = {
+        projectName: "my-production-app",
+        scope: "@test",
+        preset: "production-app",
+        webApps: [],
+        apiHosting: "standalone",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      };
+
+      await generate(testDir, options);
+
+      const rootPackageJson = readPackageJson(join(testDir, "package.json"));
+      const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const readme = readFileSync(join(testDir, "README.md"), "utf8");
+      const apiUsersSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "users.ts"),
+        "utf8",
+      );
+      const apiAppSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "app.ts"),
+        "utf8",
+      );
+      const clientSource = readFileSync(
+        join(testDir, "apps", "console-web", "src", "api", "client.ts"),
+        "utf8",
+      );
+
+      expect(rootPackageJson.scripts).toMatchObject({
+        dev: "turbo dev",
+        "dev:smoke":
+          "pnpm --filter @test/api-server dev:smoke && pnpm --filter @test/console-web dev:smoke",
+        lint: "biome lint .",
+        test: "turbo test",
+        typecheck: "turbo typecheck",
+      });
+      expect(apiPackageJson.scripts).toMatchObject({
+        "dev:smoke": "tsx src/dev-smoke.ts",
+        build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
+        test: "vitest run",
+      });
+      expect(apiPackageJson.dependencies).toMatchObject({
+        "@croco/events-core": "^0.0.2",
+        "@croco/events-inmemory": "^0.0.3",
+        "@croco/problems-core": "^0.0.2",
+        "@croco/protocols-rest": "^0.0.2",
+        "@croco/repository-core": "^0.0.2",
+        "@croco/retry-core": "^0.0.3",
+        "@croco/telemetry-api": "^0.0.2",
+        "@croco/telemetry-sdk-node": "^0.0.2",
+        "@croco/transports-http": "^0.0.2",
+      });
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "lambda.ts"))).toBe(true);
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "env.ts"))).toBe(true);
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "problems.ts"))).toBe(true);
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "dev-smoke.ts"))).toBe(true);
+      expect(existsSync(join(testDir, "sst.config.ts"))).toBe(true);
+      assertLambdaHandlerTarget(testDir, "apps/api-server/src/lambda.handler");
+      expect(apiUsersSource).toContain("RetryTemplate");
+      expect(apiUsersSource).toContain("EventPublisher");
+      expect(apiUsersSource).toContain("InMemoryEventBus");
+      expect(apiUsersSource).toContain("Repository");
+      expect(apiAppSource).toContain("HttpExceptionFilter");
+      expect(apiAppSource).toContain("globalFilters: [HttpExceptionFilter]");
+      expect(clientSource).toContain("ApiProblemError");
+      expect(readme).toContain("운영형 앱 스타터");
+      expect(readme).toContain("비범위");
+      expect(readme).toContain("HttpExceptionFilter");
+      expect(readme).toContain("TelemetryRuntime.forceFlush");
+      assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+      assertAllSourceBareImportsDeclared(testDir);
+    },
+  );
+
   it("generates SaaS preset with runnable demo smoke commands", { timeout: 120_000 }, async () => {
     const options: GeneratorOptions = {
       projectName: "my-saas",

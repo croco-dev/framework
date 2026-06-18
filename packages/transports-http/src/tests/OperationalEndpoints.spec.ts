@@ -1,7 +1,13 @@
 import "reflect-metadata";
 import { DiagnosticsCollector } from "@croco/diagnostics-core";
-import { Container } from "@croco/framework-context";
+import {
+  Container,
+  RuntimeInspector,
+  type RuntimeInspectorSnapshot,
+} from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import { ProblemFactory } from "@croco/problems-core";
+import { Controller, Get } from "@croco/protocols-rest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -38,6 +44,36 @@ class StaticDiagnosticsProvider {
   }
 }
 
+@Controller("/inspector")
+class InspectorController {
+  @Get("/ok")
+  ok() {
+    return { ok: true };
+  }
+
+  @Get("/problem")
+  problem() {
+    throw ProblemFactory.badRequest(
+      "dev-inspector/test-problem",
+      "test problem token=problem-secret",
+    );
+  }
+}
+
+class ThrowingRuntimeInspector extends RuntimeInspector {
+  override startRequest(): never {
+    throw new Error("inspector start failure");
+  }
+
+  override recordEvent(): never {
+    throw new Error("inspector record failure");
+  }
+
+  override finishRequest(): never {
+    throw new Error("inspector finish failure");
+  }
+}
+
 describe("Operational endpoints", () => {
   beforeEach(() => {
     Container.reset();
@@ -63,6 +99,201 @@ describe("Operational endpoints", () => {
     const app = createApp({ controllers: [] });
 
     const response = await app.fetch(new Request("http://localhost/health/diagnostics"));
+
+    expect(response.status).toBe(404);
+  });
+
+  it("does not register the dev inspector when exposure is off", async () => {
+    const app = createApp({ controllers: [] });
+
+    const response = await app.fetch(new Request("http://localhost/dev/inspector"));
+
+    expect(response.status).toBe(404);
+  });
+
+  it("captures the latest local request timeline with safe redaction", async () => {
+    const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const spanId = "00f067aa0ba902b7";
+    const app = createApp({
+      controllers: [InspectorController],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const requestResponse = await app.fetch(
+      new Request("http://localhost/inspector/ok?apiKey=query-secret", {
+        headers: {
+          authorization: "Bearer secret",
+          traceparent: `00-${traceId}-${spanId}-01`,
+          "x-request-id": "dev-req-1",
+        },
+      }),
+    );
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(requestResponse.status).toBe(200);
+    expect(inspectorResponse.status).toBe(200);
+    expect(inspectorResponse.headers.get("cache-control")).toBe("no-store");
+    expect(snapshot.requests[0]).toMatchObject({
+      requestId: "dev-req-1",
+      method: "GET",
+      path: "/inspector/ok",
+      route: "/inspector/ok",
+      status: 200,
+      outcome: "succeeded",
+      headers: {
+        authorization: "[Redacted]",
+      },
+      query: {
+        apiKey: "[Redacted]",
+      },
+      trace: {
+        traceId,
+        spanId,
+        traceFlags: 1,
+      },
+    });
+    expect(snapshot.requests[0].timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "di.snapshot" }),
+        expect.objectContaining({ kind: "middleware.end", outcome: "succeeded" }),
+        expect.objectContaining({ kind: "handler.end", outcome: "succeeded" }),
+        expect.objectContaining({ kind: "request.end", outcome: "succeeded" }),
+      ]),
+    );
+    expect(JSON.stringify(snapshot)).not.toContain("query-secret");
+    expect(JSON.stringify(snapshot)).not.toContain("Bearer secret");
+  });
+
+  it("records Problems without changing the Problem response", async () => {
+    const app = createApp({
+      controllers: [InspectorController],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const requestResponse = await app.fetch(new Request("http://localhost/inspector/problem"));
+    const problemBody = await requestResponse.json();
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(requestResponse.status).toBe(400);
+    expect(problemBody).toMatchObject({
+      code: "dev-inspector/test-problem",
+      detail: "test problem token=problem-secret",
+    });
+    expect(snapshot.requests[0]).toMatchObject({
+      path: "/inspector/problem",
+      status: 400,
+      outcome: "failed",
+    });
+    expect(snapshot.requests[0].timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "problem",
+          outcome: "failed",
+          name: "dev-inspector/test-problem",
+        }),
+      ]),
+    );
+    expect(JSON.stringify(snapshot)).not.toContain("problem-secret");
+  });
+
+  it("does not let inspector failures change route responses", async () => {
+    const app = createApp({
+      controllers: [InspectorController],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+        inspector: new ThrowingRuntimeInspector(),
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/inspector/ok"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ ok: true });
+  });
+
+  it("keeps inspector records isolated between multiple apps in one process", async () => {
+    const firstApp = createApp({
+      controllers: [InspectorController],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+    const secondApp = createApp({
+      controllers: [InspectorController],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    await firstApp.fetch(new Request("http://localhost/dev/inspector"));
+    await secondApp.fetch(new Request("http://localhost/dev/inspector"));
+    await firstApp.fetch(
+      new Request("http://localhost/inspector/ok", {
+        headers: { "x-request-id": "first-app-request" },
+      }),
+    );
+
+    const firstInspectorResponse = await firstApp.fetch(
+      new Request("http://localhost/dev/inspector"),
+    );
+    const secondInspectorResponse = await secondApp.fetch(
+      new Request("http://localhost/dev/inspector"),
+    );
+    const firstSnapshot = (await firstInspectorResponse.json()) as RuntimeInspectorSnapshot;
+    const secondSnapshot = (await secondInspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(
+      firstSnapshot.requests.some((request) => request.requestId === "first-app-request"),
+    ).toBe(true);
+    expect(
+      secondSnapshot.requests.some((request) => request.requestId === "first-app-request"),
+    ).toBe(false);
+  });
+
+  it("requires a token when the dev inspector uses token exposure", async () => {
+    const app = createApp({
+      controllers: [],
+      devInspector: {
+        exposure: "token",
+        token: "dev-secret",
+      },
+    });
+
+    const denied = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const allowed = await app.fetch(
+      new Request("http://localhost/dev/inspector", {
+        headers: { "X-Dev-Inspector-Token": "dev-secret" },
+      }),
+    );
+
+    expect(denied.status).toBe(403);
+    expect(denied.headers.get("cache-control")).toBe("no-store");
+    expect(allowed.status).toBe(200);
+  });
+
+  it("keeps private dev inspector exposure disabled in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const app = createApp({
+      controllers: [],
+      devInspector: {
+        exposure: "private",
+        allowProduction: true,
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/dev/inspector"));
 
     expect(response.status).toBe(404);
   });

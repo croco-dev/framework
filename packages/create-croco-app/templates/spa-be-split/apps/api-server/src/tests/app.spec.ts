@@ -1,13 +1,17 @@
-import { createTestingApp } from "@croco/testing";
-import { describe, expect, it } from "vitest";
-import { UserController } from "../controllers/UserController";
+import { beforeEach, describe, expect, it } from "vitest";
+import { createCrocoApp } from "../app";
+import { getUserAuditEntries, resetUserRuntimeForTests } from "../users";
 
 describe("API server", () => {
-  it("serves users through the Croco testing harness", async () => {
-    const app = createTestingApp({ controllers: [UserController] });
+  beforeEach(() => {
+    resetUserRuntimeForTests();
+  });
 
-    const response = await app.get("/users");
-    const users = await app.readJson<Array<{ id: string; name: string }>>(response);
+  it("serves users through the operational app", async () => {
+    const app = createCrocoApp();
+
+    const response = await app.fetch(new Request("http://localhost/users"));
+    const users = (await response.json()) as Array<{ id: string; name: string }>;
 
     expect(response.status).toBe(200);
     expect(users).toEqual(
@@ -19,5 +23,40 @@ describe("API server", () => {
       ]),
     );
     expect(users).toHaveLength(2);
+  });
+
+  it("creates users through the operational app and publishes the domain event", async () => {
+    const app = createCrocoApp();
+    const response = await app.fetch(
+      new Request("http://localhost/users", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Katherine Johnson", email: "katherine@example.com" }),
+      }),
+    );
+    const user = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(user).toEqual(
+      expect.objectContaining({
+        name: "Katherine Johnson",
+        email: "katherine@example.com",
+      }),
+    );
+    expect(getUserAuditEntries()).toContain(user.id);
+  });
+
+  it("returns RFC 7807 Problem details for missing users", async () => {
+    const app = createCrocoApp();
+    const response = await app.fetch(new Request("http://localhost/users/missing"));
+    const problem = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(problem).toEqual(
+      expect.objectContaining({
+        status: 404,
+        code: "starter/user-not-found",
+      }),
+    );
   });
 });

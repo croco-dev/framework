@@ -59,6 +59,7 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 | `GET /health/ready`       | 항상      | `/ready`와 동일                                                                                           | `200` 또는 `503` |
 | `GET /health/diagnostics` | opt-in    | `DiagnosticsReport`에서 redaction 적용 후 반환                                                            | `200` 또는 `403` |
 | `GET /diagnostics`        | opt-in    | `/health/diagnostics`와 동일한 표준 경로                                                                  | `200` 또는 `403` |
+| `GET /dev/inspector`      | opt-in    | 최근 로컬 요청의 runtime timeline, trace, DI snapshot, event/retry/problem 요약을 redaction 적용 후 반환  | `200` 또는 `403` |
 | `GET /metrics`            | 항상      | `{ "timestamp": string, "metrics": { "standardEndpointPathCount": number, "healthCheckCount": number } }` | `200`            |
 
 Readiness는 `@croco/health-core`의 `HealthCheckService` 실행 semantics를 사용합니다.
@@ -98,6 +99,9 @@ croco ops check http://localhost:3000 \
 - `CROCO_DIAGNOSTICS_ENABLED`: `true`로 설정 시 `/health/diagnostics` 라우트가 활성화됩니다.
 - `CROCO_DIAGNOSTICS_TOKEN`: 외부에서 이 엔드포인트를 호출할 때 필요한 인증 토큰입니다. 설정 시, 요청 헤더에 반드시 `X-Diagnostics-Token: <토큰값>`을 포함해야 합니다.
 - `CROCO_DIAGNOSTICS_EXPOSURE`: `off`, `private`, `token` 중 하나를 설정할 수 있습니다. 앱 코드의 `diagnostics.exposure`가 있으면 앱 코드 설정이 우선합니다.
+- `CROCO_DEV_INSPECTOR_ENABLED`: `true`로 설정 시 `NODE_ENV=production`이 아닌 환경에서 `/dev/inspector` 라우트가 활성화됩니다.
+- `CROCO_DEV_INSPECTOR_TOKEN`: Dev Inspector를 `token` exposure로 호출할 때 필요한 토큰입니다. 기본 헤더는 `X-Dev-Inspector-Token`입니다.
+- `CROCO_DEV_INSPECTOR_EXPOSURE`: `off`, `private`, `token`, `custom` 중 하나를 설정할 수 있습니다. 앱 코드의 `devInspector.exposure`가 있으면 앱 코드 설정이 우선합니다.
 
 새 코드에서는 환경변수보다 `createApp({ diagnostics: ... })` 설정을 권장합니다.
 
@@ -114,6 +118,32 @@ const app = createApp({
 ```
 
 앱이 `WorkflowDiagnosticsProvider`, `TelemetryDiagnosticsProvider`처럼 선택적 패키지의 provider를 사용하는 경우 `diagnostics.providers`에 추가하면 기본 runtime/container/event bus provider와 함께 등록됩니다. 기본 collector 전체를 교체해야 할 때만 `diagnostics.collector`를 직접 전달합니다.
+
+## 로컬 Dev Inspector
+
+`@croco/transports-http`는 개발 중 요청 하나의 주요 runtime event를 한 출력으로 확인할 수 있는 `GET /dev/inspector`를 제공합니다.
+
+- 기본 노출은 off입니다. `createApp({ devInspector: { exposure: "private" } })` 또는 `CROCO_DEV_INSPECTOR_ENABLED=true`로 명시적으로 켭니다.
+- `private` exposure는 `NODE_ENV=production`에서 등록되지 않습니다. 운영 환경에서 꼭 필요하면 `allowProduction: true`와 `token` 또는 `custom` exposure를 함께 사용해야 합니다.
+- 기본 토큰 헤더는 `X-Dev-Inspector-Token`입니다.
+- 응답은 `Cache-Control: no-store`를 포함합니다.
+- 요청 URL query, headers/query, timeline details 안의 token/secret/password/API key/connection string 계열 key는 `[Redacted]`로 대체됩니다.
+- Error/Problem message처럼 key 없이 들어오는 문자열도 `token=...`, `Bearer ...`, DSN/connection URL 형태의 민감 값은 `[Redacted]`로 scrub 처리되며, 문자열은 기본 최대 500자로 잘립니다(`maxStringLength`로 조정 가능).
+- Inspector 기록 중 예외가 발생해도 원래 요청 처리와 응답은 유지됩니다. 실패한 instrumentation은 가능한 경우 logger warning으로만 남깁니다.
+- Inspector는 인메모리 ring buffer입니다. 프로세스 재시작, Lambda cold start, Worker isolate 교체 시 내용은 초기화됩니다.
+
+```typescript no-check
+const app = createApp({
+  controllers: [UserController],
+  devInspector: {
+    exposure: "token",
+    token: process.env.CROCO_DEV_INSPECTOR_TOKEN,
+    maxRequests: 25,
+  },
+});
+```
+
+Inspector timeline에는 HTTP request start/end, middleware/handler timing, DI container snapshot, trace id, Problem 응답 요약, `@croco/events-inmemory` publish/handler 결과, `@croco/retry-core` retry attempt/wait/success/exhaustion 정보가 포함됩니다. 이벤트 payload와 핸들러 반환 body는 저장하지 않습니다.
 
 ## Provider별 진단 정보
 

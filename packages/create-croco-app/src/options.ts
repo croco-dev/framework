@@ -14,6 +14,7 @@ type ChoiceName = "preset" | "api" | "api-hosting" | "backend-deploy" | "fronten
 
 type RawCliOptions = Record<string, string | boolean | undefined>;
 type SaasPreset = Extract<GeneratorOptions["preset"], "saas" | "ai-saas">;
+type ProductionPreset = Extract<GeneratorOptions["preset"], "production-app">;
 
 export function parseCliOptions(
   directory: string | undefined,
@@ -88,6 +89,9 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
   if (isSaasPreset(cliOptions.preset)) {
     assertSaasOptions(cliOptions, cliOptions.preset);
   }
+  if (isProductionPreset(cliOptions.preset)) {
+    assertProductionOptions(cliOptions, cliOptions.preset);
+  }
 }
 
 export function validateResolvedOptions(options: GeneratorOptions): void {
@@ -141,6 +145,11 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
     return;
   }
 
+  if (isProductionPreset(options.preset)) {
+    assertProductionOptions(options, options.preset);
+    return;
+  }
+
   if (options.preset === "ddd-fullstack") {
     if (!options.api) throw new Error("--api is required for ddd-api and ddd-fullstack");
     if (options.apiHosting === "nextjs" && options.webApps.length !== 1) {
@@ -188,6 +197,22 @@ export function normalizeNonInteractiveOptions(
 
   if (isSaasPreset(preset)) {
     assertSaasOptions(cliOptions, preset);
+
+    return {
+      projectName,
+      scope,
+      preset,
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: cliOptions.agentRules ?? true,
+      installDeps: cliOptions.installDeps ?? true,
+      initGit: cliOptions.initGit ?? true,
+    };
+  }
+
+  if (isProductionPreset(preset)) {
+    assertProductionOptions(cliOptions, preset);
 
     return {
       projectName,
@@ -261,6 +286,12 @@ function isSaasPreset(preset: GeneratorOptions["preset"] | undefined): preset is
   return preset === "saas" || preset === "ai-saas";
 }
 
+function isProductionPreset(
+  preset: GeneratorOptions["preset"] | undefined,
+): preset is ProductionPreset {
+  return preset === "production-app";
+}
+
 function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPreset): void {
   const presetName = preset;
 
@@ -288,6 +319,26 @@ function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPrese
   }
   if (options.db && options.db.length > 0) {
     throw new InvalidSaasPresetOptionProblem(`--db is not supported with the ${presetName} preset`);
+  }
+}
+
+function assertProductionOptions(
+  options: Partial<GeneratorOptions>,
+  preset: ProductionPreset,
+): void {
+  if (options.api) throw new Error(`--api is not supported with the ${preset} preset`);
+  if (options.apiHosting && options.apiHosting !== "standalone") {
+    throw new Error(`--api-hosting is not configurable with the ${preset} preset`);
+  }
+  if (options.backendDeploy)
+    throw new Error(`--backend-deploy is not supported with the ${preset} preset`);
+  if (options.frontendDeploy)
+    throw new Error(`--frontend-deploy is not supported with the ${preset} preset`);
+  if (options.webApps && options.webApps.length > 0) {
+    throw new Error(`--web-apps is not supported with the ${preset} preset`);
+  }
+  if (options.db && options.db.length > 0) {
+    throw new Error(`--db is not supported with the ${preset} preset`);
   }
 }
 

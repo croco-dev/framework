@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { request } from "./client";
+import { ApiProblemError, request } from "./client";
 
 export type User = {
   readonly id: string;
@@ -27,7 +27,7 @@ export function useUsers(): UseUsersResult {
     try {
       setUsers(await request<User[]>("/users"));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to load users");
+      setError(toErrorMessage(caught, "Failed to load users"));
     } finally {
       setLoading(false);
     }
@@ -35,12 +35,18 @@ export function useUsers(): UseUsersResult {
 
   const createUser = useCallback(
     async (input: Omit<User, "id">) => {
-      await request<User>("/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      await refresh();
+      setError(null);
+
+      try {
+        await request<User>("/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        await refresh();
+      } catch (caught) {
+        setError(toErrorMessage(caught, "Failed to create user"));
+      }
     },
     [refresh],
   );
@@ -50,4 +56,12 @@ export function useUsers(): UseUsersResult {
   }, [refresh]);
 
   return { users, loading, error, createUser, refresh };
+}
+
+function toErrorMessage(caught: unknown, fallback: string): string {
+  if (caught instanceof ApiProblemError) {
+    return caught.problem.detail ?? `${caught.problem.code}: ${caught.problem.title}`;
+  }
+
+  return caught instanceof Error ? caught.message : fallback;
 }

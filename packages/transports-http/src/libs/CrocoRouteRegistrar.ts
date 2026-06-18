@@ -1,10 +1,16 @@
 import { randomUUID } from "node:crypto";
 import {
+  Container,
   Context as FrameworkContext,
+  finishRuntimeInspectionRequest,
   type ILogger,
+  type RuntimeInspector,
+  type RuntimeContext,
   type RuntimeTraceContext,
+  recordRuntimeInspectionEvent,
+  startRuntimeInspectionRequest,
 } from "@croco/framework-context";
-import { ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemCategoryMapper, ProblemFactory } from "@croco/problems-core";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ErrorHandler } from "./ErrorHandler";
 import { HttpContext } from "./HttpContext";
@@ -20,12 +26,18 @@ import type { CompiledRoute, MiddlewareFunction } from "./types";
  * 컴파일된 라우트를 Hono 인스턴스에 등록하고 공통 미들웨어를 적용합니다.
  */
 export class CrocoRouteRegistrar {
+  private runtimeInspector?: RuntimeInspector;
+
   constructor(
     private readonly hono: Hono,
     private readonly errorHandler: ErrorHandler,
     private readonly globalMiddlewares: MiddlewareFunction[],
     private readonly logger: ILogger,
   ) {}
+
+  setRuntimeInspector(inspector: RuntimeInspector): void {
+    this.runtimeInspector = inspector;
+  }
 
   register(route: CompiledRoute): void {
     const method = route.method.toLowerCase();
@@ -37,27 +49,123 @@ export class CrocoRouteRegistrar {
       const traceContext: TraceParent | null = parseTraceParent(traceparent ?? null);
       const fallbackRequestId = ctx.header("x-request-id") ?? randomUUID();
       const runtime = this.resolveRuntimeContext(c, fallbackRequestId, traceContext);
+      const inspector = this.runtimeInspector;
+      const inspection = startRuntimeInspectionRequest(
+        inspector,
+        {
+          requestId: runtime.requestId,
+          method: ctx.req.method,
+          path: ctx.req.path,
+          route: route.path,
+          url: ctx.req.url,
+          headers: ctx.req.headers,
+          query: ctx.req.query,
+          runtime: this.describeRuntime(runtime),
+          trace: this.describeTrace(runtime.trace),
+        },
+        (error) => this.reportInspectorFailure(error),
+      );
       const requestContext = {
         requestId: runtime.requestId,
+        inspectionId: inspection?.id,
         traceId: runtime.trace?.traceId,
         spanId: runtime.trace?.spanId,
         traceFlags: runtime.trace?.traceFlags,
         runtime,
+        runtimeInspector: inspector,
       };
       const middlewares = [telemetry, ...this.globalMiddlewares];
 
       return FrameworkContext.run(requestContext, async () => {
+        let middlewareStartedAt: number | undefined;
         try {
-          return await this.executeMiddlewares(ctx, middlewares, async () => {
-            const result = await route.handler(ctx);
-            return this.toResponse(ctx, result);
+          this.recordInspectionEvent(inspector, {
+            kind: "request.context",
+            outcome: "started",
+            details: {
+              requestId: runtime.requestId,
+              runtimePlatform: runtime.platform,
+              traceId: runtime.trace?.traceId,
+              spanId: runtime.trace?.spanId,
+            },
           });
+          this.recordInspectionEvent(inspector, {
+            kind: "di.snapshot",
+            outcome: "started",
+            details: this.getDiagnosticsSnapshot(),
+          });
+          middlewareStartedAt = Date.now();
+          this.recordInspectionEvent(inspector, {
+            kind: "middleware.start",
+            outcome: "started",
+            details: {
+              count: middlewares.length,
+            },
+          });
+          const response = await this.executeMiddlewares(ctx, middlewares, async () => {
+            const handlerStartedAt = Date.now();
+            this.recordInspectionEvent(inspector, {
+              kind: "handler.start",
+              outcome: "started",
+              name: String(route.methodName),
+              details: {
+                route: route.path,
+                method: route.method,
+              },
+            });
+
+            const result = await route.handler(ctx);
+            const handlerResponse = this.toResponse(ctx, result);
+            const resultOutcome = handlerResponse.status >= 400 ? "failed" : "succeeded";
+            this.recordInspectionEvent(inspector, {
+              kind: "handler.end",
+              outcome: resultOutcome,
+              name: String(route.methodName),
+              durationMs: Date.now() - handlerStartedAt,
+              details: {
+                resultType: this.describeResult(result),
+                responseStatus: handlerResponse.status,
+              },
+            });
+
+            return handlerResponse;
+          });
+          const responseOutcome = response.status >= 400 ? "failed" : "succeeded";
+          this.recordInspectionEvent(inspector, {
+            kind: "middleware.end",
+            outcome: "succeeded",
+            durationMs: Date.now() - middlewareStartedAt,
+            details: {
+              traceId: ctx.get("traceId"),
+              telemetryDegraded: ctx.get("telemetryDegraded") ?? false,
+              responseStatus: response.status,
+            },
+          });
+          this.finishInspection(inspector, inspection?.id, response, responseOutcome, ctx);
+          return response;
         } catch (error) {
           if (error instanceof Response) {
+            const outcome = error.status >= 400 ? "failed" : "succeeded";
+            this.recordInspectionEvent(inspector, {
+              kind: "middleware.end",
+              outcome,
+              ...(middlewareStartedAt !== undefined
+                ? { durationMs: Date.now() - middlewareStartedAt }
+                : {}),
+              details: {
+                traceId: ctx.get("traceId"),
+                telemetryDegraded: ctx.get("telemetryDegraded") ?? false,
+                responseStatus: error.status,
+              },
+            });
+            this.finishInspection(inspector, inspection?.id, error, outcome, ctx);
             return error;
           }
 
-          return this.errorHandler.handleError(error, ctx);
+          this.recordRouteError(inspector, error);
+          const response = this.errorHandler.handleError(error, ctx);
+          this.finishInspection(inspector, inspection?.id, response, "failed", ctx, error);
+          return response;
         }
       });
     };
@@ -267,5 +375,149 @@ export class CrocoRouteRegistrar {
     }
 
     return value as Record<string, unknown>;
+  }
+
+  private describeRuntime(runtime: RuntimeContext): Record<string, unknown> {
+    return {
+      platform: runtime.platform,
+      requestId: runtime.requestId,
+      capabilities: runtime.capabilities,
+    };
+  }
+
+  private recordInspectionEvent(
+    inspector: RuntimeInspector | undefined,
+    input: Parameters<typeof recordRuntimeInspectionEvent>[1],
+  ): void {
+    recordRuntimeInspectionEvent(inspector, input, (error) => this.reportInspectorFailure(error));
+  }
+
+  private getDiagnosticsSnapshot(): Record<string, unknown> {
+    try {
+      return Container.getDiagnosticsSnapshot();
+    } catch (error) {
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      this.reportInspectorFailure(normalizedError);
+      return {
+        unavailable: true,
+        error: {
+          name: normalizedError.name,
+          message: normalizedError.message,
+        },
+      };
+    }
+  }
+
+  private describeTrace(
+    traceContext: RuntimeTraceContext | undefined,
+  ): Record<string, unknown> | undefined {
+    if (!traceContext) {
+      return undefined;
+    }
+
+    return {
+      traceId: traceContext.traceId,
+      spanId: traceContext.spanId,
+      traceFlags: traceContext.traceFlags,
+    };
+  }
+
+  private describeResult(result: unknown): string {
+    if (result instanceof Response) {
+      return "Response";
+    }
+
+    if (result === null) {
+      return "null";
+    }
+
+    if (Array.isArray(result)) {
+      return "array";
+    }
+
+    return typeof result;
+  }
+
+  private recordRouteError(inspector: RuntimeInspector | undefined, error: unknown): void {
+    if (!inspector) {
+      return;
+    }
+
+    if (error instanceof Problem) {
+      this.recordInspectionEvent(inspector, {
+        kind: "problem",
+        outcome: "failed",
+        name: error.code,
+        details: {
+          code: error.code,
+          category: error.category,
+          status: ProblemCategoryMapper.toHttpStatus(error.category),
+          title: error.title,
+          detail: error.detail,
+        },
+      });
+      return;
+    }
+
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    this.recordInspectionEvent(inspector, {
+      kind: "error",
+      outcome: "failed",
+      name: normalizedError.name,
+      details: {
+        name: normalizedError.name,
+        message: normalizedError.message,
+      },
+    });
+  }
+
+  private finishInspection(
+    inspector: RuntimeInspector | undefined,
+    inspectionId: string | undefined,
+    response: Response,
+    outcome: "succeeded" | "failed",
+    ctx: HttpContext,
+    error?: unknown,
+  ): void {
+    if (!inspector) {
+      return;
+    }
+
+    this.recordInspectionEvent(inspector, {
+      kind: "di.snapshot",
+      outcome,
+      details: this.getDiagnosticsSnapshot(),
+    });
+    finishRuntimeInspectionRequest(
+      inspector,
+      {
+        inspectionId,
+        status: response.status,
+        outcome,
+        details: {
+          traceId: ctx.get("traceId"),
+          telemetryDegraded: ctx.get("telemetryDegraded") ?? false,
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                }
+              : undefined,
+        },
+      },
+      (error) => this.reportInspectorFailure(error),
+    );
+  }
+
+  private reportInspectorFailure(error: Error): void {
+    try {
+      this.logger.warn("Dev Inspector instrumentation failed", {
+        name: error.name,
+        message: error.message,
+      });
+    } catch {
+      /* logging must not affect request handling */
+    }
   }
 }

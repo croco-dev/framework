@@ -236,6 +236,29 @@ const smokeCases: readonly SmokeCase[] = [
     ],
   },
   {
+    name: "production-app-starter",
+    args: ["--preset", "production-app", "--scope", "@smoke", "--no-install", "--no-git"],
+    validations: [
+      { label: "dev smoke", args: ["dev:smoke"] },
+      { label: "lint", args: ["lint"] },
+      { label: "test", args: ["test"] },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      {
+        label: "Contract snapshot",
+        args: ["contract:snapshot"],
+        paths: ["contract-graph.snapshot.json"],
+      },
+      { label: "Contract diff", args: ["contract:diff"] },
+      { label: "OpenAPI contract", args: ["contract:openapi"] },
+      {
+        label: "RPC client",
+        args: ["contract:client"],
+        paths: ["libs/shared/provider-rpc/src/user.ts"],
+      },
+    ],
+  },
+  {
     name: "saas-golden-path",
     args: ["--preset", "saas", "--scope", "@smoke", "--no-install", "--no-git"],
     validations: [
@@ -280,8 +303,17 @@ const smokeCases: readonly SmokeCase[] = [
 ];
 
 try {
-  assertSmokeCoverage(smokeCases);
-  printSmokeCoverageSummary(smokeCases);
+  const selectedSmokeCases = selectSmokeCases(smokeCases);
+  const isFilteredRun = selectedSmokeCases.length !== smokeCases.length;
+
+  if (isFilteredRun) {
+    console.log(
+      `create-croco-app-generated-smoke: selected cases ${selectedSmokeCases.map(({ name }) => name).join(", ")}`,
+    );
+  } else {
+    assertSmokeCoverage(smokeCases);
+    printSmokeCoverageSummary(smokeCases);
+  }
 
   run(
     process.execPath,
@@ -289,7 +321,10 @@ try {
       turboPath,
       "build",
       "--filter=@croco/cli...",
+      "--filter=@croco/events-core...",
+      "--filter=@croco/events-inmemory...",
       "--filter=create-croco-app...",
+      "--filter=@croco/framework-context...",
       "--filter=@croco/frontend-cloudflare...",
       "--filter=@croco/frontend-react...",
       "--filter=@croco/frontend-vite...",
@@ -299,7 +334,11 @@ try {
       "--filter=@croco/lifecycle-core...",
       "--filter=@croco/openapi-spec...",
       "--filter=@croco/problems-core...",
+      "--filter=@croco/repository-core...",
+      "--filter=@croco/retry-core...",
       "--filter=@croco/rpc-codegen...",
+      "--filter=@croco/telemetry-api...",
+      "--filter=@croco/telemetry-sdk-node...",
       "--filter=@croco/transports-http...",
       "--force",
     ],
@@ -309,7 +348,7 @@ try {
 
   const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides();
 
-  for (const smokeCase of smokeCases) {
+  for (const smokeCase of selectedSmokeCases) {
     const projectDir = join(smokeRoot, smokeCase.name);
 
     run("node", [cliPath, projectDir, ...smokeCase.args], rootDir);
@@ -330,11 +369,42 @@ try {
     }
   }
 
-  runSpaBeSplitContractSmoke();
+  if (!isFilteredRun) {
+    runSpaBeSplitContractSmoke();
+  }
 
   console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
 } finally {
   rmSync(smokeRoot, { force: true, recursive: true });
+}
+
+function selectSmokeCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
+  const requestedCaseNames = new Set(process.argv.slice(2).filter(Boolean));
+  const envValue = process.env.CROCO_GENERATED_SMOKE_CASES;
+
+  if (envValue) {
+    for (const caseName of envValue.split(",")) {
+      const trimmedCaseName = caseName.trim();
+      if (trimmedCaseName) {
+        requestedCaseNames.add(trimmedCaseName);
+      }
+    }
+  }
+
+  if (requestedCaseNames.size === 0) {
+    return cases;
+  }
+
+  const selectedCases = cases.filter(({ name }) => requestedCaseNames.has(name));
+  const unknownCases = [...requestedCaseNames].filter(
+    (caseName) => !cases.some(({ name }) => name === caseName),
+  );
+
+  if (unknownCases.length > 0) {
+    throw new Error(`Unknown create-croco-app generated smoke case(s): ${unknownCases.join(", ")}`);
+  }
+
+  return selectedCases;
 }
 
 function assertExists(path: string, message: string): void {
@@ -541,6 +611,7 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
     "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
     "@croco/events-core": `file:${packWorkspacePackage("@croco/events-core", "events-core", packDir)}`,
+    "@croco/events-inmemory": `file:${packWorkspacePackage("@croco/events-inmemory", "events-inmemory", packDir)}`,
     "@croco/framework-config": `file:${packWorkspacePackage("@croco/framework-config", "framework-config", packDir)}`,
     "@croco/framework-context": `file:${packWorkspacePackage("@croco/framework-context", "framework-context", packDir)}`,
     "@croco/framework-logger": `file:${packWorkspacePackage("@croco/framework-logger", "framework-logger", packDir)}`,
@@ -561,6 +632,8 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
     "@croco/protocols-rest": `file:${packWorkspacePackage("@croco/protocols-rest", "protocols-rest", packDir)}`,
     "@croco/ratelimit-core": `file:${packWorkspacePackage("@croco/ratelimit-core", "ratelimit-core", packDir)}`,
+    "@croco/repository-core": `file:${packWorkspacePackage("@croco/repository-core", "repository-core", packDir)}`,
+    "@croco/retry-core": `file:${packWorkspacePackage("@croco/retry-core", "retry-core", packDir)}`,
     "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
     "@croco/telemetry-api": `file:${packWorkspacePackage("@croco/telemetry-api", "telemetry-api", packDir)}`,
     "@croco/telemetry-sdk-node": `file:${packWorkspacePackage("@croco/telemetry-sdk-node", "telemetry-sdk-node", packDir)}`,
@@ -573,11 +646,26 @@ function getContractSmokeRangeOverrides(): Record<string, string> {
 
   return {
     "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
+    "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
+    "@croco/events-core": `file:${packWorkspacePackage("@croco/events-core", "events-core", packDir)}`,
+    "@croco/events-inmemory": `file:${packWorkspacePackage("@croco/events-inmemory", "events-inmemory", packDir)}`,
+    "@croco/framework-config": `file:${packWorkspacePackage("@croco/framework-config", "framework-config", packDir)}`,
+    "@croco/framework-context": `file:${packWorkspacePackage("@croco/framework-context", "framework-context", packDir)}`,
+    "@croco/framework-logger": `file:${packWorkspacePackage("@croco/framework-logger", "framework-logger", packDir)}`,
+    "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
+    "@croco/health-core": `file:${packWorkspacePackage("@croco/health-core", "health-core", packDir)}`,
     "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
     "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
     "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
     "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
+    "@croco/protocols-rest": `file:${packWorkspacePackage("@croco/protocols-rest", "protocols-rest", packDir)}`,
+    "@croco/ratelimit-core": `file:${packWorkspacePackage("@croco/ratelimit-core", "ratelimit-core", packDir)}`,
+    "@croco/repository-core": `file:${packWorkspacePackage("@croco/repository-core", "repository-core", packDir)}`,
+    "@croco/retry-core": `file:${packWorkspacePackage("@croco/retry-core", "retry-core", packDir)}`,
     "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
+    "@croco/telemetry-api": `file:${packWorkspacePackage("@croco/telemetry-api", "telemetry-api", packDir)}`,
+    "@croco/telemetry-sdk-node": `file:${packWorkspacePackage("@croco/telemetry-sdk-node", "telemetry-sdk-node", packDir)}`,
+    "@croco/transports-http": `file:${packWorkspacePackage("@croco/transports-http", "transports-http", packDir)}`,
   };
 }
 

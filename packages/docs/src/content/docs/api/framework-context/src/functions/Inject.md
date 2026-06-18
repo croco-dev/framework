@@ -28,8 +28,6 @@ class UserService {
 
 > **Inject**(): `Function`
 
-Injects a service into a class property or constructor parameter.
-
 ### Returns
 
 `Function`
@@ -38,13 +36,11 @@ Injects a service into a class property or constructor parameter.
 
 > **Inject**(`typeFn`): `Function`
 
-Injects a service into a class property or constructor parameter.
-
 ### Parameters
 
 #### typeFn
 
-(`type?`) => `Constructable`\<`unknown`\>
+(`type?`) => [`Constructor`](/api/framework-context/src/type-aliases/constructor/)\<`unknown`\>
 
 ### Returns
 
@@ -53,8 +49,6 @@ Injects a service into a class property or constructor parameter.
 ## Call Signature
 
 > **Inject**(`serviceName?`): `Function`
-
-Injects a service into a class property or constructor parameter.
 
 ### Parameters
 
@@ -69,8 +63,6 @@ Injects a service into a class property or constructor parameter.
 ## Call Signature
 
 > **Inject**(`token`): `Function`
-
-Injects a service into a class property or constructor parameter.
 
 ### Parameters
 

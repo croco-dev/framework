@@ -6,19 +6,58 @@ import {
 } from "typedi";
 import type { Constructable as TypeDIConstructable } from "typedi/types/types/constructable.type";
 import "reflect-metadata";
-import { ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemFactory } from "@croco/problems-core";
 import { Context } from "./Context";
+import { getParameterInjectionToken } from "./InjectionMetadata";
 import { MetadataStorage } from "./MetadataStorage";
 import { CircularDependencyProblem } from "./problems/CircularDependencyProblem";
-import type { ComponentMetadata, Constructor, Scope } from "./types";
+import {
+  ContainerResolutionProblem,
+  ContainerScopeMismatchProblem,
+} from "./problems/ContainerResolutionProblem";
+import type {
+  ComponentMetadata,
+  Constructor,
+  DependencyProviderKind,
+  DependencyResolutionStep,
+  DependencyResolutionStepStatus,
+  DependencyResolutionTrace,
+  DependencyResolutionTraceStatus,
+  DependencyTokenKind,
+  Scope,
+} from "./types";
 
 export type TokenIdentifier<T> = Constructor<T> | TypeDIToken<T> | string | symbol;
 
 const COMPONENT_METADATA_KEY = Symbol("component:metadata");
 
+type HandlerDependencyResolver = <T>(id: Constructor<T> | TypeDIToken<T> | string) => T;
+
 class HandlerContainerInstance extends TypeDIContainerInstance {
+  constructor(
+    id: string,
+    private readonly resolveDependency: HandlerDependencyResolver,
+  ) {
+    super(id);
+  }
+
   override get<T>(id: Constructor<T> | TypeDIToken<T> | string): T {
-    return Container.get(id);
+    return this.resolveDependency(id);
+  }
+
+  override getMany<T>(id: Constructor<T>): T[];
+  override getMany<T>(id: TypeDIToken<T>): T[];
+  override getMany<T>(id: string): T[];
+  override getMany<T>(id: Constructor<T> | TypeDIToken<T> | string): T[] {
+    if (typeof id === "function") {
+      return [this.resolveDependency(id)];
+    }
+
+    if (typeof id === "string") {
+      return TypeDIContainer.getMany(id);
+    }
+
+    return TypeDIContainer.getMany(id);
   }
 }
 
@@ -29,36 +68,23 @@ export class Container {
   private static validated = false;
   private static readonly lazyProviders = new Map<TokenIdentifier<unknown>, () => unknown>();
   private static readonly symbolTokens = new Map<symbol, TypeDIToken<unknown>>();
+  private static lastResolutionTrace: DependencyResolutionTrace | undefined;
 
   static get<T>(token: TokenIdentifier<T>): T {
-    if (Container.shouldResolveLazy(token)) {
-      return Container.resolveLazy(token);
-    }
+    const trace = Container.buildResolutionTrace(token);
 
-    if (!Container.isConstructorToken(token)) {
-      return Container.getRegisteredValue(token);
-    }
+    try {
+      const result = Container.resolveWithTrace(token, trace, []);
+      Container.lastResolutionTrace = Container.withTraceStatus(trace, "resolved");
+      return result;
+    } catch (error) {
+      Container.lastResolutionTrace = Container.normalizeFailureTrace(trace, error);
 
-    const constructorToken = token as Constructor<T>;
+      if (error instanceof Problem) {
+        throw error;
+      }
 
-    const metadata = Container.getComponentMetadata(constructorToken);
-
-    if (!metadata) {
-      return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
-    }
-
-    switch (metadata.scope) {
-      case "singleton":
-        return Container.getSingletonInstance(constructorToken);
-
-      case "transient":
-        return Container.createTransientInstance(constructorToken);
-
-      case "request":
-        return Container.getRequestScoped(constructorToken);
-
-      default:
-        return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
+      throw Container.toContainerResolutionProblem(token, error, Container.lastResolutionTrace);
     }
   }
 
@@ -76,6 +102,16 @@ export class Container {
 
       throw error;
     }
+  }
+
+  static getResolutionTrace<T>(token: TokenIdentifier<T>): DependencyResolutionTrace {
+    const trace = Container.buildResolutionTrace(token);
+    Container.lastResolutionTrace = trace;
+    return trace;
+  }
+
+  static getLastResolutionTrace(): DependencyResolutionTrace | undefined {
+    return Container.lastResolutionTrace;
   }
 
   static set<T>(token: TokenIdentifier<T>, instance: T): T {
@@ -104,6 +140,7 @@ export class Container {
     MetadataStorage.clear();
     Container.lazyProviders.clear();
     Container.symbolTokens.clear();
+    Container.lastResolutionTrace = undefined;
     Container.validated = false;
   }
 
@@ -222,6 +259,7 @@ export class Container {
     isInitialized: boolean;
     registeredServiceCount: number;
     scopes: string[];
+    lastResolutionTrace?: DependencyResolutionTrace;
   } {
     const components = Container.getRegisteredComponents();
     const scopes = new Set<string>();
@@ -235,6 +273,9 @@ export class Container {
       isInitialized: Container.validated,
       registeredServiceCount: components.length,
       scopes: Array.from(scopes),
+      ...(Container.lastResolutionTrace
+        ? { lastResolutionTrace: Container.lastResolutionTrace }
+        : {}),
     };
   }
 
@@ -335,32 +376,88 @@ export class Container {
 
   private static isOptionalResolutionError(error: unknown): error is Error {
     return (
-      error instanceof Error &&
-      (error.name === "ServiceNotFoundError" || error.name === "CannotInstantiateValueError")
+      (error instanceof ContainerResolutionProblem && error.reason === "missing-provider") ||
+      (error instanceof Error &&
+        (error.name === "ServiceNotFoundError" || error.name === "CannotInstantiateValueError"))
     );
   }
 
-  private static createTransientInstance<T>(token: Constructor<T>): T {
-    const dependencies = Container.resolveDependencies(token);
+  private static resolveWithTrace<T>(
+    token: TokenIdentifier<T>,
+    trace: DependencyResolutionTrace,
+    stack: TokenIdentifier<unknown>[],
+  ): T {
+    Container.assertNoRuntimeCircularDependency(token, stack);
+
+    if (Container.shouldResolveLazy(token)) {
+      return Container.resolveLazy(token);
+    }
+
+    if (!Container.isConstructorToken(token)) {
+      return Container.getRegisteredValue(token);
+    }
+
+    const constructorToken = token as Constructor<T>;
+    const metadata = Container.getComponentMetadata(constructorToken);
+
+    if (!metadata) {
+      return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
+    }
+
+    Container.assertScopeCompatibility(constructorToken, stack, trace);
+
+    const nextStack = [...stack, token as TokenIdentifier<unknown>];
+
+    switch (metadata.scope) {
+      case "singleton":
+        return Container.getSingletonInstance(constructorToken, trace, nextStack);
+
+      case "transient":
+        return Container.createTransientInstance(constructorToken, trace, nextStack);
+
+      case "request":
+        return Container.getRequestScoped(constructorToken, trace, nextStack);
+
+      default:
+        return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
+    }
+  }
+
+  private static createTransientInstance<T>(
+    token: Constructor<T>,
+    trace: DependencyResolutionTrace,
+    stack: TokenIdentifier<unknown>[],
+  ): T {
+    const dependencies = Container.resolveDependencies(token, trace, stack);
     return Reflect.construct(token, dependencies) as T;
   }
 
-  private static getSingletonInstance<T>(token: Constructor<T>): T {
+  private static getSingletonInstance<T>(
+    token: Constructor<T>,
+    trace: DependencyResolutionTrace,
+    stack: TokenIdentifier<unknown>[],
+  ): T {
     if (Container.hasRegisteredValue(token)) {
       return Container.getRegisteredValue(token);
     }
 
-    const instance = Container.createTransientInstance(token);
+    const instance = Container.createTransientInstance(token, trace, stack);
     Container.set(token, instance);
     return instance;
   }
 
-  private static resolveDependencies<T>(token: Constructor<T>): unknown[] {
+  private static resolveDependencies<T>(
+    token: Constructor<T>,
+    trace: DependencyResolutionTrace,
+    stack: TokenIdentifier<unknown>[],
+  ): unknown[] {
     const paramTypes =
       (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
-    const handlerContainer = Container.createHandlerContainer();
+    const handlerContainer = Container.createHandlerContainer(trace, stack);
 
     return paramTypes.map((paramType: Constructor, index: number) => {
+      Container.assertScopeCompatibility(paramType, stack, trace);
+
       const handler = TypeDIContainer.handlers.find(
         (candidate) =>
           (candidate.object === token || candidate.object === Object.getPrototypeOf(token)) &&
@@ -371,15 +468,368 @@ export class Container {
         return handler.value(handlerContainer);
       }
 
-      return Container.get(paramType);
+      return Container.resolveWithTrace(paramType, trace, stack);
     });
   }
 
-  private static createHandlerContainer(): TypeDIContainerInstance {
-    return new HandlerContainerInstance("__croco_handler__");
+  private static createHandlerContainer(
+    trace: DependencyResolutionTrace,
+    stack: TokenIdentifier<unknown>[],
+  ): TypeDIContainerInstance {
+    return new HandlerContainerInstance("__croco_handler__", (id) =>
+      Container.resolveHandlerDependency(id, trace, stack),
+    );
   }
 
-  private static getRequestScoped<T>(token: Constructor<T>): T {
+  private static resolveHandlerDependency<T>(
+    token: TokenIdentifier<T>,
+    trace: DependencyResolutionTrace,
+    stack: TokenIdentifier<unknown>[],
+  ): T {
+    Container.assertScopeCompatibility(token, stack, trace);
+    return Container.resolveWithTrace(token, trace, stack);
+  }
+
+  private static buildResolutionTrace<T>(
+    token: TokenIdentifier<T>,
+    status?: DependencyResolutionTraceStatus,
+  ): DependencyResolutionTrace {
+    const steps: DependencyResolutionStep[] = [];
+    Container.collectResolutionSteps(token, [], steps);
+    return {
+      root: Container.describeToken(token).label,
+      status: status ?? Container.computeTraceStatus(steps),
+      steps,
+    };
+  }
+
+  private static collectResolutionSteps<T>(
+    token: TokenIdentifier<T>,
+    path: TokenIdentifier<unknown>[],
+    steps: DependencyResolutionStep[],
+    edge?: Pick<DependencyResolutionStep, "dependencyOf" | "parameterIndex">,
+  ): void {
+    const nextPath = [...path, token as TokenIdentifier<unknown>];
+    const cycleStartIndex = path.findIndex((entry) => Container.isSameToken(entry, token));
+
+    if (cycleStartIndex >= 0) {
+      steps.push(
+        Container.createResolutionStep(token, path, {
+          ...edge,
+          status: "circular",
+          reason: `Circular dependency detected through ${nextPath
+            .slice(cycleStartIndex)
+            .map((entry) => Container.describeToken(entry).label)
+            .join(" -> ")}.`,
+        }),
+      );
+      return;
+    }
+
+    const scopeMismatch = Container.getScopeMismatch(token, path);
+    if (scopeMismatch) {
+      steps.push(
+        Container.createResolutionStep(token, path, {
+          ...edge,
+          status: "scope-mismatch",
+          reason: `Singleton-scoped component ${scopeMismatch.singleton} cannot depend on request-scoped component ${scopeMismatch.requestScoped}.`,
+        }),
+      );
+      return;
+    }
+
+    const step = Container.createResolutionStep(token, path, edge);
+    steps.push(step);
+
+    if (
+      step.status !== "selected" ||
+      !Container.isConstructorToken(token) ||
+      step.provider !== "component"
+    ) {
+      return;
+    }
+
+    const paramTypes =
+      (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
+    paramTypes.forEach((paramType, parameterIndex) => {
+      const injectedToken = getParameterInjectionToken(token, parameterIndex);
+      Container.collectResolutionSteps(injectedToken ?? paramType, nextPath, steps, {
+        dependencyOf: step.token,
+        parameterIndex,
+      });
+    });
+  }
+
+  private static createResolutionStep<T>(
+    token: TokenIdentifier<T>,
+    path: TokenIdentifier<unknown>[],
+    overrides: Partial<DependencyResolutionStep> = {},
+  ): DependencyResolutionStep {
+    const described = Container.describeToken(token);
+    const selection = Container.describeProviderSelection(token);
+    return {
+      token: described.label,
+      tokenKind: described.kind,
+      provider: overrides.provider ?? selection.provider,
+      status: overrides.status ?? selection.status,
+      reason: overrides.reason ?? selection.reason,
+      path: [...path, token as TokenIdentifier<unknown>].map(
+        (entry) => Container.describeToken(entry).label,
+      ),
+      ...(selection.scope ? { scope: selection.scope } : {}),
+      ...(overrides.dependencyOf ? { dependencyOf: overrides.dependencyOf } : {}),
+      ...(overrides.parameterIndex !== undefined
+        ? { parameterIndex: overrides.parameterIndex }
+        : {}),
+    };
+  }
+
+  private static describeProviderSelection<T>(token: TokenIdentifier<T>): {
+    provider: DependencyProviderKind;
+    status: DependencyResolutionStepStatus;
+    reason: string;
+    scope?: Scope;
+  } {
+    const metadata = Container.isConstructorToken(token)
+      ? Container.getComponentMetadata(token)
+      : undefined;
+
+    if (Container.shouldResolveLazy(token)) {
+      return {
+        provider: "lazy",
+        status: "selected",
+        reason: "Lazy provider registered with Container.registerLazy().",
+        ...(metadata?.scope ? { scope: metadata.scope } : {}),
+      };
+    }
+
+    if (metadata) {
+      if (metadata.scope === "singleton" && Container.hasRegisteredValue(token)) {
+        return {
+          provider: "registered-value",
+          status: "selected",
+          reason: "Singleton component instance is already registered.",
+          scope: metadata.scope,
+        };
+      }
+
+      return {
+        provider: "component",
+        status: "selected",
+        reason: `Component metadata selected ${metadata.scope} scope.`,
+        scope: metadata.scope,
+      };
+    }
+
+    if (Container.hasRegisteredValue(token)) {
+      return {
+        provider: "registered-value",
+        status: "selected",
+        reason: "Explicit provider value registered with Container.set().",
+      };
+    }
+
+    if (!Container.isConstructorToken(token)) {
+      return {
+        provider: "missing",
+        status: "missing",
+        reason: "No provider is registered for this token.",
+      };
+    }
+
+    return {
+      provider: "typedi",
+      status: "selected",
+      reason: "No Croco component metadata found; TypeDI fallback will be attempted.",
+    };
+  }
+
+  private static computeTraceStatus(
+    steps: readonly DependencyResolutionStep[],
+  ): DependencyResolutionTraceStatus {
+    if (steps.some((step) => step.status === "circular")) {
+      return "circular";
+    }
+    if (steps.some((step) => step.status === "scope-mismatch")) {
+      return "scope-mismatch";
+    }
+    if (steps.some((step) => step.status === "missing")) {
+      return "missing";
+    }
+    return "ready";
+  }
+
+  private static withTraceStatus(
+    trace: DependencyResolutionTrace,
+    status: DependencyResolutionTraceStatus,
+  ): DependencyResolutionTrace {
+    return { ...trace, status };
+  }
+
+  private static normalizeFailureTrace(
+    trace: DependencyResolutionTrace,
+    error: unknown,
+  ): DependencyResolutionTrace {
+    if (
+      error instanceof ContainerResolutionProblem ||
+      error instanceof ContainerScopeMismatchProblem
+    ) {
+      return error.trace;
+    }
+
+    if (error instanceof CircularDependencyProblem) {
+      return Container.withTraceStatus(trace, "circular");
+    }
+
+    if (Container.isTypeDIResolutionError(error)) {
+      return Container.withTraceStatus(trace, "missing");
+    }
+
+    if (trace.status !== "ready") {
+      return trace;
+    }
+
+    return Container.withTraceStatus(trace, "failed");
+  }
+
+  private static toContainerResolutionProblem<T>(
+    token: TokenIdentifier<T>,
+    error: unknown,
+    trace: DependencyResolutionTrace,
+  ): ContainerResolutionProblem {
+    const cause = error instanceof Error ? error : undefined;
+    const reason = Container.isTypeDIResolutionError(error)
+      ? "missing-provider"
+      : "construction-failed";
+    const label = Container.describeToken(token).label;
+    const causeDetail = cause?.message ? ` Cause: ${cause.message}` : "";
+    const path = Container.getTracePath(trace);
+    const detail =
+      reason === "missing-provider"
+        ? `DI resolution failed for ${label}: provider is not registered or cannot be constructed. Resolution path: ${path}.${causeDetail}`
+        : `DI resolution failed for ${label}: construction failed. Resolution path: ${path}.${causeDetail}`;
+
+    return new ContainerResolutionProblem(detail, trace, reason, cause);
+  }
+
+  private static assertNoRuntimeCircularDependency<T>(
+    token: TokenIdentifier<T>,
+    stack: TokenIdentifier<unknown>[],
+  ): void {
+    const cycleStartIndex = stack.findIndex((entry) => Container.isSameToken(entry, token));
+    if (cycleStartIndex < 0) {
+      return;
+    }
+
+    const cycle = stack
+      .slice(cycleStartIndex)
+      .concat(token as TokenIdentifier<unknown>)
+      .map((entry) => Container.describeToken(entry).label);
+    throw new CircularDependencyProblem(cycle);
+  }
+
+  private static assertScopeCompatibility<T>(
+    token: TokenIdentifier<T>,
+    stack: TokenIdentifier<unknown>[],
+    trace: DependencyResolutionTrace,
+  ): void {
+    const scopeMismatch = Container.getScopeMismatch(token, stack);
+    if (!scopeMismatch) {
+      return;
+    }
+
+    throw new ContainerScopeMismatchProblem(
+      scopeMismatch.singleton,
+      scopeMismatch.requestScoped,
+      scopeMismatch.path,
+      Container.withTraceStatus(trace, "scope-mismatch"),
+    );
+  }
+
+  private static getScopeMismatch<T>(
+    token: TokenIdentifier<T>,
+    path: TokenIdentifier<unknown>[],
+  ):
+    | {
+        singleton: string;
+        requestScoped: string;
+        path: string[];
+      }
+    | undefined {
+    if (!Container.isConstructorToken(token)) {
+      return undefined;
+    }
+
+    const metadata = Container.getComponentMetadata(token);
+    if (metadata?.scope !== "request") {
+      return undefined;
+    }
+
+    const singletonAncestor = path.find(
+      (entry): entry is Constructor =>
+        Container.isConstructorToken(entry) &&
+        Container.getComponentMetadata(entry)?.scope === "singleton",
+    );
+
+    if (!singletonAncestor) {
+      return undefined;
+    }
+
+    return {
+      singleton: Container.describeToken(singletonAncestor).label,
+      requestScoped: Container.describeToken(token).label,
+      path: [...path, token as TokenIdentifier<unknown>].map(
+        (entry) => Container.describeToken(entry).label,
+      ),
+    };
+  }
+
+  private static describeToken<T>(token: TokenIdentifier<T>): {
+    label: string;
+    kind: DependencyTokenKind;
+  } {
+    if (typeof token === "string") {
+      return { label: token, kind: "string" };
+    }
+
+    if (typeof token === "symbol") {
+      return {
+        label: Symbol.keyFor(token) ?? token.description ?? token.toString(),
+        kind: "symbol",
+      };
+    }
+
+    if (token instanceof TypeDIToken) {
+      return { label: `Token<${token.name ?? "UNSET_NAME"}>`, kind: "typedi-token" };
+    }
+
+    return { label: token.name || "<anonymous>", kind: "constructor" };
+  }
+
+  private static isSameToken<T>(
+    first: TokenIdentifier<unknown>,
+    second: TokenIdentifier<T>,
+  ): boolean {
+    return first === second;
+  }
+
+  private static isTypeDIResolutionError(error: unknown): error is Error {
+    return (
+      error instanceof Error &&
+      (error.name === "ServiceNotFoundError" || error.name === "CannotInstantiateValueError")
+    );
+  }
+
+  private static getTracePath(trace: DependencyResolutionTrace): string {
+    const lastStep = trace.steps[trace.steps.length - 1];
+    return lastStep ? lastStep.path.join(" -> ") : trace.root;
+  }
+
+  private static getRequestScoped<T>(
+    token: Constructor<T>,
+    trace: DependencyResolutionTrace,
+    stack: TokenIdentifier<unknown>[],
+  ): T {
     const cache = Context.getCache();
 
     if (!cache) {
@@ -394,7 +844,7 @@ export class Container {
       return cached as T;
     }
 
-    const instance = Container.createTransientInstance(token);
+    const instance = Container.createTransientInstance(token, trace, stack);
     cache.set(token, instance);
     return instance;
   }

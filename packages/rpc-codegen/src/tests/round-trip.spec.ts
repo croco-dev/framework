@@ -11,8 +11,8 @@ import { generateClientFiles } from "../libs/generate";
 const outDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen");
 const moduleDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen-modules");
 const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null, headers: null };
-const BODY_INPUT_SCHEMAS = {
-  body: {} as RouteIR["inputSchemas"]["body"],
+const BODY_INPUT_SCHEMAS: RouteIR["inputSchemas"] = {
+  body: z.object({ name: z.string() }) as unknown as RouteIR["inputSchemas"]["body"],
   path: null,
   query: null,
   headers: null,
@@ -89,8 +89,13 @@ describe("rpc-codegen round trip", () => {
 
     const files = generateClientFiles(routeIRs, outDir);
 
-    expect(files).toEqual([path.join(outDir, "order.ts"), path.join(outDir, "user.ts")]);
-    expect(fs.readdirSync(outDir).sort()).toEqual(["order.ts", "user.ts"]);
+    expect(files).toEqual([
+      path.join(outDir, "order.ts"),
+      path.join(outDir, "user.ts"),
+      path.join(outDir, "rpc.ts"),
+      path.join(outDir, "index.ts"),
+    ]);
+    expect(fs.readdirSync(outDir).sort()).toEqual(["index.ts", "order.ts", "rpc.ts", "user.ts"]);
 
     const userContent = fs.readFileSync(path.join(outDir, "user.ts"), "utf-8");
     const orderContent = fs.readFileSync(path.join(outDir, "order.ts"), "utf-8");
@@ -177,6 +182,7 @@ describe("rpc-codegen round trip", () => {
 
     const files = generateClientFiles(routeIRs, outDir);
     const healthContent = fs.readFileSync(files[0], "utf-8");
+    const rpcContent = fs.readFileSync(path.join(outDir, "rpc.ts"), "utf-8");
     const healthModule = await importGeneratedClient("health.ts", healthContent);
     const fetchMock = vi.fn(async (url: string) => {
       if (url === "/health") {
@@ -192,10 +198,10 @@ describe("rpc-codegen round trip", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(healthContent).toContain(
-      "function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
+    expect(rpcContent).toContain(
+      "export async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
     );
-    expect(healthContent).toContain(
+    expect(rpcContent).toContain(
       "async function rejectErrorResponse(response: Response): Promise<never>",
     );
     await expect(healthModule.healthClient.health()).resolves.toBeUndefined();
@@ -450,7 +456,15 @@ describe("rpc-codegen round trip", () => {
 });
 
 async function importGeneratedClient(fileName: string, source: string) {
-  const output = ts.transpileModule(source, {
+  const rpcSource = fs.readFileSync(path.join(outDir, "rpc.ts"), "utf-8");
+  const rpcOutput = ts.transpileModule(rpcSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.ES2022,
+      target: ts.ScriptTarget.ES2022,
+    },
+    reportDiagnostics: true,
+  });
+  const output = ts.transpileModule(source.replace("from './rpc';", "from './rpc.mjs';"), {
     compilerOptions: {
       module: ts.ModuleKind.ES2022,
       target: ts.ScriptTarget.ES2022,
@@ -458,9 +472,11 @@ async function importGeneratedClient(fileName: string, source: string) {
     reportDiagnostics: true,
   });
 
+  expect(rpcOutput.diagnostics).toEqual([]);
   expect(output.diagnostics).toEqual([]);
 
   const modulePath = path.join(moduleDir, fileName.replace(/\.ts$/, ".mjs"));
+  fs.writeFileSync(path.join(moduleDir, "rpc.mjs"), rpcOutput.outputText);
   fs.writeFileSync(modulePath, output.outputText);
 
   return import(pathToFileURL(modulePath).href) as Promise<{

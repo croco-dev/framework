@@ -83,6 +83,8 @@ export default defineConfig({
             { label: "Getting Started", slug: "guides/getting-started" },
             { label: "Architecture", slug: "guides/architecture" },
             { label: "Runtime Contract", slug: "guides/runtime-contract" },
+            { label: "Failure Semantics", slug: "guides/failure-semantics" },
+            { label: "Deployment Recipes", slug: "guides/deployment-recipes" },
             { label: "Events Core", slug: "guides/events-core" },
             { label: "Retry Core", slug: "guides/retry-core" },
           ],

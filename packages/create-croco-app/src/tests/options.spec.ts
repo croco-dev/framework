@@ -24,7 +24,9 @@ describe("noninteractive CLI option validation", () => {
     const help = createProgram().helpInformation();
 
     expect(help).toContain("Create a pnpm-based Croco application");
-    expect(help).toContain("blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|saas|ai-saas");
+    expect(help).toContain(
+      "blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|saas|ai-saas",
+    );
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
     expect(help).not.toContain("--package-manager");
@@ -293,6 +295,28 @@ describe("noninteractive CLI option validation", () => {
     });
   });
 
+  it("normalizes safe noninteractive defaults for production app projects", () => {
+    const cliOptions = parseCliOptions("my-production-app", {
+      preset: "production-app",
+      scope: "@test",
+      install: false,
+      git: false,
+      agentRules: false,
+    });
+
+    expect(normalizeNonInteractiveOptions(cliOptions)).toMatchObject({
+      projectName: "my-production-app",
+      scope: "@test",
+      preset: "production-app",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+  });
+
   it("rejects configurable API flags for SaaS projects", () => {
     const cliOptions = parseCliOptions("my-saas", {
       preset: "saas",
@@ -325,6 +349,30 @@ describe("noninteractive CLI option validation", () => {
     (rawOptions, expectedMessage) => {
       const cliOptions = parseCliOptions(undefined, {
         preset: "saas",
+        ...rawOptions,
+      });
+
+      expect(() => validateCliOptions(cliOptions)).toThrow(expectedMessage);
+    },
+  );
+
+  it.each([
+    [{ api: "trpc" }, "--api is not supported with the production-app preset"],
+    [{ webApps: "web" }, "--web-apps is not supported with the production-app preset"],
+    [{ db: "postgres" }, "--db is not supported with the production-app preset"],
+    [
+      { backendDeploy: "lambda" },
+      "--backend-deploy is not supported with the production-app preset",
+    ],
+    [
+      { frontendDeploy: "vercel" },
+      "--frontend-deploy is not supported with the production-app preset",
+    ],
+  ] as const)(
+    "rejects configurable production app CLI options before prompting: %o",
+    (rawOptions, expectedMessage) => {
+      const cliOptions = parseCliOptions(undefined, {
+        preset: "production-app",
         ...rawOptions,
       });
 

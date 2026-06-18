@@ -1,5 +1,10 @@
 import { DomainEvent, type EventHandler, type EventSubscription } from "@croco/events-core";
-import { Container } from "@croco/framework-context";
+import {
+  Container,
+  Context,
+  DEV_INSPECTOR_TOKEN,
+  RuntimeInspector,
+} from "@croco/framework-context";
 import * as telemetryApi from "@croco/telemetry-api";
 import * as otelApi from "@opentelemetry/api";
 import { SpanStatusCode } from "@opentelemetry/api";
@@ -98,6 +103,49 @@ describe("InMemoryEventBus", () => {
 
       expect(testHandler.handledEvents).toHaveLength(1);
       expect(testHandler.handledEvents[0].message).toBe("hello");
+    });
+
+    it("records publish and handler lifecycle events for the active runtime inspector request", async () => {
+      const inspector = new RuntimeInspector();
+      inspector.startRequest({ requestId: "event-req-1" });
+      Container.set(DEV_INSPECTOR_TOKEN, inspector);
+      Container.set(TestHandler, testHandler);
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
+
+      await Context.run({ requestId: "event-req-1" }, async () => {
+        await eventBus.publish(new TestEvent("payload-not-recorded"));
+      });
+      inspector.finishRequest({ requestId: "event-req-1", status: 200, outcome: "succeeded" });
+
+      const timeline = inspector.snapshot().requests[0].timeline;
+
+      expect(timeline).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "event.publish",
+            outcome: "started",
+            name: "TestEvent",
+            details: expect.objectContaining({
+              subscriberCount: 1,
+            }),
+          }),
+          expect.objectContaining({
+            kind: "event.handler",
+            outcome: "succeeded",
+            name: "TestHandler",
+            details: {
+              eventName: "TestEvent",
+              error: undefined,
+            },
+          }),
+          expect.objectContaining({
+            kind: "event.publish",
+            outcome: "succeeded",
+            name: "TestEvent",
+          }),
+        ]),
+      );
+      expect(JSON.stringify(timeline)).not.toContain("payload-not-recorded");
     });
 
     it("should publish to multiple handlers", async () => {

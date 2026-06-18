@@ -7,7 +7,7 @@ title: "LlmCostBudget"
 
 > **LlmCostBudget** = `object`
 
-비용 예산, 모델 단가, 사용량 기록 타입입니다.
+테넌트별 LLM 비용 제한입니다.
 
 ## Properties
 
@@ -15,14 +15,20 @@ title: "LlmCostBudget"
 
 > **dailyLimit**: `number`
 
+하루 동안 허용되는 최대 비용입니다.
+
 ***
 
 ### monthlyLimit?
 
 > `optional` **monthlyLimit**: `number`
 
+한 달 동안 허용되는 최대 비용입니다.
+
 ***
 
 ### tenantId
 
 > **tenantId**: `string`
+
+제한을 적용할 테넌트 식별자입니다.
