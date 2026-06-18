@@ -3,7 +3,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { extractRouteIR, type RouteIR } from "@croco/protocols-core";
-import { Project, type SourceFile, ts } from "ts-morph";
+import { Project, type SourceFile, ts as tsMorph } from "ts-morph";
+import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateClientFiles } from "../libs/generate";
 
@@ -46,7 +47,11 @@ describe("rpc-codegen e2e", () => {
     const files = generateClientFiles(routes, outDir);
 
     expect(routes).toHaveLength(3);
-    expect(files).toEqual([path.join(outDir, "test.ts")]);
+    expect(files).toEqual([
+      path.join(outDir, "test.ts"),
+      path.join(outDir, "rpc.ts"),
+      path.join(outDir, "index.ts"),
+    ]);
 
     const getUser = findRoute(routes, "getUser");
     expect(getUser.inputSchemas.body).toBeNull();
@@ -67,6 +72,10 @@ describe("rpc-codegen e2e", () => {
     expect(health.outputSchema).toBeNull();
 
     const content = fs.readFileSync(files[0], "utf-8");
+    const rpcContent = fs.readFileSync(path.join(outDir, "rpc.ts"), "utf-8");
+    expect(content).toContain(
+      "import { handleJsonResponse, readOptionalJsonResponse } from './rpc';",
+    );
     expect(content).toContain(
       "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; headers: { 'x-request-id': string; }; };",
     );
@@ -86,6 +95,35 @@ describe("rpc-codegen e2e", () => {
       "health: (): Promise<unknown | undefined> => fetch('/health', { method: 'GET' }).then((response) => readOptionalJsonResponse(response)),",
     );
     expect(content).not.toContain("zod");
+    assertGeneratedClientTypechecks(
+      `${content}
+async function exerciseGeneratedClient() {
+  const created = await testClient.createUser({ name: 'Ada Lovelace' });
+  const createdId: string = created.id;
+  const createdName: string = created.name;
+
+  await testClient.getUser({
+    path: { id: createdId },
+    query: { include: undefined },
+    headers: { 'x-request-id': 'request-1' },
+  });
+
+  // @ts-expect-error generated path params expose id, not userId.
+  void testClient.getUser({ path: { userId: createdId }, query: { include: undefined }, headers: { 'x-request-id': 'request-1' } });
+
+  // @ts-expect-error generated request bodies must match the controller body schema.
+  void testClient.createUser({ name: 123 });
+
+  // @ts-expect-error generated response fields keep their controller response schema types.
+  const badCreatedId: number = created.id;
+
+  void createdName;
+  void badCreatedId;
+}
+void exerciseGeneratedClient;
+`,
+      rpcContent,
+    );
   }, 60_000);
 
   it("rejects extracted @All controller routes before generating clients", async () => {
@@ -115,8 +153,8 @@ describe("rpc-codegen e2e", () => {
 function emitController(sourcePath: string): SourceFile {
   const project = new Project({
     compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
+      module: tsMorph.ModuleKind.CommonJS,
+      target: tsMorph.ScriptTarget.ES2020,
       experimentalDecorators: true,
       emitDecoratorMetadata: true,
       noEmitOnError: false,
@@ -172,6 +210,52 @@ function findRoute(routes: RouteIR[], methodName: string): RouteIR {
   }
 
   return route;
+}
+
+function assertGeneratedClientTypechecks(source: string, rpcSource: string): void {
+  const fileName = "generated-client.ts";
+  const supportFileName = "rpc.ts";
+  const sources = new Map([
+    [fileName, source],
+    [supportFileName, rpcSource],
+  ]);
+  const compilerOptions: ts.CompilerOptions = {
+    lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    noEmit: true,
+    skipLibCheck: true,
+    strict: true,
+    target: ts.ScriptTarget.ES2022,
+    types: [],
+  };
+  const host = ts.createCompilerHost(compilerOptions);
+
+  host.getSourceFile = (name, languageVersion) => {
+    const text = sources.get(name) ?? sources.get(path.basename(name));
+
+    if (text !== undefined) {
+      return ts.createSourceFile(name, text, languageVersion, true);
+    }
+
+    const fileText = ts.sys.readFile(name);
+
+    return fileText === undefined
+      ? undefined
+      : ts.createSourceFile(name, fileText, languageVersion, true);
+  };
+  host.fileExists = (name) =>
+    sources.has(name) || sources.has(path.basename(name)) || ts.sys.fileExists(name);
+  host.readFile = (name) =>
+    sources.get(name) ?? sources.get(path.basename(name)) ?? ts.sys.readFile(name);
+
+  const program = ts.createProgram([fileName], compilerOptions, host);
+  const diagnostics = ts.getPreEmitDiagnostics(program);
+  const messages = diagnostics.map((diagnostic) =>
+    ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+  );
+
+  expect(messages).toEqual([]);
 }
 
 function linkNodeModules(targetDir: string): void {
