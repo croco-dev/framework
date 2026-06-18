@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import { ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,9 +11,16 @@ import { generateClientFiles } from "../libs/generate";
 
 const outDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen");
 const moduleDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen-modules");
-const EMPTY_INPUT_SCHEMAS = { body: null, path: null, query: null, headers: null };
+const EMPTY_INPUT_SCHEMAS = {
+  body: null,
+  path: null,
+  query: null,
+  headers: null,
+};
 const BODY_INPUT_SCHEMAS: RouteIR["inputSchemas"] = {
-  body: z.object({ name: z.string() }) as unknown as RouteIR["inputSchemas"]["body"],
+  body: z.object({
+    name: z.string(),
+  }) as unknown as RouteIR["inputSchemas"]["body"],
   path: null,
   query: null,
   headers: null,
@@ -33,7 +41,10 @@ const HEADER_INPUT_SCHEMAS = {
   body: null,
   path: null,
   query: null,
-  headers: z.object({ authorization: z.string(), "x-request-id": z.string().optional() }) as any,
+  headers: z.object({
+    authorization: z.string(),
+    "x-request-id": z.string().optional(),
+  }) as any,
 };
 
 describe("rpc-codegen round trip", () => {
@@ -122,7 +133,10 @@ describe("rpc-codegen round trip", () => {
       }
 
       if (url === "/users" && options.method === "POST") {
-        return jsonResponse({ id: "2", name: JSON.parse(options.body as string).name });
+        return jsonResponse({
+          id: "2",
+          name: JSON.parse(options.body as string).name,
+        });
       }
 
       return jsonResponse({ message: "not found" }, 404);
@@ -375,6 +389,125 @@ describe("rpc-codegen round trip", () => {
     expect(problemError.response.status).toBe(404);
   });
 
+  it("resolves declared Problem responses through the typed result branch", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-problem-result.ts", userContent);
+    const problem = {
+      type: "https://errors.example.com/not-found",
+      title: "Not Found",
+      status: 404,
+      code: "USER_NOT_FOUND",
+      detail: "User missing",
+    };
+    const fetchMock = vi.fn(async () => jsonResponse(problem, 404));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await userModule.userClient.getUserResult({
+      path: { id: "missing" },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "problem",
+      code: "USER_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      problem,
+      declaration: {
+        code: "USER_NOT_FOUND",
+        category: "NotFound",
+        status: 404,
+      },
+    });
+  });
+
+  it("treats undeclared Problem Details as external result failures", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient(
+      "user-undeclared-problem-result.ts",
+      userContent,
+    );
+    const problem = {
+      type: "https://errors.example.com/forbidden",
+      title: "Forbidden",
+      status: 403,
+      code: "USER_FORBIDDEN",
+      detail: "User forbidden",
+    };
+    const fetchMock = vi.fn(async () => jsonResponse(problem, 403));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await userModule.userClient.getUserResult({
+      path: { id: "forbidden" },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      body: problem,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.kind === "external") {
+      expect(result.error.name).toBe("RpcClientProblemError");
+    }
+  });
+
   it("rejects non-JSON error responses without parsing them as success", async () => {
     const routeIRs: RouteIR[] = [
       {
@@ -493,6 +626,39 @@ async function importGeneratedClient(fileName: string, source: string) {
           readonly deletedAt: string | null;
         };
       }) => Promise<unknown>;
+      readonly getUserResult: (input: {
+        readonly path: { readonly id: string };
+        readonly query?: {
+          readonly includePosts: boolean;
+          readonly page: number;
+          readonly search: string | undefined;
+          readonly tags: string[];
+          readonly deletedAt: string | null;
+        };
+      }) => Promise<
+        | {
+            readonly ok: true;
+            readonly data: unknown;
+            readonly response: Response;
+          }
+        | {
+            readonly ok: false;
+            readonly kind: "problem";
+            readonly code: string;
+            readonly category: string;
+            readonly status: number;
+            readonly problem: unknown;
+            readonly declaration: unknown;
+            readonly response: Response;
+          }
+        | {
+            readonly ok: false;
+            readonly kind: "external";
+            readonly error: { readonly name: string };
+            readonly response: Response;
+            readonly body?: unknown;
+          }
+      >;
       readonly getCurrentUser: (input: {
         readonly headers: {
           readonly authorization: string;

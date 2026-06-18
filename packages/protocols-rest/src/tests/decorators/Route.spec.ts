@@ -1,6 +1,7 @@
 import "reflect-metadata";
+import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
-import { HttpMethod, REST_ROUTES_KEY } from "../../libs/constants";
+import { HttpMethod, PROBLEM_RESPONSES_KEY, REST_ROUTES_KEY } from "../../libs/constants";
 import { Controller } from "../../libs/decorators/Controller";
 import {
   All,
@@ -12,7 +13,8 @@ import {
   Post,
   Put,
 } from "../../libs/decorators/HttpMethod";
-import type { RouteMetadata } from "../../libs/types";
+import { ProblemResponse, ProblemResponses } from "../../libs/decorators/ProblemResponse";
+import type { ProblemResponseMetadata, RouteMetadata } from "../../libs/types";
 
 describe("Route decorators", () => {
   describe("@Get decorator", () => {
@@ -77,6 +79,71 @@ describe("Route decorators", () => {
       const routes = Reflect.getMetadata(REST_ROUTES_KEY, AuthController) as RouteMetadata[];
       expect(routes[0].method).toBe(HttpMethod.POST);
       expect(routes[0].path).toBe("/login");
+    });
+  });
+
+  describe("@ProblemResponse decorators", () => {
+    it("should register declared Problem responses with category-derived status", () => {
+      @Controller("/users")
+      class UserController {
+        @Get("/:id")
+        @ProblemResponses(
+          { code: "USER_NOT_FOUND", category: ProblemCategory.NotFound },
+          {
+            code: "USER_FORBIDDEN",
+            category: ProblemCategory.Forbidden,
+            description: "User cannot be read by the current actor.",
+          },
+        )
+        getUser() {}
+      }
+
+      const responses = Reflect.getMetadata(
+        PROBLEM_RESPONSES_KEY,
+        UserController,
+        "getUser",
+      ) as ProblemResponseMetadata[];
+
+      expect(responses).toEqual([
+        {
+          code: "USER_NOT_FOUND",
+          category: ProblemCategory.NotFound,
+          status: 404,
+        },
+        {
+          code: "USER_FORBIDDEN",
+          category: ProblemCategory.Forbidden,
+          description: "User cannot be read by the current actor.",
+          status: 403,
+        },
+      ]);
+    });
+
+    it("should append repeated ProblemResponse decorators", () => {
+      @Controller("/users")
+      class UserController {
+        @Get("/:id")
+        @ProblemResponse({
+          code: "USER_FORBIDDEN",
+          category: ProblemCategory.Forbidden,
+        })
+        @ProblemResponse({
+          code: "USER_NOT_FOUND",
+          category: ProblemCategory.NotFound,
+        })
+        getUser() {}
+      }
+
+      const responses = Reflect.getMetadata(
+        PROBLEM_RESPONSES_KEY,
+        UserController,
+        "getUser",
+      ) as ProblemResponseMetadata[];
+
+      expect(responses.map((response) => response.code)).toEqual([
+        "USER_NOT_FOUND",
+        "USER_FORBIDDEN",
+      ]);
     });
   });
 

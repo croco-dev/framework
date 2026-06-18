@@ -30,6 +30,11 @@ export type ContractGraphDiff = {
   readonly nonBreakingChanges: readonly ContractGraphDiffChange[];
 };
 
+type ContractRequestSchemaLocation = Extract<
+  ContractSchemaLocation,
+  "body" | "path" | "query" | "headers"
+>;
+
 export function diffContractGraphSnapshots(
   baseline: ContractGraphSnapshot,
   current: ContractGraphSnapshot,
@@ -154,6 +159,7 @@ function diffExistingRoute(
   }
 
   changes.push(...diffRequestSchemas(baseline, current));
+  changes.push(...diffProblemResponses(baseline, current));
 
   if (!isResponseSchemaCompatible(baseline.response, current.response)) {
     changes.push({
@@ -164,6 +170,65 @@ function diffExistingRoute(
       location: "response",
       message: `Route '${baseline.routeId}' response schema is not backwards compatible.`,
     });
+  }
+
+  return changes;
+}
+
+function diffProblemResponses(
+  baseline: ContractGraphSnapshotRoute,
+  current: ContractGraphSnapshotRoute,
+): ContractGraphDiffChange[] {
+  const changes: ContractGraphDiffChange[] = [];
+  const baselineProblemList = baseline.problems ?? [];
+  const currentProblemList = current.problems ?? [];
+  const baselineProblems = new Map(baselineProblemList.map((problem) => [problem.code, problem]));
+  const currentProblems = new Map(currentProblemList.map((problem) => [problem.code, problem]));
+
+  for (const currentProblem of currentProblemList) {
+    const baselineProblem = baselineProblems.get(currentProblem.code);
+
+    if (!baselineProblem) {
+      changes.push({
+        code: "contract-problem-response-added",
+        severity: "breaking",
+        routeId: baseline.routeId,
+        operationId: baseline.operationId,
+        location: "problem",
+        fieldPath: currentProblem.code,
+        message: `Route '${baseline.routeId}' added Problem code '${currentProblem.code}', widening the generated failure union.`,
+      });
+      continue;
+    }
+
+    if (
+      baselineProblem.category !== currentProblem.category ||
+      baselineProblem.status !== currentProblem.status
+    ) {
+      changes.push({
+        code: "contract-problem-response-classification-changed",
+        severity: "breaking",
+        routeId: baseline.routeId,
+        operationId: baseline.operationId,
+        location: "problem",
+        fieldPath: currentProblem.code,
+        message: `Route '${baseline.routeId}' changed Problem code '${currentProblem.code}' from ${baselineProblem.category}/${baselineProblem.status} to ${currentProblem.category}/${currentProblem.status}.`,
+      });
+    }
+  }
+
+  for (const baselineProblem of baselineProblemList) {
+    if (!currentProblems.has(baselineProblem.code)) {
+      changes.push({
+        code: "contract-problem-response-removed",
+        severity: "breaking",
+        routeId: baseline.routeId,
+        operationId: baseline.operationId,
+        location: "problem",
+        fieldPath: baselineProblem.code,
+        message: `Route '${baseline.routeId}' removed Problem code '${baselineProblem.code}', narrowing the generated failure union.`,
+      });
+    }
   }
 
   return changes;
@@ -195,7 +260,7 @@ function diffRequestSchemas(
 }
 
 function diffRequestSchema(
-  location: Exclude<ContractSchemaLocation, "response">,
+  location: ContractRequestSchemaLocation,
   baseline: ContractGraphSnapshotRoute,
   current: ContractGraphSnapshotRoute,
 ): ContractGraphDiffChange[] {

@@ -1,12 +1,15 @@
 import "reflect-metadata";
+import { ProblemCategoryMapper } from "@croco/problems-core";
 import type { z } from "zod";
-import type { ParamIR, RouteInputSchemas, RouteIR } from "./RouteIR";
+import type { ParamIR, ProblemResponseIR, RouteInputSchemas, RouteIR } from "./RouteIR";
 import { buildHeaderSchema, buildPathSchema, buildQuerySchema } from "./schemaBuilder";
 import {
   type Constructor,
   type ControllerMetadata,
   type ParamMetadata,
   ParamType,
+  PROBLEM_RESPONSES_KEY,
+  type ProblemResponseMetadata,
   REST_CONTROLLER_KEY,
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
@@ -37,6 +40,9 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       (Reflect.getMetadata(RESPONSE_SCHEMA_KEY, controllerCtor, routeMeta.methodName) as
         | z.ZodType
         | undefined) ?? null;
+    const problemResponses = extractProblemResponses(
+      Reflect.getMetadata(PROBLEM_RESPONSES_KEY, controllerCtor, routeMeta.methodName),
+    );
 
     return {
       controllerName: controllerCtor.name,
@@ -47,9 +53,43 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       inputSchema: inputSchemas.body,
       inputSchemas,
       outputSchema,
+      problemResponses,
       domain: null,
     };
   });
+}
+
+function extractProblemResponses(value: unknown): ProblemResponseIR[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isProblemResponseMetadata)
+    .map((response) => ({
+      code: response.code,
+      category: response.category,
+      status: ProblemCategoryMapper.toHttpStatus(response.category),
+      ...(response.description ? { description: response.description } : {}),
+      ...(response.type ? { type: response.type } : {}),
+    }))
+    .sort(compareProblemResponses);
+}
+
+function isProblemResponseMetadata(value: unknown): value is ProblemResponseMetadata {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "code" in value &&
+    "category" in value &&
+    typeof value.code === "string" &&
+    value.code.length > 0 &&
+    typeof value.category === "string"
+  );
+}
+
+function compareProblemResponses(left: ProblemResponseIR, right: ProblemResponseIR): number {
+  return left.code.localeCompare(right.code) || left.status - right.status;
 }
 
 function extractParams(paramsMeta: ParamMetadata[]): ParamIR[] {

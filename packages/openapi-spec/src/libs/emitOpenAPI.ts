@@ -8,9 +8,9 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   assertContractGraphHasNoErrors,
   buildContractGraph,
-  getContractPathParams,
   type ContractGraph,
   type ContractGraphRoute,
+  getContractPathParams,
   type ParamIR,
 } from "@croco/protocols-core";
 import { type ZodType, z } from "zod";
@@ -27,6 +27,22 @@ type ControllerConstructor = new (...args: unknown[]) => unknown;
 type OpenAPIParamLocation = "path" | "query" | "header";
 type OpenAPIReference = { $ref: string };
 type RouteResponses = RouteConfig["responses"];
+type DeclaredProblemOpenAPIResponse = {
+  readonly description: string;
+  readonly content: {
+    readonly "application/problem+json": {
+      readonly schema: OpenAPIReference;
+    };
+  };
+  readonly "x-croco-problems": readonly DeclaredProblemOpenAPI[];
+};
+type DeclaredProblemOpenAPI = {
+  readonly code: string;
+  readonly category: string;
+  readonly status: number;
+  readonly description?: string;
+  readonly type?: string;
+};
 
 export type ProblemResponseConfig = {
   readonly status: number | `${number}` | "default";
@@ -90,7 +106,7 @@ export function emitOpenAPIFromContractGraph(
   registerSecuritySchemes(registry, options.securitySchemes);
 
   routes.forEach((route) => {
-    registry.registerPath(toRouteConfig(route, defaultResponses));
+    registry.registerPath(toRouteConfig(route, defaultResponses, problemDetailsRef));
   });
 
   const generator = new OpenApiGeneratorV31(registry.definitions);
@@ -190,14 +206,18 @@ function toProblemResponseConfig(
   );
 }
 
-function toRouteConfig(route: ContractGraphRoute, defaultResponses: RouteResponses): RouteConfig {
+function toRouteConfig(
+  route: ContractGraphRoute,
+  defaultResponses: RouteResponses,
+  problemDetailsRef: OpenAPIReference,
+): RouteConfig {
   return {
     method: toHttpMethod(route),
     path: toOpenAPIPath(route.path),
     operationId: route.operationId,
     summary: route.routeId,
     tags: [route.domain ?? route.controllerName],
-    responses: toResponseConfig(route, defaultResponses),
+    responses: toResponseConfig(route, defaultResponses, problemDetailsRef),
     ...(route.params.length > 0 || route.inputSchema ? { request: toRequestConfig(route) } : {}),
   };
 }
@@ -205,11 +225,13 @@ function toRouteConfig(route: ContractGraphRoute, defaultResponses: RouteRespons
 function toResponseConfig(
   route: ContractGraphRoute,
   defaultResponses: RouteResponses,
+  problemDetailsRef: OpenAPIReference,
 ): RouteResponses {
   const outputSchema = unwrapZodEffects(route.outputSchema);
 
   return {
     ...defaultResponses,
+    ...toDeclaredProblemResponseConfig(route, problemDetailsRef),
     200: {
       description: "Successful response",
       ...(outputSchema
@@ -223,6 +245,60 @@ function toResponseConfig(
         : {}),
     },
   };
+}
+
+function toDeclaredProblemResponseConfig(
+  route: ContractGraphRoute,
+  problemDetailsRef: OpenAPIReference,
+): RouteResponses {
+  const responsesByStatus = new Map<number, string[]>();
+  const problemsByStatus = new Map<number, DeclaredProblemOpenAPI[]>();
+
+  for (const problem of route.problemResponses ?? []) {
+    const labels = responsesByStatus.get(problem.status) ?? [];
+    const problems = problemsByStatus.get(problem.status) ?? [];
+    const description = problem.description
+      ? `${problem.code} (${problem.category}): ${problem.description}`
+      : `${problem.code} (${problem.category})`;
+    const declaration = {
+      code: problem.code,
+      category: problem.category,
+      status: problem.status,
+      ...(problem.description ? { description: problem.description } : {}),
+      ...(problem.type ? { type: problem.type } : {}),
+    };
+
+    responsesByStatus.set(problem.status, [...labels, description].sort());
+    problemsByStatus.set(problem.status, [...problems, declaration].sort(compareDeclaredProblems));
+  }
+
+  return Object.fromEntries(
+    [...responsesByStatus.entries()].map(
+      ([status, descriptions]): [number, DeclaredProblemOpenAPIResponse] => {
+        const problems = problemsByStatus.get(status) ?? [];
+
+        return [
+          status,
+          {
+            description: `Declared Problems: ${descriptions.join(", ")}`,
+            content: {
+              "application/problem+json": {
+                schema: problemDetailsRef,
+              },
+            },
+            "x-croco-problems": problems,
+          },
+        ];
+      },
+    ),
+  );
+}
+
+function compareDeclaredProblems(
+  left: DeclaredProblemOpenAPI,
+  right: DeclaredProblemOpenAPI,
+): number {
+  return left.code.localeCompare(right.code) || left.status - right.status;
 }
 
 function toTags(routes: ContractGraphRoute[]): { name: string; description: string }[] {

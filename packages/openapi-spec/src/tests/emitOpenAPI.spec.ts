@@ -3,20 +3,22 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Container } from "typedi";
+import { ProblemCategory } from "@croco/problems-core";
+import { buildContractGraph } from "@croco/protocols-core";
 import {
+  All,
   Body,
   Controller,
   Get,
   Header,
   Param,
   Post,
+  ProblemResponse,
   Query,
   RequestValidationProblem,
   ResponseSchema,
-  All,
 } from "@croco/protocols-rest";
-import { buildContractGraph } from "@croco/protocols-core";
+import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
@@ -160,7 +162,10 @@ describe("emitOpenAPI", () => {
   });
 
   it("should emit a POST operation with a JSON request body", () => {
-    const createOrderSchema = z.object({ productId: z.string(), quantity: z.number().int() });
+    const createOrderSchema = z.object({
+      productId: z.string(),
+      quantity: z.number().int(),
+    });
 
     @Controller("/orders")
     class OrdersController {
@@ -327,6 +332,76 @@ describe("emitOpenAPI", () => {
     expect(responses?.[200]).toEqual({ description: "Successful response" });
   });
 
+  it("should document route-declared Problem codes under derived HTTP statuses", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({
+        code: "USER_BLOCKED",
+        category: ProblemCategory.BusinessRuleViolation,
+        description: "The user cannot be read in the current workflow state.",
+      })
+      @ProblemResponse({
+        code: "USER_INVALID",
+        category: ProblemCategory.ValidationError,
+        type: "https://errors.example.com/user-invalid",
+      })
+      @ProblemResponse({
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "The user id does not exist.",
+      })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const spec = emitOpenAPI([UsersController]);
+    const responses = spec.paths?.["/users/{id}"]?.get?.responses;
+
+    expect(responses?.[404]).toMatchObject({
+      description: "Declared Problems: USER_NOT_FOUND (NotFound): The user id does not exist.",
+      content: {
+        "application/problem+json": {
+          schema: {
+            $ref: "#/components/schemas/ProblemDetails",
+          },
+        },
+      },
+      "x-croco-problems": [
+        {
+          code: "USER_NOT_FOUND",
+          category: "NotFound",
+          status: 404,
+          description: "The user id does not exist.",
+        },
+      ],
+    });
+    expect(responses?.[422]).toMatchObject({
+      description:
+        "Declared Problems: USER_BLOCKED (BusinessRuleViolation): The user cannot be read in the current workflow state., USER_INVALID (ValidationError)",
+      content: {
+        "application/problem+json": {
+          schema: {
+            $ref: "#/components/schemas/ProblemDetails",
+          },
+        },
+      },
+      "x-croco-problems": [
+        {
+          code: "USER_BLOCKED",
+          category: "BusinessRuleViolation",
+          status: 422,
+          description: "The user cannot be read in the current workflow state.",
+        },
+        {
+          code: "USER_INVALID",
+          category: "ValidationError",
+          status: 422,
+          type: "https://errors.example.com/user-invalid",
+        },
+      ],
+    });
+  });
+
   it("should preserve generic success responses without a response schema", () => {
     @Controller("/health")
     class HealthController {
@@ -466,34 +541,50 @@ describe("emitOpenAPI", () => {
     });
   });
 
-  it("should emit multiple routes and pass Redocly lint", { timeout: 120000 }, () => {
-    const createItemSchema = z.object({ name: z.string().min(1) });
+  it(
+    "should emit multiple routes and pass Redocly lint",
+    {
+      timeout: 120000,
+    },
+    () => {
+      const createItemSchema = z.object({ name: z.string().min(1) });
 
-    @Controller("/items")
-    class ItemsController {
-      @Get("/:id")
-      getItem(
-        @Param("id") _id: string,
-        @Query("filter") _filter: string,
-        @Header("x-request-id") _requestId: string,
-      ): void {}
+      @Controller("/items")
+      class ItemsController {
+        @Get("/:id")
+        getItem(
+          @Param("id") _id: string,
+          @Query("filter") _filter: string,
+          @Header("x-request-id") _requestId: string,
+        ): void {}
 
-      @Post("/")
-      createItem(@Body(createItemSchema) _body: z.infer<typeof createItemSchema>): void {}
-    }
+        @Post("/")
+        createItem(@Body(createItemSchema) _body: z.infer<typeof createItemSchema>): void {}
+      }
 
-    const spec = emitOpenAPI([ItemsController]);
-    const getItem = spec.paths?.["/items/{id}"]?.get;
-    const createItem = spec.paths?.["/items"]?.post;
+      const spec = emitOpenAPI([ItemsController]);
+      const getItem = spec.paths?.["/items/{id}"]?.get;
+      const createItem = spec.paths?.["/items"]?.post;
 
-    expect(getItem?.parameters).toEqual([
-      { in: "path", name: "id", required: true, schema: { type: "string" } },
-      { in: "query", name: "filter", required: false, schema: { type: "string" } },
-      { in: "header", name: "x-request-id", required: false, schema: { type: "string" } },
-    ]);
-    expect(createItem?.operationId).toBe("ItemsController_createItem");
-    expectRedoclyLintPasses(spec);
-  });
+      expect(getItem?.parameters).toEqual([
+        { in: "path", name: "id", required: true, schema: { type: "string" } },
+        {
+          in: "query",
+          name: "filter",
+          required: false,
+          schema: { type: "string" },
+        },
+        {
+          in: "header",
+          name: "x-request-id",
+          required: false,
+          schema: { type: "string" },
+        },
+      ]);
+      expect(createItem?.operationId).toBe("ItemsController_createItem");
+      expectRedoclyLintPasses(spec);
+    },
+  );
 });
 
 function expectRedoclyLintPasses(spec: object): void {

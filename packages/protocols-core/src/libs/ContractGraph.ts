@@ -196,7 +196,11 @@ function toContractGraphRoute(
         ...getMetadataReferences(
           Reflect.getMetadata(REST_GUARDS_KEY, controllerCtor, route.methodName),
           "route",
-          { controllerName: route.controllerName, methodName: route.methodName, routeId },
+          {
+            controllerName: route.controllerName,
+            methodName: route.methodName,
+            routeId,
+          },
         ),
       ],
       roles: [
@@ -227,6 +231,30 @@ function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
   diagnostics.push(...validateNamedParams(route));
   diagnostics.push(...validateBodyParams(route));
   diagnostics.push(...validateSchemaEffects(route));
+  diagnostics.push(...validateProblemResponses(route));
+
+  return diagnostics;
+}
+
+function validateProblemResponses(route: ContractGraphRoute): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const seenCodes = new Set<string>();
+
+  for (const response of route.problemResponses ?? []) {
+    if (seenCodes.has(response.code)) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-duplicate-problem-code",
+          "error",
+          `Route declares duplicate Problem code '${response.code}'. Problem response codes must be unique per route so generated clients can exhaustively discriminate failures.`,
+        ),
+      );
+      continue;
+    }
+
+    seenCodes.add(response.code);
+  }
 
   return diagnostics;
 }

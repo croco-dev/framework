@@ -18,6 +18,21 @@ export type ProblemDetails = {
   code: string;
 } & Record<string, unknown>;
 
+export type TypedProblemDetails<
+  Code extends string = string,
+  Status extends number = number,
+> = Omit<ProblemDetails, "code" | "status"> & {
+  code: Code;
+  status: Status;
+};
+
+export function assertProblemExhaustive(problem: never): never {
+  const value = problem as { readonly code?: unknown } | undefined;
+  const suffix = typeof value?.code === "string" ? `: ${value.code}` : "";
+
+  throw new Error(`Unhandled Problem variant${suffix}`);
+}
+
 export abstract class Problem extends Error {
   public readonly code: string;
   public readonly category: ProblemCategory;

@@ -3,14 +3,14 @@ import type {
   ContractAccessMetadata,
   ContractDiagnostic,
   ContractGraph,
+  ContractGraphRoute,
   ContractGraphVersion,
   ContractMetadataReference,
-  ContractGraphRoute,
 } from "./ContractGraph";
 import type { ParamIR } from "./RouteIR";
 
 export type ContractGraphSnapshotVersion = "croco.contract-graph.snapshot.v1";
-export type ContractSchemaLocation = "body" | "path" | "query" | "headers" | "response";
+export type ContractSchemaLocation = "body" | "path" | "query" | "headers" | "response" | "problem";
 
 export type ContractSchemaSnapshot = {
   readonly kind: string;
@@ -43,6 +43,14 @@ export type ContractGraphSnapshotParam = {
   readonly schema: ContractSchemaSnapshot | null;
 };
 
+export type ContractGraphSnapshotProblemResponse = {
+  readonly code: string;
+  readonly category: string;
+  readonly status: number;
+  readonly description?: string;
+  readonly type?: string;
+};
+
 export type ContractGraphSnapshotRoute = {
   readonly routeId: string;
   readonly operationId: string;
@@ -61,6 +69,7 @@ export type ContractGraphSnapshotRoute = {
     readonly headers: ContractSchemaSnapshot | null;
   };
   readonly response: ContractSchemaSnapshot | null;
+  readonly problems: readonly ContractGraphSnapshotProblemResponse[];
 };
 
 export type ContractGraphSnapshot = {
@@ -152,7 +161,23 @@ function toSnapshotRoute(route: ContractGraphRoute): ContractGraphSnapshotRoute 
       headers: snapshotZodSchema(route.inputSchemas.headers),
     },
     response: snapshotZodSchema(route.outputSchema),
+    problems: [...(route.problemResponses ?? [])]
+      .map((problem) => ({
+        code: problem.code,
+        category: problem.category,
+        status: problem.status,
+        ...(problem.description ? { description: problem.description } : {}),
+        ...(problem.type ? { type: problem.type } : {}),
+      }))
+      .sort(compareProblemResponses),
   };
+}
+
+function compareProblemResponses(
+  left: ContractGraphSnapshotProblemResponse,
+  right: ContractGraphSnapshotProblemResponse,
+): number {
+  return compareStrings(left.code, right.code) || left.status - right.status;
 }
 
 function snapshotUnknownSchema(schema: unknown): ContractSchemaSnapshot {

@@ -7470,6 +7470,12 @@
       "entrypoint": "packages/problems-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertProblemExhaustive",
+          "exportKind": "named",
+          "source": "./libs/Problem",
+          "declarationKind": "function"
+        },
+        {
           "name": "HttpStatus",
           "exportKind": "named",
           "source": "./libs/HttpStatus",
@@ -7543,6 +7549,11 @@
         },
         {
           "name": "ProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/Problem"
+        },
+        {
+          "name": "TypedProblemDetails",
           "exportKind": "named",
           "source": "./libs/Problem"
         }
@@ -7722,6 +7733,11 @@
           "source": "./libs/ContractGraphSnapshot"
         },
         {
+          "name": "ContractGraphSnapshotProblemResponse",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
           "name": "ContractGraphSnapshotRoute",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
@@ -7768,6 +7784,11 @@
         },
         {
           "name": "ParamIR",
+          "exportKind": "named",
+          "source": "./libs/RouteIR"
+        },
+        {
+          "name": "ProblemResponseIR",
           "exportKind": "named",
           "source": "./libs/RouteIR"
         },
@@ -8289,6 +8310,24 @@
           "declarationKind": "const"
         },
         {
+          "name": "PROBLEM_RESPONSES_KEY",
+          "exportKind": "named",
+          "source": "../constants",
+          "declarationKind": "const"
+        },
+        {
+          "name": "ProblemResponse",
+          "exportKind": "named",
+          "source": "./ProblemResponse",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemResponses",
+          "exportKind": "named",
+          "source": "./ProblemResponse",
+          "declarationKind": "function"
+        },
+        {
           "name": "Put",
           "exportKind": "named",
           "source": "./HttpMethod",
@@ -8496,6 +8535,18 @@
         },
         {
           "name": "PipeTransformConstructor",
+          "exportKind": "declaration",
+          "source": "../types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemResponseMetadata",
+          "exportKind": "declaration",
+          "source": "../types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemResponseOptions",
           "exportKind": "declaration",
           "source": "../types",
           "declarationKind": "type"

@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { ProblemCategory } from "@croco/problems-core";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -19,6 +20,7 @@ import {
   Get,
   Param,
   Post,
+  ProblemResponse,
   Query,
   ResponseSchema,
   Roles,
@@ -367,6 +369,61 @@ describe("buildContractGraph", () => {
     });
   });
 
+  it("should snapshot declared Problem responses as route failure contracts", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({
+        code: "USER_FORBIDDEN",
+        category: ProblemCategory.Forbidden,
+      })
+      @ProblemResponse({
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "User id is missing.",
+      })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([UsersController]);
+    const snapshot = createContractGraphSnapshot(graph);
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(snapshot.routes[0]?.problems).toEqual([
+      {
+        code: "USER_FORBIDDEN",
+        category: "Forbidden",
+        status: 403,
+      },
+      {
+        code: "USER_NOT_FOUND",
+        category: "NotFound",
+        description: "User id is missing.",
+        status: 404,
+      },
+    ]);
+  });
+
+  it("should reject duplicate declared Problem codes on a route", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({ code: "USER_NOT_FOUND", category: ProblemCategory.NotFound })
+      @ProblemResponse({ code: "USER_NOT_FOUND", category: ProblemCategory.NotFound })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([UsersController]);
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-route-duplicate-problem-code",
+        routeId: "UsersController.getUser",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
   it("should classify added routes as non-breaking and removed routes as breaking", () => {
     const BaselineController = (() => {
       @Controller("/users")
@@ -629,6 +686,88 @@ describe("buildContractGraph", () => {
       expect.objectContaining({
         code: "contract-response-schema-incompatible",
         routeId: "UsersController.getUser",
+      }),
+    ]);
+  });
+
+  it("should classify added Problem response codes as breaking and removed codes as non-breaking", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Get("/:id")
+        @ProblemResponse({ code: "USER_NOT_FOUND", category: ProblemCategory.NotFound })
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Get("/:id")
+        @ProblemResponse({ code: "USER_FORBIDDEN", category: ProblemCategory.Forbidden })
+        @ProblemResponse({ code: "USER_NOT_FOUND", category: ProblemCategory.NotFound })
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+    const baseline = createContractGraphSnapshot(buildContractGraph([BaselineController]));
+    const current = createContractGraphSnapshot(buildContractGraph([CurrentController]));
+
+    const additiveDiff = diffContractGraphSnapshots(baseline, current);
+    const removalDiff = diffContractGraphSnapshots(current, baseline);
+
+    expect(additiveDiff.hasBreakingChanges).toBe(true);
+    expect(additiveDiff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-problem-response-added",
+        fieldPath: "USER_FORBIDDEN",
+        location: "problem",
+      }),
+    ]);
+    expect(removalDiff.hasBreakingChanges).toBe(true);
+    expect(removalDiff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-problem-response-removed",
+        fieldPath: "USER_FORBIDDEN",
+        location: "problem",
+      }),
+    ]);
+  });
+
+  it("should classify Problem category or status changes as breaking", () => {
+    const BaselineController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Get("/:id")
+        @ProblemResponse({ code: "USER_NOT_FOUND", category: ProblemCategory.NotFound })
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/users")
+      class UsersController {
+        @Get("/:id")
+        @ProblemResponse({ code: "USER_NOT_FOUND", category: ProblemCategory.Forbidden })
+        getUser(@Param("id") _id: string): void {}
+      }
+
+      return UsersController;
+    })();
+
+    const diff = diffContractGraphSnapshots(
+      createContractGraphSnapshot(buildContractGraph([BaselineController])),
+      createContractGraphSnapshot(buildContractGraph([CurrentController])),
+    );
+
+    expect(diff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-problem-response-classification-changed",
+        fieldPath: "USER_NOT_FOUND",
+        location: "problem",
       }),
     ]);
   });
