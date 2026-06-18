@@ -67,12 +67,12 @@ export type ModelPricing = {
 /**
  * 가격 레지스트리에 저장되는 모델 단가 항목입니다.
  */
-export type PricingRegistryEntry = ModelPricing & {
+export interface PricingRegistryEntry extends ModelPricing {
   /** LLM 제공자 식별자입니다. */
   provider: string;
   /** 제공자 안에서 사용하는 모델 식별자입니다. */
   modelId: string;
-};
+}
 
 /**
  * 버전과 출처를 포함하는 가격 레지스트리 정의입니다.
@@ -116,10 +116,11 @@ export type LlmMeterUsageDelta = {
   /** 메트릭에 더할 값입니다. */
   value: number;
   /**
-   * 사용량을 만든 작업 이름입니다. 내장 경로는 generate, stream, embed, cost_tracking을 사용하며
-   * 통합 코드가 추가 작업 이름을 전달할 수 있습니다.
+   * 사용량을 만든 작업 이름입니다. 내장 기록 경로는 generate, embed, cost_tracking을 명시
+   * 값으로 사용하며 스트리밍이나 통합 코드는 stream 같은 추가 작업 이름을 문자열 확장값으로
+   * 전달할 수 있습니다.
    */
-  operation: "generate" | "stream" | "embed" | "cost_tracking" | string;
+  operation: "generate" | "embed" | "cost_tracking" | string;
 };
 
 /**

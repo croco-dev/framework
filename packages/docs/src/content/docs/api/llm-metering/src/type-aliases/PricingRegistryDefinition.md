@@ -21,7 +21,7 @@ title: "PricingRegistryDefinition"
 
 ### entries
 
-> **entries**: readonly [`PricingRegistryEntry`](/api/llm-metering/src/type-aliases/pricingregistryentry/)[]
+> **entries**: readonly [`PricingRegistryEntry`](/api/llm-metering/src/interfaces/pricingregistryentry/)[]
 
 provider/model 단위 가격 항목 목록입니다.
 

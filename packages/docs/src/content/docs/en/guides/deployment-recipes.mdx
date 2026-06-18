@@ -381,8 +381,8 @@ process.once("SIGINT", () => void shutdown("SIGINT"));
 ### Node boundaries
 
 - Put the process behind a supervisor or platform that sends `SIGTERM` before killing the container.
-- Configure load balancer health checks against `/health/live` and readiness checks against `/ready`
-  or `/health/ready`.
+- The shared example exposes only `/api/health`. Add explicit `/health/live` and `/health/ready`
+  handlers, or map `/ready`, when your load balancer expects those paths.
 - `app.listen()` starts an HTTP server for the current process; it does not create multi-process
   clustering, zero-downtime deploys, TLS termination, or load balancing by itself.
 - Use provider-backed stores for any state that must survive a process restart.

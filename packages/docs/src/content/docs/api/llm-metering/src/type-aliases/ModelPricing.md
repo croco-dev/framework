@@ -9,6 +9,10 @@ title: "ModelPricing"
 
 모델별 입력/출력 토큰 단가와 가격 메타데이터입니다.
 
+## Extended by
+
+- [`PricingRegistryEntry`](/api/llm-metering/src/interfaces/pricingregistryentry/)
+
 ## Properties
 
 ### currency

@@ -21,10 +21,11 @@ title: "LlmMeterUsageDelta"
 
 ### operation
 
-> **operation**: `"generate"` \| `"stream"` \| `"embed"` \| `"cost_tracking"` \| `string`
+> **operation**: `"generate"` \| `"embed"` \| `"cost_tracking"` \| `string`
 
-사용량을 만든 작업 이름입니다. 내장 경로는 generate, stream, embed, cost_tracking을 사용하며
-통합 코드가 추가 작업 이름을 전달할 수 있습니다.
+사용량을 만든 작업 이름입니다. 내장 기록 경로는 generate, embed, cost_tracking을 명시
+값으로 사용하며 스트리밍이나 통합 코드는 stream 같은 추가 작업 이름을 문자열 확장값으로
+전달할 수 있습니다.
 
 ***
 
