@@ -29,7 +29,7 @@ Croco Framework 공식 문서 사이트입니다. Starlight(Astro 기반)로 구
 ## 가이드 링크
 
 - [Getting Started](src/content/docs/en/guides/getting-started.mdx) — Croco 설치 및 첫 API
-- [Architecture](src/content/docs/en/guides/architecture.mdx) — 4계층 구조
+- [Architecture](src/content/docs/en/guides/architecture.mdx) — 5계층 구조
 - [Events Core](src/content/docs/en/guides/events-core.mdx) — 도메인 이벤트
 - [Retry Core](src/content/docs/en/guides/retry-core.mdx) — 재시도 정책
 

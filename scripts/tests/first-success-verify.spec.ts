@@ -99,9 +99,21 @@ function createFixture(options: FixtureOptions = {}): string {
     root,
     "examples/quick-start-lambda/src/index.ts",
     [
-      '@Controller("/api")',
-      '@Get("/health")',
-      'return { status: "ok" }',
+      'import { createLambdaExampleApp } from "./app/bootstrap";',
+      "const app = createLambdaExampleApp();",
+      "export const handler = app.lambdaHandler();",
+      "",
+    ].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/quick-start-lambda/src/protocols/HealthController.ts",
+    ['@Controller("/api")', '@Get("/health")', 'return { status: "ok" }', ""].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/quick-start-lambda/src/protocols/UserController.ts",
+    [
       '@Controller("/api/users")',
       "@Get()",
       "@UseGuards(AuthGuard)",
@@ -113,7 +125,7 @@ function createFixture(options: FixtureOptions = {}): string {
   );
   writeFile(
     root,
-    "examples/quick-start-lambda/src/AuthProvider.ts",
+    "examples/quick-start-lambda/src/integrations/TestAuthProvider.ts",
     ['"test-key"', "return null", ""].join("\n"),
   );
   writeFile(
