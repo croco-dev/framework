@@ -13,7 +13,7 @@ title: "Body"
 
 ### schema?
 
-`ZodType`
+`ZodType`\<`any`, `ZodTypeDef`, `any`\>
 
 ## Returns
 

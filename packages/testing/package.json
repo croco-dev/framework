@@ -32,13 +32,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/events-inmemory": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/llm-core": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/storage-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
     "@croco/transports-http": "workspace:*",
+    "@opentelemetry/api": "^1.9.0",
     "reflect-metadata": "0.2.2"
   },
   "devDependencies": {

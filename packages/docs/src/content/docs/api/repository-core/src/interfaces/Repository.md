@@ -72,7 +72,7 @@ The ID of the entity to delete
 
 ### findById()
 
-> **findById**(`id`): `Promise`\<`T`\>
+> **findById**(`id`): `Promise`\<`T` \| `null`\>
 
 Find a single entity by its ID.
 
@@ -86,7 +86,7 @@ The entity ID
 
 #### Returns
 
-`Promise`\<`T`\>
+`Promise`\<`T` \| `null`\>
 
 The entity if found, null otherwise
 

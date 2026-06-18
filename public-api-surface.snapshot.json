@@ -2894,6 +2894,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "getEventHandlerSubscriptions",
+          "exportKind": "named",
+          "source": "./libs/EventHandler",
+          "declarationKind": "function"
+        },
+        {
           "name": "globalEventRegistry",
           "exportKind": "named",
           "source": "./libs/EventRegistry",
@@ -10831,6 +10837,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createEventTestingHarness",
+          "exportKind": "named",
+          "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
           "name": "createLlmProviderConformanceSuite",
           "exportKind": "named",
           "source": "./libs/llm-provider-conformance",
@@ -10861,10 +10873,34 @@
           "declarationKind": "function"
         },
         {
+          "name": "createTestingRequestContext",
+          "exportKind": "named",
+          "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTestingTransactionContext",
+          "exportKind": "named",
+          "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "CrocoEventTestingHarness",
+          "exportKind": "named",
+          "source": "./libs/testing",
+          "declarationKind": "class"
+        },
+        {
           "name": "CrocoTestingApp",
           "exportKind": "named",
           "source": "./libs/testing",
           "declarationKind": "class"
+        },
+        {
+          "name": "installTestingTelemetryCapture",
+          "exportKind": "named",
+          "source": "./libs/telemetry-testing",
+          "declarationKind": "function"
         },
         {
           "name": "readProblemResponse",
@@ -10883,9 +10919,47 @@
           "exportKind": "named",
           "source": "./libs/testing",
           "declarationKind": "function"
+        },
+        {
+          "name": "runWithTestingContext",
+          "exportKind": "named",
+          "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "TestingTelemetryCapture",
+          "exportKind": "named",
+          "source": "./libs/telemetry-testing",
+          "declarationKind": "class"
+        },
+        {
+          "name": "TestingTransactionContext",
+          "exportKind": "named",
+          "source": "./libs/testing",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
+        {
+          "name": "CapturedSpan",
+          "exportKind": "named",
+          "source": "./libs/telemetry-testing"
+        },
+        {
+          "name": "CapturedSpanEvent",
+          "exportKind": "named",
+          "source": "./libs/telemetry-testing"
+        },
+        {
+          "name": "CapturedSpanException",
+          "exportKind": "named",
+          "source": "./libs/telemetry-testing"
+        },
+        {
+          "name": "EventTestingHarnessOptions",
+          "exportKind": "named",
+          "source": "./libs/testing"
+        },
         {
           "name": "LlmProviderConformanceCase",
           "exportKind": "named",
@@ -10913,6 +10987,11 @@
         },
         {
           "name": "ProblemResponseExpectation",
+          "exportKind": "named",
+          "source": "./libs/testing"
+        },
+        {
+          "name": "ResetCrocoTestingContextOptions",
           "exportKind": "named",
           "source": "./libs/testing"
         },
@@ -10957,7 +11036,17 @@
           "source": "./libs/testing"
         },
         {
+          "name": "TestingRequestContextOptions",
+          "exportKind": "named",
+          "source": "./libs/testing"
+        },
+        {
           "name": "TestingRequestOptions",
+          "exportKind": "named",
+          "source": "./libs/testing"
+        },
+        {
+          "name": "TestingTransactionContextOptions",
           "exportKind": "named",
           "source": "./libs/testing"
         },

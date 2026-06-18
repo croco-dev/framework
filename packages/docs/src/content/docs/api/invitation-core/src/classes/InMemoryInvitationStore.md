@@ -29,7 +29,7 @@ title: "InMemoryInvitationStore"
 
 ### compareAndSetStatus()
 
-> **compareAndSetStatus**(`tenantId`, `id`, `expected`, `desired`, `meta?`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> **compareAndSetStatus**(`tenantId`, `id`, `expected`, `desired`, `meta?`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -61,7 +61,7 @@ title: "InMemoryInvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Overrides
 
@@ -115,7 +115,7 @@ title: "InMemoryInvitationStore"
 
 ### findById()
 
-> **findById**(`id`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> **findById**(`id`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -125,7 +125,7 @@ title: "InMemoryInvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Overrides
 
@@ -135,7 +135,7 @@ title: "InMemoryInvitationStore"
 
 ### findByTenantAndEmail()
 
-> **findByTenantAndEmail**(`tenantId`, `email`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> **findByTenantAndEmail**(`tenantId`, `email`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -149,7 +149,7 @@ title: "InMemoryInvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Overrides
 
@@ -159,7 +159,7 @@ title: "InMemoryInvitationStore"
 
 ### findByTokenHash()
 
-> **findByTokenHash**(`tokenHash`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> **findByTokenHash**(`tokenHash`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -169,7 +169,7 @@ title: "InMemoryInvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Overrides
 
@@ -199,7 +199,7 @@ title: "InMemoryInvitationStore"
 
 ### updateStatus()
 
-> **updateStatus**(`tenantId`, `id`, `status`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> **updateStatus**(`tenantId`, `id`, `status`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -217,7 +217,7 @@ title: "InMemoryInvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Overrides
 

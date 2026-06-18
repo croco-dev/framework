@@ -125,11 +125,11 @@ title: "EventBusConfig"
 
 ### getStats()
 
-> `static` **getStats**(): [`EventBusStats`](/api/events-core/src/classes/eventbusstats/)
+> `static` **getStats**(): [`EventBusStats`](/api/events-core/src/classes/eventbusstats/) \| `undefined`
 
 #### Returns
 
-[`EventBusStats`](/api/events-core/src/classes/eventbusstats/)
+[`EventBusStats`](/api/events-core/src/classes/eventbusstats/) \| `undefined`
 
 ***
 

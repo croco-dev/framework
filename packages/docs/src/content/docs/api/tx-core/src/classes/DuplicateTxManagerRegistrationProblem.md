@@ -21,7 +21,7 @@ title: "DuplicateTxManagerRegistrationProblem"
 
 ##### key
 
-`string`
+`string` | `undefined`
 
 #### Returns
 

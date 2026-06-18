@@ -43,7 +43,7 @@ export type { EventHandler, EventHandlerClass } from "./libs/EventHandler";
 /**
  * 이벤트 타입과 핸들러를 연결하는 클래스 데코레이터입니다.
  */
-export { RegisterEventHandler } from "./libs/EventHandler";
+export { getEventHandlerSubscriptions, RegisterEventHandler } from "./libs/EventHandler";
 /**
  * 구성된 EventBus를 통해 단건/다건 이벤트를 발행하는 헬퍼입니다.
  */

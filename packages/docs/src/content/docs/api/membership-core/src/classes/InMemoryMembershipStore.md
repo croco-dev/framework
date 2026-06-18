@@ -155,7 +155,7 @@ const membership = await store.save({
 
 ### findByTenantAndUser()
 
-> **findByTenantAndUser**(`tenantId`, `userId`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+> **findByTenantAndUser**(`tenantId`, `userId`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
 #### Parameters
 
@@ -169,7 +169,7 @@ const membership = await store.save({
 
 #### Returns
 
-`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
 #### Overrides
 

@@ -61,7 +61,7 @@ title: "SearchTransformRegistry"
 
 ### get()
 
-> `abstract` **get**\<`TOptions`\>(`ref`): [`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\>
+> `abstract` **get**\<`TOptions`\>(`ref`): [`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\> \| `undefined`
 
 #### Type Parameters
 
@@ -77,7 +77,7 @@ title: "SearchTransformRegistry"
 
 #### Returns
 
-[`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\>
+[`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\> \| `undefined`
 
 ***
 

@@ -11,13 +11,7 @@ title: "resetCrocoTestingContext"
 
 ### options?
 
-#### logger?
-
-[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
-
-#### providers?
-
-readonly [`TestingProvider`](/api/testing/src/type-aliases/testingprovider/)\<`unknown`\>[]
+[`ResetCrocoTestingContextOptions`](/api/testing/src/type-aliases/resetcrocotestingcontextoptions/) = `{}`
 
 ## Returns
 

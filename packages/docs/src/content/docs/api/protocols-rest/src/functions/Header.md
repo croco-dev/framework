@@ -17,7 +17,7 @@ title: "Header"
 
 ### schema?
 
-`ZodType`
+`ZodType`\<`any`, `ZodTypeDef`, `any`\>
 
 ## Returns
 

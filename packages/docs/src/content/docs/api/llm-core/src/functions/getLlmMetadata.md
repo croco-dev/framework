@@ -5,7 +5,7 @@ prev: false
 title: "getLlmMetadata"
 ---
 
-> **getLlmMetadata**(`target`, `propertyKey`): [`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/)
+> **getLlmMetadata**(`target`, `propertyKey`): [`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/) \| `undefined`
 
 메서드에서 Llm 메타데이터 조회
 
@@ -21,4 +21,4 @@ title: "getLlmMetadata"
 
 ## Returns
 
-[`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/)
+[`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/) \| `undefined`

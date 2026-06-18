@@ -11,7 +11,7 @@ title: "recordRuntimeInspectionEvent"
 
 ### inspector
 
-`RuntimeInspectionEventRecorder`
+`RuntimeInspectionEventRecorder` | `undefined`
 
 ### input
 

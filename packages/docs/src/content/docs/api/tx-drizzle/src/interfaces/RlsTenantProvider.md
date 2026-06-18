@@ -9,8 +9,8 @@ title: "RlsTenantProvider"
 
 ### getTenantId()
 
-> **getTenantId**(): `string`
+> **getTenantId**(): `string` \| `null`
 
 #### Returns
 
-`string`
+`string` \| `null`

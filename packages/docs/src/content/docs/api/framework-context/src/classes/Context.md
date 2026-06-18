@@ -21,93 +21,93 @@ AsyncLocalStorage 기반으로 요청 컨텍스트를 실행하고 조회하는 
 
 ### get()
 
-> `static` **get**(): [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
+> `static` **get**(): [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) \| `null`
 
 #### Returns
 
-[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) \| `null`
 
 ***
 
 ### getActiveTraceId()
 
-> `static` **getActiveTraceId**(): `string`
+> `static` **getActiveTraceId**(): `string` \| `null`
 
 Get active trace ID from request context propagation
 
 #### Returns
 
-`string`
+`string` \| `null`
 
 ***
 
 ### getCache()
 
-> `static` **getCache**(): `Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\>
+> `static` **getCache**(): `Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\> \| `undefined`
 
 #### Returns
 
-`Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\>
+`Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\> \| `undefined`
 
 ***
 
 ### getCreatedAt()
 
-> `static` **getCreatedAt**(): `number`
+> `static` **getCreatedAt**(): `number` \| `null`
 
 #### Returns
 
-`number`
+`number` \| `null`
 
 ***
 
 ### getCurrentUser()
 
-> `static` **getCurrentUser**(): `UserContext`
+> `static` **getCurrentUser**(): `UserContext` \| `null` \| `undefined`
 
 #### Returns
 
-`UserContext`
+`UserContext` \| `null` \| `undefined`
 
 ***
 
 ### getRequestId()
 
-> `static` **getRequestId**(): `string`
+> `static` **getRequestId**(): `string` \| `null`
 
 #### Returns
 
-`string`
+`string` \| `null`
 
 ***
 
 ### getRuntimeContext()
 
-> `static` **getRuntimeContext**(): [`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
+> `static` **getRuntimeContext**(): [`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/) \| `null`
 
 #### Returns
 
-[`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
+[`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/) \| `null`
 
 ***
 
 ### getRuntimePlatform()
 
-> `static` **getRuntimePlatform**(): [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+> `static` **getRuntimePlatform**(): [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/) \| `null`
 
 #### Returns
 
-[`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+[`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/) \| `null`
 
 ***
 
 ### getTenantId()
 
-> `static` **getTenantId**(): `string`
+> `static` **getTenantId**(): `string` \| `null`
 
 #### Returns
 
-`string`
+`string` \| `null`
 
 ***
 

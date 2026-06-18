@@ -95,7 +95,7 @@ title: "DomainPolicyManager"
 
 ### tryAutoJoin()
 
-> **tryAutoJoin**(`tenantId`, `userId`, `email`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+> **tryAutoJoin**(`tenantId`, `userId`, `email`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
 #### Parameters
 
@@ -113,4 +113,4 @@ title: "DomainPolicyManager"
 
 #### Returns
 
-`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>

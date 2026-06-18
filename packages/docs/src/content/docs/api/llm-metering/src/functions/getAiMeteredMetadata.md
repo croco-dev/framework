@@ -5,7 +5,7 @@ prev: false
 title: "getAiMeteredMetadata"
 ---
 
-> **getAiMeteredMetadata**(`target`, `propertyKey`): [`AiMeteredMetadata`](/api/llm-metering/src/type-aliases/aimeteredmetadata/)
+> **getAiMeteredMetadata**(`target`, `propertyKey`): [`AiMeteredMetadata`](/api/llm-metering/src/type-aliases/aimeteredmetadata/) \| `undefined`
 
 메서드에서 AiMetered 메타데이터 조회
 
@@ -21,4 +21,4 @@ title: "getAiMeteredMetadata"
 
 ## Returns
 
-[`AiMeteredMetadata`](/api/llm-metering/src/type-aliases/aimeteredmetadata/)
+[`AiMeteredMetadata`](/api/llm-metering/src/type-aliases/aimeteredmetadata/) \| `undefined`

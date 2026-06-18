@@ -110,7 +110,7 @@ NOT suitable for production multi-instance deployments.
 
 ### findAccountByExternalId()
 
-> **findAccountByExternalId**(`externalCustomerId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+> **findAccountByExternalId**(`externalCustomerId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 #### Parameters
 
@@ -120,7 +120,7 @@ NOT suitable for production multi-instance deployments.
 
 #### Returns
 
-`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 #### Overrides
 
@@ -130,7 +130,7 @@ NOT suitable for production multi-instance deployments.
 
 ### findAccountByTenantId()
 
-> **findAccountByTenantId**(`tenantId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+> **findAccountByTenantId**(`tenantId`): `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 #### Parameters
 
@@ -140,7 +140,7 @@ NOT suitable for production multi-instance deployments.
 
 #### Returns
 
-`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/)\>
+`Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
 #### Overrides
 
@@ -170,7 +170,7 @@ NOT suitable for production multi-instance deployments.
 
 ### findSubscription()
 
-> **findSubscription**(`billingAccountId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+> **findSubscription**(`billingAccountId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 #### Parameters
 
@@ -180,7 +180,7 @@ NOT suitable for production multi-instance deployments.
 
 #### Returns
 
-`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 #### Overrides
 
@@ -190,7 +190,7 @@ NOT suitable for production multi-instance deployments.
 
 ### findSubscriptionByExternalId()
 
-> **findSubscriptionByExternalId**(`externalSubscriptionId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+> **findSubscriptionByExternalId**(`externalSubscriptionId`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 #### Parameters
 
@@ -200,7 +200,7 @@ NOT suitable for production multi-instance deployments.
 
 #### Returns
 
-`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
 #### Overrides
 

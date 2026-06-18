@@ -43,7 +43,7 @@ Lua 스크립트 실행
 
 ### set()
 
-> **set**(`key`, `value`, `mode`, `expireMode`, `expire`): `Promise`\<`string`\>
+> **set**(`key`, `value`, `mode`, `expireMode`, `expire`): `Promise`\<`string` \| `null`\>
 
 키 설정 (NX: 존재하지 않을 때만, EX: TTL)
 
@@ -71,7 +71,7 @@ Lua 스크립트 실행
 
 #### Returns
 
-`Promise`\<`string`\>
+`Promise`\<`string` \| `null`\>
 
 ***
 

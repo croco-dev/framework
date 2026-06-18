@@ -9,7 +9,7 @@ title: "PlanProvider"
 
 ### getPlan()
 
-> **getPlan**(`planId`): `Promise`\<[`PlanSnapshot`](/api/metrics-core/src/type-aliases/plansnapshot/)\>
+> **getPlan**(`planId`): `Promise`\<[`PlanSnapshot`](/api/metrics-core/src/type-aliases/plansnapshot/) \| `null`\>
 
 #### Parameters
 
@@ -19,4 +19,4 @@ title: "PlanProvider"
 
 #### Returns
 
-`Promise`\<[`PlanSnapshot`](/api/metrics-core/src/type-aliases/plansnapshot/)\>
+`Promise`\<[`PlanSnapshot`](/api/metrics-core/src/type-aliases/plansnapshot/) \| `null`\>

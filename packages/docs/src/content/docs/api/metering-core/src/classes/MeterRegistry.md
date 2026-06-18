@@ -50,7 +50,7 @@ DB에서 Meter 정의를 로드하고 메모리 캐싱합니다.
 
 ### get()
 
-> **get**(`tenantId`, `meterId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)\>
+> **get**(`tenantId`, `meterId`): `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/) \| `null`\>
 
 Meter 조회 (캐시 우선)
 
@@ -66,7 +66,7 @@ Meter 조회 (캐시 우선)
 
 #### Returns
 
-`Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)\>
+`Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/) \| `null`\>
 
 MeterDefinition 또는 null
 

@@ -5,7 +5,7 @@ prev: false
 title: "getLambdaContext"
 ---
 
-> **getLambdaContext**(`honoRequest`): `Context`
+> **getLambdaContext**(`honoRequest`): `Context` \| `undefined`
 
 Hono 요청에서 원본 Lambda 컨텍스트를 추출합니다.
 
@@ -17,4 +17,4 @@ Hono 요청에서 원본 Lambda 컨텍스트를 추출합니다.
 
 ## Returns
 
-`Context`
+`Context` \| `undefined`

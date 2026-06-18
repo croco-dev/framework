@@ -45,11 +45,11 @@ AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 
 
 ### getClient()
 
-> **getClient**(): `TClient`
+> **getClient**(): `TClient` \| `null`
 
 #### Returns
 
-`TClient`
+`TClient` \| `null`
 
 ***
 

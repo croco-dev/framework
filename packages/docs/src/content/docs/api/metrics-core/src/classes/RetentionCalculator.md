@@ -21,7 +21,7 @@ churn, GRR, NRR, Logo Churn 등 리텐션 지표를 계산하는 계산기입니
 
 ### calculateChurn()
 
-> **calculateChurn**(`startingMRR`, `movement`, `_type`): `Promise`\<`number`\>
+> **calculateChurn**(`startingMRR`, `movement`, `_type`): `Promise`\<`number` \| `null`\>
 
 #### Parameters
 
@@ -39,13 +39,13 @@ churn, GRR, NRR, Logo Churn 등 리텐션 지표를 계산하는 계산기입니
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 ***
 
 ### calculateGRR()
 
-> **calculateGRR**(`startingMRR`, `movement`): `Promise`\<`number`\>
+> **calculateGRR**(`startingMRR`, `movement`): `Promise`\<`number` \| `null`\>
 
 Calculate Gross Revenue Retention (GRR) for a period.
 
@@ -67,7 +67,7 @@ MRR movement data for the period
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 GRR as percentage (0-100), or null if starting MRR is zero
 
@@ -75,7 +75,7 @@ GRR as percentage (0-100), or null if starting MRR is zero
 
 ### calculateLogoChurn()
 
-> **calculateLogoChurn**(`startingCustomers`, `endingCustomers`): `Promise`\<`number`\>
+> **calculateLogoChurn**(`startingCustomers`, `endingCustomers`): `Promise`\<`number` \| `null`\>
 
 Calculate Logo Churn Rate (customer churn rate based on number of customers).
 
@@ -97,7 +97,7 @@ Number of customers at end of period
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 Logo Churn as percentage, or null if starting customers is zero
 
@@ -105,7 +105,7 @@ Logo Churn as percentage, or null if starting customers is zero
 
 ### calculateNRR()
 
-> **calculateNRR**(`startingMRR`, `movement`): `Promise`\<`number`\>
+> **calculateNRR**(`startingMRR`, `movement`): `Promise`\<`number` \| `null`\>
 
 Calculate Net Revenue Retention (NRR) for a period.
 
@@ -127,7 +127,7 @@ MRR movement data for the period
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 NRR as percentage (can be >100%), or null if starting MRR is zero
 
@@ -135,7 +135,7 @@ NRR as percentage (can be >100%), or null if starting MRR is zero
 
 ### calculateRetention()
 
-> **calculateRetention**(`startingMRR`, `movement`, `startingCustomers?`, `endingCustomers?`): `Promise`\<\{ `grr`: `number`; `logoChurn`: `number`; `nrr`: `number`; `revenueChurn`: `number`; \}\>
+> **calculateRetention**(`startingMRR`, `movement`, `startingCustomers?`, `endingCustomers?`): `Promise`\<\{ `grr`: `number` \| `null`; `logoChurn`: `number` \| `null`; `nrr`: `number` \| `null`; `revenueChurn`: `number` \| `null`; \}\>
 
 Calculate all retention metrics at once.
 
@@ -167,6 +167,6 @@ Number of customers at end (optional, for logo churn)
 
 #### Returns
 
-`Promise`\<\{ `grr`: `number`; `logoChurn`: `number`; `nrr`: `number`; `revenueChurn`: `number`; \}\>
+`Promise`\<\{ `grr`: `number` \| `null`; `logoChurn`: `number` \| `null`; `nrr`: `number` \| `null`; `revenueChurn`: `number` \| `null`; \}\>
 
 Complete retention metrics

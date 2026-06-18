@@ -5,10 +5,10 @@ prev: false
 title: "getLambdaContext"
 ---
 
-> **getLambdaContext**(): [`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/)
+> **getLambdaContext**(): [`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/) \| `null`
 
 Get the current Lambda context.
 
 ## Returns
 
-[`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/)
+[`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/) \| `null`

@@ -24,7 +24,7 @@ Measures how fast a business is growing and its sustainability:
 
 ### calculateQuickRatio()
 
-> **calculateQuickRatio**(`movement`): `Promise`\<`number`\>
+> **calculateQuickRatio**(`movement`): `Promise`\<`number` \| `null`\>
 
 Calculate Quick Ratio for a period.
 
@@ -44,6 +44,6 @@ MRR movement data for the period
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<`number` \| `null`\>
 
 Quick Ratio, or null if denominator is zero

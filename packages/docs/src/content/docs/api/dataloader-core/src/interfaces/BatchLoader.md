@@ -68,7 +68,7 @@ The type of loaded values
 
 ### load()
 
-> **load**(`key`): `Promise`\<`V`\>
+> **load**(`key`): `Promise`\<`V` \| `null`\>
 
 #### Parameters
 
@@ -78,13 +78,13 @@ The type of loaded values
 
 #### Returns
 
-`Promise`\<`V`\>
+`Promise`\<`V` \| `null`\>
 
 ***
 
 ### loadMany()
 
-> **loadMany**(`keys`): `Promise`\<(`Error` \| `V`)[]\>
+> **loadMany**(`keys`): `Promise`\<(`Error` \| `V` \| `null`)[]\>
 
 #### Parameters
 
@@ -94,7 +94,7 @@ The type of loaded values
 
 #### Returns
 
-`Promise`\<(`Error` \| `V`)[]\>
+`Promise`\<(`Error` \| `V` \| `null`)[]\>
 
 ***
 

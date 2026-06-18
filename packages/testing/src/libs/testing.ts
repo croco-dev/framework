@@ -1,8 +1,30 @@
 import "reflect-metadata";
-import { Container, LOGGER_TOKEN, type ILogger, type Token } from "@croco/framework-context";
+import { AsyncLocalStorage } from "node:async_hooks";
+import {
+  Container,
+  Context,
+  LOGGER_TOKEN,
+  TRANSACTION_CONTEXT_TOKEN,
+  type ILogger,
+  type RequestContext,
+  type RuntimeContext,
+  type RuntimeCapabilities,
+  type Token,
+  type TransactionContext,
+} from "@croco/framework-context";
+import {
+  EventBusConfig,
+  EventPublisher,
+  getEventHandlerSubscriptions,
+  type DomainEvent,
+  type EventBus,
+  type EventHandlerClass,
+  type EventSubscription,
+} from "@croco/events-core";
+import { InMemoryEventBus, type InMemoryEventBusOptions } from "@croco/events-inmemory";
 import { Logger } from "@croco/framework-logger";
 import { emitOpenAPI, type EmitOpenAPIOptions } from "@croco/openapi-spec";
-import type { ProblemDetails } from "@croco/problems-core";
+import { Problem, ProblemCategory, type ProblemDetails } from "@croco/problems-core";
 import {
   createApp,
   type AppConfig,
@@ -26,6 +48,15 @@ type OpenAPIDocumentLike = {
 };
 type TestingConstructor<T = unknown> = new (...args: never[]) => T;
 type TestingToken<T = unknown> = TestingConstructor<T> | Token<T> | string | symbol;
+type AfterCommitHook = () => void | Promise<void>;
+type TestingTransactionFrame = {
+  readonly afterCommitHooks: AfterCommitHook[];
+};
+type TestingAfterCommitHookFailure = {
+  readonly error: Error;
+  readonly message: string;
+  readonly name: string;
+};
 
 export type TestLogger = ILogger;
 
@@ -44,6 +75,19 @@ export type TestingHarnessOptions = {
   readonly baseUrl?: string;
 };
 
+export type TestingTransactionContextOptions = {
+  readonly inTransaction?: boolean;
+};
+
+export type ResetCrocoTestingContextOptions = {
+  readonly logger?: TestLogger;
+  readonly providers?: readonly TestingProvider[];
+  readonly transactionContext?:
+    | TestingTransactionContext
+    | TestingTransactionContextOptions
+    | false;
+};
+
 export type TestingAppOptions = Omit<AppConfig, "controllers"> &
   TestingHarnessOptions & {
     readonly autoRegisterControllers?: boolean;
@@ -51,6 +95,10 @@ export type TestingAppOptions = Omit<AppConfig, "controllers"> &
     readonly logger?: TestLogger;
     readonly providers?: readonly TestingProvider[];
     readonly resetContainer?: boolean;
+    readonly transactionContext?:
+      | TestingTransactionContext
+      | TestingTransactionContextOptions
+      | false;
   };
 
 export type TestingRequestOptions = Omit<RequestInit, "body"> & {
@@ -76,8 +124,67 @@ export type OpenAPIRouteExpectation = {
   readonly status?: number | `${number}` | "default";
 };
 
+export type TestingRequestContextOptions = Omit<Partial<RequestContext>, "runtime"> & {
+  readonly runtime?: Partial<RuntimeContext> | false;
+};
+
+export type EventTestingHarnessOptions<TEvent extends DomainEvent = DomainEvent> = {
+  readonly eventBus?: EventBus<TEvent>;
+  readonly handlers?: readonly EventHandlerClass<TEvent>[];
+  readonly inMemoryEventBus?: InMemoryEventBusOptions;
+  readonly logger?: TestLogger;
+  readonly providers?: readonly TestingProvider[];
+  readonly resetContainer?: boolean;
+  readonly subscriptions?: readonly EventSubscription<TEvent>[];
+  readonly transactionContext?:
+    | TestingTransactionContext
+    | TestingTransactionContextOptions
+    | false;
+};
+
 const DEFAULT_BASE_URL = "http://localhost";
+const DEFAULT_TEST_RUNTIME_CAPABILITIES: RuntimeCapabilities = {
+  env: false,
+  flush: true,
+  logger: true,
+  shutdown: false,
+  trace: false,
+  waitUntil: true,
+};
 const IGNORED_PARAM_TYPES = new Set<unknown>([Object, String, Number, Boolean, Array]);
+let testingRequestContextCounter = 0;
+
+class TestingTransactionContextNotActiveProblem extends Problem {
+  constructor() {
+    super(
+      "testing/transaction-context-not-active",
+      ProblemCategory.InternalServerError,
+      "Testing transaction context is not active. Use runInTransaction() or createTestingTransactionContext({ inTransaction: true }).",
+      { type: "https://docs.croco.dev/problems/testing/transaction-context-not-active" },
+    );
+  }
+}
+
+class TestingAfterCommitHooksProblem extends Problem {
+  constructor(failures: readonly TestingAfterCommitHookFailure[]) {
+    const cause = failures[0]?.error;
+
+    super(
+      "testing/after-commit-hooks-failed",
+      ProblemCategory.InternalServerError,
+      `${failures.length} testing afterCommit hook(s) failed after transaction commit`,
+      {
+        type: "https://docs.croco.dev/problems/testing/after-commit-hooks-failed",
+        extensions: {
+          committed: true,
+          failureCount: failures.length,
+          failures: failures.map(({ message, name }) => ({ message, name })),
+        },
+        ...(cause ? { cause } : {}),
+      },
+    );
+  }
+}
 
 class SilentTestLogger implements TestLogger {
   debug(): void {}
@@ -90,6 +197,111 @@ class SilentTestLogger implements TestLogger {
 
   child(): TestLogger {
     return this;
+  }
+}
+
+function createTestingTransactionFrame(): TestingTransactionFrame {
+  return { afterCommitHooks: [] };
+}
+
+function normalizeTestingError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(String(error));
+}
+
+function safeLogAfterCommitHookFailure(error: Error): void {
+  try {
+    const logger = Container.has(LOGGER_TOKEN)
+      ? Container.get<TestLogger>(LOGGER_TOKEN)
+      : new SilentTestLogger();
+    logger.error("AfterCommit hook failed:", { error });
+  } catch {
+    // Logging must not hide the original after-commit hook failure.
+  }
+}
+
+export class TestingTransactionContext implements TransactionContext {
+  private readonly storage = new AsyncLocalStorage<TestingTransactionFrame | null>();
+  private manualFrame: TestingTransactionFrame | null;
+
+  constructor(options: TestingTransactionContextOptions = {}) {
+    this.manualFrame = options.inTransaction ? createTestingTransactionFrame() : null;
+  }
+
+  isInTransaction(): boolean {
+    return this.getCurrentFrame() !== null;
+  }
+
+  onAfterCommit(hook: AfterCommitHook): void {
+    const frame = this.getCurrentFrame();
+
+    if (!frame) {
+      throw new TestingTransactionContextNotActiveProblem();
+    }
+
+    frame.afterCommitHooks.push(hook);
+  }
+
+  async runInTransaction<T>(fn: () => Promise<T> | T): Promise<T> {
+    const existingFrame = this.getCurrentFrame();
+
+    if (existingFrame) {
+      return await fn();
+    }
+
+    const frame = createTestingTransactionFrame();
+    const result = await this.storage.run(frame, async () => await fn());
+    await this.executeAfterCommitHooks(frame);
+
+    return result;
+  }
+
+  async flushAfterCommitHooks(): Promise<void> {
+    const frame = this.getCurrentFrame();
+
+    if (!frame) {
+      return;
+    }
+
+    if (this.manualFrame === frame) {
+      this.manualFrame = null;
+    }
+
+    await this.executeAfterCommitHooks(frame);
+  }
+
+  getPendingAfterCommitHookCount(): number {
+    return this.getCurrentFrame()?.afterCommitHooks.length ?? 0;
+  }
+
+  private getCurrentFrame(): TestingTransactionFrame | null {
+    return this.storage.getStore() ?? this.manualFrame;
+  }
+
+  private async executeAfterCommitHooks(frame: TestingTransactionFrame): Promise<void> {
+    const hooks = frame.afterCommitHooks.splice(0);
+    const failures: TestingAfterCommitHookFailure[] = [];
+
+    for (const hook of hooks) {
+      try {
+        await hook();
+      } catch (error) {
+        const normalizedError = normalizeTestingError(error);
+        failures.push({
+          error: normalizedError,
+          message: normalizedError.message,
+          name: normalizedError.name,
+        });
+        safeLogAfterCommitHookFailure(normalizedError);
+      }
+    }
+
+    if (failures.length > 0) {
+      throw new TestingAfterCommitHooksProblem(failures);
+    }
   }
 }
 
@@ -156,14 +368,16 @@ export function createTestingApp(options: TestingAppOptions): CrocoTestingApp {
     logger,
     providers = [],
     resetContainer = true,
+    transactionContext,
     ...appConfig
   } = options;
 
   if (resetContainer) {
-    resetCrocoTestingContext({ logger, providers });
+    resetCrocoTestingContext({ logger, providers, transactionContext });
   } else {
     seedCrocoTestingDefaults(logger);
     registerTestingProviders(providers);
+    seedTestingTransactionContext(transactionContext);
   }
 
   if (autoRegisterControllers) {
@@ -187,15 +401,121 @@ export function createTestingHarness(
   return new CrocoTestingApp(app, options.baseUrl ?? DEFAULT_BASE_URL);
 }
 
-export function resetCrocoTestingContext(
-  options: {
-    readonly logger?: TestLogger;
-    readonly providers?: readonly TestingProvider[];
-  } = {},
-): void {
+export function resetCrocoTestingContext(options: ResetCrocoTestingContextOptions = {}): void {
   Container.reset();
+  EventBusConfig.setInstance(new EventBusConfig());
+  testingRequestContextCounter = 0;
   seedCrocoTestingDefaults(options.logger);
+  seedTestingTransactionContext(options.transactionContext);
   registerTestingProviders(options.providers ?? []);
+}
+
+export function createTestingTransactionContext(
+  options: TestingTransactionContextOptions = {},
+): TestingTransactionContext {
+  return new TestingTransactionContext(options);
+}
+
+export function createTestingRequestContext(
+  options: TestingRequestContextOptions = {},
+): RequestContext {
+  const { runtime: runtimeInput, ...contextOptions } = options;
+  const requestId = options.requestId ?? `test-request-${++testingRequestContextCounter}`;
+  const runtime =
+    runtimeInput === false ? undefined : createTestingRuntimeContext(requestId, runtimeInput);
+  const context: RequestContext = {
+    ...contextOptions,
+    requestId,
+    ...(runtime ? { runtime } : {}),
+  };
+
+  return context;
+}
+
+export function runWithTestingContext<T>(
+  fn: () => Promise<T> | T,
+  options: RequestContext | TestingRequestContextOptions = {},
+): Promise<T> | T {
+  const requestContext = isRequestContext(options) ? options : createTestingRequestContext(options);
+
+  return Context.run(requestContext, fn);
+}
+
+export class CrocoEventTestingHarness<TEvent extends DomainEvent = DomainEvent> {
+  readonly transactionContext: TestingTransactionContext | null;
+
+  constructor(
+    readonly eventBus: EventBus<TEvent>,
+    readonly config: EventBusConfig,
+    transactionContext: TestingTransactionContext | null,
+  ) {
+    this.transactionContext = transactionContext;
+  }
+
+  publish(event: TEvent): Promise<void> {
+    return this.eventBus.publish(event);
+  }
+
+  dispatch(event: TEvent): Promise<void> {
+    return this.publish(event);
+  }
+
+  publishAfterCommit(event: TEvent): void {
+    new EventPublisher(this.config).publishAfterCommit(event);
+  }
+
+  flushAfterCommitHooks(): Promise<void> {
+    return this.transactionContext?.flushAfterCommitHooks() ?? Promise.resolve();
+  }
+
+  clear(): void {
+    this.config.clear();
+  }
+}
+
+export async function createEventTestingHarness<TEvent extends DomainEvent = DomainEvent>(
+  options: EventTestingHarnessOptions<TEvent> = {},
+): Promise<CrocoEventTestingHarness<TEvent>> {
+  const {
+    eventBus = new InMemoryEventBus<TEvent>(options.inMemoryEventBus),
+    handlers = [],
+    logger,
+    providers = [],
+    resetContainer = true,
+    subscriptions = [],
+    transactionContext: transactionContextInput,
+  } = options;
+  const decoratedSubscriptions = handlers.flatMap((handler) =>
+    getEventHandlerSubscriptions(handler as EventHandlerClass),
+  ) as EventSubscription<TEvent>[];
+  const transactionContext = normalizeTestingTransactionContext(transactionContextInput);
+
+  if (resetContainer) {
+    resetCrocoTestingContext({
+      logger,
+      providers,
+      transactionContext: transactionContext ?? false,
+    });
+  } else {
+    seedCrocoTestingDefaults(logger);
+    seedTestingTransactionContext(transactionContext ?? false);
+    registerTestingProviders(providers);
+  }
+
+  registerConstructors(handlers as readonly TestingConstructor[]);
+
+  const config = new EventBusConfig();
+  EventBusConfig.setInstance(config);
+  Container.set(EventBusConfig, config);
+  config.setEventBus(eventBus);
+
+  for (const subscription of [...decoratedSubscriptions, ...subscriptions]) {
+    config.subscribe(subscription);
+  }
+
+  await config.start({ handlers: [] });
+
+  return new CrocoEventTestingHarness(eventBus, config, transactionContext);
 }
 
 export async function readResponseJson<T = unknown>(response: Response): Promise<T> {
@@ -298,6 +618,32 @@ function seedCrocoTestingDefaults(logger: TestLogger = new SilentTestLogger()): 
   Container.set(Logger, logger as Logger);
   Container.set(ErrorHandler, new ErrorHandler(logger as Logger));
   Container.set(HealthCheckRegistry, new HealthCheckRegistry());
+}
+
+function seedTestingTransactionContext(
+  input: TestingTransactionContext | TestingTransactionContextOptions | false | undefined,
+): TestingTransactionContext | null {
+  const transactionContext = normalizeTestingTransactionContext(input);
+
+  if (transactionContext) {
+    Container.set(TRANSACTION_CONTEXT_TOKEN, transactionContext);
+  }
+
+  return transactionContext;
+}
+
+function normalizeTestingTransactionContext(
+  input: TestingTransactionContext | TestingTransactionContextOptions | false | undefined,
+): TestingTransactionContext | null {
+  if (input === false) {
+    return null;
+  }
+
+  if (input instanceof TestingTransactionContext) {
+    return input;
+  }
+
+  return new TestingTransactionContext(input);
 }
 
 function registerTestingProviders(providers: readonly TestingProvider[]): void {
@@ -454,4 +800,42 @@ function toArray<T>(value: T | readonly T[] | undefined): T[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function createTestingRuntimeContext(
+  requestId: string,
+  options: Partial<RuntimeContext> | undefined,
+): RuntimeContext {
+  const {
+    capabilities: capabilityOverrides,
+    requestId: runtimeRequestId,
+    ...runtimeOptions
+  } = options ?? {};
+  const waitUntilPromises: Promise<unknown>[] = [];
+  const capabilities = {
+    ...DEFAULT_TEST_RUNTIME_CAPABILITIES,
+    ...capabilityOverrides,
+  };
+  const defaultRuntime = {
+    env: {},
+    platform: "node",
+    waitUntil(promise: Promise<unknown>) {
+      waitUntilPromises.push(promise);
+    },
+    async flush() {
+      await Promise.allSettled(waitUntilPromises.splice(0));
+    },
+    async shutdown() {},
+  } satisfies Omit<RuntimeContext, "capabilities" | "requestId">;
+
+  return {
+    ...defaultRuntime,
+    ...runtimeOptions,
+    capabilities,
+    requestId: runtimeRequestId ?? requestId,
+  };
+}
+
+function isRequestContext(value: unknown): value is RequestContext {
+  return isRecord(value) && typeof value.requestId === "string";
 }

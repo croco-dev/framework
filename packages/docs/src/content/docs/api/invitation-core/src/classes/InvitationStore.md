@@ -25,7 +25,7 @@ title: "InvitationStore"
 
 ### compareAndSetStatus()
 
-> `abstract` **compareAndSetStatus**(`tenantId`, `id`, `expected`, `desired`, `meta?`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> `abstract` **compareAndSetStatus**(`tenantId`, `id`, `expected`, `desired`, `meta?`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -57,7 +57,7 @@ title: "InvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 ***
 
@@ -99,7 +99,7 @@ title: "InvitationStore"
 
 ### findById()
 
-> `abstract` **findById**(`id`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> `abstract` **findById**(`id`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -109,13 +109,13 @@ title: "InvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 ***
 
 ### findByTenantAndEmail()
 
-> `abstract` **findByTenantAndEmail**(`tenantId`, `email`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> `abstract` **findByTenantAndEmail**(`tenantId`, `email`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -129,13 +129,13 @@ title: "InvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 ***
 
 ### findByTokenHash()
 
-> `abstract` **findByTokenHash**(`tokenHash`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> `abstract` **findByTokenHash**(`tokenHash`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -145,7 +145,7 @@ title: "InvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 ***
 
@@ -167,7 +167,7 @@ title: "InvitationStore"
 
 ### updateStatus()
 
-> `abstract` **updateStatus**(`tenantId`, `id`, `status`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+> `abstract` **updateStatus**(`tenantId`, `id`, `status`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
 #### Parameters
 
@@ -185,4 +185,4 @@ title: "InvitationStore"
 
 #### Returns
 
-`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
+`Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>

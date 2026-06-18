@@ -70,9 +70,9 @@ Whether previous subscription was churned
 
 ##### previousAmount
 
-`number`
-
 Previous plan amount (if any)
+
+`number` | `null`
 
 ##### newAmount
 

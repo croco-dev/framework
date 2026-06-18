@@ -23,7 +23,7 @@ Backoff configuration
 
 ### backoffPolicy?
 
-> `optional` **backoffPolicy**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)
+> `optional` **backoffPolicy**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)\<`unknown`\>
 
 Custom backoff policy (overrides backoff options)
 

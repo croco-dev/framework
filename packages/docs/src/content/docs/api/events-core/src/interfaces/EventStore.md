@@ -76,7 +76,7 @@ title: "EventStore"
 
 ### getById()
 
-> **getById**\<`TEvent`\>(`eventId`): `Promise`\<`TEvent`\>
+> **getById**\<`TEvent`\>(`eventId`): `Promise`\<`TEvent` \| `undefined`\>
 
 특정 이벤트를 ID로 조회합니다.
 
@@ -96,7 +96,7 @@ title: "EventStore"
 
 #### Returns
 
-`Promise`\<`TEvent`\>
+`Promise`\<`TEvent` \| `undefined`\>
 
 이벤트 또는 undefined
 
