@@ -20,7 +20,7 @@ async function main() {
       controllerPaths,
       outputDir: projectRoot,
     });
-    console.log("✓ routes.js generated at .croco/build/routes.js");
+    console.log("✓ routes.js and route-registration-table.json generated at .croco/build");
   } catch (err) {
     console.error("Failed to generate routes.js:", err instanceof Error ? err.message : err);
     process.exit(1);

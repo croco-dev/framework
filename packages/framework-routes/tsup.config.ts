@@ -12,5 +12,10 @@ export default defineConfig({
   clean: true,
   minify: false,
   external: ["reflect-metadata"],
-  noExternal: ["@croco/framework-context", "@croco/protocols-rest"],
+  noExternal: [
+    "@croco/framework-context",
+    "@croco/problems-core",
+    "@croco/protocols-core",
+    "@croco/protocols-rest",
+  ],
 });
