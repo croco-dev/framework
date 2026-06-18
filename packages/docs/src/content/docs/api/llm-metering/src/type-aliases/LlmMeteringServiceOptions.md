@@ -35,6 +35,12 @@ LlmMeteringService 입력과 결과에 사용하는 타입입니다.
 
 ***
 
+### failurePolicy?
+
+> `optional` **failurePolicy**: [`LlmMeteringFailurePolicy`](/api/llm-metering/src/type-aliases/llmmeteringfailurepolicy/)
+
+***
+
 ### meteringService
 
 > **meteringService**: [`MeteringService`](/api/metering-core/src/classes/meteringservice/)
@@ -44,3 +50,9 @@ LlmMeteringService 입력과 결과에 사용하는 타입입니다.
 ### pricingTable?
 
 > `optional` **pricingTable**: [`PricingTable`](/api/llm-metering/src/classes/pricingtable/)
+
+***
+
+### quotaPolicy?
+
+> `optional` **quotaPolicy**: [`LlmQuotaPolicy`](/api/llm-metering/src/interfaces/llmquotapolicy/)

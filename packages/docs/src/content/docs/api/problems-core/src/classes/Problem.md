@@ -72,6 +72,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`LlmMeteringRecordFailedProblem`](/api/llm-metering/src/classes/llmmeteringrecordfailedproblem/)
 - [`LlmQuotaExceededProblem`](/api/llm-metering/src/classes/llmquotaexceededproblem/)
 - [`PricingNotFoundProblem`](/api/llm-metering/src/classes/pricingnotfoundproblem/)
+- [`PricingRegistryConflictProblem`](/api/llm-metering/src/classes/pricingregistryconflictproblem/)
 - [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/)
 - [`AlreadyMemberProblem`](/api/membership-core/src/classes/alreadymemberproblem/)
 - [`InvalidRoleProblem`](/api/membership-core/src/classes/invalidroleproblem/)
