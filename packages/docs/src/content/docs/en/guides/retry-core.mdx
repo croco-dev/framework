@@ -17,6 +17,11 @@ pnpm add @croco/retry-core
 - **Lambda Support**: Time-aware retries (stop before timeout)
 - **Monitoring**: Integration with OpenTelemetry for tracing and metrics
 
+Retry behavior follows Croco's shared [Failure Semantics](/en/guides/failure-semantics/) contract.
+By default, `InternalServerError` and `TooManyRequests` Problems are retryable, client/domain
+Problems are terminal, and timeout/circuit control failures remain typed Problems instead of generic
+errors.
+
 ## Usage
 
 ### Using the Decorator

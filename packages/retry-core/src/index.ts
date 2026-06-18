@@ -47,6 +47,7 @@ export { RedisCircuitBreakerStore } from "./libs/stores/RedisCircuitBreakerStore
 export {
   CircuitBreakerOpenProblem,
   DuplicateRecoverHandlerProblem,
+  LambdaTimeoutProblem,
   RetryAbortedProblem,
   RetryExhaustedProblem,
 } from "./libs/errors";

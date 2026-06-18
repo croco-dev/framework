@@ -220,6 +220,8 @@ RFC 7807 표준을 따르는 일관된 에러 응답 형식을 제공합니다.
 throw Problem.notFound("user/not-found", "사용자를 찾을 수 없습니다.");
 ```
 
+실패 처리 기준은 [Failure Semantics](packages/docs/src/content/docs/en/guides/failure-semantics.mdx)를 따릅니다. `ProblemCategory`는 복구 가능성, `code`는 패키지별 안정 식별자를 나타내며, `retry-core`는 기본적으로 `InternalServerError`와 `TooManyRequests`만 재시도 가능한 실패로 소비합니다.
+
 ---
 
 ## 🚀 시작하기

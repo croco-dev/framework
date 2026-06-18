@@ -1,0 +1,140 @@
+---
+title: Failure Semantics
+description: Standard Problem, retry, timeout, cancellation, and idempotency rules for Croco packages.
+---
+
+Croco treats failure as a typed recovery contract. A failure must tell callers whether it is a
+domain decision, a client input problem, a transient dependency fault, a timeout, a cancellation, or
+an idempotency conflict. That decision should be visible as a `Problem` category, stable code, and
+transport-safe response shape before the failure crosses a Croco package boundary.
+
+## Core Rules
+
+- Throw a Croco `Problem` for expected domain, validation, authorization, quota, provider, timeout,
+  cancellation, idempotency, and framework contract failures.
+- Let generic `Error` represent unexpected implementation faults only. Transports may convert it to
+  an opaque 500, but package APIs should not use generic `Error` for states a caller can recover
+  from.
+- Keep the `ProblemCategory` small and shared. It answers "what class of recovery is possible?".
+- Keep the `code` package-specific and stable. It answers "which exact failure happened?".
+- Preserve upstream failure evidence in `cause` or safe extensions when a provider failure is
+  normalized. Do not include secrets, credentials, raw request bodies, or tenant-private data.
+- Do not return an empty success result when a failure happened. Use a typed failure or an explicit
+  recovery value whose source is visible to the caller.
+
+## Category And Code Naming
+
+`ProblemCategory` is the cross-package recovery class. New package failures should choose the
+nearest existing category instead of adding narrow categories for every provider or domain.
+
+| Category                     | Use For                                                                | Default Retry Decision               |
+| ---------------------------- | ---------------------------------------------------------------------- | ------------------------------------ |
+| `BadRequest`                 | malformed request shape, invalid primitive format, unsupported option  | terminal                             |
+| `Unauthorized` / `Forbidden` | missing identity or insufficient permission                            | terminal                             |
+| `NotFound` / `Gone`          | absent or retired resource                                             | terminal                             |
+| `Conflict`                   | duplicate state, optimistic concurrency, idempotency collision         | terminal unless caller changes input |
+| `ValidationError`            | schema or field validation failure                                     | terminal                             |
+| `BusinessRuleViolation`      | domain policy refusal, quota policy refusal that should not be retried | terminal                             |
+| `TooManyRequests`            | rate limit, open circuit, caller should back off                       | retryable by default                 |
+| `InternalServerError`        | transient provider, runtime, or framework infrastructure failure       | retryable by default                 |
+| `NotImplemented`             | unsupported capability or adapter feature                              | terminal unless explicitly opted in  |
+
+The `code` must be stable across releases and specific enough for logs, tests, and generated
+clients. Prefer the package's existing convention, usually uppercase package-prefixed codes such as
+`RETRY_EXHAUSTED`, `CIRCUIT_BREAKER_OPEN`, or `LAMBDA_TIMEOUT_GUARD`. Do not encode request ids,
+tenant ids, provider trace ids, localized text, or mutable provider messages in the code.
+
+## Retryability
+
+`@croco/retry-core` consumes Croco `Problem` categories directly. Its default policy retries
+`InternalServerError` and `TooManyRequests`, does not retry client/domain categories, and rejects
+programmer errors such as `TypeError`, `ReferenceError`, `SyntaxError`, and `RangeError`.
+
+That means package authors should classify expected failures before retry sees them:
+
+```typescript no-check
+import { Problem, ProblemCategory } from "@croco/problems-core";
+
+class ProviderUnavailableProblem extends Problem {
+  constructor(cause: Error) {
+    super(
+      "PAYMENTS_PROVIDER_UNAVAILABLE",
+      ProblemCategory.InternalServerError,
+      "Payments provider failed",
+      {
+        cause,
+      },
+    );
+  }
+}
+
+class PaymentLimitExceededProblem extends Problem {
+  constructor() {
+    super(
+      "PAYMENT_LIMIT_EXCEEDED",
+      ProblemCategory.BusinessRuleViolation,
+      "Payment limit exceeded",
+    );
+  }
+}
+```
+
+The provider failure is retryable by default. The business rule failure is terminal by default. A
+caller can still opt into a different retry policy, but the package's default classification should
+be correct without caller-specific overrides.
+
+## Timeout And Cancellation
+
+Timeout and cancellation are control-plane failures. They should stop additional side effects and
+preserve the reason for recovery logic.
+
+- `LambdaTimeoutGuard` fails before starting another retry attempt and throws
+  `LambdaTimeoutProblem`, a Croco `Problem` with code `LAMBDA_TIMEOUT_GUARD`.
+- Open circuit failures throw `CircuitBreakerOpenProblem` with `TooManyRequests`, which lets callers
+  back off instead of treating the circuit as a domain denial.
+- Abort signals should be propagated to provider calls when the package accepts a signal. If the
+  package records lifecycle state, a cancellation should move to an explicit cancelled state rather
+  than failed or completed.
+- A timeout or cancellation must not mark idempotent work as successful unless the side effect is
+  known to have committed.
+
+## Idempotency
+
+Idempotency is a state contract, not a retry policy by itself.
+
+- A completed idempotency key may replay the recorded success or return the recorded typed failure.
+- An in-progress key should fail with a deterministic conflict or busy-state `Problem`; callers can
+  retry after the documented recovery window.
+- If storage fails after a side effect starts but before completion is recorded, the package should
+  abort or clear the in-progress marker when that is safe. It should not hide the partial state behind
+  a generic error.
+- Replayed operations need the same tenant, meter/resource id, and idempotency key boundaries that
+  produced the original result.
+
+`@croco/metering-core` follows this pattern by separating quota failures, duplicate records, and
+idempotency cleanup from generic storage errors.
+
+## Transport And Client Consumption
+
+HTTP and RPC transports should preserve `Problem` details as the failure union shape that generated
+clients can consume. The transport may turn unknown generic errors into an opaque 500 response and
+log the original error, but expected failures should already be typed before they reach the transport.
+
+Generated `@croco/rpc-codegen` clients model this distinction explicitly. A non-2xx response whose
+body matches `RpcProblemDetails` rejects as `RpcClientProblemError`, and callers should branch on
+`error.problem.code`, `error.problem.status`, or other safe `Problem` fields. Empty, invalid, or
+non-Problem error responses reject as `RpcClientResponseError`; callers should treat those as
+transport/protocol failures instead of parsing a generic `Error.message`.
+
+Package-level differences are intentional:
+
+- `@croco/problems-core` defines the stable `Problem` envelope and category-to-status mapping.
+- `@croco/retry-core` consumes categories to decide retryability and emits retry/timeout/circuit
+  `Problem` types for recovery logic.
+- `@croco/transports-http` serializes known `Problem` instances into RFC 7807 responses and treats
+  non-Problem errors as unhandled internal faults.
+- `@croco/rpc-codegen` turns serialized `Problem` JSON into `RpcClientProblemError.problem` and
+  separates non-Problem failures as `RpcClientResponseError`.
+
+When adding a package, test at least one typed failure path that proves the package does not hide an
+expected failure behind a generic `Error`.

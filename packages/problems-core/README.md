@@ -1,6 +1,7 @@
 # @croco/problems-core
 
 RFC 7807 Problem Details 기반의 공통 에러 계층입니다. Croco 패키지 전반에서 일관된 HTTP 에러 표현을 만들 때 사용합니다.
+Croco 전체 실패 분류 기준은 [Failure Semantics](../../packages/docs/src/content/docs/en/guides/failure-semantics.mdx)를 따릅니다.
 
 ## 설치
 
@@ -49,3 +50,9 @@ const json = ProblemSerializer.serialize(
 - `ProblemSerializer`: 직렬화와 역직렬화
 - `HttpStatus`: 상태 코드 상수
 - `ProblemExtensions`, `validateExtensions`, `isValidExtensions`: 확장 필드 검증
+
+## 실패 의미론
+
+`ProblemCategory`는 HTTP 상태 코드뿐 아니라 호출자가 선택할 복구 경로를 나타냅니다. `BadRequest`, `ValidationError`, `BusinessRuleViolation`, `Conflict`, `Unauthorized`, `Forbidden`, `NotFound`, `Gone`, `NotImplemented`는 기본적으로 terminal 실패이며, `TooManyRequests`와 `InternalServerError`는 `retry-core`에서 기본 재시도 대상으로 소비됩니다.
+
+`code`는 패키지별 안정 식별자입니다. 새 public Problem은 기존 패키지 관례를 따르되 요청 id, tenant id, provider trace id, provider message처럼 매 요청 달라지는 값을 code에 넣지 않습니다. 외부 provider 오류를 정규화할 때는 안전한 `cause` 또는 extension으로 원인 증거를 남기고 secret, credential, raw body는 노출하지 않습니다.
