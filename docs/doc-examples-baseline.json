@@ -40,7 +40,7 @@
       "file": "docs/troubleshooting/diagnostics.md",
       "blockIndex": 1,
       "language": "typescript",
-      "openingLine": 104,
+      "openingLine": 108,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
