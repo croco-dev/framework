@@ -55,6 +55,51 @@ const pipe = createValidationPipe(schema);
 const page = validateRequest(schema, { page: "1" });
 ```
 
+### 스키마 단일 출처
+
+`defineRouteSchema`는 DTO 타입, 런타임 검증, 응답 스키마, OpenAPI/RPC 산출물의 출처를 하나의
+route schema 객체로 모읍니다. 새 외부 스키마 의존성을 추가하지 않고 기존 Zod 기반 REST 검증
+경로를 사용합니다.
+
+```typescript
+import {
+  Body,
+  Controller,
+  Post,
+  ResponseSchema,
+  defineRouteSchema,
+  type InferRouteSchemaRequest,
+  type InferRouteSchemaResponse,
+} from "@croco/protocols-rest";
+import { z } from "zod";
+
+const createUserRoute = defineRouteSchema({
+  request: {
+    body: z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+    }),
+  },
+  response: z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    email: z.string().email(),
+  }),
+});
+
+type CreateUserBody = InferRouteSchemaRequest<typeof createUserRoute>["body"];
+type CreateUserResponse = InferRouteSchemaResponse<typeof createUserRoute>;
+
+@Controller("/users")
+class UserController {
+  @Post("/")
+  @ResponseSchema(createUserRoute.response)
+  createUser(@Body(createUserRoute.request.body) body: CreateUserBody): CreateUserResponse {
+    return { id: "4ea573de-cfb9-4696-bc48-216f19f44300", ...body };
+  }
+}
+```
+
 ### 타입 기반 라우트 계약
 
 ```typescript
@@ -124,4 +169,5 @@ class UserController {
 - 메타데이터 조회: `getControllerMeta`, `getRouteMeta`, `getParamsMeta`, `getGuards`, `getPipes`, `getInterceptors`, `getFilters`, `isController`
 - 검증 유틸리티: `createValidator`, `validateRequest`, `validateResponse`, `createValidationPipe`
 - 검증 Problem: `ValidationProblem`, `RequestValidationProblem`, `ResponseValidationProblem`
+- 스키마 계약: `defineRouteSchema`, `InferRouteSchemaRequest`, `InferRouteSchemaResponse`
 - 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `TypedRouteConfig`, `RouteContractSpec`, `RouteMethodReturn`

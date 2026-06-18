@@ -22,6 +22,14 @@ export {
   getContractPathParams,
 } from "./libs/ContractGraph";
 export type {
+  DefinedRouteSchema,
+  InferRouteSchemaRequest,
+  InferRouteSchemaResponse,
+  RouteRequestSchemas,
+  RouteSchemaLike,
+} from "./libs/RouteSchema";
+export { defineRouteSchema } from "./libs/RouteSchema";
+export type {
   ContractGraphDiff,
   ContractGraphDiffChange,
   ContractGraphDiffSeverity,

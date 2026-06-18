@@ -1,7 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
-import type { RouteIR } from "@croco/protocols-core";
+import {
+  defineRouteSchema,
+  type InferRouteSchemaRequest,
+  type InferRouteSchemaResponse,
+  type RouteIR,
+} from "@croco/protocols-core";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -483,6 +488,67 @@ describe("generateClientFiles", () => {
     expect(content).toContain(
       "export type UpdateInput = { body: { name: string; }; path: { id: string; }; query: { filter: string; }; };",
     );
+  });
+
+  it("should generate client DTOs from one route schema object", () => {
+    const createUserRoute = defineRouteSchema({
+      request: {
+        body: z.object({
+          name: z.string(),
+          email: z.string().email(),
+        }),
+      },
+      response: z.object({
+        id: z.string(),
+        name: z.string(),
+        email: z.string().email(),
+      }),
+    });
+    type CreateUserBody = InferRouteSchemaRequest<typeof createUserRoute>["body"];
+    type CreateUserResponse = InferRouteSchemaResponse<typeof createUserRoute>;
+    const validBody: CreateUserBody = { name: "Ada", email: "ada@example.com" };
+    const validResponse: CreateUserResponse = {
+      id: "user-1",
+      name: validBody.name,
+      email: validBody.email,
+    };
+    // @ts-expect-error DTO field types are inferred from the schema object.
+    const invalidBody: CreateUserBody = { name: "Ada", email: 42 };
+    const bodySchema = createUserRoute.request.body as unknown as NonNullable<
+      RouteIR["inputSchemas"]["body"]
+    >;
+    const responseSchema = createUserRoute.response as unknown as NonNullable<
+      RouteIR["outputSchema"]
+    >;
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: bodySchema }],
+        inputSchema: bodySchema,
+        inputSchemas: {
+          body: bodySchema,
+          path: null,
+          query: null,
+          headers: null,
+        },
+        outputSchema: responseSchema,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(validResponse.id).toBe("user-1");
+    expect(invalidBody).toBeDefined();
+    expect(content).toContain("export type CreateUserInput = { name: string; email: string; };");
+    expect(content).toContain(
+      "export type CreateUserOutput = { id: string; name: string; email: string; };",
+    );
+    expect(content).toContain("createUser: (input: CreateUserInput): Promise<CreateUserOutput>");
   });
 
   it("should generate output types from outputSchema", () => {
