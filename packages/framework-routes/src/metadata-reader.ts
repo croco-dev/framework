@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { discoverControllerConstructors, type Constructor } from "@croco/protocols-core";
 
 export type CompiledRouteInfo = {
   readonly method: string;
@@ -25,20 +26,38 @@ type RouteMetadataShape = {
 const CONTROLLER_KEY = Symbol.for("croco:rest:controller");
 const ROUTES_KEY = Symbol.for("croco:rest:routes");
 
+export async function readControllerConstructors(
+  controllerPath: string,
+): Promise<readonly Constructor[]> {
+  const mod = (await import(controllerPath)) as Record<string, unknown>;
+
+  return discoverControllerConstructors(mod);
+}
+
+export async function readControllersMetadata(
+  controllerPath: string,
+): Promise<readonly CompiledControllerInfo[]> {
+  return readControllersMetadataFromConstructors(await readControllerConstructors(controllerPath));
+}
+
 export async function readControllerMetadata(
   controllerPath: string,
 ): Promise<CompiledControllerInfo | null> {
-  const mod = await import(controllerPath);
+  const [controller] = await readControllersMetadata(controllerPath);
 
-  for (const [className, exported] of Object.entries(mod)) {
-    if (typeof exported !== "function") {
-      continue;
-    }
+  return controller ?? null;
+}
 
-    const controllerMeta = Reflect.getMetadata(CONTROLLER_KEY, exported) as
+export function readControllersMetadataFromConstructors(
+  controllerConstructors: readonly Constructor[],
+): CompiledControllerInfo[] {
+  const controllers: CompiledControllerInfo[] = [];
+
+  for (const controller of controllerConstructors) {
+    const controllerMeta = Reflect.getMetadata(CONTROLLER_KEY, controller) as
       | ControllerMetadataShape
       | undefined;
-    const routesMeta = Reflect.getMetadata(ROUTES_KEY, exported) as
+    const routesMeta = Reflect.getMetadata(ROUTES_KEY, controller) as
       | RouteMetadataShape[]
       | undefined;
 
@@ -46,16 +65,16 @@ export async function readControllerMetadata(
       continue;
     }
 
-    return {
+    controllers.push({
       basePath: controllerMeta.path,
-      className,
+      className: controller.name,
       routes: routesMeta.map((route) => ({
         method: route.method,
         path: route.path,
         handlerName: String(route.methodName),
       })),
-    };
+    });
   }
 
-  return null;
+  return controllers;
 }

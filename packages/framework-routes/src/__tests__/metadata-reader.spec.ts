@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { build } from "tsup";
 import { describe, expect, it } from "vitest";
-import { readControllerMetadata } from "../metadata-reader";
+import { readControllerMetadata, readControllersMetadata } from "../metadata-reader";
 import { SampleController } from "./fixtures/SampleController";
 
 describe("readControllerMetadata", () => {
@@ -36,6 +36,24 @@ describe("readControllerMetadata", () => {
         { method: "POST", path: "/users", handlerName: "createUser" },
       ],
     });
+  });
+
+  it("imports every controller exported by a module file", async () => {
+    const moduleUrl = new URL("./fixtures/MultipleControllers.ts", import.meta.url).href;
+    const controllers = await readControllersMetadata(moduleUrl);
+
+    expect(controllers).toEqual([
+      {
+        basePath: "/api/users",
+        className: "UsersController",
+        routes: [{ method: "GET", path: "", handlerName: "listUsers" }],
+      },
+      {
+        basePath: "/api/posts",
+        className: "PostsController",
+        routes: [{ method: "POST", path: "", handlerName: "createPost" }],
+      },
+    ]);
   });
 
   it("reads metadata from a compiled controller module", async () => {

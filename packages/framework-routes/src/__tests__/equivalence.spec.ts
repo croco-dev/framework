@@ -3,7 +3,11 @@ import { extractRouteIR } from "@croco/protocols-core";
 import { Controller, Delete, Get, Post, Put } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CompiledController } from "../compiler";
-import { generateModule, generateRouteRegistrationCode } from "../compiler";
+import {
+  createRouteRegistrationTable,
+  generateModule,
+  generateRouteRegistrationCode,
+} from "../compiler";
 
 type RuntimeRoutePair = {
   readonly method: string;
@@ -108,27 +112,34 @@ describe("build-time vs runtime route equivalence", () => {
     expect([...buildPairs].sort()).toEqual([...runtimePairs].sort());
   });
 
-  it("generates registration code with matching route method and path pairs", () => {
+  it("generates an explicit registration table with matching route method and path pairs", () => {
+    const table = createRouteRegistrationTable(buildTimeControllers);
+    const tablePairs = table.entries.map((entry) => `${entry.method} ${entry.path}`);
+
+    expect([...tablePairs].sort()).toEqual([
+      "DELETE /api/users/:id",
+      "GET /api/users",
+      "GET /api/users/:id",
+      "GET /health",
+      "GET /v2/items",
+      "POST /api/users",
+      "POST /v2/items/:slug",
+      "PUT /api/users/:id",
+    ]);
+
     const code = generateRouteRegistrationCode(buildTimeControllers);
 
-    for (const routeCall of [
-      "app.get('/api/users'",
-      "app.post('/api/users'",
-      "app.get('/api/users/:id'",
-      "app.put('/api/users/:id'",
-      "app.delete('/api/users/:id'",
-      "app.get('/v2/items'",
-      "app.post('/v2/items/:slug'",
-      "app.get('/health'",
-    ]) {
-      expect(code).toContain(routeCall);
-    }
+    expect(code).toContain("routeRegistrationTable");
+    expect(code).toContain('"path": "/api/users"');
+    expect(code).toContain('"path": "/api/users/:id"');
+    expect(code).toContain('"path": "/v2/items/:slug"');
+    expect(code).toContain('"path": "/health"');
   });
 
   it("handles empty controller lists gracefully", () => {
     const code = generateModule([]);
 
     expect(code).toContain("function registerRoutes");
-    expect(code).not.toContain("app.get");
+    expect(code).toContain("Object.freeze([])");
   });
 });

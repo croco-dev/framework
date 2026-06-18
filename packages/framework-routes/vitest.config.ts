@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -8,8 +9,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@croco/framework-context": "../framework-context/src/index.ts",
-      "@croco/protocols-rest": "../protocols-rest/src/index.ts",
+      "@croco/framework-context": resolve(__dirname, "../framework-context/src/index.ts"),
+      "@croco/problems-core": resolve(__dirname, "../problems-core/src/index.ts"),
+      "@croco/protocols-core": resolve(__dirname, "../protocols-core/src/index.ts"),
+      "@croco/protocols-rest": resolve(__dirname, "../protocols-rest/src/index.ts"),
     },
   },
 });
