@@ -94,6 +94,26 @@ describe("package-quality-report.mts", () => {
     writePackage(repo, "alpha", "@croco/alpha", {
       build: "tsup",
     });
+    writeFile(
+      repo,
+      "ci-reports/package-quality/public-api-summary.json",
+      `${JSON.stringify(
+        {
+          status: "fail",
+          packageCount: 1,
+          changedPackages: 1,
+          runtimeAdded: 1,
+          runtimeRemoved: 0,
+          typeAdded: 0,
+          typeRemoved: 1,
+          snapshotPath: "public-api-surface.snapshot.json",
+          reportPath: "ci-reports/package-quality/public-api-diff.md",
+          updateCommand: "pnpm public-api:write",
+        },
+        null,
+        2,
+      )}\n`,
+    );
 
     const report = createPackageQualityReport({
       rootDir: repo,
@@ -110,7 +130,12 @@ describe("package-quality-report.mts", () => {
     );
 
     expect(markdown).toContain("# Package Quality Dashboard");
+    expect(markdown).toContain("| `public-api:check` | package public export surface drift");
+    expect(markdown).toContain("- Runtime exports added/removed: 1 / 0");
+    expect(markdown).toContain("- Type exports added/removed: 0 / 1");
+    expect(markdown).toContain("run `pnpm public-api:write`");
     expect(summaryJson).toContain('"packageName": "@croco/alpha"');
+    expect(summaryJson).toContain('"publicApi"');
   });
 
   it("flags repository-core Drizzle boundary violations", () => {
