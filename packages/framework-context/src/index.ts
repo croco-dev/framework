@@ -184,6 +184,17 @@ export { LOGGER_TOKEN } from "./libs/ILogger";
  */
 export { MiddlewareChain } from "./libs/Middleware";
 
+export {
+  assertPolicyRuntimeCapabilities,
+  compilePolicyTable,
+  createPolicyTarget,
+  definePolicy,
+  getPolicyExecutionPlan,
+  POLICY_EXECUTION_ORDER,
+  POLICY_KINDS,
+  POLICY_TARGET_KINDS,
+} from "./libs/RuntimePolicy";
+
 /**
  * 종료 훅을 등록하고 프로세스 시그널에서 graceful shutdown을 실행하는 매니저 클래스입니다.
  *
@@ -204,6 +215,11 @@ export { MiddlewareChain } from "./libs/Middleware";
 export { ShutdownManager } from "./libs/ShutdownManager";
 export { CircularDependencyProblem } from "./libs/problems/CircularDependencyProblem";
 export { MiddlewareProblem } from "./libs/problems/MiddlewareProblems";
+export {
+  PolicyCapabilityProblem,
+  PolicyConflictProblem,
+  PolicyDefinitionProblem,
+} from "./libs/problems/RuntimePolicyProblems";
 export {
   ShutdownConfigurationConflictProblem,
   ShutdownTimeoutProblem,
@@ -258,6 +274,25 @@ export type { ComponentOptions } from "./libs/types";
  * ```
  */
 export type { Constructor } from "./libs/types";
+
+export type {
+  DefinePolicyOptions,
+  PolicyDefinition,
+  PolicyExecutionEntry,
+  PolicyExecutionPlan,
+  PolicyFailurePropagation,
+  PolicyFailurePropagationEntry,
+  PolicyKind,
+  PolicyRuntimeCapability,
+  PolicySource,
+  PolicyTable,
+  PolicyTarget,
+  PolicyTargetKind,
+  RetryPolicyDefinition,
+  RuntimePolicy,
+  TimeoutPolicy,
+  TracingPolicy,
+} from "./libs/RuntimePolicy";
 
 export type {
   RuntimeCapabilities,
