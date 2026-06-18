@@ -18,6 +18,7 @@ export { contractsCheck, runContractsCheck } from "./commands/contractsCheck";
 export { create } from "./commands/create";
 export { createDomain } from "./commands/createDomain";
 export { createPage } from "./commands/createPage";
+export { doctor, formatDoctorReport, getDoctorExitCode, runDoctor } from "./commands/doctor";
 export { generate } from "./commands/generate";
 export { generateScaffold } from "./commands/generateScaffold";
 export {
@@ -54,6 +55,18 @@ export {
   runOpsStatus,
 } from "./commands/ops";
 export { GLOBAL_OPTIONS } from "./commands/options";
+
+export type {
+  DoctorCheckResult,
+  DoctorCheckStatus,
+  DoctorDiagnostic,
+  DoctorLocation,
+  DoctorPackage,
+  DoctorReport,
+  DoctorSeverity,
+  DoctorSummary,
+  RunDoctorOptions,
+} from "./commands/doctor";
 
 export type {
   JobDetails,

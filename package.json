@@ -11,6 +11,7 @@
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
+    "doctor": "pnpm --filter @croco/cli... build && node packages/cli/dist/bin/croco.js doctor",
     "docs:build": "turbo run docs:build",
     "docs:dev": "turbo run docs:dev",
     "docs:examples:check": "node --experimental-strip-types scripts/doc-examples-check.mts --check",

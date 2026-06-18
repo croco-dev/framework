@@ -26,6 +26,7 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 | `generate scaffold <Model>`             | Page + domain bundle                          |
 | `codegen rpc [args]`                    | Generate RPC client code                      |
 | `codegen openapi [args]`                | Generate OpenAPI spec                         |
+| `doctor [path]`                         | Diagnose workspace boundaries and setup       |
 | `migrate up\|down\|status [args]`       | Run, rollback, or inspect database migrations |
 | `jobs list\|show\|logs\|cancel\|replay` | Inspect and recover Croco background jobs     |
 | `ops check\|status <url>`               | Validate or inspect operational endpoints     |
@@ -59,6 +60,14 @@ Creates a single source file under `apps/api-server/src/`:
 - `croco migrate up` runs pending migrations via `@croco/migration-runner`
 - `croco migrate down` rolls back migrations
 - `croco migrate status` shows executed and pending migration status
+
+### doctor — Workspace Diagnostics
+
+- `croco doctor --json` finds the nearest `pnpm-workspace.yaml`, discovers workspace packages, and prints a machine-readable report for CI.
+- `croco doctor apps/api-server` runs the same checks from a specific workspace path.
+- Current blocking diagnostics include `doctor/repository-core-drizzle-boundary` and `doctor/lambda-telemetry-flush-missing`. Each failure reports the cause, source location, and recovery action.
+
+In this repository, `pnpm run doctor` builds the CLI and runs `croco doctor` against the current workspace.
 
 ### jobs — Background Job Operations
 
