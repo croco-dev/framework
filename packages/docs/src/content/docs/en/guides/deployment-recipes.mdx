@@ -1,0 +1,421 @@
+---
+title: Deployment Recipes
+description: Copy-ready deployment recipes for Croco on AWS Lambda, Cloudflare Workers, and Node servers.
+---
+
+# Deployment Recipes
+
+Croco supports more than one runtime, but each runtime has different lifecycle and capability
+boundaries. Use these recipes as deployment baselines instead of copying a local development server
+into production.
+
+## Runtime choice
+
+| Runtime            | Use when                                                                                      | Croco entry point       | Required operational boundary                                                                                                                               |
+| ------------------ | --------------------------------------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AWS Lambda         | You want a request/response HTTP API behind API Gateway or another Lambda-compatible gateway. | `app.lambdaHandler()`   | Initialize SDKs outside the handler, validate env at module load, and call telemetry `forceFlush()` before the invocation returns.                          |
+| Cloudflare Workers | You need an edge fetch handler and Worker bindings.                                           | `toWorkersHandler(app)` | Read config from `env`, use `ctx.waitUntil()` through `Context.getRuntimeContext()`, and avoid Node-only packages unless the package is proven Worker-safe. |
+| Node server        | You run a long-lived process behind a load balancer, container platform, or process manager.  | `app.listen(port)`      | Expose `/health/live` and `/ready`, validate env before listen, and shut down through the hosting platform's normal signal/drain path.                      |
+
+The shared request contract is documented in [Runtime Contract](/en/guides/runtime-contract/).
+Presentation SSR/runtime support is tracked separately in
+[Presentation Runtime Support](/en/reference/presentation-runtime-support/).
+
+## Shared deployment rules
+
+- Import `reflect-metadata` once at the first runtime entry point.
+- Validate required env, secrets, and feature flags before accepting traffic. Missing production
+  config should fail startup or the Lambda cold start rather than producing partial behavior.
+- Keep secrets server-side. Do not expose diagnostics without a private network boundary, token
+  guard, or custom guard.
+- Treat in-memory stores as local, single-process, warm-container, or isolate-local state only.
+- Keep telemetry export failures visible. A failed telemetry flush should be logged with evidence;
+  it should not be silently converted into a successful health signal.
+
+## AWS Lambda HTTP API
+
+This recipe is the copy-ready baseline for a Croco HTTP API on Lambda. It uses API Gateway HTTP API
+style events through `app.lambdaHandler()`, initializes OpenTelemetry once per cold start, and flushes
+before the invocation returns.
+
+Install the runtime dependencies:
+
+```bash
+pnpm add @croco/problems-core @croco/protocols-rest @croco/ratelimit-core @croco/telemetry-sdk-node @croco/transports-http reflect-metadata
+```
+
+Set these environment variables in the Lambda function configuration:
+
+| Variable                                                              | Required                  | Purpose                                                                           |
+| --------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
+| `SERVICE_NAME`                                                        | yes                       | OpenTelemetry service name and diagnostics identity.                              |
+| `PUBLIC_ORIGIN`                                                       | yes                       | Allowed browser origin for CORS. Use the deployed frontend origin, not `*`.       |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` or `OTEL_EXPORTER_OTLP_ENDPOINT` | when telemetry is enabled | OTLP HTTP trace endpoint.                                                         |
+| `TELEMETRY_ENABLED`                                                   | no                        | Set to `false` to disable telemetry startup and flush.                            |
+| `TRACE_SAMPLE_RATE`                                                   | no                        | Sampling probability between `0` and `1`. Defaults to Croco's Lambda preset.      |
+| `CROCO_DIAGNOSTICS_TOKEN`                                             | no                        | Enables token-guarded `/health/diagnostics`. Leave unset to keep diagnostics off. |
+
+Create `src/runtime/env.ts`:
+
+```typescript
+import { ProblemFactory } from "@croco/problems-core";
+
+export type DeploymentEnv = {
+  serviceName: string;
+  publicOrigin: string;
+  telemetryEnabled: boolean;
+  otlpEndpoint?: string;
+  traceSampleRate?: number;
+  diagnosticsToken?: string;
+};
+
+function optionalEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value && value.length > 0 ? value : undefined;
+}
+
+function requiredEnv(name: string): string {
+  const value = optionalEnv(name);
+
+  if (!value) {
+    throw ProblemFactory.internalServerError(
+      "deployment/env-required",
+      `Missing required environment variable ${name}.`,
+    );
+  }
+
+  return value;
+}
+
+function parseTraceSampleRate(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    throw ProblemFactory.validationError(
+      "deployment/trace-sample-rate-invalid",
+      "TRACE_SAMPLE_RATE must be a number between 0 and 1.",
+    );
+  }
+
+  return parsed;
+}
+
+export function readDeploymentEnv(): DeploymentEnv {
+  const telemetryEnabled = optionalEnv("TELEMETRY_ENABLED") !== "false";
+  const otlpEndpoint =
+    optionalEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") ?? optionalEnv("OTEL_EXPORTER_OTLP_ENDPOINT");
+
+  if (telemetryEnabled && !otlpEndpoint) {
+    throw ProblemFactory.internalServerError(
+      "deployment/otlp-endpoint-required",
+      "Set OTEL_EXPORTER_OTLP_TRACES_ENDPOINT, OTEL_EXPORTER_OTLP_ENDPOINT, or TELEMETRY_ENABLED=false.",
+    );
+  }
+
+  return {
+    serviceName: requiredEnv("SERVICE_NAME"),
+    publicOrigin: requiredEnv("PUBLIC_ORIGIN"),
+    telemetryEnabled,
+    otlpEndpoint,
+    traceSampleRate: parseTraceSampleRate(optionalEnv("TRACE_SAMPLE_RATE")),
+    diagnosticsToken: optionalEnv("CROCO_DIAGNOSTICS_TOKEN"),
+  };
+}
+```
+
+Create `src/app.ts`:
+
+```typescript
+import {
+  createSlidingWindowPolicy,
+  RateLimitKeyBuilder,
+  RateLimiter,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import { Controller, Get } from "@croco/protocols-rest";
+import {
+  bodyLimitMiddleware,
+  corsMiddleware,
+  createApp,
+  mb,
+  rateLimitHttpMiddleware,
+  securityHeadersMiddleware,
+} from "@croco/transports-http";
+import type { DeploymentEnv } from "./runtime/env";
+
+@Controller("/api")
+class HealthController {
+  @Get("/health")
+  health() {
+    return { status: "ok" };
+  }
+}
+
+export function createDeploymentApp(env: DeploymentEnv) {
+  const rateLimiter = new RateLimiter(
+    new SlidingWindowInMemoryStore(),
+    new RateLimitKeyBuilder(["ip"]),
+  );
+
+  return createApp({
+    controllers: [HealthController],
+    diagnostics: env.diagnosticsToken
+      ? {
+          exposure: "token",
+          token: env.diagnosticsToken,
+        }
+      : {
+          exposure: "off",
+        },
+    middlewares: [
+      securityHeadersMiddleware(),
+      corsMiddleware({ origins: [env.publicOrigin] }),
+      bodyLimitMiddleware({ limit: mb(1) }),
+      rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("http", 100, 60_000),
+      }),
+    ],
+  });
+}
+```
+
+Create `src/handler.ts`:
+
+```typescript
+import "reflect-metadata";
+import { lambdaPreset, TelemetryRuntime } from "@croco/telemetry-sdk-node";
+import type { LambdaContext, LambdaEvent, LambdaResponse } from "@croco/transports-http";
+import { createDeploymentApp } from "./app";
+import { readDeploymentEnv } from "./runtime/env";
+
+const env = readDeploymentEnv();
+const telemetry = TelemetryRuntime.getInstance();
+const telemetryReady = telemetry.init(
+  lambdaPreset({
+    serviceName: env.serviceName,
+    exporterUrl: env.otlpEndpoint,
+    probability: env.traceSampleRate,
+  }),
+);
+const crocoHandler = createDeploymentApp(env).lambdaHandler();
+
+export async function handler(event: LambdaEvent, context: LambdaContext): Promise<LambdaResponse> {
+  await telemetryReady;
+
+  try {
+    return await crocoHandler(event, context);
+  } finally {
+    const flush = await telemetry.forceFlush(2_500);
+
+    if (!flush.success) {
+      console.error("telemetry forceFlush failed", flush.error?.message ?? flush.error);
+    }
+  }
+}
+```
+
+Deploy `src/handler.handler` as the Lambda entry point on a Node.js runtime supported by your
+deployment platform. Put the function behind API Gateway HTTP API or an equivalent gateway that
+forwards API Gateway v2 compatible events.
+
+### Lambda boundaries
+
+- Do not use `AWS_LAMBDA_EXEC_WRAPPER` for Croco telemetry. Initialize `TelemetryRuntime` in module
+  scope and flush in `finally`.
+- Keep expensive clients and the Croco app in module scope so warm invocations reuse them.
+- `Context.getRuntimeContext().waitUntil()` queues work that Croco drains before response conversion;
+  do not use it for unbounded jobs.
+- Lambda responses are buffered. Do not claim streaming support for this adapter.
+- In-memory rate limits, caches, and stores are warm-container only. Use provider-backed storage for
+  cross-container guarantees.
+
+## Cloudflare Workers API
+
+Workers use the fetch contract. Croco exposes the Worker `env` object and `ExecutionContext.waitUntil`
+through the runtime context when you use `toWorkersHandler(app)`.
+
+Install the Worker adapter and shared HTTP packages:
+
+```bash
+pnpm add @croco/framework-context @croco/protocols-rest @croco/ratelimit-core @croco/transports-cloudflare-workers @croco/transports-http reflect-metadata
+```
+
+Configure Wrangler with Node.js compatibility before copying the Worker entry point. Croco's request
+context uses `AsyncLocalStorage`, and this recipe imports the shared `@croco/transports-http`
+surface, so the Worker must be allowed to import the Node APIs used by that surface.
+
+```toml
+# wrangler.toml
+main = "src/index.ts"
+compatibility_date = "2026-06-18"
+compatibility_flags = ["nodejs_compat"]
+```
+
+```typescript
+import "reflect-metadata";
+import {
+  createSlidingWindowPolicy,
+  RateLimitKeyBuilder,
+  RateLimiter,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import { Context } from "@croco/framework-context";
+import { Controller, Get } from "@croco/protocols-rest";
+import {
+  bodyLimitMiddleware,
+  corsMiddleware,
+  createApp,
+  mb,
+  rateLimitHttpMiddleware,
+  securityHeadersMiddleware,
+} from "@croco/transports-http";
+import { toWorkersHandler } from "@croco/transports-cloudflare-workers";
+
+@Controller("/api")
+class WorkerController {
+  @Get("/runtime")
+  runtime() {
+    const runtime = Context.getRuntimeContext();
+
+    runtime?.waitUntil(Promise.resolve());
+
+    return {
+      platform: runtime?.platform,
+      requestId: runtime?.requestId,
+      hasServiceBinding: Boolean(runtime?.env?.API_WORKER),
+    };
+  }
+}
+
+const rateLimiter = new RateLimiter(
+  new SlidingWindowInMemoryStore(),
+  new RateLimitKeyBuilder(["ip"]),
+);
+
+const app = createApp({
+  controllers: [WorkerController],
+  middlewares: [
+    securityHeadersMiddleware(),
+    corsMiddleware({ origins: ["https://app.example.com"] }),
+    bodyLimitMiddleware({ limit: mb(1) }),
+    rateLimitHttpMiddleware({
+      rateLimiter,
+      policy: createSlidingWindowPolicy("http", 100, 60_000),
+    }),
+  ],
+});
+
+export default toWorkersHandler(app);
+```
+
+Use Worker bindings and secrets for runtime config. Plain text and JSON environment variables are
+available as `env` bindings; secrets should be configured as Worker secrets or secret-backed
+bindings.
+
+### Worker boundaries
+
+- Do not call `app.listen()` in Workers. Workers receive requests through `fetch(request, env, ctx)`.
+- Do not read `process.env` in request code. Use `Context.getRuntimeContext().env` or pass `env` into
+  your own adapters.
+- Do not use `@croco/telemetry-sdk-node` in Workers. It wraps the OpenTelemetry Node SDK and is
+  intended for Node and Lambda.
+- `nodejs_compat` is required for this recipe. `nodejs_als` is only enough for code that imports
+  `AsyncLocalStorage` and no other Node APIs.
+- Node.js compatibility in Workers is explicit and partial. Even with `nodejs_compat`, do not depend
+  on a durable local filesystem, inbound `listen()` sockets, or Node server APIs at the application
+  boundary.
+- In-memory rate limits and caches are isolate-local. Use Cloudflare Durable Objects, KV, R2, D1, or
+  another Worker-safe durable adapter when the behavior must survive isolate replacement.
+
+## Node server
+
+Node server deployment is a long-lived process. Use it for containers, VMs, local production-like
+smoke, or platforms that route HTTP directly to your process.
+
+```typescript
+import "reflect-metadata";
+import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
+import { createDeploymentApp } from "./app";
+import { readDeploymentEnv } from "./runtime/env";
+
+const env = readDeploymentEnv();
+const telemetry = TelemetryRuntime.getInstance();
+
+await telemetry.init({
+  serviceName: env.serviceName,
+  trace: {
+    enabled: env.telemetryEnabled,
+    exporterUrl: env.otlpEndpoint,
+    probability: env.traceSampleRate ?? 1,
+  },
+});
+
+const app = createDeploymentApp(env);
+const port = Number(process.env.PORT ?? "3000");
+
+await app.listen(port);
+
+async function shutdown(signal: string) {
+  const flush = await telemetry.forceFlush(5_000);
+
+  if (!flush.success) {
+    console.error(
+      `telemetry forceFlush failed during ${signal}`,
+      flush.error?.message ?? flush.error,
+    );
+  }
+
+  await telemetry.shutdown();
+  process.exit(flush.success ? 0 : 1);
+}
+
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
+```
+
+### Node boundaries
+
+- Put the process behind a supervisor or platform that sends `SIGTERM` before killing the container.
+- Configure load balancer health checks against `/health/live` and readiness checks against `/ready`
+  or `/health/ready`.
+- `app.listen()` starts an HTTP server for the current process; it does not create multi-process
+  clustering, zero-downtime deploys, TLS termination, or load balancing by itself.
+- Use provider-backed stores for any state that must survive a process restart.
+
+## Validation checklist
+
+Run the narrowest checks that match the recipe you changed:
+
+```bash
+pnpm docs:build
+pnpm check
+pnpm changeset-required:check -- --base origin/trunk --head HEAD
+```
+
+For Lambda examples that reuse `examples/quick-start-lambda`, also run:
+
+```bash
+pnpm quick-start-lambda:smoke
+```
+
+## Runtime references
+
+- AWS Lambda [Node.js handler](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-handler.html)
+  and
+  [TypeScript handler](https://docs.aws.amazon.com/lambda/latest/dg/typescript-handler.html)
+  docs define the handler as the method Lambda invokes and explain that the function runs until the
+  handler returns, exits, or times out.
+- Cloudflare Workers [bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/)
+  and
+  [context](https://developers.cloudflare.com/workers/runtime-apis/context/) docs define `env`
+  bindings and `ctx.waitUntil()` as runtime handler inputs.
+- Cloudflare Workers
+  [Node.js compatibility](https://developers.cloudflare.com/workers/runtime-apis/nodejs/) docs
+  require an explicit compatibility flag and do not make Workers equivalent to a Node server process.
+- Node.js [HTTP docs](https://nodejs.org/api/http.html#serverlisten) define `server.listen()` as
+  starting an HTTP server listening for connections.
