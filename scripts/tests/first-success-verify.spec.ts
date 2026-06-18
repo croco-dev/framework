@@ -99,21 +99,37 @@ function createFixture(options: FixtureOptions = {}): string {
     root,
     "examples/quick-start-lambda/src/index.ts",
     [
-      '@Controller("/api")',
-      '@Get("/health")',
-      'return { status: "ok" }',
-      '@Controller("/api/users")',
-      "@Get()",
-      "@UseGuards(AuthGuard)",
-      "@Post()",
-      '@Meter({ meterId: "api_user_create" })',
-      '@Metered({ meterId: "api_user_create" })',
+      'import { createLambdaExampleApp } from "./app/bootstrap";',
+      "const app = createLambdaExampleApp();",
+      "export const handler = app.lambdaHandler();",
       "",
     ].join("\n"),
   );
   writeFile(
     root,
-    "examples/quick-start-lambda/src/AuthProvider.ts",
+    "examples/quick-start-lambda/src/protocols/HealthController.ts",
+    ['@Controller("/api")', '@Get("/health")', 'return { status: "ok" }', ""].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/quick-start-lambda/src/protocols/UserController.ts",
+    [
+      '@Controller("/api/users")',
+      "@Get()",
+      "@UseGuards(AuthGuard)",
+      "list() { return []; }",
+      "",
+      "@Post()",
+      "@UseGuards(AuthGuard)",
+      '@Meter({ meterId: "api_user_create" })',
+      '@Metered({ meterId: "api_user_create" })',
+      "create() { return {}; }",
+      "",
+    ].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/quick-start-lambda/src/integrations/TestAuthProvider.ts",
     ['"test-key"', "return null", ""].join("\n"),
   );
   writeFile(

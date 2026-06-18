@@ -31,6 +31,10 @@ type ParsedCreateCrocoAppCommand = {
   readonly flags: Map<string, string | boolean>;
 };
 
+type PackageJsonWithScripts = {
+  readonly scripts?: Record<string, string | undefined>;
+};
+
 const CREATE_CROCO_APP_CHOICES = new Map<string, readonly string[]>([
   ["--preset", ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack"]],
   ["--api", ["graphql", "trpc"]],
@@ -373,10 +377,9 @@ const QUICK_START_DIR = join(ROOT, "examples", "quick-start-lambda");
 const paths = {
   rootReadme: join(ROOT, "README.md"),
   readme: join(QUICK_START_DIR, "README.md"),
-  index: join(QUICK_START_DIR, "src", "index.ts"),
-  authProvider: join(QUICK_START_DIR, "src", "AuthProvider.ts"),
-  userService: join(QUICK_START_DIR, "src", "UserService.ts"),
-  storage: join(QUICK_START_DIR, "src", "storage.ts"),
+  healthController: join(QUICK_START_DIR, "src", "protocols", "HealthController.ts"),
+  userController: join(QUICK_START_DIR, "src", "protocols", "UserController.ts"),
+  authProvider: join(QUICK_START_DIR, "src", "integrations", "TestAuthProvider.ts"),
   examplePkg: join(QUICK_START_DIR, "package.json"),
   gettingStarted: join(
     ROOT,
@@ -418,9 +421,9 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
   }
 
   // Example package.json dev script maps to tsx src/index.ts
-  let pkg;
+  let pkg: PackageJsonWithScripts;
   try {
-    pkg = JSON.parse(examplePkg);
+    pkg = JSON.parse(examplePkg) as PackageJsonWithScripts;
   } catch {
     pkg = {};
   }
@@ -439,9 +442,9 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     pass("A1d", "README documents `pnpm quick-start-lambda:smoke`");
   }
 
-  let rootPackageJson;
+  let rootPackageJson: PackageJsonWithScripts;
   try {
-    rootPackageJson = JSON.parse(rootPkg);
+    rootPackageJson = JSON.parse(rootPkg) as PackageJsonWithScripts;
   } catch {
     rootPackageJson = {};
   }
@@ -457,21 +460,21 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
 
 // A2. Health endpoint: GET /api/health returns { status: "ok" }
 {
-  const index = read(paths.index);
+  const healthController = read(paths.healthController);
 
-  if (!index.includes('@Controller("/api")')) {
+  if (!healthController.includes('@Controller("/api")')) {
     fail("A2a", "HealthController missing @Controller('/api')");
   } else {
     pass("A2a", "HealthController has @Controller('/api')");
   }
 
-  if (!index.includes('@Get("/health")')) {
+  if (!healthController.includes('@Get("/health")')) {
     fail("A2b", "HealthController missing @Get('/health')");
   } else {
     pass("A2b", "HealthController has @Get('/health')");
   }
 
-  if (!index.includes('return { status: "ok" }')) {
+  if (!healthController.includes('return { status: "ok" }')) {
     fail("A2c", "health() missing `return { status: 'ok' }`");
   } else {
     pass("A2c", "health() returns { status: 'ok' }");
@@ -480,21 +483,21 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
 
 // A3. Users list: GET /api/users with @UseGuards(AuthGuard)
 {
-  const index = read(paths.index);
+  const userController = read(paths.userController);
 
-  if (!index.includes('@Controller("/api/users")')) {
+  if (!userController.includes('@Controller("/api/users")')) {
     fail("A3a", "UserController missing @Controller('/api/users')");
   } else {
     pass("A3a", "UserController has @Controller('/api/users')");
   }
 
-  if (!index.includes("@Get()")) {
+  if (!userController.includes("@Get()")) {
     fail("A3b", "UserController missing @Get()");
   } else {
     pass("A3b", "UserController has @Get()");
   }
 
-  if (!index.includes("@UseGuards(AuthGuard)")) {
+  if (!userController.includes("@UseGuards(AuthGuard)")) {
     fail("A3c", "list() missing @UseGuards(AuthGuard)");
   } else {
     pass("A3c", "list() has @UseGuards(AuthGuard)");
@@ -503,23 +506,32 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
 
 // A4. Users create: POST /api/users with auth + metering
 {
-  const index = read(paths.index);
+  const userController = read(paths.userController);
 
-  if (!index.includes("@Post()")) {
+  if (!userController.includes("@Post()")) {
     fail("A4a", "UserController missing @Post()");
   } else {
     pass("A4a", "UserController has @Post()");
   }
 
-  // Verify @UseGuards(AuthGuard) on or near @Post()
-  // We need to find the Post section - check for both in the file
-  if (!index.includes("@UseGuards(AuthGuard)")) {
+  const createMethodIndex = userController.indexOf("create(");
+  const createBlockStart =
+    createMethodIndex === -1
+      ? 0
+      : Math.max(0, userController.lastIndexOf("\n\n", createMethodIndex));
+  const createDecoratorBlock =
+    createMethodIndex === -1 ? "" : userController.slice(createBlockStart, createMethodIndex);
+
+  if (
+    !createDecoratorBlock.includes("@Post()") ||
+    !createDecoratorBlock.includes("@UseGuards(AuthGuard)")
+  ) {
     fail("A4b", "create() missing @UseGuards(AuthGuard)");
   } else {
     pass("A4b", "create() has @UseGuards(AuthGuard)");
   }
 
-  if (!index.includes('@Metered({ meterId: "api_user_create" })')) {
+  if (!userController.includes('@Metered({ meterId: "api_user_create" })')) {
     fail("A4c", "create() missing @Metered({ meterId: 'api_user_create' })");
   } else {
     pass("A4c", "create() has @Metered({ meterId: 'api_user_create' })");
@@ -534,17 +546,17 @@ console.log("\n📋 B. Auth contract\n");
   const auth = read(paths.authProvider);
   const readme = read(paths.readme);
 
-  // AuthProvider accepts "test-key", rejects others
+  // TestAuthProvider accepts "test-key", rejects others
   if (!auth.includes('"test-key"')) {
-    fail("B1", "AuthProvider.ts missing `test-key` check");
+    fail("B1", "TestAuthProvider.ts missing `test-key` check");
   } else {
-    pass("B1", "AuthProvider.ts checks for `test-key`");
+    pass("B1", "TestAuthProvider.ts checks for `test-key`");
   }
 
   if (!auth.includes("return null")) {
-    fail("B2", "AuthProvider.ts missing `return null` for rejected keys");
+    fail("B2", "TestAuthProvider.ts missing `return null` for rejected keys");
   } else {
-    pass("B2", "AuthProvider.ts returns null for non-matching keys");
+    pass("B2", "TestAuthProvider.ts returns null for non-matching keys");
   }
 
   // README documents auth note
@@ -567,18 +579,18 @@ console.log("\n📋 B. Auth contract\n");
 console.log("\n📋 C. Metering contract\n");
 
 {
-  const index = read(paths.index);
+  const userController = read(paths.userController);
   const readme = read(paths.readme);
 
   // @Meter on class level with api_user_create
-  if (!index.includes('@Meter({ meterId: "api_user_create" })')) {
+  if (!userController.includes('@Meter({ meterId: "api_user_create" })')) {
     fail("C1", "UserController missing class-level @Meter({ meterId: 'api_user_create' })");
   } else {
     pass("C1", "UserController has class-level @Meter({ meterId: 'api_user_create' })");
   }
 
   // @Metered on create method
-  if (!index.includes('@Metered({ meterId: "api_user_create" })')) {
+  if (!userController.includes('@Metered({ meterId: "api_user_create" })')) {
     fail("C2", "create() missing @Metered({ meterId: 'api_user_create' })");
   } else {
     pass("C2", "create() has @Metered({ meterId: 'api_user_create' })");
