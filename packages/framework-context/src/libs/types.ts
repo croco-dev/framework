@@ -38,6 +38,20 @@ export type RuntimeCapabilities = {
 
 export type RuntimeNativeContext = Record<string, unknown>;
 
+export type RuntimeInspectorRecorderEventInput = {
+  readonly inspectionId?: string;
+  readonly requestId?: string;
+  readonly kind: string;
+  readonly outcome?: "started" | "succeeded" | "failed" | "skipped";
+  readonly name?: string;
+  readonly durationMs?: number;
+  readonly details?: Record<string, unknown>;
+};
+
+export interface RuntimeInspectorRecorder {
+  recordEvent(input: RuntimeInspectorRecorderEventInput): void;
+}
+
 export interface RuntimeContext {
   platform: RuntimePlatform;
   requestId: string;
@@ -53,12 +67,14 @@ export interface RuntimeContext {
 
 export interface RequestContext {
   requestId: string;
+  inspectionId?: string;
   user?: UserContext;
   tenantId?: string;
   traceId?: string;
   spanId?: string;
   traceFlags?: string | number;
   runtime?: RuntimeContext;
+  runtimeInspector?: RuntimeInspectorRecorder;
 }
 
 export type Middleware<TContext = RequestContext> = (

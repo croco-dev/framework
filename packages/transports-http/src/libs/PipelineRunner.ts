@@ -1,5 +1,13 @@
-import type { Guard } from "@croco/framework-context";
-import { ProblemFactory } from "@croco/problems-core";
+import {
+  Container,
+  Context,
+  DEV_INSPECTOR_TOKEN,
+  type Guard,
+  type RuntimeInspector,
+  type RuntimeInspectorRecorder,
+  recordRuntimeInspectionEvent,
+} from "@croco/framework-context";
+import { Problem, ProblemCategoryMapper, ProblemFactory } from "@croco/problems-core";
 import type {
   CallHandler,
   ExceptionFilter,
@@ -48,6 +56,7 @@ export class PipelineRunner {
 
       return await this.runInterceptorChain(execContext, handler, config.interceptors);
     } catch (error) {
+      this.recordPipelineError(error);
       return this.runFilters(error, execContext, config.filters);
     }
   }
@@ -117,5 +126,41 @@ export class PipelineRunner {
     }
 
     return this.errorHandler.handleError(nextError, context.getHttpContext());
+  }
+
+  private recordPipelineError(error: unknown): void {
+    const inspector: RuntimeInspectorRecorder | undefined =
+      Context.get()?.runtimeInspector ??
+      Container.getOptional<RuntimeInspector>(DEV_INSPECTOR_TOKEN);
+    if (!inspector) {
+      return;
+    }
+
+    if (error instanceof Problem) {
+      recordRuntimeInspectionEvent(inspector, {
+        kind: "problem",
+        outcome: "failed",
+        name: error.code,
+        details: {
+          code: error.code,
+          category: error.category,
+          status: ProblemCategoryMapper.toHttpStatus(error.category),
+          title: error.title,
+          detail: error.detail,
+        },
+      });
+      return;
+    }
+
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    recordRuntimeInspectionEvent(inspector, {
+      kind: "error",
+      outcome: "failed",
+      name: normalizedError.name,
+      details: {
+        name: normalizedError.name,
+        message: normalizedError.message,
+      },
+    });
   }
 }

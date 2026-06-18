@@ -1,3 +1,9 @@
+import {
+  Container,
+  Context,
+  DEV_INSPECTOR_TOKEN,
+  RuntimeInspector,
+} from "@croco/framework-context";
 import { describe, expect, it, vi } from "vitest";
 import { NoBackoff } from "../libs/BackoffPolicy";
 import { RetryAbortedProblem, RetryExhaustedProblem } from "../libs/errors";
@@ -31,6 +37,73 @@ describe("RetryTemplate", () => {
 
     expect(result).toBe("success");
     expect(attempts).toBe(3);
+  });
+
+  it("records retry lifecycle events for the active runtime inspector request", async () => {
+    const inspector = new RuntimeInspector();
+    inspector.startRequest({ requestId: "retry-req-1" });
+    Container.set(DEV_INSPECTOR_TOKEN, inspector);
+
+    try {
+      const template = new RetryTemplate({
+        maxAttempts: 3,
+        backoffPolicy: new NoBackoff(),
+      });
+
+      let attempts = 0;
+      const result = await Context.run({ requestId: "retry-req-1" }, async () =>
+        template.execute(async () => {
+          attempts++;
+          if (attempts < 2) throw new Error("retry failed once token=retry-secret");
+          return "success";
+        }),
+      );
+      inspector.finishRequest({ requestId: "retry-req-1", status: 200, outcome: "succeeded" });
+
+      const timeline = inspector.snapshot().requests[0].timeline;
+
+      expect(result).toBe("success");
+      expect(timeline).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "retry.start",
+            outcome: "started",
+            details: expect.objectContaining({
+              maxAttempts: 3,
+              argumentCount: 0,
+            }),
+          }),
+          expect.objectContaining({
+            kind: "retry.error",
+            outcome: "failed",
+            details: expect.objectContaining({
+              attempt: 1,
+              error: {
+                name: "Error",
+                message: "retry failed once token=[Redacted]",
+              },
+            }),
+          }),
+          expect.objectContaining({
+            kind: "retry.wait",
+            outcome: "started",
+            details: expect.objectContaining({
+              delayMs: 0,
+            }),
+          }),
+          expect.objectContaining({
+            kind: "retry.success",
+            outcome: "succeeded",
+            details: expect.objectContaining({
+              attempt: 2,
+            }),
+          }),
+        ]),
+      );
+      expect(JSON.stringify(timeline)).not.toContain("retry-secret");
+    } finally {
+      Container.reset();
+    }
   });
 
   it("throws last error when exhausted", async () => {

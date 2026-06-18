@@ -8,6 +8,12 @@ import { Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
 import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
+import {
+  DEV_INSPECTOR_ENDPOINT_PATH,
+  authorizeDevInspectorRequest,
+  resolveDevInspector,
+  resolveDevInspectorEndpointPolicy,
+} from "./devInspectorEndpoint";
 import { ErrorHandler } from "./ErrorHandler";
 import { HealthCheckRegistry } from "./HealthCheckRegistry";
 import { PipelineRunner } from "./PipelineRunner";
@@ -201,6 +207,20 @@ export class CrocoApp {
 
       registerDiagnosticsRoute(STANDARD_DIAGNOSTICS_ENDPOINT_PATH);
       registerDiagnosticsRoute(DIAGNOSTICS_ENDPOINT_PATH);
+    }
+
+    const devInspectorPolicy = resolveDevInspectorEndpointPolicy(this.config.devInspector);
+    if (devInspectorPolicy.exposure !== "off") {
+      const inspector = resolveDevInspector(devInspectorPolicy);
+      this.routeRegistrar.setRuntimeInspector(inspector);
+
+      this.hono.get(DEV_INSPECTOR_ENDPOINT_PATH, async (c) => {
+        if (!(await authorizeDevInspectorRequest(c, devInspectorPolicy))) {
+          return c.json({ error: "Forbidden" }, 403, { "Cache-Control": "no-store" });
+        }
+
+        return c.json(inspector.snapshot(), 200, { "Cache-Control": "no-store" });
+      });
     }
 
     this.hono.get(METRICS_ENDPOINT_PATH, (c) =>

@@ -20,6 +20,12 @@ const ctx: RequestContext = {
 
 ## Properties
 
+### inspectionId?
+
+> `optional` **inspectionId**: `string`
+
+***
+
 ### requestId
 
 > **requestId**: `string`
@@ -31,6 +37,12 @@ const ctx: RequestContext = {
 ### runtime?
 
 > `optional` **runtime**: [`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
+
+***
+
+### runtimeInspector?
+
+> `optional` **runtimeInspector**: [`RuntimeInspectorRecorder`](/api/framework-context/src/interfaces/runtimeinspectorrecorder/)
 
 ***
 

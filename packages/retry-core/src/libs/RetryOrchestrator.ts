@@ -1,3 +1,11 @@
+import {
+  Container,
+  Context,
+  DEV_INSPECTOR_TOKEN,
+  type RuntimeInspector,
+  type RuntimeInspectorRecorder,
+  recordRuntimeInspectionEvent,
+} from "@croco/framework-context";
 import { type BackoffOptions, type BackoffPolicy, ExponentialBackoff } from "./BackoffPolicy";
 import { RetryExhaustedProblem } from "./errors/RetryExhaustedProblem";
 import { RetryContext } from "./RetryContext";
@@ -40,21 +48,31 @@ export class RetryOrchestrator {
         ? new CompositeRetryListener(options.listeners)
         : null;
     const context = new RetryContext(methodName, args, maxAttempts);
+    const inspector = RetryOrchestrator.resolveRuntimeInspector();
 
     const hooks = {
       onStart: async (ctx: RetryContext): Promise<boolean> => {
+        let shouldStart = true;
+
         if (additionalHooks?.onStart) {
           const result = await additionalHooks.onStart(ctx);
           if (!result) {
-            return false;
+            shouldStart = false;
           }
         }
 
-        if (listener) {
-          return await listener.onStart(ctx);
+        if (shouldStart && listener) {
+          shouldStart = await listener.onStart(ctx);
         }
 
-        return true;
+        RetryOrchestrator.recordInspectionEvent(inspector, {
+          kind: "retry.start",
+          outcome: shouldStart ? "started" : "skipped",
+          name: methodName,
+          details: RetryOrchestrator.describeRetryContext(ctx),
+        });
+
+        return shouldStart;
       },
       onRetryError: async (err: Error, ctx: RetryContext): Promise<void> => {
         if (listener) {
@@ -64,6 +82,16 @@ export class RetryOrchestrator {
         if (additionalHooks?.onRetryError) {
           await additionalHooks.onRetryError(err, ctx);
         }
+
+        RetryOrchestrator.recordInspectionEvent(inspector, {
+          kind: "retry.error",
+          outcome: "failed",
+          name: methodName,
+          details: {
+            ...RetryOrchestrator.describeRetryContext(ctx),
+            error: RetryOrchestrator.describeError(err),
+          },
+        });
       },
       onSuccess: async (ctx: RetryContext): Promise<void> => {
         if (listener) {
@@ -73,6 +101,14 @@ export class RetryOrchestrator {
         if (additionalHooks?.onSuccess) {
           await additionalHooks.onSuccess(ctx);
         }
+
+        RetryOrchestrator.recordInspectionEvent(inspector, {
+          kind: "retry.success",
+          outcome: "succeeded",
+          name: methodName,
+          durationMs: ctx.elapsedTimeMs,
+          details: RetryOrchestrator.describeRetryContext(ctx),
+        });
       },
       onExhausted: async (err: Error, ctx: RetryContext): Promise<void> => {
         if (listener) {
@@ -82,8 +118,31 @@ export class RetryOrchestrator {
         if (additionalHooks?.onExhausted) {
           await additionalHooks.onExhausted(err, ctx);
         }
+
+        RetryOrchestrator.recordInspectionEvent(inspector, {
+          kind: "retry.exhausted",
+          outcome: "failed",
+          name: methodName,
+          durationMs: ctx.elapsedTimeMs,
+          details: {
+            ...RetryOrchestrator.describeRetryContext(ctx),
+            error: RetryOrchestrator.describeError(err),
+          },
+        });
       },
-      beforeWait: additionalHooks?.beforeWait,
+      beforeWait: async (delay: number, ctx: RetryContext): Promise<boolean> => {
+        const shouldWait = (await additionalHooks?.beforeWait?.(delay, ctx)) ?? true;
+        RetryOrchestrator.recordInspectionEvent(inspector, {
+          kind: "retry.wait",
+          outcome: shouldWait ? "started" : "skipped",
+          name: methodName,
+          details: {
+            ...RetryOrchestrator.describeRetryContext(ctx),
+            delayMs: delay,
+          },
+        });
+        return shouldWait;
+      },
     };
 
     try {
@@ -117,5 +176,37 @@ export class RetryOrchestrator {
 
       throw context.lastError ?? retryError;
     }
+  }
+
+  private static resolveRuntimeInspector(): RuntimeInspectorRecorder | undefined {
+    return (
+      Context.get()?.runtimeInspector ??
+      Container.getOptional<RuntimeInspector>(DEV_INSPECTOR_TOKEN)
+    );
+  }
+
+  private static recordInspectionEvent(
+    inspector: RuntimeInspectorRecorder | undefined,
+    input: Parameters<typeof recordRuntimeInspectionEvent>[1],
+  ): void {
+    recordRuntimeInspectionEvent(inspector, input);
+  }
+
+  private static describeRetryContext(context: RetryContext): Record<string, unknown> {
+    return {
+      methodName: context.methodName,
+      attempt: context.attempt,
+      maxAttempts: context.maxAttempts,
+      remainingAttempts: context.remainingAttempts,
+      exhausted: context.exhausted,
+      argumentCount: context.args.length,
+    };
+  }
+
+  private static describeError(error: Error): Record<string, unknown> {
+    return {
+      name: error.name,
+      message: error.message,
+    };
   }
 }
