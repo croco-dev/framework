@@ -35,6 +35,8 @@ Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 �
 - **Observable by default**: request lifecycle, trace, retry, event, Problem, DI scope, telemetry flush 경계는 운영자가 원인을 추적할 수 있는 evidence를 남겨야 합니다.
 - **Generated, not hand-wired**: client, OpenAPI/RPC spec, manifest, intent map, docs example, registration table 같은 glue code는 수동 동기화보다 생성과 drift gate를 우선합니다.
 - **Production path first**: toy example보다 배포, runtime limitation, compatibility, migration, CI quality gate, zero-credential smoke path를 먼저 설계합니다.
+- **LLM-readable architecture**: 안정적인 에러 코드, source location, manifest, intent map, 타입 기반 문서, deterministic generated output을 선호합니다. 사람과 LLM이 같은 구조를 읽고 같은 수정 지점을 찾을 수 있어야 합니다.
+- **Composable boundaries**: adapter, middleware graph, policy, runtime capability, package layering 경계를 명확히 하며 core package가 provider/runtime 구현체에 오염되지 않게 합니다.
 
 ### 🆚 설계 철학 비교
 
