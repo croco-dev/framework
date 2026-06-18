@@ -35,7 +35,7 @@ export class LambdaTimeoutProblem extends Problem {
 
   // biome-ignore lint/complexity/noUselessConstructor: Problem 클래스의 protected constructor 호출 필요
   constructor(detail: string) {
-    super(detail);
+    super("LAMBDA_TIMEOUT_GUARD", ProblemCategory.InternalServerError, detail);
   }
 }
 

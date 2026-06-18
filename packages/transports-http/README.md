@@ -1,6 +1,7 @@
 # @croco/transports-http
 
 Croco의 HTTP 실행 계층입니다. `@croco/protocols-rest`로 정의한 컨트롤러를 Hono 기반 앱, Node 서버, AWS Lambda 핸들러로 연결합니다.
+HTTP 실패 응답은 Croco [Failure Semantics](../../packages/docs/src/content/docs/en/guides/failure-semantics.mdx)를 기준으로 `Problem`은 RFC 7807 응답으로 보존하고, generic `Error`는 unhandled internal fault로 취급합니다.
 
 ## 설치
 
@@ -177,6 +178,10 @@ Diagnostics 응답은 `Cache-Control: no-store`를 포함합니다. `recentError
 100자로 제한되고, `token`, `secret`, `password`, `authorization`, `cookie`, `credential`,
 `apiKey` 계열 detail key는 `[Redacted]`로 대체됩니다. 필요하면 `recentErrorLimit`과
 `messageLimit`을 조정할 수 있습니다.
+
+## Failure response contract
+
+`ErrorHandler`는 Croco `Problem`을 만나면 `type`, `title`, `status`, `code`, `detail`, `instance`와 안전한 extension을 그대로 직렬화합니다. 일반 `Error`는 로그에 남기고 `500 Internal Server Error`의 opaque 응답으로 변환합니다. 따라서 컨트롤러, guard, interceptor, provider adapter는 사용자가 복구할 수 있는 실패를 transport까지 generic `Error`로 넘기지 말고 package-specific `Problem`으로 정규화해야 합니다.
 
 ## Security Middleware Contract
 
