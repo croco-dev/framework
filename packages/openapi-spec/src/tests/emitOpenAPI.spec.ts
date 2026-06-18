@@ -9,8 +9,11 @@ import {
   All,
   Body,
   Controller,
+  defineRouteSchema,
   Get,
   Header,
+  type InferRouteSchemaRequest,
+  type InferRouteSchemaResponse,
   Param,
   Post,
   ProblemResponse,
@@ -235,6 +238,67 @@ describe("emitOpenAPI", () => {
               },
             },
             required: ["id", "items"],
+          },
+        },
+      },
+    });
+  });
+
+  it("should emit request and response contracts from one route schema object", () => {
+    const createUserRoute = defineRouteSchema({
+      request: {
+        body: z.object({
+          name: z.string().min(1),
+          email: z.string().email(),
+        }),
+      },
+      response: z.object({
+        id: z.string().uuid(),
+        name: z.string(),
+        email: z.string().email(),
+      }),
+    });
+    type CreateUserBody = InferRouteSchemaRequest<typeof createUserRoute>["body"];
+    type CreateUserResponse = InferRouteSchemaResponse<typeof createUserRoute>;
+
+    @Controller("/users")
+    class UsersController {
+      @Post("/")
+      @ResponseSchema(createUserRoute.response)
+      createUser(@Body(createUserRoute.request.body) body: CreateUserBody): CreateUserResponse {
+        return { id: "4ea573de-cfb9-4696-bc48-216f19f44300", ...body };
+      }
+    }
+
+    const spec = emitOpenAPI([UsersController]);
+    const createUser = spec.paths?.["/users"]?.post;
+
+    expect(createUser?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              name: { type: "string", minLength: 1 },
+              email: { type: "string", format: "email" },
+            },
+            required: ["name", "email"],
+          },
+        },
+      },
+    });
+    expect(createUser?.responses?.[200]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              name: { type: "string" },
+              email: { type: "string", format: "email" },
+            },
+            required: ["id", "name", "email"],
           },
         },
       },

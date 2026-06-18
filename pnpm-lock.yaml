@@ -1893,6 +1893,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-core':
+        specifier: workspace:*
+        version: link:../protocols-core
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2

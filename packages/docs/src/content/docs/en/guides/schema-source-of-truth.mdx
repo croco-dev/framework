@@ -1,0 +1,99 @@
+---
+title: Schema Source Of Truth
+description: Derive DTO types, runtime validation, OpenAPI, and RPC clients from one route schema object.
+---
+
+Croco route contracts should start from one schema object. The same object feeds request validation,
+response validation metadata, contract graph snapshots, OpenAPI emission, and generated RPC client types.
+
+## Decision
+
+Use `defineRouteSchema()` for route-level request and response schemas:
+
+- DTO types are inferred with `InferRouteSchemaRequest` and `InferRouteSchemaResponse`.
+- REST decorators consume the same schema references through `@Body(...)`, `@Param(...)`,
+  `@Query(...)`, `@Header(...)`, and `@ResponseSchema(...)`.
+- `buildContractGraph()` preserves those schema references in `inputSchemas` and `outputSchema`.
+- `@croco/openapi-spec` and `@croco/rpc-codegen` derive artifacts from the contract graph instead of
+  reading parallel DTO interfaces or hand-written OpenAPI metadata.
+
+```typescript no-check
+import {
+  Body,
+  Controller,
+  Post,
+  ResponseSchema,
+  defineRouteSchema,
+  type InferRouteSchemaRequest,
+  type InferRouteSchemaResponse,
+} from "@croco/protocols-rest";
+import { z } from "zod";
+
+const createUserRoute = defineRouteSchema({
+  request: {
+    body: z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+    }),
+  },
+  response: z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    email: z.string().email(),
+  }),
+});
+
+type CreateUserBody = InferRouteSchemaRequest<typeof createUserRoute>["body"];
+type CreateUserResponse = InferRouteSchemaResponse<typeof createUserRoute>;
+
+@Controller("/users")
+class UsersController {
+  @Post("/")
+  @ResponseSchema(createUserRoute.response)
+  createUser(@Body(createUserRoute.request.body) body: CreateUserBody): CreateUserResponse {
+    return { id: "4ea573de-cfb9-4696-bc48-216f19f44300", ...body };
+  }
+}
+```
+
+The controller has no separate `CreateUserDto` interface to keep synchronized. If the email schema
+changes, the method parameter type, runtime validation, OpenAPI request body, and generated RPC request
+type move together.
+
+## Considered Models
+
+| Model                          | Strength                                                              | Tradeoff                                                                                                                 | Croco stance                                         |
+| ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Route schema object            | One source feeds validation, graph snapshots, OpenAPI, and RPC types. | Controller decorators still attach the schema to route metadata.                                                         | Adopted now.                                         |
+| TypeScript DTO interface first | Familiar for application authors.                                     | Runtime validation and OpenAPI need a second schema or codegen pass, creating drift risk.                                | Not sufficient alone.                                |
+| OpenAPI first                  | Strong external contract artifact.                                    | Server runtime validation and TypeScript DTOs become generated consumers, which is heavy for local controller authoring. | Useful output, not the primary source.               |
+| Library-neutral schema adapter | Keeps Croco independent of a schema library.                          | Needs a stable adapter contract before existing Zod users can migrate safely.                                            | Future extension point, not required for this slice. |
+
+## Drift Gates
+
+Generated contract artifacts must read the contract graph:
+
+```typescript no-check
+import { buildContractGraph } from "@croco/protocols-core";
+import { emitOpenAPIFromContractGraph } from "@croco/openapi-spec";
+import { generateClientFilesFromContractGraph } from "@croco/rpc-codegen";
+
+const graph = buildContractGraph([UsersController]);
+
+emitOpenAPIFromContractGraph(graph);
+generateClientFilesFromContractGraph(graph, ".croco/client");
+```
+
+This keeps the drift boundary explicit. If route metadata contains unsupported shapes, missing path
+parameters, multiple body schemas, or unsupported generated-client schema kinds, the graph/codegen path
+fails before publishing artifacts.
+
+## Dependency Rationale
+
+This model does not add a new external schema dependency. Croco already uses Zod for REST validation and
+contract artifact generation. `defineRouteSchema()` is a small contract helper over existing schema
+objects, and its public type inference uses Zod's structural output type so package-local Zod instances do
+not force a duplicate DTO interface.
+
+If Croco later supports another schema library, it should be added behind the same route-schema contract
+shape with explicit artifact tests for validation, OpenAPI, and RPC generation.

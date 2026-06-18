@@ -7758,6 +7758,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "defineRouteSchema",
+          "exportKind": "named",
+          "source": "./libs/RouteSchema",
+          "declarationKind": "function"
+        },
+        {
           "name": "diffContractGraphSnapshots",
           "exportKind": "named",
           "source": "./libs/ContractGraphDiff",
@@ -7952,6 +7958,21 @@
           "source": "./libs/ContractGraphSnapshot"
         },
         {
+          "name": "DefinedRouteSchema",
+          "exportKind": "named",
+          "source": "./libs/RouteSchema"
+        },
+        {
+          "name": "InferRouteSchemaRequest",
+          "exportKind": "named",
+          "source": "./libs/RouteSchema"
+        },
+        {
+          "name": "InferRouteSchemaResponse",
+          "exportKind": "named",
+          "source": "./libs/RouteSchema"
+        },
+        {
           "name": "ParamIR",
           "exportKind": "named",
           "source": "./libs/RouteIR"
@@ -7965,6 +7986,16 @@
           "name": "RouteIR",
           "exportKind": "named",
           "source": "./libs/RouteIR"
+        },
+        {
+          "name": "RouteRequestSchemas",
+          "exportKind": "named",
+          "source": "./libs/RouteSchema"
+        },
+        {
+          "name": "RouteSchemaLike",
+          "exportKind": "named",
+          "source": "./libs/RouteSchema"
         }
       ]
     },
@@ -8363,6 +8394,11 @@
           "exportKind": "named",
           "source": "./RouteContract",
           "declarationKind": "function"
+        },
+        {
+          "name": "defineRouteSchema",
+          "exportKind": "named",
+          "source": "@croco/protocols-core"
         },
         {
           "name": "Delete",
@@ -8789,6 +8825,11 @@
           "source": "./CallHandler"
         },
         {
+          "name": "DefinedRouteSchema",
+          "exportKind": "named",
+          "source": "@croco/protocols-core"
+        },
+        {
           "name": "EndpointRequest",
           "exportKind": "named",
           "source": "./RouteTypes"
@@ -8832,6 +8873,16 @@
           "name": "InferRouteResponse",
           "exportKind": "named",
           "source": "./RouteTypes"
+        },
+        {
+          "name": "InferRouteSchemaRequest",
+          "exportKind": "named",
+          "source": "@croco/protocols-core"
+        },
+        {
+          "name": "InferRouteSchemaResponse",
+          "exportKind": "named",
+          "source": "@croco/protocols-core"
         },
         {
           "name": "Interceptor",
@@ -8930,6 +8981,11 @@
           "source": "./RouteContract"
         },
         {
+          "name": "RouteRequestSchemas",
+          "exportKind": "named",
+          "source": "@croco/protocols-core"
+        },
+        {
           "name": "RouteResponse",
           "exportKind": "named",
           "source": "./RouteContract"
@@ -8938,6 +8994,11 @@
           "name": "RouteSchema",
           "exportKind": "named",
           "source": "./ValidationSchema"
+        },
+        {
+          "name": "RouteSchemaLike",
+          "exportKind": "named",
+          "source": "@croco/protocols-core"
         },
         {
           "name": "TokenVerifier",

@@ -15,6 +15,11 @@ import {
   stringifyContractGraphSnapshot,
 } from "../libs/ContractGraphSnapshot";
 import {
+  defineRouteSchema,
+  type InferRouteSchemaRequest,
+  type InferRouteSchemaResponse,
+} from "../libs/RouteSchema";
+import {
   Body,
   Controller,
   Get,
@@ -68,6 +73,69 @@ describe("buildContractGraph", () => {
       controllerPath: "/users",
     });
     expect(graph.routes[1]?.inputSchemas.body).toBe(createUserSchema);
+    expect(graph.diagnostics).toEqual([]);
+  });
+
+  it("should preserve a route schema object as the DTO and contract source of truth", () => {
+    const createUserRoute = defineRouteSchema({
+      request: {
+        body: z.object({
+          name: z.string().min(1),
+          email: z.string().email(),
+        }),
+      },
+      response: z.object({
+        id: z.string().uuid(),
+        name: z.string(),
+        email: z.string().email(),
+      }),
+    });
+    type CreateUserBody = InferRouteSchemaRequest<typeof createUserRoute>["body"];
+    type CreateUserRequest = InferRouteSchemaRequest<typeof createUserRoute>;
+    type CreateUserResponse = InferRouteSchemaResponse<typeof createUserRoute>;
+
+    const validBody: CreateUserBody = { name: "Ada", email: "ada@example.com" };
+    const validRequest: CreateUserRequest = { body: validBody };
+    // @ts-expect-error DTO fields are inferred from the schema instead of a hand-maintained type.
+    const invalidBody: CreateUserBody = { name: "Ada", email: 42 };
+
+    @Controller("/users")
+    class UsersController {
+      @Post("/")
+      @ResponseSchema(createUserRoute.response)
+      createUser(@Body(createUserRoute.request.body) body: CreateUserBody): CreateUserResponse {
+        return { id: "4ea573de-cfb9-4696-bc48-216f19f44300", ...body };
+      }
+    }
+
+    const graph = buildContractGraph([UsersController]);
+    const route = graph.routes[0];
+
+    expect(validBody.email).toBe("ada@example.com");
+    expect(validRequest.body.email).toBe("ada@example.com");
+    expect(invalidBody).toBeDefined();
+    expect(route?.inputSchemas.body).toBe(createUserRoute.request.body);
+    expect(route?.params[0]?.schema).toBe(createUserRoute.request.body);
+    expect(route?.outputSchema).toBe(createUserRoute.response);
+    expect(createContractGraphSnapshot(graph).routes[0]).toMatchObject({
+      request: {
+        body: {
+          kind: "object",
+          fields: [
+            { name: "email", required: true, schema: { kind: "string" } },
+            { name: "name", required: true, schema: { kind: "string" } },
+          ],
+        },
+      },
+      response: {
+        kind: "object",
+        fields: [
+          { name: "email", required: true, schema: { kind: "string" } },
+          { name: "id", required: true, schema: { kind: "string" } },
+          { name: "name", required: true, schema: { kind: "string" } },
+        ],
+      },
+    });
     expect(graph.diagnostics).toEqual([]);
   });
 
