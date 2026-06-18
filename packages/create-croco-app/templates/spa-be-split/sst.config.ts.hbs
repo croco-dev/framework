@@ -1,0 +1,29 @@
+/// <reference path="./.sst/platform/config.d.ts" />
+
+export default $config({
+  app(input) {
+    return {
+      name: '{{projectName}}',
+      removal: input?.stage === 'production' ? 'retain' : 'remove',
+      protect: ['production'].includes(input?.stage),
+      home: 'aws',
+    };
+  },
+  async run() {
+    const api = new sst.aws.Function('Api', {
+      handler: 'apps/api-server/src/lambda.handler',
+      url: true,
+      environment: {
+        NODE_ENV: $app.stage === 'production' ? 'production' : 'development',
+        WEB_ORIGIN: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
+        TELEMETRY_ENABLED: process.env.TELEMETRY_ENABLED ?? 'false',
+        OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? '',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ?? '',
+      },
+    });
+
+    return {
+      api: api.url,
+    };
+  },
+});

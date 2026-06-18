@@ -1,7 +1,15 @@
 import type { GeneratorOptions } from "./types.js";
 
 export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
-  presets: ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack", "saas", "ai-saas"],
+  presets: [
+    "blank",
+    "ddd-api",
+    "ddd-fullstack",
+    "ddd-vike-fullstack",
+    "production-app",
+    "saas",
+    "ai-saas",
+  ],
   apis: ["graphql", "trpc"],
   apiHosting: ["standalone", "nextjs"],
   backendDeploys: ["docker", "lambda"],

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:smoke": "node --input-type=module --eval \"import { loadConfigFromFile } from 'vite'; const result = await loadConfigFromFile({ command: 'serve', mode: 'development' }, './vite.config.ts'); if (!result) throw new Error('vite.config.ts did not load');\"",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
