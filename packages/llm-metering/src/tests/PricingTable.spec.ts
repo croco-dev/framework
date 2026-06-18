@@ -36,6 +36,7 @@ describe("PricingTable", () => {
             outputPricePerToken: 0.2,
             currency: "USD",
             effectiveDate: "2026-06-18",
+            source: "tenant-rate-card",
           },
         ],
       });
@@ -49,12 +50,24 @@ describe("PricingTable", () => {
         outputPricePerToken: 0.2,
         currency: "USD",
         effectiveDate: "2026-06-18",
+        source: "tenant-rate-card",
       });
       expect(pricingTable.toRegistry()).toMatchObject({
         version: "tenant-pricing-2026-06-18",
         source: "internal-price-book",
         effectiveDate: "2026-06-18",
         notes: "tenant-specific negotiated rates",
+        entries: [
+          {
+            provider: "openai",
+            modelId: "gpt-governed",
+            inputPricePerToken: 0.1,
+            outputPricePerToken: 0.2,
+            currency: "USD",
+            effectiveDate: "2026-06-18",
+            source: "tenant-rate-card",
+          },
+        ],
       });
     });
 

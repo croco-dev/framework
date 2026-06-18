@@ -7,7 +7,7 @@ title: "LlmUsageRecord"
 
 > **LlmUsageRecord** = `object`
 
-비용 예산, 모델 단가, 사용량 기록 타입입니다.
+텍스트 생성 호출에서 기록된 토큰 사용량과 비용입니다.
 
 ## Properties
 

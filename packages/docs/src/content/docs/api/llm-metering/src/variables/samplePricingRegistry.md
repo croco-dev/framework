@@ -5,28 +5,6 @@ prev: false
 title: "samplePricingRegistry"
 ---
 
-> `const` **samplePricingRegistry**: `object`
+> `const` **samplePricingRegistry**: [`PricingRegistryDefinition`](/api/llm-metering/src/type-aliases/pricingregistrydefinition/)
 
-기본 가격표와 가격 계산기 구현체입니다.
-
-## Type Declaration
-
-### effectiveDate
-
-> **effectiveDate**: `string` = `"2024-01-01"`
-
-### entries
-
-> **entries**: `object`[]
-
-### notes
-
-> **notes**: `string` = `"This registry is intentionally versioned sample data. Do not treat it as current provider pricing."`
-
-### source
-
-> **source**: `string` = `"Croco sample data for local tests and demos; applications should inject current pricing."`
-
-### version
-
-> **version**: `string` = `"sample-openai-anthropic-2024-legacy"`
+로컬 테스트와 예제에 사용하는 버전 고정 샘플 가격 레지스트리입니다.
