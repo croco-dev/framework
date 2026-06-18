@@ -1,0 +1,828 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+export type QualityTask = "build" | "typecheck" | "test";
+export type QualityStatus = "pass" | "fail" | "not-collected" | "not-configured" | "not-run";
+
+export type PackageInfo = {
+  readonly name: string;
+  readonly private: boolean;
+  readonly relativeDir: string;
+  readonly scripts: Readonly<Record<string, string>>;
+};
+
+export type PackageTaskResult = {
+  readonly task: QualityTask;
+  readonly status: QualityStatus;
+  readonly taskId: string | null;
+  readonly logFile: string | null;
+  readonly cacheStatus: string | null;
+};
+
+export type PackageQualityRow = {
+  readonly packageName: string;
+  readonly relativeDir: string;
+  readonly private: boolean;
+  readonly tasks: Readonly<Record<QualityTask, PackageTaskResult>>;
+};
+
+export type DependencyBoundaryViolation = {
+  readonly file: string;
+  readonly line: number;
+  readonly excerpt: string;
+};
+
+export type DependencyBoundaryResult = {
+  readonly id: string;
+  readonly packageName: string;
+  readonly sourceDir: string;
+  readonly policy: string;
+  readonly status: "pass" | "fail" | "missing-source";
+  readonly violations: readonly DependencyBoundaryViolation[];
+};
+
+export type PackageQualityReport = {
+  readonly generatedAt: string;
+  readonly rootDir: string;
+  readonly summaryDir: string;
+  readonly rows: readonly PackageQualityRow[];
+  readonly boundaries: readonly DependencyBoundaryResult[];
+  readonly gateOutcomes: Readonly<Record<string, string>>;
+};
+
+type CheckOptions = {
+  readonly rootDir: string;
+  readonly outputDir: string;
+  readonly summaryDir: string;
+  readonly boundaryCheckOnly: boolean;
+};
+
+type TurboTaskSummary = {
+  readonly taskId: string;
+  readonly task: string;
+  readonly package: string;
+  readonly directory: string | null;
+  readonly logFile: string | null;
+  readonly cacheStatus: string | null;
+  readonly exitCode: number | null;
+};
+
+type TurboRunSummary = {
+  readonly filePath: string;
+  readonly command: string;
+  readonly endTime: number;
+  readonly exitCode: number | null;
+  readonly tasks: readonly TurboTaskSummary[];
+};
+
+type DependencyBoundaryRule = {
+  readonly id: string;
+  readonly packageName: string;
+  readonly sourceDir: string;
+  readonly forbiddenPattern: RegExp;
+  readonly policy: string;
+};
+
+const QUALITY_TASKS: readonly QualityTask[] = ["build", "typecheck", "test"];
+const reportDirectory = join("ci-reports", "package-quality");
+const turboRunsDirectory = join(".turbo", "runs");
+const workspaceFileName = "pnpm-workspace.yaml";
+
+const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
+  {
+    id: "repository-core-drizzle-free",
+    packageName: "@croco/repository-core",
+    sourceDir: "packages/repository-core/src",
+    forbiddenPattern: /drizzle/i,
+    policy:
+      "@croco/repository-core is an interface layer and must not mention Drizzle implementation details in src.",
+  },
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readJsonFile(path: string): unknown {
+  return JSON.parse(readFileSync(path, "utf-8")) as unknown;
+}
+
+function normalizeScripts(value: unknown): Record<string, string> {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+}
+
+function toPosixPath(path: string): string {
+  return path.split("\\").join("/");
+}
+
+function isQualityTask(value: string): value is QualityTask {
+  return value === "build" || value === "typecheck" || value === "test";
+}
+
+function findPackageJsonFiles(dir: string, results: string[] = []): string[] {
+  if (!existsSync(dir)) {
+    return results;
+  }
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) {
+        continue;
+      }
+      findPackageJsonFiles(fullPath, results);
+      continue;
+    }
+
+    if (entry.isFile() && entry.name === "package.json") {
+      results.push(fullPath);
+    }
+  }
+
+  return results.sort();
+}
+
+function stripInlineYamlComment(value: string): string {
+  const commentIndex = value.indexOf(" #");
+  return commentIndex === -1 ? value : value.slice(0, commentIndex);
+}
+
+function normalizeWorkspacePattern(value: string): string | null {
+  const normalized = stripInlineYamlComment(value)
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+
+  if (!normalized || normalized.startsWith("!")) {
+    return null;
+  }
+
+  return toPosixPath(normalized).replace(/\/+$/, "");
+}
+
+export function parseWorkspacePackagePatterns(source: string): string[] {
+  const patterns: string[] = [];
+  let inPackagesSection = false;
+
+  for (const line of source.split(/\r?\n/)) {
+    if (/^packages:\s*$/.test(line)) {
+      inPackagesSection = true;
+      continue;
+    }
+
+    if (inPackagesSection && /^[^\s#][^:]*:/.test(line)) {
+      break;
+    }
+
+    if (!inPackagesSection) {
+      continue;
+    }
+
+    const match = line.match(/^\s*-\s+(.+?)\s*$/);
+    const pattern = match ? normalizeWorkspacePattern(match[1]) : null;
+
+    if (pattern) {
+      patterns.push(pattern);
+    }
+  }
+
+  return patterns;
+}
+
+function getDirectChildPackageJsonFiles(rootDir: string, relativeDir: string): string[] {
+  const baseDir = join(rootDir, relativeDir);
+
+  if (!existsSync(baseDir)) {
+    return [];
+  }
+
+  return readdirSync(baseDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(baseDir, entry.name, "package.json"))
+    .filter((packageJsonPath) => existsSync(packageJsonPath));
+}
+
+function getWorkspacePackageJsonFilesForPattern(rootDir: string, pattern: string): string[] {
+  if (pattern.endsWith("/**/*")) {
+    return findPackageJsonFiles(join(rootDir, pattern.slice(0, -5)));
+  }
+
+  if (pattern.endsWith("/*")) {
+    return getDirectChildPackageJsonFiles(rootDir, pattern.slice(0, -2));
+  }
+
+  if (!pattern.includes("*")) {
+    const packageJsonPath = join(rootDir, pattern, "package.json");
+    return existsSync(packageJsonPath) ? [packageJsonPath] : [];
+  }
+
+  return [];
+}
+
+function readWorkspacePackageJsonFiles(rootDir: string): string[] {
+  const workspacePath = join(rootDir, workspaceFileName);
+
+  if (!existsSync(workspacePath)) {
+    return findPackageJsonFiles(join(rootDir, "packages"));
+  }
+
+  const patterns = parseWorkspacePackagePatterns(readFileSync(workspacePath, "utf-8"));
+  if (patterns.length === 0) {
+    return findPackageJsonFiles(join(rootDir, "packages"));
+  }
+
+  return [
+    ...new Set(
+      patterns.flatMap((pattern) => getWorkspacePackageJsonFilesForPattern(rootDir, pattern)),
+    ),
+  ].sort();
+}
+
+export function readPackages(rootDir: string): PackageInfo[] {
+  return readWorkspacePackageJsonFiles(rootDir)
+    .map((packageJsonPath) => {
+      const packageJson = readJsonFile(packageJsonPath);
+      const relativeDir = toPosixPath(
+        relative(rootDir, packageJsonPath).replace(/\/package\.json$/, ""),
+      );
+
+      if (!isRecord(packageJson) || typeof packageJson.name !== "string") {
+        throw new Error(`${relativeDir}/package.json is missing a string name`);
+      }
+
+      return {
+        name: packageJson.name,
+        private: packageJson.private === true,
+        relativeDir,
+        scripts: normalizeScripts(packageJson.scripts),
+      };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function parseTurboTask(task: unknown): TurboTaskSummary | null {
+  if (!isRecord(task) || typeof task.task !== "string" || typeof task.package !== "string") {
+    return null;
+  }
+
+  const execution = isRecord(task.execution) ? task.execution : {};
+  const cache = isRecord(task.cache) ? task.cache : {};
+  const taskId = typeof task.taskId === "string" ? task.taskId : `${task.package}#${task.task}`;
+  const directory = typeof task.directory === "string" ? toPosixPath(task.directory) : null;
+  const logFile = typeof task.logFile === "string" ? task.logFile : null;
+  const cacheStatus = typeof cache.status === "string" ? cache.status : null;
+  const exitCode = typeof execution.exitCode === "number" ? execution.exitCode : null;
+
+  return {
+    taskId,
+    task: task.task,
+    package: task.package,
+    directory,
+    logFile,
+    cacheStatus,
+    exitCode,
+  };
+}
+
+function parseTurboRunSummary(filePath: string): TurboRunSummary | null {
+  const json = readJsonFile(filePath);
+
+  if (!isRecord(json) || !isRecord(json.execution) || !Array.isArray(json.tasks)) {
+    return null;
+  }
+
+  const command = typeof json.execution.command === "string" ? json.execution.command : "";
+  const endTime = typeof json.execution.endTime === "number" ? json.execution.endTime : 0;
+  const exitCode = typeof json.execution.exitCode === "number" ? json.execution.exitCode : null;
+  const tasks = json.tasks.flatMap((task) => {
+    const parsedTask = parseTurboTask(task);
+    return parsedTask ? [parsedTask] : [];
+  });
+
+  return {
+    filePath,
+    command,
+    endTime,
+    exitCode,
+    tasks,
+  };
+}
+
+export function readTurboRunSummaries(summaryDir: string): TurboRunSummary[] {
+  if (!existsSync(summaryDir)) {
+    return [];
+  }
+
+  return readdirSync(summaryDir)
+    .filter((fileName) => fileName.endsWith(".json"))
+    .flatMap((fileName) => {
+      const filePath = join(summaryDir, fileName);
+      const summary = parseTurboRunSummary(filePath);
+      return summary ? [summary] : [];
+    })
+    .sort((left, right) => left.endTime - right.endTime);
+}
+
+function getCommandTask(command: string): QualityTask | null {
+  const match = command.match(/(?:^|\s)turbo\s+(?:run\s+)?(build|typecheck|test)(?:\s|$)/);
+  const task = match?.[1];
+
+  return task === "build" || task === "typecheck" || task === "test" ? task : null;
+}
+
+function getLatestSummaryByTask(
+  summaries: readonly TurboRunSummary[],
+): Map<QualityTask, TurboRunSummary> {
+  const byTask = new Map<QualityTask, TurboRunSummary>();
+
+  for (const summary of summaries) {
+    const task = getCommandTask(summary.command);
+
+    if (!task) {
+      continue;
+    }
+
+    const current = byTask.get(task);
+    if (!current || summary.endTime >= current.endTime) {
+      byTask.set(task, summary);
+    }
+  }
+
+  return byTask;
+}
+
+function mergePackagesWithTurboTasks(
+  packages: readonly PackageInfo[],
+  summaries: readonly TurboRunSummary[],
+): PackageInfo[] {
+  const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
+
+  for (const summary of summaries) {
+    for (const task of summary.tasks) {
+      if (!isQualityTask(task.task)) {
+        continue;
+      }
+
+      const existing = byName.get(task.package);
+      if (existing) {
+        if (!existing.scripts[task.task]) {
+          byName.set(task.package, {
+            ...existing,
+            scripts: {
+              ...existing.scripts,
+              [task.task]: "observed by Turbo summary",
+            },
+          });
+        }
+        continue;
+      }
+
+      byName.set(task.package, {
+        name: task.package,
+        private: false,
+        relativeDir: task.directory ?? "",
+        scripts: {
+          [task.task]: "observed by Turbo summary",
+        },
+      });
+    }
+  }
+
+  return [...byName.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function getTaskResult(
+  pkg: PackageInfo,
+  task: QualityTask,
+  summaryByTask: ReadonlyMap<QualityTask, TurboRunSummary>,
+): PackageTaskResult {
+  if (!pkg.scripts[task]) {
+    return {
+      task,
+      status: "not-configured",
+      taskId: null,
+      logFile: null,
+      cacheStatus: null,
+    };
+  }
+
+  const summary = summaryByTask.get(task);
+  if (!summary) {
+    return {
+      task,
+      status: "not-collected",
+      taskId: null,
+      logFile: null,
+      cacheStatus: null,
+    };
+  }
+
+  const turboTask = summary.tasks.find(
+    (candidate) => candidate.task === task && candidate.package === pkg.name,
+  );
+  if (!turboTask) {
+    return {
+      task,
+      status: "not-run",
+      taskId: null,
+      logFile: null,
+      cacheStatus: null,
+    };
+  }
+
+  return {
+    task,
+    status: turboTask.exitCode === 0 ? "pass" : "fail",
+    taskId: turboTask.taskId,
+    logFile: turboTask.logFile,
+    cacheStatus: turboTask.cacheStatus,
+  };
+}
+
+function createPackageRow(
+  pkg: PackageInfo,
+  summaryByTask: ReadonlyMap<QualityTask, TurboRunSummary>,
+): PackageQualityRow {
+  return {
+    packageName: pkg.name,
+    relativeDir: pkg.relativeDir,
+    private: pkg.private,
+    tasks: {
+      build: getTaskResult(pkg, "build", summaryByTask),
+      typecheck: getTaskResult(pkg, "typecheck", summaryByTask),
+      test: getTaskResult(pkg, "test", summaryByTask),
+    },
+  };
+}
+
+function walkFiles(dir: string, results: string[] = []): string[] {
+  if (!existsSync(dir)) {
+    return results;
+  }
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === "dist" || entry.name === "coverage") {
+        continue;
+      }
+      walkFiles(fullPath, results);
+      continue;
+    }
+
+    if (entry.isFile()) {
+      results.push(fullPath);
+    }
+  }
+
+  return results.sort();
+}
+
+function getBoundaryViolations(
+  rootDir: string,
+  rule: DependencyBoundaryRule,
+): DependencyBoundaryViolation[] {
+  const sourceDir = join(rootDir, rule.sourceDir);
+
+  return walkFiles(sourceDir).flatMap((filePath) => {
+    const source = readFileSync(filePath, "utf-8");
+    const relativeFile = toPosixPath(relative(rootDir, filePath));
+
+    return source.split(/\r?\n/).flatMap((line, index) => {
+      if (!rule.forbiddenPattern.test(line)) {
+        return [];
+      }
+
+      return [
+        {
+          file: relativeFile,
+          line: index + 1,
+          excerpt: line.trim(),
+        },
+      ];
+    });
+  });
+}
+
+export function scanDependencyBoundaries(
+  rootDir: string,
+  rules: readonly DependencyBoundaryRule[] = DEPENDENCY_BOUNDARY_RULES,
+): DependencyBoundaryResult[] {
+  return rules.map((rule) => {
+    const absoluteSourceDir = join(rootDir, rule.sourceDir);
+
+    if (!existsSync(absoluteSourceDir) || !statSync(absoluteSourceDir).isDirectory()) {
+      return {
+        id: rule.id,
+        packageName: rule.packageName,
+        sourceDir: rule.sourceDir,
+        policy: rule.policy,
+        status: "missing-source",
+        violations: [],
+      };
+    }
+
+    const violations = getBoundaryViolations(rootDir, rule);
+
+    return {
+      id: rule.id,
+      packageName: rule.packageName,
+      sourceDir: rule.sourceDir,
+      policy: rule.policy,
+      status: violations.length > 0 ? "fail" : "pass",
+      violations,
+    };
+  });
+}
+
+function readGateOutcomes(): Record<string, string> {
+  return {
+    "changeset-required:check": process.env.PACKAGE_QUALITY_CHANGESET_STATUS ?? "not provided",
+    "pnpm check": process.env.PACKAGE_QUALITY_CHECK_STATUS ?? "not provided",
+    build: process.env.PACKAGE_QUALITY_BUILD_STATUS ?? "not provided",
+    typecheck: process.env.PACKAGE_QUALITY_TYPECHECK_STATUS ?? "not provided",
+    test: process.env.PACKAGE_QUALITY_TEST_STATUS ?? "not provided",
+  };
+}
+
+export function createPackageQualityReport(
+  options: Pick<CheckOptions, "rootDir" | "summaryDir">,
+): PackageQualityReport {
+  const summaries = readTurboRunSummaries(options.summaryDir);
+  const summaryByTask = getLatestSummaryByTask(summaries);
+  const packages = mergePackagesWithTurboTasks(readPackages(options.rootDir), summaries);
+  const rows = packages.map((pkg) => createPackageRow(pkg, summaryByTask));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    rootDir: options.rootDir,
+    summaryDir: options.summaryDir,
+    rows,
+    boundaries: scanDependencyBoundaries(options.rootDir),
+    gateOutcomes: readGateOutcomes(),
+  };
+}
+
+function summarizeStatus(
+  rows: readonly PackageQualityRow[],
+  task: QualityTask,
+  status: QualityStatus,
+): number {
+  return rows.filter((row) => row.tasks[task].status === status).length;
+}
+
+function formatTaskCell(result: PackageTaskResult): string {
+  if (result.status === "pass") {
+    return result.cacheStatus === "HIT" ? "pass (cached)" : "pass";
+  }
+
+  if (result.status === "fail") {
+    return result.logFile ? `fail; log: \`${result.logFile}\`` : "fail";
+  }
+
+  return result.status;
+}
+
+function formatPackageNotes(row: PackageQualityRow): string {
+  const failures = QUALITY_TASKS.flatMap((task) => {
+    const result = row.tasks[task];
+    return result.status === "fail" ? [`${task} failed`] : [];
+  });
+
+  if (failures.length > 0) {
+    return failures.join("; ");
+  }
+
+  if (row.private) {
+    return "private package";
+  }
+
+  return "";
+}
+
+function formatFailureSummary(rows: readonly PackageQualityRow[]): string[] {
+  const failures = rows.flatMap((row) =>
+    QUALITY_TASKS.flatMap((task) => {
+      const result = row.tasks[task];
+      if (result.status !== "fail") {
+        return [];
+      }
+
+      const evidence = result.logFile ? `; log: \`${result.logFile}\`` : "";
+      return `- \`${row.packageName}\` ${task} failed${evidence}`;
+    }),
+  );
+
+  return failures.length > 0 ? failures : ["- none"];
+}
+
+function formatBoundaryStatus(result: DependencyBoundaryResult): string {
+  if (result.status === "pass") {
+    return "pass";
+  }
+
+  if (result.status === "missing-source") {
+    return "fail; source directory missing";
+  }
+
+  return `fail; ${result.violations.length} violation(s)`;
+}
+
+function formatBoundaryEvidence(result: DependencyBoundaryResult): string {
+  if (result.violations.length === 0) {
+    return `Scanned \`${result.sourceDir}\``;
+  }
+
+  return result.violations
+    .slice(0, 5)
+    .map((violation) => `\`${violation.file}:${violation.line}\` ${violation.excerpt}`)
+    .join("<br>");
+}
+
+export function buildReportMarkdown(report: PackageQualityReport): string {
+  const lines = [
+    "# Package Quality Dashboard",
+    "",
+    `- Generated at: ${report.generatedAt}`,
+    `- Turbo summary directory: \`${toPosixPath(relative(report.rootDir, report.summaryDir))}\``,
+    "- Source: Turbo run summaries plus repository dependency boundary scans.",
+    "",
+    "## Gate summary",
+    "| Gate | Scope | CI mode | Current outcome | Evidence |",
+    "| --- | --- | --- | --- | --- |",
+    `| \`changeset-required:check\` | publishable package behavior changes | blocking on PR | ${report.gateOutcomes["changeset-required:check"]} | links public package changes to a required non-README changeset |`,
+    `| \`pnpm check\` | repository policy, lint, format, dependency boundaries | blocking on PR/trunk | ${report.gateOutcomes["pnpm check"]} | includes \`dependency-boundaries:check\` |`,
+    `| \`build\` | package build tasks | blocking on PR/trunk | ${report.gateOutcomes.build} | Turbo \`build\` summary below |`,
+    `| \`typecheck\` | package TypeScript tasks | blocking on PR/trunk | ${report.gateOutcomes.typecheck} | Turbo \`typecheck\` summary below |`,
+    `| \`test\` | package test tasks | blocking on PR/trunk | ${report.gateOutcomes.test} | Turbo \`test\` summary below |`,
+    "| benchmark and bundle size | performance/bundle drift | warning-only until baselines stabilize | warning-only | benchmark workflow keeps enforce mode explicit; bundle size remains a future warning gate |",
+    "",
+    "## Package task totals",
+    "| Task | Pass | Fail | Not collected | Not configured | Not run |",
+    "| --- | ---: | ---: | ---: | ---: | ---: |",
+    ...QUALITY_TASKS.map(
+      (task) =>
+        `| ${task} | ${summarizeStatus(report.rows, task, "pass")} | ${summarizeStatus(report.rows, task, "fail")} | ${summarizeStatus(report.rows, task, "not-collected")} | ${summarizeStatus(report.rows, task, "not-configured")} | ${summarizeStatus(report.rows, task, "not-run")} |`,
+    ),
+    "",
+    "## Failure summary",
+    ...formatFailureSummary(report.rows),
+    "",
+    "## Dependency boundary results",
+    "| Rule | Package | Status | Evidence |",
+    "| --- | --- | --- | --- |",
+    ...report.boundaries.map(
+      (result) =>
+        `| \`${result.id}\` | \`${result.packageName}\` | ${formatBoundaryStatus(result)} | ${formatBoundaryEvidence(result)} |`,
+    ),
+    "",
+    "## Package matrix",
+    "| Package | Build | Typecheck | Test | Notes |",
+    "| --- | --- | --- | --- | --- |",
+    ...report.rows.map(
+      (row) =>
+        `| \`${row.packageName}\` | ${formatTaskCell(row.tasks.build)} | ${formatTaskCell(row.tasks.typecheck)} | ${formatTaskCell(row.tasks.test)} | ${formatPackageNotes(row)} |`,
+    ),
+    "",
+    "## Trunk gate rollout",
+    "- Current blocking gates: changeset-required, dependency-boundaries, lint/format/policy checks, build, typecheck, and test.",
+    "- Current advisory gates: production audit on PRs, core coverage baseline warnings, benchmark warnings, and future bundle-size warnings.",
+    "- Promote warning-only gates only after the dashboard shows stable package-level ownership, no unknown package rows, and documented baselines.",
+    "- New packages should appear in this dashboard with explicit build/typecheck/test support or an intentional not-configured state.",
+  ];
+
+  return `${lines.join("\n")}\n`;
+}
+
+export function writePackageQualityReport(report: PackageQualityReport, outputDir: string): string {
+  mkdirSync(outputDir, { recursive: true });
+
+  const markdownPath = join(outputDir, "report.md");
+  const jsonPath = join(outputDir, "summary.json");
+
+  writeFileSync(markdownPath, buildReportMarkdown(report));
+  writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
+
+  return markdownPath;
+}
+
+function parseArgs(args: readonly string[]): CheckOptions {
+  let rootDir = process.cwd();
+  let outputDir = join(rootDir, reportDirectory);
+  let summaryDir = join(rootDir, turboRunsDirectory);
+  let boundaryCheckOnly = false;
+
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+
+    if (arg === "--root") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--root requires a path");
+      }
+      rootDir = resolve(value);
+      outputDir = join(rootDir, reportDirectory);
+      summaryDir = join(rootDir, turboRunsDirectory);
+      index++;
+      continue;
+    }
+
+    if (arg === "--output-dir") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--output-dir requires a path");
+      }
+      outputDir = resolve(value);
+      index++;
+      continue;
+    }
+
+    if (arg === "--summary-dir") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--summary-dir requires a path");
+      }
+      summaryDir = resolve(value);
+      index++;
+      continue;
+    }
+
+    if (arg === "--boundary-check-only") {
+      boundaryCheckOnly = true;
+      continue;
+    }
+
+    throw new Error(`Unknown option: ${arg}`);
+  }
+
+  return {
+    rootDir,
+    outputDir,
+    summaryDir,
+    boundaryCheckOnly,
+  };
+}
+
+function runBoundaryCheck(rootDir: string): number {
+  const results = scanDependencyBoundaries(rootDir);
+  const failures = results.filter((result) => result.status !== "pass");
+
+  for (const result of results) {
+    console.log(`dependency-boundaries: ${result.id} ${result.status}`);
+    for (const violation of result.violations) {
+      console.error(`- ${violation.file}:${violation.line}: ${violation.excerpt}`);
+    }
+  }
+
+  if (failures.length > 0) {
+    console.error(`dependency-boundaries: ${failures.length} rule(s) failed`);
+    return 1;
+  }
+
+  console.log("dependency-boundaries: all rules passed");
+  return 0;
+}
+
+async function main(): Promise<void> {
+  const options = parseArgs(process.argv.slice(2));
+
+  if (options.boundaryCheckOnly) {
+    process.exit(runBoundaryCheck(options.rootDir));
+  }
+
+  const report = createPackageQualityReport({
+    rootDir: options.rootDir,
+    summaryDir: options.summaryDir,
+  });
+  const markdownPath = writePackageQualityReport(report, options.outputDir);
+  const failureCount = report.rows.reduce(
+    (count, row) =>
+      count + QUALITY_TASKS.filter((task) => row.tasks[task].status === "fail").length,
+    0,
+  );
+  const boundaryFailureCount = report.boundaries.filter(
+    (result) => result.status !== "pass",
+  ).length;
+
+  console.log(`package-quality-report: wrote ${markdownPath}`);
+  console.log(`package-quality-report: package task failures=${failureCount}`);
+  console.log(`package-quality-report: dependency boundary failures=${boundaryFailureCount}`);
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main().catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`package-quality-report: failed: ${message}`);
+    process.exit(1);
+  });
+}

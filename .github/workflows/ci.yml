@@ -34,6 +34,7 @@ jobs:
           cache: "pnpm"
 
       - name: Changeset required check
+        id: changeset_required
         if: github.event_name == 'pull_request'
         run: pnpm changeset-required:check -- --base origin/${{ github.base_ref }} --head HEAD
 
@@ -137,12 +138,14 @@ jobs:
         run: pnpm quick-start-lambda:smoke
 
       - name: Lint & Format Check
+        id: lint_format_check
         run: |
           pnpm check
           echo "✓ Lint gate: 0 errors verified"
 
       - name: Build
-        run: pnpm build
+        id: build
+        run: pnpm turbo run build --summarize --continue=always
 
       - name: Package entrypoint smoke
         run: pnpm package-entrypoints:smoke
@@ -154,10 +157,37 @@ jobs:
         run: pnpm create-croco-app:smoke
 
       - name: TypeScript check
-        run: pnpm typecheck
+        id: typecheck
+        run: pnpm turbo run typecheck --summarize --continue=always
 
       - name: Test
-        run: pnpm test
+        id: test
+        run: pnpm turbo run test --summarize --continue=always
+
+      - name: Publish package quality dashboard
+        if: always()
+        env:
+          PACKAGE_QUALITY_CHANGESET_STATUS: ${{ steps.changeset_required.outcome || 'skipped' }}
+          PACKAGE_QUALITY_CHECK_STATUS: ${{ steps.lint_format_check.outcome || 'skipped' }}
+          PACKAGE_QUALITY_BUILD_STATUS: ${{ steps.build.outcome || 'skipped' }}
+          PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome || 'skipped' }}
+          PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome || 'skipped' }}
+        shell: bash
+        run: |
+          pnpm package-quality:report
+          if [ -f ci-reports/package-quality/report.md ]; then
+            cat ci-reports/package-quality/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Package quality dashboard was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload package quality dashboard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-quality-dashboard
+          path: ci-reports/package-quality
+          if-no-files-found: warn
 
       - name: CLI integration tests
         run: pnpm --filter @croco/cli test:e2e
