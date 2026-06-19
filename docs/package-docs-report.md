@@ -6,10 +6,10 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |    99 |
+| Public packages                |   100 |
 | Private packages skipped       |     2 |
 | Missing package README         |    22 |
-| Missing generated API docs     |    74 |
+| Missing generated API docs     |    75 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    38 |
 
@@ -44,6 +44,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 
 - `@croco/access-core` (`packages/access-core`) — legacy baseline
 - `@croco/access-drizzle` (`packages/access-drizzle`) — legacy baseline
+- `@croco/admin-ops` (`packages/admin-ops`) — legacy baseline
 - `@croco/analytics-core` (`packages/analytics-core`) — legacy baseline
 - `@croco/analytics-posthog` (`packages/analytics-posthog`) — legacy baseline
 - `@croco/audit-drizzle` (`packages/audit-drizzle`) — legacy baseline
@@ -126,7 +127,7 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       21 |
-| Domain       |       26 |
+| Domain       |       27 |
 | Provider     |       25 |
 | Integration  |        5 |
 | Protocol     |        6 |
@@ -137,7 +138,7 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       45 |
+| 🟡 beta             |       46 |
 | 🔴 alpha/WIP        |       31 |
 | ⚠️ deprecated       |        0 |
 
