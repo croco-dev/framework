@@ -216,3 +216,191 @@ export type LifecycleRunTimelineExtension = {
   readonly source: "lifecycle";
   readonly run: LifecycleRunTimelineSource;
 };
+
+export type RetryConsoleSourceKind =
+  | "task"
+  | "workflow"
+  | "lifecycle"
+  | "batch"
+  | "execution"
+  | (string & {});
+
+export type RetryConsoleItemState =
+  | "running"
+  | "succeeded"
+  | "retryable"
+  | "non_retryable"
+  | "terminal_failed";
+
+export type RetryConsoleRecoveryActionKind = "retry" | "replay" | "inspect" | "wait" | "none";
+
+export type RetryConsoleProblemMetadata = {
+  readonly code: string;
+  readonly message: string;
+  readonly title?: string;
+  readonly status?: number;
+  readonly type?: string;
+  readonly detail?: string;
+  readonly retryable?: boolean;
+  readonly stack?: string;
+  readonly extensions?: Record<string, unknown>;
+};
+
+export type RetryConsoleTimestamps = {
+  readonly createdAt?: string;
+  readonly startedAt?: string;
+  readonly completedAt?: string;
+  readonly updatedAt?: string;
+};
+
+export type RetryConsoleCorrelationIds = {
+  readonly executionId?: string;
+  readonly parentExecutionId?: string;
+  readonly replayOf?: string;
+  readonly workflowExecutionId?: string;
+  readonly workflowName?: string;
+  readonly taskName?: string;
+  readonly batchName?: string;
+  readonly lifecycleRunId?: string;
+  readonly lifecycleRuleId?: string;
+  readonly tenantId?: string;
+  readonly signalId?: string;
+  readonly traceId?: string;
+  readonly requestId?: string;
+  readonly idempotencyKey?: string;
+  readonly [key: string]: string | undefined;
+};
+
+export type RetryConsolePermissionDescriptor = {
+  readonly action: string;
+  readonly resource: string;
+  readonly scope?: string;
+  readonly reason?: string;
+};
+
+export type RetryConsolePermissionGrant = {
+  readonly descriptor?: RetryConsolePermissionDescriptor;
+  readonly granted: boolean;
+  readonly checkedAt?: string;
+  readonly deniedReason?: string;
+};
+
+export type RetryConsoleAuditDescriptor = {
+  readonly actorId: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+  readonly ticketId?: string;
+  readonly metadata?: Record<string, unknown>;
+};
+
+export type RetryConsoleRecoveryAction = {
+  readonly id: string;
+  readonly kind: RetryConsoleRecoveryActionKind;
+  readonly label: string;
+  readonly allowed: boolean;
+  readonly reason: string;
+  readonly permission: RetryConsolePermissionDescriptor;
+  readonly requiresAudit: boolean;
+  readonly requiresIdempotencyKey: boolean;
+};
+
+export type RetryConsoleSourceMetadata = {
+  readonly kind: RetryConsoleSourceKind;
+  readonly label: string;
+  readonly target?: string;
+};
+
+export type RetryConsoleItem = {
+  readonly id: string;
+  readonly source: RetryConsoleSourceMetadata;
+  readonly state: RetryConsoleItemState;
+  readonly title: string;
+  readonly retryable: boolean;
+  readonly problem?: RetryConsoleProblemMetadata;
+  readonly attempts: {
+    readonly current: number;
+    readonly max?: number;
+  };
+  readonly timestamps: RetryConsoleTimestamps;
+  readonly correlationIds: RetryConsoleCorrelationIds;
+  readonly recoveryActions: readonly RetryConsoleRecoveryAction[];
+  readonly details?: Record<string, unknown>;
+};
+
+export type RetryConsoleListOptions = {
+  readonly states?: readonly RetryConsoleItemState[];
+  readonly sourceKinds?: readonly RetryConsoleSourceKind[];
+  readonly includeSucceeded?: boolean;
+};
+
+export type RetryConsoleRecoveryInputById = {
+  readonly itemId: string;
+  readonly actionId: string;
+  readonly actionKind?: never;
+  readonly permission: RetryConsolePermissionGrant;
+  readonly audit: RetryConsoleAuditDescriptor;
+  readonly payload?: unknown;
+  readonly metadata?: Record<string, unknown>;
+};
+
+export type RetryConsoleRecoveryInputByKind = {
+  readonly itemId: string;
+  readonly actionId?: never;
+  readonly actionKind: RetryConsoleRecoveryActionKind;
+  readonly permission: RetryConsolePermissionGrant;
+  readonly audit: RetryConsoleAuditDescriptor;
+  readonly payload?: unknown;
+  readonly metadata?: Record<string, unknown>;
+};
+
+export type RetryConsoleRecoveryInput = {
+  readonly itemId: string;
+  readonly actionId?: string;
+  readonly actionKind?: RetryConsoleRecoveryActionKind;
+  readonly permission: RetryConsolePermissionGrant;
+  readonly audit: RetryConsoleAuditDescriptor;
+  readonly payload?: unknown;
+  readonly metadata?: Record<string, unknown>;
+};
+
+export type RetryConsoleSourceRecoveryResult = {
+  readonly item?: RetryConsoleItem;
+  readonly providerResult?: unknown;
+};
+
+export type RetryConsoleRecoveryResult =
+  | {
+      readonly status: "succeeded";
+      readonly action: RetryConsoleRecoveryAction;
+      readonly item: RetryConsoleItem;
+      readonly audit: RetryConsoleAuditDescriptor;
+      readonly providerResult?: unknown;
+    }
+  | {
+      readonly status: "denied";
+      readonly action?: RetryConsoleRecoveryAction;
+      readonly item?: RetryConsoleItem;
+      readonly problem: RetryConsoleProblemMetadata;
+    }
+  | {
+      readonly status: "failed";
+      readonly action: RetryConsoleRecoveryAction;
+      readonly item: RetryConsoleItem;
+      readonly problem: RetryConsoleProblemMetadata;
+    };
+
+export interface RetryConsoleSource {
+  readonly kind: RetryConsoleSourceKind;
+  list(options?: RetryConsoleListOptions): Promise<readonly RetryConsoleItem[]>;
+  recover(
+    item: RetryConsoleItem,
+    request: RetryConsoleRecoveryInput,
+    action: RetryConsoleRecoveryAction,
+  ): Promise<RetryConsoleSourceRecoveryResult>;
+}
+
+export interface RetryConsole {
+  list(options?: RetryConsoleListOptions): Promise<readonly RetryConsoleItem[]>;
+  show(itemId: string): Promise<RetryConsoleItem | null>;
+  recover(request: RetryConsoleRecoveryInput): Promise<RetryConsoleRecoveryResult>;
+}

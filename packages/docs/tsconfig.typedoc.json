@@ -11,6 +11,7 @@
     "types": ["node"]
   },
   "files": [
+    "../admin-ops/src/index.ts",
     "../audit-core/src/index.ts",
     "../auth-core/src/index.ts",
     "../billing-core/src/index.ts",

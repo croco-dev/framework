@@ -509,7 +509,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/pagination-core`      | Core         | `packages/pagination-core`      | README, tests      |
 | `@croco/tenant-core`          | Core         | `packages/tenant-core`          | README, tests      |
 | `@croco/access-core`          | Domain       | `packages/access-core`          | README, tests      |
-| `@croco/admin-ops`            | Domain       | `packages/admin-ops`            | README, tests      |
+| `@croco/admin-ops`            | Domain       | `packages/admin-ops`            | README, API, tests |
 | `@croco/customer-health-core` | Domain       | `packages/customer-health-core` | README, tests      |
 | `@croco/entitlements-core`    | Domain       | `packages/entitlements-core`    | README, tests      |
 | `@croco/execution-core`       | Domain       | `packages/execution-core`       | README, tests      |

@@ -1,7 +1,7 @@
 {
   "name": "@croco/admin-ops",
   "version": "0.0.0",
-  "description": "Operations timeline contracts and normalization helpers for Croco admin surfaces",
+  "description": "Operations timeline and retry console contracts for Croco admin surfaces",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",
@@ -26,11 +26,26 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom",
     "lint": "oxlint .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "test:watch": "vitest"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@croco/execution-core": "workspace:*",
+    "@croco/lifecycle-core": "workspace:*",
+    "@croco/problems-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vitest": "4.0.16"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
 }
