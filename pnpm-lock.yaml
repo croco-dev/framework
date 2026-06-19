@@ -115,6 +115,55 @@ importers:
         specifier: ^5.9.0
         version: 5.9.3
 
+  examples/saas-billing-golden-path:
+    dependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../../packages/events-core
+      '@croco/events-inmemory':
+        specifier: workspace:*
+        version: link:../../packages/events-inmemory
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../../packages/framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../../packages/problems-core
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../../packages/protocols-rest
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../../packages/retry-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../../packages/telemetry-api
+      '@croco/transports-http':
+        specifier: workspace:*
+        version: link:../../packages/transports-http
+      '@croco/tx-core':
+        specifier: workspace:*
+        version: link:../../packages/tx-core
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+    devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+      '@types/node':
+        specifier: ^22
+        version: 22.19.3
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
   packages/access-core:
     dependencies:
       '@croco/framework-context':
@@ -12306,7 +12355,7 @@ snapshots:
       '@vitest/spy': 4.0.16
       '@vitest/utils': 4.0.16
       chai: 6.2.2
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
 
   '@vitest/expect@4.1.8':
     dependencies:
@@ -12325,14 +12374,6 @@ snapshots:
     optionalDependencies:
       vite: 7.3.2(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
-  '@vitest/mocker@4.0.16(vite@7.3.2(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))':
-    dependencies:
-      '@vitest/spy': 4.0.16
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 7.3.2(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
-
   '@vitest/mocker@4.1.8(vite@7.3.2(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.1.8
@@ -12343,7 +12384,7 @@ snapshots:
 
   '@vitest/pretty-format@4.0.16':
     dependencies:
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
 
   '@vitest/pretty-format@4.1.8':
     dependencies:
@@ -12379,7 +12420,7 @@ snapshots:
   '@vitest/utils@4.0.16':
     dependencies:
       '@vitest/pretty-format': 4.0.16
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
 
   '@vitest/utils@4.1.8':
     dependencies:
@@ -16364,7 +16405,7 @@ snapshots:
       tinybench: 2.9.0
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
       vite: 7.3.2(@types/node@20.19.33)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
@@ -16402,7 +16443,7 @@ snapshots:
       tinybench: 2.9.0
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
       vite: 7.3.2(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
@@ -16424,7 +16465,7 @@ snapshots:
   vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       '@vitest/expect': 4.0.16
-      '@vitest/mocker': 4.0.16(vite@7.3.2(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/mocker': 4.0.16(vite@7.3.2(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
       '@vitest/pretty-format': 4.0.16
       '@vitest/runner': 4.0.16
       '@vitest/snapshot': 4.0.16
@@ -16440,7 +16481,7 @@ snapshots:
       tinybench: 2.9.0
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
       vite: 7.3.2(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
