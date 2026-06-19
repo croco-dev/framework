@@ -7,6 +7,7 @@ export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
     "ddd-fullstack",
     "ddd-vike-fullstack",
     "production-app",
+    "admin-console",
     "saas",
     "ai-saas",
   ],

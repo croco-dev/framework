@@ -14,7 +14,7 @@ type ChoiceName = "preset" | "api" | "api-hosting" | "backend-deploy" | "fronten
 
 type RawCliOptions = Record<string, string | boolean | undefined>;
 type SaasPreset = Extract<GeneratorOptions["preset"], "saas" | "ai-saas">;
-type ProductionPreset = Extract<GeneratorOptions["preset"], "production-app">;
+type ProductionPreset = Extract<GeneratorOptions["preset"], "production-app" | "admin-console">;
 
 export function parseCliOptions(
   directory: string | undefined,
@@ -289,7 +289,7 @@ function isSaasPreset(preset: GeneratorOptions["preset"] | undefined): preset is
 function isProductionPreset(
   preset: GeneratorOptions["preset"] | undefined,
 ): preset is ProductionPreset {
-  return preset === "production-app";
+  return preset === "production-app" || preset === "admin-console";
 }
 
 function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPreset): void {

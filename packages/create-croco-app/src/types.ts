@@ -6,6 +6,7 @@ export type GeneratorOptions = {
     | "ddd-vike-fullstack"
     | "ddd-api"
     | "production-app"
+    | "admin-console"
     | "saas"
     | "ai-saas"
     | "blank";

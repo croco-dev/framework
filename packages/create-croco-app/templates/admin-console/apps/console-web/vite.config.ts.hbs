@@ -1,0 +1,13 @@
+import { crocoSpaViteConfig } from '@croco/frontend-vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  server: {
+    proxy: {
+      '/admin': 'http://localhost:3000',
+      '/ops': 'http://localhost:3000',
+    },
+  },
+  plugins: [react(), ...crocoSpaViteConfig()],
+});

@@ -259,6 +259,28 @@ const smokeCases: readonly SmokeCase[] = [
     ],
   },
   {
+    name: "admin-console-starter",
+    args: ["--preset", "admin-console", "--scope", "@smoke", "--no-install", "--no-git"],
+    validations: [
+      { label: "admin smoke", args: ["admin:smoke"] },
+      { label: "lint", args: ["lint"] },
+      { label: "test", args: ["test"] },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      {
+        label: "Contract snapshot",
+        args: ["contract:snapshot"],
+        paths: ["contract-graph.snapshot.json"],
+      },
+      { label: "Contract verify", args: ["contract:verify"] },
+      {
+        label: "Admin RPC client",
+        args: ["contract:client"],
+        paths: ["libs/shared/provider-rpc/src/admin.ts"],
+      },
+    ],
+  },
+  {
     name: "saas-golden-path",
     args: ["--preset", "saas", "--scope", "@smoke", "--no-install", "--no-git"],
     validations: [

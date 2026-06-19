@@ -63,6 +63,11 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
           hint: "REST API + React SPA with telemetry, Problems, smoke checks, and Lambda entrypoint",
         },
         {
+          value: "admin-console",
+          label: "Admin Console",
+          hint: "REST API + generated client React admin console with Problem and operations panels",
+        },
+        {
           value: "saas",
           label: "SaaS Golden Path",
           hint: "Tenant, auth, access, billing, metering, entitlements demo",
@@ -107,7 +112,12 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     };
   }
 
-  if (preset === "production-app" || preset === "saas" || preset === "ai-saas") {
+  if (
+    preset === "production-app" ||
+    preset === "admin-console" ||
+    preset === "saas" ||
+    preset === "ai-saas"
+  ) {
     const agentRules =
       cliArgs.agentRules ??
       (await p.confirm({
@@ -136,7 +146,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     return {
       projectName: projectName as string,
       scope: scope as string,
-      preset: preset as "production-app" | "saas" | "ai-saas",
+      preset: preset as "production-app" | "admin-console" | "saas" | "ai-saas",
       webApps: [],
       apiHosting: "standalone",
       db: [],

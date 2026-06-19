@@ -604,6 +604,74 @@ describe("E2E: generate()", () => {
     },
   );
 
+  it(
+    "generates admin console preset with generated-client workflow",
+    { timeout: 120_000 },
+    async () => {
+      const options: GeneratorOptions = {
+        projectName: "my-admin-console",
+        scope: "@test",
+        preset: "admin-console",
+        webApps: [],
+        apiHosting: "standalone",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      };
+
+      await generate(testDir, options);
+
+      const rootPackageJson = readPackageJson(join(testDir, "package.json"));
+      const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const readme = readFileSync(join(testDir, "README.md"), "utf8");
+      const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
+      const webSource = readFileSync(
+        join(testDir, "apps", "console-web", "src", "App.tsx"),
+        "utf8",
+      );
+      const viteConfig = readFileSync(
+        join(testDir, "apps", "console-web", "vite.config.ts"),
+        "utf8",
+      );
+
+      expect(rootPackageJson.scripts).toMatchObject({
+        "admin:smoke":
+          "pnpm contract:client && pnpm --filter @test/api-server admin:smoke && pnpm --filter @test/console-web admin:smoke",
+        typecheck: "pnpm contract:client && turbo typecheck",
+        build: "pnpm contract:client && turbo build",
+        "contract:client": expect.stringContaining(
+          "apps/api-server/src/{controllers/**/*.ts,admin.ts,users.ts,problems.ts}",
+        ),
+      });
+      expect(apiPackageJson.scripts).toMatchObject({
+        "admin:smoke": "tsx src/dev-smoke.ts",
+      });
+      expect(appSource).toContain("AdminController");
+      expect(viteConfig).toContain("'/admin': 'http://localhost:3000'");
+      expect(webSource).toContain("import { adminClient, type adminRpc }");
+      expect(webSource).toContain("adminClient");
+      expect(webSource).toContain("adminRpc.ListUsersOutput");
+      expect(webSource).toContain("query: { tenantId: selectedTenantId }");
+      expect(webSource).toContain("admin-console/invite-failed");
+      expect(webSource).toContain("Probe Missing User");
+      expect(webSource).toContain("Operations");
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "admin.ts"))).toBe(true);
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "controllers", "AdminController.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "tests", "AdminConsole.spec.ts")),
+      ).toBe(true);
+      expect(readme).toContain("Croco admin console starter");
+      expect(readme).toContain("Recovery States");
+      expect(readme).toContain("not a marketing landing page");
+      assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+      assertAllSourceBareImportsDeclared(testDir);
+    },
+  );
+
   it("generates SaaS preset with runnable demo smoke commands", { timeout: 120_000 }, async () => {
     const options: GeneratorOptions = {
       projectName: "my-saas",

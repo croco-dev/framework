@@ -222,6 +222,76 @@ function checkSpaBeSplitStructure() {
   checkFileContains("spa-be-split", ["README.md.hbs"], /TelemetryRuntime\.forceFlush/);
 }
 
+function checkAdminConsoleStructure() {
+  checkFileExists("admin-console", "package.json.hbs");
+  checkFileExists("admin-console", "README.md.hbs");
+  checkFileExists("admin-console", "apps", "api-server", "src", "admin.ts");
+  checkFileExists("admin-console", "apps", "api-server", "src", "app.ts.hbs");
+  checkFileExists(
+    "admin-console",
+    "apps",
+    "api-server",
+    "src",
+    "controllers",
+    "AdminController.ts",
+  );
+  checkFileExists("admin-console", "apps", "api-server", "src", "controllers", "adminSchemas.ts");
+  checkFileExists("admin-console", "apps", "api-server", "src", "tests", "AdminConsole.spec.ts");
+  checkFileExists("admin-console", "apps", "console-web", "src", "App.tsx.hbs");
+
+  const rootPackageJson = readJsonTemplate("admin-console", "package.json.hbs");
+  expect(rootPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "admin:smoke": expect.stringMatching(/^pnpm contract:client/),
+      "contract:client": expect.stringMatching(/admin\.ts,users\.ts,problems\.ts/),
+      typecheck: "pnpm contract:client && turbo typecheck",
+      build: "pnpm contract:client && turbo build",
+    }),
+  });
+
+  const apiPackageJson = readJsonTemplate(
+    "admin-console",
+    "apps",
+    "api-server",
+    "package.json.hbs",
+  );
+  expect(apiPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "admin:smoke": "tsx src/dev-smoke.ts",
+    }),
+  });
+
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "controllers", "AdminController.ts"],
+    /@ProblemResponse/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "controllers", "AdminController.ts"],
+    /admin-console\/user-not-found/,
+  );
+  checkFileContains("admin-console", ["apps", "console-web", "src", "App.tsx.hbs"], /adminClient/);
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
+    /query: \{ tenantId: selectedTenantId \}/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
+    /admin-console\/invite-failed/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
+    /Probe Missing User/,
+  );
+  checkFileContains("admin-console", ["apps", "console-web", "src", "App.tsx.hbs"], /Operations/);
+  checkFileContains("admin-console", ["README.md.hbs"], /operations timeline/);
+  checkFileContains("admin-console", ["README.md.hbs"], /not a marketing landing page/);
+}
+
 function checkSsrLambdaStructure() {
   checkFileExists("ssr-lambda", "apps", "api-server", "package.json.hbs");
   checkFileContains(
@@ -471,31 +541,40 @@ function checkAiSaasStructure() {
   checkFileContains("ai-saas", ["README.md.hbs"], /Do not expose provider API keys/);
 }
 
-describe.each(["spa-be-split", "ssr-lambda", "container-fullstack", "saas", "ai-saas"])(
-  "Template: %s",
-  (template) => {
-    it("should have required structure", () => {
-      if (template === "spa-be-split") {
-        checkSpaBeSplitStructure();
-        return;
-      }
+describe.each([
+  "spa-be-split",
+  "ssr-lambda",
+  "container-fullstack",
+  "saas",
+  "ai-saas",
+  "admin-console",
+])("Template: %s", (template) => {
+  it("should have required structure", () => {
+    if (template === "spa-be-split") {
+      checkSpaBeSplitStructure();
+      return;
+    }
 
-      if (template === "ssr-lambda") {
-        checkSsrLambdaStructure();
-        return;
-      }
+    if (template === "ssr-lambda") {
+      checkSsrLambdaStructure();
+      return;
+    }
 
-      if (template === "saas") {
-        checkSaasStructure();
-        return;
-      }
+    if (template === "saas") {
+      checkSaasStructure();
+      return;
+    }
 
-      if (template === "ai-saas") {
-        checkAiSaasStructure();
-        return;
-      }
+    if (template === "ai-saas") {
+      checkAiSaasStructure();
+      return;
+    }
 
-      checkContainerFullstackStructure();
-    });
-  },
-);
+    if (template === "admin-console") {
+      checkAdminConsoleStructure();
+      return;
+    }
+
+    checkContainerFullstackStructure();
+  });
+});
