@@ -1,8 +1,70 @@
-import { existsSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { extname, join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
 import type { GeneratorOptions } from "../types.js";
+
+const TEXT_FILE_EXTENSIONS = new Set([
+  ".css",
+  ".js",
+  ".json",
+  ".md",
+  ".ts",
+  ".tsx",
+  ".yaml",
+  ".yml",
+]);
+
+type PackageJson = {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+};
+
+function collectFiles(directory: string): string[] {
+  return readdirSync(directory, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
+}
+
+function readPackageJson(filePath: string): PackageJson {
+  return JSON.parse(readFileSync(filePath, "utf8")) as PackageJson;
+}
+
+function assertNoTailwindReferences(projectDir: string): void {
+  const filesWithTailwindReferences = collectFiles(projectDir)
+    .filter((filePath) => TEXT_FILE_EXTENSIONS.has(extname(filePath)))
+    .filter((filePath) => readFileSync(filePath, "utf8").toLowerCase().includes("tailwind"))
+    .map((filePath) => relative(projectDir, filePath));
+
+  expect(filesWithTailwindReferences).toEqual([]);
+}
+
+function assertStylexNextWebApp(webDir: string): void {
+  const packageJson = readPackageJson(join(webDir, "package.json"));
+  const globalsCss = readFileSync(join(webDir, "src", "app", "globals.css"), "utf8");
+  const healthCheckSource = readFileSync(
+    join(webDir, "src", "components", "health-check.tsx"),
+    "utf8",
+  );
+
+  expect(packageJson.dependencies?.["@stylexjs/stylex"]).toBe("^0.19.0");
+  expect(packageJson.devDependencies?.["@stylexjs/babel-plugin"]).toBe("^0.19.0");
+  expect(packageJson.devDependencies?.["@stylexjs/postcss-plugin"]).toBe("^0.19.0");
+  expect(packageJson.dependencies?.["tailwindcss"]).toBeUndefined();
+  expect(packageJson.devDependencies?.["tailwindcss"]).toBeUndefined();
+  expect(packageJson.dependencies?.["@tailwindcss/postcss"]).toBeUndefined();
+  expect(packageJson.devDependencies?.["@tailwindcss/postcss"]).toBeUndefined();
+  expect(existsSync(join(webDir, "babel.config.js"))).toBe(true);
+  expect(existsSync(join(webDir, "postcss.config.js"))).toBe(true);
+  expect(existsSync(join(webDir, "tailwind.config.ts"))).toBe(false);
+  expect(existsSync(join(webDir, "tailwind.config.js"))).toBe(false);
+  expect(existsSync(join(webDir, "tailwind.config.cjs"))).toBe(false);
+  expect(existsSync(join(webDir, "tailwind.config.mjs"))).toBe(false);
+  expect(globalsCss).toContain("@stylex");
+  expect(globalsCss).not.toContain("tailwind");
+  expect(healthCheckSource).toContain("@stylexjs/stylex");
+  expect(healthCheckSource).toContain("stylex.props");
+}
 
 describe("E2E Advanced: generate()", () => {
   let testDir: string;
@@ -84,11 +146,14 @@ describe("E2E Advanced: generate()", () => {
     // Multiple web apps
     expect(existsSync(join(testDir, "apps", "web1"))).toBe(true);
     expect(existsSync(join(testDir, "apps", "web2"))).toBe(true);
+    assertStylexNextWebApp(join(testDir, "apps", "web1"));
+    assertStylexNextWebApp(join(testDir, "apps", "web2"));
     // Lambda
     expect(existsSync(join(testDir, "sst.config.ts"))).toBe(true);
     // All DBs
     expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb"))).toBe(true);
     expect(existsSync(join(testDir, "libs", "shared", "provider-redis"))).toBe(true);
+    assertNoTailwindReferences(testDir);
   });
 
   it("generates graphql + docker + all DBs + agent-rules", { timeout: 120_000 }, async () => {

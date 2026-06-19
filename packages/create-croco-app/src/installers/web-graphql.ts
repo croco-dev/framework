@@ -8,7 +8,7 @@ export function installWebGraphql(
   webAppName: string,
   options: Pick<GeneratorOptions, "projectName" | "scope">,
 ): void {
-  const addonDir = join(TEMPLATES_DIR, "addons/web-graphql");
+  const addonDir = join(TEMPLATES_DIR, "addons/web-graphql/apps/web");
   const appTargetDir = join(targetDir, "apps", webAppName);
   mergeInto(addonDir, appTargetDir, { projectName: options.projectName, scope: options.scope });
 }
