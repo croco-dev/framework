@@ -29,6 +29,7 @@
     "access-core",
     "admin-ops",
     "access-drizzle",
+    "admin-react",
     "analytics-core",
     "analytics-posthog",
     "audit-drizzle",

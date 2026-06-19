@@ -298,6 +298,197 @@
       ]
     },
     {
+      "packageName": "@croco/admin-react",
+      "relativeDir": "packages/admin-react",
+      "entrypoint": "packages/admin-react/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "AdminActionList",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "BillingEntitlementAdminPanel",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "BillingStatus",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createBillingEntitlementAdminPanelState",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createCoreProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createInMemoryBillingEntitlementAdminPanelState",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "const"
+        },
+        {
+          "name": "createPermissionDeniedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "EntitlementList",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "evaluateAdminActionPermissions",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "PlanSummary",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemNotice",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "UsageQuotaMeter",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "AdminActionContract",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminActionPermissionDecision",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminActionSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminAuditMetadata",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminBillingStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminEntitlementRow",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminMeteringState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminMutability",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminPanelActionHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminPlanSummary",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminProblemReference",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminProviderState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminStateSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminUsageMeter",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "BillingEntitlementAdminPanelProps",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "BillingEntitlementAdminPanelReadyState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "BillingEntitlementAdminPanelState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "BillingEntitlementAdminPanelStateInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "BillingProviderFailureState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "BillingProviderStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "NonEmptyArray",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "PermissionDeniedAdminPanelState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/analytics-core",
       "relativeDir": "packages/analytics-core",
       "entrypoint": "packages/analytics-core/src/index.ts",
