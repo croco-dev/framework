@@ -124,6 +124,180 @@
       "typeExports": []
     },
     {
+      "packageName": "@croco/admin-ops",
+      "relativeDir": "packages/admin-ops",
+      "entrypoint": "packages/admin-ops/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "collectOperationsTimeline",
+          "exportKind": "named",
+          "source": "./libs/OperationsTimeline",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createOperationsTimeline",
+          "exportKind": "named",
+          "source": "./libs/OperationsTimeline",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createOperationsTimelineRows",
+          "exportKind": "named",
+          "source": "./libs/OperationsTimeline",
+          "declarationKind": "function"
+        },
+        {
+          "name": "InMemoryOperationsTimelineSourceAdapter",
+          "exportKind": "named",
+          "source": "./libs/OperationsTimeline",
+          "declarationKind": "class"
+        },
+        {
+          "name": "matchesOperationsTimelineQuery",
+          "exportKind": "named",
+          "source": "./libs/OperationsTimeline",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeAuditLogEntry",
+          "exportKind": "named",
+          "source": "./libs/normalizers",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeDomainEvent",
+          "exportKind": "named",
+          "source": "./libs/normalizers",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeLifecycleRun",
+          "exportKind": "named",
+          "source": "./libs/normalizers",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeTaskFailureExecution",
+          "exportKind": "named",
+          "source": "./libs/normalizers",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeWorkflowExecution",
+          "exportKind": "named",
+          "source": "./libs/normalizers",
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "AuditTimelineExtension",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AuditTimelineSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DomainEventTimelineExtension",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DomainEventTimelineSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "LifecycleRunTimelineExtension",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "LifecycleRunTimelineSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineActor",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineEntity",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineEvent",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineProblem",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineQuery",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineRenderRow",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineRetry",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineSeverity",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OperationsTimelineSourceAdapter",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TaskFailureTimelineExtension",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TaskFailureTimelineSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TimelineOrder",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WorkflowExecutionTimelineExtension",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WorkflowExecutionTimelineSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/analytics-core",
       "relativeDir": "packages/analytics-core",
       "entrypoint": "packages/analytics-core/src/index.ts",

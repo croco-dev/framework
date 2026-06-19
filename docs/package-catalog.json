@@ -31,6 +31,7 @@
       "description": "Business-domain APIs and package-level abstractions",
       "packages": [
         "access-core",
+        "admin-ops",
         "analytics-core",
         "audit-core",
         "auth-core",
@@ -170,6 +171,7 @@
       "label": "🟡 beta",
       "packages": [
         "access-core",
+        "admin-ops",
         "billing-polar",
         "cache-core",
         "cli",

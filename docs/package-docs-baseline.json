@@ -27,6 +27,7 @@
   ],
   "allowedMissingApiDocs": [
     "access-core",
+    "admin-ops",
     "access-drizzle",
     "analytics-core",
     "analytics-posthog",
