@@ -1,6 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import type { OutputContract } from "../output-contract";
+import type {
+  GeneratedRuntimeProfile,
+  GeneratedRuntimeProfileCatalog,
+  OutputContract,
+} from "../output-contract";
 import { OutputContractValidator } from "../output-contract-validator";
 
 function createValidContract(overrides?: Partial<OutputContract>): OutputContract {
@@ -110,4 +115,279 @@ describe("OutputContractValidator", () => {
     expect(report.passed).toBe(false);
     expect(report.results.length).toBeGreaterThan(0);
   });
+
+  it("reports error when contract format is unsupported", () => {
+    const contract = createValidContract({ format: "iife" as unknown as OutputContract["format"] });
+    const report = validator.validate(contract);
+
+    expect(report.passed).toBe(false);
+    expect(report.results.some((result) => result.message.includes("not supported"))).toBe(true);
+  });
 });
+
+describe("Generated runtime profile catalog", () => {
+  const validator = new OutputContractValidator();
+  const profileCatalog = readRuntimeProfileCatalog();
+
+  it.each(profileCatalog.profiles)("validates the $name generated runtime profile", (profile) => {
+    const report = validator.validateGeneratedRuntimeProfile(profile);
+
+    expect(report.passed).toBe(true);
+    expect(report.results.filter((result) => result.severity === "error")).toHaveLength(0);
+  });
+
+  it("validates every runtime profile and catalog claim together", () => {
+    const report = validator.validateGeneratedRuntimeProfileCatalog(profileCatalog, {
+      claimedRuntimes: readPresentationPresetRuntimeClaims(),
+    });
+
+    expect(report.passed).toBe(true);
+    expect(report.results.filter((result) => result.severity === "error")).toHaveLength(0);
+  });
+
+  it("names generated app smoke cases that exist in the smoke matrix", () => {
+    const smokeScript = readFileSync(
+      new URL("../../../../scripts/create-croco-app-generated-smoke.mts", import.meta.url),
+      "utf-8",
+    );
+
+    for (const profile of profileCatalog.profiles) {
+      expect(smokeScript).toContain(`name: "${profile.generatedAppSmokeCase}"`);
+    }
+  });
+
+  it("fails when a catalog runtime claim has no generated profile evidence", () => {
+    const report = validator.validateGeneratedRuntimeProfileCatalog(
+      {
+        ...profileCatalog,
+        profiles: profileCatalog.profiles.filter((profile) => profile.runtime !== "browser"),
+      },
+      { claimedRuntimes: ["browser"] },
+    );
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" &&
+          result.message ===
+            "Catalog runtime claim 'browser' has no generated runtime profile evidence",
+      ),
+    ).toBe(true);
+  });
+
+  it("fails when a catalog runtime claim is unsupported", () => {
+    const report = validator.validateGeneratedRuntimeProfileCatalog(profileCatalog, {
+      claimedRuntimes: ["deno"],
+    });
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" &&
+          result.message === "Catalog runtime claim 'deno' is not a supported presentation runtime",
+      ),
+    ).toBe(true);
+  });
+
+  it("fails without throwing when catalog profiles contain non-object values", () => {
+    const report = validator.validateGeneratedRuntimeProfileCatalog({
+      ...profileCatalog,
+      profiles: [null, ...profileCatalog.profiles] as unknown as readonly GeneratedRuntimeProfile[],
+    });
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" &&
+          result.message === "Generated runtime profile must be an object",
+      ),
+    ).toBe(true);
+  });
+
+  it("fails when runtime target metadata does not match the profile runtime", () => {
+    const [profile] = profileCatalog.profiles;
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      target: {
+        ...profile.target,
+        target: "lambda",
+      },
+    });
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" && result.message.includes("does not match runtime"),
+      ),
+    ).toBe(true);
+  });
+
+  it("fails when runtime target env metadata is not a string array", () => {
+    const [profile] = profileCatalog.profiles;
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      target: {
+        ...profile.target,
+        requiredEnvVars: "TOKEN" as unknown as readonly string[],
+      },
+    });
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" &&
+          result.message === "Deploy target requiredEnvVars must contain non-empty strings",
+      ),
+    ).toBe(true);
+  });
+
+  it("fails when runtime target constraints use invalid value types", () => {
+    const [profile] = profileCatalog.profiles;
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      target: {
+        ...profile.target,
+        runtime: {
+          nodeVersion: 20,
+          memory: "512",
+          timeout: 0,
+        } as unknown as typeof profile.target.runtime,
+      },
+    });
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" &&
+          result.message === "Deploy target runtime.nodeVersion must be non-empty when provided",
+      ),
+    ).toBe(true);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" &&
+          result.message === "Deploy target runtime.memory must be greater than 0 when provided",
+      ),
+    ).toBe(true);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" &&
+          result.message === "Deploy target runtime.timeout must be greater than 0 when provided",
+      ),
+    ).toBe(true);
+  });
+
+  it("fails without throwing when generated profile artifacts or entries contain non-object values", () => {
+    const [profile] = profileCatalog.profiles;
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      target: {
+        ...profile.target,
+        output: {
+          ...profile.target.output,
+          artifacts: [null, ...profile.target.output.artifacts],
+          entries: [null, ...profile.target.output.entries],
+        },
+      },
+    } as unknown as GeneratedRuntimeProfile);
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) => result.severity === "error" && result.message === "Artifact must be an object",
+      ),
+    ).toBe(true);
+    expect(
+      report.results.some(
+        (result) => result.severity === "error" && result.message === "Entry must be an object",
+      ),
+    ).toBe(true);
+  });
+
+  it("fails when a generated profile artifact format is unsupported", () => {
+    const [profile] = profileCatalog.profiles;
+    const [artifact, ...artifacts] = profile.target.output.artifacts;
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      target: {
+        ...profile.target,
+        output: {
+          ...profile.target.output,
+          artifacts: [
+            {
+              ...artifact,
+              format: "iife" as typeof artifact.format,
+            },
+            ...artifacts,
+          ],
+        },
+      },
+    });
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" && result.message.includes("has unsupported format"),
+      ),
+    ).toBe(true);
+  });
+
+  it("fails when a generated profile entry references a missing artifact", () => {
+    const [profile] = profileCatalog.profiles;
+    const [entry, ...entries] = profile.target.output.entries;
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      target: {
+        ...profile.target,
+        output: {
+          ...profile.target.output,
+          entries: [
+            {
+              ...entry,
+              main: "missing-entry.js",
+            },
+            ...entries,
+          ],
+        },
+      },
+    });
+
+    expect(report.passed).toBe(false);
+    expect(
+      report.results.some(
+        (result) =>
+          result.severity === "error" && result.message.includes("but no matching artifact exists"),
+      ),
+    ).toBe(true);
+  });
+});
+
+function readRuntimeProfileCatalog(): GeneratedRuntimeProfileCatalog {
+  return JSON.parse(
+    readFileSync(new URL("../../runtime-profiles.json", import.meta.url), "utf-8"),
+  ) as GeneratedRuntimeProfileCatalog;
+}
+
+function readPresentationPresetRuntimeClaims(): readonly string[] {
+  const catalog = JSON.parse(
+    readFileSync(new URL("../../../../docs/package-catalog.json", import.meta.url), "utf-8"),
+  ) as {
+    readonly extensionMatrix?: {
+      readonly packages?: {
+        readonly "presentation-preset"?: {
+          readonly runtimes?: readonly string[];
+        };
+      };
+    };
+  };
+
+  return catalog.extensionMatrix?.packages?.["presentation-preset"]?.runtimes ?? [];
+}

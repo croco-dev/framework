@@ -46,6 +46,7 @@ type PackageInfo = {
 
 type SmokeTarget = {
   readonly fieldName: string;
+  readonly kind: "json" | "module";
   readonly specifier: string;
   readonly target: string;
 };
@@ -536,6 +537,10 @@ function pushConditionalTarget(
   targets: SmokeTarget[],
 ): void {
   if (typeof value === "string") {
+    if (condition === "types" && isJsonTargetPath(value)) {
+      return;
+    }
+
     pushStringTarget(specifier, value, fieldName, packageInfo, diagnostics, targets);
     return;
   }
@@ -549,6 +554,9 @@ function pushConditionalTarget(
 
   const target = (value as Record<string, unknown>)[condition];
   if (target === undefined && condition === "require") {
+    return;
+  }
+  if (condition === "types" && typeof target === "string" && isJsonTargetPath(target)) {
     return;
   }
 
@@ -581,7 +589,16 @@ function pushStringTarget(
     return;
   }
 
-  targets.push({ fieldName, specifier, target });
+  targets.push({
+    fieldName,
+    kind: isJsonTargetPath(target) ? "json" : "module",
+    specifier,
+    target,
+  });
+}
+
+function isJsonTargetPath(target: string): boolean {
+  return target.endsWith(".json");
 }
 
 function writeEsmConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): void {
@@ -590,11 +607,18 @@ function writeEsmConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): v
     [
       'process.env.SKIP_ENV_VALIDATION = "true";',
       "const targets = [",
-      ...targets.map((target) => `  ${JSON.stringify(target.specifier)},`),
+      ...targets.map(
+        (target) =>
+          `  ${JSON.stringify({ json: target.kind === "json", specifier: target.specifier })},`,
+      ),
       "];",
       "for (const target of targets) {",
-      "  await import(target);",
-      "  console.log(`esm ok ${target}`);",
+      "  if (target.json) {",
+      '    await import(target.specifier, { with: { type: "json" } });',
+      "  } else {",
+      "    await import(target.specifier);",
+      "  }",
+      "  console.log(`esm ok ${target.specifier}`);",
       "}",
       "",
     ].join("\n"),

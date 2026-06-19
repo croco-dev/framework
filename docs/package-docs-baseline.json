@@ -13,7 +13,6 @@
     "migration-runner",
     "notifications-core",
     "openapi-spec",
-    "presentation-preset",
     "preset-cloudflare",
     "preset-lambda",
     "preset-node",

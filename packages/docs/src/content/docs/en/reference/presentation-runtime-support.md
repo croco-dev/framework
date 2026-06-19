@@ -66,3 +66,25 @@ Presentation packages move from alpha to beta only after all package-specific cr
 
 No presentation package should be promoted in `docs/package-catalog.json` unless its gate evidence is named
 in the relevant package README, package tests, generated-app smoke, and this page.
+
+## Presentation Preset Evidence
+
+`@croco/presentation-preset` keeps the current generated runtime profile contract in
+`packages/presentation-preset/runtime-profiles.json`. The package test command validates each
+profile's target metadata, output entries, artifacts, contract format, generated smoke case, and
+the runtime claims currently listed in `docs/package-catalog.json`.
+
+| Profile             | Runtime              | Generated smoke case          |
+| ------------------- | -------------------- | ----------------------------- |
+| `node-server`       | `node`               | `production-app-starter`      |
+| `lambda-function`   | `lambda`             | `graphql-lambda-api`          |
+| `cloudflare-worker` | `cloudflare-workers` | `meta-vite-fullstack-workers` |
+| `browser-vite-spa`  | `browser`            | `meta-vite-web`               |
+
+Verification commands:
+
+```bash
+pnpm --filter @croco/presentation-preset test
+pnpm create-croco-app:smoke
+pnpm docs:catalog:check
+```

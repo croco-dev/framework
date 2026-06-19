@@ -4,9 +4,13 @@ export type {
   BuildArtifact,
   DeployTarget,
   EntryDescriptor,
+  GeneratedRuntimeProfile,
+  GeneratedRuntimeProfileCatalog,
   OutputContract,
+  PresentationRuntime,
 } from "./output-contract";
 export type {
+  RuntimeClaimValidationOptions,
   ValidationReport,
   ValidationResult,
   ValidationSeverity,
