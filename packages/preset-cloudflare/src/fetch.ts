@@ -23,6 +23,9 @@ export type CloudflareRuntimeContext = {
   readonly waitUntil: (promise: Promise<unknown>) => void;
   readonly capabilities: {
     readonly env: true;
+    readonly filesystem: false;
+    readonly nodeApi: false;
+    readonly requestLifecycle: true;
     readonly waitUntil: true;
     readonly flush: false;
     readonly shutdown: false;
@@ -97,6 +100,9 @@ function createRuntimeContext(
     waitUntil: (promise) => ctx.waitUntil(promise),
     capabilities: {
       env: true,
+      filesystem: false,
+      nodeApi: false,
+      requestLifecycle: true,
       waitUntil: true,
       flush: false,
       shutdown: false,

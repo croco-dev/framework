@@ -260,7 +260,10 @@ describe("Context", () => {
       },
       capabilities: {
         env: false,
+        filesystem: true,
         logger: false,
+        nodeApi: true,
+        requestLifecycle: true,
         trace: true,
         waitUntil: false,
         flush: false,
@@ -282,7 +285,10 @@ describe("Context", () => {
       requestId: "runtime-req-1",
       capabilities: {
         env: true,
+        filesystem: true,
         logger: false,
+        nodeApi: true,
+        requestLifecycle: true,
         trace: false,
         waitUntil: true,
         flush: true,

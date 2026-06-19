@@ -13,7 +13,10 @@ import {
 
 const capabilities = {
   env: true,
+  filesystem: true,
   logger: true,
+  nodeApi: true,
+  requestLifecycle: true,
   trace: true,
   waitUntil: true,
   flush: true,

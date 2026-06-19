@@ -68,7 +68,10 @@ export type RuntimeTraceContext = {
 
 export type RuntimeCapabilities = {
   env: boolean;
+  filesystem: boolean;
   logger: boolean;
+  nodeApi: boolean;
+  requestLifecycle: boolean;
   trace: boolean;
   waitUntil: boolean;
   flush: boolean;

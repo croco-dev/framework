@@ -13,7 +13,10 @@ describe("runtime capabilities", () => {
     expect(RUNTIME_PLATFORMS).toEqual(["node", "lambda", "cloudflare-workers"]);
     expect(RUNTIME_CAPABILITY_NAMES).toEqual([
       "env",
+      "filesystem",
       "logger",
+      "nodeApi",
+      "requestLifecycle",
       "trace",
       "waitUntil",
       "flush",
@@ -28,12 +31,25 @@ describe("runtime capabilities", () => {
     expect(
       isRuntimeCapabilitySupported("edge-runtime", "flush", {
         env: true,
+        filesystem: false,
         logger: false,
+        nodeApi: false,
+        requestLifecycle: true,
         trace: false,
         waitUntil: false,
         flush: true,
         shutdown: false,
       }),
     ).toBe(true);
+  });
+
+  it("marks Node-only platform APIs separately from request lifecycle support", () => {
+    expect(RUNTIME_CAPABILITY_SUPPORT.node.filesystem).toBe(true);
+    expect(RUNTIME_CAPABILITY_SUPPORT.node.nodeApi).toBe(true);
+    expect(RUNTIME_CAPABILITY_SUPPORT.lambda.filesystem).toBe(true);
+    expect(RUNTIME_CAPABILITY_SUPPORT.lambda.nodeApi).toBe(true);
+    expect(RUNTIME_CAPABILITY_SUPPORT["cloudflare-workers"].filesystem).toBe(false);
+    expect(RUNTIME_CAPABILITY_SUPPORT["cloudflare-workers"].nodeApi).toBe(false);
+    expect(RUNTIME_CAPABILITY_SUPPORT["cloudflare-workers"].requestLifecycle).toBe(true);
   });
 });

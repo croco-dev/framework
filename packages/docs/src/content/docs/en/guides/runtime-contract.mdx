@@ -35,11 +35,19 @@ class RuntimeController {
 
 ## Capability Matrix
 
-| Runtime            | `platform`           | `env`                 | `requestId`                              | `logger`   | `trace`                    | `waitUntil`                                   | `flush`                                | `shutdown` |
-| ------------------ | -------------------- | --------------------- | ---------------------------------------- | ---------- | -------------------------- | --------------------------------------------- | -------------------------------------- | ---------- |
-| Node HTTP          | `node`               | `process.env`         | `x-request-id` or generated id           | app logger | active HTTP server span    | no-op                                         | no-op                                  | no-op      |
-| AWS Lambda         | `lambda`             | `process.env`         | API Gateway request id or `awsRequestId` | app logger | active HTTP server span    | queued and drained before response conversion | drains queued work and logs rejections | no-op      |
-| Cloudflare Workers | `cloudflare-workers` | Worker binding object | `x-request-id` or generated id           | app logger | `traceparent` when present | delegates to `ExecutionContext.waitUntil`     | no-op                                  | no-op      |
+| Capability         | Node HTTP                        | AWS Lambda                                                           | Cloudflare Workers                          |
+| ------------------ | -------------------------------- | -------------------------------------------------------------------- | ------------------------------------------- |
+| `platform`         | `node`                           | `lambda`                                                             | `cloudflare-workers`                        |
+| `env`              | supported through `process.env`  | supported through `process.env`                                      | supported through the Worker binding object |
+| `filesystem`       | supported                        | supported for the Lambda filesystem, including `/tmp`                | unsupported                                 |
+| `nodeApi`          | supported                        | supported on the Node.js Lambda runtime                              | unsupported                                 |
+| `requestLifecycle` | supported per HTTP request       | supported per invocation                                             | supported per fetch event                   |
+| `requestId`        | `x-request-id` or generated id   | API Gateway request id or `awsRequestId`                             | `x-request-id` or generated id              |
+| `logger`           | app logger                       | app logger                                                           | app logger                                  |
+| `trace`            | active HTTP server span          | active HTTP server span                                              | `traceparent` when present                  |
+| `waitUntil`        | unsupported                      | queued and drained before response conversion                        | delegates to `ExecutionContext.waitUntil`   |
+| `flush`            | unsupported                      | drains queued work and can run transport-provided telemetry flushing | unsupported                                 |
+| `shutdown`         | unsupported in the request scope | unsupported in the request scope                                     | unsupported in the request scope            |
 
 The code-level source of truth for these runtime and capability names is
 `RUNTIME_CAPABILITY_SUPPORT` from `@croco/framework-context`. `RuntimeContextInit<"cloudflare-workers">`

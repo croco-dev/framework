@@ -52,6 +52,9 @@ describe("createWorkerFetchHandler", () => {
         },
         capabilities: expect.objectContaining({
           env: true,
+          filesystem: false,
+          nodeApi: false,
+          requestLifecycle: true,
           waitUntil: true,
           flush: false,
           shutdown: false,

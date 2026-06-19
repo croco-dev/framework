@@ -84,7 +84,10 @@ describe("CrocoApp", () => {
         traceId: runtime?.trace?.traceId ?? null,
         waitUntil: runtime?.capabilities.waitUntil ?? null,
         env: runtime?.capabilities.env ?? null,
+        filesystem: runtime?.capabilities.filesystem ?? null,
         logger: runtime?.capabilities.logger ?? null,
+        nodeApi: runtime?.capabilities.nodeApi ?? null,
+        requestLifecycle: runtime?.capabilities.requestLifecycle ?? null,
       };
     }
 
@@ -185,6 +188,9 @@ describe("CrocoApp", () => {
         waitUntil: runtime?.capabilities.waitUntil ?? null,
         flush: runtime?.capabilities.flush ?? null,
         env: runtime?.capabilities.env ?? null,
+        filesystem: runtime?.capabilities.filesystem ?? null,
+        nodeApi: runtime?.capabilities.nodeApi ?? null,
+        requestLifecycle: runtime?.capabilities.requestLifecycle ?? null,
       };
     }
 
@@ -391,7 +397,10 @@ describe("CrocoApp", () => {
       traceId,
       waitUntil: false,
       env: true,
+      filesystem: true,
       logger: true,
+      nodeApi: true,
+      requestLifecycle: true,
     });
   });
 
@@ -871,6 +880,9 @@ describe("CrocoApp", () => {
       waitUntil: true,
       flush: true,
       env: true,
+      filesystem: true,
+      nodeApi: true,
+      requestLifecycle: true,
     });
     expect(lambdaWaitUntilCompleted).toBe(true);
   });

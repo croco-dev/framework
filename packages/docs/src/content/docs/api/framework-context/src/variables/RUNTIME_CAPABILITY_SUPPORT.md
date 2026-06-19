@@ -17,6 +17,10 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 
 > `readonly` **env**: `true` = `true`
 
+#### cloudflare-workers.filesystem
+
+> `readonly` **filesystem**: `false` = `false`
+
 #### cloudflare-workers.flush
 
 > `readonly` **flush**: `false` = `false`
@@ -24,6 +28,14 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 #### cloudflare-workers.logger
 
 > `readonly` **logger**: `true` = `true`
+
+#### cloudflare-workers.nodeApi
+
+> `readonly` **nodeApi**: `false` = `false`
+
+#### cloudflare-workers.requestLifecycle
+
+> `readonly` **requestLifecycle**: `true` = `true`
 
 #### cloudflare-workers.shutdown
 
@@ -45,6 +57,10 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 
 > `readonly` **env**: `true` = `true`
 
+#### lambda.filesystem
+
+> `readonly` **filesystem**: `true` = `true`
+
 #### lambda.flush
 
 > `readonly` **flush**: `true` = `true`
@@ -52,6 +68,14 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 #### lambda.logger
 
 > `readonly` **logger**: `true` = `true`
+
+#### lambda.nodeApi
+
+> `readonly` **nodeApi**: `true` = `true`
+
+#### lambda.requestLifecycle
+
+> `readonly` **requestLifecycle**: `true` = `true`
 
 #### lambda.shutdown
 
@@ -73,6 +97,10 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 
 > `readonly` **env**: `true` = `true`
 
+#### node.filesystem
+
+> `readonly` **filesystem**: `true` = `true`
+
 #### node.flush
 
 > `readonly` **flush**: `false` = `false`
@@ -80,6 +108,14 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 #### node.logger
 
 > `readonly` **logger**: `true` = `true`
+
+#### node.nodeApi
+
+> `readonly` **nodeApi**: `true` = `true`
+
+#### node.requestLifecycle
+
+> `readonly` **requestLifecycle**: `true` = `true`
 
 #### node.shutdown
 

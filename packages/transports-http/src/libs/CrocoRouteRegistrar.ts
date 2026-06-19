@@ -331,8 +331,11 @@ export class CrocoRouteRegistrar {
         waitUntil: (promise) => executionContext.waitUntil(promise),
         capabilities: {
           env: true,
+          filesystem: false,
           waitUntil: true,
           flush: false,
+          nodeApi: false,
+          requestLifecycle: true,
           shutdown: false,
         },
       };
@@ -343,8 +346,11 @@ export class CrocoRouteRegistrar {
       env: process.env,
       capabilities: {
         env: true,
+        filesystem: true,
         waitUntil: false,
         flush: false,
+        nodeApi: true,
+        requestLifecycle: true,
         shutdown: false,
       },
     };

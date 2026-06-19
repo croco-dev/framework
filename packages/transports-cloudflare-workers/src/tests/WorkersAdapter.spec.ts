@@ -95,6 +95,9 @@ describe("WorkersAdapter", () => {
         envValue: runtime?.env?.TEST_VALUE ?? null,
         waitUntil: runtime?.capabilities.waitUntil ?? null,
         env: runtime?.capabilities.env ?? null,
+        filesystem: runtime?.capabilities.filesystem ?? null,
+        nodeApi: runtime?.capabilities.nodeApi ?? null,
+        requestLifecycle: runtime?.capabilities.requestLifecycle ?? null,
       };
     }
   }
@@ -256,6 +259,9 @@ describe("WorkersAdapter", () => {
         envValue: "from-runtime-env",
         waitUntil: true,
         env: true,
+        filesystem: false,
+        nodeApi: false,
+        requestLifecycle: true,
       });
       expect(ctx.waitUntil).toHaveBeenCalledWith(expect.any(Promise));
     });

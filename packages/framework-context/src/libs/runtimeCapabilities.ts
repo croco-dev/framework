@@ -13,7 +13,10 @@ export const RUNTIME_PLATFORMS = [
 
 export const RUNTIME_CAPABILITY_NAMES = [
   "env",
+  "filesystem",
   "logger",
+  "nodeApi",
+  "requestLifecycle",
   "trace",
   "waitUntil",
   "flush",
@@ -23,7 +26,10 @@ export const RUNTIME_CAPABILITY_NAMES = [
 export const RUNTIME_CAPABILITY_SUPPORT = {
   node: {
     env: true,
+    filesystem: true,
     logger: true,
+    nodeApi: true,
+    requestLifecycle: true,
     trace: true,
     waitUntil: false,
     flush: false,
@@ -31,7 +37,10 @@ export const RUNTIME_CAPABILITY_SUPPORT = {
   },
   lambda: {
     env: true,
+    filesystem: true,
     logger: true,
+    nodeApi: true,
+    requestLifecycle: true,
     trace: true,
     waitUntil: true,
     flush: true,
@@ -39,7 +48,10 @@ export const RUNTIME_CAPABILITY_SUPPORT = {
   },
   "cloudflare-workers": {
     env: true,
+    filesystem: false,
     logger: true,
+    nodeApi: false,
+    requestLifecycle: true,
     trace: true,
     waitUntil: true,
     flush: false,
