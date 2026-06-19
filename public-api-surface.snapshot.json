@@ -4234,6 +4234,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "createFrameworkManifest",
+          "exportKind": "named",
+          "source": "./framework-manifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrameworkManifestFromIntentMap",
+          "exportKind": "named",
+          "source": "./framework-manifest",
+          "declarationKind": "function"
+        },
+        {
           "name": "createProjectIntentMap",
           "exportKind": "named",
           "source": "./intent-map",
@@ -4244,6 +4256,18 @@
           "exportKind": "named",
           "source": "./compiler",
           "declarationKind": "function"
+        },
+        {
+          "name": "formatFrameworkManifestDiagnostics",
+          "exportKind": "named",
+          "source": "./framework-manifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "FrameworkManifestDiagnosticError",
+          "exportKind": "named",
+          "source": "./framework-manifest",
+          "declarationKind": "class"
         },
         {
           "name": "generateModule",
@@ -4305,9 +4329,139 @@
           "source": "./metadata-reader"
         },
         {
+          "name": "CreateFrameworkManifestFromIntentMapOptions",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "CreateFrameworkManifestOptions",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
           "name": "CreateProjectIntentMapOptions",
           "exportKind": "named",
           "source": "./intent-map"
+        },
+        {
+          "name": "FrameworkManifest",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestCommitPolicy",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestControllerEntity",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestDiagnostic",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestDiagnosticSeverity",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestDomainEventEntity",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestEntity",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestEntityKind",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestEntityRef",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestEntityVocabularyEntry",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestEventHandlerEntity",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestExportSymbol",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestGeneratedArtifact",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestGeneratedArtifactKind",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestProviderEntity",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestPublicSymbolKind",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestRelationship",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestRouteEntity",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestSchema",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestSourceFile",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestSourceFileRole",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestSourceLocation",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestSummary",
+          "exportKind": "named",
+          "source": "./framework-manifest"
+        },
+        {
+          "name": "FrameworkManifestVersion",
+          "exportKind": "named",
+          "source": "./framework-manifest"
         },
         {
           "name": "IntentMapController",

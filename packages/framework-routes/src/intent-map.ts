@@ -21,6 +21,7 @@ export type IntentMapPublicSymbolKind =
   | "re-export";
 export type IntentMapGeneratedArtifactKind =
   | "intent-map"
+  | "framework-manifest"
   | "route-registration-table"
   | "routes-module";
 export type IntentMapRelationshipKind =
@@ -177,6 +178,12 @@ const DEFAULT_GENERATED_ARTIFACTS: readonly Omit<
   IntentMapGeneratedArtifact,
   "gitIgnored" | "gitIgnoreRule"
 >[] = [
+  {
+    kind: "framework-manifest",
+    path: ".croco/build/framework-manifest.json",
+    description:
+      "Typed framework manifest generated from Croco source, route, provider, and event metadata.",
+  },
   {
     kind: "intent-map",
     path: ".croco/build/intent-map.json",
