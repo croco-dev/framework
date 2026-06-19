@@ -202,6 +202,14 @@ export {
   POLICY_TARGET_KINDS,
 } from "./libs/RuntimePolicy";
 export {
+  compileRequestPipelineGraph,
+  dumpRequestPipelineGraph,
+  requestPipelineNodesFromPolicyPlan,
+  REQUEST_PIPELINE_FAILURE_PROPAGATIONS,
+  REQUEST_PIPELINE_NODE_KINDS,
+  REQUEST_PIPELINE_PHASES,
+} from "./libs/RequestPipelineGraph";
+export {
   getRuntimeCapabilitySupport,
   isKnownRuntimePlatform,
   isRuntimeCapabilitySupported,
@@ -239,6 +247,7 @@ export {
   PolicyConflictProblem,
   PolicyDefinitionProblem,
 } from "./libs/problems/RuntimePolicyProblems";
+export { PipelineGraphProblem } from "./libs/problems/PipelineGraphProblems";
 export {
   ShutdownConfigurationConflictProblem,
   ShutdownTimeoutProblem,
@@ -323,6 +332,21 @@ export type {
   TimeoutPolicy,
   TracingPolicy,
 } from "./libs/RuntimePolicy";
+
+export type {
+  CompileRequestPipelineGraphOptions,
+  PolicyPipelineNodeOptions,
+  RequestPipelineFailurePropagation,
+  RequestPipelineGraph,
+  RequestPipelineGraphEdge,
+  RequestPipelineGraphEdgeReason,
+  RequestPipelineNode,
+  RequestPipelineNodeKind,
+  RequestPipelinePath,
+  RequestPipelinePhase,
+  RequestPipelinePhaseOrder,
+  ResolvedRequestPipelineNode,
+} from "./libs/RequestPipelineGraph";
 
 export type {
   RuntimeCapabilitiesForPlatform,

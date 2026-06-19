@@ -3,7 +3,7 @@ import { ErrorHandler } from "./libs/ErrorHandler";
 import { HealthCheckRegistry } from "./libs/HealthCheckRegistry";
 import { HttpExecutionContext } from "./libs/HttpExecutionContext";
 import { ParamResolver } from "./libs/ParamResolver";
-import { PipelineRunner } from "./libs/PipelineRunner";
+import { PipelineRunner, describeHttpPipelineGraph } from "./libs/PipelineRunner";
 import { RouteCompiler } from "./libs/RouteCompiler";
 
 /**
@@ -19,6 +19,7 @@ export { startServer } from "./libs/adapters/NodeAdapter";
 export type {
   AppConfig,
   CompiledRoute,
+  CompiledRoutePipelineGraphConfig,
   CrocoHttpContext,
   CrocoRequest,
   CrocoResponse,
@@ -49,6 +50,7 @@ export {
   ParamResolver,
   PipelineRunner,
   RouteCompiler,
+  describeHttpPipelineGraph,
 };
 
 /**
@@ -161,4 +163,5 @@ export {
   securityHeadersMiddleware,
 } from "./libs/middleware/SecurityHeadersMiddleware";
 export type { PipelineConfig } from "./libs/PipelineRunner";
+export type { HttpPipelineGraphConfig } from "./libs/PipelineRunner";
 export type { CompileOptions } from "./libs/RouteCompiler";

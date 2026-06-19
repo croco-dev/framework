@@ -344,6 +344,35 @@ describe("CrocoApp", () => {
     expect(afterStatuses).toEqual([204]);
   });
 
+  it("should expose registered request pipeline graphs with telemetry and app middleware", () => {
+    function appMiddleware() {}
+
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [appMiddleware],
+      securityValidation: "off",
+    });
+
+    const graph = app
+      .describeRequestPipelineGraphs()
+      .find((entry) => entry.target === "GET /api/hello");
+
+    expect(graph?.successOrder).toEqual([
+      "middleware:0:before",
+      "middleware:1:before",
+      "handler:TestController.hello",
+      "middleware:1:after",
+      "middleware:0:after",
+    ]);
+    expect(graph?.errorOrder).toEqual(graph?.successOrder);
+    expect(graph?.nodes.find((node) => node.id === "middleware:0:before")?.label).toBe(
+      "middleware[0].before",
+    );
+    expect(graph?.nodes.find((node) => node.id === "middleware:1:before")?.label).toBe(
+      "appMiddleware.before",
+    );
+  });
+
   it("should preserve middleware short-circuit responses", async () => {
     const app = createApp({
       controllers: [TestController],
