@@ -13,7 +13,7 @@ export function createProgram(): Command {
     .argument("[directory]", "Target directory")
     .option(
       "--preset <preset>",
-      "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|saas|ai-saas)",
+      "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas)",
     )
     .option("--scope <scope>", "Package scope (e.g. @myorg)")
     .option("--api <api>", "API type (graphql|trpc)")

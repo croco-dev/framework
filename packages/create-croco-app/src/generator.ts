@@ -48,8 +48,11 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
     return;
   }
 
-  if (options.preset === "production-app") {
+  if (options.preset === "production-app" || options.preset === "admin-console") {
     mergeInto(join(TEMPLATES_DIR, "spa-be-split"), resolvedTarget, vars);
+    if (options.preset === "admin-console") {
+      mergeInto(join(TEMPLATES_DIR, "admin-console"), resolvedTarget, vars);
+    }
     if (options.agentRules) {
       installAgentRules(resolvedTarget, vars);
     }

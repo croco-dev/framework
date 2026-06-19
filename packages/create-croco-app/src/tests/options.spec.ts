@@ -25,7 +25,7 @@ describe("noninteractive CLI option validation", () => {
 
     expect(help).toContain("Create a pnpm-based Croco application");
     expect(help).toContain(
-      "blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|saas|ai-saas",
+      "blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas",
     );
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
@@ -317,6 +317,28 @@ describe("noninteractive CLI option validation", () => {
     });
   });
 
+  it("normalizes safe noninteractive defaults for admin console projects", () => {
+    const cliOptions = parseCliOptions("my-admin-console", {
+      preset: "admin-console",
+      scope: "@test",
+      install: false,
+      git: false,
+      agentRules: false,
+    });
+
+    expect(normalizeNonInteractiveOptions(cliOptions)).toMatchObject({
+      projectName: "my-admin-console",
+      scope: "@test",
+      preset: "admin-console",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+  });
+
   it("rejects configurable API flags for SaaS projects", () => {
     const cliOptions = parseCliOptions("my-saas", {
       preset: "saas",
@@ -373,6 +395,30 @@ describe("noninteractive CLI option validation", () => {
     (rawOptions, expectedMessage) => {
       const cliOptions = parseCliOptions(undefined, {
         preset: "production-app",
+        ...rawOptions,
+      });
+
+      expect(() => validateCliOptions(cliOptions)).toThrow(expectedMessage);
+    },
+  );
+
+  it.each([
+    [{ api: "trpc" }, "--api is not supported with the admin-console preset"],
+    [{ webApps: "web" }, "--web-apps is not supported with the admin-console preset"],
+    [{ db: "postgres" }, "--db is not supported with the admin-console preset"],
+    [
+      { backendDeploy: "lambda" },
+      "--backend-deploy is not supported with the admin-console preset",
+    ],
+    [
+      { frontendDeploy: "vercel" },
+      "--frontend-deploy is not supported with the admin-console preset",
+    ],
+  ] as const)(
+    "rejects configurable admin console CLI options before prompting: %o",
+    (rawOptions, expectedMessage) => {
+      const cliOptions = parseCliOptions(undefined, {
+        preset: "admin-console",
         ...rawOptions,
       });
 
