@@ -33,6 +33,7 @@
     "@croco/invitation-core": "workspace:*",
     "@croco/llm-core": "workspace:*",
     "@croco/llm-metering": "workspace:*",
+    "@croco/llm-openai": "workspace:*",
     "@croco/membership-core": "workspace:*",
     "@croco/metering-core": "workspace:*",
     "@croco/metrics-core": "workspace:*",

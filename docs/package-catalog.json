@@ -73,6 +73,7 @@
         "entitlements-drizzle",
         "execution-drizzle",
         "invitation-drizzle",
+        "llm-openai",
         "membership-drizzle",
         "metering-drizzle",
         "metering-upstash",
@@ -196,6 +197,7 @@
         "impersonation-core",
         "integrations-posthog",
         "lifecycle-core",
+        "llm-openai",
         "meta-vite",
         "notifications-core",
         "onboarding-core",
@@ -415,6 +417,21 @@
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": ["invitation persistence", "transaction-aware repository"]
+      },
+      "llm-openai": {
+        "domain": "LLM",
+        "adapter": "OpenAI Responses provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["OPENAI_API_KEY"],
+        "features": [
+          "Responses text generation",
+          "SSE streaming",
+          "JSON Schema structured output",
+          "function tool calls",
+          "single and batch embeddings",
+          "usage and telemetry mapping",
+          "Problem normalization"
+        ]
       },
       "membership-drizzle": {
         "domain": "Membership",
