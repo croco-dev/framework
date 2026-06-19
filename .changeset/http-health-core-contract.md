@@ -1,5 +1,5 @@
 ---
-"@croco/transports-http": major
+"@croco/transports-http": patch
 ---
 
 Return the canonical `@croco/health-core` readiness contract from HTTP health endpoints.

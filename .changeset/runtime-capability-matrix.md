@@ -1,8 +1,8 @@
 ---
-"@croco/framework-context": minor
+"@croco/framework-context": patch
 "@croco/transports-http": patch
 "@croco/transports-cloudflare-workers": patch
-"@croco/preset-cloudflare": minor
+"@croco/preset-cloudflare": patch
 "@croco/testing": patch
 ---
 
