@@ -525,7 +525,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/features-posthog`     | Integration  | `packages/features-posthog`     | README, tests      |
 | `@croco/integrations-posthog` | Integration  | `packages/integrations-posthog` | tests              |
 | `@croco/meta-vite`            | Presentation | `packages/meta-vite`            | README, tests      |
-| `@croco/presentation-preset`  | Presentation | `packages/presentation-preset`  | tests              |
+| `@croco/presentation-preset`  | Presentation | `packages/presentation-preset`  | README, tests      |
 | `@croco/openapi-spec`         | Protocol     | `packages/openapi-spec`         | tests              |
 | `@croco/protocols-core`       | Protocol     | `packages/protocols-core`       | tests              |
 | `@croco/protocols-graphql`    | Protocol     | `packages/protocols-graphql`    | tests              |

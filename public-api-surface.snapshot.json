@@ -8403,9 +8403,29 @@
           "source": "./output-contract"
         },
         {
+          "name": "GeneratedRuntimeProfile",
+          "exportKind": "named",
+          "source": "./output-contract"
+        },
+        {
+          "name": "GeneratedRuntimeProfileCatalog",
+          "exportKind": "named",
+          "source": "./output-contract"
+        },
+        {
           "name": "OutputContract",
           "exportKind": "named",
           "source": "./output-contract"
+        },
+        {
+          "name": "PresentationRuntime",
+          "exportKind": "named",
+          "source": "./output-contract"
+        },
+        {
+          "name": "RuntimeClaimValidationOptions",
+          "exportKind": "named",
+          "source": "./output-contract-validator"
         },
         {
           "name": "ValidationReport",

@@ -8,7 +8,7 @@
 | ------------------------------ | ----: |
 | Public packages                |   102 |
 | Private packages skipped       |     2 |
-| Missing package README         |    22 |
+| Missing package README         |    21 |
 | Missing generated API docs     |    75 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    40 |
@@ -28,7 +28,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/migration-runner` (`packages/migration-runner`) — legacy baseline
 - `@croco/notifications-core` (`packages/notifications-core`) — legacy baseline
 - `@croco/openapi-spec` (`packages/openapi-spec`) — legacy baseline
-- `@croco/presentation-preset` (`packages/presentation-preset`) — legacy baseline
 - `@croco/preset-cloudflare` (`packages/preset-cloudflare`) — legacy baseline
 - `@croco/preset-lambda` (`packages/preset-lambda`) — legacy baseline
 - `@croco/preset-node` (`packages/preset-node`) — legacy baseline
