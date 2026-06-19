@@ -8680,6 +8680,12 @@
       "entrypoint": "packages/protocols-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertContractGraphConsumerRouteCoverage",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertContractGraphHasNoErrors",
           "exportKind": "named",
           "source": "./libs/ContractGraph",
@@ -8698,10 +8704,22 @@
           "declarationKind": "class"
         },
         {
+          "name": "createContractGraphConsumerCoverage",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage",
+          "declarationKind": "function"
+        },
+        {
           "name": "createContractGraphSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
           "declarationKind": "function"
+        },
+        {
+          "name": "DEFAULT_CONTRACT_GRAPH_CONSUMERS",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage",
+          "declarationKind": "const"
         },
         {
           "name": "defineRouteSchema",
@@ -8737,6 +8755,12 @@
           "name": "formatContractDiagnostics",
           "exportKind": "named",
           "source": "./libs/ContractGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getContractGraphConsumerRouteCoverageDiagnostics",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage",
           "declarationKind": "function"
         },
         {
@@ -8814,6 +8838,46 @@
           "source": "./libs/ContractGraph"
         },
         {
+          "name": "ContractGraphConsumerCoverage",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
+          "name": "ContractGraphConsumerCoverageReport",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
+          "name": "ContractGraphConsumerCoverageVersion",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
+          "name": "ContractGraphConsumerDefinition",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
+          "name": "ContractGraphConsumerId",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
+          "name": "ContractGraphConsumerRouteCoverage",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
+          "name": "ContractGraphConsumerRouteField",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
+          "name": "ContractGraphConsumerRouteFieldFingerprints",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
+        },
+        {
           "name": "ContractGraphController",
           "exportKind": "named",
           "source": "./libs/ContractGraph"
@@ -8832,6 +8896,11 @@
           "name": "ContractGraphDiffSeverity",
           "exportKind": "named",
           "source": "./libs/ContractGraphDiff"
+        },
+        {
+          "name": "ContractGraphObservedConsumerRoute",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphConsumerCoverage"
         },
         {
           "name": "ContractGraphRoute",

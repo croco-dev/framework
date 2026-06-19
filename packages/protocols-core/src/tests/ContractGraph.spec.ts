@@ -9,6 +9,11 @@ import {
   ContractGraphDiagnosticError,
   formatContractDiagnostic,
 } from "../libs/ContractGraph";
+import {
+  assertContractGraphConsumerRouteCoverage,
+  createContractGraphConsumerCoverage,
+  getContractGraphConsumerRouteCoverageDiagnostics,
+} from "../libs/ContractGraphConsumerCoverage";
 import { diffContractGraphSnapshots } from "../libs/ContractGraphDiff";
 import {
   createContractGraphSnapshot,
@@ -434,7 +439,158 @@ describe("buildContractGraph", () => {
         "UsersController_createUser",
         "UsersController_getUser",
       ],
+      consumerCoverage: {
+        version: "croco.contract-consumer-coverage.v1",
+        routeCount: 3,
+        consumers: [
+          expect.objectContaining({
+            consumerId: "openapi",
+            requiredRouteFields: expect.arrayContaining([
+              "routeId",
+              "operationId",
+              "request.body",
+              "response",
+              "problems",
+            ]),
+          }),
+          expect.objectContaining({
+            consumerId: "rpc-client",
+            requiredRouteFields: expect.arrayContaining([
+              "routeId",
+              "operationId",
+              "request.body",
+              "response",
+              "problems",
+            ]),
+          }),
+        ],
+      },
     });
+  });
+
+  it("should report consumer coverage diagnostics instead of silently dropping unsupported fields", () => {
+    const AuthGuard = class AuthGuard {};
+
+    @UseGuards(AuthGuard)
+    @Roles("admin")
+    @Controller("/admin")
+    class AdminController {
+      @Get("/")
+      listAdmins(): void {}
+    }
+
+    const graph = buildContractGraph([AdminController]);
+    const report = createContractGraphConsumerCoverage(graph);
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-consumer-unsupported-route-field",
+        severity: "warning",
+        routeId: "AdminController.listAdmins",
+        message: expect.stringContaining("access.guards"),
+      }),
+      expect.objectContaining({
+        code: "contract-consumer-unsupported-route-field",
+        severity: "warning",
+        routeId: "AdminController.listAdmins",
+        message: expect.stringContaining("access.roles"),
+      }),
+      expect.objectContaining({
+        code: "contract-consumer-unsupported-route-field",
+        severity: "warning",
+        routeId: "AdminController.listAdmins",
+        message: expect.stringContaining("access.guards"),
+      }),
+      expect.objectContaining({
+        code: "contract-consumer-unsupported-route-field",
+        severity: "warning",
+        routeId: "AdminController.listAdmins",
+        message: expect.stringContaining("access.roles"),
+      }),
+    ]);
+    expect(report.consumers[0]?.routes[0]?.unsupportedFields).toEqual([
+      "access.guards",
+      "access.roles",
+    ]);
+  });
+
+  it("should reject generated consumers that omit graph routes", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/")
+      listUsers(): void {}
+
+      @Post("/")
+      createUser(): void {}
+    }
+
+    const graph = buildContractGraph([UsersController]);
+
+    expect(() =>
+      assertContractGraphConsumerRouteCoverage(graph, "openapi", [
+        {
+          routeId: "UsersController.listUsers",
+          operationId: "UsersController_listUsers",
+        },
+      ]),
+    ).toThrow("contract-consumer-missing-route");
+  });
+
+  it("should reject generated consumers that drop operation ids, response schemas, or Problems", () => {
+    const userSchema = z.object({ id: z.string() });
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ResponseSchema(userSchema)
+      @ProblemResponse({
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+      })
+      getUser(@Param("id") _id: string): z.infer<typeof userSchema> {
+        return { id: "user_1" };
+      }
+    }
+
+    const graph = buildContractGraph([UsersController]);
+    const diagnostics = getContractGraphConsumerRouteCoverageDiagnostics(graph, "openapi", [
+      {
+        routeId: "UsersController.getUser",
+        consumedFields: [
+          "routeId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+        ],
+        fieldFingerprints: {
+          routeId: "UsersController.getUser",
+          httpMethod: "GET",
+          path: "/users/:id",
+          "request.body": "absent",
+          "request.path": "present",
+          "request.query": "absent",
+          "request.headers": "absent",
+          response: "absent",
+          problems: "[]",
+        },
+      },
+    ]);
+
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "contract-consumer-missing-generated-route-field",
+      "contract-consumer-route-field-mismatch",
+      "contract-consumer-route-field-mismatch",
+    ]);
+    expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      expect.stringContaining("operationId"),
+      expect.stringContaining("problems"),
+      expect.stringContaining("response"),
+    ]);
   });
 
   it("should snapshot declared Problem responses as route failure contracts", () => {

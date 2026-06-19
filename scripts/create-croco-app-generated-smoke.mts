@@ -249,6 +249,11 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:snapshot"],
         paths: ["contract-graph.snapshot.json"],
       },
+      {
+        label: "Contract coverage",
+        args: ["contract:coverage"],
+        paths: ["contract-graph.coverage.json"],
+      },
       { label: "Contract diff", args: ["contract:diff"] },
       { label: "OpenAPI contract", args: ["contract:openapi"] },
       {
@@ -272,7 +277,11 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:snapshot"],
         paths: ["contract-graph.snapshot.json"],
       },
-      { label: "Contract verify", args: ["contract:verify"] },
+      {
+        label: "Contract verify",
+        args: ["contract:verify"],
+        paths: ["contract-graph.coverage.json"],
+      },
       {
         label: "Admin RPC client",
         args: ["contract:client"],
@@ -300,7 +309,11 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:snapshot"],
         paths: ["contract-graph.snapshot.json"],
       },
-      { label: "Contract verify", args: ["contract:verify"] },
+      {
+        label: "Contract verify",
+        args: ["contract:verify"],
+        paths: ["contract-graph.coverage.json"],
+      },
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
     ],
@@ -317,7 +330,11 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:snapshot"],
         paths: ["contract-graph.snapshot.json"],
       },
-      { label: "Contract verify", args: ["contract:verify"] },
+      {
+        label: "Contract verify",
+        args: ["contract:verify"],
+        paths: ["contract-graph.coverage.json"],
+      },
       { label: "AI demo flow", args: ["ai:smoke"] },
       { label: "full demo flow", args: ["demo:smoke"] },
     ],
@@ -607,6 +624,10 @@ function runSpaBeSplitContractSmoke(): void {
     "REST SPA contract smoke did not create contract-graph.snapshot.json",
   );
   run("pnpm", ["contract:verify"], projectDir);
+  assertExists(
+    join(projectDir, "contract-graph.coverage.json"),
+    "REST SPA contract smoke did not create contract-graph.coverage.json",
+  );
   assertExists(
     join(projectDir, "openapi.json"),
     "REST SPA contract smoke did not create openapi.json",

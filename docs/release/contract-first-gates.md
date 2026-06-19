@@ -25,8 +25,8 @@ pnpm contract:verify
 ```
 
 Generated `create-croco-app` REST templates expose `contract:verify` and `ci:contracts` scripts.
-They compare the committed snapshot against current controllers first, then regenerate OpenAPI and
-RPC client artifacts from the accepted contract.
+They compare the committed snapshot against current controllers first, write a consumer coverage
+report, then regenerate OpenAPI and RPC client artifacts from the accepted contract.
 
 `contract:diff` compares the committed snapshot with current controllers and fails on current graph
 errors or breaking contract drift. Removed controllers, removed routes, HTTP method/path changes,
@@ -37,9 +37,14 @@ reported as non-breaking.
 `contract:openapi` and `contract:client` should run after the check and diff gates so generated
 artifacts are produced only from an accepted contract graph.
 
-The committed baseline is `contract-graph.snapshot.json`. `openapi.json` and generated RPC client
-files may be committed when consumers need checked-in artifacts, but CI should regenerate them from
-the server controllers rather than treating hand-edited generated output as authoritative.
+`contract:coverage` writes `contract-graph.coverage.json` with the same route graph plus consumer
+coverage diagnostics. Unsupported graph fields are reported explicitly so generator omissions do not
+look like successful consumption.
+
+The committed baseline is `contract-graph.snapshot.json`. `contract-graph.coverage.json`,
+`openapi.json`, and generated RPC client files may be committed when consumers need checked-in
+artifacts, but CI should regenerate them from the server controllers rather than treating
+hand-edited generated output as authoritative.
 
 ## Typed RPC clients
 
@@ -59,6 +64,7 @@ successful response values.
 ```bash
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts'
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.snapshot.json
+croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.coverage.json
 croco contracts diff --baseline contract-graph.snapshot.json --controllers 'apps/api-server/src/controllers/**/*.ts'
 ```
 

@@ -57,18 +57,58 @@ describe("emitOpenAPI", () => {
   });
 
   it("should consume the canonical contract graph as its source of truth", () => {
+    const userSchema = z.object({ id: z.string() });
+
     @Controller("/users")
     class UsersController {
       @Get("/:id")
-      getUser(@Param("id") _id: string): void {}
+      @ResponseSchema(userSchema)
+      @ProblemResponse({
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "User id is missing.",
+      })
+      getUser(@Param("id") _id: string): z.infer<typeof userSchema> {
+        return { id: "user_1" };
+      }
     }
 
     const graph = buildContractGraph([UsersController]);
     const spec = emitOpenAPIFromContractGraph(graph);
+    const operation = spec.paths?.["/users/{id}"]?.get;
 
     expect(graph.routes[0]?.routeId).toBe("UsersController.getUser");
-    expect(spec.paths?.["/users/{id}"]?.get?.operationId).toBe("UsersController_getUser");
-    expect(spec.paths?.["/users/{id}"]?.get?.summary).toBe("UsersController.getUser");
+    expect(operation?.operationId).toBe("UsersController_getUser");
+    expect(operation?.summary).toBe("UsersController.getUser");
+    expect(operation?.parameters).toEqual([
+      {
+        in: "path",
+        name: "id",
+        required: true,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(operation?.responses?.[200]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            properties: { id: { type: "string" } },
+            required: ["id"],
+            type: "object",
+          },
+        },
+      },
+    });
+    expect(operation?.responses?.[404]).toMatchObject({
+      "x-croco-problems": [
+        {
+          category: "NotFound",
+          code: "USER_NOT_FOUND",
+          description: "User id is missing.",
+          status: 404,
+        },
+      ],
+    });
   });
 
   it("should normalize catch-all path parameters from the canonical contract graph", () => {
