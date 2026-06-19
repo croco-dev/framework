@@ -261,6 +261,49 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should generate clients from contract-first route IR", () => {
+    const createUserSchema = z.object({ name: z.string() }) as unknown as RouteIR["inputSchema"];
+    const userSchema = z.object({ id: z.string(), name: z.string() }) as unknown as
+      | RouteIR["outputSchema"]
+      | NonNullable<RouteIR["routeContract"]>["outputSchema"];
+    const inputSchemas: RouteIR["inputSchemas"] = {
+      body: createUserSchema,
+      path: null,
+      query: null,
+      headers: null,
+    };
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "create",
+        httpMethod: "POST",
+        path: "/users",
+        routeContract: {
+          id: "users.create",
+          method: "POST",
+          path: "/users",
+          operationId: "createUser",
+          inputSchemas,
+          outputSchema: userSchema,
+        },
+        params: [{ kind: "body", name: "", schema: createUserSchema }],
+        inputSchema: createUserSchema,
+        inputSchemas,
+        outputSchema: userSchema,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(content).toContain("export type CreateInput = { name: string; };");
+    expect(content).toContain("export type CreateOutput = { id: string; name: string; };");
+    expect(content).toContain(
+      "create: (input: CreateInput): Promise<CreateOutput> => fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }).then((response) => handleJsonResponse<CreateOutput>(response)),",
+    );
+  });
+
   it("should generate one file per controller domain", () => {
     const routes: RouteIR[] = [
       {

@@ -111,10 +111,6 @@ import {
   HttpMethod,
   Param,
   Post,
-  ResponseSchema,
-  routeBodySchema,
-  routeParam,
-  routeResponseSchema,
   type RouteBody,
   type RouteMethodReturn,
   type RouteParam,
@@ -140,25 +136,23 @@ const createUser = defineRouteContract({
 
 @Controller("/users")
 class UserController {
-  @Get(getUser.path)
-  @ResponseSchema(routeResponseSchema(getUser))
+  @Get(getUser)
   find(
-    @Param(routeParam(getUser, "id")) id: RouteParam<typeof getUser, "id">,
+    @Param(getUser, "id") id: RouteParam<typeof getUser, "id">,
   ): RouteMethodReturn<typeof getUser> {
     return { id, name: "Ada" };
   }
 
-  @Post(createUser.path)
-  @ResponseSchema(routeResponseSchema(createUser))
+  @Post(createUser)
   create(
-    @Body(routeBodySchema(createUser)) body: RouteBody<typeof createUser>,
+    @Body(createUser) body: RouteBody<typeof createUser>,
   ): RouteMethodReturn<typeof createUser> {
     return { id: "user-1", name: body.name };
   }
 }
 ```
 
-`defineRouteContract`는 path params, query, body, response, Problem union을 TypeScript 계약으로 연결합니다. `routeParam(getUser, "userId")`처럼 path에 없는 이름이나 response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. 런타임 값 검증은 기존처럼 Zod schema와 pipe가 담당합니다.
+`defineRouteContract`는 path params, query, body, response, Problem union을 TypeScript 계약으로 연결합니다. `@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증은 기존처럼 Zod schema와 pipe가 담당합니다.
 
 ## API 레퍼런스
 
@@ -169,5 +163,5 @@ class UserController {
 - 메타데이터 조회: `getControllerMeta`, `getRouteMeta`, `getParamsMeta`, `getGuards`, `getPipes`, `getInterceptors`, `getFilters`, `isController`
 - 검증 유틸리티: `createValidator`, `validateRequest`, `validateResponse`, `createValidationPipe`
 - 검증 Problem: `ValidationProblem`, `RequestValidationProblem`, `ResponseValidationProblem`
-- 스키마 계약: `defineRouteSchema`, `InferRouteSchemaRequest`, `InferRouteSchemaResponse`
-- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `TypedRouteConfig`, `RouteContractSpec`, `RouteMethodReturn`
+- 스키마 계약: `defineRouteSchema`, `InferRouteSchemaRequest`, `InferRouteSchemaResponse`, `defineRouteContract`, `routeParam`, `routeParamSchema`, `routeQueryParam`, `routeQueryParamSchema`, `routePathParamsSchema`, `routeQuerySchema`, `routeBodySchema`, `routeResponseSchema`
+- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `TypedRouteConfig`, `RouteContractSpec`, `RouteContractSourceLocation`, `RouteBody`, `RouteResponse`, `RouteMethodReturn`, `RouteParam`, `RouteQueryParam`

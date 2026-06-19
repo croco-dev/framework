@@ -1,7 +1,13 @@
 import "reflect-metadata";
 import { ProblemCategoryMapper } from "@croco/problems-core";
 import type { z } from "zod";
-import type { ParamIR, ProblemResponseIR, RouteInputSchemas, RouteIR } from "./RouteIR";
+import type {
+  ParamIR,
+  ProblemResponseIR,
+  RouteContractIR,
+  RouteInputSchemas,
+  RouteIR,
+} from "./RouteIR";
 import { buildHeaderSchema, buildPathSchema, buildQuerySchema } from "./schemaBuilder";
 import {
   type Constructor,
@@ -13,6 +19,7 @@ import {
   REST_CONTROLLER_KEY,
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
+  type RouteContractMetadata,
   type RouteMetadata,
 } from "./sharedTypes";
 
@@ -35,11 +42,16 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
 
   return routesMeta.map((routeMeta) => {
     const params = extractParams(paramsMap?.get(routeMeta.methodName) ?? []);
-    const inputSchemas = extractInputSchemas(params);
-    const outputSchema =
+    const routeContract = extractRouteContract(routeMeta.contract);
+    const decoratorInputSchemas = extractInputSchemas(params);
+    const inputSchemas = routeContract
+      ? mergeContractInputSchemas(routeContract.inputSchemas, decoratorInputSchemas)
+      : decoratorInputSchemas;
+    const decoratorOutputSchema =
       (Reflect.getMetadata(RESPONSE_SCHEMA_KEY, controllerCtor, routeMeta.methodName) as
         | z.ZodType
         | undefined) ?? null;
+    const outputSchema = decoratorOutputSchema ?? routeContract?.outputSchema ?? null;
     const problemResponses = extractProblemResponses(
       Reflect.getMetadata(PROBLEM_RESPONSES_KEY, controllerCtor, routeMeta.methodName),
     );
@@ -48,7 +60,8 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       controllerName: controllerCtor.name,
       methodName: String(routeMeta.methodName),
       httpMethod: routeMeta.method,
-      path: joinPaths(controllerMeta.path, routeMeta.path),
+      path: routeContract?.path ?? joinPaths(controllerMeta.path, routeMeta.path),
+      routeContract,
       params,
       inputSchema: inputSchemas.body,
       inputSchemas,
@@ -57,6 +70,41 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       domain: null,
     };
   });
+}
+
+function extractRouteContract(contract: RouteContractMetadata | undefined): RouteContractIR | null {
+  if (!contract) {
+    return null;
+  }
+
+  const path = normalizeFullPath(contract.path);
+
+  return {
+    id: contract.id ?? contract.operationId ?? null,
+    method: contract.method,
+    path,
+    ...(contract.operationId ? { operationId: contract.operationId } : {}),
+    ...(contract.sourceLocation ? { sourceLocation: contract.sourceLocation } : {}),
+    inputSchemas: {
+      body: contract.body ?? null,
+      path: contract.params ?? null,
+      query: contract.query ?? null,
+      headers: null,
+    },
+    outputSchema: contract.response ?? null,
+  };
+}
+
+function mergeContractInputSchemas(
+  contractInputSchemas: RouteInputSchemas,
+  decoratorInputSchemas: RouteInputSchemas,
+): RouteInputSchemas {
+  return {
+    body: contractInputSchemas.body,
+    path: contractInputSchemas.path,
+    query: contractInputSchemas.query,
+    headers: decoratorInputSchemas.headers,
+  };
 }
 
 function extractProblemResponses(value: unknown): ProblemResponseIR[] {
@@ -145,6 +193,12 @@ function joinPaths(base: string, path: string): string {
   const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
   const cleanPath = path === "" ? "" : path.startsWith("/") ? path : `/${path}`;
   const result = `${cleanBase}${cleanPath}`.replace(/\/+/g, "/");
+
+  return result.length > 1 && result.endsWith("/") ? result.slice(0, -1) : result || "/";
+}
+
+function normalizeFullPath(path: string): string {
+  const result = (path.startsWith("/") ? path : `/${path}`).replace(/\/+/g, "/");
 
   return result.length > 1 && result.endsWith("/") ? result.slice(0, -1) : result || "/";
 }

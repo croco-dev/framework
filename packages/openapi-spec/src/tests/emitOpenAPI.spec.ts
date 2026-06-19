@@ -9,9 +9,11 @@ import {
   All,
   Body,
   Controller,
+  defineRouteContract,
   defineRouteSchema,
   Get,
   Header,
+  HttpMethod,
   type InferRouteSchemaRequest,
   type InferRouteSchemaResponse,
   Param,
@@ -19,6 +21,8 @@ import {
   ProblemResponse,
   Query,
   RequestValidationProblem,
+  type RouteBody,
+  type RouteMethodReturn,
   ResponseSchema,
 } from "@croco/protocols-rest";
 import { Container } from "typedi";
@@ -273,6 +277,71 @@ describe("emitOpenAPI", () => {
     const spec = emitOpenAPI([UsersController]);
     const createUser = spec.paths?.["/users"]?.post;
 
+    expect(createUser?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              name: { type: "string", minLength: 1 },
+              email: { type: "string", format: "email" },
+            },
+            required: ["name", "email"],
+          },
+        },
+      },
+    });
+    expect(createUser?.responses?.[200]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              name: { type: "string" },
+              email: { type: "string", format: "email" },
+            },
+            required: ["id", "name", "email"],
+          },
+        },
+      },
+    });
+  });
+
+  it("should emit request and response contracts from a typed route contract", () => {
+    const createUserSchema = z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+    });
+    const userSchema = z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      email: z.string().email(),
+    });
+    const createUserContract = defineRouteContract({
+      id: "users.create",
+      method: HttpMethod.POST,
+      path: "/users",
+      operationId: "createUser",
+      body: createUserSchema,
+      response: userSchema,
+    });
+
+    @Controller("/users")
+    class UsersController {
+      @Post(createUserContract)
+      createUser(
+        @Body(createUserContract) body: RouteBody<typeof createUserContract>,
+      ): RouteMethodReturn<typeof createUserContract> {
+        return { id: "4ea573de-cfb9-4696-bc48-216f19f44300", ...body };
+      }
+    }
+
+    const spec = emitOpenAPI([UsersController]);
+    const createUser = spec.paths?.["/users"]?.post;
+
+    expect(createUser?.operationId).toBe("createUser");
     expect(createUser?.requestBody).toMatchObject({
       required: true,
       content: {

@@ -4,15 +4,16 @@ description: Derive DTO types, runtime validation, OpenAPI, and RPC clients from
 ---
 
 Croco route contracts should start from one schema object. The same object feeds request validation,
-response validation metadata, contract graph snapshots, OpenAPI emission, and generated RPC client types.
+response contract metadata, contract graph snapshots, OpenAPI emission, and generated RPC client types.
 
 ## Decision
 
-Use `defineRouteSchema()` for route-level request and response schemas:
+Use `defineRouteContract()` for REST controller routes that need one typed source of truth for method,
+path, request schemas, and response schema:
 
-- DTO types are inferred with `InferRouteSchemaRequest` and `InferRouteSchemaResponse`.
-- REST decorators consume the same schema references through `@Body(...)`, `@Param(...)`,
-  `@Query(...)`, `@Header(...)`, and `@ResponseSchema(...)`.
+- DTO types are inferred with `RouteParam`, `RouteBody`, `RouteQueryParam`, and `RouteMethodReturn`.
+- REST decorators consume the same contract through `@Get(contract)`, `@Post(contract)`,
+  `@Param(contract, "id")`, `@Query(contract, "name")`, and `@Body(contract)`.
 - `buildContractGraph()` preserves those schema references in `inputSchemas` and `outputSchema`.
 - `@croco/openapi-spec` and `@croco/rpc-codegen` derive artifacts from the contract graph instead of
   reading parallel DTO interfaces or hand-written OpenAPI metadata.
@@ -21,36 +22,38 @@ Use `defineRouteSchema()` for route-level request and response schemas:
 import {
   Body,
   Controller,
+  defineRouteContract,
+  HttpMethod,
   Post,
-  ResponseSchema,
-  defineRouteSchema,
-  type InferRouteSchemaRequest,
-  type InferRouteSchemaResponse,
+  type RouteBody,
+  type RouteMethodReturn,
 } from "@croco/protocols-rest";
 import { z } from "zod";
 
-const createUserRoute = defineRouteSchema({
-  request: {
-    body: z.object({
-      name: z.string().min(1),
-      email: z.string().email(),
-    }),
-  },
-  response: z.object({
-    id: z.string().uuid(),
-    name: z.string(),
-    email: z.string().email(),
-  }),
+const createUserInput = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+});
+const userSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  email: z.string().email(),
 });
 
-type CreateUserBody = InferRouteSchemaRequest<typeof createUserRoute>["body"];
-type CreateUserResponse = InferRouteSchemaResponse<typeof createUserRoute>;
+const createUserRoute = defineRouteContract({
+  id: "users.create",
+  method: HttpMethod.POST,
+  path: "/users",
+  body: createUserInput,
+  response: userSchema,
+});
 
 @Controller("/users")
 class UsersController {
-  @Post("/")
-  @ResponseSchema(createUserRoute.response)
-  createUser(@Body(createUserRoute.request.body) body: CreateUserBody): CreateUserResponse {
+  @Post(createUserRoute)
+  createUser(
+    @Body(createUserRoute) body: RouteBody<typeof createUserRoute>,
+  ): RouteMethodReturn<typeof createUserRoute> {
     return { id: "4ea573de-cfb9-4696-bc48-216f19f44300", ...body };
   }
 }
@@ -59,6 +62,35 @@ class UsersController {
 The controller has no separate `CreateUserDto` interface to keep synchronized. If the email schema
 changes, the method parameter type, runtime validation, OpenAPI request body, and generated RPC request
 type move together.
+
+## Migration
+
+Move existing loose decorators one route at a time. Replace the parallel path/param/body/response values
+with a single route contract, then point the decorators at that contract:
+
+```typescript no-check
+const getUserRoute = defineRouteContract({
+  id: "users.get",
+  method: HttpMethod.GET,
+  path: "/users/:id",
+  params: z.object({ id: userIdSchema }),
+  response: userSchema,
+});
+
+@Controller("/users")
+class UsersController {
+  @Get(getUserRoute)
+  getUser(
+    @Param(getUserRoute, "id") id: RouteParam<typeof getUserRoute, "id">,
+  ): RouteMethodReturn<typeof getUserRoute> {
+    return getUser(id);
+  }
+}
+```
+
+If the contract path declares `:id` but the params schema uses `userId`, `defineRouteContract()` fails
+typecheck. If the controller binds `@Body(otherSchema)` or `@ResponseSchema(otherSchema)` against a
+contract route, `buildContractGraph()` emits a contract diagnostic before OpenAPI or RPC generation.
 
 ## Considered Models
 
@@ -91,7 +123,7 @@ fails before publishing artifacts.
 ## Dependency Rationale
 
 This model does not add a new external schema dependency. Croco already uses Zod for REST validation and
-contract artifact generation. `defineRouteSchema()` is a small contract helper over existing schema
+contract artifact generation. `defineRouteContract()` is a small contract helper over existing schema
 objects, and its public type inference uses Zod's structural output type so package-local Zod instances do
 not force a duplicate DTO interface.
 

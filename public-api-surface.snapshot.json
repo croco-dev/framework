@@ -8120,6 +8120,11 @@
           "source": "./libs/ContractGraph"
         },
         {
+          "name": "ContractDiagnosticSourceLocation",
+          "exportKind": "named",
+          "source": "./libs/ContractGraph"
+        },
+        {
           "name": "ContractDiagnosticTarget",
           "exportKind": "named",
           "source": "./libs/ContractGraph"
@@ -8176,6 +8181,11 @@
         },
         {
           "name": "ContractGraphSnapshotRoute",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractGraphSnapshotRouteContract",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
         },
@@ -8241,6 +8251,16 @@
         },
         {
           "name": "ProblemResponseIR",
+          "exportKind": "named",
+          "source": "./libs/RouteIR"
+        },
+        {
+          "name": "RouteContractIR",
+          "exportKind": "named",
+          "source": "./libs/RouteIR"
+        },
+        {
+          "name": "RouteContractSourceLocation",
           "exportKind": "named",
           "source": "./libs/RouteIR"
         },
@@ -8625,7 +8645,7 @@
           "name": "Body",
           "exportKind": "named",
           "source": "./Params",
-          "declarationKind": "const"
+          "declarationKind": "function"
         },
         {
           "name": "Controller",
@@ -8747,6 +8767,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "isRouteContractSpec",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
           "name": "LoggingInterceptor",
           "exportKind": "named",
           "source": "./LoggingInterceptor",
@@ -8762,7 +8788,7 @@
           "name": "Param",
           "exportKind": "named",
           "source": "./Params",
-          "declarationKind": "const"
+          "declarationKind": "function"
         },
         {
           "name": "ParamType",
@@ -8810,7 +8836,7 @@
           "name": "Query",
           "exportKind": "named",
           "source": "./Params",
-          "declarationKind": "const"
+          "declarationKind": "function"
         },
         {
           "name": "Raw",
@@ -8915,6 +8941,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "routeParamSchema",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
           "name": "routePathParamsSchema",
           "exportKind": "named",
           "source": "./RouteContract",
@@ -8922,6 +8954,12 @@
         },
         {
           "name": "routeQueryParam",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routeQueryParamSchema",
           "exportKind": "named",
           "source": "./RouteContract",
           "declarationKind": "function"
@@ -9194,6 +9232,11 @@
         },
         {
           "name": "RouteContractResult",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteContractSourceLocation",
           "exportKind": "named",
           "source": "./RouteContract"
         },

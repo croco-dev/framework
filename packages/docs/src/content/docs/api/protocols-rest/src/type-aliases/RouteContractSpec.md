@@ -45,6 +45,12 @@ title: "RouteContractSpec"
 
 ***
 
+### id?
+
+> `readonly` `optional` **id**: `string`
+
+***
+
 ### method
 
 > `readonly` **method**: `Method`
@@ -84,3 +90,9 @@ title: "RouteContractSpec"
 ### response?
 
 > `readonly` `optional` **response**: `Response`
+
+***
+
+### sourceLocation?
+
+> `readonly` `optional` **sourceLocation**: [`RouteContractSourceLocation`](/api/protocols-rest/src/type-aliases/routecontractsourcelocation/)

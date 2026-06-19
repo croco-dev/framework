@@ -21,9 +21,17 @@ export type ContractDiagnostic = {
   readonly target: ContractDiagnosticTarget;
   readonly message: string;
   readonly routeId?: string;
+  readonly contractId?: string;
   readonly controllerName?: string;
   readonly methodName?: string;
   readonly path?: string;
+  readonly sourceLocation?: ContractDiagnosticSourceLocation;
+};
+
+export type ContractDiagnosticSourceLocation = {
+  readonly path: string;
+  readonly line?: number;
+  readonly column?: number;
 };
 
 export type ContractGraphController = {
@@ -184,7 +192,7 @@ function toContractGraphRoute(
   return {
     ...route,
     routeId,
-    operationId: routeId.replace(/[^A-Za-z0-9_]+/g, "_"),
+    operationId: route.routeContract?.operationId ?? routeId.replace(/[^A-Za-z0-9_]+/g, "_"),
     controllerPath,
     access: {
       guards: [
@@ -230,10 +238,217 @@ function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
   diagnostics.push(...validatePathParams(route));
   diagnostics.push(...validateNamedParams(route));
   diagnostics.push(...validateBodyParams(route));
+  diagnostics.push(...validateRouteContract(route));
   diagnostics.push(...validateSchemaEffects(route));
   diagnostics.push(...validateProblemResponses(route));
 
   return diagnostics;
+}
+
+function validateRouteContract(route: ContractGraphRoute): ContractDiagnostic[] {
+  const contract = route.routeContract;
+
+  if (!contract) {
+    return [];
+  }
+
+  return [
+    ...validateContractMethod(route),
+    ...validateContractControllerPath(route),
+    ...validateContractNamedParams(route, "path", contract.inputSchemas.path),
+    ...validateContractNamedParams(route, "query", contract.inputSchemas.query),
+    ...validateContractBody(route),
+    ...validateContractResponse(route),
+  ];
+}
+
+function validateContractMethod(route: ContractGraphRoute): ContractDiagnostic[] {
+  const contract = route.routeContract;
+
+  if (!contract || contract.method.toUpperCase() === route.httpMethod.toUpperCase()) {
+    return [];
+  }
+
+  return [
+    createRouteDiagnostic(
+      route,
+      "contract-route-method-mismatch",
+      "error",
+      `Route contract declares ${contract.method.toUpperCase()} but the route decorator registered ${route.httpMethod.toUpperCase()}. Use the HTTP method decorator that matches the contract.`,
+    ),
+  ];
+}
+
+function validateContractControllerPath(route: ContractGraphRoute): ContractDiagnostic[] {
+  const contract = route.routeContract;
+
+  if (!contract || route.controllerPath === "" || contract.path === route.controllerPath) {
+    return [];
+  }
+
+  if (contract.path.startsWith(`${route.controllerPath}/`)) {
+    return [];
+  }
+
+  return [
+    createRouteDiagnostic(
+      route,
+      "contract-route-controller-path-mismatch",
+      "error",
+      `Route contract path '${contract.path}' is outside controller path '${route.controllerPath}'. Contract-first routes use the contract path as the generated/runtime path, so the contract path must include the controller prefix or the controller should use '/'.`,
+    ),
+  ];
+}
+
+function validateContractNamedParams(
+  route: ContractGraphRoute,
+  kind: "path" | "query",
+  contractSchema: z.ZodType | null,
+): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const contractShape = getNamedSchemaShape(contractSchema);
+  const contractNames = new Set(Object.keys(contractShape));
+  const params = route.params.filter((param) => param.kind === kind);
+  const pathParamNames = kind === "path" ? new Set(getContractPathParamNames(route.path)) : null;
+
+  if (kind === "path" && pathParamNames && pathParamNames.size > 0 && contractNames.size === 0) {
+    diagnostics.push(
+      createRouteDiagnostic(
+        route,
+        "contract-route-missing-path-param-schema",
+        "error",
+        `Route contract path '${route.path}' declares path parameters but the contract has no params schema.`,
+      ),
+    );
+  }
+
+  for (const name of contractNames) {
+    const param = params.find((candidate) => candidate.name === name);
+
+    if (!param) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          kind === "path"
+            ? "contract-route-missing-path-param-binding"
+            : "contract-route-missing-query-param-binding",
+          "error",
+          `Route contract declares ${kind} parameter '${name}' but the controller method does not bind it with @${kind === "path" ? "Param" : "Query"}(contract, "${name}").`,
+        ),
+      );
+      continue;
+    }
+
+    if (param.schema !== contractShape[name]) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          kind === "path"
+            ? "contract-route-path-param-schema-mismatch"
+            : "contract-route-query-param-schema-mismatch",
+          "error",
+          `Controller @${kind === "path" ? "Param" : "Query"}("${name}") schema does not match the route contract schema. Use @${kind === "path" ? "Param" : "Query"}(contract, "${name}") or route ${kind} schema helpers so the contract remains the source of truth.`,
+        ),
+      );
+    }
+  }
+
+  for (const param of params) {
+    if (!contractNames.has(param.name)) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          kind === "path"
+            ? "contract-route-uncontracted-path-param"
+            : "contract-route-uncontracted-query-param",
+          "error",
+          `Controller binds ${kind} parameter '${param.name}' but the route contract does not declare it.`,
+        ),
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
+function validateContractBody(route: ContractGraphRoute): ContractDiagnostic[] {
+  const contract = route.routeContract;
+
+  if (!contract) {
+    return [];
+  }
+
+  const bodyParams = route.params.filter((param) => param.kind === "body");
+  const contractBody = contract.inputSchemas.body;
+
+  if (!contractBody) {
+    if (bodyParams.length === 0) {
+      return [];
+    }
+
+    return [
+      createRouteDiagnostic(
+        route,
+        "contract-route-uncontracted-body-param",
+        "error",
+        "Controller binds @Body() but the route contract does not declare a body schema.",
+      ),
+    ];
+  }
+
+  if (bodyParams.length === 0) {
+    return [
+      createRouteDiagnostic(
+        route,
+        "contract-route-missing-body-binding",
+        "error",
+        "Route contract declares a body schema but the controller method does not bind it with @Body(contract).",
+      ),
+    ];
+  }
+
+  return bodyParams
+    .filter((param) => param.schema !== contractBody)
+    .map((param) =>
+      createRouteDiagnostic(
+        route,
+        "contract-route-body-schema-mismatch",
+        "error",
+        `Controller @Body() schema does not match the route contract body schema at parameter '${param.name}'. Use @Body(contract) so request validation and generated contracts share the same schema.`,
+      ),
+    );
+}
+
+function validateContractResponse(route: ContractGraphRoute): ContractDiagnostic[] {
+  const contract = route.routeContract;
+
+  if (!contract) {
+    return [];
+  }
+
+  if (route.outputSchema === contract.outputSchema) {
+    return [];
+  }
+
+  if (!contract.outputSchema) {
+    return [
+      createRouteDiagnostic(
+        route,
+        "contract-route-uncontracted-response-schema",
+        "error",
+        "Controller declares @ResponseSchema() but the route contract does not declare a response schema.",
+      ),
+    ];
+  }
+
+  return [
+    createRouteDiagnostic(
+      route,
+      "contract-route-response-schema-mismatch",
+      "error",
+      "Controller @ResponseSchema() metadata does not match the route contract response schema. Use @ResponseSchema(contract) or omit @ResponseSchema when @Get(contract) is the source of truth.",
+    ),
+  ];
 }
 
 function validateProblemResponses(route: ContractGraphRoute): ContractDiagnostic[] {
@@ -461,6 +676,20 @@ function getRouteSchemas(route: ContractGraphRoute): z.ZodType[] {
   return [...new Set(schemas)];
 }
 
+function getNamedSchemaShape(schema: z.ZodType | null): Record<string, z.ZodType> {
+  const definition = schema ? getZodDefinition(schema) : undefined;
+  const shape = definition ? getZodObjectShape(definition) : {};
+  const result: Record<string, z.ZodType> = {};
+
+  for (const [name, value] of Object.entries(shape)) {
+    if (isZodType(value)) {
+      result[name] = value;
+    }
+  }
+
+  return result;
+}
+
 function isZodEffects(schema: z.ZodType): boolean {
   return schema.constructor.name === "ZodEffects";
 }
@@ -545,9 +774,13 @@ function createRouteDiagnostic(
     target: getDiagnosticTarget(code),
     message,
     routeId: route.routeId,
+    ...(route.routeContract?.id ? { contractId: route.routeContract.id } : {}),
     controllerName: route.controllerName,
     methodName: route.methodName,
     path: route.path,
+    ...(route.routeContract?.sourceLocation
+      ? { sourceLocation: route.routeContract.sourceLocation }
+      : {}),
   };
 }
 

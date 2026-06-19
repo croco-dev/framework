@@ -1,4 +1,5 @@
 import type { ProblemCategory } from "@croco/problems-core";
+import type { z } from "zod";
 
 /**
  * @croco/protocols-rest와 동일한 Symbol.for() 키를 사용합니다.
@@ -33,7 +34,26 @@ export interface RouteMetadata {
   path: string;
   methodName: string | symbol;
   statusCode?: number;
+  contract?: RouteContractMetadata;
 }
+
+export type RouteContractSourceLocation = {
+  readonly path: string;
+  readonly line?: number;
+  readonly column?: number;
+};
+
+export type RouteContractMetadata = {
+  readonly id?: string;
+  readonly method: string;
+  readonly path: string;
+  readonly operationId?: string;
+  readonly sourceLocation?: RouteContractSourceLocation;
+  readonly params?: z.AnyZodObject;
+  readonly query?: z.AnyZodObject;
+  readonly body?: z.ZodType;
+  readonly response?: z.ZodType;
+};
 
 export type ProblemResponseMetadata = {
   readonly code: string;

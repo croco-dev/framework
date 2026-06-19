@@ -4,6 +4,7 @@ import type { HttpMethod, ParamType } from "./constants";
 import type { ExceptionFilter } from "./interfaces/ExceptionFilter";
 import type { Interceptor } from "./interfaces/Interceptor";
 import type { PipeTransform } from "./interfaces/PipeTransform";
+import type { RouteContractSpec } from "./types/RouteContract";
 
 export interface ControllerMetadata {
   path: string;
@@ -15,6 +16,7 @@ export interface RouteMetadata {
   path: string;
   methodName: string | symbol;
   statusCode?: number;
+  contract?: RouteContractSpec;
 }
 
 export type ProblemResponseMetadata<

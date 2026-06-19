@@ -17,7 +17,7 @@ title: "defineRouteContract"
 
 ### contract
 
-`TContract` & `ValidateRouteContractPathParams`\<`TContract`\>
+`TContract` & `ValidateRouteContractPathParams`\<`NoInfer`\<`TContract`\>\>
 
 ## Returns
 

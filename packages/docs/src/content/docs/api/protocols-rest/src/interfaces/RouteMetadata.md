@@ -7,6 +7,12 @@ title: "RouteMetadata"
 
 ## Properties
 
+### contract?
+
+> `optional` **contract**: [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+
+***
+
 ### method
 
 > **method**: [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)

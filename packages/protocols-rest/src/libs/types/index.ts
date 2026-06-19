@@ -4,10 +4,13 @@
 export * from "../types";
 export {
   defineRouteContract,
+  isRouteContractSpec,
   routeBodySchema,
   routeParam,
+  routeParamSchema,
   routePathParamsSchema,
   routeQueryParam,
+  routeQueryParamSchema,
   routeQuerySchema,
   routeResponseSchema,
 } from "./RouteContract";
@@ -18,6 +21,7 @@ export type {
   RouteContractRequest,
   RouteContractResult,
   RouteContractSpec,
+  RouteContractSourceLocation,
   RouteMethodReturn,
   RouteParam,
   RoutePathParamName,

@@ -2,7 +2,7 @@ import type { Problem } from "@croco/problems-core";
 import type { z } from "zod";
 import type { HttpMethod } from "../constants";
 
-type AnyZodObject = z.ZodObject<z.ZodRawShape>;
+type AnyZodObject = z.AnyZodObject;
 type EmptyObject = Record<never, never>;
 type RouteContractTypeError<Message extends string> = {
   readonly __routeContractError__: Message;
@@ -24,14 +24,22 @@ export type RouteContractSpec<
     | readonly ProblemConstructor[]
     | undefined,
 > = {
+  readonly id?: string;
   readonly method: Method;
   readonly path: Path;
   readonly operationId?: string;
+  readonly sourceLocation?: RouteContractSourceLocation;
   readonly params?: Params;
   readonly query?: Query;
   readonly body?: Body;
   readonly response?: Response;
   readonly problems?: Problems;
+};
+
+export type RouteContractSourceLocation = {
+  readonly path: string;
+  readonly line?: number;
+  readonly column?: number;
 };
 
 export type RoutePathParamName<Path extends string> = string extends Path
@@ -99,9 +107,19 @@ export type RouteQueryParam<
 > = RouteQuery<TContract>[Name];
 
 export function defineRouteContract<const TContract extends RouteContractSpec>(
-  contract: TContract & ValidateRouteContractPathParams<TContract>,
+  contract: TContract & ValidateRouteContractPathParams<NoInfer<TContract>>,
 ): TContract {
   return contract;
+}
+
+export function isRouteContractSpec(value: unknown): value is RouteContractSpec {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as { readonly method?: unknown; readonly path?: unknown };
+
+  return typeof candidate.method === "string" && typeof candidate.path === "string";
 }
 
 export function routeParam<
@@ -111,11 +129,25 @@ export function routeParam<
   return name;
 }
 
+export function routeParamSchema<
+  TContract extends RouteContractSpec & { params: AnyZodObject },
+  Name extends RoutePathParamName<TContract["path"]> & keyof RoutePathParams<TContract> & string,
+>(contract: TContract, name: Name): z.ZodType<RoutePathParams<TContract>[Name]> {
+  return getObjectShape(contract.params)[name] as z.ZodType<RoutePathParams<TContract>[Name]>;
+}
+
 export function routeQueryParam<
   TContract extends RouteContractSpec,
   Name extends keyof RouteQuery<TContract> & string,
 >(_contract: TContract, name: Name): Name {
   return name;
+}
+
+export function routeQueryParamSchema<
+  TContract extends RouteContractSpec & { query: AnyZodObject },
+  Name extends keyof RouteQuery<TContract> & string,
+>(contract: TContract, name: Name): z.ZodType<RouteQuery<TContract>[Name]> {
+  return getObjectShape(contract.query)[name] as z.ZodType<RouteQuery<TContract>[Name]>;
 }
 
 export function routePathParamsSchema<
@@ -148,9 +180,11 @@ type ValidateRouteContractPathParams<TContract extends RouteContractSpec> =
     : unknown;
 
 type ContractParamsSchema<TContract extends RouteContractSpec> = TContract extends {
-  readonly params: infer Params extends AnyZodObject;
+  readonly params: unknown;
 }
-  ? Params
+  ? TContract["params"] extends AnyZodObject
+    ? TContract["params"]
+    : undefined
   : undefined;
 
 type ContractPathParamError<Path extends string, Params extends AnyZodObject | undefined> =
@@ -180,3 +214,7 @@ type ZodObjectKey<Schema extends AnyZodObject | undefined> =
 type NormalizePathParamToken<Token extends string> = Token extends `...${infer Name}`
   ? Name
   : Token;
+
+function getObjectShape(schema: AnyZodObject): z.ZodRawShape {
+  return schema.shape;
+}

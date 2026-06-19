@@ -14,6 +14,7 @@ import {
   createContractGraphSnapshot,
   stringifyContractGraphSnapshot,
 } from "../libs/ContractGraphSnapshot";
+import { REST_ROUTES_KEY, type RouteMetadata } from "../libs/sharedTypes";
 import {
   defineRouteSchema,
   type InferRouteSchemaRequest,
@@ -154,6 +155,64 @@ describe("buildContractGraph", () => {
     });
     expect(graph.diagnostics).toEqual([]);
     expect(() => assertContractGraphHasNoErrors(graph)).not.toThrow();
+  });
+
+  it("should preserve route contract identity and reject body or response decorator drift", () => {
+    const bodySchema = z.object({ name: z.string() });
+    const otherBodySchema = z.object({ displayName: z.string() });
+    const responseSchema = z.object({ id: z.string(), name: z.string() });
+    const otherResponseSchema = z.object({ id: z.string(), displayName: z.string() });
+
+    @Controller("/users")
+    class UsersController {
+      @Post("/")
+      @ResponseSchema(otherResponseSchema)
+      createUser(@Body(otherBodySchema) _body: z.infer<typeof otherBodySchema>): void {}
+    }
+
+    attachRouteContract(UsersController, "createUser", {
+      id: "users.create",
+      method: "POST",
+      path: "/users",
+      operationId: "createUser",
+      sourceLocation: { path: "src/controllers/UserController.ts", line: 20 },
+      body: bodySchema,
+      response: responseSchema,
+    });
+
+    const graph = buildContractGraph([UsersController]);
+
+    expect(graph.routes[0]).toMatchObject({
+      routeContract: {
+        id: "users.create",
+        method: "POST",
+        path: "/users",
+        operationId: "createUser",
+        sourceLocation: { path: "src/controllers/UserController.ts", line: 20 },
+      },
+      operationId: "createUser",
+    });
+    expect(createContractGraphSnapshot(graph).routes[0]?.routeContract).toEqual({
+      id: "users.create",
+      method: "POST",
+      path: "/users",
+      operationId: "createUser",
+      sourceLocation: { path: "src/controllers/UserController.ts", line: 20 },
+    });
+    expect(graph.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "contract-route-body-schema-mismatch",
+          contractId: "users.create",
+          sourceLocation: { path: "src/controllers/UserController.ts", line: 20 },
+        }),
+        expect.objectContaining({
+          code: "contract-route-response-schema-mismatch",
+          contractId: "users.create",
+          sourceLocation: { path: "src/controllers/UserController.ts", line: 20 },
+        }),
+      ]),
+    );
   });
 
   it("should expose auth and access metadata references when present", () => {
@@ -876,3 +935,17 @@ describe("buildContractGraph", () => {
     ]);
   });
 });
+
+function attachRouteContract(
+  controller: Function,
+  methodName: string,
+  contract: NonNullable<RouteMetadata["contract"]>,
+): void {
+  const routes = Reflect.getMetadata(REST_ROUTES_KEY, controller) as RouteMetadata[];
+
+  Reflect.defineMetadata(
+    REST_ROUTES_KEY,
+    routes.map((route) => (route.methodName === methodName ? { ...route, contract } : route)),
+    controller,
+  );
+}
