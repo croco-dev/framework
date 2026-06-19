@@ -453,6 +453,8 @@
           "server actions",
           "SSR/RSC streaming",
           "ISR v1 exact-key TTL",
+          "Node/Lambda durable ISR smoke",
+          "Workers ISR boundary smoke",
           "generated page/API/action/ISR smoke"
         ]
       },

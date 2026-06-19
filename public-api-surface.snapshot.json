@@ -6975,6 +6975,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createDurableIsrCacheProfile",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport",
+          "declarationKind": "function"
+        },
+        {
           "name": "createIsrHandler",
           "exportKind": "named",
           "source": "./libs/isr/createIsrHandler",
@@ -6996,6 +7002,12 @@
           "name": "createLambdaHandler",
           "exportKind": "named",
           "source": "./libs/providers/lambda",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createLocalIsrCacheProfile",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport",
           "declarationKind": "function"
         },
         {
@@ -7062,6 +7074,12 @@
           "name": "dispatchServerAction",
           "exportKind": "named",
           "source": "./libs/actions/serverActions",
+          "declarationKind": "function"
+        },
+        {
+          "name": "evaluateIsrRuntimeSupport",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport",
           "declarationKind": "function"
         },
         {
@@ -7151,6 +7169,11 @@
           "source": "./libs/render/types"
         },
         {
+          "name": "DurableIsrCacheStoreProfileOptions",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
+        },
+        {
           "name": "HeadMetadata",
           "exportKind": "named",
           "source": "./libs/routes/head"
@@ -7161,9 +7184,19 @@
           "source": "./libs/isr/types"
         },
         {
+          "name": "IsrCacheDurability",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
+        },
+        {
           "name": "IsrCacheStore",
           "exportKind": "named",
           "source": "./libs/isr/types"
+        },
+        {
+          "name": "IsrCacheStoreProfile",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
         },
         {
           "name": "IsrMiddleware",
@@ -7174,6 +7207,36 @@
           "name": "IsrMiddlewareOptions",
           "exportKind": "named",
           "source": "./libs/isr/types"
+        },
+        {
+          "name": "IsrRuntime",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
+        },
+        {
+          "name": "IsrRuntimeDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
+        },
+        {
+          "name": "IsrRuntimeDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
+        },
+        {
+          "name": "IsrRuntimeDiagnosticSeverity",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
+        },
+        {
+          "name": "IsrRuntimeSupportOptions",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
+        },
+        {
+          "name": "IsrRuntimeSupportReport",
+          "exportKind": "named",
+          "source": "./libs/isr/runtimeSupport"
         },
         {
           "name": "MetaDeployTarget",

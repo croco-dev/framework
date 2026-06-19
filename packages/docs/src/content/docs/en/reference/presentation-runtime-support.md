@@ -22,6 +22,11 @@ paths are incomplete.
 | Streaming         | Fetch `Response` bodies are preserved by the fetch-compatible Node surface.                                              | Not supported by this adapter; Lambda responses are buffered.                                                                                                    | Supported for fetch `Response` bodies; tested as a Worker-style stream preservation claim.                                                   |
 | Cache persistence | In-memory is local/single-process only. Redis is the shipped durable adapter.                                            | In-memory is warm-container only. Redis is the shipped durable adapter.                                                                                          | No shipped durable Worker cache adapter. Use a Worker-safe external `IsrCacheStore` before claiming durable ISR.                             |
 
+Runtime ISR smoke evidence lives in `packages/meta-vite/src/tests/isr-runtime-support.spec.ts`.
+Run it through `pnpm --filter @croco/meta-vite test`; the smoke covers Redis-backed durable ISR on
+Node and Lambda, Workers durable-claim rejection without a Worker-safe store, and local-only
+in-memory cache isolation.
+
 ## ISR v1 Contract
 
 `@croco/meta-vite` keeps ISR v1 as exact-key TTL caching. The stable contract is:
@@ -31,19 +36,33 @@ paths are incomplete.
 - concurrent same-key misses use the cache store's `getOrSet()` singleflight semantics;
 - `InMemoryCacheStore` is local, development, or single-process only;
 - `RedisCacheStoreAdapter` is the shipped durable adapter for Node and Lambda deployments;
+- `createDurableIsrCacheProfile()` does not upgrade known `InMemoryCacheStore` instances into a durable profile;
+- `evaluateIsrRuntimeSupport()` reports deterministic durable-claim diagnostics before runtime boot;
 - pattern invalidation is available only through durable adapters that explicitly expose it, such as the Redis adapter.
+
+## Durable ISR Recovery
+
+Missing durable ISR configuration is not treated as a silent production success:
+
+| Diagnostic code                           | Trigger                                                                                          | Recovery                                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY`    | A deployment requires durable ISR while using a local process, warm-container, or isolate cache. | Use `RedisCacheStoreAdapter` on Node/Lambda, or a durable runtime-safe store for Workers.   |
+| `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` | A Cloudflare Workers durable ISR claim uses a store profile that is not marked Worker-safe.      | Supply a Worker-safe `IsrCacheStore` backed by Worker-compatible bindings and mark it safe. |
+
+RSC development recovery remains conservative: render failures return controlled diagnostics, and
+development reload recovery is a full page reload rather than an HMR-based RSC recovery claim.
 
 ## Promotion Criteria
 
 Presentation packages move from alpha to beta only after all package-specific criteria are met:
 
-| Package                      | Current result | Beta gate                                                                                                                                                                                                                            |
-| ---------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@croco/frontend-react`      | Remains alpha. | Add generated-app and package-level smoke that proves browser hydration, page data flow, and meta-vite integration across at least one generated fullstack profile.                                                                  |
-| `@croco/frontend-cloudflare` | Remains alpha. | Prove Worker SSR with service-binding API routing, asset fallback, streaming response preservation, env/context propagation, and clear failure behavior in package tests plus generated-app smoke.                                   |
-| `@croco/frontend-vite`       | Remains alpha. | Prove Vite config generation, optional Cloudflare peer behavior, browser build output, and generated-app build/smoke across SPA and meta-vite profiles.                                                                              |
-| `@croco/meta-vite`           | Remains beta.  | Production-ready requires durable ISR evidence for supported production runtimes, complete adapter smoke for Node/Lambda/Workers, RSC development-mode recovery documentation, and output contract validation in generated profiles. |
-| `@croco/presentation-preset` | Remains beta.  | Production-ready requires generated output contract validation for every supported runtime profile and no untested runtime capability claim in the package catalog.                                                                  |
+| Package                      | Current result | Beta gate                                                                                                                                                                                                                                                          |
+| ---------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@croco/frontend-react`      | Remains alpha. | Add generated-app and package-level smoke that proves browser hydration, page data flow, and meta-vite integration across at least one generated fullstack profile.                                                                                                |
+| `@croco/frontend-cloudflare` | Remains alpha. | Prove Worker SSR with service-binding API routing, asset fallback, streaming response preservation, env/context propagation, and clear failure behavior in package tests plus generated-app smoke.                                                                 |
+| `@croco/frontend-vite`       | Remains alpha. | Prove Vite config generation, optional Cloudflare peer behavior, browser build output, and generated-app build/smoke across SPA and meta-vite profiles.                                                                                                            |
+| `@croco/meta-vite`           | Remains beta.  | Durable ISR runtime smoke now covers Node/Lambda/Workers claim boundaries. Production-ready still requires generated-profile output contract validation across every supported profile and stronger RSC development recovery than the documented full reload path. |
+| `@croco/presentation-preset` | Remains beta.  | Production-ready requires generated output contract validation for every supported runtime profile and no untested runtime capability claim in the package catalog.                                                                                                |
 
 No presentation package should be promoted in `docs/package-catalog.json` unless its gate evidence is named
 in the relevant package README, package tests, generated-app smoke, and this page.

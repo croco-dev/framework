@@ -58,6 +58,38 @@ describe("AbstractCacheStoreAdapter", () => {
     expect(fetchCount).toBe(1);
   });
 
+  it("singleflights concurrent misses for the same key", async () => {
+    const adapter = new TestAdapter();
+    let fetchCount = 0;
+    let resolveFetch: ((response: Response) => void) | undefined;
+    const fetcher = async () => {
+      fetchCount++;
+      return new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      });
+    };
+
+    const pending = Promise.all([
+      adapter.getOrSet("/test", fetcher),
+      adapter.getOrSet("/test", fetcher),
+      adapter.getOrSet("/test", fetcher),
+    ]);
+
+    await Promise.resolve();
+    expect(fetchCount).toBe(1);
+
+    if (!resolveFetch) {
+      throw new Error("singleflight fetcher was not called");
+    }
+
+    resolveFetch(new Response("fetched-1"));
+    const responses = await pending;
+    const bodies = await Promise.all(responses.map((response) => response.text()));
+
+    expect(bodies).toEqual(["fetched-1", "fetched-1", "fetched-1"]);
+    expect(fetchCount).toBe(1);
+  });
+
   it("caches the fetched value", async () => {
     const adapter = new TestAdapter();
     let fetchCount = 0;

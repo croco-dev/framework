@@ -28,7 +28,23 @@ export type { SsgRenderedArtifact, SsgRenderFunction } from "./libs/build/ssgPre
 export { prerenderSsgRoutes, renderRouteToString } from "./libs/build/ssgPrerender";
 export { createIsrHandler } from "./libs/isr/createIsrHandler";
 export { createIsrMiddleware } from "./libs/isr/isrMiddleware";
+export {
+  createDurableIsrCacheProfile,
+  createLocalIsrCacheProfile,
+  evaluateIsrRuntimeSupport,
+} from "./libs/isr/runtimeSupport";
 // ISR
+export type {
+  DurableIsrCacheStoreProfileOptions,
+  IsrCacheDurability,
+  IsrCacheStoreProfile,
+  IsrRuntime,
+  IsrRuntimeDiagnostic,
+  IsrRuntimeDiagnosticCode,
+  IsrRuntimeDiagnosticSeverity,
+  IsrRuntimeSupportOptions,
+  IsrRuntimeSupportReport,
+} from "./libs/isr/runtimeSupport";
 export type {
   IsrCacheAdapter,
   IsrCacheStore,
