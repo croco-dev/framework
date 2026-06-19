@@ -130,6 +130,7 @@ describe("package-quality-report.mts", () => {
     );
 
     expect(markdown).toContain("# Package Quality Dashboard");
+    expect(markdown).toContain("`static-misuse:check`");
     expect(markdown).toContain("| `public-api:check` | package public export surface drift");
     expect(markdown).toContain("- Runtime exports added/removed: 1 / 0");
     expect(markdown).toContain("- Type exports added/removed: 0 / 1");
