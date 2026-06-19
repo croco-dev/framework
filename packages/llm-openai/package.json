@@ -1,0 +1,56 @@
+{
+  "name": "@croco/llm-openai",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/llm-openai"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "oxlint ."
+  },
+  "dependencies": {
+    "@croco/llm-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
+    "openai": "^6.44.0"
+  },
+  "devDependencies": {
+    "@croco/testing": "workspace:*",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  },
+  "peerDependencies": {
+    "@croco/llm-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*"
+  }
+}

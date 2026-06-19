@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   101 |
+| Public packages                |   102 |
 | Private packages skipped       |     2 |
 | Missing package README         |    22 |
 | Missing generated API docs     |    76 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    39 |
+| Extension matrix packages      |    40 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.
 
@@ -129,7 +129,7 @@ None.
 | ------------ | -------: |
 | Core         |       21 |
 | Domain       |       27 |
-| Provider     |       25 |
+| Provider     |       26 |
 | Integration  |        5 |
 | Protocol     |        6 |
 | Transport    |        3 |
@@ -139,7 +139,7 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       46 |
+| 🟡 beta             |       47 |
 | 🔴 alpha/WIP        |       32 |
 | ⚠️ deprecated       |        0 |
 
@@ -149,7 +149,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       25 |                     0 |
+| Provider     |       26 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        3 |                     0 |
 | Presentation |        6 |                     0 |

@@ -15,6 +15,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 ## Extended by
 
 - [`InMemoryLlmModel`](/api/llm-core/src/classes/inmemoryllmmodel/)
+- [`OpenAiLlmModel`](/api/llm-openai/src/classes/openaillmmodel/)
 
 ## Constructors
 

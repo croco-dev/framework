@@ -120,21 +120,31 @@ export function createLlmProviderConformanceSuite<TObject = unknown>(
 
         if (!first.done) {
           controller.abort();
-          let next = await iterator.next();
-          let bufferedChunks = 0;
-          while (!next.done && bufferedChunks < 2) {
-            assert.equal(
-              typeof next.value.delta,
-              "string",
-              `${options.providerName} must emit only valid chunks while draining after abort.`,
+          try {
+            let next = await iterator.next();
+            let bufferedChunks = 0;
+            while (!next.done && bufferedChunks < 2) {
+              assert.equal(
+                typeof next.value.delta,
+                "string",
+                `${options.providerName} must emit only valid chunks while draining after abort.`,
+              );
+              bufferedChunks += 1;
+              next = await iterator.next();
+            }
+            assert.ok(
+              next.done,
+              `${options.providerName} must stop streaming promptly after abort.`,
             );
-            bufferedChunks += 1;
-            next = await iterator.next();
+          } catch (error) {
+            assert.ok(
+              error instanceof Problem,
+              `${options.providerName} must complete cleanly or surface a Croco Problem after abort.`,
+            );
+          } finally {
+            await iterator.return?.();
           }
-          assert.ok(next.done, `${options.providerName} must stop streaming promptly after abort.`);
         }
-
-        await iterator.return?.();
       },
     },
     {

@@ -808,6 +808,9 @@ importers:
       '@croco/llm-metering':
         specifier: workspace:*
         version: link:../llm-metering
+      '@croco/llm-openai':
+        specifier: workspace:*
+        version: link:../llm-openai
       '@croco/membership-core':
         specifier: workspace:*
         version: link:../membership-core
@@ -1405,6 +1408,34 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
     devDependencies:
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  packages/llm-openai:
+    dependencies:
+      '@croco/llm-core':
+        specifier: workspace:*
+        version: link:../llm-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
+      openai:
+        specifier: ^6.44.0
+        version: 6.44.0(ws@8.18.0)(zod@4.3.6)
+    devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       tsup:
         specifier: 8.5.1
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
@@ -7712,6 +7743,17 @@ packages:
 
   oniguruma-to-es@4.3.4:
     resolution: {integrity: sha512-3VhUGN3w2eYxnTzHn+ikMI+fp/96KoRSVK9/kMTcFqj1NRDh2IhQCKvYxDnWePKRXY/AqH+Fuiyb7VHSzBjHfA==}
+
+  openai@6.44.0:
+    resolution: {integrity: sha512-09/gH+8jH0RgUwsgWHAaxsKGRT5zVZ95IaJUnqAWj6XejIBmnFRwq2WUIF37VtDEsmGrtPmvCs5+yBSeZGWvkA==}
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   openapi-sampler@1.7.2:
     resolution: {integrity: sha512-OKytvqB5XIaTgA9xtw8W8UTar+uymW2xPVpFN0NihMtuHPdPTGxBEhGnfFnJW5g/gOSIvkP+H0Xh3XhVI9/n7g==}
@@ -14954,6 +14996,11 @@ snapshots:
       oniguruma-parser: 0.12.1
       regex: 6.1.0
       regex-recursion: 6.0.2
+
+  openai@6.44.0(ws@8.18.0)(zod@4.3.6):
+    optionalDependencies:
+      ws: 8.18.0
+      zod: 4.3.6
 
   openapi-sampler@1.7.2:
     dependencies:

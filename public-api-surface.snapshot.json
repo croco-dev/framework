@@ -6417,6 +6417,141 @@
       ]
     },
     {
+      "packageName": "@croco/llm-openai",
+      "relativeDir": "packages/llm-openai",
+      "entrypoint": "packages/llm-openai/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "createOpenAiSdkTransport",
+          "exportKind": "named",
+          "source": "./libs/OpenAiSdkTransport",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeOpenAiError",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "OpenAiAbortProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiAuthenticationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiInvalidResponseProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiLlmModel",
+          "exportKind": "named",
+          "source": "./libs/OpenAiLlmModel",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiMissingConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiRateLimitProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiRetryableUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiTerminalUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OpenAiValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OpenAiProblems",
+          "declarationKind": "class"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "OpenAiEmbeddingRequest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiEmbeddingResponse",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiEnvironment",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiInputMessage",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiLlmModelConfig",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiRequestOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiResponse",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiResponseRequest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiSdkTransportOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiStreamEvent",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiTransport",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OpenAiUsage",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/membership-core",
       "relativeDir": "packages/membership-core",
       "entrypoint": "packages/membership-core/src/index.ts",

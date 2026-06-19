@@ -45,6 +45,7 @@ export default defineConfig({
             "../framework-context/src/index.ts",
             "../invitation-core/src/index.ts",
             "../llm-core/src/index.ts",
+            "../llm-openai/src/index.ts",
             "../llm-metering/src/index.ts",
             "../membership-core/src/index.ts",
             "../metering-core/src/index.ts",
