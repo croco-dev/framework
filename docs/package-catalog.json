@@ -117,6 +117,7 @@
     "Presentation": {
       "description": "Frontend, SSR, and presentation-layer adapters",
       "packages": [
+        "admin-react",
         "frontend-cloudflare",
         "frontend-react",
         "frontend-vite",
@@ -222,6 +223,7 @@
       "label": "🔴 alpha/WIP",
       "packages": [
         "access-drizzle",
+        "admin-react",
         "analytics-core",
         "analytics-posthog",
         "audit-drizzle",
@@ -262,6 +264,18 @@
   "extensionMatrix": {
     "groups": ["Provider", "Integration", "Transport", "Presentation"],
     "packages": {
+      "admin-react": {
+        "domain": "Admin React",
+        "adapter": "Billing entitlement admin panel",
+        "runtimes": ["browser", "node"],
+        "requiredEnv": ["none"],
+        "features": [
+          "billing panel contract",
+          "entitlement status primitives",
+          "usage quota meters",
+          "provider failure state"
+        ]
+      },
       "access-drizzle": {
         "domain": "Access control",
         "adapter": "Drizzle repository",

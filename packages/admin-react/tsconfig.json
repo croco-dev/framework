@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig/tsconfig.react.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@croco/billing-core": ["../billing-core/src/types.ts"],
+      "@croco/entitlements-core": ["../entitlements-core/src/libs/types.ts"],
+      "@croco/metering-core": ["../metering-core/src/libs/types.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

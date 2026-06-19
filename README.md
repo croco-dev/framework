@@ -369,7 +369,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **100개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **101개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Package Groups
 
@@ -381,7 +381,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
 | Protocol     | API protocol definitions and code generation                                               |         6 |
 | Transport    | Runtime adapters that execute protocol routes                                              |         3 |
-| Presentation | Frontend, SSR, and presentation-layer adapters                                             |         5 |
+| Presentation | Frontend, SSR, and presentation-layer adapters                                             |         6 |
 | Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |         8 |
 
 ### Maturity Guide
@@ -392,7 +392,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | ------------------- | ----------------------------------- | --------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |        46 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        31 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        32 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
 ### Extension & Adapter Matrix
@@ -455,6 +455,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 | Package                      | Domain              | Adapter                             | Node | Lambda | Workers | Frontend | Required env/config                                                                                        | Peer deps                                    | Features                                                                                                             | Maturity     | Package tests     |
 | ---------------------------- | ------------------- | ----------------------------------- | ---- | ------ | ------- | -------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ----------------- |
+| `@croco/admin-react`         | Admin React         | Billing entitlement admin panel     | yes  | -      | -       | yes      | none                                                                                                       | react<br>react-dom                           | billing panel contract<br>entitlement status primitives<br>usage quota meters<br>provider failure state              | 🔴 alpha/WIP | has package tests |
 | `@croco/frontend-react`      | Frontend React      | React integration helpers           | yes  | -      | -       | yes      | none                                                                                                       | @croco/meta-vite<br>react<br>react-dom       | React bindings<br>meta-vite integration                                                                              | 🔴 alpha/WIP | has package tests |
 | `@croco/meta-vite`           | Frontend routing    | Meta Vite runtime                   | yes  | yes    | yes     | yes      | optional Redis-compatible ISR adapter config<br>Worker-safe IsrCacheStore required for durable Workers ISR | ioredis<br>react<br>react-dom<br>vite<br>zod | route registry<br>server actions<br>SSR/RSC streaming<br>ISR v1 exact-key TTL<br>generated page/API/action/ISR smoke | 🟡 beta      | has package tests |
 | `@croco/frontend-cloudflare` | Frontend SSR        | Cloudflare SSR handler              | -    | -      | yes     | -        | API_WORKER binding optional<br>ASSETS binding optional                                                     | -                                            | SSR fetch handler<br>service binding routing<br>asset fallback<br>streaming response smoke                           | 🔴 alpha/WIP | has package tests |
@@ -547,6 +548,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/analytics-core`                | Domain       | `packages/analytics-core`                | tests         |
 | `@croco/batch-core`                    | Domain       | `packages/batch-core`                    | README, tests |
 | `@croco/analytics-posthog`             | Integration  | `packages/analytics-posthog`             | README, tests |
+| `@croco/admin-react`                   | Presentation | `packages/admin-react`                   | README, tests |
 | `@croco/frontend-cloudflare`           | Presentation | `packages/frontend-cloudflare`           | README, tests |
 | `@croco/frontend-react`                | Presentation | `packages/frontend-react`                | README, tests |
 | `@croco/frontend-vite`                 | Presentation | `packages/frontend-vite`                 | README, tests |
