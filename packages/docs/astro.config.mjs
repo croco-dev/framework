@@ -36,6 +36,7 @@ export default defineConfig({
       plugins: [
         starlightTypeDoc({
           entryPoints: [
+            "../admin-ops/src/index.ts",
             "../audit-core/src/index.ts",
             "../auth-core/src/index.ts",
             "../billing-core/src/index.ts",
@@ -68,6 +69,7 @@ export default defineConfig({
             disableSources: true,
             excludeInternal: true,
             excludePrivate: true,
+            excludeReferences: true,
             skipErrorChecking: true,
           },
           sidebar: {
