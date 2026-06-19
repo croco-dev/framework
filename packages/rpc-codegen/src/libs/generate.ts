@@ -2,8 +2,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
+  assertContractGraphConsumerRouteCoverage,
   assertContractGraphHasNoErrors,
   type ContractGraph,
+  type ContractGraphConsumerRouteField,
+  type ContractGraphObservedConsumerRoute,
   getContractPathParamNames,
   getContractPathParams,
   type RouteIR,
@@ -13,9 +16,14 @@ export type GenerateClientOptions = {
   readonly reactQuery?: boolean;
 };
 
+type GeneratedClientRoute = RouteIR & {
+  readonly routeId?: string;
+  readonly operationId?: string;
+};
+
 type DomainRoutes = {
   readonly domain: string;
-  readonly routes: RouteIR[];
+  readonly routes: GeneratedClientRoute[];
 };
 
 type ResponseHelperOptions = {
@@ -36,11 +44,19 @@ export function generateClientFilesFromContractGraph(
 ): string[] {
   assertContractGraphHasNoErrors(graph);
 
-  return generateClientFiles([...graph.routes], outDir, options);
+  const files = generateClientFiles([...graph.routes], outDir, options);
+
+  assertContractGraphConsumerRouteCoverage(
+    graph,
+    "rpc-client",
+    collectGeneratedRpcConsumerRoutes(files),
+  );
+
+  return files;
 }
 
 export function generateClientFiles(
-  routes: RouteIR[],
+  routes: GeneratedClientRoute[],
   outDir: string,
   options: GenerateClientOptions = {},
 ): string[] {
@@ -69,7 +85,7 @@ export function generateClientFiles(
   return [...files, supportPath, indexPath];
 }
 
-function assertGeneratedClientRoutes(routes: RouteIR[]): void {
+function assertGeneratedClientRoutes(routes: readonly GeneratedClientRoute[]): void {
   for (const route of routes) {
     if (route.httpMethod.toUpperCase() === "ALL") {
       throw new RpcCodegenContractProblem(
@@ -114,7 +130,7 @@ function assertGeneratedClientMethodNames(domainRoutes: DomainRoutes): void {
   }
 }
 
-function assertGeneratedClientPathParams(route: RouteIR): void {
+function assertGeneratedClientPathParams(route: GeneratedClientRoute): void {
   const pathParamNames = new Set(getContractPathParamNames(route.path));
   const declaredParamNames = new Set(
     route.params.filter((param) => param.kind === "path").map((param) => param.name),
@@ -154,8 +170,8 @@ function assertGeneratedClientPathParams(route: RouteIR): void {
   }
 }
 
-function groupRoutesByDomain(routes: RouteIR[]): DomainRoutes[] {
-  const groups = new Map<string, RouteIR[]>();
+function groupRoutesByDomain(routes: readonly GeneratedClientRoute[]): DomainRoutes[] {
+  const groups = new Map<string, GeneratedClientRoute[]>();
 
   for (const route of routes) {
     const domain = getDomainName(route);
@@ -228,14 +244,213 @@ function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<str
     ? "import { useMutation, useQuery } from '@tanstack/react-query';\n"
     : "";
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
+  const routeMetadata = generateContractRouteMetadata(domainRoutes);
 
   return `${imports}${responseHelperImports}${types.join("\n")}
 ${problemDeclarations}
+${routeMetadata}
 ${queryHelpers}${headerHelpers}
 export const ${clientName} = {
 ${clientMethods}
 };
 ${hooks}`;
+}
+
+function generateContractRouteMetadata(domainRoutes: DomainRoutes): string {
+  const entries = domainRoutes.routes
+    .map(
+      (route) =>
+        `  { routeId: ${literalValueToTypeScript(getRouteId(route))}, operationId: ${literalValueToTypeScript(getOperationId(route))}, methodName: ${literalValueToTypeScript(route.methodName)}, method: ${literalValueToTypeScript(route.httpMethod.toUpperCase())}, path: ${literalValueToTypeScript(route.path)} }`,
+    )
+    .join(",\n");
+
+  return `export const ${domainRoutes.domain}ContractRoutes = [
+${entries}
+] as const;`;
+}
+
+function collectGeneratedRpcConsumerRoutes(
+  files: readonly string[],
+): ContractGraphObservedConsumerRoute[] {
+  const routes: ContractGraphObservedConsumerRoute[] = [];
+  const metadataPattern =
+    /routeId: '([^']+)', operationId: '([^']+)', methodName: '([^']+)', method: '([^']+)', path: '([^']+)'/g;
+
+  for (const file of files) {
+    if (path.basename(file) === "rpc.ts" || path.basename(file) === "index.ts") {
+      continue;
+    }
+
+    const content = fs.readFileSync(file, "utf-8");
+
+    for (const match of content.matchAll(metadataPattern)) {
+      const routeId = match[1];
+      const operationId = match[2];
+      const methodName = match[3];
+      const method = match[4];
+      const routePath = match[5];
+
+      if (routeId && operationId && methodName && method && routePath) {
+        routes.push(
+          createGeneratedRpcConsumerRoute(content, {
+            routeId,
+            operationId,
+            methodName,
+            method,
+            path: routePath,
+          }),
+        );
+      }
+    }
+  }
+
+  return routes;
+}
+
+function createGeneratedRpcConsumerRoute(
+  content: string,
+  route: {
+    readonly routeId: string;
+    readonly operationId: string;
+    readonly methodName: string;
+    readonly method: string;
+    readonly path: string;
+  },
+): ContractGraphObservedConsumerRoute {
+  const methodBlock = getGeneratedMethodBlock(content, route.methodName);
+  const problemDeclarations = getProblemDeclarationsFingerprint(content, route.methodName);
+
+  return {
+    routeId: route.routeId,
+    operationId: route.operationId,
+    consumedFields: collectGeneratedRpcConsumedFields(),
+    fieldFingerprints: {
+      routeId: route.routeId,
+      operationId: route.operationId,
+      httpMethod: route.method,
+      path: route.path,
+      "request.body": methodBlock.includes("body: JSON.stringify(") ? "present" : "absent",
+      "request.path": methodBlock.includes("input.path") ? "present" : "absent",
+      "request.query": methodBlock.includes("serializeQueryParams(input.query)")
+        ? "present"
+        : "absent",
+      "request.headers": methodBlock.includes("serializeHeaders(input.headers)")
+        ? "present"
+        : "absent",
+      response: content.includes(
+        `export type ${getGeneratedTypeName(route.methodName, "Output")} =`,
+      )
+        ? "present"
+        : "absent",
+      problems: problemDeclarations,
+    },
+  };
+}
+
+function collectGeneratedRpcConsumedFields(): ContractGraphConsumerRouteField[] {
+  return [
+    "routeId",
+    "operationId",
+    "httpMethod",
+    "path",
+    "request.body",
+    "request.path",
+    "request.query",
+    "request.headers",
+    "response",
+    "problems",
+  ];
+}
+
+function getGeneratedMethodBlock(content: string, methodName: string): string {
+  const methodMarker = `  ${methodName}:`;
+  const resultMarker = `  ${methodName}Result:`;
+  const methodStart = content.indexOf(methodMarker);
+  const resultStart = content.indexOf(resultMarker, methodStart);
+
+  if (methodStart === -1 || resultStart === -1) {
+    return "";
+  }
+
+  const nextRouteStart = content
+    .slice(resultStart + resultMarker.length)
+    .search(/\n  [A-Za-z_$][A-Za-z0-9_$]*:/);
+
+  if (nextRouteStart === -1) {
+    return content.slice(methodStart);
+  }
+
+  return content.slice(methodStart, resultStart + resultMarker.length + nextRouteStart);
+}
+
+function getProblemDeclarationsFingerprint(content: string, methodName: string): string {
+  const declarationPattern = new RegExp(
+    `export const ${escapeRegExp(methodName)}ProblemDeclarations = \\[([\\s\\S]*?)\\] as const`,
+  );
+  const declaration = content.match(declarationPattern)?.[1] ?? "";
+  const problems = [...declaration.matchAll(/\{ ([^}]+) \}/g)].map((match) =>
+    parseGeneratedProblemDeclaration(match[1] ?? ""),
+  );
+
+  return JSON.stringify(problems.sort(compareGeneratedProblems));
+}
+
+function parseGeneratedProblemDeclaration(declaration: string): {
+  readonly code: string;
+  readonly category: string;
+  readonly status: number;
+  readonly description?: string;
+  readonly type?: string;
+} {
+  const fields = new Map<string, string | number>();
+  const fieldPattern = /(\w+): ('(?:\\.|[^'\\])*'|\d+)/g;
+
+  for (const match of declaration.matchAll(fieldPattern)) {
+    const name = match[1];
+    const rawValue = match[2];
+    fields.set(name, parseGeneratedProblemValue(rawValue));
+  }
+
+  return {
+    code: String(fields.get("code")),
+    category: String(fields.get("category")),
+    status: Number(fields.get("status")),
+    ...(typeof fields.get("description") === "string"
+      ? { description: String(fields.get("description")) }
+      : {}),
+    ...(typeof fields.get("type") === "string" ? { type: String(fields.get("type")) } : {}),
+  };
+}
+
+function parseGeneratedProblemValue(value: string): string | number {
+  if (/^\d+$/.test(value)) {
+    return Number(value);
+  }
+
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1).replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+  }
+
+  return value;
+}
+
+function compareGeneratedProblems(
+  left: { readonly code: string; readonly category: string; readonly status: number },
+  right: { readonly code: string; readonly category: string; readonly status: number },
+): number {
+  return (
+    left.code.localeCompare(right.code) ||
+    left.category.localeCompare(right.category) ||
+    left.status - right.status
+  );
+}
+
+function getGeneratedTypeName(methodName: string, suffix: string): string {
+  return `${toPascalCase(methodName)}${suffix}`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function generateClientIndex(domainRoutes: readonly DomainRoutes[]): string {
@@ -524,7 +739,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 `;
 }
 
-function generateInputType(route: RouteIR): string {
+function generateInputType(route: GeneratedClientRoute): string {
   if (!needsInput(route)) {
     return "";
   }
@@ -540,7 +755,7 @@ function generateInputType(route: RouteIR): string {
   return `export type ${getInputTypeName(route)} = { ${fields.join(" ")} };`;
 }
 
-function generateOutputType(route: RouteIR): string {
+function generateOutputType(route: GeneratedClientRoute): string {
   if (!route.outputSchema) {
     return "";
   }
@@ -548,7 +763,7 @@ function generateOutputType(route: RouteIR): string {
   return `export type ${getOutputTypeName(route)} = ${zodTypeToTypeScript(route.outputSchema)};`;
 }
 
-function generateProblemTypes(route: RouteIR): string {
+function generateProblemTypes(route: GeneratedClientRoute): string {
   const problemResponses = route.problemResponses ?? [];
   const problemUnion =
     problemResponses.length === 0
@@ -565,7 +780,7 @@ export type ${getProblemDetailsTypeName(route)} = RpcProblemDetailsFor<${getProb
 export type ${getResultTypeName(route)} = RpcClientResult<${getSuccessType(route)}, ${getProblemTypeName(route)}>;`;
 }
 
-function generateProblemDeclarations(route: RouteIR): string {
+function generateProblemDeclarations(route: GeneratedClientRoute): string {
   const declarations = (route.problemResponses ?? [])
     .map((problem) => {
       const fields = [
@@ -591,7 +806,7 @@ ${declarations}
 ] as const satisfies readonly RpcDeclaredProblem[];`;
 }
 
-function generateClientMethod(route: RouteIR): string {
+function generateClientMethod(route: GeneratedClientRoute): string {
   const input = needsInput(route)
     ? `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`
     : "";
@@ -616,7 +831,7 @@ ${getQueryStatements(route)}    return fetch(${getUrlExpression(route)}, ${fetch
   ${getResultMethodName(route)}: (${input}): ${resultReturnType} => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${resultResponse}),`;
 }
 
-function getFetchOptions(route: RouteIR): string {
+function getFetchOptions(route: GeneratedClientRoute): string {
   const options = [`method: '${route.httpMethod.toUpperCase()}'`];
 
   if (hasBody(route)) {
@@ -632,7 +847,7 @@ function getFetchOptions(route: RouteIR): string {
   return `{ ${options.join(", ")} }`;
 }
 
-function getHeadersExpression(route: RouteIR): string {
+function getHeadersExpression(route: GeneratedClientRoute): string {
   const hasHeaderInput =
     route.inputSchemas.headers !== null && route.inputSchemas.headers !== undefined;
 
@@ -651,7 +866,7 @@ function getHeadersExpression(route: RouteIR): string {
   return "";
 }
 
-function getResponseExpression(route: RouteIR): string {
+function getResponseExpression(route: GeneratedClientRoute): string {
   if (!route.outputSchema) {
     return "readOptionalJsonResponse(response)";
   }
@@ -659,7 +874,7 @@ function getResponseExpression(route: RouteIR): string {
   return `handleJsonResponse<${getOutputTypeName(route)}>(response)`;
 }
 
-function getResultResponseExpression(route: RouteIR): string {
+function getResultResponseExpression(route: GeneratedClientRoute): string {
   const problemDeclarations = getProblemDeclarationsName(route);
   const problemType = getProblemTypeName(route);
 
@@ -670,7 +885,7 @@ function getResultResponseExpression(route: RouteIR): string {
   return `handleJsonResult<${getOutputTypeName(route)}, ${problemType}>(response, ${problemDeclarations})`;
 }
 
-function getReturnType(route: RouteIR): string {
+function getReturnType(route: GeneratedClientRoute): string {
   if (!route.outputSchema) {
     return "Promise<unknown | undefined>";
   }
@@ -678,11 +893,11 @@ function getReturnType(route: RouteIR): string {
   return `Promise<${getOutputTypeName(route)}>`;
 }
 
-function getResultReturnType(route: RouteIR): string {
+function getResultReturnType(route: GeneratedClientRoute): string {
   return `Promise<${getResultTypeName(route)}>`;
 }
 
-function getSuccessType(route: RouteIR): string {
+function getSuccessType(route: GeneratedClientRoute): string {
   if (!route.outputSchema) {
     return "unknown | undefined";
   }
@@ -694,7 +909,7 @@ function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string)
   return domainRoutes.routes.map((route) => generateReactQueryHook(route, clientName)).join("\n");
 }
 
-function generateReactQueryHook(route: RouteIR, clientName: string): string {
+function generateReactQueryHook(route: GeneratedClientRoute, clientName: string): string {
   const hookName = `use${toPascalCase(route.methodName)}`;
 
   if (hasBody(route)) {
@@ -969,7 +1184,7 @@ function getObjectShape(schema: unknown): Record<string, unknown> {
   return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
 }
 
-function getPathExpression(route: RouteIR): string {
+function getPathExpression(route: GeneratedClientRoute): string {
   const pathParams = getContractPathParams(route.path);
 
   if (pathParams.length === 0) {
@@ -992,7 +1207,7 @@ function getPathInputAccessor(name: string): string {
     : `input.path[${formatObjectKey(name)}]`;
 }
 
-function getQueryStatements(route: RouteIR): string {
+function getQueryStatements(route: GeneratedClientRoute): string {
   if (!route.inputSchemas.query) {
     return "";
   }
@@ -1002,11 +1217,11 @@ function getQueryStatements(route: RouteIR): string {
 `;
 }
 
-function getUrlExpression(route: RouteIR): string {
+function getUrlExpression(route: GeneratedClientRoute): string {
   return route.inputSchemas.query ? "url" : "path";
 }
 
-function getInputSchemaEntries(route: RouteIR): [string, unknown][] {
+function getInputSchemaEntries(route: GeneratedClientRoute): [string, unknown][] {
   const entries: [string, unknown | null][] = [
     ["body", route.inputSchemas.body],
     ["path", route.inputSchemas.path],
@@ -1019,23 +1234,23 @@ function getInputSchemaEntries(route: RouteIR): [string, unknown][] {
   );
 }
 
-function needsInput(route: RouteIR): boolean {
+function needsInput(route: GeneratedClientRoute): boolean {
   return getInputSchemaEntries(route).length > 0;
 }
 
-function hasRequiredInput(route: RouteIR): boolean {
+function hasRequiredInput(route: GeneratedClientRoute): boolean {
   return needsInput(route);
 }
 
-function hasBody(route: RouteIR): boolean {
+function hasBody(route: GeneratedClientRoute): boolean {
   return route.inputSchemas.body !== null && route.inputSchemas.body !== undefined;
 }
 
-function hasStructuredInput(route: RouteIR): boolean {
+function hasStructuredInput(route: GeneratedClientRoute): boolean {
   return Boolean(route.inputSchemas.path || route.inputSchemas.query || route.inputSchemas.headers);
 }
 
-function hasLegacyBodyInput(route: RouteIR): boolean {
+function hasLegacyBodyInput(route: GeneratedClientRoute): boolean {
   return Boolean(
     route.inputSchemas.body &&
     !route.inputSchemas.path &&
@@ -1044,42 +1259,50 @@ function hasLegacyBodyInput(route: RouteIR): boolean {
   );
 }
 
-function getDomainName(route: RouteIR): string {
+function getDomainName(route: GeneratedClientRoute): string {
   const rawName = route.domain ?? route.controllerName.replace(/Controller$/, "");
 
   return toCamelCase(rawName);
 }
 
-function getInputTypeName(route: RouteIR): string {
+function getInputTypeName(route: GeneratedClientRoute): string {
   return `${toPascalCase(route.methodName)}Input`;
 }
 
-function getOutputTypeName(route: RouteIR): string {
+function getOutputTypeName(route: GeneratedClientRoute): string {
   return `${toPascalCase(route.methodName)}Output`;
 }
 
-function getProblemTypeName(route: RouteIR): string {
+function getProblemTypeName(route: GeneratedClientRoute): string {
   return `${toPascalCase(route.methodName)}Problem`;
 }
 
-function getProblemDetailsTypeName(route: RouteIR): string {
+function getProblemDetailsTypeName(route: GeneratedClientRoute): string {
   return `${toPascalCase(route.methodName)}ProblemDetails`;
 }
 
-function getResultTypeName(route: RouteIR): string {
+function getResultTypeName(route: GeneratedClientRoute): string {
   return `${toPascalCase(route.methodName)}Result`;
 }
 
-function getProblemDeclarationsName(route: RouteIR): string {
+function getProblemDeclarationsName(route: GeneratedClientRoute): string {
   return `${route.methodName}ProblemDeclarations`;
 }
 
-function getResultMethodName(route: RouteIR): string {
+function getResultMethodName(route: GeneratedClientRoute): string {
   return `${route.methodName}Result`;
 }
 
-function formatRoute(route: RouteIR): string {
+function formatRoute(route: GeneratedClientRoute): string {
   return `${route.controllerName}.${route.methodName} (${route.path})`;
+}
+
+function getRouteId(route: GeneratedClientRoute): string {
+  return route.routeId ?? `${route.controllerName}.${route.methodName}`;
+}
+
+function getOperationId(route: GeneratedClientRoute): string {
+  return route.operationId ?? getRouteId(route).replace(/[^A-Za-z0-9_]+/g, "_");
 }
 
 function assertNoZodImport(content: string): void {

@@ -85,7 +85,7 @@ pnpm demo:smoke
 
 `pnpm demo:smoke` runs the base SaaS demo, operational smoke checks, and the AI SaaS smoke flow. `pnpm ai:smoke` runs only the AI portion.
 
-Intentional API contract changes should update and commit `contract-graph.snapshot.json` with `pnpm contract:snapshot`. CI should run `pnpm contract:verify` or `pnpm ci:contracts`; it does not rewrite the snapshot before diffing, then regenerates `openapi.json` and `libs/shared/provider-rpc/src` from the accepted controller contract. Commit `openapi.json` only when external consumers or deployment artifacts need it; the provider-rpc client is generated from the server contract and is typechecked by the verification gate.
+Intentional API contract changes should update and commit `contract-graph.snapshot.json` with `pnpm contract:snapshot`. CI should run `pnpm contract:verify` or `pnpm ci:contracts`; it does not rewrite the snapshot before diffing, writes `contract-graph.coverage.json`, then regenerates `openapi.json` and `libs/shared/provider-rpc/src` from the accepted controller contract. Commit `contract-graph.coverage.json` only when audit artifacts need it. Commit `openapi.json` only when external consumers or deployment artifacts need it; the provider-rpc client is generated from the server contract and is typechecked by the verification gate.
 
 ## Non-goals
 

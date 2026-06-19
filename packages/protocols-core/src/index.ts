@@ -22,6 +22,23 @@ export {
   getContractPathParams,
 } from "./libs/ContractGraph";
 export type {
+  ContractGraphConsumerCoverage,
+  ContractGraphConsumerCoverageReport,
+  ContractGraphConsumerCoverageVersion,
+  ContractGraphConsumerDefinition,
+  ContractGraphConsumerId,
+  ContractGraphConsumerRouteCoverage,
+  ContractGraphConsumerRouteFieldFingerprints,
+  ContractGraphConsumerRouteField,
+  ContractGraphObservedConsumerRoute,
+} from "./libs/ContractGraphConsumerCoverage";
+export {
+  assertContractGraphConsumerRouteCoverage,
+  createContractGraphConsumerCoverage,
+  DEFAULT_CONTRACT_GRAPH_CONSUMERS,
+  getContractGraphConsumerRouteCoverageDiagnostics,
+} from "./libs/ContractGraphConsumerCoverage";
+export type {
   DefinedRouteSchema,
   InferRouteSchemaRequest,
   InferRouteSchemaResponse,

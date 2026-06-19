@@ -7,6 +7,10 @@ import type {
   ContractGraphVersion,
   ContractMetadataReference,
 } from "./ContractGraph";
+import {
+  createContractGraphConsumerCoverage,
+  type ContractGraphConsumerCoverageReport,
+} from "./ContractGraphConsumerCoverage";
 import type { ParamIR } from "./RouteIR";
 
 export type ContractGraphSnapshotVersion = "croco.contract-graph.snapshot.v1";
@@ -78,6 +82,7 @@ export type ContractGraphSnapshot = {
   readonly controllerCount: number;
   readonly routeCount: number;
   readonly operationIds: readonly string[];
+  readonly consumerCoverage?: ContractGraphConsumerCoverageReport;
   readonly controllers: readonly ContractGraphSnapshotController[];
   readonly routes: readonly ContractGraphSnapshotRoute[];
   readonly diagnostics: readonly ContractDiagnostic[];
@@ -101,6 +106,7 @@ export function createContractGraphSnapshot(graph: ContractGraph): ContractGraph
     controllerCount: controllers.length,
     routeCount: routes.length,
     operationIds: routes.map((route) => route.operationId).sort(compareStrings),
+    consumerCoverage: createContractGraphConsumerCoverage(graph),
     controllers,
     routes,
     diagnostics: [...graph.diagnostics].sort(compareDiagnostics),

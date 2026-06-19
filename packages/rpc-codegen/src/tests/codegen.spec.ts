@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
 import {
+  type ContractGraph,
   defineRouteSchema,
   type InferRouteSchemaRequest,
   type InferRouteSchemaResponse,
@@ -10,7 +11,7 @@ import {
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { generateClientFiles } from "../libs/generate";
+import { generateClientFiles, generateClientFilesFromContractGraph } from "../libs/generate";
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
@@ -108,6 +109,10 @@ describe("generateClientFiles", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
     expect(content).toContain("export const userClient = {");
+    expect(content).toContain("export const userContractRoutes = [");
+    expect(content).toContain(
+      "{ routeId: 'UserController.list', operationId: 'UserController_list', methodName: 'list', method: 'GET', path: '/users' }",
+    );
     expect(content).toContain(
       "import { readOptionalJsonResponse, readOptionalJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
     );
@@ -120,6 +125,62 @@ describe("generateClientFiles", () => {
     );
     expect(content).toContain(
       "listResult: (): Promise<ListResult> => fetch('/users', { method: 'GET' }).then((response) => readOptionalJsonResult<ListProblem>(response, listProblemDeclarations)),",
+    );
+  });
+
+  it("should preserve contract graph route id, operation id, schemas, and Problem metadata", () => {
+    const graph: ContractGraph = {
+      version: "croco.contract-graph.v1",
+      controllers: [
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.getUser"],
+        },
+      ],
+      routes: [
+        {
+          routeId: "UsersController.getUser",
+          operationId: "UsersController_getUser",
+          controllerName: "UsersController",
+          methodName: "getUser",
+          httpMethod: "GET",
+          path: "/users/:id",
+          controllerPath: "/users",
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+          domain: null,
+          access: { guards: [], roles: [] },
+          problemResponses: [
+            {
+              code: "USER_NOT_FOUND",
+              category: ProblemCategory.NotFound,
+              status: 404,
+              description: "User id is missing, or the user was deleted.",
+            },
+          ],
+        },
+      ],
+      diagnostics: [],
+    };
+
+    const files = generateClientFilesFromContractGraph(graph, TEMP_DIR);
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(content).toContain(
+      "{ routeId: 'UsersController.getUser', operationId: 'UsersController_getUser', methodName: 'getUser', method: 'GET', path: '/users/:id' }",
+    );
+    expect(content).toContain("export type GetUserInput = { path: { id: string; }; };");
+    expect(content).toContain("export type GetUserOutput = { id: string; };");
+    expect(content).toContain(
+      "export type GetUserProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404>;",
+    );
+    expect(content).toContain(
+      "{ code: 'USER_NOT_FOUND', category: 'NotFound', status: 404, description: 'User id is missing, or the user was deleted.' }",
     );
   });
 

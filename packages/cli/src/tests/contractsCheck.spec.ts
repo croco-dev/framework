@@ -53,6 +53,20 @@ describe("contractsCheck", () => {
       snapshotVersion: "croco.contract-graph.snapshot.v1",
       routeCount: 1,
       operationIds: ["UsersController_listUsers"],
+      consumerCoverage: {
+        version: "croco.contract-consumer-coverage.v1",
+        routeCount: 1,
+        consumers: [
+          expect.objectContaining({
+            consumerId: "openapi",
+            routeCount: 1,
+          }),
+          expect.objectContaining({
+            consumerId: "rpc-client",
+            routeCount: 1,
+          }),
+        ],
+      },
     });
   });
 
