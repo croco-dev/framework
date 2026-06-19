@@ -154,6 +154,7 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 | `CROCO_DI_001`    | dependency-injection | error    | 등록되지 않은 provider를 resolve함          | provider 등록, module export, optional lookup    |
 | `CROCO_ROUTE_004` | routing              | error    | path parameter와 controller metadata 불일치 | `@Param` 추가 또는 path token rename             |
 | `CROCO_BUILD_002` | build-time           | error    | generated artifact가 source와 drift됨       | package-specific write command 실행 후 diff 검토 |
+| `CROCO_BUILD_003` | build-time           | error    | controller source에 TypeScript 오류가 있음  | controller type error 수정 후 contract 재실행    |
 
 ### `CROCO_DI_001`
 
@@ -169,6 +170,11 @@ Fix: path token과 같은 이름의 `@Param` binding을 추가하거나, generat
 
 Cause: build-time generated artifact가 현재 source에서 다시 생성한 결과와 다릅니다.
 Fix: package-specific write command를 실행하고 generated diff를 검토한 뒤 source change와 함께 commit합니다. public API drift는 `pnpm public-api:write`로 갱신합니다.
+
+### `CROCO_BUILD_003`
+
+Cause: RPC/OpenAPI contract loader가 import하려는 controller source에 TypeScript diagnostic이 있습니다. 이 상태에서 emitted JavaScript를 import하면 type-safe source contract가 아닌 깨진 source에서 contract artifact가 생성될 수 있습니다.
+Fix: 출력된 source file, line/column, `TS####` diagnostic을 기준으로 controller type error를 수정한 뒤 `contract:check`, `contract:openapi`, `contract:client`를 다시 실행합니다.
 
 ### 변경 정책
 

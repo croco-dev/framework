@@ -133,6 +133,31 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
       },
     ],
   },
+  {
+    code: "CROCO_BUILD_003",
+    category: "build-time",
+    severity: "error",
+    title: "Controller source has TypeScript errors",
+    cause:
+      "A controller source matched by a contract loader has TypeScript diagnostics, so generated RPC or OpenAPI artifacts would not reflect a type-safe source contract.",
+    action:
+      "Fix the reported TypeScript diagnostic in the controller source before running contract check, OpenAPI generation, or RPC client generation again.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_build_003",
+    searchKeywords: [
+      "CROCO_BUILD_003",
+      "controller TypeScript diagnostic",
+      "contract loader",
+      "RPC codegen",
+      "OpenAPI generation",
+    ],
+    fixExamples: [
+      {
+        label: "Fix the controller type error before generating contracts",
+        before: "readonly id: string = 123;",
+        after: 'readonly id: string = "123";',
+      },
+    ],
+  },
 ] as const satisfies readonly DiagnosticCodeDefinition[];
 
 const diagnosticCodeDefinitionByCode = new Map<string, DiagnosticCodeDefinition>(
