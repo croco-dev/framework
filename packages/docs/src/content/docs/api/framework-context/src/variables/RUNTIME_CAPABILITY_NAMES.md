@@ -5,4 +5,4 @@ prev: false
 title: "RUNTIME_CAPABILITY_NAMES"
 ---
 
-> `const` **RUNTIME\_CAPABILITY\_NAMES**: readonly \[`"env"`, `"logger"`, `"trace"`, `"waitUntil"`, `"flush"`, `"shutdown"`\]
+> `const` **RUNTIME\_CAPABILITY\_NAMES**: readonly \[`"env"`, `"filesystem"`, `"logger"`, `"nodeApi"`, `"requestLifecycle"`, `"trace"`, `"waitUntil"`, `"flush"`, `"shutdown"`\]

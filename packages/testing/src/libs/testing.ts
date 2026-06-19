@@ -145,8 +145,11 @@ export type EventTestingHarnessOptions<TEvent extends DomainEvent = DomainEvent>
 const DEFAULT_BASE_URL = "http://localhost";
 const DEFAULT_TEST_RUNTIME_CAPABILITIES: RuntimeCapabilities = {
   env: false,
+  filesystem: true,
   flush: true,
   logger: true,
+  nodeApi: true,
+  requestLifecycle: true,
   shutdown: false,
   trace: false,
   waitUntil: true,

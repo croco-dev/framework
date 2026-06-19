@@ -118,6 +118,9 @@ export class CrocoLambdaAdapter {
         },
         capabilities: {
           env: true,
+          filesystem: true,
+          nodeApi: true,
+          requestLifecycle: true,
           waitUntil: true,
           flush: true,
           shutdown: false,

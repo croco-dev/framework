@@ -15,6 +15,12 @@ title: "RuntimeCapabilities"
 
 ***
 
+### filesystem
+
+> **filesystem**: `boolean`
+
+***
+
 ### flush
 
 > **flush**: `boolean`
@@ -24,6 +30,18 @@ title: "RuntimeCapabilities"
 ### logger
 
 > **logger**: `boolean`
+
+***
+
+### nodeApi
+
+> **nodeApi**: `boolean`
+
+***
+
+### requestLifecycle
+
+> **requestLifecycle**: `boolean`
 
 ***
 

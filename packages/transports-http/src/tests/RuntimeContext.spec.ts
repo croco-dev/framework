@@ -60,6 +60,9 @@ describe("RuntimeContext", () => {
 
     expect(runtime.capabilities).toMatchObject({
       env: true,
+      filesystem: true,
+      nodeApi: true,
+      requestLifecycle: true,
       waitUntil: true,
       flush: true,
       shutdown: false,
@@ -110,7 +113,10 @@ describe("RuntimeContext", () => {
       platform: "edge-runtime",
       capabilitySupport: {
         env: true,
+        filesystem: false,
         logger: false,
+        nodeApi: false,
+        requestLifecycle: true,
         trace: false,
         waitUntil: false,
         flush: true,
@@ -129,6 +135,8 @@ describe("RuntimeContext", () => {
     await runtime.shutdown();
 
     expect(runtime.platform).toBe("edge-runtime");
+    expect(runtime.capabilities.filesystem).toBe(false);
+    expect(runtime.capabilities.requestLifecycle).toBe(true);
     expect(runtime.capabilities.flush).toBe(true);
     expect(shutdown).toHaveBeenCalledOnce();
   });

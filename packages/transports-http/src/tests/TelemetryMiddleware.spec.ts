@@ -279,7 +279,10 @@ describe("TelemetryMiddleware", () => {
           requestId: "request-1",
           capabilities: {
             env: true,
+            filesystem: true,
             logger: false,
+            nodeApi: true,
+            requestLifecycle: true,
             trace: false,
             waitUntil: false,
             flush: false,

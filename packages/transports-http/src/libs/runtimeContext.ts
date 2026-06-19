@@ -98,16 +98,32 @@ type RuntimeContextEnvCarrier = {
 
 const DEFAULT_CAPABILITIES: RuntimeCapabilities = {
   env: false,
+  filesystem: false,
   logger: false,
+  nodeApi: false,
+  requestLifecycle: false,
   trace: false,
   waitUntil: false,
   flush: false,
   shutdown: false,
 };
 
+const IMPLEMENTATION_BACKED_RUNTIME_CAPABILITIES: readonly RuntimeCapabilityName[] = [
+  "env",
+  "logger",
+  "trace",
+  "waitUntil",
+  "flush",
+  "shutdown",
+] as const;
+
 export function createRuntimeContext(init: RuntimeContextInit): RuntimeContext {
+  const support = getRuntimeCapabilitySupportForInit(init);
   const capabilities: RuntimeCapabilities = {
     ...DEFAULT_CAPABILITIES,
+    filesystem: support.filesystem,
+    nodeApi: support.nodeApi,
+    requestLifecycle: support.requestLifecycle,
     ...init.capabilities,
     env: init.capabilities?.env ?? init.env !== undefined,
     logger: init.capabilities?.logger ?? init.logger !== undefined,
@@ -117,7 +133,7 @@ export function createRuntimeContext(init: RuntimeContextInit): RuntimeContext {
     shutdown: init.capabilities?.shutdown ?? init.shutdown !== undefined,
   };
 
-  assertRuntimeCapabilities(init, capabilities);
+  assertRuntimeCapabilities(init, capabilities, support);
 
   return {
     platform: init.platform,
@@ -146,19 +162,22 @@ export function withRuntimeContextEnv(
 function assertRuntimeCapabilities(
   init: RuntimeContextInit,
   capabilities: RuntimeCapabilities,
+  support: RuntimeCapabilities,
 ): void {
-  const support = getRuntimeCapabilitySupportForInit(init);
-
   for (const capability of RUNTIME_CAPABILITY_NAMES) {
     const implemented = hasRuntimeCapabilityImplementation(init, capability);
+    const isImplementationBacked = IMPLEMENTATION_BACKED_RUNTIME_CAPABILITIES.includes(capability);
 
-    if (!support[capability] && (capabilities[capability] || implemented)) {
+    if (
+      !support[capability] &&
+      (capabilities[capability] || (isImplementationBacked && implemented))
+    ) {
       throw new RuntimeCapabilityProblem(
         `Runtime platform '${init.platform}' does not support capability '${capability}'.`,
       );
     }
 
-    if (capabilities[capability] && !implemented) {
+    if (isImplementationBacked && capabilities[capability] && !implemented) {
       throw new RuntimeCapabilityProblem(
         `Runtime platform '${init.platform}' declares capability '${capability}' without an implementation.`,
       );
@@ -187,8 +206,14 @@ function hasRuntimeCapabilityImplementation(
   switch (capability) {
     case "env":
       return init.env !== undefined;
+    case "filesystem":
+      return true;
     case "logger":
       return init.logger !== undefined;
+    case "nodeApi":
+      return true;
+    case "requestLifecycle":
+      return true;
     case "trace":
       return init.trace !== undefined;
     case "waitUntil":

@@ -36,6 +36,9 @@ function createWorkersRuntimeContext(
     waitUntil: (promise) => ctx.waitUntil(promise),
     capabilities: {
       env: true,
+      filesystem: false,
+      nodeApi: false,
+      requestLifecycle: true,
       waitUntil: true,
       flush: false,
       shutdown: false,
