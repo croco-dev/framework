@@ -8,7 +8,7 @@ description: Official Croco adapter boundaries, priorities, and compatibility cr
 Croco adapters are the boundary between Croco contracts and external runtimes, SDKs, stores,
 protocols, or UI tooling. The extension matrix lists current package support. This page defines
 what counts as an adapter, which official candidates are prioritized, and what evidence is required
-before an adapter can be treated as supported.
+before an adapter can be treated as compatible or certified.
 
 ## Adapter Categories
 
@@ -75,6 +75,73 @@ Runtime support in the extension matrix uses this vocabulary:
 or intentionally unclaimed. A package must not silently degrade when a runtime capability is missing;
 it should fail with a deterministic Problem, diagnostic, build-time check, or documented unsupported
 state.
+
+## Compatibility Certification
+
+Compatibility certification is an evidence record for one package version, one Croco contract, and
+one or more runtime claims. It is not a marketing label for a whole package family. A certified
+adapter must show which contract it implements, which runtimes it supports, how failures surface,
+and which commands prove the claim.
+
+Certification has three states:
+
+| State       | Meaning                                                                                                               | Allowed public claim                                                                  |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Uncertified | The adapter exists, but one or more checklist areas have no current evidence.                                         | May be listed as alpha or experimental, but must not claim official compatibility.    |
+| Candidate   | The adapter has package metadata, docs, and package tests, but conformance, diagnostics, or runtime smoke is missing. | May claim compatibility work in progress for named runtimes and known gaps.           |
+| Certified   | Every checklist item has current evidence for the named contract and runtime set.                                     | May claim Croco compatibility for the named contract, runtime set, and version range. |
+
+The certification source of truth for first-party packages is `docs/package-catalog.json` plus the
+evidence linked from package README, tests, docs, and release notes. The extension matrix renders the
+runtime and maturity metadata, but maturity alone is not certification.
+
+### Certification Checklist
+
+| Gate                     | Required artifact                                                                                                                                                                    | Verification command or evidence                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Contract boundary        | README names the Croco contract, adapter category, owned boundary, and unsupported boundaries. Core packages do not import provider/runtime SDKs.                                    | `pnpm dependency-boundaries:check`, package manifest normalization, and package README review.                          |
+| Runtime claim            | `docs/package-catalog.json` lists only runtimes with explicit support and docs describe unsupported runtimes.                                                                        | `pnpm docs:catalog:check` plus tests for unsupported runtime or option failures where the adapter can detect them.      |
+| Conformance behavior     | Shared conformance suite is used when one exists; otherwise package tests cover the public adapter contract directly.                                                                | Package test command for the adapter and conformance harness output, for example `pnpm --filter <pkg> test`.            |
+| Failure model            | Missing config, invalid input, not-found, retryable upstream failure, terminal upstream failure, timeout, and unsupported feature paths map to stable Croco Problems or diagnostics. | Focused regression tests that assert Problem code/category or diagnostic code, not generic `Error` text.                |
+| Telemetry boundary       | Adapter emits spans/events through `@croco/telemetry-api` without initializing SDK globals inside provider packages; Lambda-like paths document flush.                               | Package tests or smoke output covering span/event hooks and docs review for the flush boundary.                         |
+| Diagnostics and secrets  | Readiness/config diagnostics expose required env, peers, stores, bindings, or clients without leaking secret values.                                                                 | Diagnostics tests, redaction tests, or documented no-secret readiness output.                                           |
+| Runtime smoke            | No-credential smoke proves the default runtime path. Live-provider smoke is optional, env-gated, and skips clearly when credentials are absent.                                      | CI smoke command, generated-app smoke, or documented local smoke command with skip behavior.                            |
+| Release and docs hygiene | README, generated API docs, extension matrix metadata, public API snapshot when applicable, and changeset are updated with behavior changes.                                         | `pnpm docs:catalog:check`, `pnpm public-api:check`, `pnpm changeset-required:check -- --base origin/trunk --head HEAD`. |
+
+### Official Adapter Minimum
+
+First-party adapters may enter the extension matrix before certification, but the minimum bar for a
+new official adapter package is:
+
+- package README with install, runtime support, configuration, unsupported features, and a minimal
+  usage example;
+- package tests for success, invalid input, missing config, upstream/provider failure, and
+  unsupported runtime or option cases that can be detected locally;
+- extension matrix metadata for adapter category, domain, features, required env/config, peer
+  dependencies, runtime claims, maturity, and package test presence;
+- deterministic Problem or diagnostic codes for missing configuration and provider/runtime failures;
+- no-credential smoke or generated-app smoke for any runtime that executes Croco routes, handlers,
+  clients, or framework bootstrap;
+- release hygiene through generated API docs, public API snapshot updates when exports change, and
+  changesets for publishable behavior.
+
+This minimum is intentionally lower than production-ready maturity. Production-ready still requires
+the provider, presentation, transport, or integration-specific maturity gates linked from the
+extension matrix.
+
+### Badge and Metadata Policy
+
+Compatibility badges are allowed only when they point to the certification evidence. A badge or
+README statement should include the Croco contract, adapter package version or version range, runtime
+set, and a link to the passing conformance or smoke evidence. Suggested wording:
+
+```text
+Croco compatible: <contract> on <runtime list>, verified against <version range>
+```
+
+Community packages should keep the same evidence shape in their own README. They may reference the
+Croco checklist, but they should not use `@croco/*` naming or "official" wording unless the package
+is owned and released by the Croco organization.
 
 ## Minimum Compatibility Criteria
 
