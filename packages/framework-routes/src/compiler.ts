@@ -6,6 +6,7 @@ import {
   type ContractGraph,
   type Constructor,
 } from "@croco/protocols-core";
+import { createFrameworkManifestFromIntentMap } from "./framework-manifest";
 import type { CompiledRouteInfo } from "./metadata-reader";
 import { createProjectIntentMap } from "./intent-map";
 import {
@@ -200,6 +201,7 @@ export async function compileRoutes(options: CompileRoutesOptions): Promise<void
     contractGraph,
     routeRegistrationTable,
   });
+  const frameworkManifest = createFrameworkManifestFromIntentMap(intentMap);
 
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
@@ -209,6 +211,11 @@ export async function compileRoutes(options: CompileRoutesOptions): Promise<void
   await fs.writeFile(
     path.join(outDir, "route-registration-table.json"),
     `${JSON.stringify(routeRegistrationTable, null, 2)}\n`,
+    "utf-8",
+  );
+  await fs.writeFile(
+    path.join(outDir, "framework-manifest.json"),
+    `${JSON.stringify(frameworkManifest, null, 2)}\n`,
     "utf-8",
   );
   await fs.writeFile(

@@ -171,6 +171,9 @@ describe("compiler", () => {
       const intentMap = JSON.parse(
         await readFile(join(outputDir, ".croco", "build", "intent-map.json"), "utf-8"),
       );
+      const frameworkManifest = JSON.parse(
+        await readFile(join(outputDir, ".croco", "build", "framework-manifest.json"), "utf-8"),
+      );
 
       expect(code).toContain("export function registerRoutes(app)");
       expect(code).toContain("routeRegistrationTable");
@@ -204,6 +207,28 @@ describe("compiler", () => {
         eventHandlers: [
           expect.objectContaining({ id: "UserCreatedHandler", eventName: "user.created" }),
         ],
+      });
+      expect(frameworkManifest).toMatchObject({
+        version: "croco.framework-manifest.v1",
+        summary: {
+          controllers: 1,
+          routes: 2,
+          providers: 3,
+          eventHandlers: 1,
+          domainEvents: 1,
+        },
+        generatedArtifacts: expect.arrayContaining([
+          expect.objectContaining({
+            kind: "framework-manifest",
+            path: ".croco/build/framework-manifest.json",
+            commitPolicy: expect.any(String),
+          }),
+        ]),
+        entities: expect.arrayContaining([
+          expect.objectContaining({ kind: "http.controller", id: "SampleController" }),
+          expect.objectContaining({ kind: "di.provider", id: "UserService" }),
+          expect.objectContaining({ kind: "event.handler", id: "UserCreatedHandler" }),
+        ]),
       });
     } finally {
       await rm(outputDir, { recursive: true, force: true });
