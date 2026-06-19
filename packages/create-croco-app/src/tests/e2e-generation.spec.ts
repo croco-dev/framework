@@ -54,6 +54,15 @@ function assertNoHandlebarsPlaceholders(projectDir: string): void {
   expect(filesWithPlaceholders).toEqual([]);
 }
 
+function assertNoTailwindReferences(projectDir: string): void {
+  const filesWithTailwindReferences = collectFiles(projectDir)
+    .filter(isTextFile)
+    .filter((filePath) => readFileSync(filePath, "utf8").toLowerCase().includes("tailwind"))
+    .map((filePath) => relative(projectDir, filePath));
+
+  expect(filesWithTailwindReferences).toEqual([]);
+}
+
 function collectPackageNames(projectDir: string): Set<string> {
   return new Set(
     collectFiles(projectDir)
@@ -188,6 +197,30 @@ function assertAllSourceBareImportsDeclared(projectDir: string): void {
   }
 }
 
+function assertStylexNextWebApp(webDir: string): void {
+  const packageJson = readPackageJson(join(webDir, "package.json"));
+  const globalsCss = readFileSync(join(webDir, "src", "app", "globals.css"), "utf8");
+  const pageSource = readFileSync(join(webDir, "src", "app", "page.tsx"), "utf8");
+
+  expect(packageJson.dependencies?.["@stylexjs/stylex"]).toBe("^0.19.0");
+  expect(packageJson.devDependencies?.["@stylexjs/babel-plugin"]).toBe("^0.19.0");
+  expect(packageJson.devDependencies?.["@stylexjs/postcss-plugin"]).toBe("^0.19.0");
+  expect(packageJson.dependencies?.["tailwindcss"]).toBeUndefined();
+  expect(packageJson.devDependencies?.["tailwindcss"]).toBeUndefined();
+  expect(packageJson.dependencies?.["@tailwindcss/postcss"]).toBeUndefined();
+  expect(packageJson.devDependencies?.["@tailwindcss/postcss"]).toBeUndefined();
+  expect(existsSync(join(webDir, "babel.config.js"))).toBe(true);
+  expect(existsSync(join(webDir, "postcss.config.js"))).toBe(true);
+  expect(existsSync(join(webDir, "tailwind.config.ts"))).toBe(false);
+  expect(existsSync(join(webDir, "tailwind.config.js"))).toBe(false);
+  expect(existsSync(join(webDir, "tailwind.config.cjs"))).toBe(false);
+  expect(existsSync(join(webDir, "tailwind.config.mjs"))).toBe(false);
+  expect(globalsCss).toContain("@stylex");
+  expect(globalsCss).not.toContain("tailwind");
+  expect(pageSource).toContain("@stylexjs/stylex");
+  expect(pageSource).toContain("stylex.props");
+}
+
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
   const manifests = collectFiles(projectDir)
     .filter((filePath) => basename(filePath) === "package.json")
@@ -282,6 +315,7 @@ describe("E2E: generate()", () => {
 
       // Web app (web-graphql addon)
       expect(existsSync(join(testDir, "apps", "web"))).toBe(true);
+      assertStylexNextWebApp(join(testDir, "apps", "web"));
 
       // Docker files
       expect(existsSync(join(testDir, "docker-compose.yml"))).toBe(true);
@@ -310,6 +344,7 @@ describe("E2E: generate()", () => {
       expect(existsSync(join(testDir, "apps", "api", "Dockerfile"))).toBe(false);
       assertDockerFiltersMatchPackages(testDir);
       assertNoHandlebarsPlaceholders(testDir);
+      assertNoTailwindReferences(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },
   );

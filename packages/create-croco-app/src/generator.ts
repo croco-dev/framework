@@ -95,7 +95,14 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
 
   // Step 5: web addon (standalone hosting + web apps)
-  if (!isVikeFullstackPreset && options.apiHosting === "standalone" && hasWebApps) {
+  const frontendDeployOwnsWebApp =
+    options.frontendDeploy === "cloudflare-meta-vite" || options.frontendDeploy === "vite-spa";
+  if (
+    !isVikeFullstackPreset &&
+    options.apiHosting === "standalone" &&
+    hasWebApps &&
+    !frontendDeployOwnsWebApp
+  ) {
     for (const webAppName of options.webApps) {
       if (options.api === "graphql") {
         installWebGraphql(resolvedTarget, webAppName, vars);
