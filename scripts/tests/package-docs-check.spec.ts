@@ -57,11 +57,15 @@ describe("package-docs-check.mts", () => {
       expect(readme).toContain("현재 카탈로그는 **2개 public package**");
       expect(readme).toContain("Extension & Adapter Matrix");
       expect(readme).toContain("Adapter Ecosystem");
+      expect(readme).toContain("compatibility certification checklist");
+      expect(readme).toContain("certified compatibility");
       expect(readme).toContain("`@croco/alpha`");
       expect(report).toContain("Missing generated API docs");
       expect(report).toContain("Extension Matrix");
       expect(matrix).toContain("title: Extension Matrix");
       expect(matrix).toContain("Adapter Ecosystem");
+      expect(matrix).toContain("certification checklist");
+      expect(matrix).toContain("compatibility certification claim");
       expect(matrix).toContain("`@croco/alpha`");
     },
     scriptTestTimeout,
