@@ -66,6 +66,11 @@ const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
 const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
 const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
 
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
+
 enum ParamType {
   PARAM = 'param',
 }
@@ -115,11 +120,15 @@ export class AssetsController {
 
 function getMultipleBodyController(): string {
   return `import 'reflect-metadata';
-import { z } from 'zod';
 
 const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
 const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
 const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
 
 enum ParamType {
   BODY = 'body',
@@ -164,8 +173,8 @@ function Body(schema: unknown): ParameterDecorator {
 export class UsersController {
   @Post('/')
   createUser(
-    @Body(z.object({ name: z.string() })) _body: { name: string },
-    @Body(z.object({ auditId: z.string() })) _audit: { auditId: string },
+    @Body(null) _body: { name: string },
+    @Body(null) _audit: { auditId: string },
   ): void {}
 }
 `;

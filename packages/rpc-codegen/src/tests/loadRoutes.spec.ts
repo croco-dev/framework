@@ -88,6 +88,46 @@ describe("loadRoutes", () => {
   );
 
   it(
+    "preserves local imports outside the controller glob during contract loading",
+    async () => {
+      const controllersDir = path.join(sourceDir, "controllers");
+
+      fs.mkdirSync(controllersDir, { recursive: true });
+      fs.writeFileSync(path.join(sourceDir, "ImportedUserDto.ts"), getLocalSupportSource());
+      fs.writeFileSync(
+        path.join(controllersDir, "LocalImportController.ts"),
+        getControllerImportingLocalSupportSource(),
+      );
+
+      const routes = await loadRoutes(path.join(controllersDir, "*.ts"));
+
+      expect(routes).toHaveLength(1);
+      expect(routes[0]).toMatchObject({
+        controllerName: "LocalImportController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/local-imports",
+      });
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
+    "fails before importing emitted controllers when controller TypeScript has errors",
+    async () => {
+      const controllerPath = path.join(sourceDir, "BrokenController.ts");
+      fs.writeFileSync(controllerPath, getBrokenControllerSource());
+
+      await expectControllerTypeScriptDiagnostics(
+        loadRoutes(path.join(sourceDir, "*.ts")),
+        controllerPath,
+        "rpc-codegen/controller-typescript-diagnostics",
+      );
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
     "fails clearly when matched files export no controllers",
     async () => {
       fs.writeFileSync(path.join(sourceDir, "Helper.ts"), "export class Helper {}\n");
@@ -116,6 +156,43 @@ async function expectNoRestControllersFound(result: Promise<unknown>): Promise<v
   });
 }
 
+async function expectControllerTypeScriptDiagnostics(
+  result: Promise<unknown>,
+  controllerPath: string,
+  code: string,
+): Promise<void> {
+  try {
+    await result;
+  } catch (error) {
+    expect(error).toMatchObject({
+      code,
+      status: 422,
+      title: "Validation Error",
+      extensions: {
+        crocoCode: "CROCO_BUILD_003",
+        diagnostics: [
+          expect.objectContaining({
+            crocoCode: "CROCO_BUILD_003",
+            tsCode: "TS2322",
+            file: controllerPath,
+            line: expect.any(Number),
+            column: expect.any(Number),
+          }),
+        ],
+      },
+    });
+    expect(error).toMatchObject({
+      detail: expect.stringContaining("CROCO_BUILD_003 TS2322"),
+    });
+    expect(error).toMatchObject({
+      detail: expect.stringMatching(/BrokenController\.ts:\d+:\d+/),
+    });
+    return;
+  }
+
+  throw new Error("Expected controller TypeScript diagnostics to reject contract loading.");
+}
+
 function writeProtocolsRestFixture(projectDir: string): void {
   const packageDir = path.join(projectDir, "node_modules", "@croco", "protocols-rest");
 
@@ -125,6 +202,7 @@ function writeProtocolsRestFixture(projectDir: string): void {
     JSON.stringify({ name: "@croco/protocols-rest", main: "index.js" }),
   );
   fs.writeFileSync(path.join(packageDir, "index.js"), getProtocolsRestFixtureSource());
+  fs.writeFileSync(path.join(packageDir, "index.d.ts"), getProtocolsRestFixtureTypes());
 }
 
 function getImportedControllerSource(): string {
@@ -135,6 +213,56 @@ export class ImportedController {
   @Get('/')
   list() {
     return [];
+  }
+}
+`;
+}
+
+function getLocalSupportSource(): string {
+  return `export class ImportedUserDto {
+  readonly id = 'user-1';
+}
+`;
+}
+
+function getControllerImportingLocalSupportSource(): string {
+  return `import 'reflect-metadata';
+import { ImportedUserDto } from '../ImportedUserDto';
+
+const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
+
+type RouteMetadata = {
+  readonly method: string;
+  readonly path: string;
+  readonly methodName: string | symbol;
+};
+
+function Controller(controllerPath: string): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: controllerPath, target }, target);
+  };
+}
+
+function Get(routePath: string): MethodDecorator {
+  return (target, propertyKey) => {
+    const ctor = target.constructor;
+    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
+  };
+}
+
+@Controller('/local-imports')
+export class LocalImportController {
+  @Get('/')
+  list() {
+    return [new ImportedUserDto()];
   }
 }
 `;
@@ -163,9 +291,22 @@ exports.Get = function Get(routePath = '') {
 `;
 }
 
+function getProtocolsRestFixtureTypes(): string {
+  return `export declare function Controller(controllerPath?: string): ClassDecorator;
+export declare function Get(routePath?: string): MethodDecorator;
+`;
+}
+
 function getMixedControllerSource(): string {
-  return `const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+  return `import 'reflect-metadata';
+
+const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
 const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
 
 type RouteMetadata = {
   readonly method: string;
@@ -200,6 +341,52 @@ export class ExportedHelper {
 export class UsersController {
   @Get('/')
   listUsers() {
+    return [new UserDto()];
+  }
+}
+`;
+}
+
+function getBrokenControllerSource(): string {
+  return `import 'reflect-metadata';
+
+const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
+
+type RouteMetadata = {
+  readonly method: string;
+  readonly path: string;
+  readonly methodName: string | symbol;
+};
+
+function Controller(controllerPath: string): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: controllerPath, target }, target);
+  };
+}
+
+function Get(routePath: string): MethodDecorator {
+  return (target, propertyKey) => {
+    const ctor = target.constructor;
+    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
+  };
+}
+
+class UserDto {
+  readonly id: string = 123;
+}
+
+@Controller('/broken')
+export class BrokenController {
+  @Get('/')
+  listUsers(): UserDto[] {
     return [new UserDto()];
   }
 }
