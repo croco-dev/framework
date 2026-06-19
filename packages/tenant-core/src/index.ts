@@ -20,6 +20,19 @@ export { ActiveTenantGuard } from "./libs/guards/TenantGuard";
 export { DuplicateTenantManagerRegistrationProblem } from "./libs/problems/DuplicateTenantManagerRegistrationProblem";
 
 /**
+ * Tenant isolation enforcement failures and stable diagnostic codes.
+ */
+export {
+  TENANT_ISOLATION_DIAGNOSTIC_CODES,
+  TenantAdminBypassReasonRequiredProblem,
+  TenantCrossTenantLeakProblem,
+  TenantDefaultFallbackProblem,
+  TenantIsolationContextMissingProblem,
+  TenantUnsafeQueryProblem,
+} from "./libs/problems/TenantIsolationProblems";
+export type { TenantIsolationDiagnosticCode } from "./libs/problems/TenantIsolationProblems";
+
+/**
  * 등록되지 않은 TenantManager 조회 시 사용하는 Problem 타입입니다.
  */
 export { TenantManagerNotRegisteredProblem } from "./libs/problems/TenantManagerNotRegisteredProblem";
@@ -58,6 +71,37 @@ export type {
   TenantIsolationStrategy,
   TenantIsolationType,
 } from "./libs/TenantIsolationStrategy";
+
+/**
+ * Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixture helpers.
+ */
+export {
+  createCrossTenantLeakFixture,
+  createTenantIsolationEnforcer,
+  createTenantRepositoryBoundary,
+  markTenantScopedOperation,
+  TenantIsolationEnforcer,
+} from "./libs/TenantIsolationEnforcer";
+export type {
+  CrossTenantLeakFixture,
+  CrossTenantLeakFixtureOptions,
+  CrossTenantLeakFixtureRecord,
+  TenantBypassReason,
+  TenantContextProvider,
+  TenantContextRequirement,
+  TenantIsolationAuditEvent,
+  TenantIsolationAuditSink,
+  TenantIsolationEnforcerOptions,
+  TenantIsolationEvidence,
+  TenantOperationIsolation,
+  TenantOperationKind,
+  TenantQueryBoundary,
+  TenantQueryPredicate,
+  TenantRepositoryBoundary,
+  TenantRlsEvidence,
+  TenantScopedOperation,
+  TenantScopedOperationMarker,
+} from "./libs/TenantIsolationEnforcer";
 
 /**
  * AsyncLocalStorage 기반 tenant 컨텍스트 관리자입니다.

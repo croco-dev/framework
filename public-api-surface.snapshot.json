@@ -11617,6 +11617,24 @@
           "declarationKind": "class"
         },
         {
+          "name": "createCrossTenantLeakFixture",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTenantIsolationEnforcer",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTenantRepositoryBoundary",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer",
+          "declarationKind": "function"
+        },
+        {
           "name": "DuplicateTenantManagerRegistrationProblem",
           "exportKind": "named",
           "source": "./libs/problems/DuplicateTenantManagerRegistrationProblem",
@@ -11635,9 +11653,51 @@
           "declarationKind": "class"
         },
         {
+          "name": "markTenantScopedOperation",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer",
+          "declarationKind": "function"
+        },
+        {
           "name": "SubdomainTenantResolver",
           "exportKind": "named",
           "source": "./libs/resolvers/SubdomainTenantResolver",
+          "declarationKind": "class"
+        },
+        {
+          "name": "TENANT_ISOLATION_DIAGNOSTIC_CODES",
+          "exportKind": "named",
+          "source": "./libs/problems/TenantIsolationProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TenantAdminBypassReasonRequiredProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TenantIsolationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "TenantCrossTenantLeakProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TenantIsolationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "TenantDefaultFallbackProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TenantIsolationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "TenantIsolationContextMissingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TenantIsolationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "TenantIsolationEnforcer",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer",
           "declarationKind": "class"
         },
         {
@@ -11669,18 +11729,54 @@
           "exportKind": "named",
           "source": "./libs/problems/TenantRequiredProblem",
           "declarationKind": "class"
+        },
+        {
+          "name": "TenantUnsafeQueryProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TenantIsolationProblems",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
+        {
+          "name": "CrossTenantLeakFixture",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "CrossTenantLeakFixtureOptions",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "CrossTenantLeakFixtureRecord",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
         {
           "name": "Tenant",
           "exportKind": "named",
           "source": "./libs/TenantStore"
         },
         {
+          "name": "TenantBypassReason",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
           "name": "TenantContext",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "TenantContextProvider",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantContextRequirement",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
         },
         {
           "name": "TenantFilter",
@@ -11698,9 +11794,34 @@
           "source": "./libs/types"
         },
         {
+          "name": "TenantIsolationAuditEvent",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantIsolationAuditSink",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
           "name": "TenantIsolationConfig",
           "exportKind": "named",
           "source": "./libs/TenantIsolationStrategy"
+        },
+        {
+          "name": "TenantIsolationDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/problems/TenantIsolationProblems"
+        },
+        {
+          "name": "TenantIsolationEnforcerOptions",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantIsolationEvidence",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
         },
         {
           "name": "TenantIsolationFilter",
@@ -11733,6 +11854,31 @@
           "source": "./libs/TenantMiddleware"
         },
         {
+          "name": "TenantOperationIsolation",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantOperationKind",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantQueryBoundary",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantQueryPredicate",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantRepositoryBoundary",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
           "name": "TenantResolutionResult",
           "exportKind": "named",
           "source": "./libs/types"
@@ -11741,6 +11887,21 @@
           "name": "TenantResolver",
           "exportKind": "named",
           "source": "./libs/TenantResolver"
+        },
+        {
+          "name": "TenantRlsEvidence",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantScopedOperation",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
+        },
+        {
+          "name": "TenantScopedOperationMarker",
+          "exportKind": "named",
+          "source": "./libs/TenantIsolationEnforcer"
         },
         {
           "name": "TenantSettings",
