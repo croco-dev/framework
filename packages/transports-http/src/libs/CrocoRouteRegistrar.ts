@@ -20,6 +20,7 @@ import {
   getRuntimeContextInitFromEnv,
   type RuntimeContextInit,
 } from "./runtimeContext";
+import { describeHttpPipelineGraph } from "./PipelineRunner";
 import type { CompiledRoute, MiddlewareFunction } from "./types";
 
 /**
@@ -42,6 +43,13 @@ export class CrocoRouteRegistrar {
   register(route: CompiledRoute): void {
     const method = route.method.toLowerCase();
     const telemetry = telemetryMiddleware(route.path);
+    const middlewares = [telemetry, ...this.globalMiddlewares];
+
+    route.pipelineGraph = describeHttpPipelineGraph({
+      ...route.pipelineGraphConfig,
+      target: route.pipelineGraphConfig?.target ?? `${route.method.toUpperCase()} ${route.path}`,
+      middlewares,
+    });
 
     const honoHandler = async (c: HonoContext) => {
       const ctx = new HttpContext(c);
@@ -74,8 +82,6 @@ export class CrocoRouteRegistrar {
         runtime,
         runtimeInspector: inspector,
       };
-      const middlewares = [telemetry, ...this.globalMiddlewares];
-
       return FrameworkContext.run(requestContext, async () => {
         let middlewareStartedAt: number | undefined;
         try {

@@ -3495,6 +3495,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "compileRequestPipelineGraph",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph",
+          "declarationKind": "function"
+        },
+        {
           "name": "Component",
           "exportKind": "named",
           "source": "./libs/decorators/Component",
@@ -3552,6 +3558,12 @@
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
           "declarationKind": "const"
+        },
+        {
+          "name": "dumpRequestPipelineGraph",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph",
+          "declarationKind": "function"
         },
         {
           "name": "finishRuntimeInspectionRequest",
@@ -3620,6 +3632,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "PipelineGraphProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PipelineGraphProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "POLICY_EXECUTION_ORDER",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
@@ -3659,6 +3677,30 @@
           "name": "recordRuntimeInspectionEvent",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
+          "declarationKind": "function"
+        },
+        {
+          "name": "REQUEST_PIPELINE_FAILURE_PROPAGATIONS",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph",
+          "declarationKind": "const"
+        },
+        {
+          "name": "REQUEST_PIPELINE_NODE_KINDS",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph",
+          "declarationKind": "const"
+        },
+        {
+          "name": "REQUEST_PIPELINE_PHASES",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph",
+          "declarationKind": "const"
+        },
+        {
+          "name": "requestPipelineNodesFromPolicyPlan",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph",
           "declarationKind": "function"
         },
         {
@@ -3722,6 +3764,11 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "CompileRequestPipelineGraphOptions",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
         {
           "name": "ComponentMetadata",
           "exportKind": "named",
@@ -3833,6 +3880,11 @@
           "source": "./libs/RuntimePolicy"
         },
         {
+          "name": "PolicyPipelineNodeOptions",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
           "name": "PolicyRuntimeCapability",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy"
@@ -3861,6 +3913,56 @@
           "name": "RequestContext",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "RequestPipelineFailurePropagation",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelineGraph",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelineGraphEdge",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelineGraphEdgeReason",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelineNode",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelineNodeKind",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelinePath",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelinePhase",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "RequestPipelinePhaseOrder",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
+        },
+        {
+          "name": "ResolvedRequestPipelineNode",
+          "exportKind": "named",
+          "source": "./libs/RequestPipelineGraph"
         },
         {
           "name": "RetryPolicyDefinition",
@@ -11365,6 +11467,11 @@
           "declarationKind": "class"
         },
         {
+          "name": "describeHttpPipelineGraph",
+          "exportKind": "named",
+          "source": null
+        },
+        {
           "name": "DEV_INSPECTOR_ENDPOINT_PATH",
           "exportKind": "named",
           "source": "./libs/devInspectorEndpoint",
@@ -11538,6 +11645,11 @@
           "source": "./libs/types"
         },
         {
+          "name": "CompiledRoutePipelineGraphConfig",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "CompileOptions",
           "exportKind": "named",
           "source": "./libs/RouteCompiler"
@@ -11651,6 +11763,11 @@
           "name": "HealthCheckStatus",
           "exportKind": "named",
           "source": "./libs/HealthCheckRegistry"
+        },
+        {
+          "name": "HttpPipelineGraphConfig",
+          "exportKind": "named",
+          "source": "./libs/PipelineRunner"
         },
         {
           "name": "InterceptorProvider",

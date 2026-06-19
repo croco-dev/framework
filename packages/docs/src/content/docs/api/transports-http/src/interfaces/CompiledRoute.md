@@ -44,3 +44,15 @@ title: "CompiledRoute"
 ### path
 
 > **path**: `string`
+
+***
+
+### pipelineGraph?
+
+> `optional` **pipelineGraph**: [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)
+
+***
+
+### pipelineGraphConfig?
+
+> `optional` **pipelineGraphConfig**: [`CompiledRoutePipelineGraphConfig`](/api/transports-http/src/type-aliases/compiledroutepipelinegraphconfig/)

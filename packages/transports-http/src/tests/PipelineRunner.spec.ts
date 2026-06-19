@@ -6,7 +6,7 @@ import type { ExceptionFilter } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HttpExecutionContext } from "../libs/HttpExecutionContext";
-import { PipelineRunner } from "../libs/PipelineRunner";
+import { PipelineRunner, describeHttpPipelineGraph } from "../libs/PipelineRunner";
 import type { CrocoHttpContext } from "../libs/types";
 
 function createMockHttpContext(): CrocoHttpContext {
@@ -206,5 +206,77 @@ describe("PipelineRunner", () => {
       detail: "original business error",
       status: 400,
     });
+  });
+
+  it("should describe deterministic middleware, guard, interceptor, handler, and filter order", () => {
+    function firstMiddleware() {}
+    function secondMiddleware() {}
+
+    class AuthGuard {
+      canActivate() {
+        return true;
+      }
+    }
+
+    class EnvelopeInterceptor {
+      async intercept(_context: unknown, next: { handle(): Promise<unknown> }) {
+        return next.handle();
+      }
+    }
+
+    class AuditInterceptor {
+      async intercept(_context: unknown, next: { handle(): Promise<unknown> }) {
+        return next.handle();
+      }
+    }
+
+    class HttpProblemFilter {
+      catch(error: unknown) {
+        return error;
+      }
+    }
+
+    const graph = describeHttpPipelineGraph({
+      target: "GET /orders/:id",
+      handlerId: "handler:OrdersController.get",
+      handlerLabel: "OrdersController.get",
+      middlewares: [firstMiddleware, secondMiddleware],
+      guards: [new AuthGuard()],
+      interceptors: [new EnvelopeInterceptor(), new AuditInterceptor()],
+      filters: [new HttpProblemFilter()],
+    });
+
+    expect(graph.successOrder).toEqual([
+      "middleware:0:before",
+      "middleware:1:before",
+      "guard:0",
+      "interceptor:0:before",
+      "interceptor:1:before",
+      "handler:OrdersController.get",
+      "interceptor:1:after",
+      "interceptor:0:after",
+      "middleware:1:after",
+      "middleware:0:after",
+    ]);
+    expect(graph.executionOrder).toEqual(graph.successOrder);
+    expect(graph.errorOrder).toEqual([
+      "middleware:0:before",
+      "middleware:1:before",
+      "guard:0",
+      "interceptor:0:before",
+      "interceptor:1:before",
+      "handler:OrdersController.get",
+      "interceptor:1:after",
+      "interceptor:0:after",
+      "filter:0",
+      "middleware:1:after",
+      "middleware:0:after",
+    ]);
+    expect(graph.phaseOrder.error).toEqual(["filter:0"]);
+    expect(graph.nodes.find((node) => node.id === "filter:0")?.failurePropagation).toBe(
+      "handle-error",
+    );
+    expect(graph.debugDump).toContain("request-pipeline GET /orders/:id");
+    expect(graph.debugDump).toContain("middleware middleware:0:before (short-circuit)");
   });
 });

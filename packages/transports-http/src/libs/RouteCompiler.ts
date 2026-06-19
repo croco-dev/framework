@@ -176,6 +176,14 @@ export class RouteCompiler {
       handler,
       controllerInstance: undefined,
       methodName: routeIR.methodName,
+      pipelineGraphConfig: {
+        target: `${routeIR.httpMethod.toUpperCase()} ${fullPath}`,
+        handlerId: `handler:${controller.name}.${String(routeIR.methodName)}`,
+        handlerLabel: `${controller.name}.${String(routeIR.methodName)}`,
+        guards: [...globalGuards, ...routeGuards],
+        interceptors: [...globalInterceptors, ...routeInterceptors],
+        filters: [...globalFilters, ...routeFilters],
+      },
     };
   }
 

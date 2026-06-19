@@ -37,6 +37,16 @@ title: "CrocoApp"
 
 ## Methods
 
+### describeRequestPipelineGraphs()
+
+> **describeRequestPipelineGraphs**(): readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)[]
+
+#### Returns
+
+readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)[]
+
+***
+
 ### fetch()
 
 > **fetch**(`request`, `runtimeContext?`, `options?`): `Promise`\<`Response`\>

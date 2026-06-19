@@ -1,3 +1,4 @@
+import type { PolicyExecutionPlan, RequestPipelineGraph } from "@croco/framework-context";
 import type { Constructor } from "@croco/protocols-rest";
 import type { DevInspectorEndpointOptions } from "./devInspectorEndpoint";
 import type { DiagnosticsEndpointOptions } from "./operationalEndpoints";
@@ -66,12 +67,24 @@ export interface CrocoResponse {
   headers: Record<string, string>;
 }
 
+export type CompiledRoutePipelineGraphConfig = {
+  readonly guards?: readonly unknown[];
+  readonly interceptors?: readonly unknown[];
+  readonly filters?: readonly unknown[];
+  readonly handlerId?: string;
+  readonly handlerLabel?: string;
+  readonly target?: string;
+  readonly policyPlan?: PolicyExecutionPlan;
+};
+
 export interface CompiledRoute {
   method: string;
   path: string;
   handler: (ctx: CrocoHttpContext) => Promise<unknown>;
   controllerInstance?: unknown;
   methodName: string | symbol;
+  pipelineGraphConfig?: CompiledRoutePipelineGraphConfig;
+  pipelineGraph?: RequestPipelineGraph;
 }
 
 export type LambdaRequestContext = APIGatewayEventRequestContextV2 & {

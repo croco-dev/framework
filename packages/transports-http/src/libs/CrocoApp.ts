@@ -1,7 +1,13 @@
 import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
-import { Container, type ILogger, LOGGER_TOKEN, type Constructor } from "@croco/framework-context";
+import {
+  Container,
+  type ILogger,
+  LOGGER_TOKEN,
+  type Constructor,
+  type RequestPipelineGraph,
+} from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { ProblemFactory } from "@croco/problems-core";
 import { Hono } from "hono";
@@ -240,6 +246,13 @@ export class CrocoApp {
   getHono(): Hono {
     this.boot();
     return this.hono;
+  }
+
+  describeRequestPipelineGraphs(): readonly RequestPipelineGraph[] {
+    this.boot();
+    return this.routes
+      .map((route) => route.pipelineGraph)
+      .filter((graph): graph is RequestPipelineGraph => graph !== undefined);
   }
 
   async listen(

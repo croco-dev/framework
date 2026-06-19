@@ -3,8 +3,11 @@ import {
   Context,
   DEV_INSPECTOR_TOKEN,
   type Guard,
+  type RequestPipelineGraph,
+  type RequestPipelineNode,
   type RuntimeInspector,
   type RuntimeInspectorRecorder,
+  compileRequestPipelineGraph,
   recordRuntimeInspectionEvent,
 } from "@croco/framework-context";
 import { Problem, ProblemCategoryMapper, ProblemFactory } from "@croco/problems-core";
@@ -16,6 +19,7 @@ import type {
 } from "@croco/protocols-rest";
 import type { ErrorHandler } from "./ErrorHandler";
 import type { HttpExecutionContext } from "./HttpExecutionContext";
+import type { CompiledRoutePipelineGraphConfig, MiddlewareFunction } from "./types";
 
 type FilterResponse = {
   status: number;
@@ -38,6 +42,92 @@ export interface PipelineConfig {
   guards: Guard<ExecutionContext>[];
   interceptors: Interceptor<ExecutionContext>[];
   filters: ExceptionFilter<unknown, HttpExecutionContext>[];
+}
+
+export type HttpPipelineGraphConfig = CompiledRoutePipelineGraphConfig & {
+  readonly middlewares?: readonly MiddlewareFunction[];
+};
+
+export function describeHttpPipelineGraph(config: HttpPipelineGraphConfig): RequestPipelineGraph {
+  const middlewares = config.middlewares ?? [];
+  const guards = config.guards ?? [];
+  const interceptors = config.interceptors ?? [];
+  const filters = config.filters ?? [];
+  const nodes: RequestPipelineNode[] = [
+    ...middlewares.map((middleware, index) =>
+      toNode(
+        `middleware:${index}:before`,
+        "middleware",
+        "before",
+        10 + index,
+        `${getProviderName(middleware, `middleware[${index}]`)}.before`,
+        "short-circuit",
+      ),
+    ),
+    ...guards.map((guard, index) =>
+      toNode(
+        `guard:${index}`,
+        "guard",
+        "before",
+        100 + index,
+        getProviderName(guard, `guard[${index}]`),
+        "terminal",
+      ),
+    ),
+    ...interceptors.map((interceptor, index) =>
+      toNode(
+        `interceptor:${index}:before`,
+        "interceptor",
+        "before",
+        300 + index,
+        `${getProviderName(interceptor, `interceptor[${index}]`)}.before`,
+        "observe-and-rethrow",
+      ),
+    ),
+    toNode(
+      config.handlerId ?? "handler",
+      "handler",
+      "handler",
+      10,
+      config.handlerLabel ?? "handler",
+      "terminal",
+    ),
+    ...interceptors.map((interceptor, index) =>
+      toNode(
+        `interceptor:${index}:after`,
+        "interceptor",
+        "after",
+        100 + interceptors.length - index,
+        `${getProviderName(interceptor, `interceptor[${index}]`)}.after`,
+        "observe-and-rethrow",
+      ),
+    ),
+    ...middlewares.map((middleware, index) =>
+      toNode(
+        `middleware:${index}:after`,
+        "middleware",
+        "after",
+        200 + middlewares.length - index,
+        `${getProviderName(middleware, `middleware[${index}]`)}.after`,
+        "short-circuit",
+      ),
+    ),
+    ...filters.map((filter, index) =>
+      toNode(
+        `filter:${index}`,
+        "filter",
+        "error",
+        10 + index,
+        getProviderName(filter, `filter[${index}]`),
+        "handle-error",
+      ),
+    ),
+  ];
+
+  return compileRequestPipelineGraph(nodes, {
+    target: config.target,
+    policyPlan: config.policyPlan,
+  });
 }
 
 /**
@@ -163,4 +253,39 @@ export class PipelineRunner {
       },
     });
   }
+}
+
+function toNode(
+  id: string,
+  kind: RequestPipelineNode["kind"],
+  phase: RequestPipelineNode["phase"],
+  order: number,
+  label: string,
+  failurePropagation: RequestPipelineNode["failurePropagation"],
+): RequestPipelineNode {
+  return {
+    id,
+    kind,
+    phase,
+    order,
+    label,
+    failurePropagation,
+  };
+}
+
+function getProviderName(provider: unknown, fallback: string): string {
+  if (typeof provider === "function" && provider.name.length > 0) {
+    return provider.name;
+  }
+
+  if (typeof provider !== "object" || provider === null) {
+    return fallback;
+  }
+
+  const constructorName = provider.constructor.name;
+  if (constructorName.length > 0 && constructorName !== "Object") {
+    return constructorName;
+  }
+
+  return fallback;
 }
