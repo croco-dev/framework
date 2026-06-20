@@ -727,9 +727,11 @@ describe("E2E: generate()", () => {
       test: "turbo test",
       "demo:seed": "pnpm --filter @test/api-server demo:seed",
       "profile:check": "pnpm --filter @test/api-server profile:check",
+      "runtime-policy:check":
+        "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
-        "pnpm profile:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+        "pnpm profile:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
     });
     expect(apiPackageJson.dependencies).toMatchObject({
@@ -768,11 +770,15 @@ describe("E2E: generate()", () => {
       existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
     ).toBe(true);
     expect(existsSync(join(testDir, "croco-saas-profile.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, "croco-runtime-policy.manifest.json"))).toBe(true);
     expect(existsSync(join(testDir, ".env.example"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "provider-profile.md"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "secrets-checklist.md"))).toBe(true);
     const profileManifest = JSON.parse(
       readFileSync(join(testDir, "croco-saas-profile.manifest.json"), "utf8"),
+    );
+    const runtimePolicyManifest = JSON.parse(
+      readFileSync(join(testDir, "croco-runtime-policy.manifest.json"), "utf8"),
     );
     const envExample = readFileSync(join(testDir, ".env.example"), "utf8");
     const providerProfileDocs = readFileSync(join(testDir, "docs", "provider-profile.md"), "utf8");
@@ -790,6 +796,19 @@ describe("E2E: generate()", () => {
       smoke: {
         zeroCredential: "pnpm demo:smoke",
         realProviderOptIn: "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
+      },
+    });
+    expect(runtimePolicyManifest).toMatchObject({
+      schemaVersion: "croco.runtime-policy/v1",
+      runtime: {
+        platform: "cloudflare-workers",
+        source: {
+          file: "croco-saas-profile.manifest.json",
+          symbol: "saas-cloudflare",
+        },
+      },
+      table: {
+        plans: [],
       },
     });
     expect(profileManifest.packages).toEqual(
@@ -900,7 +919,7 @@ describe("E2E: generate()", () => {
         "contract:verify":
           "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
         "demo:smoke":
-          "pnpm profile:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+          "pnpm profile:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       });
       expect(manifest).toMatchObject({
         schemaVersion: 1,

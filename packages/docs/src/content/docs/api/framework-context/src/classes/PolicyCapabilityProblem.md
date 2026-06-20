@@ -55,7 +55,7 @@ title: "PolicyCapabilityProblem"
 
 ### code
 
-> `readonly` **code**: `"framework-context/policy-capability-unavailable"` = `"framework-context/policy-capability-unavailable"`
+> `readonly` **code**: `"framework-context/policy-capability-unavailable"` = `POLICY_CAPABILITY_UNAVAILABLE_CODE`
 
 #### Overrides
 

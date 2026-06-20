@@ -1,4 +1,6 @@
+import { createQStashTaskConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as QStashSdk from "@upstash/qstash";
 
 let mockPublishJSON = vi.fn();
 
@@ -10,11 +12,114 @@ vi.mock("@upstash/qstash", () => ({
 
 import { QStashTaskRunner } from "../libs/QStashTaskRunner";
 
+type PublishJsonRecord = {
+  readonly body?: unknown;
+  readonly deduplicationId?: string;
+  readonly delay?: number;
+  readonly headers?: Record<string, string>;
+  readonly url?: string;
+};
+
+const QSTASH_LIVE_ENV = [
+  "CROCO_LIVE_QSTASH",
+  "UPSTASH_QSTASH_TOKEN",
+  "UPSTASH_QSTASH_DESTINATION_URL",
+] as const;
+
+function createUpstreamError(message: string, status: number): Error & { readonly status: number } {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
+}
+
+function getPublishJsonRecords(): PublishJsonRecord[] {
+  return mockPublishJSON.mock.calls.map((call) => call[0] as PublishJsonRecord);
+}
+
+function isTruthyEnv(name: string): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function readRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required for QStash live smoke.`);
+  }
+
+  return value;
+}
+
+async function runQStashLiveSmoke(): Promise<void> {
+  const { Client } = await vi.importActual<typeof QStashSdk>("@upstash/qstash");
+  const client = new Client({ token: readRequiredEnv("UPSTASH_QSTASH_TOKEN") });
+  const deduplicationId = `croco-tasks-qstash:${Date.now()}`;
+  const response = await client.publishJSON({
+    body: {
+      payload: { source: "tasks-qstash-live-smoke" },
+      taskId: "croco.tasks-qstash.live-smoke",
+    },
+    deduplicationId,
+    url: readRequiredEnv("UPSTASH_QSTASH_DESTINATION_URL"),
+  });
+
+  expect(typeof response.messageId).toBe("string");
+  expect(response.messageId.length).toBeGreaterThan(0);
+}
+
 describe("QStashTaskRunner", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPublishJSON = vi.fn().mockResolvedValue({
       messageId: "msg-test-123",
+    });
+  });
+
+  describe("QStash task conformance", () => {
+    it.each(
+      createQStashTaskConformanceSuite({
+        createMissingConfig: () =>
+          new QStashTaskRunner({
+            token: "",
+            destinationUrl: "https://example.com/api/tasks/webhook",
+          }),
+        createPublisher: (scenario) => {
+          if (scenario === "success") {
+            mockPublishJSON.mockResolvedValue({ messageId: "msg-conformance" });
+          }
+
+          if (scenario === "retryable-upstream") {
+            mockPublishJSON.mockRejectedValue(
+              createUpstreamError("qstash timeout token=super-secret-token", 503),
+            );
+          }
+
+          if (scenario === "terminal-upstream") {
+            mockPublishJSON.mockRejectedValue(
+              createUpstreamError("qstash rejected token=super-secret-token", 400),
+            );
+          }
+
+          return {
+            publisher: new QStashTaskRunner({
+              token: "test-token",
+              destinationUrl: "https://example.com/api/tasks/webhook",
+            }),
+            getPublishedMessages: getPublishJsonRecords,
+          };
+        },
+        liveSmoke: {
+          isEnabled: () =>
+            isTruthyEnv("CROCO_LIVE_QSTASH") &&
+            QSTASH_LIVE_ENV.every((name) => Boolean(process.env[name])),
+          requiredEnv: QSTASH_LIVE_ENV,
+          run: runQStashLiveSmoke,
+        },
+        providerName: "tasks-qstash",
+        secretSamples: ["super-secret-token"],
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
     });
   });
 
@@ -124,6 +229,30 @@ describe("QStashTaskRunner", () => {
       headers: {
         "X-Api-Key": "override-key",
       },
+    });
+  });
+
+  it("should pass idempotency keys as QStash deduplication ids", async () => {
+    const runner = new QStashTaskRunner({
+      token: "test-token",
+      destinationUrl: "https://example.com/api/tasks/webhook",
+    });
+
+    await runner.execute(
+      "sync-customer",
+      { customerId: "customer-123" },
+      { idempotencyKey: "customer-sync-123" },
+    );
+
+    expect(mockPublishJSON).toHaveBeenCalledWith({
+      deduplicationId: "customer-sync-123",
+      url: "https://example.com/api/tasks/webhook",
+      body: {
+        taskId: "sync-customer",
+        payload: { customerId: "customer-123" },
+      },
+      delay: undefined,
+      headers: {},
     });
   });
 });

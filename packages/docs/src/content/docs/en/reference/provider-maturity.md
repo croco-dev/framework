@@ -71,15 +71,44 @@ The first consumer is:
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@croco/billing-polar` | Uses the billing conformance suite with deterministic mocked Polar gateway and webhook behavior, normalizes Polar SDK failures, exposes safe diagnostics, and documents optional live Polar smoke. | Remains beta. It has default conformance and diagnostics evidence, but production-ready still requires recorded env-gated live Polar smoke evidence with real Polar credentials. |
 
+### Upstash and QStash provider conformance
+
+`@croco/testing` exports two serverless provider suites for the first Upstash/QStash promotion
+wave:
+
+- `createUpstashRedisRateLimitConformanceSuite()` for Upstash Redis-backed rate-limit stores. It
+  checks missing configuration, unsupported policies, allow/deny stats, refund idempotency,
+  redacted retryable upstream failures, redacted terminal upstream failures, and no-credential
+  live-smoke gates.
+- `createQStashTaskConformanceSuite()` for QStash task publishers. It checks missing
+  configuration, task envelope shape, delay/header/deduplication evidence, invalid task input,
+  redacted retryable upstream failures, redacted terminal upstream failures, and no-credential
+  live-smoke gates.
+
+The first consumers are:
+
+| Package                    | Harness evidence                                                                                                                        | Promotion result                                                                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@croco/ratelimit-upstash` | Runs the Upstash Redis rate-limit conformance suite with a mocked Redis/Lua fixture and an opt-in real-backend live-smoke gate.         | Remains alpha. Conformance now covers the rate-limit domain, but diagnostics/readiness and broader real Upstash backend smoke remain promotion blockers. |
+| `@croco/tasks-qstash`      | Runs the QStash task conformance suite with a mocked QStash client, deduplication evidence, and an opt-in real-backend live-smoke gate. | Remains alpha. Conformance now covers task publishing, but webhook/schedule verification and diagnostics/readiness remain blockers.                      |
+
+Remaining Upstash/QStash domains before beta promotion:
+
+- `@croco/metering-upstash` needs a Redis usage-storage conformance consumer.
+- `@croco/batch-qstash` needs a QStash batch/chunk scheduling conformance consumer.
+- `@croco/triggers-qstash` needs QStash schedule and webhook verification conformance.
+- All five providers still need safe diagnostics/readiness evidence and documented broader
+  real-backend live smoke commands.
+
 ## First Promotion Wave
 
 No provider is promoted to production-ready by intent alone.
 
-| Candidate                | Current maturity | Evidence                                                                                                                                                                      | Gate result                                                                                                                                         |
-| ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@croco/storage-r2`      | Beta             | README, package tests, generated catalog entry, and reusable storage conformance coverage with mocked R2 behavior.                                                            | Production gate fails until diagnostics/readiness and optional live R2 smoke are documented and passing.                                            |
-| `@croco/billing-polar`   | Beta             | README, package tests, generated catalog entry, reusable billing conformance coverage with mocked Polar behavior, stable Problem mapping, and safe diagnostics/readiness.     | Production gate still fails until optional live Polar smoke evidence with real credentials is recorded and reviewed.                                |
-| Upstash/QStash providers | Alpha            | Package tests and catalog entries exist for rate limit, metering, batch, tasks, and triggers providers.                                                                       | Beta gate fails until reusable Redis/QStash conformance suites and diagnostics/readiness evidence exist.                                            |
-| Drizzle SaaS providers   | Alpha            | Package tests and catalog entries exist for access, audit, auth, customer health, entitlements, execution, invitation, membership, metering, onboarding, and search adapters. | Beta gate fails until a shared Drizzle provider conformance suite covers migration/schema assumptions, transaction behavior, and repository errors. |
+| Candidate                | Current maturity | Evidence                                                                                                                                                                      | Gate result                                                                                                                                                              |
+| ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@croco/storage-r2`      | Beta             | README, package tests, generated catalog entry, and reusable storage conformance coverage with mocked R2 behavior.                                                            | Production gate fails until diagnostics/readiness and optional live R2 smoke are documented and passing.                                                                 |
+| `@croco/billing-polar`   | Beta             | README, package tests, generated catalog entry, reusable billing conformance coverage with mocked Polar behavior, stable Problem mapping, and safe diagnostics/readiness.     | Production gate still fails until optional live Polar smoke evidence with real credentials is recorded and reviewed.                                                     |
+| Upstash/QStash providers | Alpha            | Shared conformance now covers `@croco/ratelimit-upstash` and `@croco/tasks-qstash`; package tests and catalog entries also exist for metering, batch, and triggers providers. | Beta gate fails until metering/batch/triggers consume reusable conformance and all providers expose diagnostics/readiness plus broader real-backend live smoke evidence. |
+| Drizzle SaaS providers   | Alpha            | Package tests and catalog entries exist for access, audit, auth, customer health, entitlements, execution, invitation, membership, metering, onboarding, and search adapters. | Beta gate fails until a shared Drizzle provider conformance suite covers migration/schema assumptions, transaction behavior, and repository errors.                      |
 
 This page should be updated whenever a provider changes maturity in `docs/package-catalog.json`.

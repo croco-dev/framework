@@ -3410,6 +3410,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "parseRuntimePolicyCheckArgs",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "pluralize",
           "exportKind": "named",
           "source": "./libs/naming",
@@ -3480,6 +3486,24 @@
           "exportKind": "named",
           "source": "./commands/ops",
           "declarationKind": "function"
+        },
+        {
+          "name": "runRuntimePolicyCheck",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runtimePolicy",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "const"
+        },
+        {
+          "name": "runtimePolicyCheck",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "const"
         },
         {
           "name": "selectMode",
@@ -3660,6 +3684,11 @@
           "name": "RunOpsStatusOptions",
           "exportKind": "named",
           "source": "./commands/ops"
+        },
+        {
+          "name": "RuntimePolicyCheckIo",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy"
         },
         {
           "name": "WriteOptions",
@@ -5319,6 +5348,24 @@
           "declarationKind": "function"
         },
         {
+          "name": "assertPolicyTableRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "checkPolicyRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "checkPolicyTableRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "CircularDependencyProblem",
           "exportKind": "named",
           "source": "./libs/problems/CircularDependencyProblem",
@@ -5326,6 +5373,12 @@
         },
         {
           "name": "compilePolicyTable",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "compilePolicyTableForRuntime",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
           "declarationKind": "function"
@@ -5390,6 +5443,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "definePolicyForRuntime",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineRuntimePolicyPreset",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "DEV_INSPECTOR_TOKEN",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
@@ -5408,6 +5473,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "formatPolicyCapabilityDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "getPolicyExecutionPlan",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
@@ -5417,6 +5488,12 @@
           "name": "getRuntimeCapabilitySupport",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getRuntimePolicyPresetCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
           "declarationKind": "function"
         },
         {
@@ -5472,6 +5549,12 @@
           "exportKind": "named",
           "source": "./libs/problems/PipelineGraphProblems",
           "declarationKind": "class"
+        },
+        {
+          "name": "POLICY_CAPABILITY_UNAVAILABLE_CODE",
+          "exportKind": "named",
+          "source": "./libs/problems/RuntimePolicyProblems",
+          "declarationKind": "const"
         },
         {
           "name": "POLICY_EXECUTION_ORDER",
@@ -5631,6 +5714,11 @@
           "source": "./libs/RuntimePolicy"
         },
         {
+          "name": "DefineRuntimePolicyOptions",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
           "name": "DependencyGraphDiagnostic",
           "exportKind": "named",
           "source": "./libs/types"
@@ -5719,6 +5807,11 @@
           "name": "Middleware",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "PolicyCapabilityDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
         },
         {
           "name": "PolicyDefinition",
@@ -5957,6 +6050,11 @@
         },
         {
           "name": "RuntimePolicy",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "RuntimePolicyPresetConfig",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy"
         },
@@ -12679,9 +12777,21 @@
           "declarationKind": "class"
         },
         {
+          "name": "MissingUpstashRateLimitConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitUpstashProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "UpstashFixedWindowStore",
           "exportKind": "named",
           "source": "./libs/UpstashRateLimitStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UpstashRateLimitUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitUpstashProblems",
           "declarationKind": "class"
         },
         {
@@ -13759,13 +13869,36 @@
       "entrypoint": "packages/tasks-qstash/src/index.ts",
       "runtimeExports": [
         {
+          "name": "QStashTaskConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "QStashTaskPublishProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "QStashTaskRunner",
           "exportKind": "named",
           "source": "./libs/QStashTaskRunner",
           "declarationKind": "class"
+        },
+        {
+          "name": "QStashTaskValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
+        {
+          "name": "QStashTaskExecuteOptions",
+          "exportKind": "named",
+          "source": "./libs/QStashTaskRunner"
+        },
         {
           "name": "QStashTaskRunnerOptions",
           "exportKind": "named",
@@ -14352,6 +14485,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createQStashTaskConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "createRpcTestFetch",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -14385,6 +14524,12 @@
           "name": "createTestingTransactionContext",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createUpstashRedisRateLimitConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
           "declarationKind": "function"
         },
         {
@@ -14554,9 +14699,54 @@
           "source": "./libs/testing"
         },
         {
+          "name": "QStashTaskConformanceHarness",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskExecuteOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskPublisher",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskPublishRecord",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
           "name": "ResetCrocoTestingContextOptions",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "ServerlessProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "ServerlessProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "ServerlessProviderLiveSmokeGate",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
         },
         {
           "name": "StorageProviderConformanceCase",
@@ -14617,6 +14807,16 @@
           "name": "TestLogger",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "UpstashRedisRateLimitConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "UpstashRedisRateLimitConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
         }
       ]
     },

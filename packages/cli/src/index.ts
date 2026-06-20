@@ -56,6 +56,12 @@ export {
   runOpsCheck,
   runOpsStatus,
 } from "./commands/ops";
+export {
+  parseRuntimePolicyCheckArgs,
+  runRuntimePolicyCheck,
+  runtimePolicy,
+  runtimePolicyCheck,
+} from "./commands/runtimePolicy";
 export { GLOBAL_OPTIONS } from "./commands/options";
 
 export type { DiCheckDiagnostic, DiCheckIo, DiCheckReport } from "./commands/diCheck";
@@ -92,3 +98,5 @@ export type {
   OpsStatusSummary,
   RunOpsStatusOptions,
 } from "./commands/ops";
+
+export type { RuntimePolicyCheckIo } from "./commands/runtimePolicy";
