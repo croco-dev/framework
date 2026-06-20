@@ -5,15 +5,15 @@ prev: false
 title: "getLambdaEvent"
 ---
 
-> **getLambdaEvent**(`honoRequest`): [`LambdaEvent`](/api/transports-http/src/type-aliases/lambdaevent/) \| `undefined`
+> **getLambdaEvent**(`honoContext`): [`LambdaEvent`](/api/transports-http/src/type-aliases/lambdaevent/) \| `undefined`
 
-Hono 요청에서 원본 Lambda 이벤트를 추출합니다.
+Hono 컨텍스트에서 원본 Lambda 이벤트를 추출합니다.
 
 ## Parameters
 
-### honoRequest
+### honoContext
 
-`HonoRequest`
+[`LambdaExecutionContext`](/api/transports-http/src/type-aliases/lambdaexecutioncontext/)
 
 ## Returns
 

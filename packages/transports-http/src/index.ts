@@ -60,6 +60,7 @@ export {
   CrocoLambdaAdapter,
   getLambdaContext,
   getLambdaEvent,
+  type LambdaExecutionContext,
   type LambdaExecutionEnv,
   type LambdaHandlerOptions,
   type TypedLambdaHandler,

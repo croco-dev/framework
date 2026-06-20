@@ -12787,6 +12787,11 @@
           "source": "./libs/types"
         },
         {
+          "name": "LambdaExecutionContext",
+          "exportKind": "named",
+          "source": "./libs/CrocoLambdaAdapter"
+        },
+        {
           "name": "LambdaExecutionEnv",
           "exportKind": "named",
           "source": "./libs/CrocoLambdaAdapter"

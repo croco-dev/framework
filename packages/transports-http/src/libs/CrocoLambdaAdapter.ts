@@ -1,5 +1,5 @@
 import type { ILogger } from "@croco/framework-context";
-import type { Hono, HonoRequest } from "hono";
+import type { Hono } from "hono";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type { LambdaContext, LambdaEvent, LambdaHandler } from "./types";
 
@@ -30,6 +30,10 @@ export interface LambdaExecutionEnv {
   event: LambdaEvent;
   lambdaContext: LambdaContext;
 }
+
+export type LambdaExecutionContext = {
+  readonly env?: Partial<LambdaExecutionEnv>;
+};
 
 export type TypedLambdaHandler = (
   event: LambdaEvent,
@@ -165,17 +169,15 @@ export class CrocoLambdaAdapter {
 }
 
 /**
- * Hono 요청에서 원본 Lambda 이벤트를 추출합니다.
+ * Hono 컨텍스트에서 원본 Lambda 이벤트를 추출합니다.
  */
-export function getLambdaEvent(honoRequest: HonoRequest): LambdaEvent | undefined {
-  const env = honoRequest.raw as unknown as { env?: LambdaExecutionEnv };
-  return env.env?.event;
+export function getLambdaEvent(honoContext: LambdaExecutionContext): LambdaEvent | undefined {
+  return honoContext.env?.event;
 }
 
 /**
- * Hono 요청에서 원본 Lambda 컨텍스트를 추출합니다.
+ * Hono 컨텍스트에서 원본 Lambda 컨텍스트를 추출합니다.
  */
-export function getLambdaContext(honoRequest: HonoRequest): LambdaContext | undefined {
-  const env = honoRequest.raw as unknown as { env?: LambdaExecutionEnv };
-  return env.env?.lambdaContext;
+export function getLambdaContext(honoContext: LambdaExecutionContext): LambdaContext | undefined {
+  return honoContext.env?.lambdaContext;
 }

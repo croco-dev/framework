@@ -27,6 +27,11 @@ import {
 import { serve } from "@hono/node-server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
+import {
+  getLambdaContext,
+  getLambdaEvent,
+  type LambdaExecutionContext,
+} from "../libs/CrocoLambdaAdapter";
 import { toLambdaHandler } from "../libs/adapters/LambdaAdapter";
 import { CrocoRouteRegistrar } from "../libs/CrocoRouteRegistrar";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -163,6 +168,19 @@ describe("CrocoApp", () => {
         cookies: env?.event?.cookies ?? [],
         authorizer: env?.event?.requestContext?.authorizer ?? null,
         awsRequestId: env?.lambdaContext?.awsRequestId ?? null,
+      };
+    }
+
+    @Get("/helper-metadata")
+    getHelperMetadata(@Raw() raw: unknown) {
+      const lambdaRaw = raw as LambdaExecutionContext;
+      const event = getLambdaEvent(lambdaRaw);
+      const context = getLambdaContext(lambdaRaw);
+
+      return {
+        stage: event?.requestContext?.stage ?? null,
+        cookies: event?.cookies ?? [],
+        awsRequestId: context?.awsRequestId ?? null,
       };
     }
 
@@ -1071,6 +1089,49 @@ describe("CrocoApp", () => {
           scopes: ["read:users"],
         },
       },
+      awsRequestId: "req-123",
+    });
+  });
+
+  it("should expose lambda event and context through exported helpers", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        version: "2.0",
+        routeKey: "GET /lambda/helper-metadata",
+        rawPath: "/lambda/helper-metadata",
+        rawQueryString: "",
+        cookies: ["helper=event"],
+        headers: { "content-type": "application/json" },
+        requestContext: {
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
+          http: {
+            method: "GET",
+            path: "/lambda/helper-metadata",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
+          },
+          requestId: "gateway-req-123",
+          routeKey: "GET /lambda/helper-metadata",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
+          timeEpoch: 1710676800000,
+        },
+        isBase64Encoded: false,
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      stage: "$default",
+      cookies: ["helper=event"],
       awsRequestId: "req-123",
     });
   });
