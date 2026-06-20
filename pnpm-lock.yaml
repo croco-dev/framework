@@ -278,9 +278,15 @@ importers:
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core
+      '@croco/pagination-core':
+        specifier: workspace:*
+        version: link:../pagination-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/search-core':
+        specifier: workspace:*
+        version: link:../search-core
       '@croco/tenant-core':
         specifier: workspace:*
         version: link:../tenant-core

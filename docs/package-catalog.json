@@ -275,7 +275,9 @@
         "requiredEnv": ["none"],
         "features": [
           "billing panel contract",
+          "contract-aware DataTable",
           "entitlement status primitives",
+          "pagination and search adapters",
           "usage quota meters",
           "provider failure state",
           "tenant switcher",

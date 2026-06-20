@@ -402,8 +402,11 @@ describe("crocoPlugin", () => {
       const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
       const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
       const actualResult = typeof result === "object" && "then" in result ? await result : result;
+      const actualContents = actualResult?.contents;
 
-      expect(actualResult?.contents).not.toContain("import 'reflect-metadata';");
+      expect(typeof actualContents === "string" ? actualContents : "").not.toContain(
+        "import 'reflect-metadata';",
+      );
     });
   });
 
