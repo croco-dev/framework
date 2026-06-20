@@ -5,15 +5,15 @@ prev: false
 title: "getLambdaContext"
 ---
 
-> **getLambdaContext**(`honoRequest`): `Context` \| `undefined`
+> **getLambdaContext**(`honoContext`): `Context` \| `undefined`
 
-Hono 요청에서 원본 Lambda 컨텍스트를 추출합니다.
+Hono 컨텍스트에서 원본 Lambda 컨텍스트를 추출합니다.
 
 ## Parameters
 
-### honoRequest
+### honoContext
 
-`HonoRequest`
+[`LambdaExecutionContext`](/api/transports-http/src/type-aliases/lambdaexecutioncontext/)
 
 ## Returns
 
