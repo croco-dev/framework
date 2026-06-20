@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
 import {
+  CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   type ContractGraph,
   defineRouteSchema,
   type InferRouteSchemaRequest,
@@ -74,6 +75,17 @@ const BODY_HEADER_INPUT_SCHEMAS = {
   query: null,
   headers: z.object({ "x-request-id": z.string() }) as any,
 };
+const NUMERIC_NATIVE_ENUM = {
+  0: "Draft",
+  1: "Published",
+  Draft: 0,
+  Published: 1,
+} as const;
+const MIXED_NATIVE_ENUM = {
+  0: "Draft",
+  Draft: 0,
+  Published: "published",
+} as const;
 
 describe("generateClientFiles", () => {
   beforeEach(() => {
@@ -605,9 +617,9 @@ describe("generateClientFiles", () => {
 
     expect(validResponse.id).toBe("user-1");
     expect(invalidBody).toBeDefined();
-    expect(content).toContain("export type CreateUserInput = { name: string; email: string; };");
+    expect(content).toContain("export type CreateUserInput = { email: string; name: string; };");
     expect(content).toContain(
-      "export type CreateUserOutput = { id: string; name: string; email: string; };",
+      "export type CreateUserOutput = { email: string; id: string; name: string; };",
     );
     expect(content).toContain("createUser: (input: CreateUserInput): Promise<CreateUserOutput>");
   });
@@ -766,8 +778,36 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "export type GetOutput = { version: 'status/v1'; status: 'up' | 'down'; mode: 'live' | 'test'; details: Record<string, unknown>; };",
+      "export type GetOutput = { details: Record<string, unknown>; mode: 'live' | 'test'; status: 'down' | 'up'; version: 'status/v1'; };",
     );
+  });
+
+  it("should generate native enum output types without TypeScript reverse mappings", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "StatusController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/status",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.object({
+          numeric: z.nativeEnum(NUMERIC_NATIVE_ENUM),
+          mixed: z.nativeEnum(MIXED_NATIVE_ENUM),
+        }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "export type GetOutput = { mixed: 0 | 'published'; numeric: 0 | 1; };",
+    );
+    expect(content).not.toContain("'Draft'");
+    expect(content).not.toContain("'Published'");
   });
 
   it("should reject unsupported Zod schemas instead of emitting unknown fallbacks", () => {
@@ -788,9 +828,46 @@ void handleMissingProblemBranch;
     ];
 
     expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
-      "Cannot generate RPC client type for unsupported schema ZodDate.",
+      `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE} at checkedAt`,
     );
     expect(fs.existsSync(path.join(TEMP_DIR, "status.ts"))).toBe(false);
+  });
+
+  it("should not write earlier domain files when a later domain has an unsupported schema", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "AlphaController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/alpha",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+      {
+        controllerName: "ZetaController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/zeta",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.object({
+          checkedAt: z.date(),
+        }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE} at checkedAt`,
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "alpha.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "zeta.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "rpc.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "index.ts"))).toBe(false);
   });
 
   it("should not emit zod references for body-only routes", () => {
@@ -1077,7 +1154,7 @@ void handleMissingProblemBranch;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "export type ListInput = { query: { page: number; active: boolean | undefined; search: string | undefined; tags: string[]; deletedAt: string | null; }; };",
+        "export type ListInput = { query: { active: boolean | undefined; deletedAt: string | null; page: number; search: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
         "import { readOptionalJsonResponse, readOptionalJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",

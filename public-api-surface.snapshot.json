@@ -10757,6 +10757,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "const"
+        },
+        {
+          "name": "CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "const"
+        },
+        {
           "name": "ContractGraphDiagnosticError",
           "exportKind": "named",
           "source": "./libs/ContractGraph",
@@ -10784,6 +10796,12 @@
           "name": "defineRouteSchema",
           "exportKind": "named",
           "source": "./libs/RouteSchema",
+          "declarationKind": "function"
+        },
+        {
+          "name": "describeZodSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
           "declarationKind": "function"
         },
         {
@@ -10817,6 +10835,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "formatSchemaDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
           "name": "getContractGraphConsumerRouteCoverageDiagnostics",
           "exportKind": "named",
           "source": "./libs/ContractGraphConsumerCoverage",
@@ -10841,6 +10865,48 @@
           "declarationKind": "function"
         },
         {
+          "name": "getSchemaDescriptorDiagnostics",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodArrayElementSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodDefaultValue",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodInnerSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodObjectShape",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodObjectUnsupportedDynamicKeyMode",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodSchemaTypeName",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
           "name": "isContractGraphSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
@@ -10853,6 +10919,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "const"
+        },
+        {
           "name": "snapshotZodSchema",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
@@ -10862,6 +10934,12 @@
           "name": "stringifyContractGraphSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "unwrapZodEffectsSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
           "declarationKind": "function"
         }
       ],
@@ -11017,9 +11095,34 @@
           "source": "./libs/ContractGraph"
         },
         {
+          "name": "ContractSchemaDescriptor",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
+          "name": "ContractSchemaDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
+          "name": "ContractSchemaDiagnosticSeverity",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
+          "name": "ContractSchemaFieldDescriptor",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
           "name": "ContractSchemaFieldSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractSchemaJsonSafeStatus",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
         },
         {
           "name": "ContractSchemaLocation",
@@ -11027,9 +11130,19 @@
           "source": "./libs/ContractGraphSnapshot"
         },
         {
+          "name": "ContractSchemaPrimitiveValue",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
           "name": "ContractSchemaSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractSchemaSupportMatrixEntry",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
         },
         {
           "name": "DefinedRouteSchema",

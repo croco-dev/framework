@@ -3,6 +3,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
 import type { RouteIR } from "./RouteIR";
+import { describeZodSchema, getSchemaDescriptorDiagnostics } from "./SchemaDescriptor";
 import {
   type Constructor,
   type ControllerMetadata,
@@ -58,6 +59,13 @@ export type ContractAccessMetadata = {
 export type ContractPathParam = {
   readonly token: string;
   readonly name: string;
+};
+
+type RouteSchemaDiagnosticLocation = "body" | "path" | "query" | "headers" | "response";
+
+type RouteSchemaDiagnosticEntry = {
+  readonly schema: z.ZodType;
+  readonly location: RouteSchemaDiagnosticLocation;
 };
 
 export type ContractGraphRoute = RouteIR & {
@@ -230,7 +238,7 @@ function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
   diagnostics.push(...validatePathParams(route));
   diagnostics.push(...validateNamedParams(route));
   diagnostics.push(...validateBodyParams(route));
-  diagnostics.push(...validateSchemaEffects(route));
+  diagnostics.push(...validateRouteSchemas(route));
   diagnostics.push(...validateProblemResponses(route));
 
   return diagnostics;
@@ -350,19 +358,19 @@ function validateBodyParams(route: ContractGraphRoute): ContractDiagnostic[] {
   ];
 }
 
-function validateSchemaEffects(route: ContractGraphRoute): ContractDiagnostic[] {
+function validateRouteSchemas(route: ContractGraphRoute): ContractDiagnostic[] {
   const diagnostics: ContractDiagnostic[] = [];
 
-  for (const schema of getRouteSchemas(route)) {
-    const effectsCount = countZodEffects(schema);
+  for (const entry of getRouteSchemaEntries(route)) {
+    const descriptor = describeZodSchema(entry.schema);
 
-    for (let index = 0; index < effectsCount; index += 1) {
+    for (const diagnostic of getSchemaDescriptorDiagnostics(descriptor)) {
       diagnostics.push(
         createRouteDiagnostic(
           route,
-          "contract-schema-zod-effects-unwrapped",
-          "warning",
-          "Zod effects are represented from their inner schema in generated contracts; runtime transforms/refinements still run on the server.",
+          diagnostic.code,
+          diagnostic.severity,
+          `${formatSchemaLocation(entry.location, diagnostic.schemaPath)}: ${diagnostic.message}`,
         ),
       );
     }
@@ -448,89 +456,37 @@ function validateUniqueOperationIds(routes: readonly ContractGraphRoute[]): Cont
   return diagnostics;
 }
 
-function getRouteSchemas(route: ContractGraphRoute): z.ZodType[] {
-  const schemas = [
-    route.inputSchemas.body,
-    route.inputSchemas.path,
-    route.inputSchemas.query,
-    route.inputSchemas.headers,
-    route.outputSchema,
-    ...route.params.map((param) => param.schema),
-  ].filter((schema): schema is z.ZodType => Boolean(schema));
-
-  return [...new Set(schemas)];
-}
-
-function isZodEffects(schema: z.ZodType): boolean {
-  return schema.constructor.name === "ZodEffects";
-}
-
-function countZodEffects(schema: z.ZodType, seen = new Set<z.ZodType>()): number {
-  if (seen.has(schema)) {
-    return 0;
-  }
-
-  seen.add(schema);
-
-  const currentCount = isZodEffects(schema) ? 1 : 0;
-  const nestedCount = getNestedZodSchemas(schema).reduce(
-    (count, nestedSchema) => count + countZodEffects(nestedSchema, seen),
-    0,
-  );
-
-  return currentCount + nestedCount;
-}
-
-function getNestedZodSchemas(schema: z.ZodType): z.ZodType[] {
-  const definition = getZodDefinition(schema);
-
-  if (!definition) {
-    return [];
-  }
-
-  const nestedSchemas = [
-    ...Object.values(getZodObjectShape(definition)),
-    definition.innerType,
-    definition.schema,
-    definition.type,
-    definition.element,
-    ...(Array.isArray(definition.options) ? definition.options : []),
+function getRouteSchemaEntries(route: ContractGraphRoute): RouteSchemaDiagnosticEntry[] {
+  const candidates: readonly {
+    readonly schema: z.ZodType | null;
+    readonly location: RouteSchemaDiagnosticLocation;
+  }[] = [
+    { schema: route.inputSchemas.body, location: "body" },
+    { schema: route.inputSchemas.path, location: "path" },
+    { schema: route.inputSchemas.query, location: "query" },
+    { schema: route.inputSchemas.headers, location: "headers" },
+    { schema: route.outputSchema, location: "response" },
   ];
+  const entries: RouteSchemaDiagnosticEntry[] = [];
+  const seen = new Set<z.ZodType>();
 
-  return nestedSchemas.filter(isZodType);
-}
+  for (const candidate of candidates) {
+    if (!candidate.schema || seen.has(candidate.schema)) {
+      continue;
+    }
 
-type ZodDefinition = {
-  readonly shape?: unknown;
-  readonly innerType?: unknown;
-  readonly schema?: unknown;
-  readonly type?: unknown;
-  readonly element?: unknown;
-  readonly options?: unknown;
-};
-
-function getZodDefinition(schema: z.ZodType): ZodDefinition | undefined {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
+    seen.add(candidate.schema);
+    entries.push({ schema: candidate.schema, location: candidate.location });
   }
 
-  return schema._def as ZodDefinition;
+  return entries;
 }
 
-function getZodObjectShape(definition: ZodDefinition): Record<string, unknown> {
-  const shape = typeof definition.shape === "function" ? definition.shape() : definition.shape;
-
-  return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
-}
-
-function isZodType(value: unknown): value is z.ZodType {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as { readonly safeParse?: unknown };
-
-  return typeof candidate.safeParse === "function";
+function formatSchemaLocation(
+  location: RouteSchemaDiagnosticLocation,
+  schemaPath: readonly string[],
+): string {
+  return schemaPath.length > 0 ? `${location}.${schemaPath.join(".")}` : location;
 }
 
 function createRouteDiagnostic(
