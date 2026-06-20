@@ -124,6 +124,170 @@
       "typeExports": []
     },
     {
+      "packageName": "@croco/admin-core",
+      "relativeDir": "packages/admin-core",
+      "entrypoint": "packages/admin-core/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "ADMIN_CORE_DIAGNOSTIC_CODES",
+          "exportKind": "named",
+          "source": "./libs/AdminResource",
+          "declarationKind": "const"
+        },
+        {
+          "name": "AdminResourceValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/AdminResource",
+          "declarationKind": "class"
+        },
+        {
+          "name": "assertAdminResourceValid",
+          "exportKind": "named",
+          "source": "./libs/AdminResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineAdminResource",
+          "exportKind": "named",
+          "source": "./libs/AdminResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "validateAdminResource",
+          "exportKind": "named",
+          "source": "./libs/AdminResource",
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "AdminAction",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminActionKind",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminActionMutability",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminActionRecoveryDescriptor",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminActionTarget",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminAuditDescriptor",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminAuditRequirement",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFieldValueType",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminPermissionMode",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminPermissionRequirement",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminProblemContract",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceDetailDescriptor",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/AdminResource"
+        },
+        {
+          "name": "AdminResourceDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/AdminResource"
+        },
+        {
+          "name": "AdminResourceDiagnosticTarget",
+          "exportKind": "named",
+          "source": "./libs/AdminResource"
+        },
+        {
+          "name": "AdminResourceField",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceIdentity",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceListDescriptor",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceScope",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceSection",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminResourceValidationReport",
+          "exportKind": "named",
+          "source": "./libs/AdminResource"
+        },
+        {
+          "name": "AdminSortDirection",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "NonEmptyArray",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/admin-generated",
       "relativeDir": "packages/admin-generated",
       "entrypoint": "packages/admin-generated/src/index.ts",
