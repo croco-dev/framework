@@ -20,6 +20,10 @@ type SmokeValidation = {
   readonly packagePath?: readonly string[];
   readonly args?: readonly string[];
   readonly paths?: readonly string[];
+  readonly json?: {
+    readonly path: string;
+    readonly matches: Record<string, unknown>;
+  };
 };
 
 type SmokeCase = {
@@ -58,6 +62,34 @@ const smokeCases: readonly SmokeCase[] = [
     name: "blank-basic",
     args: ["--preset", "blank", "--scope", "@smoke", "--no-install", "--no-git"],
     validations: [{ label: "typecheck", args: ["typecheck"] }],
+  },
+  {
+    name: "goal-saas-api",
+    args: ["--goal", "saas-api", "--scope", "@smoke", "--no-install", "--no-git"],
+    validations: [
+      {
+        label: "manifest",
+        json: {
+          path: "croco.app.json",
+          matches: {
+            schemaVersion: 1,
+            goal: "saas-api",
+            preset: "saas",
+            runtimeTarget: "node",
+            providers: [
+              "in-memory-tenant",
+              "in-memory-auth",
+              "in-memory-billing",
+              "in-memory-metering",
+              "in-memory-events",
+            ],
+          },
+        },
+      },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "test", args: ["test"] },
+    ],
   },
   {
     name: "graphql-lambda-api",
@@ -472,7 +504,15 @@ function runValidation(
     );
   }
 
-  if (!validation.args && !validation.paths) {
+  if (validation.json) {
+    assertJsonMatches(
+      join(validationDir, validation.json.path),
+      validation.json.matches,
+      `${smokeCase.name} ${validation.label}`,
+    );
+  }
+
+  if (!validation.args && !validation.paths && !validation.json) {
     throw new Error(`${smokeCase.name} ${validation.label} has no validation action`);
   }
 
@@ -878,6 +918,25 @@ function assertFileContains(path: string, expected: string): void {
 
   if (!content.includes(expected)) {
     throw new Error(`${path} did not include expected text: ${expected}`);
+  }
+}
+
+function assertJsonMatches(path: string, expected: Record<string, unknown>, label: string): void {
+  assertExists(path, `${label} did not create ${path}`);
+  const actual = JSON.parse(readFileSync(path, "utf8")) as unknown;
+
+  if (!isRecord(actual)) {
+    throw new Error(`${label} JSON ${path} is not an object`);
+  }
+
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    const actualValue = actual[key];
+
+    if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
+      throw new Error(
+        `${label} JSON ${path} expected ${key}=${JSON.stringify(expectedValue)} but got ${JSON.stringify(actualValue)}`,
+      );
+    }
   }
 }
 

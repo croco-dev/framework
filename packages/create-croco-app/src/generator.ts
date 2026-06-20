@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { validateResolvedGoalOptions, writeGoalManifest } from "./goals.js";
 import { mergeInto } from "./helpers/fs.js";
 import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
 import {
@@ -23,6 +24,8 @@ import { TEMPLATES_DIR } from "./template-path.js";
 import type { GeneratorOptions } from "./types.js";
 
 export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
+  validateResolvedGoalOptions(options);
+
   const vars = { projectName: options.projectName, scope: options.scope };
   const isVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
 
@@ -164,6 +167,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
 
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
+  writeGoalManifest(targetDir, options);
 
   // Step 10: .env.example → .env 복사
   const envExample = join(targetDir, ".env.example");

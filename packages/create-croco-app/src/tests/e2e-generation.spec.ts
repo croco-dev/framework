@@ -3,6 +3,8 @@ import { basename, extname, join, relative } from "node:path";
 import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
+import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
+import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
 import type { GeneratorOptions } from "../types.js";
 
 const DEPENDENCY_FIELDS = [
@@ -283,6 +285,34 @@ describe("E2E: generate()", () => {
     expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
     expect(existsSync(join(testDir, "turbo.json"))).toBe(true);
     expect(existsSync(join(testDir, "tsconfig.json"))).toBe(true);
+  });
+
+  it("rejects mismatched goal generator options before creating the target directory", async () => {
+    const options: GeneratorOptions = {
+      projectName: "mismatched-goal",
+      scope: "@test",
+      goal: "saas-api",
+      preset: "production-app",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    let error: unknown;
+    try {
+      await generate(testDir, options);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(InvalidGoalOptionProblem);
+    expect(error).toMatchObject({
+      code: "create-croco-app/invalid-goal-option",
+    });
+    expect(existsSync(testDir)).toBe(false);
   });
 
   it(
@@ -749,6 +779,77 @@ describe("E2E: generate()", () => {
     assertNoExternalCrocoWorkspaceRanges(testDir);
     assertAllSourceBareImportsDeclared(testDir);
   });
+
+  it(
+    "generates a goal-first SaaS API app with manifest evidence",
+    { timeout: 120_000 },
+    async () => {
+      const options = normalizeNonInteractiveOptions(
+        parseCliOptions("my-saas-api", {
+          goal: "saas-api",
+          scope: "@test",
+          install: false,
+          git: false,
+          agentRules: false,
+        }),
+      );
+
+      await generate(testDir, options);
+
+      const rootPackageJson = readPackageJson(join(testDir, "package.json"));
+      const manifest = JSON.parse(readFileSync(join(testDir, "croco.app.json"), "utf8")) as {
+        schemaVersion?: unknown;
+        projectName?: unknown;
+        scope?: unknown;
+        goal?: unknown;
+        preset?: unknown;
+        runtimeTarget?: unknown;
+        protocol?: unknown;
+        providers?: unknown;
+        storage?: unknown;
+        auth?: unknown;
+        billing?: unknown;
+        telemetry?: unknown;
+        deploymentPreset?: unknown;
+        qualityGates?: unknown;
+      };
+
+      expect(rootPackageJson.scripts).toMatchObject({
+        typecheck: "turbo typecheck",
+        build: "turbo build",
+        test: "turbo test",
+        "contract:verify":
+          "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
+        "demo:smoke":
+          "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+      });
+      expect(manifest).toMatchObject({
+        schemaVersion: 1,
+        projectName: "my-saas-api",
+        scope: "@test",
+        goal: "saas-api",
+        preset: "saas",
+        runtimeTarget: "node",
+        protocol: "rest",
+        providers: [
+          "in-memory-tenant",
+          "in-memory-auth",
+          "in-memory-billing",
+          "in-memory-metering",
+          "in-memory-events",
+        ],
+        storage: ["in-memory-demo"],
+        auth: "tenant-demo",
+        billing: "demo",
+        telemetry: "opentelemetry-otlp",
+        deploymentPreset: "node-api",
+        qualityGates: ["install", "typecheck", "build", "test", "contract:verify", "demo:smoke"],
+      });
+      assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+      assertAllSourceBareImportsDeclared(testDir);
+    },
+  );
 
   it(
     "generates AI SaaS preset with tenant-metered AI smoke commands",

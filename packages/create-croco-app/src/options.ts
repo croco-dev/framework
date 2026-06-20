@@ -1,4 +1,10 @@
 import { validateProjectName } from "./helpers/validate.js";
+import {
+  readGoal,
+  resolveGoalOptions,
+  validateGoalCliOptions,
+  validateResolvedGoalOptions,
+} from "./goals.js";
 import { InvalidSaasPresetOptionProblem } from "./libs/problems/InvalidSaasPresetOptionProblem.js";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "./supported-options.js";
 import type { GeneratorOptions } from "./types.js";
@@ -23,6 +29,8 @@ export function parseCliOptions(
   const cliOptions: Partial<GeneratorOptions> = {};
 
   if (directory) cliOptions.projectName = directory.split("/").at(-1) ?? directory;
+  if (typeof rawOptions.goal === "string")
+    cliOptions.goal = rawOptions.goal as GeneratorOptions["goal"];
   if (typeof rawOptions.preset === "string")
     cliOptions.preset = rawOptions.preset as GeneratorOptions["preset"];
   if (typeof rawOptions.scope === "string") cliOptions.scope = rawOptions.scope;
@@ -57,7 +65,9 @@ export function parseCliOptions(
 }
 
 export function isNonInteractiveOptions(cliOptions: Partial<GeneratorOptions>): boolean {
-  return !!cliOptions.preset && !!cliOptions.scope && !!cliOptions.projectName;
+  return (
+    (!!cliOptions.goal || !!cliOptions.preset) && !!cliOptions.scope && !!cliOptions.projectName
+  );
 }
 
 export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void {
@@ -73,6 +83,7 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
     throw new Error("Scope must start with @");
   }
 
+  if (cliOptions.goal !== undefined) validateGoalCliOptions(cliOptions);
   if (cliOptions.preset !== undefined) readChoice("preset", cliOptions.preset, PRESETS);
   if (cliOptions.api !== undefined) readChoice("api", cliOptions.api, APIS);
   if (cliOptions.apiHosting !== undefined)
@@ -102,6 +113,7 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
   if (!options.scope.startsWith("@")) throw new Error("Scope must start with @");
 
   readChoice("preset", options.preset, PRESETS);
+  if (options.goal) readGoal(options.goal);
   readChoice("api-hosting", options.apiHosting, API_HOSTING);
   if (options.api) readChoice("api", options.api, APIS);
   if (options.backendDeploy) readChoice("backend-deploy", options.backendDeploy, BACKEND_DEPLOYS);
@@ -112,6 +124,7 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
   }
 
   if (options.preset === "blank") {
+    validateResolvedGoalOptions(options);
     if (options.api) throw new Error("--api is not supported with the blank preset");
     if (options.backendDeploy)
       throw new Error("--backend-deploy is not supported with the blank preset");
@@ -127,6 +140,7 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
   }
 
   if (options.preset === "ddd-api") {
+    validateResolvedGoalOptions(options);
     if (!options.api) throw new Error("--api is required for ddd-api and ddd-fullstack");
     if (options.webApps.length > 0) {
       throw new Error("--web-apps is only supported with the ddd-fullstack preset");
@@ -141,16 +155,19 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
   }
 
   if (isSaasPreset(options.preset)) {
+    validateResolvedGoalOptions(options);
     assertSaasOptions(options, options.preset);
     return;
   }
 
   if (isProductionPreset(options.preset)) {
+    validateResolvedGoalOptions(options);
     assertProductionOptions(options, options.preset);
     return;
   }
 
   if (options.preset === "ddd-fullstack") {
+    validateResolvedGoalOptions(options);
     if (!options.api) throw new Error("--api is required for ddd-api and ddd-fullstack");
     if (options.apiHosting === "nextjs" && options.webApps.length !== 1) {
       throw new Error("--api-hosting nextjs requires exactly one web app");
@@ -161,6 +178,7 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
     return;
   }
 
+  validateResolvedGoalOptions(options);
   if (options.frontendDeploy !== "cloudflare-meta-vite") {
     throw new Error("ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite");
   }
@@ -173,6 +191,15 @@ export function normalizeNonInteractiveOptions(
 
   const projectName = requireOption(cliOptions.projectName, "Project name is required");
   const scope = requireOption(cliOptions.scope, "Package scope is required");
+  if (cliOptions.goal) {
+    const goal = readGoal(cliOptions.goal);
+    const options = resolveGoalOptions(projectName, scope, goal, cliOptions);
+
+    validateResolvedOptions(options);
+
+    return options;
+  }
+
   const preset = readChoice(
     "preset",
     requireOption(cliOptions.preset, "Project preset is required"),

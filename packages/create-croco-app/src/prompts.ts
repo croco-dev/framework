@@ -1,5 +1,6 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
+import { GOAL_SPECS, readGoal, resolveGoalOptions } from "./goals.js";
 import type { GeneratorOptions } from "./types.js";
 
 export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<GeneratorOptions> {
@@ -37,6 +38,65 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
   if (p.isCancel(scope)) {
     p.cancel("Operation cancelled");
     process.exit(0);
+  }
+
+  const goal =
+    cliArgs.goal ??
+    (cliArgs.preset
+      ? undefined
+      : await p.select({
+          message: "Select an app goal:",
+          options: [
+            ...Object.entries(GOAL_SPECS).map(([value, spec]) => ({
+              value,
+              label: spec.label,
+              hint: spec.hint,
+            })),
+            {
+              value: "custom-preset",
+              label: "Custom technology preset",
+              hint: "Choose the lower-level preset, protocol, hosting, deploy, and database options",
+            },
+          ],
+        }));
+  if (p.isCancel(goal)) {
+    p.cancel("Operation cancelled");
+    process.exit(0);
+  }
+
+  if (goal && goal !== "custom-preset") {
+    const agentRules =
+      cliArgs.agentRules ??
+      (await p.confirm({
+        message: "Add AI agent rules? (.cursor/rules, AGENTS.md)",
+        initialValue: true,
+      }));
+    if (p.isCancel(agentRules)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
+    const installDeps =
+      cliArgs.installDeps ?? (await p.confirm({ message: "Install dependencies?" }));
+    if (p.isCancel(installDeps)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
+    const initGit = cliArgs.initGit ?? (await p.confirm({ message: "Initialize git repository?" }));
+    if (p.isCancel(initGit)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
+    p.outro(pc.green("✓ Project configuration complete"));
+
+    return resolveGoalOptions(projectName as string, scope as string, readGoal(goal as string), {
+      ...cliArgs,
+      agentRules: agentRules as boolean,
+      installDeps: installDeps as boolean,
+      initGit: initGit as boolean,
+    });
   }
 
   // 3. preset
