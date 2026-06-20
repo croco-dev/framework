@@ -274,11 +274,18 @@ export type { ComponentMetadata } from "./libs/types";
 export type { ContainerResolutionFailureReason } from "./libs/problems/ContainerResolutionProblem";
 
 export type {
+  DependencyGraphDiagnostic,
+  DependencyGraphDiagnosticCode,
+  DependencyGraphManifest,
+  DependencyGraphManifestStatus,
+  DependencyGraphManifestVersion,
+  DependencyGraphProvider,
   DependencyProviderKind,
   DependencyResolutionStep,
   DependencyResolutionStepStatus,
   DependencyResolutionTrace,
   DependencyResolutionTraceStatus,
+  DependencySourceLocation,
   DependencyTokenKind,
 } from "./libs/types";
 

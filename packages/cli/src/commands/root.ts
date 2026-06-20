@@ -41,6 +41,11 @@ export function createCrocoCommand() {
         "Validate Croco contract graph artifacts",
         async () => (await import("./contracts.js")).contracts as LoadedCommand,
       ),
+      di: lazyCommand(
+        "di",
+        "Validate Croco DI graph artifacts",
+        async () => (await import("./di.js")).di as LoadedCommand,
+      ),
       doctor,
       migrate: lazyCommand(
         "migrate",

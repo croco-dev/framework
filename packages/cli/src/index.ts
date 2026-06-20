@@ -18,6 +18,8 @@ export { contractsCheck, runContractsCheck } from "./commands/contractsCheck";
 export { create } from "./commands/create";
 export { createDomain } from "./commands/createDomain";
 export { createPage } from "./commands/createPage";
+export { di } from "./commands/di";
+export { diCheck, parseDiCheckArgs, runDiCheck } from "./commands/diCheck";
 export { doctor, formatDoctorReport, getDoctorExitCode, runDoctor } from "./commands/doctor";
 export { generate } from "./commands/generate";
 export { generateScaffold } from "./commands/generateScaffold";
@@ -55,6 +57,8 @@ export {
   runOpsStatus,
 } from "./commands/ops";
 export { GLOBAL_OPTIONS } from "./commands/options";
+
+export type { DiCheckDiagnostic, DiCheckIo, DiCheckReport } from "./commands/diCheck";
 
 export type {
   DoctorCheckResult,

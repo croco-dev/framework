@@ -2,40 +2,22 @@
 editUrl: false
 next: false
 prev: false
-title: "DependencyResolutionStep"
+title: "DependencyGraphProvider"
 ---
 
-> **DependencyResolutionStep** = `object`
+> **DependencyGraphProvider** = `object`
 
 ## Properties
 
-### dependencyOf?
+### dependencies
 
-> `readonly` `optional` **dependencyOf**: `string`
-
-***
-
-### dependencyOfId?
-
-> `readonly` `optional` **dependencyOfId**: `string`
+> `readonly` **dependencies**: readonly `string`[]
 
 ***
 
-### parameterIndex?
+### dependencyIds
 
-> `readonly` `optional` **parameterIndex**: `number`
-
-***
-
-### path
-
-> `readonly` **path**: readonly `string`[]
-
-***
-
-### pathIds
-
-> `readonly` **pathIds**: readonly `string`[]
+> `readonly` **dependencyIds**: readonly `string`[]
 
 ***
 
@@ -45,15 +27,15 @@ title: "DependencyResolutionStep"
 
 ***
 
-### reason
-
-> `readonly` **reason**: `string`
-
-***
-
 ### scope?
 
 > `readonly` `optional` **scope**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
+
+***
+
+### sourceLocation?
+
+> `readonly` `optional` **sourceLocation**: [`DependencySourceLocation`](/api/framework-context/src/type-aliases/dependencysourcelocation/)
 
 ***
 
