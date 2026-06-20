@@ -4,7 +4,7 @@ import {
   aiGenerateResponseSchema,
   aiInvocationLogListSchema,
   aiUsageStateSchema,
-  optionalTenantIdHeaderSchema,
+  OPTIONAL_TENANT_ID_HEADER_SCHEMA,
   type AiGenerateRequestDto,
 } from "./aiSchemas";
 
@@ -13,7 +13,7 @@ export class AiController {
   @Post("/generate")
   @ResponseSchema(aiGenerateResponseSchema)
   async generate(
-    @Header("x-tenant-id", optionalTenantIdHeaderSchema) tenantId: string | undefined,
+    @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
     @Body(aiGenerateRequestSchema) body: AiGenerateRequestDto,
   ) {
     const { defaultAiSaasRuntime } = await import("../aiSaas");
@@ -27,7 +27,9 @@ export class AiController {
 
   @Get("/usage")
   @ResponseSchema(aiUsageStateSchema)
-  async usage(@Header("x-tenant-id", optionalTenantIdHeaderSchema) tenantId: string | undefined) {
+  async usage(
+    @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
+  ) {
     const { defaultAiSaasRuntime } = await import("../aiSaas");
     return defaultAiSaasRuntime.service.getUsageState(tenantId);
   }
@@ -35,7 +37,7 @@ export class AiController {
   @Get("/invocations")
   @ResponseSchema(aiInvocationLogListSchema)
   async invocations(
-    @Header("x-tenant-id", optionalTenantIdHeaderSchema) tenantId: string | undefined,
+    @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
   ) {
     const { defaultAiSaasRuntime } = await import("../aiSaas");
     return defaultAiSaasRuntime.service.listInvocationLogs(tenantId);

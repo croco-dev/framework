@@ -54,7 +54,8 @@ function runDecorator(
 
   if (options.imported !== false) {
     if (typeof importListener !== "function") {
-      throw new Error("ImportDeclaration listener is not registered");
+      expect(importListener).toBeTypeOf("function");
+      return reports;
     }
 
     importListener({
@@ -74,7 +75,8 @@ function runDecorator(
   }
 
   if (typeof listener !== "function") {
-    throw new Error("Decorator listener is not registered");
+    expect(listener).toBeTypeOf("function");
+    return reports;
   }
 
   listener({

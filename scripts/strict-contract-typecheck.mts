@@ -20,7 +20,7 @@ export type StrictContractPackage = {
   readonly tsconfig: string;
 };
 
-type StrictContractBaseline = {
+export type StrictContractBaseline = {
   readonly version: 1;
   readonly strictOptions: readonly string[];
   readonly packages: readonly string[];
@@ -167,6 +167,35 @@ function readBaseline(rootDir: string): StrictContractBaseline {
   return JSON.parse(readFileSync(join(rootDir, baselinePath), "utf-8")) as StrictContractBaseline;
 }
 
+function describeList(values: readonly string[]): string {
+  return values.length === 0 ? "<empty>" : values.join(", ");
+}
+
+function listsMatch(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+export function validateStrictContractBaselineConfiguration(
+  baseline: StrictContractBaseline,
+): void {
+  if (baseline.version !== 1) {
+    throw new Error(`Unsupported baseline version: ${baseline.version}`);
+  }
+
+  if (!listsMatch(baseline.strictOptions, strictOptions)) {
+    throw new Error(
+      `Baseline strictOptions mismatch. Expected: ${describeList(strictOptions)}; Actual: ${describeList(baseline.strictOptions)}`,
+    );
+  }
+
+  const rolloutPackageNames = rolloutPackages.map((pkg) => pkg.name);
+  if (!listsMatch(baseline.packages, rolloutPackageNames)) {
+    throw new Error(
+      `Baseline packages mismatch. Expected: ${describeList(rolloutPackageNames)}; Actual: ${describeList(baseline.packages)}`,
+    );
+  }
+}
+
 function runTypecheck(
   rootDir: string,
   pkg: StrictContractPackage,
@@ -208,6 +237,7 @@ function printDiagnostic(prefix: string, diagnostic: StrictContractDiagnostic): 
 function main(): void {
   const rootDir = process.cwd();
   const baseline = readBaseline(rootDir);
+  validateStrictContractBaselineConfiguration(baseline);
   const current = rolloutPackages.flatMap((pkg) => runTypecheck(rootDir, pkg));
   const comparison = compareStrictContractDiagnostics(baseline.diagnostics, current);
 

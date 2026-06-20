@@ -140,6 +140,42 @@ function matchSchemaLessNamedParamDecorator(line: string): RegExpMatchArray | nu
   return line.match(/@(Param|Query|Header)\s*\(\s*(['"`])[^'"`]+\2\s*\)/);
 }
 
+function stripLineComment(line: string): string {
+  return line.replace(/\/\/.*$/, "");
+}
+
+function isIndexInsideStringLiteral(line: string, index: number): boolean {
+  let quote: string | null = null;
+  let escaped = false;
+
+  for (let currentIndex = 0; currentIndex < index; currentIndex += 1) {
+    const char = line[currentIndex];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (quote !== null) {
+      if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+    }
+  }
+
+  return quote !== null;
+}
+
 function toPosixPath(path: string): string {
   return path.split("\\").join("/");
 }
@@ -235,10 +271,14 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
       if (isLineIgnored(lines, lineIndex, rule.code)) {
         return [];
       }
+      const analyzableLine = stripLineComment(line);
 
       for (const detector of rule.detectors) {
-        const match = detector.match(line);
+        const match = detector.match(analyzableLine);
         if (!match) {
+          continue;
+        }
+        if (match.index !== undefined && isIndexInsideStringLiteral(analyzableLine, match.index)) {
           continue;
         }
 

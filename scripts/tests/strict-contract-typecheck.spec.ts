@@ -4,6 +4,8 @@ import {
   collectStrictContractDiagnostics,
   compareStrictContractDiagnostics,
   normalizeStrictContractDiagnostics,
+  validateStrictContractBaselineConfiguration,
+  type StrictContractBaseline,
   type StrictContractPackage,
 } from "../strict-contract-typecheck.mts";
 
@@ -84,4 +86,37 @@ describe("strict-contract-typecheck.mts", () => {
       ],
     });
   });
+
+  it("accepts baseline metadata that matches the strict rollout configuration", () => {
+    expect(() => validateStrictContractBaselineConfiguration(validBaseline())).not.toThrow();
+  });
+
+  it("rejects stale baseline metadata before comparing diagnostics", () => {
+    expect(() =>
+      validateStrictContractBaselineConfiguration({
+        ...validBaseline(),
+        strictOptions: ["exactOptionalPropertyTypes"],
+      }),
+    ).toThrow(/Baseline strictOptions mismatch/);
+
+    expect(() =>
+      validateStrictContractBaselineConfiguration({
+        ...validBaseline(),
+        packages: ["@croco/protocols-rest"],
+      }),
+    ).toThrow(/Baseline packages mismatch/);
+  });
 });
+
+function validBaseline(): StrictContractBaseline {
+  return {
+    version: 1,
+    strictOptions: [
+      "exactOptionalPropertyTypes",
+      "noUncheckedIndexedAccess",
+      "noPropertyAccessFromIndexSignature",
+    ],
+    packages: ["@croco/protocols-core"],
+    diagnostics: [],
+  };
+}

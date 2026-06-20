@@ -230,6 +230,37 @@ describe("static-misuse-check.mts", () => {
       }),
     );
   });
+
+  it("ignores generated REST decorator mentions in line comments", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/UsersController.ts",
+      [
+        'import { Body, Controller, Post } from "@croco/protocols-rest";',
+        'import { z } from "zod";',
+        "const bodySchema = z.object({ name: z.string() });",
+        '@Controller("/users")',
+        "export class UsersController {",
+        "  @Post()",
+        "  update(@Body(bodySchema) body: unknown) {",
+        "    // mention @All() and @Body() in a maintenance note without tripping the gate",
+        '    return { body, note: "@Param(\\"id\\") belongs in docs" };',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-generated-contract-schema-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
 });
 
 function createTempRepo(): string {

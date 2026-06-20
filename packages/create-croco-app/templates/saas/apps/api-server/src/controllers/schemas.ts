@@ -170,9 +170,9 @@ export const jobActionSchema = z.object({
   reason: z.string().optional(),
 });
 
-export const jobIdSchema = z.string().min(1);
-export const optionalJobStatusQuerySchema = z.string().optional();
-export const optionalJobTypeQuerySchema = z.string().optional();
-export const optionalJobsIntegerQuerySchema = z.string().optional();
+export const JOB_ID_SCHEMA = z.string().min(1);
+export const OPTIONAL_JOB_STATUS_QUERY_SCHEMA = z.string().optional();
+export const OPTIONAL_JOB_TYPE_QUERY_SCHEMA = z.string().optional();
+export const OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA = z.string().optional();
 
 export type JobActionDto = z.infer<typeof jobActionSchema>;
