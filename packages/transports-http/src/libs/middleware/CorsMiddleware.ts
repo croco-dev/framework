@@ -1,4 +1,5 @@
 import type { MiddlewareFunction } from "../types";
+import { markSecurityMiddleware } from "./SecurityMiddlewareMarker";
 
 export type CorsOptions = {
   origins: string[];
@@ -25,7 +26,7 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
     exposedHeaders,
   } = options;
 
-  return async (ctx, next): Promise<void> => {
+  const middleware: MiddlewareFunction = async (ctx, next): Promise<void> => {
     const requestOrigin = ctx.header("origin");
 
     if (!requestOrigin || !origins.includes(requestOrigin)) {
@@ -58,4 +59,6 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
 
     await next();
   };
+
+  return markSecurityMiddleware(middleware, "corsMiddleware");
 };

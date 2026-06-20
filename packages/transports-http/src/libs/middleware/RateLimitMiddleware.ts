@@ -7,6 +7,7 @@ import type {
 } from "@croco/ratelimit-core";
 import { createRateLimitMiddleware } from "@croco/ratelimit-core";
 import type { CrocoHttpContext, MiddlewareFunction } from "../types";
+import { markSecurityMiddleware } from "./SecurityMiddlewareMarker";
 
 export type RateLimitSkipPredicate = (ctx: CrocoHttpContext) => boolean | Promise<boolean>;
 
@@ -34,6 +35,20 @@ function createContextAdapter(ctx: CrocoHttpContextAdapter): HttpContext {
   };
 }
 
+function applyRateLimitHeaders(ctx: CrocoHttpContext): void {
+  const headers = ctx.get<RateLimitHeaders>("rateLimitHeaders");
+  if (!headers) {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (value !== undefined) {
+      ctx.raw.header(key, value);
+      ctx.res.headers[key] = value;
+    }
+  }
+}
+
 /**
  * `@croco/ratelimit-core` 미들웨어를 Croco HTTP 컨텍스트에 맞게 연결합니다.
  */
@@ -41,7 +56,7 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
   const { skipSuccessfulRequests, skipFailedRequests, skip, ...createOptions } = options;
   const baseMiddleware = createRateLimitMiddleware(createOptions);
 
-  return async (ctx, next): Promise<void> => {
+  const middleware: MiddlewareFunction = async (ctx, next): Promise<void> => {
     if (skip && (await skip(ctx))) {
       await next();
       return;
@@ -62,18 +77,18 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
         return;
       }
 
-      const headers = ctx.get<RateLimitHeaders>("rateLimitHeaders");
-      if (headers) {
-        for (const [key, value] of Object.entries(headers)) {
-          if (value !== undefined) {
-            ctx.raw.header(key, value);
-          }
-        }
-      }
+      applyRateLimitHeaders(ctx);
     };
 
-    await baseMiddleware(adapter, wrappedNext);
+    try {
+      await baseMiddleware(adapter, wrappedNext);
+    } catch (error) {
+      applyRateLimitHeaders(ctx);
+      throw error;
+    }
   };
+
+  return markSecurityMiddleware(middleware, "rateLimitHttpMiddleware");
 }
 
 export type RateLimitMiddlewareFactoryOptions = {

@@ -1,4 +1,5 @@
 import type { MiddlewareFunction } from "../types";
+import { markSecurityMiddleware } from "./SecurityMiddlewareMarker";
 
 export type SecurityHeadersOptions = {
   contentTypeOptions?: boolean;
@@ -45,7 +46,7 @@ export const securityHeadersMiddleware = (
   const frameValue = buildFrameValue(frameOptions, frameOptionsAllowFrom);
   const referrerValue = buildReferrerValue(referrerPolicy);
 
-  return async (ctx, next): Promise<void> => {
+  const middleware: MiddlewareFunction = async (ctx, next): Promise<void> => {
     if (contentTypeOptions) {
       ctx.raw.header("X-Content-Type-Options", "nosniff");
     }
@@ -82,6 +83,8 @@ export const securityHeadersMiddleware = (
 
     await next();
   };
+
+  return markSecurityMiddleware(middleware, "securityHeadersMiddleware");
 };
 
 function buildHstsValue(

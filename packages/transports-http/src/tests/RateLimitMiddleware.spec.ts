@@ -2,6 +2,7 @@ import "reflect-metadata";
 
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import { Controller, Get } from "@croco/protocols-rest";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
@@ -16,6 +17,14 @@ import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware"
 
 describe("RateLimitMiddleware", () => {
   let rateLimiter: RateLimiter;
+
+  @Controller("/limited")
+  class RateLimitedController {
+    @Get("/resource")
+    getResource() {
+      return { ok: true };
+    }
+  }
 
   beforeEach(() => {
     Container.reset();
@@ -179,6 +188,71 @@ describe("RateLimitMiddleware", () => {
       );
 
       expect(response.status).toBe(404);
+    });
+
+    it("should include recovery headers on 429 Problem responses", async () => {
+      const app = createApp({
+        controllers: [RateLimitedController],
+        middlewares: [
+          rateLimitHttpMiddleware({
+            rateLimiter,
+            policy: createSlidingWindowPolicy("api", 1, 60000),
+            addHeaders: true,
+          }),
+        ],
+        securityValidation: "off",
+      });
+      const request = () =>
+        new Request("http://localhost/limited/resource", {
+          headers: { "x-forwarded-for": "127.0.0.1" },
+        });
+
+      const allowed = await app.fetch(request());
+      const rejected = await app.fetch(request());
+
+      expect(allowed.status).toBe(200);
+      expect(allowed.headers.get("X-RateLimit-Limit")).toBe("1");
+      expect(allowed.headers.get("X-RateLimit-Remaining")).toBe("0");
+      expect(allowed.headers.get("Retry-After")).toBeNull();
+
+      expect(rejected.status).toBe(429);
+      expect(rejected.headers.get("Retry-After")).not.toBeNull();
+      expect(rejected.headers.get("X-RateLimit-Limit")).toBe("1");
+      expect(rejected.headers.get("X-RateLimit-Remaining")).toBe("0");
+      expect(rejected.headers.get("X-RateLimit-Reset")).not.toBeNull();
+
+      const body = await rejected.json();
+      expect(body).toMatchObject({
+        code: "RATE_LIMIT_EXCEEDED",
+        status: 429,
+      });
+    });
+
+    it("should suppress 429 recovery headers when addHeaders is false", async () => {
+      const app = createApp({
+        controllers: [RateLimitedController],
+        middlewares: [
+          rateLimitHttpMiddleware({
+            rateLimiter,
+            policy: createSlidingWindowPolicy("api", 1, 60000),
+            addHeaders: false,
+          }),
+        ],
+        securityValidation: "off",
+      });
+      const request = () =>
+        new Request("http://localhost/limited/resource", {
+          headers: { "x-forwarded-for": "127.0.0.1" },
+        });
+
+      await app.fetch(request());
+      const rejected = await app.fetch(request());
+
+      expect(rejected.status).toBe(429);
+      expect(rejected.headers.get("Retry-After")).toBeNull();
+      expect(rejected.headers.get("X-RateLimit-Limit")).toBeNull();
+      expect(rejected.headers.get("X-RateLimit-Remaining")).toBeNull();
+      expect(rejected.headers.get("X-RateLimit-Reset")).toBeNull();
     });
   });
 });
