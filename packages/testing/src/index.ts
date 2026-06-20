@@ -48,3 +48,18 @@ export {
   type LlmProviderConformancePromptSet,
   type LlmProviderConformanceSuite,
 } from "./libs/llm-provider-conformance";
+export {
+  createQStashTaskConformanceSuite,
+  createUpstashRedisRateLimitConformanceSuite,
+  type QStashTaskConformanceHarness,
+  type QStashTaskConformanceOptions,
+  type QStashTaskConformanceScenario,
+  type QStashTaskExecuteOptions,
+  type QStashTaskPublisher,
+  type QStashTaskPublishRecord,
+  type ServerlessProviderConformanceCase,
+  type ServerlessProviderConformanceSuite,
+  type ServerlessProviderLiveSmokeGate,
+  type UpstashRedisRateLimitConformanceOptions,
+  type UpstashRedisRateLimitConformanceScenario,
+} from "./libs/serverless-provider-conformance";

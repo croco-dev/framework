@@ -1,28 +1,11 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
-/**
- * 저장소 타입과 정책 타입이 맞지 않을 때 발생하는 문제입니다.
- */
-export class InvalidRateLimitPolicyProblem extends Problem {
-  readonly code = "ratelimit-upstash/invalid-policy";
-  readonly category = ProblemCategory.InternalServerError;
-
-  constructor(storeType: string) {
-    super(undefined, undefined, `Invalid policy for ${storeType} store`, {
-      extensions: {
-        retryable: false,
-        storeType,
-      },
-    });
-  }
-}
-
-export class MissingUpstashRateLimitConfigProblem extends Problem {
-  readonly code = "ratelimit-upstash/missing-config";
+export class QStashTaskConfigProblem extends Problem {
+  readonly code = "tasks-qstash/missing-config";
   readonly category = ProblemCategory.InternalServerError;
 
   constructor(configKey: string) {
-    super(undefined, undefined, `Missing required Upstash rate-limit configuration: ${configKey}`, {
+    super(undefined, undefined, `Missing required QStash task configuration: ${configKey}`, {
       extensions: {
         configKey,
         retryable: false,
@@ -31,22 +14,34 @@ export class MissingUpstashRateLimitConfigProblem extends Problem {
   }
 }
 
-export class UpstashRateLimitUpstreamProblem extends Problem {
-  readonly code = "ratelimit-upstash/upstream-failed";
+export class QStashTaskValidationProblem extends Problem {
+  readonly code = "tasks-qstash/invalid-publish-request";
+  readonly category = ProblemCategory.BadRequest;
 
-  constructor(operation: string, error: unknown) {
+  constructor(message: string) {
+    super(undefined, undefined, message, {
+      extensions: {
+        retryable: false,
+      },
+    });
+  }
+}
+
+export class QStashTaskPublishProblem extends Problem {
+  readonly code = "tasks-qstash/publish-failed";
+
+  constructor(error: unknown) {
     const status = getUpstreamStatus(error);
-    const retryable = isRetryableUpstashRateLimitError(error);
+    const retryable = isRetryableQStashTaskError(error);
     const message = redactSensitiveValue(getErrorMessage(error));
 
     super(
-      "ratelimit-upstash/upstream-failed",
+      "tasks-qstash/publish-failed",
       mapUpstreamProblemCategory(status, retryable),
-      `Upstash Redis ${operation} failed: ${message}`,
+      `QStash task publish failed: ${message}`,
       {
         extensions: {
-          operation,
-          provider: "upstash-redis",
+          provider: "qstash",
           retryable,
           ...(status !== undefined ? { upstreamStatus: status } : {}),
         },
@@ -55,7 +50,7 @@ export class UpstashRateLimitUpstreamProblem extends Problem {
   }
 }
 
-export function isRetryableUpstashRateLimitError(error: unknown): boolean {
+export function isRetryableQStashTaskError(error: unknown): boolean {
   const status = getUpstreamStatus(error);
   if (status !== undefined) {
     return status === 408 || status === 429 || status >= 500;
@@ -131,7 +126,7 @@ function mapUpstreamProblemCategory(
 
 function redactSensitiveValue(value: string): string {
   return value.replace(
-    /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|redis[-_]?url|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
+    /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|qstash[-_]?url|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
     "$1$2[Redacted]",
   );
 }

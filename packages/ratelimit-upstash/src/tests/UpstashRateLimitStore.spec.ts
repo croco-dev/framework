@@ -3,12 +3,133 @@ import {
   createSlidingWindowPolicy,
   createTokenBucketPolicy,
 } from "@croco/ratelimit-core";
+import { createUpstashRedisRateLimitConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   UpstashFixedWindowStore,
   UpstashSlidingWindowStore,
   UpstashTokenBucketStore,
 } from "../libs/UpstashRateLimitStore";
+
+type ConformanceScenario = "allow" | "deny" | "retryable-upstream" | "terminal-upstream";
+const UPSTASH_REDIS_LIVE_ENV = [
+  "CROCO_LIVE_UPSTASH_REDIS",
+  "UPSTASH_REDIS_REST_URL",
+  "UPSTASH_REDIS_REST_TOKEN",
+] as const;
+
+function createMockRedis(): {
+  eval: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  del: ReturnType<typeof vi.fn>;
+  keys: ReturnType<typeof vi.fn>;
+  expire: ReturnType<typeof vi.fn>;
+} {
+  return {
+    eval: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+    del: vi.fn(),
+    keys: vi.fn(),
+    expire: vi.fn(),
+  };
+}
+
+function createUpstreamError(message: string, status: number): Error & { readonly status: number } {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
+}
+
+function createConformanceStore(scenario: ConformanceScenario): UpstashFixedWindowStore {
+  const redis = createMockRedis();
+
+  if (scenario === "allow") {
+    redis.eval
+      .mockResolvedValueOnce([1, 1, 1])
+      .mockResolvedValueOnce([1, 0, 2])
+      .mockResolvedValueOnce([0, 0, 2]);
+  }
+
+  if (scenario === "deny") {
+    redis.eval.mockResolvedValueOnce([0, 2, 0]);
+  }
+
+  if (scenario === "retryable-upstream") {
+    redis.eval.mockRejectedValue(
+      createUpstreamError("redis timeout token=super-secret-token", 503),
+    );
+  }
+
+  if (scenario === "terminal-upstream") {
+    redis.eval.mockRejectedValue(
+      createUpstreamError("redis rejected token=super-secret-token", 400),
+    );
+  }
+
+  return new UpstashFixedWindowStore({ redis: redis as never });
+}
+
+function isTruthyEnv(name: string): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function readRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required for Upstash Redis live smoke.`);
+  }
+
+  return value;
+}
+
+async function runUpstashRedisLiveSmoke(): Promise<void> {
+  const { Redis } = await import("@upstash/redis");
+  const redis = new Redis({
+    token: readRequiredEnv("UPSTASH_REDIS_REST_TOKEN"),
+    url: readRequiredEnv("UPSTASH_REDIS_REST_URL"),
+  });
+  const key = `smoke:${Date.now()}`;
+  const store = new UpstashFixedWindowStore({
+    prefix: `croco:ratelimit-upstash:${Date.now()}`,
+    redis,
+  });
+  const policy = createFixedWindowPolicy("live-smoke", 2, 1_000);
+
+  const result = await store.check(key, policy);
+  expect(result.success).toBe(true);
+  expect(result.refundReceipt?.algorithm).toBe("fixed");
+
+  if (result.refundReceipt?.algorithm === "fixed") {
+    await store.refund(key, policy, result.refundReceipt);
+  }
+
+  await store.reset(key);
+}
+
+describe("Upstash Redis rate-limit conformance", () => {
+  it.each(
+    createUpstashRedisRateLimitConformanceSuite({
+      createMissingConfig: () => new UpstashFixedWindowStore({ redis: undefined as never }),
+      createStore: createConformanceStore,
+      invalidPolicy: createSlidingWindowPolicy("invalid", 2, 1_000),
+      liveSmoke: {
+        isEnabled: () =>
+          isTruthyEnv("CROCO_LIVE_UPSTASH_REDIS") &&
+          UPSTASH_REDIS_LIVE_ENV.every((name) => Boolean(process.env[name])),
+        requiredEnv: UPSTASH_REDIS_LIVE_ENV,
+        run: runUpstashRedisLiveSmoke,
+      },
+      policy: createFixedWindowPolicy("conformance", 2, 1_000),
+      providerName: "ratelimit-upstash",
+      secretSamples: ["super-secret-token"],
+    }).cases,
+  )("$name", async ({ run }) => {
+    await run();
+  });
+});
 
 describe("UpstashFixedWindowStore", () => {
   let store!: UpstashFixedWindowStore;

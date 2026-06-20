@@ -12680,9 +12680,21 @@
           "declarationKind": "class"
         },
         {
+          "name": "MissingUpstashRateLimitConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitUpstashProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "UpstashFixedWindowStore",
           "exportKind": "named",
           "source": "./libs/UpstashRateLimitStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UpstashRateLimitUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitUpstashProblems",
           "declarationKind": "class"
         },
         {
@@ -13760,13 +13772,36 @@
       "entrypoint": "packages/tasks-qstash/src/index.ts",
       "runtimeExports": [
         {
+          "name": "QStashTaskConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "QStashTaskPublishProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "QStashTaskRunner",
           "exportKind": "named",
           "source": "./libs/QStashTaskRunner",
           "declarationKind": "class"
+        },
+        {
+          "name": "QStashTaskValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
+        {
+          "name": "QStashTaskExecuteOptions",
+          "exportKind": "named",
+          "source": "./libs/QStashTaskRunner"
+        },
         {
           "name": "QStashTaskRunnerOptions",
           "exportKind": "named",
@@ -14347,6 +14382,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createQStashTaskConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "createRpcTestFetch",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -14380,6 +14421,12 @@
           "name": "createTestingTransactionContext",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createUpstashRedisRateLimitConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
           "declarationKind": "function"
         },
         {
@@ -14489,9 +14536,54 @@
           "source": "./libs/testing"
         },
         {
+          "name": "QStashTaskConformanceHarness",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskExecuteOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskPublisher",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskPublishRecord",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
           "name": "ResetCrocoTestingContextOptions",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "ServerlessProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "ServerlessProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "ServerlessProviderLiveSmokeGate",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
         },
         {
           "name": "StorageProviderConformanceCase",
@@ -14552,6 +14644,16 @@
           "name": "TestLogger",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "UpstashRedisRateLimitConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "UpstashRedisRateLimitConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
         }
       ]
     },

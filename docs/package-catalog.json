@@ -527,7 +527,14 @@
         "adapter": "Upstash Redis rate-limit store",
         "runtimes": ["node", "lambda", "cloudflare-workers"],
         "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
-        "features": ["sliding window", "token bucket", "fixed window", "Lua atomicity"]
+        "features": [
+          "sliding window",
+          "token bucket",
+          "fixed window",
+          "Lua atomicity",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "search-drizzle": {
         "domain": "Search",
@@ -568,8 +575,15 @@
         "domain": "Tasks",
         "adapter": "QStash task runner",
         "runtimes": ["node", "lambda", "cloudflare-workers"],
-        "requiredEnv": ["QSTASH_TOKEN", "destination webhook URL"],
-        "features": ["task publish", "delay override", "custom headers"]
+        "requiredEnv": ["UPSTASH_QSTASH_TOKEN", "UPSTASH_QSTASH_DESTINATION_URL"],
+        "features": [
+          "task publish",
+          "delay override",
+          "custom headers",
+          "deduplication id",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "telemetry-api": {
         "domain": "Telemetry",
