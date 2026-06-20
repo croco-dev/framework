@@ -33,6 +33,14 @@ export {
   useSessionGate,
   useTenant,
 } from "./libs/authBridge";
+export {
+  ProblemBoundary,
+  ProblemPanel,
+  ProblemRecoveryActions,
+  ProblemToastAdapter,
+  createProblemToastPayload,
+  normalizeProblemDetails,
+} from "./libs/problemUi";
 export type {
   AuthBridgeGateStatusProps,
   CrocoAuthBridgeProviderProps,
@@ -62,6 +70,18 @@ export type {
   RequirePermissionProps,
   RequireSessionProps,
 } from "./libs/authBridgeTypes";
+export type {
+  ProblemBoundaryFallback,
+  ProblemBoundaryFallbackState,
+  ProblemBoundaryProps,
+  ProblemBoundaryState,
+  ProblemPanelProps,
+  ProblemRecoveryAction,
+  ProblemRecoveryActionKind,
+  ProblemRecoveryActionsProps,
+  ProblemToastAdapterProps,
+  ProblemToastPayload,
+} from "./libs/problemUiTypes";
 export {
   PageDataContext,
   PageDataProvider,
