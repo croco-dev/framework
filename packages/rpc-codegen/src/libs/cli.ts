@@ -8,6 +8,7 @@ type CliOptions = {
   readonly controllers: string;
   readonly outDir: string | null;
   readonly reactQuery: boolean;
+  readonly strictProblems: boolean;
   readonly check: boolean;
 };
 
@@ -38,7 +39,9 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   }
 
   const { loadContractGraph } = await import("./loadRoutes");
-  const graph = await loadContractGraph(result.options.controllers);
+  const graph = await loadContractGraph(result.options.controllers, {
+    strictProblemResponses: result.options.strictProblems,
+  });
 
   if (result.options.check) {
     return reportContractGraph(graph, io);
@@ -81,6 +84,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const controllers = getFlagValue(args, "--controllers");
   const outDir = getFlagValue(args, "--out");
   const check = args.includes("--check");
+  const strictProblems = args.includes("--strict-problems");
 
   if (!controllers || (!outDir && !check)) {
     return { kind: "invalid" };
@@ -92,6 +96,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       controllers,
       outDir,
       reactQuery: args.includes("--react-query"),
+      strictProblems,
       check,
     },
   };
@@ -106,13 +111,14 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
 
 function printHelp(io: CliIo): void {
   io.stdout(`Usage: croco-rpc-codegen --controllers <glob> --out <dir> [--react-query]
-       croco-rpc-codegen --controllers <glob> --check
+       croco-rpc-codegen --controllers <glob> --check [--strict-problems]
 
 Options:
   --controllers <glob>  Controller files to load
   --out <dir>           Output directory for generated clients
   --react-query         Generate React Query hooks
   --check               Validate the canonical contract graph without writing clients
+  --strict-problems     Warn when routes do not declare generated client Problem unions
   --help, -h            Show this help message`);
 }
 

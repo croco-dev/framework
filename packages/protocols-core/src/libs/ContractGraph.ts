@@ -67,6 +67,10 @@ export type ContractGraphRoute = RouteIR & {
   readonly access: ContractAccessMetadata;
 };
 
+export type BuildContractGraphOptions = {
+  readonly strictProblemResponses?: boolean;
+};
+
 export type ContractGraph = {
   readonly version: ContractGraphVersion;
   readonly controllers: readonly ContractGraphController[];
@@ -88,7 +92,10 @@ export class ContractGraphDiagnosticError extends Problem {
   }
 }
 
-export function buildContractGraph(controllers: readonly Constructor[]): ContractGraph {
+export function buildContractGraph(
+  controllers: readonly Constructor[],
+  options: BuildContractGraphOptions = {},
+): ContractGraph {
   const graphControllers: ContractGraphController[] = [];
   const graphRoutes: ContractGraphRoute[] = [];
   const diagnostics: ContractDiagnostic[] = [];
@@ -122,7 +129,7 @@ export function buildContractGraph(controllers: readonly Constructor[]): Contrac
     graphRoutes.push(...routes);
 
     for (const route of routes) {
-      diagnostics.push(...validateRoute(route));
+      diagnostics.push(...validateRoute(route, options));
     }
   }
 
@@ -213,7 +220,10 @@ function toContractGraphRoute(
   };
 }
 
-function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
+function validateRoute(
+  route: ContractGraphRoute,
+  options: BuildContractGraphOptions,
+): ContractDiagnostic[] {
   const diagnostics: ContractDiagnostic[] = [];
 
   if (route.httpMethod.toUpperCase() === "ALL") {
@@ -232,6 +242,7 @@ function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
   diagnostics.push(...validateBodyParams(route));
   diagnostics.push(...validateSchemaEffects(route));
   diagnostics.push(...validateProblemResponses(route));
+  diagnostics.push(...validateStrictProblemResponses(route, options));
 
   return diagnostics;
 }
@@ -241,7 +252,9 @@ function validateProblemResponses(route: ContractGraphRoute): ContractDiagnostic
   const seenCodes = new Set<string>();
 
   for (const response of route.problemResponses ?? []) {
-    if (seenCodes.has(response.code)) {
+    const existing = seenCodes.has(response.code);
+
+    if (existing) {
       diagnostics.push(
         createRouteDiagnostic(
           route,
@@ -256,7 +269,122 @@ function validateProblemResponses(route: ContractGraphRoute): ContractDiagnostic
     seenCodes.add(response.code);
   }
 
+  diagnostics.push(...validateRouteContractProblemResponses(route));
+
   return diagnostics;
+}
+
+function validateRouteContractProblemResponses(route: ContractGraphRoute): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const problemResponses = route.problemResponses ?? [];
+  const contractResponses = getRouteContractProblemResponses(problemResponses);
+
+  if (contractResponses.length === 0) {
+    return diagnostics;
+  }
+
+  const declaredByCode = new Map(problemResponses.map((response) => [response.code, response]));
+  const contractByCode = new Map(contractResponses.map((response) => [response.code, response]));
+
+  for (const contractResponse of contractResponses) {
+    const declared = declaredByCode.get(contractResponse.code);
+
+    if (!declared) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-missing-problem-response",
+          "error",
+          `Route contract declares Problem code '${contractResponse.code}', but the route metadata does not include it. Use routeProblemResponses(contract) without filtering the contract failure surface.`,
+        ),
+      );
+      continue;
+    }
+
+    if (!hasSameProblemClassification(declared, contractResponse)) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-problem-response-mismatch",
+          "error",
+          `Route metadata declares Problem code '${declared.code}' as ${declared.category}/${declared.status}, but the route contract declares ${contractResponse.category}/${contractResponse.status}. Keep @ProblemResponse metadata derived from the route contract.`,
+        ),
+      );
+    }
+  }
+
+  for (const declared of problemResponses) {
+    if (contractByCode.has(declared.code)) {
+      continue;
+    }
+
+    diagnostics.push(
+      createRouteDiagnostic(
+        route,
+        "contract-route-problem-response-not-in-contract",
+        "error",
+        `Route declares Problem code '${declared.code}' outside the route contract. Add it to the contract problems list or remove the extra @ProblemResponse declaration.`,
+      ),
+    );
+  }
+
+  return diagnostics;
+}
+
+function validateStrictProblemResponses(
+  route: ContractGraphRoute,
+  options: BuildContractGraphOptions,
+): ContractDiagnostic[] {
+  if (!options.strictProblemResponses || (route.problemResponses?.length ?? 0) > 0) {
+    return [];
+  }
+
+  return [
+    createRouteDiagnostic(
+      route,
+      "contract-route-missing-problem-response-contract",
+      "warning",
+      "Strict Problem contract mode could not find declared route failures. Keep the generated client failure union as never only when this public route cannot throw Croco Problems; otherwise declare failures with routeProblemResponses(contract).",
+    ),
+  ];
+}
+
+function getRouteContractProblemResponses(
+  problemResponses: NonNullable<ContractGraphRoute["problemResponses"]>,
+): NonNullable<ContractGraphRoute["problemResponses"]> {
+  const responsesByCode = new Map<
+    string,
+    NonNullable<ContractGraphRoute["problemResponses"]>[number]
+  >();
+
+  for (const response of problemResponses) {
+    for (const contractResponse of response.routeContractProblems ?? []) {
+      const existing = responsesByCode.get(contractResponse.code);
+
+      if (existing && !hasSameProblemClassification(existing, contractResponse)) {
+        responsesByCode.set(contractResponse.code, contractResponse);
+        continue;
+      }
+
+      responsesByCode.set(contractResponse.code, contractResponse);
+    }
+  }
+
+  return [...responsesByCode.values()].sort(compareProblemResponses);
+}
+
+function hasSameProblemClassification(
+  left: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+  right: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+): boolean {
+  return left.category === right.category && left.status === right.status;
+}
+
+function compareProblemResponses(
+  left: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+  right: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+): number {
+  return left.code.localeCompare(right.code) || left.status - right.status;
 }
 
 function validatePathParams(route: ContractGraphRoute): ContractDiagnostic[] {

@@ -1,4 +1,5 @@
 export type {
+  BuildContractGraphOptions,
   ContractAccessMetadata,
   ContractDiagnostic,
   ContractDiagnosticSeverity,

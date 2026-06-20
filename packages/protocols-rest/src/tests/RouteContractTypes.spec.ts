@@ -3,15 +3,18 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import {
   Body,
+  defineRouteProblem,
   defineRouteContract,
   Get,
   HttpMethod,
   Param,
   Post,
+  ProblemResponse,
   Query,
   ResponseSchema,
   routeBodySchema,
   routeParam,
+  routeProblemResponses,
   routeQueryParam,
   routeQuerySchema,
   routeResponseSchema,
@@ -45,6 +48,15 @@ class UserNotFoundProblem extends Problem {
   }
 }
 
+class UserForbiddenProblem extends Problem {
+  readonly code = "USER_FORBIDDEN";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor() {
+    super("USER_FORBIDDEN", ProblemCategory.Forbidden);
+  }
+}
+
 describe("route contract types", () => {
   const getUserContract = defineRouteContract({
     method: HttpMethod.GET,
@@ -60,6 +72,19 @@ describe("route contract types", () => {
     path: "/users",
     body: createUserSchema,
     response: userSchema,
+  });
+
+  const updateUserContract = defineRouteContract({
+    method: HttpMethod.POST,
+    path: "/users/:id",
+    params: z.object({ id: z.string() }),
+    response: userSchema,
+    problems: [
+      defineRouteProblem(UserForbiddenProblem, {
+        code: "USER_FORBIDDEN",
+        category: ProblemCategory.Forbidden,
+      }),
+    ],
   });
 
   it("connects route schemas to controller decorator migration helpers", () => {
@@ -106,6 +131,8 @@ describe("route contract types", () => {
       name: string;
     }>();
     expectTypeOf<RouteProblem<typeof getUserContract>>().toEqualTypeOf<UserNotFoundProblem>();
+    expectTypeOf<RouteProblem<typeof updateUserContract>>().toEqualTypeOf<UserForbiddenProblem>();
+    expectTypeOf(routeProblemResponses(updateUserContract)[0]?.status).toEqualTypeOf<403>();
 
     const handler: RouteContractHandler<typeof createUserContract> = async ({ body }) => ({
       id: "user_1",
@@ -150,3 +177,22 @@ const invalidResponseHandler: RouteContractHandler<typeof responseContract> = ()
 });
 
 void invalidResponseHandler;
+
+defineRouteProblem(UserForbiddenProblem, {
+  // @ts-expect-error typed Problem helpers preserve the subclass literal code.
+  code: "USER_NOT_FOUND",
+  category: ProblemCategory.Forbidden,
+});
+
+defineRouteProblem(UserForbiddenProblem, {
+  code: "USER_FORBIDDEN",
+  // @ts-expect-error typed Problem helpers preserve the subclass literal category.
+  category: ProblemCategory.NotFound,
+});
+
+ProblemResponse({
+  code: "USER_FORBIDDEN",
+  category: ProblemCategory.Forbidden,
+  // @ts-expect-error route contract provenance is attached only by routeProblemResponses(contract).
+  routeContractProblems: [],
+});

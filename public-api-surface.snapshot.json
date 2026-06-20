@@ -10590,6 +10590,11 @@
       ],
       "typeExports": [
         {
+          "name": "BuildContractGraphOptions",
+          "exportKind": "named",
+          "source": "./libs/ContractGraph"
+        },
+        {
           "name": "Constructor",
           "exportKind": "named",
           "source": "./libs/sharedTypes"
@@ -11193,6 +11198,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "defineRouteProblem",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
           "name": "defineRouteSchema",
           "exportKind": "named",
           "source": "@croco/protocols-core"
@@ -11451,6 +11462,12 @@
         },
         {
           "name": "routePathParamsSchema",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routeProblemResponses",
           "exportKind": "named",
           "source": "./RouteContract",
           "declarationKind": "function"
@@ -11764,6 +11781,16 @@
         },
         {
           "name": "RouteProblem",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteProblemDeclaration",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteProblemStatus",
           "exportKind": "named",
           "source": "./RouteContract"
         },

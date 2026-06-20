@@ -35,7 +35,7 @@ title: "RouteContractSpec"
 
 ### Problems
 
-`Problems` *extends* readonly [`ProblemConstructor`](/api/protocols-rest/src/type-aliases/problemconstructor/)[] \| `undefined` = readonly [`ProblemConstructor`](/api/protocols-rest/src/type-aliases/problemconstructor/)[] \| `undefined`
+`Problems` *extends* readonly `RouteContractProblem`[] \| `undefined` = readonly `RouteContractProblem`[] \| `undefined`
 
 ## Properties
 
