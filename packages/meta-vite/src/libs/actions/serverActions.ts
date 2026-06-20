@@ -1,5 +1,92 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { ProblemDetails } from "@croco/problems-core";
 import type { ZodSchema } from "zod";
 import type { RuntimeContext } from "../render/types";
+
+export type ServerActionValidationFields = Record<string, readonly string[]>;
+
+export type ServerActionProblemKind =
+  | "action_not_found"
+  | "invalid_path"
+  | "validation"
+  | "domain_problem";
+
+export type ServerActionProblemContract<Code extends string = string> = {
+  readonly code: Code;
+  readonly status?: number;
+  readonly description?: string;
+  readonly type?: string;
+};
+
+export type ServerActionOutputContract<TOutput = unknown> = {
+  readonly description?: string;
+  readonly example?: TOutput;
+  readonly schema?: unknown;
+};
+
+export type ServerActionSuccessResult<TOutput = unknown> = {
+  readonly ok: true;
+  readonly data: TOutput;
+};
+
+export type ServerActionFailureResult = ProblemDetails & {
+  readonly ok: false;
+  readonly kind: ServerActionProblemKind;
+  readonly actionName?: string;
+  readonly path?: string;
+  readonly fields?: ServerActionValidationFields;
+  readonly formErrors?: readonly string[];
+};
+
+export type ServerActionResult<TOutput = unknown> =
+  | ServerActionSuccessResult<TOutput>
+  | ServerActionFailureResult;
+
+export type ServerActionHandlerResult<TOutput = unknown> =
+  | Response
+  | ServerActionSuccessResult<TOutput>;
+
+export class ServerActionNotFoundProblem extends Problem {
+  readonly code = "meta-vite/server-action-not-found";
+  readonly category = ProblemCategory.NotFound;
+
+  constructor(actionName: string) {
+    super(
+      "meta-vite/server-action-not-found",
+      ProblemCategory.NotFound,
+      `Server action '${actionName}' is not registered`,
+      { extensions: { actionName } },
+    );
+  }
+}
+
+export class ServerActionInvalidPathProblem extends Problem {
+  readonly code = "meta-vite/server-action-invalid-path";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(path: string) {
+    super(
+      "meta-vite/server-action-invalid-path",
+      ProblemCategory.BadRequest,
+      "Invalid server action path",
+      { extensions: { path } },
+    );
+  }
+}
+
+export class ServerActionValidationProblem extends Problem {
+  readonly code = "meta-vite/server-action-validation-failed";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(fields: ServerActionValidationFields, formErrors: readonly string[]) {
+    super(
+      "meta-vite/server-action-validation-failed",
+      ProblemCategory.ValidationError,
+      "Server action input validation failed",
+      { extensions: { fields, formErrors } },
+    );
+  }
+}
 
 /**
  * Server Action configuration.
@@ -13,27 +100,40 @@ import type { RuntimeContext } from "../render/types";
  *   },
  * });
  */
-export type ServerActionConfig<T = unknown> = {
+export type ServerActionConfig<
+  TInput = unknown,
+  TOutput = unknown,
+  TProblemCode extends string = string,
+> = {
   /** Unique identifier for this action */
   name: string;
   /** Optional Zod schema for input validation */
-  schema?: ZodSchema<T>;
+  schema?: ZodSchema<TInput>;
+  /** Optional output contract metadata for codegen and documentation */
+  output?: ServerActionOutputContract<TOutput>;
+  /** Optional declared domain Problems that the handler can surface */
+  problems?: readonly ServerActionProblemContract<TProblemCode>[];
   /** Action handler receiving parsed/validated data and optional runtime context */
-  handler: (data: T, context?: RuntimeContext) => Promise<Response> | Response;
+  handler: (
+    data: TInput,
+    context?: RuntimeContext,
+  ) => Promise<ServerActionHandlerResult<TOutput>> | ServerActionHandlerResult<TOutput>;
 };
 
 export class ServerActionRegistry {
-  private readonly actions = new Map<string, ServerActionConfig<unknown>>();
+  private readonly actions = new Map<string, ServerActionConfig<unknown, unknown>>();
 
   /**
    * Register a server action in this registry.
    * @throws Error if action name is already registered in this registry
    */
-  register<T>(config: ServerActionConfig<T>): void {
+  register<TInput, TOutput, TProblemCode extends string>(
+    config: ServerActionConfig<TInput, TOutput, TProblemCode>,
+  ): void {
     if (this.actions.has(config.name)) {
       throw new Error(`ServerAction '${config.name}' already registered`);
     }
-    this.actions.set(config.name, config as ServerActionConfig<unknown>);
+    this.actions.set(config.name, config as ServerActionConfig<unknown, unknown>);
   }
 
   /**
@@ -54,7 +154,7 @@ export class ServerActionRegistry {
    * Dispatch a registered server action by name.
    * - Validates input against the registered schema (if any)
    * - Returns 404 if action not found
-   * - Returns 400 if validation fails
+   * - Returns 422 if validation fails
    * - Passes RuntimeContext to the handler
    */
   async dispatch(
@@ -64,30 +164,41 @@ export class ServerActionRegistry {
   ): Promise<Response> {
     const config = this.actions.get(name);
     if (!config) {
-      return new Response(JSON.stringify({ code: "ACTION_NOT_FOUND", name }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createServerActionProblemResponse(
+        new ServerActionNotFoundProblem(name),
+        "action_not_found",
+      );
     }
 
     // Convert FormData to plain object if needed
     const raw = formData instanceof FormData ? formDataToObject(formData) : formData;
 
+    let data: unknown = raw;
+
     if (config.schema) {
       const parsed = config.schema.safeParse(raw);
       if (!parsed.success) {
-        return new Response(
-          JSON.stringify({
-            code: "VALIDATION_ERROR",
-            fields: parsed.error.flatten().fieldErrors,
-          }),
-          { status: 400, headers: { "Content-Type": "application/json" } },
+        const flattened = parsed.error.flatten();
+        return createServerActionProblemResponse(
+          new ServerActionValidationProblem(
+            normalizeValidationFields(flattened.fieldErrors),
+            flattened.formErrors,
+          ),
+          "validation",
         );
       }
-      return config.handler(parsed.data, context);
+      data = parsed.data;
     }
 
-    return config.handler(raw as never, context);
+    try {
+      return normalizeServerActionHandlerResult(await config.handler(data, context));
+    } catch (error) {
+      if (error instanceof Problem) {
+        return createServerActionProblemResponse(error, "domain_problem");
+      }
+
+      throw error;
+    }
   }
 }
 
@@ -104,11 +215,24 @@ const globalServerActionRegistry = createServerActionRegistry();
  * Register a server action in the global registry by default.
  * @throws Error if action name is already registered in the selected registry
  */
-export function createServerAction<T>(
-  config: ServerActionConfig<T>,
+export function createServerAction<TInput, TOutput = unknown, TProblemCode extends string = string>(
+  config: ServerActionConfig<TInput, TOutput, TProblemCode>,
   registry: ServerActionRegistry = globalServerActionRegistry,
 ): void {
   registry.register(config);
+}
+
+export function createServerActionSuccess<TOutput>(
+  data: TOutput,
+): ServerActionSuccessResult<TOutput> {
+  return { ok: true, data };
+}
+
+export function createServerActionSuccessResponse<TOutput>(
+  data: TOutput,
+  init: ResponseInit = {},
+): Response {
+  return createJsonResponse(createServerActionSuccess(data), init);
 }
 
 /**
@@ -134,7 +258,7 @@ export function resetServerActions(
  * Dispatch a registered server action by name from the global registry by default.
  * - Validates input against the registered schema (if any)
  * - Returns 404 if action not found
- * - Returns 400 if validation fails
+ * - Returns 422 if validation fails
  * - Passes RuntimeContext to the handler
  */
 export async function dispatchServerAction(
@@ -161,6 +285,54 @@ function formDataToObject(formData: FormData): Record<string, unknown> {
   }
 
   return result;
+}
+
+function normalizeValidationFields(
+  fieldErrors: Record<string, string[] | undefined>,
+): ServerActionValidationFields {
+  return Object.fromEntries(
+    Object.entries(fieldErrors).filter((entry): entry is [string, string[]] => {
+      const [, messages] = entry;
+      return Array.isArray(messages) && messages.length > 0;
+    }),
+  );
+}
+
+function normalizeServerActionHandlerResult(result: ServerActionHandlerResult): Response {
+  if (result instanceof Response) {
+    return result;
+  }
+
+  return createJsonResponse(result);
+}
+
+function createServerActionProblemResponse(
+  problem: Problem,
+  kind: ServerActionProblemKind,
+): Response {
+  const body: ServerActionFailureResult = {
+    ...problem.toJSON(),
+    ok: false,
+    kind,
+  };
+
+  return createJsonResponse(body, { status: body.status }, "application/problem+json");
+}
+
+function createJsonResponse(
+  body: unknown,
+  init: ResponseInit = {},
+  contentType = "application/json",
+): Response {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", contentType);
+  }
+
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers,
+  });
 }
 
 /**
@@ -202,12 +374,9 @@ export function createServerActionHandler(
         segments[2] !== "action" ||
         !segments[3]
       ) {
-        return new Response(
-          JSON.stringify({ code: "INVALID_PATH", message: "Invalid action path" }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          },
+        return createServerActionProblemResponse(
+          new ServerActionInvalidPathProblem(pathname),
+          "invalid_path",
         );
       }
 

@@ -1614,6 +1614,9 @@ importers:
       '@croco/presentation-preset':
         specifier: workspace:*
         version: link:../presentation-preset
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       '@vitejs/plugin-rsc':
         specifier: ^0.5.0

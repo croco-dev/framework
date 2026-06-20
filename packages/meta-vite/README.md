@@ -269,16 +269,41 @@ import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
 
 ### Server Actions
 
-| Export                       | Type     | Description                                                                                                                                     |
-| ---------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ServerActionRegistry`       | class    | Isolated action registry with `register`, `unregister`, `clear`, and `dispatch` methods for app, test, or HMR lifecycle scoping.                |
-| `createServerActionRegistry` | function | Create an isolated `ServerActionRegistry` instance.                                                                                             |
-| `createServerAction`         | function | Register a server action with name, optional Zod schema, and handler. Defaults to the global registry and throws on duplicate name.             |
-| `createServerActionHandler`  | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Accepts a registry instance and integrates with `apiRoutes`.        |
-| `dispatchServerAction`       | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Returns 404 or 400 JSON on failure. |
-| `resetServerActions`         | function | Clear all actions from the global registry by default, or from a supplied registry.                                                             |
-| `unregisterServerAction`     | function | Remove one action from the global registry by default, or from a supplied registry.                                                             |
-| `ServerActionConfig`         | type     | `{ name: string; schema?: ZodSchema<T>; handler: (data: T, context?: RuntimeContext) => Promise<Response> \| Response }`                        |
+| Export                              | Type     | Description                                                                                                                                     |
+| ----------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ServerActionRegistry`              | class    | Isolated action registry with `register`, `unregister`, `clear`, and `dispatch` methods for app, test, or HMR lifecycle scoping.                |
+| `createServerActionRegistry`        | function | Create an isolated `ServerActionRegistry` instance.                                                                                             |
+| `createServerAction`                | function | Register a server action with name, optional Zod schema, and handler. Defaults to the global registry and throws on duplicate name.             |
+| `createServerActionHandler`         | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Accepts a registry instance and integrates with `apiRoutes`.        |
+| `createServerActionSuccess`         | function | Build a typed success result body, `{ ok: true, data }`, for handlers that want the action result contract instead of a custom `Response`.      |
+| `createServerActionSuccessResponse` | function | Build an `application/json` response containing a typed success result.                                                                         |
+| `dispatchServerAction`              | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Failures return Problem JSON.       |
+| `resetServerActions`                | function | Clear all actions from the global registry by default, or from a supplied registry.                                                             |
+| `unregisterServerAction`            | function | Remove one action from the global registry by default, or from a supplied registry.                                                             |
+| `ServerActionConfig`                | type     | `{ name: string; schema?: ZodSchema<TInput>; output?: ServerActionOutputContract<TOutput>; problems?: ServerActionProblemContract[]; handler }` |
+| `ServerActionResult`                | type     | Typed action result union: `{ ok: true, data }` or RFC 7807 Problem details with `{ ok: false, kind }`.                                         |
+
+Server action failures use a stable action result contract. Missing actions, invalid paths, validation
+failures, and thrown Croco `Problem` instances return `application/problem+json` with top-level RFC 7807
+fields plus `ok: false` and `kind`.
+
+```typescript
+import { createServerAction, createServerActionSuccess } from "@croco/meta-vite";
+import { z } from "zod";
+
+createServerAction({
+  name: "signup",
+  schema: z.object({ email: z.string().email() }),
+  output: { description: "Signup result" },
+  problems: [{ code: "auth/signup-closed", status: 422 }],
+  handler: async (data) => createServerActionSuccess({ email: data.email }),
+});
+```
+
+Migration note: handlers that already return `Response` still work for successful actions. Consumers that
+previously read failure bodies as `{ code: "ACTION_NOT_FOUND" }` or `{ code: "VALIDATION_ERROR", fields }`
+should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 fields (`type`, `title`,
+`status`, `code`, `detail`), and validation `fields` when `kind === "validation"`.
 
 ### SSG
 
