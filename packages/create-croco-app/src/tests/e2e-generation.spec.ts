@@ -707,6 +707,7 @@ describe("E2E: generate()", () => {
       projectName: "my-saas",
       scope: "@test",
       preset: "saas",
+      saasProviderProfile: "saas-cloudflare",
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -725,8 +726,10 @@ describe("E2E: generate()", () => {
       build: "turbo build",
       test: "turbo test",
       "demo:seed": "pnpm --filter @test/api-server demo:seed",
+      "profile:check": "pnpm --filter @test/api-server profile:check",
+      "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
-        "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+        "pnpm profile:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
     });
     expect(apiPackageJson.dependencies).toMatchObject({
@@ -747,6 +750,10 @@ describe("E2E: generate()", () => {
       "@croco/telemetry-api": "^0.0.2",
       "@croco/telemetry-sdk-node": "^0.0.2",
     });
+    expect(apiPackageJson.scripts).toMatchObject({
+      "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
+      "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
+    });
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
     expect(apiPackageJson.devDependencies?.["@croco/cli"]).toBe("^0.0.3");
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
@@ -754,6 +761,78 @@ describe("E2E: generate()", () => {
     expect(existsSync(join(testDir, "apps", "api-server", "src", "providerProfiles.ts"))).toBe(
       true,
     );
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "provider-profile-check.ts")),
+    ).toBe(true);
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
+    ).toBe(true);
+    expect(existsSync(join(testDir, "croco-saas-profile.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, ".env.example"))).toBe(true);
+    expect(existsSync(join(testDir, "docs", "provider-profile.md"))).toBe(true);
+    expect(existsSync(join(testDir, "docs", "secrets-checklist.md"))).toBe(true);
+    const profileManifest = JSON.parse(
+      readFileSync(join(testDir, "croco-saas-profile.manifest.json"), "utf8"),
+    );
+    const envExample = readFileSync(join(testDir, ".env.example"), "utf8");
+    const providerProfileDocs = readFileSync(join(testDir, "docs", "provider-profile.md"), "utf8");
+    const generatedProfileSource = readFileSync(
+      join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts"),
+      "utf8",
+    );
+
+    expect(profileManifest).toMatchObject({
+      schemaVersion: "croco.saas-provider-profile/v1",
+      profile: {
+        name: "saas-cloudflare",
+        runtimeTarget: "cloudflare-workers",
+      },
+      smoke: {
+        zeroCredential: "pnpm demo:smoke",
+        realProviderOptIn: "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
+      },
+    });
+    expect(profileManifest.packages).toEqual(
+      expect.arrayContaining([
+        "@croco/transports-cloudflare-workers",
+        "@croco/auth-clerk",
+        "@croco/billing-polar",
+        "@croco/metering-upstash",
+        "@croco/storage-r2",
+        "@croco/tasks-qstash",
+      ]),
+    );
+    for (const packageName of profileManifest.packages as string[]) {
+      expect(apiPackageJson.dependencies?.[packageName], packageName).toEqual(expect.any(String));
+    }
+    expect(apiPackageJson.dependencies).toMatchObject({
+      "@croco/preset-cloudflare": "^0.0.2",
+      "@croco/auth-clerk": "^0.0.2",
+      "@croco/billing-polar": "^0.0.2",
+      "@croco/metering-upstash": "^0.0.2",
+      "@croco/storage-r2": "^0.0.2",
+      "@croco/tasks-qstash": "^0.0.2",
+      "@croco/triggers-qstash": "^0.0.2",
+      "@clerk/backend": "^1.0.0",
+      "@polar-sh/sdk": "^0.32.2",
+      "@upstash/qstash": "^2.9.0",
+      "@upstash/redis": "^1.34.0",
+    });
+    expect(profileManifest.compatibility.requiredCapabilities).toEqual([
+      "runtime",
+      "auth",
+      "billing",
+      "metering",
+      "storage",
+      "tasks",
+      "telemetry",
+      "webhookVerification",
+    ]);
+    expect(envExample).toContain("SAAS_PROVIDER_PROFILE=saas-cloudflare");
+    expect(envExample).toContain("CLOUDFLARE_ACCOUNT_ID=<secret>");
+    expect(providerProfileDocs).toContain("Capability Matrix");
+    expect(providerProfileDocs).toContain("QStash");
+    expect(generatedProfileSource).toContain("saas-cloudflare");
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "demo", "saasSmokeContract.ts")),
     ).toBe(true);
@@ -821,7 +900,7 @@ describe("E2E: generate()", () => {
         "contract:verify":
           "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
         "demo:smoke":
-          "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+          "pnpm profile:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       });
       expect(manifest).toMatchObject({
         schemaVersion: 1,

@@ -9,6 +9,7 @@ import {
   validateCliOptions,
   validateResolvedOptions,
 } from "../options.js";
+import { assertSaasProviderProfileCapabilities } from "../saas-provider-profiles.js";
 
 const generateMock = vi.hoisted(() => vi.fn());
 
@@ -30,6 +31,8 @@ describe("noninteractive CLI option validation", () => {
     expect(help).toContain(
       "blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas",
     );
+    expect(help).toContain("--saas-profile");
+    expect(help).toContain("saas-node-postgres|saas-cloudflare|saas-lambda");
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
     expect(help).not.toContain("--package-manager");
@@ -383,6 +386,7 @@ describe("noninteractive CLI option validation", () => {
       projectName: "my-saas",
       scope: "@test",
       preset: "saas",
+      saasProviderProfile: "saas-node-postgres",
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -405,6 +409,7 @@ describe("noninteractive CLI option validation", () => {
       projectName: "my-ai-saas",
       scope: "@test",
       preset: "ai-saas",
+      saasProviderProfile: "saas-node-postgres",
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -412,6 +417,61 @@ describe("noninteractive CLI option validation", () => {
       installDeps: false,
       initGit: false,
     });
+  });
+
+  it("accepts an explicit SaaS provider profile for SaaS projects", () => {
+    const cliOptions = parseCliOptions("my-saas", {
+      preset: "saas",
+      scope: "@test",
+      saasProfile: "saas-cloudflare",
+      install: false,
+      git: false,
+      agentRules: false,
+    });
+
+    expect(normalizeNonInteractiveOptions(cliOptions)).toMatchObject({
+      projectName: "my-saas",
+      preset: "saas",
+      saasProviderProfile: "saas-cloudflare",
+    });
+  });
+
+  it("rejects invalid SaaS provider profile values with actionable messages", () => {
+    const cliOptions = parseCliOptions("my-saas", {
+      preset: "saas",
+      scope: "@test",
+      saasProfile: "custom",
+      install: false,
+      git: false,
+    });
+
+    expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
+      'Invalid --saas-profile value "custom". Expected saas-node-postgres, saas-cloudflare or saas-lambda.',
+    );
+  });
+
+  it("rejects SaaS provider profiles outside SaaS presets", () => {
+    const cliOptions = parseCliOptions("my-api", {
+      preset: "ddd-api",
+      scope: "@test",
+      api: "trpc",
+      saasProfile: "saas-lambda",
+      install: false,
+      git: false,
+    });
+
+    expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
+      "--saas-profile is only supported with the saas and ai-saas presets",
+    );
+  });
+
+  it("fails before generation when a SaaS provider profile lacks a required capability", () => {
+    expect(() =>
+      assertSaasProviderProfileCapabilities({
+        name: "custom",
+        capabilities: {},
+      }),
+    ).toThrow("CROCO_SAAS_PROFILE_CAPABILITY_MISSING: custom lacks runtime");
   });
 
   it("normalizes safe noninteractive defaults for production app projects", () => {

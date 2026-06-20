@@ -18,6 +18,7 @@ export type GeneratorOptions = {
   apiHosting: "standalone" | "nextjs";
   backendDeploy?: "docker" | "lambda";
   frontendDeploy?: "opennext" | "vercel" | "docker" | "cloudflare-meta-vite" | "vite-spa";
+  saasProviderProfile?: "saas-node-postgres" | "saas-cloudflare" | "saas-lambda";
   db: ("postgres" | "mongodb" | "redis")[];
   agentRules: boolean;
   installDeps: boolean;

@@ -1,6 +1,10 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { GOAL_SPECS, readGoal, resolveGoalOptions } from "./goals.js";
+import {
+  DEFAULT_SAAS_PROVIDER_PROFILE,
+  SAAS_PROVIDER_PROFILE_CHOICES,
+} from "./saas-provider-profiles.js";
 import type { GeneratorOptions } from "./types.js";
 
 export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<GeneratorOptions> {
@@ -178,6 +182,24 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     preset === "saas" ||
     preset === "ai-saas"
   ) {
+    const saasProviderProfile =
+      preset === "saas" || preset === "ai-saas"
+        ? (cliArgs.saasProviderProfile ??
+          (await p.select({
+            message: "Select a production SaaS provider profile:",
+            initialValue: DEFAULT_SAAS_PROVIDER_PROFILE,
+            options: SAAS_PROVIDER_PROFILE_CHOICES.map((value) => ({
+              value,
+              label: value,
+              hint: value === DEFAULT_SAAS_PROVIDER_PROFILE ? "Node/Postgres default" : undefined,
+            })),
+          })))
+        : undefined;
+    if (p.isCancel(saasProviderProfile)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
     const agentRules =
       cliArgs.agentRules ??
       (await p.confirm({
@@ -207,6 +229,10 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       projectName: projectName as string,
       scope: scope as string,
       preset: preset as "production-app" | "admin-console" | "saas" | "ai-saas",
+      saasProviderProfile:
+        preset === "saas" || preset === "ai-saas"
+          ? (saasProviderProfile as GeneratorOptions["saasProviderProfile"])
+          : undefined,
       webApps: [],
       apiHosting: "standalone",
       db: [],

@@ -11,6 +11,7 @@ pnpm demo:smoke
 
 `demo:smoke`는 REST contract graph를 검사하고, generated client를 만든 뒤, SaaS demo flow를 실행합니다.
 CLI smoke는 서버를 시작하지 않으며, in-memory provider profile만 사용합니다.
+`pnpm profile:check`도 함께 실행되어 생성된 `croco-saas-profile.manifest.json`과 타입 소스가 drift 없이 맞는지 확인합니다.
 
 ## Operational Smoke
 
@@ -83,13 +84,30 @@ SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter {{scope}}/api-server dev
 
 ## Provider Profiles
 
-기본 profile은 `in-memory`입니다. 외부 credential 없이 tenant, membership, invitation, RBAC, access, billing, metering, entitlements, AI usage governance, health, diagnostics smoke 계약을 통과해야 합니다.
+기본 smoke runtime profile은 `in-memory`입니다. 외부 credential 없이 tenant, membership, invitation, RBAC, access, billing, metering, entitlements, AI usage governance, health, diagnostics smoke 계약을 통과해야 합니다.
 
 ```bash
 SAAS_PROVIDER_PROFILE=in-memory pnpm demo:smoke
 ```
 
-Provider-backed profile seam은 `drizzle-polar-upstash`로 문서화되어 있습니다. 이 profile은 기본 생성물에 dependency를 추가하지 않으며, 실제 adapter wiring을 추가할 때 다음 package와 env contract를 사용합니다.
+생성 시 선택한 production provider profile은 다음 산출물로 고정됩니다.
+
+- `croco-saas-profile.manifest.json`: runtime target, package list, provider capability matrix, required env, smoke command 계약
+- `.env.example`: real-provider opt-in smoke에 필요한 env 변수
+- `docs/provider-profile.md`: provider package, capability, deployment note
+- `docs/secrets-checklist.md`: 배포 전 secret/non-secret config checklist
+- `apps/api-server/src/generatedSaasProviderProfile.ts`: CI drift 검사용 타입 소스
+
+지원 production profile은 `saas-node-postgres`, `saas-cloudflare`, `saas-lambda`입니다. `pnpm demo:smoke`는 항상 zero-credential in-memory smoke이고, real provider preflight는 명시적으로 분리되어 있습니다.
+
+```bash
+pnpm profile:check
+SAAS_PROVIDER_PROFILE=<generated-profile> pnpm profile:smoke:real
+```
+
+`profile:smoke:real`은 실제 외부 provider를 호출하기 전에 manifest와 required env를 검사합니다. 누락된 값은 `CROCO_SAAS_PROFILE_ENV_MISSING` diagnostic으로 실패합니다.
+
+Provider-backed profile seam은 기존 `drizzle-polar-upstash`와 신규 production profiles로 문서화되어 있습니다. 실제 adapter wiring을 추가할 때 다음 package와 env contract를 사용합니다.
 
 ```bash
 pnpm add @croco/access-drizzle @croco/auth-drizzle @croco/entitlements-drizzle @croco/invitation-drizzle @croco/membership-drizzle @croco/metering-drizzle @croco/tx-drizzle drizzle-orm
