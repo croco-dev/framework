@@ -41,6 +41,10 @@ export type TaskExecutionOptions = {
    */
   parentId?: string;
   /**
+   * Optional execution-level idempotency key for deduplicating this task run.
+   */
+  idempotencyKey?: string;
+  /**
    * Optional execution metadata for inspection and operations views.
    */
   metadata?: Record<string, unknown>;
