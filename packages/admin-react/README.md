@@ -125,3 +125,62 @@ export function TenantAdminConsole() {
   states separately; active and expired sessions require an audited exit action.
 - Tenant isolation, provider, and permission inspection failures preserve Croco
   Problem details instead of rendering a normal success state.
+
+## Admin forms
+
+Generated admin resources can hand their backend input type to
+`AdminFormContract<TValues, TResult>` and keep field metadata, submit lifecycle,
+Problems, recovery actions, and audit metadata in one contract.
+
+```tsx
+import { AdminForm, type AdminFormContract, useAdminForm } from "@croco/admin-react";
+
+type CreateUserInput = {
+  readonly email: string;
+  readonly role: "owner" | "viewer";
+};
+
+const createUserForm: AdminFormContract<CreateUserInput, { readonly id: string }> = {
+  id: "admin.users.create",
+  title: "Create user",
+  intent: "create",
+  initialValues: { email: "", role: "viewer" },
+  fields: [
+    { name: "email", label: "Email", inputType: "email", schemaPath: "CreateUserInput.email" },
+    {
+      name: "role",
+      label: "Role",
+      inputType: "select",
+      schemaPath: "CreateUserInput.role",
+      options: [
+        { label: "Owner", value: "owner" },
+        { label: "Viewer", value: "viewer" },
+      ],
+    },
+  ],
+  requiredPermissions: ["admin:user:write"],
+  grantedPermissions: ["admin:user:write"],
+  audit: {
+    eventName: "admin.user.created",
+    subjectType: "tenant",
+    subjectId: "tenant-1",
+  },
+  async submit({ values }) {
+    return {
+      kind: "success",
+      data: await createUser(values),
+    };
+  },
+};
+
+export function CreateUserForm() {
+  const form = useAdminForm(createUserForm);
+
+  return <AdminForm state={form.state} onFieldChange={form.setFieldValue} onSubmit={form.submit} />;
+}
+```
+
+`validation_failed` submit results render field errors beside their fields.
+`domain_problem`, `permission_denied`, and `external_failure` render as global
+Problems with explicit recovery actions, so custom visual components can reuse
+the same state model without losing failure evidence.

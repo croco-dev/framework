@@ -603,6 +603,30 @@
           "declarationKind": "function"
         },
         {
+          "name": "AdminForm",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "AdminFormField",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "AdminFormGlobalProblem",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "AdminFormRecoveryActions",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
           "name": "BillingEntitlementAdminPanel",
           "exportKind": "named",
           "source": "./libs/components",
@@ -612,6 +636,12 @@
           "name": "BillingStatus",
           "exportKind": "named",
           "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminFormState",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
           "declarationKind": "function"
         },
         {
@@ -631,6 +661,12 @@
           "exportKind": "named",
           "source": "./libs/snapshot",
           "declarationKind": "function"
+        },
+        {
+          "name": "createInMemoryAdminFormState",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "const"
         },
         {
           "name": "createInMemoryBillingEntitlementAdminPanelState",
@@ -711,6 +747,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "resetAdminFormState",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "submitAdminForm",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
           "name": "TenantImpersonationConsole",
           "exportKind": "named",
           "source": "./libs/components",
@@ -723,9 +771,21 @@
           "declarationKind": "function"
         },
         {
+          "name": "updateAdminFormField",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
           "name": "UsageQuotaMeter",
           "exportKind": "named",
           "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useAdminForm",
+          "exportKind": "named",
+          "source": "./libs/hooks",
           "declarationKind": "function"
         }
       ],
@@ -757,6 +817,141 @@
         },
         {
           "name": "AdminEntitlementRow",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormContract",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormController",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormFieldChangeHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormFieldContract",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormFieldError",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormFieldErrors",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormFieldName",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormFieldOption",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormFieldType",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormIntent",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormLifecycleState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormProblemKind",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormProblemResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormProblemResultKind",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormProps",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormRecoveryAction",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormRecoveryActionKind",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormRenderActionsContext",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormRenderFieldContext",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormStateOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormSubmitAction",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormSubmitContext",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormSubmitHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormSubmitResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormSubmitSuccess",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminFormValidationFailure",
           "exportKind": "named",
           "source": "./libs/types"
         },

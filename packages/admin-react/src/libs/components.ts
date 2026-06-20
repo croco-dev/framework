@@ -1,4 +1,11 @@
-import { createElement, Fragment, type ReactElement } from "react";
+import {
+  createElement,
+  Fragment,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactElement,
+  useId,
+} from "react";
 
 import type { ProblemDetails } from "@croco/problems-core";
 
@@ -7,6 +14,12 @@ import type {
   AdminBillingStatus,
   AdminEntitlementRow,
   AdminImpersonationConsoleState,
+  AdminFormFieldContract,
+  AdminFormFieldError,
+  AdminFormFieldName,
+  AdminFormProps,
+  AdminFormRecoveryAction,
+  AdminFormState,
   AdminPanelActionHandler,
   AdminPermissionInspectionRow,
   AdminPlanSummary,
@@ -328,6 +341,188 @@ export function PermissionInspector({
   );
 }
 
+export function AdminForm<TValues extends object, TResult = unknown>({
+  onFieldChange,
+  onRecoveryAction,
+  onSubmit,
+  renderActions,
+  renderField,
+  state,
+}: AdminFormProps<TValues, TResult>): ReactElement {
+  const submitDisabled = isAdminFormSubmitDisabled(state);
+  const formInstanceId = useId();
+  const fieldIdPrefix = `admin-form-${sanitizeAdminFormId(state.contractId)}-${sanitizeAdminFormId(
+    formInstanceId,
+  )}`;
+
+  return createElement(
+    "form",
+    {
+      "aria-label": state.title,
+      "data-form-id": state.contractId,
+      "data-intent": state.intent,
+      "data-state": state.kind,
+      "data-testid": "admin-form",
+      onSubmit: (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (!submitDisabled) {
+          onSubmit?.();
+        }
+      },
+    },
+    createElement("h2", null, state.title),
+    state.problem && state.problemKind !== "validation"
+      ? createElement(AdminFormGlobalProblem, { problem: state.problem })
+      : null,
+    state.fields.map((field) => {
+      const errors = state.fieldErrors[field.name] ?? [];
+      const value = state.values[field.name];
+
+      if (renderField) {
+        return createElement(
+          Fragment,
+          { key: field.name },
+          renderField({
+            errors,
+            field,
+            state,
+            value,
+          }),
+        );
+      }
+
+      return createElement(AdminFormField<TValues>, {
+        errors,
+        field,
+        fieldIdPrefix,
+        key: field.name,
+        onFieldChange,
+        value,
+      });
+    }),
+    renderActions
+      ? renderActions({ state, submitDisabled })
+      : createElement(AdminFormActions<TValues, TResult>, {
+          onRecoveryAction,
+          submitDisabled,
+          state,
+        }),
+  );
+}
+
+export function AdminFormField<TValues extends object>({
+  errors,
+  field,
+  fieldIdPrefix,
+  onFieldChange,
+  value,
+}: {
+  readonly errors: readonly AdminFormFieldError[];
+  readonly field: AdminFormFieldContract<TValues>;
+  readonly fieldIdPrefix?: string;
+  readonly onFieldChange?: AdminFormProps<TValues>["onFieldChange"];
+  readonly value: TValues[AdminFormFieldName<TValues>];
+}): ReactElement {
+  const fieldId = `${fieldIdPrefix ?? "admin-form"}-field-${sanitizeAdminFormId(field.name)}`;
+  const errorId = `${fieldId}-errors`;
+  const descriptionId = field.description ? `${fieldId}-description` : undefined;
+  const describedById = [descriptionId, errors.length > 0 ? errorId : undefined]
+    .filter((id): id is string => id !== undefined)
+    .join(" ");
+  const input = renderAdminFormInput({
+    describedById: describedById.length > 0 ? describedById : undefined,
+    field,
+    fieldId,
+    hasErrors: errors.length > 0,
+    onFieldChange,
+    value,
+  });
+
+  return createElement(
+    "div",
+    {
+      "data-field-name": field.name,
+      "data-schema-path": field.schemaPath,
+      "data-testid": "admin-form-field",
+    },
+    field.inputType === "hidden" ? null : createElement("label", { htmlFor: fieldId }, field.label),
+    field.description ? createElement("p", { id: descriptionId }, field.description) : null,
+    input,
+    errors.length > 0
+      ? createElement(
+          "ul",
+          {
+            "data-field-error-for": field.name,
+            id: errorId,
+          },
+          errors.map((error) =>
+            createElement(
+              "li",
+              {
+                "data-problem-code": error.problem?.code,
+                key: error.code,
+              },
+              error.message,
+            ),
+          ),
+        )
+      : null,
+  );
+}
+
+export function AdminFormGlobalProblem({
+  problem,
+}: {
+  readonly problem: ProblemDetails;
+}): ReactElement {
+  return createElement(
+    "div",
+    {
+      "data-testid": "admin-form-global-problem",
+      role: "alert",
+    },
+    createElement(ProblemNotice, { problem }),
+  );
+}
+
+export function AdminFormRecoveryActions({
+  actions,
+  onRecoveryAction,
+}: {
+  readonly actions: readonly AdminFormRecoveryAction[];
+  readonly onRecoveryAction?: (action: AdminFormRecoveryAction) => void;
+}): ReactElement | null {
+  if (actions.length === 0) {
+    return null;
+  }
+
+  return createElement(
+    "div",
+    {
+      "aria-label": "Recovery actions",
+      "data-testid": "admin-form-recovery-actions",
+    },
+    actions.map((action) =>
+      createElement(
+        "button",
+        {
+          "data-audit-event": action.audit?.eventName,
+          "data-problem-codes": action.problemCodes?.join(","),
+          "data-recovery-action-id": action.id,
+          "data-recovery-kind": action.kind,
+          disabled: action.disabledReason !== undefined,
+          key: action.id,
+          onClick: () => onRecoveryAction?.(action),
+          title: action.disabledReason,
+          type: "button",
+        },
+        action.label,
+      ),
+    ),
+  );
+}
+
 export function PlanSummary({ plan }: { readonly plan: AdminPlanSummary }): ReactElement {
   return createElement(
     "section",
@@ -582,6 +777,178 @@ export function ProblemNotice({ problem }: { readonly problem: ProblemDetails })
     createElement("strong", null, problem.title),
     createElement("p", null, problem.detail ?? problem.code),
   );
+}
+
+function AdminFormActions<TValues extends object, TResult = unknown>({
+  onRecoveryAction,
+  state,
+  submitDisabled,
+}: {
+  readonly onRecoveryAction?: (action: AdminFormRecoveryAction) => void;
+  readonly state: AdminFormState<TValues, TResult>;
+  readonly submitDisabled: boolean;
+}): ReactElement {
+  return createElement(
+    "div",
+    { "data-testid": "admin-form-actions" },
+    state.kind === "succeeded" && state.successMessage
+      ? createElement("p", { "data-testid": "admin-form-success" }, state.successMessage)
+      : null,
+    createElement(
+      "button",
+      {
+        disabled: submitDisabled,
+        type: "submit",
+      },
+      formatAdminFormSubmitLabel(state),
+    ),
+    createElement(AdminFormRecoveryActions, {
+      actions: state.recoveryActions,
+      onRecoveryAction,
+    }),
+  );
+}
+
+function renderAdminFormInput<TValues extends object>({
+  describedById,
+  field,
+  fieldId,
+  hasErrors,
+  onFieldChange,
+  value,
+}: {
+  readonly describedById?: string;
+  readonly field: AdminFormFieldContract<TValues>;
+  readonly fieldId: string;
+  readonly hasErrors: boolean;
+  readonly onFieldChange?: AdminFormProps<TValues>["onFieldChange"];
+  readonly value: TValues[AdminFormFieldName<TValues>];
+}): ReactElement {
+  const commonProps = {
+    "aria-describedby": describedById,
+    "aria-invalid": hasErrors ? true : undefined,
+    id: fieldId,
+    name: field.name,
+    required: field.required,
+  };
+  const onChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
+    const nextValue = readAdminFormInputValue(field, event);
+
+    onFieldChange?.(field.name, nextValue);
+  };
+
+  if (field.inputType === "textarea") {
+    return createElement("textarea", {
+      ...commonProps,
+      onChange,
+      value: stringifyAdminFormInputValue(value),
+    });
+  }
+
+  if (field.inputType === "select") {
+    return createElement(
+      "select",
+      {
+        ...commonProps,
+        onChange,
+        value: stringifyAdminFormInputValue(value),
+      },
+      field.options?.map((option) =>
+        createElement(
+          "option",
+          {
+            disabled: option.disabled,
+            key: stringifyAdminFormInputValue(option.value),
+            value: stringifyAdminFormInputValue(option.value),
+          },
+          option.label,
+        ),
+      ),
+    );
+  }
+
+  if (field.inputType === "checkbox") {
+    return createElement("input", {
+      ...commonProps,
+      checked: Boolean(value),
+      onChange,
+      type: "checkbox",
+    });
+  }
+
+  return createElement("input", {
+    ...commonProps,
+    onChange,
+    type: field.inputType ?? "text",
+    value: stringifyAdminFormInputValue(value),
+  });
+}
+
+function readAdminFormInputValue<TValues extends object, TName extends AdminFormFieldName<TValues>>(
+  field: AdminFormFieldContract<TValues, TName>,
+  event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+): TValues[TName] {
+  if (field.inputType === "checkbox" && "checked" in event.currentTarget) {
+    return event.currentTarget.checked as TValues[TName];
+  }
+
+  const rawValue = event.currentTarget.value;
+
+  if (field.inputType === "select") {
+    const matchingOption = field.options?.find(
+      (option) => stringifyAdminFormInputValue(option.value) === rawValue,
+    );
+
+    if (matchingOption) {
+      return matchingOption.value;
+    }
+  }
+
+  if (field.inputType === "number") {
+    return Number(rawValue) as TValues[TName];
+  }
+
+  return rawValue as TValues[TName];
+}
+
+function stringifyAdminFormInputValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return String(value);
+}
+
+function sanitizeAdminFormId(value: string): string {
+  return value.replace(/[^A-Za-z0-9_-]/g, "-");
+}
+
+function isAdminFormSubmitDisabled<TValues extends object, TResult = unknown>(
+  state: AdminFormState<TValues, TResult>,
+): boolean {
+  return (
+    state.kind === "submitting" || state.kind === "retrying" || state.problemKind === "permission"
+  );
+}
+
+function formatAdminFormSubmitLabel<TValues extends object, TResult = unknown>(
+  state: AdminFormState<TValues, TResult>,
+): string {
+  if (state.kind === "submitting") {
+    return "Submitting";
+  }
+
+  if (state.kind === "retrying") {
+    return "Retrying";
+  }
+
+  return state.submitLabel;
 }
 
 function ProviderStatus({ provider }: { readonly provider: AdminProviderState }): ReactElement {
