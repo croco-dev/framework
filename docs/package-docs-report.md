@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   104 |
+| Public packages                |   105 |
 | Private packages skipped       |     2 |
 | Missing package README         |    20 |
 | Missing generated API docs     |    76 |
@@ -125,7 +125,7 @@ None.
 
 | Group        | Packages |
 | ------------ | -------: |
-| Core         |       21 |
+| Core         |       22 |
 | Domain       |       28 |
 | Provider     |       26 |
 | Integration  |        5 |
@@ -137,7 +137,7 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       48 |
+| 🟡 beta             |       49 |
 | 🔴 alpha/WIP        |       33 |
 | ⚠️ deprecated       |        0 |
 

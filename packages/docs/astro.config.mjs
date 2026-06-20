@@ -45,6 +45,7 @@ export default defineConfig({
             "../events-core/src/index.ts",
             "../events-inmemory/src/index.ts",
             "../framework-context/src/index.ts",
+            "../idempotency-core/src/index.ts",
             "../invitation-core/src/index.ts",
             "../llm-core/src/index.ts",
             "../llm-openai/src/index.ts",

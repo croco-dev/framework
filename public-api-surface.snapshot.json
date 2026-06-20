@@ -6608,6 +6608,281 @@
       ]
     },
     {
+      "packageName": "@croco/idempotency-core",
+      "relativeDir": "packages/idempotency-core",
+      "entrypoint": "packages/idempotency-core/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "createIdempotencyCoordinator",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createIdempotencyStoreConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createIdempotencyTelemetryAttributes",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createIdempotentHandler",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveEventConsumerIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveHttpIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveTaskIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveWebhookIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "IDEMPOTENCY_DIAGNOSTIC_CODES",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "IdempotencyConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "IdempotencyCoordinator",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator",
+          "declarationKind": "class"
+        },
+        {
+          "name": "IdempotencyReservationNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "IdempotencyReservationStateProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InMemoryIdempotencyStore",
+          "exportKind": "named",
+          "source": "./libs/InMemoryIdempotencyStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InvalidIdempotencyKeyProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "DerivedIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DeriveIdempotencyKeyOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ExplicitIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyAuditEvent",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyAuditSink",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyCommitOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyCompletedRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyCoordinatorOptions",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator"
+        },
+        {
+          "name": "IdempotencyDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems"
+        },
+        {
+          "name": "IdempotencyExecutionRequest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyExecutionResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyExpireOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyFailedRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyFailOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyInFlightRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyKeySourceKind",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyRecordBase",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyRecordStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyReservation",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyReserveOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyReserveResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyScope",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyStore",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyStoreConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "IdempotencyStoreConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "IdempotencyStoreConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "IdempotencyTelemetryAttributes",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "InMemoryIdempotencyStoreOptions",
+          "exportKind": "named",
+          "source": "./libs/InMemoryIdempotencyStore"
+        },
+        {
+          "name": "ProviderEventIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RequestFingerprintIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantScopedIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/impersonation-core",
       "relativeDir": "packages/impersonation-core",
       "entrypoint": "packages/impersonation-core/src/index.ts",
