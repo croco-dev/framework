@@ -495,6 +495,8 @@ try {
     printSmokeCoverageSummary(smokeCases);
   }
 
+  runGeneratedAppContractGates();
+
   run(
     process.execPath,
     [
@@ -569,6 +571,17 @@ try {
   console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
 } finally {
   rmSync(smokeRoot, { force: true, recursive: true });
+}
+
+function runGeneratedAppContractGates(): void {
+  runGate("strict contract typecheck", ["strict-contract-typecheck"]);
+  runGate("static misuse check", ["static-misuse:check"]);
+  runGate("generated template oxlint", ["exec", "oxlint", "packages/create-croco-app/templates"]);
+}
+
+function runGate(label: string, args: readonly string[]): void {
+  run("pnpm", args, rootDir);
+  console.log(`create-croco-app-generated-smoke: ${label} passed`);
 }
 
 function selectSmokeCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {

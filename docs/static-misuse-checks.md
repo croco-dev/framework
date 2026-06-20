@@ -1,8 +1,10 @@
 # Static Misuse Checks
 
 `pnpm static-misuse:check` runs repository-local static misuse detectors before the normal lint
-and format pass. The first rule is
-`CROCO_STATIC_REPOSITORY_CORE_IMPLEMENTATION_BOUNDARY`.
+and format pass. Current rules:
+
+- `CROCO_STATIC_REPOSITORY_CORE_IMPLEMENTATION_BOUNDARY`
+- `CROCO_STATIC_REST_GENERATED_CONTRACT_SCHEMA_BOUNDARY`
 
 ## Repository Boundary Rule
 
@@ -37,3 +39,34 @@ import type { Something } from "drizzle-orm";
 ```
 
 Prefer moving the implementation dependency to the owning package over suppressing the diagnostic.
+
+## Generated REST Contract Rule
+
+Generated app templates under `packages/create-croco-app/templates` are contract-first surfaces.
+They must use explicit HTTP method decorators and schema-backed body and named parameter decorators.
+The same policy is also exported as
+`@croco/oxlint-rules/rest-generated-contract-schema` and enabled for generated template
+controllers in `.oxlintrc.json`.
+
+The rule fails on:
+
+- `@All(...)`
+- `@Body()` without a schema argument
+- `@Param("name")`, `@Query("name")`, or `@Header("name")` without a schema argument
+
+Generated templates should instead pass the route contract schema:
+
+```typescript no-check
+@Post("/:id")
+@ResponseSchema(userSchema)
+create(
+  @Param("id", userIdSchema) id: string,
+  @Body(createUserInputSchema) input: CreateUserInput,
+) {
+  return users.create(id, input);
+}
+```
+
+Compatibility-mode application code can still use loose decorators outside generated templates. Those
+paths remain covered by ContractGraph, RPC codegen, and OpenAPI diagnostics when generated contracts
+are emitted.

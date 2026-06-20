@@ -19,12 +19,19 @@
     "no-restricted-globals": "off",
     "@croco/oxlint-rules/no-cross-domain-import": "off",
     "@croco/oxlint-rules/no-datasource-import": "off",
+    "@croco/oxlint-rules/rest-generated-contract-schema": "off",
     "@croco/oxlint-rules/type-graphql-explicit-type": "off"
   },
   "overrides": [
     {
       "files": ["**/*.hbs"],
       "rules": {}
+    },
+    {
+      "files": ["packages/create-croco-app/templates/**/*.ts"],
+      "rules": {
+        "@croco/oxlint-rules/rest-generated-contract-schema": "error"
+      }
     },
     {
       "files": [
