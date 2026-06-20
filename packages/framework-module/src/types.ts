@@ -46,7 +46,7 @@ export type ModuleGraphManifestVersion = "croco.module-graph.manifest.v1";
 export type ModuleGraphManifestStatus = "ready" | "failed";
 
 export type ModuleGraphDiagnosticCode =
-  | "framework-module/module-circular-dependency"
+  | "framework-module/circular-dependency"
   | "framework-module/provider-not-visible";
 
 export type ModuleGraphDiagnostic = {

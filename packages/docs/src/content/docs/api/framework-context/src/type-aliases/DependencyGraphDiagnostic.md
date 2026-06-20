@@ -27,6 +27,12 @@ title: "DependencyGraphDiagnostic"
 
 ***
 
+### pathIds
+
+> `readonly` **pathIds**: readonly `string`[]
+
+***
+
 ### severity
 
 > `readonly` **severity**: `"error"`
@@ -48,6 +54,12 @@ title: "DependencyGraphDiagnostic"
 ### token
 
 > `readonly` **token**: `string`
+
+***
+
+### tokenId
+
+> `readonly` **tokenId**: `string`
 
 ***
 

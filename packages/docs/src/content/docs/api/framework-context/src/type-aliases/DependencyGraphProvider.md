@@ -15,6 +15,12 @@ title: "DependencyGraphProvider"
 
 ***
 
+### dependencyIds
+
+> `readonly` **dependencyIds**: readonly `string`[]
+
+***
+
 ### provider
 
 > `readonly` **provider**: [`DependencyProviderKind`](/api/framework-context/src/type-aliases/dependencyproviderkind/)
@@ -42,6 +48,12 @@ title: "DependencyGraphProvider"
 ### token
 
 > `readonly` **token**: `string`
+
+***
+
+### tokenId
+
+> `readonly` **tokenId**: `string`
 
 ***
 

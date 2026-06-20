@@ -198,15 +198,15 @@ function normalizeDiagnostic(value: unknown): DiCheckDiagnostic {
   const path = Array.isArray(record?.path)
     ? record.path.filter((entry): entry is string => typeof entry === "string")
     : undefined;
+  const token = readOptionalString(record, "token");
+  const moduleName = readOptionalString(record, "moduleName");
 
   return {
     code: readString(record, "code", "cli/di-diagnostic-unknown"),
     severity: readSeverity(record?.severity),
     message: readString(record, "message", "DI graph manifest reported an error."),
-    ...(readOptionalString(record, "token") ? { token: readOptionalString(record, "token") } : {}),
-    ...(readOptionalString(record, "moduleName")
-      ? { moduleName: readOptionalString(record, "moduleName") }
-      : {}),
+    ...(token ? { token } : {}),
+    ...(moduleName ? { moduleName } : {}),
     ...(path && path.length > 0 ? { path } : {}),
     ...(sourceLocation ? { sourceLocation } : {}),
   };

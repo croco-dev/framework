@@ -76,6 +76,8 @@ export class Container {
     Constructor,
     DependencySourceLocation
   >();
+  private static readonly tokenIdentityIds = new Map<TokenIdentifier<unknown>, string>();
+  private static readonly tokenIdentityOwners = new Map<string, TokenIdentifier<unknown>>();
   private static lastResolutionTrace: DependencyResolutionTrace | undefined;
 
   static get<T>(token: TokenIdentifier<T>): T {
@@ -140,6 +142,11 @@ export class Container {
       MetadataStorage.delete(COMPONENT_METADATA_KEY, token);
       Container.componentSourceLocations.delete(token);
     }
+    const tokenId = Container.tokenIdentityIds.get(token);
+    if (tokenId) {
+      Container.tokenIdentityOwners.delete(tokenId);
+    }
+    Container.tokenIdentityIds.delete(token);
     Container.validated = false;
   }
 
@@ -150,6 +157,8 @@ export class Container {
     Container.lazyProviders.clear();
     Container.symbolTokens.clear();
     Container.componentSourceLocations.clear();
+    Container.tokenIdentityIds.clear();
+    Container.tokenIdentityOwners.clear();
     Container.lastResolutionTrace = undefined;
     Container.validated = false;
   }
@@ -190,6 +199,7 @@ export class Container {
       version: "croco.di-graph.manifest.v1",
       status: diagnostics.length === 0 ? "ready" : "failed",
       roots: roots.map((root) => Container.describeToken(root).label),
+      rootIds: roots.map((root) => Container.describeToken(root).id),
       providers: Container.createGraphProviders(traces),
       diagnostics,
     };
@@ -295,45 +305,53 @@ export class Container {
   ): DependencyGraphProvider[] {
     const providers = new Map<
       string,
-      Omit<DependencyGraphProvider, "dependencies"> & { readonly dependencies: Set<string> }
+      Omit<DependencyGraphProvider, "dependencies" | "dependencyIds"> & {
+        readonly dependencies: Map<string, string>;
+      }
     >();
 
     for (const trace of traces) {
       for (const step of trace.steps) {
-        const existing = providers.get(step.token);
+        const existing = providers.get(step.tokenId);
         const provider = existing ?? {
           token: step.token,
+          tokenId: step.tokenId,
           tokenKind: step.tokenKind,
           provider: step.provider,
           status: step.status,
-          dependencies: new Set<string>(),
+          dependencies: new Map<string, string>(),
           ...(step.scope ? { scope: step.scope } : {}),
-          ...Container.getSourceLocationForTokenLabel(step.token),
+          ...Container.getSourceLocationForTokenId(step.tokenId),
         };
 
-        if (step.dependencyOf) {
-          const dependencyOf = providers.get(step.dependencyOf) ?? {
+        if (step.dependencyOf && step.dependencyOfId) {
+          const dependencyOf = providers.get(step.dependencyOfId) ?? {
             token: step.dependencyOf,
+            tokenId: step.dependencyOfId,
             tokenKind: "constructor" as DependencyTokenKind,
             provider: "missing" as DependencyProviderKind,
             status: "missing" as DependencyResolutionStepStatus,
-            dependencies: new Set<string>(),
-            ...Container.getSourceLocationForTokenLabel(step.dependencyOf),
+            dependencies: new Map<string, string>(),
+            ...Container.getSourceLocationForTokenId(step.dependencyOfId),
           };
-          dependencyOf.dependencies.add(step.token);
-          providers.set(step.dependencyOf, dependencyOf);
+          dependencyOf.dependencies.set(step.tokenId, step.token);
+          providers.set(step.dependencyOfId, dependencyOf);
         }
 
-        providers.set(step.token, provider);
+        providers.set(step.tokenId, provider);
       }
     }
 
     return Array.from(providers.values())
       .map((provider) => ({
         ...provider,
-        dependencies: Array.from(provider.dependencies).sort(),
+        dependencies: Array.from(provider.dependencies.values()).sort(),
+        dependencyIds: Array.from(provider.dependencies.keys()).sort(),
       }))
-      .sort((left, right) => left.token.localeCompare(right.token));
+      .sort((left, right) => {
+        const tokenOrder = left.token.localeCompare(right.token);
+        return tokenOrder === 0 ? left.tokenId.localeCompare(right.tokenId) : tokenOrder;
+      });
   }
 
   private static createGraphDiagnostics(
@@ -343,7 +361,7 @@ export class Container {
     const seen = new Set<string>();
 
     const pushDiagnostic = (diagnostic: DependencyGraphDiagnostic): void => {
-      const key = `${diagnostic.code}:${diagnostic.token}:${diagnostic.path.join("->")}`;
+      const key = `${diagnostic.code}:${diagnostic.tokenId}:${diagnostic.pathIds.join("->")}`;
       if (seen.has(key)) {
         return;
       }
@@ -359,11 +377,13 @@ export class Container {
             code: "framework-context/di-missing-provider",
             severity: "error",
             token: step.token,
+            tokenId: step.tokenId,
             status: "missing",
             message: `Provider '${step.token}' is not registered. Resolution path: ${step.path.join(" -> ")}.`,
             path: step.path,
+            pathIds: step.pathIds,
             trace,
-            ...Container.getSourceLocationForTokenLabel(step.token),
+            ...Container.getSourceLocationForTokenId(step.tokenId),
           });
           continue;
         }
@@ -373,11 +393,13 @@ export class Container {
             code: "framework-context/di-circular-dependency",
             severity: "error",
             token: step.token,
+            tokenId: step.tokenId,
             status: "circular",
             message: step.reason,
             path: step.path,
+            pathIds: step.pathIds,
             trace,
-            ...Container.getSourceLocationForTokenLabel(step.token),
+            ...Container.getSourceLocationForTokenId(step.tokenId),
           });
           continue;
         }
@@ -387,11 +409,13 @@ export class Container {
             code: "framework-context/di-scope-mismatch",
             severity: "error",
             token: step.token,
+            tokenId: step.tokenId,
             status: "scope-mismatch",
             message: step.reason,
             path: step.path,
+            pathIds: step.pathIds,
             trace,
-            ...Container.getSourceLocationForTokenLabel(step.token),
+            ...Container.getSourceLocationForTokenId(step.tokenId),
           });
           continue;
         }
@@ -401,11 +425,13 @@ export class Container {
             code: "framework-context/di-unknown-provider",
             severity: "error",
             token: step.token,
+            tokenId: step.tokenId,
             status: "failed",
             message: `Provider '${step.token}' depends on TypeDI fallback metadata and cannot be statically verified.`,
             path: step.path,
+            pathIds: step.pathIds,
             trace,
-            ...Container.getSourceLocationForTokenLabel(step.token),
+            ...Container.getSourceLocationForTokenId(step.tokenId),
           });
         }
       }
@@ -413,19 +439,23 @@ export class Container {
 
     return diagnostics.sort((left, right) => {
       const codeOrder = left.code.localeCompare(right.code);
-      return codeOrder === 0 ? left.token.localeCompare(right.token) : codeOrder;
+      if (codeOrder !== 0) {
+        return codeOrder;
+      }
+
+      const tokenOrder = left.token.localeCompare(right.token);
+      return tokenOrder === 0 ? left.tokenId.localeCompare(right.tokenId) : tokenOrder;
     });
   }
 
-  private static getSourceLocationForTokenLabel(token: string): {
+  private static getSourceLocationForTokenId(tokenId: string): {
     readonly sourceLocation?: DependencySourceLocation;
   } {
-    const component = Container.getRegisteredComponents().find(
-      (candidate) => Container.describeToken(candidate).label === token,
-    );
-    const sourceLocation = component
-      ? Container.componentSourceLocations.get(component)
-      : undefined;
+    const token = Container.tokenIdentityOwners.get(tokenId);
+    const sourceLocation =
+      token && Container.isConstructorToken(token)
+        ? Container.componentSourceLocations.get(token)
+        : undefined;
 
     return sourceLocation ? { sourceLocation } : {};
   }
@@ -435,7 +465,9 @@ export class Container {
 
     for (const line of stack) {
       const trimmed = line.trim();
-      const match = trimmed.match(/\(?((?:file:\/\/)?\/.*):(\d+):(\d+)\)?$/);
+      const match =
+        trimmed.match(/\(?((?:file:\/\/)?\/.*):(\d+):(\d+)\)?$/) ??
+        trimmed.match(/\(?([A-Za-z]:\\.*):(\d+):(\d+)\)?$/);
       if (!match) {
         continue;
       }
@@ -720,7 +752,7 @@ export class Container {
     token: TokenIdentifier<T>,
     path: TokenIdentifier<unknown>[],
     steps: DependencyResolutionStep[],
-    edge?: Pick<DependencyResolutionStep, "dependencyOf" | "parameterIndex">,
+    edge?: Pick<DependencyResolutionStep, "dependencyOf" | "dependencyOfId" | "parameterIndex">,
   ): void {
     const nextPath = [...path, token as TokenIdentifier<unknown>];
     const cycleStartIndex = path.findIndex((entry) => Container.isSameToken(entry, token));
@@ -768,6 +800,7 @@ export class Container {
       const injectedToken = getParameterInjectionToken(token, parameterIndex);
       Container.collectResolutionSteps(injectedToken ?? paramType, nextPath, steps, {
         dependencyOf: step.token,
+        dependencyOfId: step.tokenId,
         parameterIndex,
       });
     });
@@ -780,17 +813,19 @@ export class Container {
   ): DependencyResolutionStep {
     const described = Container.describeToken(token);
     const selection = Container.describeProviderSelection(token);
+    const pathTokens = [...path, token as TokenIdentifier<unknown>];
     return {
       token: described.label,
+      tokenId: described.id,
       tokenKind: described.kind,
       provider: overrides.provider ?? selection.provider,
       status: overrides.status ?? selection.status,
       reason: overrides.reason ?? selection.reason,
-      path: [...path, token as TokenIdentifier<unknown>].map(
-        (entry) => Container.describeToken(entry).label,
-      ),
+      path: pathTokens.map((entry) => Container.describeToken(entry).label),
+      pathIds: pathTokens.map((entry) => Container.describeToken(entry).id),
       ...(selection.scope ? { scope: selection.scope } : {}),
       ...(overrides.dependencyOf ? { dependencyOf: overrides.dependencyOf } : {}),
+      ...(overrides.dependencyOfId ? { dependencyOfId: overrides.dependencyOfId } : {}),
       ...(overrides.parameterIndex !== undefined
         ? { parameterIndex: overrides.parameterIndex }
         : {}),
@@ -999,24 +1034,87 @@ export class Container {
 
   private static describeToken<T>(token: TokenIdentifier<T>): {
     label: string;
+    id: string;
     kind: DependencyTokenKind;
   } {
     if (typeof token === "string") {
-      return { label: token, kind: "string" };
+      return { label: token, id: Container.getTokenId(token, "string", token), kind: "string" };
     }
 
     if (typeof token === "symbol") {
+      const label = Symbol.keyFor(token) ?? token.description ?? token.toString();
       return {
-        label: Symbol.keyFor(token) ?? token.description ?? token.toString(),
+        label,
+        id: Container.getTokenId(token, "symbol", label),
         kind: "symbol",
       };
     }
 
     if (token instanceof TypeDIToken) {
-      return { label: `Token<${token.name ?? "UNSET_NAME"}>`, kind: "typedi-token" };
+      const label = `Token<${token.name ?? "UNSET_NAME"}>`;
+      return {
+        label,
+        id: Container.getTokenId(token, "typedi-token", label),
+        kind: "typedi-token",
+      };
     }
 
-    return { label: token.name || "<anonymous>", kind: "constructor" };
+    const label = token.name || "<anonymous>";
+    return { label, id: Container.getTokenId(token, "constructor", label), kind: "constructor" };
+  }
+
+  private static getTokenId<T>(
+    token: TokenIdentifier<T>,
+    kind: DependencyTokenKind,
+    label: string,
+  ): string {
+    const existing = Container.tokenIdentityIds.get(token);
+    if (existing) {
+      return existing;
+    }
+
+    const baseId = Container.createTokenIdBase(token, kind, label);
+    let id = baseId;
+    let suffix = 2;
+    while (true) {
+      const owner = Container.tokenIdentityOwners.get(id);
+      if (!owner || Container.isSameToken(owner, token)) {
+        Container.tokenIdentityIds.set(token, id);
+        Container.tokenIdentityOwners.set(id, token);
+        return id;
+      }
+
+      id = `${baseId}#${suffix}`;
+      suffix += 1;
+    }
+  }
+
+  private static createTokenIdBase<T>(
+    token: TokenIdentifier<T>,
+    kind: DependencyTokenKind,
+    label: string,
+  ): string {
+    if (Container.isConstructorToken(token)) {
+      const sourceLocation = Container.componentSourceLocations.get(token);
+      if (sourceLocation) {
+        const line = sourceLocation.line ?? 0;
+        const column = sourceLocation.column ?? 0;
+        return `${kind}:${Container.formatTokenIdPart(label)}@${sourceLocation.file}:${line}:${column}`;
+      }
+    }
+
+    if (typeof token === "symbol") {
+      const globalKey = Symbol.keyFor(token);
+      if (globalKey) {
+        return `${kind}:global:${Container.formatTokenIdPart(globalKey)}`;
+      }
+    }
+
+    return `${kind}:${Container.formatTokenIdPart(label)}`;
+  }
+
+  private static formatTokenIdPart(value: string): string {
+    return value.replace(/\\/g, "/");
   }
 
   private static isSameToken<T>(

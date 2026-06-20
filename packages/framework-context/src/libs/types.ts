@@ -25,13 +25,16 @@ export type DependencyResolutionTraceStatus =
 
 export type DependencyResolutionStep = {
   readonly token: string;
+  readonly tokenId: string;
   readonly tokenKind: DependencyTokenKind;
   readonly provider: DependencyProviderKind;
   readonly status: DependencyResolutionStepStatus;
   readonly reason: string;
   readonly path: readonly string[];
+  readonly pathIds: readonly string[];
   readonly scope?: Scope;
   readonly dependencyOf?: string;
+  readonly dependencyOfId?: string;
   readonly parameterIndex?: number;
 };
 
@@ -61,19 +64,23 @@ export type DependencyGraphDiagnostic = {
   readonly code: DependencyGraphDiagnosticCode;
   readonly severity: "error";
   readonly token: string;
+  readonly tokenId: string;
   readonly status: Exclude<DependencyResolutionTraceStatus, "ready" | "resolved">;
   readonly message: string;
   readonly path: readonly string[];
+  readonly pathIds: readonly string[];
   readonly trace: DependencyResolutionTrace;
   readonly sourceLocation?: DependencySourceLocation;
 };
 
 export type DependencyGraphProvider = {
   readonly token: string;
+  readonly tokenId: string;
   readonly tokenKind: DependencyTokenKind;
   readonly provider: DependencyProviderKind;
   readonly status: DependencyResolutionStepStatus;
   readonly dependencies: readonly string[];
+  readonly dependencyIds: readonly string[];
   readonly scope?: Scope;
   readonly sourceLocation?: DependencySourceLocation;
 };
@@ -82,6 +89,7 @@ export type DependencyGraphManifest = {
   readonly version: DependencyGraphManifestVersion;
   readonly status: DependencyGraphManifestStatus;
   readonly roots: readonly string[];
+  readonly rootIds: readonly string[];
   readonly providers: readonly DependencyGraphProvider[];
   readonly diagnostics: readonly DependencyGraphDiagnostic[];
 };

@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Container, Inject, Token } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { ModuleOptions } from "../index";
 import { createModuleGraphManifest, defineCrocoModule } from "../index";
 import { CrocoModule } from "../index";
 
@@ -90,6 +91,27 @@ describe("Module graph manifest", () => {
         moduleName: "users",
         token: "private-config",
         path: ["users", "UserService", "private-config"],
+      }),
+    );
+  });
+
+  it("uses the canonical Problem code for module cycles", () => {
+    const moduleAImports: ModuleOptions[] = [];
+    const moduleBImports: ModuleOptions[] = [];
+    const moduleA: ModuleOptions = { name: "A", imports: moduleAImports };
+    const moduleB: ModuleOptions = { name: "B", imports: moduleBImports };
+
+    moduleAImports.push(moduleB);
+    moduleBImports.push(moduleA);
+
+    const manifest = createModuleGraphManifest([moduleA]);
+
+    expect(manifest.status).toBe("failed");
+    expect(manifest.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "framework-module/circular-dependency",
+        moduleName: "A",
+        path: ["A", "B", "A"],
       }),
     );
   });

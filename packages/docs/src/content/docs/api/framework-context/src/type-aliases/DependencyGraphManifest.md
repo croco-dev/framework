@@ -21,6 +21,12 @@ title: "DependencyGraphManifest"
 
 ***
 
+### rootIds
+
+> `readonly` **rootIds**: readonly `string`[]
+
+***
+
 ### roots
 
 > `readonly` **roots**: readonly `string`[]

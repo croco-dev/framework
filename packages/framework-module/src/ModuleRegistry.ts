@@ -234,7 +234,7 @@ function createModuleGraphDiagnostics(
       : [];
 
     diagnostics.push({
-      code: "framework-module/module-circular-dependency",
+      code: "framework-module/circular-dependency",
       severity: "error",
       moduleName: cycle[0] ?? "<unknown>",
       message: error.detail ?? error.message,
