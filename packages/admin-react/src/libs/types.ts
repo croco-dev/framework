@@ -1,3 +1,5 @@
+import type { ReactElement } from "react";
+
 import type { BillingAccount, Plan, Subscription, SubscriptionStatus } from "@croco/billing-core";
 import type {
   EntitlementCheckResult,
@@ -431,4 +433,200 @@ export type TenantImpersonationConsoleStateInput = {
 export type TenantImpersonationConsoleProps = {
   readonly state: TenantImpersonationConsoleState;
   readonly onAction?: AdminPanelActionHandler;
+};
+
+export type AdminFormIntent = "create" | "update" | "action";
+
+export type AdminFormLifecycleState =
+  | "idle"
+  | "dirty"
+  | "submitting"
+  | "succeeded"
+  | "failed"
+  | "retrying";
+
+export type AdminFormProblemKind = "validation" | "domain" | "permission" | "external";
+
+export type AdminFormFieldName<TValues extends object> = Extract<keyof TValues, string>;
+
+export type AdminFormFieldType =
+  | "checkbox"
+  | "date"
+  | "email"
+  | "hidden"
+  | "number"
+  | "select"
+  | "textarea"
+  | "text";
+
+export type AdminFormFieldOption<Value = unknown> = {
+  readonly label: string;
+  readonly value: Value;
+  readonly disabled?: boolean;
+};
+
+export type AdminFormFieldContract<
+  TValues extends object,
+  TName extends AdminFormFieldName<TValues> = AdminFormFieldName<TValues>,
+> = {
+  readonly name: TName;
+  readonly label: string;
+  readonly inputType?: AdminFormFieldType;
+  readonly description?: string;
+  readonly required?: boolean;
+  readonly schemaPath?: string;
+  readonly options?: readonly AdminFormFieldOption<TValues[TName]>[];
+};
+
+export type AdminFormFieldError = {
+  readonly code: string;
+  readonly message: string;
+  readonly problem?: ProblemDetails;
+  readonly recoveryActionIds?: readonly string[];
+};
+
+export type AdminFormFieldErrors<TValues extends object> = Partial<
+  Record<AdminFormFieldName<TValues>, NonEmptyArray<AdminFormFieldError>>
+>;
+
+export type AdminFormRecoveryActionKind = "retry" | "reset" | "navigate" | "custom";
+
+export type AdminFormRecoveryAction = {
+  readonly id: string;
+  readonly label: string;
+  readonly kind: AdminFormRecoveryActionKind;
+  readonly description?: string;
+  readonly problemCodes?: readonly string[];
+  readonly disabledReason?: string;
+  readonly audit?: AdminAuditMetadata;
+};
+
+export type AdminFormSubmitContext<TValues extends object, TResult = unknown> = {
+  readonly values: TValues;
+  readonly audit: AdminAuditMetadata;
+  readonly intent: AdminFormIntent;
+  readonly previousState: AdminFormState<TValues, TResult>;
+  readonly signal?: AbortSignal;
+};
+
+export type AdminFormSubmitSuccess<TResult> = {
+  readonly kind: "success";
+  readonly data?: TResult;
+  readonly audit?: AdminAuditMetadata;
+  readonly recoveryActions?: readonly AdminFormRecoveryAction[];
+};
+
+export type AdminFormValidationFailure<TValues extends object> = {
+  readonly kind: "validation_failed";
+  readonly fieldErrors: AdminFormFieldErrors<TValues>;
+  readonly problem?: ProblemDetails;
+  readonly audit?: AdminAuditMetadata;
+  readonly recoveryActions?: readonly AdminFormRecoveryAction[];
+};
+
+export type AdminFormProblemResultKind =
+  | "domain_problem"
+  | "permission_denied"
+  | "external_failure";
+
+export type AdminFormProblemResult = {
+  readonly kind: AdminFormProblemResultKind;
+  readonly problem: ProblemDetails;
+  readonly audit?: AdminAuditMetadata;
+  readonly recoveryActions?: readonly AdminFormRecoveryAction[];
+};
+
+export type AdminFormSubmitResult<TValues extends object, TResult = unknown> =
+  | AdminFormSubmitSuccess<TResult>
+  | AdminFormValidationFailure<TValues>
+  | AdminFormProblemResult;
+
+export type AdminFormSubmitHandler<TValues extends object, TResult = unknown> = (
+  context: AdminFormSubmitContext<TValues, TResult>,
+) => AdminFormSubmitResult<TValues, TResult> | Promise<AdminFormSubmitResult<TValues, TResult>>;
+
+export type AdminFormContract<TValues extends object, TResult = unknown> = {
+  readonly id: string;
+  readonly title: string;
+  readonly intent: AdminFormIntent;
+  readonly fields: NonEmptyArray<AdminFormFieldContract<TValues>>;
+  readonly initialValues: TValues;
+  readonly submitLabel?: string;
+  readonly successMessage?: string;
+  readonly requiredPermissions?: readonly string[];
+  readonly grantedPermissions?: readonly string[];
+  readonly audit: AdminAuditMetadata;
+  readonly submit: AdminFormSubmitHandler<TValues, TResult>;
+  readonly recoveryActions?: readonly AdminFormRecoveryAction[];
+};
+
+export type AdminFormState<TValues extends object, TResult = unknown> = {
+  readonly kind: AdminFormLifecycleState;
+  readonly contractId: string;
+  readonly title: string;
+  readonly intent: AdminFormIntent;
+  readonly generatedAt: Date;
+  readonly fields: NonEmptyArray<AdminFormFieldContract<TValues>>;
+  readonly initialValues: TValues;
+  readonly values: TValues;
+  readonly dirtyFields: readonly AdminFormFieldName<TValues>[];
+  readonly fieldErrors: AdminFormFieldErrors<TValues>;
+  readonly problem?: ProblemDetails;
+  readonly problemKind?: AdminFormProblemKind;
+  readonly recoveryActions: readonly AdminFormRecoveryAction[];
+  readonly audit: AdminAuditMetadata;
+  readonly lastSubmitAudit?: AdminAuditMetadata;
+  readonly submitResult?: TResult;
+  readonly submitLabel: string;
+  readonly successMessage?: string;
+  readonly requiredPermissions: readonly string[];
+  readonly grantedPermissions: readonly string[];
+};
+
+export type AdminFormStateOptions = {
+  readonly generatedAt?: Date;
+  readonly grantedPermissions?: readonly string[];
+};
+
+export type AdminFormFieldChangeHandler<TValues extends object> = <
+  TName extends AdminFormFieldName<TValues>,
+>(
+  name: TName,
+  value: TValues[TName],
+) => void;
+
+export type AdminFormSubmitAction<TValues extends object, TResult = unknown> = () => Promise<
+  AdminFormState<TValues, TResult>
+>;
+
+export type AdminFormController<TValues extends object, TResult = unknown> = {
+  readonly contract: AdminFormContract<TValues, TResult>;
+  readonly state: AdminFormState<TValues, TResult>;
+  readonly setFieldValue: AdminFormFieldChangeHandler<TValues>;
+  readonly reset: () => void;
+  readonly submit: AdminFormSubmitAction<TValues, TResult>;
+  readonly retry: AdminFormSubmitAction<TValues, TResult>;
+};
+
+export type AdminFormRenderFieldContext<TValues extends object, TResult = unknown> = {
+  readonly field: AdminFormFieldContract<TValues>;
+  readonly value: TValues[AdminFormFieldName<TValues>];
+  readonly errors: readonly AdminFormFieldError[];
+  readonly state: AdminFormState<TValues, TResult>;
+};
+
+export type AdminFormRenderActionsContext<TValues extends object, TResult = unknown> = {
+  readonly state: AdminFormState<TValues, TResult>;
+  readonly submitDisabled: boolean;
+};
+
+export type AdminFormProps<TValues extends object, TResult = unknown> = {
+  readonly state: AdminFormState<TValues, TResult>;
+  readonly onFieldChange?: AdminFormFieldChangeHandler<TValues>;
+  readonly onSubmit?: () => void;
+  readonly onRecoveryAction?: (action: AdminFormRecoveryAction) => void;
+  readonly renderField?: (context: AdminFormRenderFieldContext<TValues, TResult>) => ReactElement;
+  readonly renderActions?: (
+    context: AdminFormRenderActionsContext<TValues, TResult>,
+  ) => ReactElement;
 };

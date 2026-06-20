@@ -4,6 +4,14 @@ import type { ProblemDetails } from "@croco/problems-core";
 import type {
   AdminActionContract,
   AdminActionPermissionDecision,
+  AdminFormContract,
+  AdminFormFieldErrors,
+  AdminFormFieldName,
+  AdminFormProblemKind,
+  AdminFormProblemResultKind,
+  AdminFormState,
+  AdminFormStateOptions,
+  AdminFormSubmitResult,
   AdminBillingStatus,
   AdminEntitlementRow,
   AdminImpersonationConsoleState,
@@ -273,6 +281,187 @@ export function createTenantImpersonationConsoleState(
 }
 
 export const createInMemoryTenantImpersonationConsoleState = createTenantImpersonationConsoleState;
+
+export function createAdminFormState<TValues extends object, TResult = unknown>(
+  contract: AdminFormContract<TValues, TResult>,
+  options: AdminFormStateOptions = {},
+): AdminFormState<TValues, TResult> {
+  const generatedAt = options.generatedAt ?? new Date();
+  const requiredPermissions = contract.requiredPermissions ?? [];
+  const grantedPermissions = options.grantedPermissions ?? contract.grantedPermissions ?? [];
+  const missingPermissions = getMissingPermissions(requiredPermissions, grantedPermissions);
+
+  if (missingPermissions.length > 0) {
+    return createAdminFormBaseState(contract, {
+      generatedAt,
+      grantedPermissions,
+      kind: "failed",
+      problem: createPermissionDeniedProblemDetails(contract.audit.subjectId, missingPermissions),
+      problemKind: "permission",
+      requiredPermissions,
+      values: contract.initialValues,
+    });
+  }
+
+  return createAdminFormBaseState(contract, {
+    generatedAt,
+    grantedPermissions,
+    kind: "idle",
+    requiredPermissions,
+    values: contract.initialValues,
+  });
+}
+
+export const createInMemoryAdminFormState = createAdminFormState;
+
+export function updateAdminFormField<
+  TValues extends object,
+  TResult = unknown,
+  TName extends AdminFormFieldName<TValues> = AdminFormFieldName<TValues>,
+>(
+  state: AdminFormState<TValues, TResult>,
+  name: TName,
+  value: TValues[TName],
+): AdminFormState<TValues, TResult> {
+  const nextValues = {
+    ...state.values,
+    [name]: value,
+  };
+  const nextDirtyFields = state.dirtyFields.includes(name)
+    ? state.dirtyFields
+    : [...state.dirtyFields, name];
+  const missingPermissions = getMissingPermissions(
+    state.requiredPermissions,
+    state.grantedPermissions,
+  );
+  const permissionProblem =
+    missingPermissions.length > 0
+      ? createPermissionDeniedProblemDetails(state.audit.subjectId, missingPermissions)
+      : undefined;
+
+  return {
+    ...state,
+    dirtyFields: nextDirtyFields,
+    fieldErrors: removeFieldErrors(state.fieldErrors, name),
+    kind: permissionProblem ? "failed" : "dirty",
+    problem: permissionProblem,
+    problemKind: permissionProblem ? "permission" : undefined,
+    submitResult: undefined,
+    values: nextValues,
+  };
+}
+
+export function resetAdminFormState<TValues extends object, TResult = unknown>(
+  contract: AdminFormContract<TValues, TResult>,
+  options: AdminFormStateOptions = {},
+): AdminFormState<TValues, TResult> {
+  return createAdminFormState(contract, options);
+}
+
+export function startAdminFormSubmit<TValues extends object, TResult = unknown>(
+  state: AdminFormState<TValues, TResult>,
+  options: { readonly retry?: boolean } = {},
+): AdminFormState<TValues, TResult> {
+  return {
+    ...state,
+    fieldErrors: {},
+    kind: options.retry ? "retrying" : "submitting",
+    problem: undefined,
+    problemKind: undefined,
+    submitResult: undefined,
+  };
+}
+
+export async function submitAdminForm<TValues extends object, TResult = unknown>(
+  contract: AdminFormContract<TValues, TResult>,
+  state: AdminFormState<TValues, TResult>,
+  options: { readonly retry?: boolean; readonly signal?: AbortSignal } = {},
+): Promise<AdminFormState<TValues, TResult>> {
+  const currentState = state.contractId === contract.id ? state : createAdminFormState(contract);
+  const permissionProblem = createAdminFormPermissionProblem(
+    contract,
+    currentState.grantedPermissions,
+  );
+
+  if (permissionProblem) {
+    return finishAdminFormSubmit(
+      currentState,
+      {
+        kind: "permission_denied",
+        problem: permissionProblem,
+        recoveryActions: contract.recoveryActions,
+      },
+      options,
+    );
+  }
+
+  try {
+    const submittingState = startAdminFormSubmit(currentState, { retry: options.retry });
+    const result = await contract.submit({
+      audit: currentState.audit,
+      intent: currentState.intent,
+      previousState: currentState,
+      signal: options.signal,
+      values: currentState.values,
+    });
+
+    return finishAdminFormSubmit(submittingState, result, options);
+  } catch (error) {
+    return finishAdminFormSubmit(
+      currentState,
+      {
+        kind: "external_failure",
+        problem: toExternalFailureProblem(error),
+        recoveryActions: contract.recoveryActions,
+      },
+      options,
+    );
+  }
+}
+
+export function finishAdminFormSubmit<TValues extends object, TResult = unknown>(
+  state: AdminFormState<TValues, TResult>,
+  result: AdminFormSubmitResult<TValues, TResult>,
+  _options: { readonly retry?: boolean } = {},
+): AdminFormState<TValues, TResult> {
+  if (result.kind === "success") {
+    return {
+      ...state,
+      dirtyFields: [],
+      fieldErrors: {},
+      kind: "succeeded",
+      lastSubmitAudit: result.audit ?? state.audit,
+      problem: undefined,
+      problemKind: undefined,
+      recoveryActions: result.recoveryActions ?? [],
+      submitResult: result.data,
+    };
+  }
+
+  if (result.kind === "validation_failed") {
+    return {
+      ...state,
+      fieldErrors: result.fieldErrors,
+      kind: "failed",
+      lastSubmitAudit: result.audit ?? state.audit,
+      problem: result.problem,
+      problemKind: "validation",
+      recoveryActions: result.recoveryActions ?? state.recoveryActions,
+      submitResult: undefined,
+    };
+  }
+
+  return {
+    ...state,
+    fieldErrors: {},
+    kind: "failed",
+    lastSubmitAudit: result.audit ?? state.audit,
+    problem: result.problem,
+    problemKind: problemKindFromSubmitResult(result.kind),
+    recoveryActions: result.recoveryActions ?? state.recoveryActions,
+    submitResult: undefined,
+  };
+}
 
 function createPlanSummary(input: BillingEntitlementAdminPanelStateInput): AdminPlanSummary {
   const subscriptionStatus = input.subscription?.status ?? "missing";
@@ -615,4 +804,124 @@ function createImpersonationPrincipal(
     label: input?.label,
     userId,
   };
+}
+
+function createAdminFormBaseState<TValues extends object, TResult = unknown>(
+  contract: AdminFormContract<TValues, TResult>,
+  input: {
+    readonly generatedAt: Date;
+    readonly grantedPermissions: readonly string[];
+    readonly kind: AdminFormState<TValues, TResult>["kind"];
+    readonly problem?: ProblemDetails;
+    readonly problemKind?: AdminFormProblemKind;
+    readonly requiredPermissions: readonly string[];
+    readonly values: TValues;
+  },
+): AdminFormState<TValues, TResult> {
+  return {
+    audit: contract.audit,
+    contractId: contract.id,
+    dirtyFields: [],
+    fieldErrors: {},
+    fields: contract.fields,
+    generatedAt: input.generatedAt,
+    grantedPermissions: input.grantedPermissions,
+    initialValues: contract.initialValues,
+    intent: contract.intent,
+    kind: input.kind,
+    problem: input.problem,
+    problemKind: input.problemKind,
+    recoveryActions: contract.recoveryActions ?? [],
+    requiredPermissions: input.requiredPermissions,
+    submitLabel: contract.submitLabel ?? defaultSubmitLabel(contract.intent),
+    successMessage: contract.successMessage,
+    title: contract.title,
+    values: input.values,
+  };
+}
+
+function createAdminFormPermissionProblem<TValues extends object, TResult = unknown>(
+  contract: AdminFormContract<TValues, TResult>,
+  grantedPermissions: readonly string[],
+): ProblemDetails | undefined {
+  const requiredPermissions = contract.requiredPermissions ?? [];
+  const missingPermissions = getMissingPermissions(requiredPermissions, grantedPermissions);
+
+  if (missingPermissions.length === 0) {
+    return undefined;
+  }
+
+  return createPermissionDeniedProblemDetails(contract.audit.subjectId, missingPermissions);
+}
+
+function getMissingPermissions(
+  requiredPermissions: readonly string[],
+  grantedPermissions: readonly string[],
+): readonly string[] {
+  return requiredPermissions.filter((permission) => !grantedPermissions.includes(permission));
+}
+
+function defaultSubmitLabel(intent: AdminFormContract<object>["intent"]): string {
+  if (intent === "create") {
+    return "Create";
+  }
+
+  if (intent === "update") {
+    return "Save";
+  }
+
+  return "Run action";
+}
+
+function removeFieldErrors<TValues extends object>(
+  fieldErrors: AdminFormFieldErrors<TValues>,
+  name: AdminFormFieldName<TValues>,
+): AdminFormFieldErrors<TValues> {
+  const nextFieldErrors = { ...fieldErrors };
+
+  delete nextFieldErrors[name];
+
+  return nextFieldErrors;
+}
+
+function problemKindFromSubmitResult(kind: AdminFormProblemResultKind): AdminFormProblemKind {
+  if (kind === "domain_problem") {
+    return "domain";
+  }
+
+  if (kind === "permission_denied") {
+    return "permission";
+  }
+
+  return "external";
+}
+
+function toExternalFailureProblem(error: unknown): ProblemDetails {
+  if (isProblemDetails(error)) {
+    return error;
+  }
+
+  return createCoreProblemDetails({
+    code: "admin-form/external-failure",
+    detail:
+      error instanceof Error ? error.message : "Admin form submit failed outside Croco Problems",
+    source: "external",
+    status: 502,
+    title: "Bad Gateway",
+  });
+}
+
+function isProblemDetails(value: unknown): value is ProblemDetails {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<ProblemDetails>;
+
+  return (
+    typeof candidate.code === "string" &&
+    typeof candidate.status === "number" &&
+    typeof candidate.title === "string" &&
+    typeof candidate.type === "string"
+  );
 }
