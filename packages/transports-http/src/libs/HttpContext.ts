@@ -7,6 +7,7 @@ import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from "./types";
  */
 export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
   private store = new Map<string, unknown>();
+  private bufferedResponseBody: Uint8Array<ArrayBuffer> | null = null;
 
   readonly req: CrocoRequest;
   readonly res: CrocoResponse;
@@ -73,17 +74,34 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
 
   text(body: string, status: number = 200): Response {
     this.res.status = status;
+    this.bufferedResponseBody = toBufferedBytes(body);
     return this.raw.text(body, status as Parameters<HonoContext["text"]>[1]);
   }
 
   jsonResponse<T>(body: T, status: number = 200): Response {
     this.res.status = status;
+    const serializedBody = JSON.stringify(body);
+    this.bufferedResponseBody =
+      typeof serializedBody === "string" ? toBufferedBytes(serializedBody) : null;
     return this.raw.json(body, status as Parameters<HonoContext["json"]>[1]);
   }
 
   redirect(url: string, status: number = 302): Response {
     this.res.status = status;
+    this.clearBufferedResponseBody();
     return this.raw.redirect(url, status as Parameters<HonoContext["redirect"]>[1]);
+  }
+
+  getBufferedResponseBody(): Uint8Array<ArrayBuffer> | null {
+    if (!this.bufferedResponseBody) {
+      return null;
+    }
+
+    return toBufferedBytes(this.bufferedResponseBody);
+  }
+
+  clearBufferedResponseBody(): void {
+    this.bufferedResponseBody = null;
   }
 
   private extractParams(): Record<string, string> {
@@ -103,4 +121,14 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
 
     return params;
   }
+}
+
+function toBufferedBytes(body: string | Uint8Array): Uint8Array<ArrayBuffer> {
+  if (typeof body === "string") {
+    return new TextEncoder().encode(body);
+  }
+
+  const copy = new Uint8Array(body.byteLength);
+  copy.set(body);
+  return copy;
 }
