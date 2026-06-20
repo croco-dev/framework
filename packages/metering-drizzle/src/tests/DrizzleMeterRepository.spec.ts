@@ -1,3 +1,5 @@
+import { MeterRegistry } from "@croco/metering-core";
+import { assertDrizzleProblem, createDrizzleProviderConformanceSuite } from "@croco/testing";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
 import Database from "better-sqlite3";
@@ -6,6 +8,103 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type DrizzleDb, DrizzleMeterRepository } from "../libs/DrizzleMeterRepository";
 import type { ILogger } from "@croco/framework-context";
 import { metersSqlite, usageRecordsSqlite } from "../libs/schema";
+
+const createRepositoryConfig = () => ({
+  meterTable: metersSqlite,
+  meterSchema: {
+    id: metersSqlite.id,
+    tenantId: metersSqlite.tenantId,
+    meterId: metersSqlite.meterId,
+    type: metersSqlite.type,
+    quota: metersSqlite.quota,
+    allowOverQuota: metersSqlite.allowOverQuota,
+    metadata: metersSqlite.metadata,
+    createdAt: metersSqlite.createdAt,
+    updatedAt: metersSqlite.updatedAt,
+  },
+  usageRecordTable: usageRecordsSqlite,
+  usageRecordSchema: {
+    id: usageRecordsSqlite.id,
+    tenantId: usageRecordsSqlite.tenantId,
+    meterId: usageRecordsSqlite.meterId,
+    value: usageRecordsSqlite.value,
+    recordedAt: usageRecordsSqlite.recordedAt,
+    metadata: usageRecordsSqlite.metadata,
+    idempotencyKey: usageRecordsSqlite.idempotencyKey,
+  },
+});
+
+type DrizzleOperationName = "delete" | "insert" | "select" | "update";
+
+function createObservedDrizzleClient(
+  db: DrizzleDb,
+  observe: (operation: DrizzleOperationName) => void,
+): DrizzleDb {
+  const observedOperations = new Set<PropertyKey>(["delete", "insert", "select", "update"]);
+
+  return new Proxy(db as object, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+
+      if (typeof value !== "function") {
+        return value;
+      }
+
+      return (...args: unknown[]) => {
+        if (observedOperations.has(property)) {
+          observe(property as DrizzleOperationName);
+        }
+
+        return value.apply(target, args);
+      };
+    },
+  }) as DrizzleDb;
+}
+
+function createSqliteTransactionHarness(sqlite: Database.Database, db: DrizzleDb) {
+  let active = false;
+  const transactionOperations: DrizzleOperationName[] = [];
+  const fallbackClient = createObservedDrizzleClient(db, (operation) => {
+    if (active) {
+      throw new Error(`fallback Drizzle client used during active transaction: ${operation}`);
+    }
+  });
+  const transactionClient = createObservedDrizzleClient(db, (operation) => {
+    transactionOperations.push(operation);
+  });
+  const getClient = vi.fn(() => (active ? transactionClient : null));
+  const txManagerDouble = {
+    getClient,
+  } as unknown as TxManager<DrizzleDb>;
+  const transactionRepository = new DrizzleMeterRepository(
+    fallbackClient,
+    txManagerDouble,
+    createRepositoryConfig(),
+  );
+
+  const run = async <T>(fn: () => Promise<T>): Promise<T> => {
+    sqlite.exec("BEGIN");
+    active = true;
+
+    try {
+      const result = await fn();
+      sqlite.exec("COMMIT");
+      return result;
+    } catch (error) {
+      sqlite.exec("ROLLBACK");
+      throw error;
+    } finally {
+      active = false;
+    }
+  };
+
+  return {
+    getClient,
+    operations: transactionOperations,
+    repository: transactionRepository,
+    run,
+  };
+}
 
 describe("DrizzleMeterRepository", () => {
   let repository!: DrizzleMeterRepository;
@@ -55,33 +154,214 @@ describe("DrizzleMeterRepository", () => {
     );
     txManager = new TxManager(adapter, { defaultNesting: "join" });
 
-    const meterSchema = {
-      id: metersSqlite.id,
-      tenantId: metersSqlite.tenantId,
-      meterId: metersSqlite.meterId,
-      type: metersSqlite.type,
-      quota: metersSqlite.quota,
-      allowOverQuota: metersSqlite.allowOverQuota,
-      metadata: metersSqlite.metadata,
-      createdAt: metersSqlite.createdAt,
-      updatedAt: metersSqlite.updatedAt,
-    };
+    repository = new DrizzleMeterRepository(db, txManager, createRepositoryConfig());
+  });
 
-    const usageRecordSchema = {
-      id: usageRecordsSqlite.id,
-      tenantId: usageRecordsSqlite.tenantId,
-      meterId: usageRecordsSqlite.meterId,
-      value: usageRecordsSqlite.value,
-      recordedAt: usageRecordsSqlite.recordedAt,
-      metadata: usageRecordsSqlite.metadata,
-      idempotencyKey: usageRecordsSqlite.idempotencyKey,
-    };
+  describe("drizzle provider conformance", () => {
+    it.each(
+      createDrizzleProviderConformanceSuite({
+        providerName: "metering-drizzle",
+        schema: {
+          supported: true,
+          checks: [
+            {
+              name: "declares local meter and usage tables with idempotency index",
+              run: async () => {
+                const tables = sqlite
+                  .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+                  .all() as Array<{
+                  name: string;
+                }>;
+                const tableNames = tables.map((table) => table.name);
 
-    repository = new DrizzleMeterRepository(db, txManager, {
-      meterTable: metersSqlite,
-      meterSchema,
-      usageRecordTable: usageRecordsSqlite,
-      usageRecordSchema,
+                expect(tableNames).toEqual(expect.arrayContaining(["meters", "usage_records"]));
+
+                const usageColumns = sqlite
+                  .prepare("PRAGMA table_info('usage_records')")
+                  .all() as Array<{
+                  name: string;
+                  notnull: number;
+                }>;
+                expect(usageColumns).toEqual(
+                  expect.arrayContaining([
+                    expect.objectContaining({ name: "tenant_id", notnull: 1 }),
+                    expect.objectContaining({ name: "meter_id", notnull: 1 }),
+                    expect.objectContaining({ name: "idempotency_key" }),
+                  ]),
+                );
+
+                const usageIndexes = sqlite
+                  .prepare("PRAGMA index_list('usage_records')")
+                  .all() as Array<{
+                  name: string;
+                  unique: number;
+                }>;
+                expect(usageIndexes).toEqual(
+                  expect.arrayContaining([
+                    expect.objectContaining({
+                      name: "usage_records_idempotency_unique",
+                      unique: 1,
+                    }),
+                  ]),
+                );
+              },
+            },
+          ],
+        },
+        transaction: {
+          participation: {
+            supported: true,
+            checks: [
+              {
+                name: "persists writes through the active transaction client",
+                run: async () => {
+                  const transaction = createSqliteTransactionHarness(sqlite, db);
+
+                  await transaction.run(async () => {
+                    await transaction.repository.save({
+                      tenantId: "tenant-conformance-tx",
+                      meterId: "transaction_participation",
+                      type: "COUNT",
+                    });
+                  });
+
+                  const meter = await repository.findByMeterIdAndTenant(
+                    "transaction_participation",
+                    "tenant-conformance-tx",
+                  );
+                  expect(meter?.meterId).toBe("transaction_participation");
+                  expect(transaction.getClient).toHaveBeenCalled();
+                  expect(transaction.operations).toContain("insert");
+                },
+              },
+            ],
+          },
+          rollback: {
+            supported: true,
+            checks: [
+              {
+                name: "rolls back repository writes when the transaction fails",
+                run: async () => {
+                  const transaction = createSqliteTransactionHarness(sqlite, db);
+
+                  await expect(
+                    transaction.run(async () => {
+                      await transaction.repository.save({
+                        tenantId: "tenant-conformance-rollback",
+                        meterId: "rollback_target",
+                        type: "COUNT",
+                      });
+                      throw new Error("force rollback");
+                    }),
+                  ).rejects.toThrow("force rollback");
+
+                  await expect(
+                    repository.findByMeterIdAndTenant(
+                      "rollback_target",
+                      "tenant-conformance-rollback",
+                    ),
+                  ).resolves.toBeNull();
+                  expect(transaction.operations).toContain("insert");
+                },
+              },
+            ],
+          },
+        },
+        tenantIsolation: {
+          supported: true,
+          checks: [
+            {
+              name: "keeps meter definitions scoped by tenant",
+              run: async () => {
+                await repository.save({
+                  tenantId: "tenant-conformance-a",
+                  meterId: "shared_meter",
+                  type: "COUNT",
+                });
+                await repository.save({
+                  tenantId: "tenant-conformance-b",
+                  meterId: "shared_meter",
+                  type: "COUNT",
+                });
+
+                const tenantAMeters = await repository.findByTenant("tenant-conformance-a");
+                const tenantBMeters = await repository.findByTenant("tenant-conformance-b");
+
+                expect(tenantAMeters).toHaveLength(1);
+                expect(tenantAMeters[0]?.tenantId).toBe("tenant-conformance-a");
+                expect(tenantBMeters).toHaveLength(1);
+                expect(tenantBMeters[0]?.tenantId).toBe("tenant-conformance-b");
+              },
+            },
+          ],
+        },
+        repositoryErrors: {
+          notFound: {
+            supported: true,
+            checks: [
+              {
+                name: "reports missing meters with a deterministic Problem code",
+                run: async () => {
+                  const registry = new MeterRegistry(repository, 0);
+
+                  await assertDrizzleProblem(
+                    () => registry.getOrThrow("tenant-conformance-missing", "missing_meter"),
+                    {
+                      code: "metering/invalid-meter",
+                      status: 404,
+                    },
+                  );
+                },
+              },
+            ],
+          },
+          validation: {
+            supported: false,
+            reason:
+              "Meter validation lives in metering-core services, not this Drizzle repository.",
+          },
+          duplicate: {
+            supported: true,
+            checks: [
+              {
+                name: "deduplicates usage records by tenant meter and idempotency key",
+                run: async () => {
+                  const record = {
+                    id: "record-conformance-1",
+                    tenantId: "tenant-conformance-duplicate",
+                    meterId: "api_calls",
+                    value: 1,
+                    timestamp: new Date("2026-01-01T00:00:00.000Z"),
+                    idempotencyKey: "idem-conformance",
+                  };
+
+                  await repository.saveUsageRecords([record]);
+                  await repository.saveUsageRecords([record]);
+
+                  const rows = sqlite
+                    .prepare(
+                      "SELECT * FROM usage_records WHERE tenant_id = ? AND meter_id = ? AND idempotency_key = ?",
+                    )
+                    .all("tenant-conformance-duplicate", "api_calls", "idem-conformance");
+
+                  expect(rows).toHaveLength(1);
+                },
+              },
+            ],
+          },
+          conflict: {
+            supported: false,
+            reason: "Usage idempotency conflicts are modeled as deterministic no-op inserts.",
+          },
+          retryableFailure: {
+            supported: false,
+            reason:
+              "The repository has no retryable upstream boundary in the local SQLite fixture.",
+          },
+        },
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
     });
   });
 
@@ -197,30 +477,7 @@ describe("DrizzleMeterRepository", () => {
         )
       `);
 
-      const emptyRepo = new DrizzleMeterRepository(db2, txManager, {
-        meterTable: metersSqlite,
-        meterSchema: {
-          id: metersSqlite.id,
-          tenantId: metersSqlite.tenantId,
-          meterId: metersSqlite.meterId,
-          type: metersSqlite.type,
-          quota: metersSqlite.quota,
-          allowOverQuota: metersSqlite.allowOverQuota,
-          metadata: metersSqlite.metadata,
-          createdAt: metersSqlite.createdAt,
-          updatedAt: metersSqlite.updatedAt,
-        },
-        usageRecordTable: usageRecordsSqlite,
-        usageRecordSchema: {
-          id: usageRecordsSqlite.id,
-          tenantId: usageRecordsSqlite.tenantId,
-          meterId: usageRecordsSqlite.meterId,
-          value: usageRecordsSqlite.value,
-          recordedAt: usageRecordsSqlite.recordedAt,
-          metadata: usageRecordsSqlite.metadata,
-          idempotencyKey: usageRecordsSqlite.idempotencyKey,
-        },
-      });
+      const emptyRepo = new DrizzleMeterRepository(db2, txManager, createRepositoryConfig());
 
       const meters = await emptyRepo.findAll();
       expect(meters).toHaveLength(0);
@@ -364,30 +621,7 @@ describe("DrizzleMeterRepository", () => {
       const repoWithLogger = new DrizzleMeterRepository(
         db,
         txManager,
-        {
-          meterTable: metersSqlite,
-          meterSchema: {
-            id: metersSqlite.id,
-            tenantId: metersSqlite.tenantId,
-            meterId: metersSqlite.meterId,
-            type: metersSqlite.type,
-            quota: metersSqlite.quota,
-            allowOverQuota: metersSqlite.allowOverQuota,
-            metadata: metersSqlite.metadata,
-            createdAt: metersSqlite.createdAt,
-            updatedAt: metersSqlite.updatedAt,
-          },
-          usageRecordTable: usageRecordsSqlite,
-          usageRecordSchema: {
-            id: usageRecordsSqlite.id,
-            tenantId: usageRecordsSqlite.tenantId,
-            meterId: usageRecordsSqlite.meterId,
-            value: usageRecordsSqlite.value,
-            recordedAt: usageRecordsSqlite.recordedAt,
-            metadata: usageRecordsSqlite.metadata,
-            idempotencyKey: usageRecordsSqlite.idempotencyKey,
-          },
-        },
+        createRepositoryConfig(),
         logger,
       );
 
@@ -421,30 +655,11 @@ describe("DrizzleMeterRepository", () => {
         run: async (fn: () => Promise<void>) => fn(),
       } as unknown as TxManager<DrizzleDb>;
 
-      const repoWithMockTx = new DrizzleMeterRepository(db, mockTxManager, {
-        meterTable: metersSqlite,
-        meterSchema: {
-          id: metersSqlite.id,
-          tenantId: metersSqlite.tenantId,
-          meterId: metersSqlite.meterId,
-          type: metersSqlite.type,
-          quota: metersSqlite.quota,
-          allowOverQuota: metersSqlite.allowOverQuota,
-          metadata: metersSqlite.metadata,
-          createdAt: metersSqlite.createdAt,
-          updatedAt: metersSqlite.updatedAt,
-        },
-        usageRecordTable: usageRecordsSqlite,
-        usageRecordSchema: {
-          id: usageRecordsSqlite.id,
-          tenantId: usageRecordsSqlite.tenantId,
-          meterId: usageRecordsSqlite.meterId,
-          value: usageRecordsSqlite.value,
-          recordedAt: usageRecordsSqlite.recordedAt,
-          metadata: usageRecordsSqlite.metadata,
-          idempotencyKey: usageRecordsSqlite.idempotencyKey,
-        },
-      });
+      const repoWithMockTx = new DrizzleMeterRepository(
+        db,
+        mockTxManager,
+        createRepositoryConfig(),
+      );
 
       const meter = await repoWithMockTx.save({
         tenantId: "tenant-1",

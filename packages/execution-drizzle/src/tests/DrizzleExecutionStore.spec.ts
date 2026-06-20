@@ -1,6 +1,9 @@
 import { type Execution, ExecutionProblem, type ExecutionStatus } from "@croco/execution-core";
+import { assertDrizzleProblem, createDrizzleProviderConformanceSuite } from "@croco/testing";
+import { getTableColumns } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
+import { executions } from "../libs/schema";
 
 type MockDb = {
   select: () => any;
@@ -70,6 +73,156 @@ describe("DrizzleExecutionStore", () => {
   beforeEach(() => {
     mockDb = createMockDb();
     store = new DrizzleExecutionStore(mockDb);
+  });
+
+  describe("drizzle provider conformance", () => {
+    it.each(
+      createDrizzleProviderConformanceSuite({
+        providerName: "execution-drizzle",
+        schema: {
+          supported: true,
+          checks: [
+            {
+              name: "declares execution state idempotency and log columns",
+              run: async () => {
+                const columns = getTableColumns(executions);
+
+                expect(Object.keys(columns)).toEqual(
+                  expect.arrayContaining([
+                    "id",
+                    "type",
+                    "status",
+                    "attempts",
+                    "maxAttempts",
+                    "idempotencyKey",
+                    "replayOf",
+                    "logs",
+                    "parentId",
+                    "metadata",
+                    "checkpoints",
+                    "progress",
+                  ]),
+                );
+              },
+            },
+          ],
+        },
+        transaction: {
+          participation: {
+            supported: false,
+            reason:
+              "DrizzleExecutionStore currently accepts a direct Drizzle client and no TxManager.",
+          },
+          rollback: {
+            supported: false,
+            reason:
+              "Rollback participation requires a TxManager-aware execution store constructor.",
+          },
+        },
+        tenantIsolation: {
+          supported: false,
+          reason: "The execution store contract currently has no tenantId field.",
+        },
+        repositoryErrors: {
+          notFound: {
+            supported: true,
+            checks: [
+              {
+                name: "reports missing updates with a deterministic Problem code",
+                run: async () => {
+                  mockDb.update = vi.fn(() => ({
+                    set: vi.fn(() => ({
+                      where: vi.fn(() => ({
+                        returning: vi.fn(() => Promise.resolve([])),
+                      })),
+                    })),
+                  }));
+
+                  await assertDrizzleProblem(
+                    () => store.update("missing-execution-id", { status: "completed" }),
+                    {
+                      code: "execution/not-found",
+                      status: 404,
+                    },
+                  );
+                },
+              },
+            ],
+          },
+          validation: {
+            supported: false,
+            reason: "State validation is enforced by execution-core managers before store writes.",
+          },
+          duplicate: {
+            supported: true,
+            checks: [
+              {
+                name: "reports unresolved idempotency insert races as conflict Problems",
+                run: async () => {
+                  vi.spyOn(store, "findByIdempotencyKey").mockResolvedValue(null);
+                  mockDb.insert = vi.fn(() => ({
+                    values: vi.fn(() => ({
+                      onConflictDoNothing: vi.fn(() => ({
+                        returning: vi.fn(() => Promise.resolve([])),
+                      })),
+                      returning: vi.fn(() => Promise.resolve([])),
+                    })),
+                  }));
+
+                  await assertDrizzleProblem(
+                    () =>
+                      store.create({
+                        type: "task",
+                        idempotencyKey: "conformance-race-key",
+                      }),
+                    {
+                      code: "execution/conflict",
+                      status: 409,
+                    },
+                  );
+                },
+              },
+            ],
+          },
+          conflict: {
+            supported: true,
+            checks: [
+              {
+                name: "surfaces atomic append failures as deterministic not-found Problems",
+                run: async () => {
+                  mockDb.update = vi.fn(() => ({
+                    set: vi.fn(() => ({
+                      where: vi.fn(() => ({
+                        returning: vi.fn(() => Promise.resolve([])),
+                      })),
+                    })),
+                  }));
+
+                  await assertDrizzleProblem(
+                    () =>
+                      store.appendLog("missing-execution-id", {
+                        timestamp: "2026-01-01T00:00:00.000Z",
+                        level: "info",
+                        message: "missing execution",
+                      }),
+                    {
+                      code: "execution/not-found",
+                      status: 404,
+                    },
+                  );
+                },
+              },
+            ],
+          },
+          retryableFailure: {
+            supported: false,
+            reason: "Retryability is modeled on ExecutionError values and managed above the store.",
+          },
+        },
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
   });
 
   describe("create", () => {

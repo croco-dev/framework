@@ -36,6 +36,7 @@
     "ulid": "^3.0.2"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "peerDependencies": {

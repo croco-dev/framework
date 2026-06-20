@@ -81,6 +81,27 @@ Remaining Upstash/QStash domains before beta promotion:
 - All five providers still need safe diagnostics/readiness evidence and documented broader
   real-backend live smoke commands.
 
+### Drizzle provider conformance
+
+`@croco/testing` exports `createDrizzleProviderConformanceSuite()` for Drizzle-backed provider
+packages. The suite does not force one repository interface across domains. Instead, each provider
+supplies domain-specific checks under shared gates for:
+
+- local schema and migration assumptions;
+- transaction participation and rollback behavior;
+- tenant isolation where the domain contract requires it;
+- deterministic not-found, validation, duplicate, conflict, and retryable failure semantics.
+
+Unsupported gates are represented as passing documentation cases with a required reason. A provider
+therefore cannot silently skip a missing maturity dimension.
+
+The current consumers are:
+
+| Package                    | Harness evidence                                                                                                                                                                                                 | Remaining blockers                                                                                                                                     |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@croco/metering-drizzle`  | Uses an in-memory SQLite Drizzle fixture to check meter/usage schema, usage idempotency index, transaction commit/rollback, tenant isolation, missing-meter Problem codes, and usage-record duplicate semantics. | Validation and retryable failure semantics live outside the repository fixture; diagnostics/readiness and broader migration evidence remain open.      |
+| `@croco/execution-drizzle` | Uses the shared suite to check execution schema columns plus deterministic `execution/not-found` and `execution/conflict` Problem codes for missing rows and unresolved idempotency races.                       | Store-level transaction participation, rollback, tenant isolation, validation, and retryable failure gates remain unsupported by the current contract. |
+
 ## First Promotion Wave
 
 No provider is promoted to production-ready by intent alone.
@@ -90,6 +111,6 @@ No provider is promoted to production-ready by intent alone.
 | `@croco/storage-r2`      | Beta             | README, package tests, generated catalog entry, and reusable storage conformance coverage with mocked R2 behavior.                                                            | Production gate fails until diagnostics/readiness and optional live R2 smoke are documented and passing.                                                                 |
 | `@croco/billing-polar`   | Beta             | README, package tests, generated catalog entry, and documented billing features.                                                                                              | Production gate fails until billing gateway conformance, safe diagnostics/readiness, and optional live Polar smoke are documented and passing.                           |
 | Upstash/QStash providers | Alpha            | Shared conformance now covers `@croco/ratelimit-upstash` and `@croco/tasks-qstash`; package tests and catalog entries also exist for metering, batch, and triggers providers. | Beta gate fails until metering/batch/triggers consume reusable conformance and all providers expose diagnostics/readiness plus broader real-backend live smoke evidence. |
-| Drizzle SaaS providers   | Alpha            | Package tests and catalog entries exist for access, audit, auth, customer health, entitlements, execution, invitation, membership, metering, onboarding, and search adapters. | Beta gate fails until a shared Drizzle provider conformance suite covers migration/schema assumptions, transaction behavior, and repository errors.                      |
+| Drizzle SaaS providers   | Alpha            | Package tests, catalog entries, and initial shared conformance consumers exist for `@croco/metering-drizzle` and `@croco/execution-drizzle`.                                  | Beta gate fails until the remaining Drizzle providers adopt the shared suite and close their unsupported transaction, tenant, and error-semantic gates.                  |
 
 This page should be updated whenever a provider changes maturity in `docs/package-catalog.json`.
