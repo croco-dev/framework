@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiProblemError, request } from "./client";
+import { ProblemClientError } from "@croco/frontend-problems";
+import { request } from "./client";
 
 export type User = {
   readonly id: string;
@@ -59,7 +60,7 @@ export function useUsers(): UseUsersResult {
 }
 
 function toErrorMessage(caught: unknown, fallback: string): string {
-  if (caught instanceof ApiProblemError) {
+  if (caught instanceof ProblemClientError) {
     return caught.problem.detail ?? `${caught.problem.code}: ${caught.problem.title}`;
   }
 

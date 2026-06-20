@@ -196,6 +196,46 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should import the shared frontend Problem runtime when configured", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: BODY_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+        problemResponses: [
+          {
+            code: "VALIDATION_FAILED",
+            category: ProblemCategory.ValidationError,
+            status: 422,
+          },
+        ],
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR, {
+      problemRuntime: "frontend-problems",
+    });
+    const content = fs.readFileSync(files[0], "utf-8");
+    const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+
+    expect(rpcContent).toContain("} from '@croco/frontend-problems';");
+    expect(rpcContent).toContain("ProblemClientError as RpcClientProblemError");
+    expect(rpcContent).toContain("ProblemDeclaration as RpcDeclaredProblem");
+    expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
+    expect(rpcContent).not.toContain("function isRpcProblemDetails");
+    expect(content).toContain(
+      "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+    );
+    expect(content).toContain("export type CreateUserResult = RpcClientResult");
+    assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
+  });
+
   it("should reject ALL routes instead of emitting invalid fetch methods", () => {
     const routes: RouteIR[] = [
       {
@@ -1573,10 +1613,15 @@ function assertVirtualTypeScriptSourcesTypecheck(
   rootFileNames: readonly string[],
 ): void {
   const compilerOptions: ts.CompilerOptions = {
+    baseUrl: path.resolve(__dirname, "../../.."),
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     noEmit: true,
+    paths: {
+      "@croco/frontend-problems": ["frontend-problems/src/index.ts"],
+      "@croco/problems-core": ["problems-core/src/index.ts"],
+    },
     skipLibCheck: true,
     strict: true,
     target: ts.ScriptTarget.ES2022,
@@ -1585,7 +1630,7 @@ function assertVirtualTypeScriptSourcesTypecheck(
   const host = ts.createCompilerHost(compilerOptions);
 
   host.getSourceFile = (name, languageVersion) => {
-    const text = sources.get(name) ?? sources.get(path.basename(name));
+    const text = getVirtualSource(sources, name);
 
     if (text !== undefined) {
       return ts.createSourceFile(name, text, languageVersion, true);
@@ -1598,9 +1643,8 @@ function assertVirtualTypeScriptSourcesTypecheck(
       : ts.createSourceFile(name, fileText, languageVersion, true);
   };
   host.fileExists = (name) =>
-    sources.has(name) || sources.has(path.basename(name)) || ts.sys.fileExists(name);
-  host.readFile = (name) =>
-    sources.get(name) ?? sources.get(path.basename(name)) ?? ts.sys.readFile(name);
+    getVirtualSource(sources, name) !== undefined || ts.sys.fileExists(name);
+  host.readFile = (name) => getVirtualSource(sources, name) ?? ts.sys.readFile(name);
 
   const program = ts.createProgram([...rootFileNames], compilerOptions, host);
   const diagnostics = ts.getPreEmitDiagnostics(program);
@@ -1609,4 +1653,24 @@ function assertVirtualTypeScriptSourcesTypecheck(
   );
 
   expect(messages).toEqual([]);
+}
+
+function getVirtualSource(sources: ReadonlyMap<string, string>, name: string): string | undefined {
+  const direct = sources.get(name);
+
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const basenameSource = sources.get(path.basename(name));
+
+  if (basenameSource === undefined) {
+    return undefined;
+  }
+
+  if (!path.isAbsolute(name)) {
+    return path.dirname(name) === "." ? basenameSource : undefined;
+  }
+
+  return path.dirname(name) === process.cwd() ? basenameSource : undefined;
 }

@@ -23,8 +23,11 @@ import {
 } from "@croco/protocols-core";
 
 export type GenerateClientOptions = {
+  readonly problemRuntime?: GenerateClientProblemRuntime;
   readonly reactQuery?: boolean;
 };
+
+export type GenerateClientProblemRuntime = "inline" | "frontend-problems";
 
 type GeneratedClientRoute = RouteIR & {
   readonly routeId?: string;
@@ -124,7 +127,7 @@ export function generateClientFiles(
     };
   });
   const supportPath = path.join(outDir, "rpc.ts");
-  const supportContent = generateRpcSupport();
+  const supportContent = generateRpcSupport(options);
   const indexPath = path.join(outDir, "index.ts");
   const indexContent = generateClientIndex(domainRouteGroups);
   const files: readonly GeneratedClientFile[] = [
@@ -565,7 +568,43 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
   return helpers.length === 0 ? "" : `import { ${helpers.join(", ")} } from './rpc';\n`;
 }
 
-function generateRpcSupport(): string {
+function generateRpcSupport(options: GenerateClientOptions = {}): string {
+  if (options.problemRuntime === "frontend-problems") {
+    return `export {
+  ProblemClientError as RpcClientProblemError,
+  ProblemResponseError as RpcClientResponseError,
+  assertProblemExhaustive as assertExhaustiveProblem,
+  handleJsonResponse,
+  handleJsonResult,
+  readOptionalJsonResponse,
+  readOptionalJsonResult,
+  toProblemFormProblem as toRpcFormProblem,
+} from '@croco/frontend-problems';
+
+export type {
+  ProblemClientExternalFailure as RpcClientExternalFailure,
+  ProblemClientFailure as RpcClientFailure,
+  ProblemClientProblemFailure as RpcClientProblemFailure,
+  ProblemClientResult as RpcClientResult,
+  ProblemClientSuccess as RpcClientSuccess,
+  ProblemDeclaration as RpcDeclaredProblem,
+  ProblemDetails as RpcProblemDetails,
+  ProblemDetailsFor as RpcProblemDetailsFor,
+  ProblemDomainDeclaration as RpcDomainProblem,
+  ProblemFormField as RpcFormField,
+  ProblemFormFieldControl as RpcFormFieldControl,
+  ProblemFormFieldErrors as RpcFormFieldErrors,
+  ProblemFormFieldOption as RpcFormFieldOption,
+  ProblemFormFieldProblem as RpcFormFieldProblem,
+  ProblemFormFieldValueKind as RpcFormFieldValueKind,
+  ProblemFormGlobalProblem as RpcFormGlobalProblem,
+  ProblemFormModel as RpcFormModel,
+  ProblemFormProblem as RpcFormProblem,
+  ProblemValidationDeclaration as RpcValidationProblem,
+} from '@croco/frontend-problems';
+`;
+  }
+
   return `export type RpcProblemDetails<
   Code extends string = string,
   Status extends number = number,

@@ -123,6 +123,7 @@
       "packages": [
         "admin-react",
         "frontend-cloudflare",
+        "frontend-problems",
         "frontend-react",
         "frontend-vite",
         "meta-vite",
@@ -244,6 +245,7 @@
         "entitlements-drizzle",
         "execution-drizzle",
         "frontend-cloudflare",
+        "frontend-problems",
         "frontend-react",
         "frontend-vite",
         "invitation-drizzle",
@@ -396,6 +398,18 @@
           "service binding routing",
           "asset fallback",
           "streaming response smoke"
+        ]
+      },
+      "frontend-problems": {
+        "domain": "Frontend Problems",
+        "adapter": "Problem-aware client runtime",
+        "runtimes": ["browser", "cloudflare-workers"],
+        "requiredEnv": ["none"],
+        "features": [
+          "Problem Details parsing",
+          "Problem-aware fetch results",
+          "declared Problem unions",
+          "form Problem mapping"
         ]
       },
       "frontend-react": {
