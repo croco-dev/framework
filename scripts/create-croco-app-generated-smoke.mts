@@ -824,7 +824,7 @@ function runSpaBeSplitContractSmoke(): void {
   assertFileContains(generatedClientPath, "export function useList()");
   assertFileContains(
     generatedClientPath,
-    "export type CreateInput = { name: string; email: string; };",
+    "export type CreateInput = { email: string; name: string; };",
   );
   console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
 }
