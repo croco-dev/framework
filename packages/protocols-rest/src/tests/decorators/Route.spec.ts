@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { HttpMethod, PROBLEM_RESPONSES_KEY, REST_ROUTES_KEY } from "../../libs/constants";
 import { Controller } from "../../libs/decorators/Controller";
@@ -14,7 +14,21 @@ import {
   Put,
 } from "../../libs/decorators/HttpMethod";
 import { ProblemResponse, ProblemResponses } from "../../libs/decorators/ProblemResponse";
+import {
+  defineRouteContract,
+  defineRouteProblem,
+  routeProblemResponses,
+} from "../../libs/types/RouteContract";
 import type { ProblemResponseMetadata, RouteMetadata } from "../../libs/types";
+
+class UserNotFoundProblem extends Problem {
+  readonly code = "USER_NOT_FOUND";
+  readonly category = ProblemCategory.NotFound;
+
+  constructor() {
+    super("USER_NOT_FOUND", ProblemCategory.NotFound);
+  }
+}
 
 describe("Route decorators", () => {
   describe("@Get decorator", () => {
@@ -143,6 +157,47 @@ describe("Route decorators", () => {
       expect(responses.map((response) => response.code)).toEqual([
         "USER_NOT_FOUND",
         "USER_FORBIDDEN",
+      ]);
+    });
+
+    it("should register route contract-derived Problem responses with contract provenance", () => {
+      const getUserContract = defineRouteContract({
+        method: HttpMethod.GET,
+        path: "/users",
+        problems: [
+          defineRouteProblem(UserNotFoundProblem, {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+          }),
+        ],
+      });
+
+      @Controller("/users")
+      class UserController {
+        @Get("/:id")
+        @ProblemResponses(...routeProblemResponses(getUserContract))
+        getUser() {}
+      }
+
+      const responses = Reflect.getMetadata(
+        PROBLEM_RESPONSES_KEY,
+        UserController,
+        "getUser",
+      ) as ProblemResponseMetadata[];
+
+      expect(responses).toEqual([
+        {
+          code: "USER_NOT_FOUND",
+          category: ProblemCategory.NotFound,
+          status: 404,
+          routeContractProblems: [
+            {
+              code: "USER_NOT_FOUND",
+              category: ProblemCategory.NotFound,
+              status: 404,
+            },
+          ],
+        },
       ]);
     });
   });

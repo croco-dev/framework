@@ -200,7 +200,7 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.outputSchema).toBeNull();
   });
 
-  it("should extract declared Problem responses with category-derived HTTP status", () => {
+  it("should extract declared Problem responses with explicit HTTP status", () => {
     @Controller("/users")
     class UsersController {
       @Get("/:id")
@@ -221,7 +221,7 @@ describe("extractRouteIR", () => {
         code: "USER_NOT_FOUND",
         category: ProblemCategory.NotFound,
         description: "The user id does not exist.",
-        status: 404,
+        status: 500,
       },
     ]);
   });

@@ -66,14 +66,34 @@ function extractProblemResponses(value: unknown): ProblemResponseIR[] {
 
   return value
     .filter(isProblemResponseMetadata)
-    .map((response) => ({
-      code: response.code,
-      category: response.category,
-      status: ProblemCategoryMapper.toHttpStatus(response.category),
-      ...(response.description ? { description: response.description } : {}),
-      ...(response.type ? { type: response.type } : {}),
-    }))
+    .map(toProblemResponseIR)
     .sort(compareProblemResponses);
+}
+
+function toProblemResponseIR(response: ProblemResponseMetadata): ProblemResponseIR {
+  const routeContractProblems = response.routeContractProblems
+    ?.filter(isProblemResponseMetadata)
+    .map(toContractProblemResponseIR)
+    .sort(compareProblemResponses);
+
+  return {
+    code: response.code,
+    category: response.category,
+    status: getProblemResponseStatus(response),
+    ...(response.description ? { description: response.description } : {}),
+    ...(response.type ? { type: response.type } : {}),
+    ...(routeContractProblems ? { routeContractProblems } : {}),
+  };
+}
+
+function toContractProblemResponseIR(response: ProblemResponseMetadata): ProblemResponseIR {
+  return {
+    code: response.code,
+    category: response.category,
+    status: getProblemResponseStatus(response),
+    ...(response.description ? { description: response.description } : {}),
+    ...(response.type ? { type: response.type } : {}),
+  };
 }
 
 function isProblemResponseMetadata(value: unknown): value is ProblemResponseMetadata {
@@ -84,8 +104,13 @@ function isProblemResponseMetadata(value: unknown): value is ProblemResponseMeta
     "category" in value &&
     typeof value.code === "string" &&
     value.code.length > 0 &&
-    typeof value.category === "string"
+    typeof value.category === "string" &&
+    (!("status" in value) || typeof value.status === "number")
   );
+}
+
+function getProblemResponseStatus(response: ProblemResponseMetadata): number {
+  return response.status ?? ProblemCategoryMapper.toHttpStatus(response.category);
 }
 
 function compareProblemResponses(left: ProblemResponseIR, right: ProblemResponseIR): number {

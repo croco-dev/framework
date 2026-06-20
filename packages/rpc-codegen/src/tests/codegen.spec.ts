@@ -666,6 +666,18 @@ describe("generateClientFiles", () => {
               code: "USER_NOT_FOUND",
               category: ProblemCategory.NotFound,
               status: 404,
+              routeContractProblems: [
+                {
+                  code: "USER_NOT_FOUND",
+                  category: ProblemCategory.NotFound,
+                  status: 404,
+                },
+                {
+                  code: "USER_FORBIDDEN",
+                  category: ProblemCategory.Forbidden,
+                  status: 403,
+                },
+              ],
             },
             {
               code: "USER_FORBIDDEN",
@@ -753,6 +765,28 @@ void handleMissingProblemBranch;
     },
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
+
+  it("should keep undeclared route Problem unions as never", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.array(z.object({ id: z.string() })) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain("export type ListProblem = never;");
+    expect(content).toContain("export type ListResult = RpcClientResult<ListOutput, ListProblem>;");
+  });
 
   it("should generate JSON-safe literal, enum, union, and record output types", () => {
     const routes: RouteIR[] = [
