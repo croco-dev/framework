@@ -35,6 +35,8 @@ describe("noninteractive CLI option validation", () => {
     expect(help).toContain("saas-node-postgres|saas-cloudflare|saas-lambda");
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
+    expect(help).toContain("--json");
+    expect(help).toContain("Print a machine-readable JSON result");
     expect(help).not.toContain("--package-manager");
   });
 
@@ -241,7 +243,15 @@ describe("noninteractive CLI option validation", () => {
       ).rejects.toThrow("process.exit: 1");
 
       expect(errorSpy).toHaveBeenCalledWith(
-        "\nError: Project name must contain only lowercase letters, numbers, hyphens, and underscores",
+        expect.stringContaining("Error [create-croco-app/invalid-cli-option]"),
+      );
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "Reason: Project name must contain only lowercase letters, numbers, hyphens, and underscores",
+        ),
+      );
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Recovery: Choose a project name"),
       );
       expect(existsSync(targetDir)).toBe(false);
     } finally {
@@ -269,7 +279,13 @@ describe("noninteractive CLI option validation", () => {
       ).rejects.toThrow("process.exit: 1");
 
       expect(errorSpy).toHaveBeenCalledWith(
-        "\nError: --api is required for ddd-api and ddd-fullstack",
+        expect.stringContaining("Error [create-croco-app/invalid-cli-option]"),
+      );
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Reason: --api is required for ddd-api and ddd-fullstack"),
+      );
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Recovery: Pass --api graphql or --api trpc."),
       );
       expect(existsSync(targetDir)).toBe(false);
     } finally {
@@ -347,6 +363,92 @@ describe("noninteractive CLI option validation", () => {
         db: [],
       }),
     );
+  });
+
+  it("prints a JSON success result with next steps for noninteractive consumers", async () => {
+    const targetDir = `/tmp/croco-json-success-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    try {
+      const program = createProgram();
+
+      await program.parseAsync(
+        [targetDir, "--preset", "blank", "--scope", "@test", "--no-install", "--no-git", "--json"],
+        { from: "user" },
+      );
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual({
+        ok: true,
+        code: "create-croco-app/project-created",
+        targetDir,
+        projectName: targetDir.split("/").at(-1),
+        preset: "blank",
+        packageManager: "pnpm",
+        nextSteps: [`cd ${targetDir}`, "pnpm install", "pnpm dev"],
+      });
+    } finally {
+      logSpy.mockRestore();
+      rmSync(targetDir, { recursive: true, force: true });
+    }
+  });
+
+  it("prints a JSON diagnostic for invalid noninteractive options", async () => {
+    const targetDir = `/tmp/croco-json-invalid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit: ${String(code)}`);
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    try {
+      const program = createProgram();
+
+      await expect(
+        program.parseAsync(
+          [
+            targetDir,
+            "--preset",
+            "ddd-api",
+            "--scope",
+            "@test",
+            "--api",
+            "rest",
+            "--no-install",
+            "--no-git",
+            "--json",
+          ],
+          { from: "user" },
+        ),
+      ).rejects.toThrow("process.exit: 1");
+
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const result = JSON.parse(String(errorSpy.mock.calls[0]?.[0])) as {
+        readonly ok: boolean;
+        readonly code: string;
+        readonly recovery: string;
+        readonly diagnostic: {
+          readonly code: string;
+          readonly detail: string;
+          readonly option: string;
+        };
+      };
+
+      expect(result).toMatchObject({
+        ok: false,
+        code: "create-croco-app/invalid-cli-option",
+        recovery: "Use one of: graphql, trpc.",
+        diagnostic: {
+          code: "create-croco-app/invalid-cli-option",
+          detail: 'Invalid --api value "rest". Expected graphql or trpc.',
+          option: "--api",
+        },
+      });
+      expect(existsSync(targetDir)).toBe(false);
+    } finally {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+      rmSync(targetDir, { recursive: true, force: true });
+    }
   });
 
   it("normalizes safe noninteractive defaults for fullstack projects", () => {

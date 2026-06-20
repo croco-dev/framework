@@ -5,6 +5,7 @@ import {
   validateGoalCliOptions,
   validateResolvedGoalOptions,
 } from "./goals.js";
+import { InvalidCliOptionProblem } from "./libs/problems/InvalidCliOptionProblem.js";
 import { InvalidSaasPresetOptionProblem } from "./libs/problems/InvalidSaasPresetOptionProblem.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
@@ -89,14 +90,18 @@ export function isNonInteractiveOptions(cliOptions: Partial<GeneratorOptions>): 
 export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void {
   if (cliOptions.projectName !== undefined) {
     const error = validateProjectName(cliOptions.projectName);
-    if (error) throw new Error(error);
+    if (error) throwInvalidProjectName(error);
   }
 
   if (cliOptions.scope !== undefined && cliOptions.scope === "") {
-    throw new Error("Package scope is required");
+    throwInvalidCliOption("Package scope is required", "Pass --scope @your-org.", "--scope");
   }
   if (cliOptions.scope && !cliOptions.scope.startsWith("@")) {
-    throw new Error("Scope must start with @");
+    throwInvalidCliOption(
+      "Scope must start with @",
+      "Prefix the package scope with @, for example --scope @myorg.",
+      "--scope",
+    );
   }
 
   if (cliOptions.goal !== undefined) validateGoalCliOptions(cliOptions);
@@ -126,10 +131,18 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
 
 export function validateResolvedOptions(options: GeneratorOptions): void {
   const error = validateProjectName(options.projectName);
-  if (error) throw new Error(error);
+  if (error) throwInvalidProjectName(error);
 
-  if (!options.scope) throw new Error("Package scope is required");
-  if (!options.scope.startsWith("@")) throw new Error("Scope must start with @");
+  if (!options.scope) {
+    throwInvalidCliOption("Package scope is required", "Pass --scope @your-org.", "--scope");
+  }
+  if (!options.scope.startsWith("@")) {
+    throwInvalidCliOption(
+      "Scope must start with @",
+      "Prefix the package scope with @, for example --scope @myorg.",
+      "--scope",
+    );
+  }
 
   readChoice("preset", options.preset, PRESETS);
   if (options.goal) readGoal(options.goal);
@@ -146,36 +159,50 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
   }
 
   if (!isSaasPreset(options.preset) && options.saasProviderProfile) {
-    throw new Error("--saas-profile is only supported with the saas and ai-saas presets");
+    throwInvalidCliOption(
+      "--saas-profile is only supported with the saas and ai-saas presets",
+      "Remove --saas-profile or choose --preset saas or --preset ai-saas.",
+      "--saas-profile",
+    );
   }
 
   if (options.preset === "blank") {
     validateResolvedGoalOptions(options);
-    if (options.api) throw new Error("--api is not supported with the blank preset");
-    if (options.backendDeploy)
-      throw new Error("--backend-deploy is not supported with the blank preset");
-    if (options.frontendDeploy)
-      throw new Error("--frontend-deploy is not supported with the blank preset");
+    if (options.api) throwUnsupportedPresetOption("--api", "blank");
+    if (options.backendDeploy) throwUnsupportedPresetOption("--backend-deploy", "blank");
+    if (options.frontendDeploy) throwUnsupportedPresetOption("--frontend-deploy", "blank");
     if (options.webApps.length > 0) {
-      throw new Error("--web-apps is not supported with the blank preset");
+      throwUnsupportedPresetOption("--web-apps", "blank");
     }
     if (options.db.length > 0) {
-      throw new Error("--db is not supported with the blank preset");
+      throwUnsupportedPresetOption("--db", "blank");
     }
     return;
   }
 
   if (options.preset === "ddd-api") {
     validateResolvedGoalOptions(options);
-    if (!options.api) throw new Error("--api is required for ddd-api and ddd-fullstack");
+    if (!options.api) throwMissingApi();
     if (options.webApps.length > 0) {
-      throw new Error("--web-apps is only supported with the ddd-fullstack preset");
+      throwInvalidCliOption(
+        "--web-apps is only supported with the ddd-fullstack preset",
+        "Remove --web-apps or choose --preset ddd-fullstack.",
+        "--web-apps",
+      );
     }
     if (options.apiHosting !== "standalone") {
-      throw new Error("--api-hosting nextjs is only supported with ddd-fullstack");
+      throwInvalidCliOption(
+        "--api-hosting nextjs is only supported with ddd-fullstack",
+        "Use --api-hosting standalone or choose --preset ddd-fullstack.",
+        "--api-hosting",
+      );
     }
     if (options.frontendDeploy) {
-      throw new Error("--frontend-deploy is only supported with fullstack presets");
+      throwInvalidCliOption(
+        "--frontend-deploy is only supported with fullstack presets",
+        "Remove --frontend-deploy or choose a fullstack preset.",
+        "--frontend-deploy",
+      );
     }
     return;
   }
@@ -194,19 +221,31 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
 
   if (options.preset === "ddd-fullstack") {
     validateResolvedGoalOptions(options);
-    if (!options.api) throw new Error("--api is required for ddd-api and ddd-fullstack");
+    if (!options.api) throwMissingApi();
     if (options.apiHosting === "nextjs" && options.webApps.length !== 1) {
-      throw new Error("--api-hosting nextjs requires exactly one web app");
+      throwInvalidCliOption(
+        "--api-hosting nextjs requires exactly one web app",
+        "Pass exactly one --web-apps value or use --api-hosting standalone.",
+        "--api-hosting",
+      );
     }
     if (options.apiHosting === "nextjs" && options.backendDeploy) {
-      throw new Error("--backend-deploy is only supported with standalone API hosting");
+      throwInvalidCliOption(
+        "--backend-deploy is only supported with standalone API hosting",
+        "Remove --backend-deploy or use --api-hosting standalone.",
+        "--backend-deploy",
+      );
     }
     return;
   }
 
   validateResolvedGoalOptions(options);
   if (options.frontendDeploy !== "cloudflare-meta-vite") {
-    throw new Error("ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite");
+    throwInvalidCliOption(
+      "ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite",
+      "Use --frontend-deploy cloudflare-meta-vite for ddd-vike-fullstack.",
+      "--frontend-deploy",
+    );
   }
 }
 
@@ -288,7 +327,11 @@ export function normalizeNonInteractiveOptions(
   const frontendDeploy = normalizeFrontendDeploy(preset, cliOptions.frontendDeploy);
 
   if (preset === "ddd-api" && cliOptions.webApps && cliOptions.webApps.length > 0) {
-    throw new Error("--web-apps is only supported with the ddd-fullstack preset");
+    throwInvalidCliOption(
+      "--web-apps is only supported with the ddd-fullstack preset",
+      "Remove --web-apps or choose --preset ddd-fullstack.",
+      "--web-apps",
+    );
   }
 
   const api =
@@ -323,20 +366,21 @@ export function normalizeNonInteractiveOptions(
 
 function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
   if (cliOptions.saasProviderProfile) {
-    throw new Error("--saas-profile is only supported with the saas and ai-saas presets");
+    throwInvalidCliOption(
+      "--saas-profile is only supported with the saas and ai-saas presets",
+      "Remove --saas-profile or choose --preset saas or --preset ai-saas.",
+      "--saas-profile",
+    );
   }
-  if (cliOptions.api) throw new Error("--api is not supported with the blank preset");
-  if (cliOptions.apiHosting)
-    throw new Error("--api-hosting is not supported with the blank preset");
-  if (cliOptions.backendDeploy)
-    throw new Error("--backend-deploy is not supported with the blank preset");
-  if (cliOptions.frontendDeploy)
-    throw new Error("--frontend-deploy is not supported with the blank preset");
+  if (cliOptions.api) throwUnsupportedPresetOption("--api", "blank");
+  if (cliOptions.apiHosting) throwUnsupportedPresetOption("--api-hosting", "blank");
+  if (cliOptions.backendDeploy) throwUnsupportedPresetOption("--backend-deploy", "blank");
+  if (cliOptions.frontendDeploy) throwUnsupportedPresetOption("--frontend-deploy", "blank");
   if (cliOptions.webApps && cliOptions.webApps.length > 0) {
-    throw new Error("--web-apps is not supported with the blank preset");
+    throwUnsupportedPresetOption("--web-apps", "blank");
   }
   if (cliOptions.db && cliOptions.db.length > 0) {
-    throw new Error("--db is not supported with the blank preset");
+    throwUnsupportedPresetOption("--db", "blank");
   }
 }
 
@@ -387,21 +431,27 @@ function assertProductionOptions(
   preset: ProductionPreset,
 ): void {
   if (options.saasProviderProfile) {
-    throw new Error("--saas-profile is only supported with the saas and ai-saas presets");
+    throwInvalidCliOption(
+      "--saas-profile is only supported with the saas and ai-saas presets",
+      "Remove --saas-profile or choose --preset saas or --preset ai-saas.",
+      "--saas-profile",
+    );
   }
-  if (options.api) throw new Error(`--api is not supported with the ${preset} preset`);
+  if (options.api) throwUnsupportedPresetOption("--api", preset);
   if (options.apiHosting && options.apiHosting !== "standalone") {
-    throw new Error(`--api-hosting is not configurable with the ${preset} preset`);
+    throwInvalidCliOption(
+      `--api-hosting is not configurable with the ${preset} preset`,
+      `Use --api-hosting standalone or remove --api-hosting for the ${preset} preset.`,
+      "--api-hosting",
+    );
   }
-  if (options.backendDeploy)
-    throw new Error(`--backend-deploy is not supported with the ${preset} preset`);
-  if (options.frontendDeploy)
-    throw new Error(`--frontend-deploy is not supported with the ${preset} preset`);
+  if (options.backendDeploy) throwUnsupportedPresetOption("--backend-deploy", preset);
+  if (options.frontendDeploy) throwUnsupportedPresetOption("--frontend-deploy", preset);
   if (options.webApps && options.webApps.length > 0) {
-    throw new Error(`--web-apps is not supported with the ${preset} preset`);
+    throwUnsupportedPresetOption("--web-apps", preset);
   }
   if (options.db && options.db.length > 0) {
-    throw new Error(`--db is not supported with the ${preset} preset`);
+    throwUnsupportedPresetOption("--db", preset);
   }
 }
 
@@ -416,14 +466,22 @@ function normalizeApiHosting(
 ): GeneratorOptions["apiHosting"] {
   if (preset === "ddd-api" || preset === "ddd-vike-fullstack") {
     if (apiHosting && apiHosting !== "standalone") {
-      throw new Error("--api-hosting nextjs is only supported with ddd-fullstack");
+      throwInvalidCliOption(
+        "--api-hosting nextjs is only supported with ddd-fullstack",
+        "Use --api-hosting standalone or choose --preset ddd-fullstack.",
+        "--api-hosting",
+      );
     }
     return "standalone";
   }
 
   const resolvedApiHosting = apiHosting ?? "standalone";
   if (resolvedApiHosting === "nextjs" && webApps.length !== 1) {
-    throw new Error("--api-hosting nextjs requires exactly one web app");
+    throwInvalidCliOption(
+      "--api-hosting nextjs requires exactly one web app",
+      "Pass exactly one --web-apps value or use --api-hosting standalone.",
+      "--api-hosting",
+    );
   }
 
   return resolvedApiHosting;
@@ -434,7 +492,11 @@ function normalizeBackendDeploy(
   backendDeploy: GeneratorOptions["backendDeploy"] | undefined,
 ): GeneratorOptions["backendDeploy"] | undefined {
   if (apiHosting === "nextjs" && backendDeploy) {
-    throw new Error("--backend-deploy is only supported with standalone API hosting");
+    throwInvalidCliOption(
+      "--backend-deploy is only supported with standalone API hosting",
+      "Remove --backend-deploy or use --api-hosting standalone.",
+      "--backend-deploy",
+    );
   }
 
   return backendDeploy;
@@ -445,15 +507,27 @@ function normalizeFrontendDeploy(
   frontendDeploy: GeneratorOptions["frontendDeploy"] | undefined,
 ): GeneratorOptions["frontendDeploy"] | undefined {
   if (preset === "ddd-api" && frontendDeploy) {
-    throw new Error("--frontend-deploy is only supported with fullstack presets");
+    throwInvalidCliOption(
+      "--frontend-deploy is only supported with fullstack presets",
+      "Remove --frontend-deploy or choose a fullstack preset.",
+      "--frontend-deploy",
+    );
   }
 
   if (preset === "ddd-vike-fullstack") {
     if (!frontendDeploy) {
-      throw new Error("--frontend-deploy cloudflare-meta-vite is required for ddd-vike-fullstack");
+      throwInvalidCliOption(
+        "--frontend-deploy cloudflare-meta-vite is required for ddd-vike-fullstack",
+        "Pass --frontend-deploy cloudflare-meta-vite.",
+        "--frontend-deploy",
+      );
     }
     if (frontendDeploy !== "cloudflare-meta-vite") {
-      throw new Error("ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite");
+      throwInvalidCliOption(
+        "ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite",
+        "Use --frontend-deploy cloudflare-meta-vite for ddd-vike-fullstack.",
+        "--frontend-deploy",
+      );
     }
   }
 
@@ -461,7 +535,9 @@ function normalizeFrontendDeploy(
 }
 
 function requireOption<T>(value: T | undefined, message: string): T {
-  if (value === undefined || value === "") throw new Error(message);
+  if (value === undefined || value === "") {
+    throwInvalidCliOption(message, recoveryForRequiredOption(message), optionFromMessage(message));
+  }
 
   return value;
 }
@@ -469,11 +545,70 @@ function requireOption<T>(value: T | undefined, message: string): T {
 function readChoice<T extends string>(name: ChoiceName, value: string, allowed: readonly T[]): T {
   if ((allowed as readonly string[]).includes(value)) return value as T;
 
-  throw new Error(`Invalid --${name} value "${value}". Expected ${formatChoices(allowed)}.`);
+  throwInvalidCliOption(
+    `Invalid --${name} value "${value}". Expected ${formatChoices(allowed)}.`,
+    `Use one of: ${allowed.join(", ")}.`,
+    `--${name}`,
+  );
 }
 
 function formatChoices(choices: readonly string[]): string {
   if (choices.length <= 1) return choices.join("");
 
   return `${choices.slice(0, -1).join(", ")} or ${choices.at(-1)}`;
+}
+
+function throwInvalidProjectName(detail: string): never {
+  throw new InvalidCliOptionProblem(
+    detail,
+    "Choose a project name with lowercase letters, numbers, hyphens, or underscores.",
+    "directory",
+  );
+}
+
+function throwMissingApi(): never {
+  throwInvalidCliOption(
+    "--api is required for ddd-api and ddd-fullstack",
+    "Pass --api graphql or --api trpc.",
+    "--api",
+  );
+}
+
+function throwUnsupportedPresetOption(option: string, preset: string): never {
+  throwInvalidCliOption(
+    `${option} is not supported with the ${preset} preset`,
+    `Remove ${option} or choose a preset that supports it.`,
+    option,
+  );
+}
+
+function throwInvalidCliOption(detail: string, recovery: string, option?: string): never {
+  throw new InvalidCliOptionProblem(detail, recovery, option);
+}
+
+function recoveryForRequiredOption(message: string): string {
+  if (message.includes("--api")) {
+    return "Pass --api graphql or --api trpc.";
+  }
+  if (message.includes("Project name")) {
+    return "Pass a target directory or project name.";
+  }
+  if (message.includes("Project preset")) {
+    return "Pass --preset with one supported preset, or use --goal.";
+  }
+  if (message.includes("Package scope")) {
+    return "Pass --scope @your-org.";
+  }
+
+  return "Provide the required option and rerun create-croco-app.";
+}
+
+function optionFromMessage(message: string): string | undefined {
+  const option = message.match(/--[a-z-]+/)?.[0];
+
+  if (option) return option;
+  if (message.includes("Project name")) return "directory";
+  if (message.includes("Package scope")) return "--scope";
+
+  return undefined;
 }
