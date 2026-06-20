@@ -1,4 +1,5 @@
 import { intro, outro } from "@clack/prompts";
+import { Problem } from "@croco/problems-core";
 import { Command } from "commander";
 import { getPackageVersion } from "./package-version.js";
 import type { GeneratorOptions } from "./types.js";
@@ -11,6 +12,10 @@ export function createProgram(): Command {
     .description("Create a pnpm-based Croco application")
     .version(getPackageVersion())
     .argument("[directory]", "Target directory")
+    .option(
+      "--goal <goal>",
+      "App goal (saas-api|spa-backend-split|worker|internal-tool). Chooses the supported stack and writes croco.app.json",
+    )
     .option(
       "--preset <preset>",
       "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas)",
@@ -60,10 +65,24 @@ export function createProgram(): Command {
         outro(`Project created in ${targetDir} 🎉`);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        console.error(`\nError: ${message}`);
+        if (err instanceof Problem) {
+          console.error(`\nError [${err.code}]: ${message}`);
+          const recovery = readRecovery(err.extensions);
+          if (recovery) {
+            console.error(`Recovery: ${recovery}`);
+          }
+        } else {
+          console.error(`\nError: ${message}`);
+        }
         process.exit(1);
       }
     });
 
   return program;
+}
+
+function readRecovery(extensions: Problem["extensions"]): string | undefined {
+  const recovery = extensions?.recovery;
+
+  return typeof recovery === "string" ? recovery : undefined;
 }

@@ -1,6 +1,9 @@
+export type AppGoal = "saas-api" | "spa-backend-split" | "worker" | "internal-tool";
+
 export type GeneratorOptions = {
   projectName: string;
   scope: string;
+  goal?: AppGoal;
   preset:
     | "ddd-fullstack"
     | "ddd-vike-fullstack"

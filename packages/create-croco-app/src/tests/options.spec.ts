@@ -2,6 +2,7 @@ import { Problem } from "@croco/problems-core";
 import { existsSync, rmSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
+import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import {
   normalizeNonInteractiveOptions,
   parseCliOptions,
@@ -24,6 +25,8 @@ describe("noninteractive CLI option validation", () => {
     const help = createProgram().helpInformation();
 
     expect(help).toContain("Create a pnpm-based Croco application");
+    expect(help).toContain("saas-api|spa-backend-split|worker|internal-tool");
+    expect(help).toContain("croco.app.json");
     expect(help).toContain(
       "blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas",
     );
@@ -43,6 +46,80 @@ describe("noninteractive CLI option validation", () => {
     expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
       "--api is required for ddd-api and ddd-fullstack",
     );
+  });
+
+  it("normalizes a goal-first SaaS API request without requiring stack flags", () => {
+    const cliOptions = parseCliOptions("my-saas-api", {
+      goal: "saas-api",
+      scope: "@test",
+      install: false,
+      git: false,
+      agentRules: false,
+    });
+
+    expect(normalizeNonInteractiveOptions(cliOptions)).toMatchObject({
+      projectName: "my-saas-api",
+      scope: "@test",
+      goal: "saas-api",
+      preset: "saas",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+  });
+
+  it("normalizes a worker goal to the supported Cloudflare Worker preset", () => {
+    const cliOptions = parseCliOptions("my-worker", {
+      goal: "worker",
+      scope: "@test",
+      install: false,
+      git: false,
+      agentRules: false,
+    });
+
+    expect(normalizeNonInteractiveOptions(cliOptions)).toMatchObject({
+      projectName: "my-worker",
+      scope: "@test",
+      goal: "worker",
+      preset: "ddd-vike-fullstack",
+      webApps: [],
+      apiHosting: "standalone",
+      frontendDeploy: "cloudflare-meta-vite",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+  });
+
+  it("rejects goal-first requests mixed with stack flags before prompting", () => {
+    const cliOptions = parseCliOptions(undefined, {
+      goal: "saas-api",
+      frontendDeploy: "vercel",
+    });
+
+    expect(() => validateCliOptions(cliOptions)).toThrow(
+      "--frontend-deploy cannot be combined with --goal saas-api",
+    );
+
+    let error: unknown;
+    try {
+      validateCliOptions(cliOptions);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(InvalidGoalOptionProblem);
+    const problem = error as {
+      readonly code: string;
+      readonly extensions?: { readonly recovery?: string };
+    };
+
+    expect(problem.code).toBe("create-croco-app/invalid-goal-option");
+    expect(problem.extensions?.recovery).toContain("Remove the stack option");
   });
 
   it("rejects invalid enum values with actionable messages", () => {
@@ -190,6 +267,48 @@ describe("noninteractive CLI option validation", () => {
 
       expect(errorSpy).toHaveBeenCalledWith(
         "\nError: --api is required for ddd-api and ddd-fullstack",
+      );
+      expect(existsSync(targetDir)).toBe(false);
+    } finally {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+      rmSync(targetDir, { recursive: true, force: true });
+    }
+  });
+
+  it("prints goal diagnostics with code and recovery before creating the target directory", async () => {
+    const targetDir = `/tmp/croco-invalid-goal-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit: ${String(code)}`);
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    try {
+      const program = createProgram();
+
+      await expect(
+        program.parseAsync(
+          [
+            targetDir,
+            "--goal",
+            "saas-api",
+            "--scope",
+            "@test",
+            "--frontend-deploy",
+            "vercel",
+            "--no-install",
+            "--no-git",
+          ],
+          { from: "user" },
+        ),
+      ).rejects.toThrow("process.exit: 1");
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error [create-croco-app/invalid-goal-option]"),
+      );
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("--frontend-deploy"));
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Recovery: Remove the stack option"),
       );
       expect(existsSync(targetDir)).toBe(false);
     } finally {
