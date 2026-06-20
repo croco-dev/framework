@@ -2,6 +2,7 @@
 
 Provider-neutral React contracts and primitives for SaaS billing, entitlement,
 tenant switching, impersonation, and permission inspection administration.
+Also includes contract-aware admin resource tables.
 
 ## Install
 
@@ -110,6 +111,41 @@ export function TenantAdminConsole() {
 }
 ```
 
+```tsx
+import {
+  AdminDataTable,
+  createAdminDataTableListResultFromOffsetPage,
+  createAdminDataTableState,
+} from "@croco/admin-react";
+
+const usersResource = {
+  id: "users",
+  label: "Users",
+  rowId: (user: { id: string }) => user.id,
+  requiredPermissions: ["users:read"],
+  columns: [
+    { id: "email", header: "Email", field: "email", sortable: true, filterable: true },
+    { id: "status", header: "Status", field: "status", sortable: true, filterable: true },
+  ],
+  list: {
+    generatedClient: "admin.users.list",
+    queryKey: ["admin", "users"],
+  },
+};
+
+const tableState = createAdminDataTableState({
+  resource: usersResource,
+  grantedPermissions: ["users:read"],
+  result: createAdminDataTableListResultFromOffsetPage(generatedUsersPage, {
+    source: "generated-client",
+  }),
+});
+
+export function UsersTable() {
+  return <AdminDataTable state={tableState} />;
+}
+```
+
 ## Contract
 
 - Croco plan, billing, entitlement, and quota state is represented separately from
@@ -125,6 +161,9 @@ export function TenantAdminConsole() {
   states separately; active and expired sessions require an audited exit action.
 - Tenant isolation, provider, and permission inspection failures preserve Croco
   Problem details instead of rendering a normal success state.
+- Data tables model resource columns, stable row ids, generated-client list
+  metadata, pagination/search adapters, row actions, bulk actions, empty state,
+  Problem state, and permission denial as explicit state.
 
 ## Admin forms
 

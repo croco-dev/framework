@@ -25,7 +25,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/billing-core --external @croco/entitlements-core --external @croco/impersonation-core --external @croco/metering-core --external @croco/problems-core --external @croco/tenant-core",
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/billing-core --external @croco/entitlements-core --external @croco/impersonation-core --external @croco/metering-core --external @croco/pagination-core --external @croco/problems-core --external @croco/search-core --external @croco/tenant-core",
     "lint": "oxlint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -35,7 +35,9 @@
     "@croco/entitlements-core": "workspace:*",
     "@croco/impersonation-core": "workspace:*",
     "@croco/metering-core": "workspace:*",
+    "@croco/pagination-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/search-core": "workspace:*",
     "@croco/tenant-core": "workspace:*"
   },
   "devDependencies": {

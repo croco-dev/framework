@@ -603,6 +603,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "AdminDataTable",
+          "exportKind": "named",
+          "source": "./libs/DataTable",
+          "declarationKind": "function"
+        },
+        {
           "name": "AdminForm",
           "exportKind": "named",
           "source": "./libs/components",
@@ -636,6 +642,48 @@
           "name": "BillingStatus",
           "exportKind": "named",
           "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminDataTableInvalidRowIdProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/dataTableSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminDataTableListResult",
+          "exportKind": "named",
+          "source": "./libs/dataTableSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminDataTableListResultFromCursorPage",
+          "exportKind": "named",
+          "source": "./libs/dataTableSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminDataTableListResultFromOffsetPage",
+          "exportKind": "named",
+          "source": "./libs/dataTableSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminDataTableListResultFromSearchResult",
+          "exportKind": "named",
+          "source": "./libs/dataTableSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminDataTablePermissionDeniedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/dataTableSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAdminDataTableState",
+          "exportKind": "named",
+          "source": "./libs/dataTableSnapshot",
           "declarationKind": "function"
         },
         {
@@ -814,6 +862,196 @@
           "name": "AdminBillingStatus",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "AdminDataTableBulkActionEvent",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableCellContext",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableColumn",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableCursorPageInput",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableEmptyState",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableField",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableFilter",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableFilterChangeEvent",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableFilterDefinition",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableFilterOperator",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableFilterScalar",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableFilterValue",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableListConfig",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableListLoader",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableListQuery",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableListResult",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableListSource",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableLoadingState",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableOffsetPageInput",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTablePageChangeEvent",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTablePaginationSummary",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTablePermissionDeniedState",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableProblemState",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableProps",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableReadyState",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableRecoveryActionEvent",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableResource",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableRow",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableRowActionEvent",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableRowId",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableSearchResultInput",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableSelectionChangeEvent",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableSort",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableSortChangeEvent",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableSortDirection",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableState",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableStateBase",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
+        },
+        {
+          "name": "AdminDataTableStateInput",
+          "exportKind": "named",
+          "source": "./libs/dataTableTypes"
         },
         {
           "name": "AdminEntitlementRow",
