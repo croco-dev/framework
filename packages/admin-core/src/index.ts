@@ -1,0 +1,36 @@
+export {
+  ADMIN_CORE_DIAGNOSTIC_CODES,
+  AdminResourceValidationProblem,
+  assertAdminResourceValid,
+  defineAdminResource,
+  validateAdminResource,
+} from "./libs/AdminResource";
+export type {
+  AdminResourceDiagnostic,
+  AdminResourceDiagnosticCode,
+  AdminResourceDiagnosticTarget,
+  AdminResourceValidationReport,
+} from "./libs/AdminResource";
+export type {
+  AdminAction,
+  AdminActionKind,
+  AdminActionMutability,
+  AdminActionRecoveryDescriptor,
+  AdminActionTarget,
+  AdminAuditDescriptor,
+  AdminAuditRequirement,
+  AdminFieldValueType,
+  AdminPermissionMode,
+  AdminPermissionRequirement,
+  AdminProblemContract,
+  AdminResource,
+  AdminResourceDetailDescriptor,
+  AdminResourceField,
+  AdminResourceIdentity,
+  AdminResourceListDescriptor,
+  AdminResourceScope,
+  AdminResourceSection,
+  AdminResourceSource,
+  AdminSortDirection,
+  NonEmptyArray,
+} from "./libs/types";
