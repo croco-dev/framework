@@ -1,7 +1,18 @@
 import "reflect-metadata";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HttpExceptionFilter } from "../libs/filters/HttpExceptionFilter";
 import type { ExecutionContext } from "../libs/interfaces/ExecutionContext";
+
+class ResourceNotFoundProblem extends Problem {
+  constructor() {
+    super("RESOURCE_NOT_FOUND", ProblemCategory.NotFound, "Resource not found", {
+      type: "not-found",
+      instance: "/api/resource",
+      extensions: { resourceId: "resource-1" },
+    });
+  }
+}
 
 describe("HttpExceptionFilter", () => {
   let filter!: HttpExceptionFilter;
@@ -18,17 +29,8 @@ describe("HttpExceptionFilter", () => {
     } as unknown as ExecutionContext;
   });
 
-  it("should convert Problem to RFC 7807 response", () => {
-    const problem = {
-      status: 404,
-      toJSON: () => ({
-        type: "not-found",
-        title: "Not Found",
-        status: 404,
-        code: "NOT_FOUND",
-        detail: "Resource not found",
-      }),
-    };
+  it("should convert Problem instances to RFC 7807 response", () => {
+    const problem = new ResourceNotFoundProblem();
 
     const result = filter.catch(problem, mockContext);
 
@@ -39,8 +41,10 @@ describe("HttpExceptionFilter", () => {
         type: "not-found",
         title: "Not Found",
         status: 404,
-        code: "NOT_FOUND",
+        code: "RESOURCE_NOT_FOUND",
         detail: "Resource not found",
+        instance: "/api/resource",
+        resourceId: "resource-1",
       },
     });
   });
@@ -58,8 +62,10 @@ describe("HttpExceptionFilter", () => {
 
   it("should set correct Content-Type header", () => {
     const problem = {
+      type: "bad-request",
+      title: "Bad Request",
       status: 400,
-      toJSON: () => ({ type: "bad-request", status: 400 }),
+      code: "BAD_REQUEST",
     };
 
     const result = filter.catch(problem, mockContext);
@@ -67,22 +73,35 @@ describe("HttpExceptionFilter", () => {
     expect(result.headers).toEqual({ "Content-Type": "application/problem+json" });
   });
 
-  it("should handle Problem with custom status code", () => {
+  it("should accept validated serialized Problem details", () => {
     const problem = {
+      type: "validation-error",
+      title: "Validation Error",
       status: 422,
-      toJSON: () => ({
-        type: "validation-error",
-        title: "Validation Error",
-        status: 422,
-        code: "VALIDATION_ERROR",
-        detail: "Invalid input",
-      }),
+      code: "VALIDATION_ERROR",
+      detail: "Invalid input",
     };
 
     const result = filter.catch(problem, mockContext);
 
     expect(result.status).toBe(422);
     expect(result.body.status).toBe(422);
+  });
+
+  it("should preserve extension fields from validated serialized Problem details", () => {
+    const problem = {
+      type: "forbidden",
+      title: "Forbidden",
+      status: 403,
+      code: "FORBIDDEN",
+      detail: "Access denied",
+      instance: "/api/resource",
+      additionalField: "extra data",
+    };
+
+    const result = filter.catch(problem, mockContext);
+
+    expect(result.body).toEqual(problem);
   });
 
   it("should handle Error with message", () => {
@@ -135,7 +154,7 @@ describe("HttpExceptionFilter", () => {
     expect(result.body.code).toBe("INTERNAL_SERVER_ERROR");
   });
 
-  it("should preserve all Problem fields in body", () => {
+  it("should reject objects that only mimic the old status and toJSON shape", () => {
     const problem = {
       status: 403,
       toJSON: () => ({
@@ -151,15 +170,8 @@ describe("HttpExceptionFilter", () => {
 
     const result = filter.catch(problem, mockContext);
 
-    expect(result.body).toEqual({
-      type: "forbidden",
-      title: "Forbidden",
-      status: 403,
-      code: "FORBIDDEN",
-      detail: "Access denied",
-      instance: "/api/resource",
-      additionalField: "extra data",
-    });
+    expect(result.status).toBe(500);
+    expect(result.body.code).toBe("INTERNAL_SERVER_ERROR");
   });
 
   it("should use default message for Error without message", () => {
@@ -178,14 +190,11 @@ describe("HttpExceptionFilter", () => {
 
   it("should return consistent response structure", () => {
     const problem = {
+      type: "unauthorized",
+      title: "Unauthorized",
       status: 401,
-      toJSON: () => ({
-        type: "unauthorized",
-        title: "Unauthorized",
-        status: 401,
-        code: "UNAUTHORIZED",
-        detail: "Authentication required",
-      }),
+      code: "UNAUTHORIZED",
+      detail: "Authentication required",
     };
 
     const result = filter.catch(problem, mockContext);
