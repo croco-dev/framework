@@ -2935,9 +2935,33 @@
       "entrypoint": "packages/billing-polar/src/index.ts",
       "runtimeExports": [
         {
+          "name": "BillingStatusMappingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/BillingStatusMappingProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "normalizePolarBillingError",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "PolarBillingDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "PolarBillingGateway",
           "exportKind": "named",
           "source": "./libs/PolarBillingGateway",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarCustomerNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
           "declarationKind": "class"
         },
         {
@@ -2947,17 +2971,90 @@
           "declarationKind": "class"
         },
         {
+          "name": "PolarMissingConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarRetryableUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarSubscriptionNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarTerminalUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "PolarWebhookHandler",
           "exportKind": "named",
           "source": "./libs/PolarWebhookHandler",
+          "declarationKind": "class"
+        },
+        {
+          "name": "validatePolarConfig",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "WebhookProcessingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProcessingProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "WebhookValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookValidationProblem",
           "declarationKind": "class"
         }
       ],
       "typeExports": [
         {
+          "name": "PolarBillingDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider"
+        },
+        {
+          "name": "PolarBillingErrorContext",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems"
+        },
+        {
           "name": "PolarConfig",
           "exportKind": "named",
           "source": "./types"
+        },
+        {
+          "name": "PolarConfigKey",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems"
+        },
+        {
+          "name": "PolarReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider"
+        },
+        {
+          "name": "PolarReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider"
         },
         {
           "name": "WebhookDependencies",
@@ -14636,6 +14733,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createBillingProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "createDrizzleProviderConformanceSuite",
           "exportKind": "named",
           "source": "./libs/drizzle-provider-conformance",
@@ -14757,6 +14860,66 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "BillingGatewayConformanceAssertions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingGatewayConformanceFixtures",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingGatewayConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingGatewayFailureScenario",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingProviderConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookConformanceAssertions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookFixture",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookHandlerContract",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookResult",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
         {
           "name": "CapturedSpan",
           "exportKind": "named",

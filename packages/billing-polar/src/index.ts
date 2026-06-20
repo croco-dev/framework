@@ -13,11 +13,12 @@
  * import { PolarBillingGateway, PolarConfig } from '@croco/billing-polar';
  *
  * const config: PolarConfig = {
- *   apiKey: 'pol_live_...',
+ *   accessToken: 'polar_access_token',
+ *   environment: 'sandbox',
  *   webhookSecret: 'whsec_...'
  * };
  *
- * const gateway = new PolarBillingGateway(config);
+ * const gateway = new PolarBillingGateway(config, logger);
  * ```
  */
 
@@ -33,16 +34,17 @@
  * import { PolarBillingGateway, PolarConfig } from '@croco/billing-polar';
  *
  * const config: PolarConfig = {
- *   apiKey: 'pol_live_...',
+ *   accessToken: 'polar_access_token',
+ *   environment: 'sandbox',
  *   webhookSecret: 'whsec_...',
- *   apiUrl: 'https://api.polar.sh'
  * };
  *
- * const gateway = new PolarBillingGateway(config);
+ * const gateway = new PolarBillingGateway(config, logger);
  * const checkout = await gateway.createCheckout({
+ *   billingAccountId: 'tenant_123',
+ *   email: 'buyer@example.com',
  *   productId: 'prod_123',
- *   amount: 2999,
- *   currency: 'USD'
+ *   successUrl: 'https://example.com/success'
  * });
  * ```
  */
@@ -69,6 +71,12 @@ export { PolarBillingGateway } from "./libs/PolarBillingGateway";
  * ```
  */
 export { PolarEventMapper } from "./libs/PolarEventMapper";
+export { PolarBillingDiagnosticsProvider } from "./libs/PolarBillingDiagnosticsProvider";
+export type {
+  PolarBillingDiagnosticsOptions,
+  PolarReadinessCheckContext,
+  PolarReadinessCheckResult,
+} from "./libs/PolarBillingDiagnosticsProvider";
 /**
  * Dependencies for Polar webhook handler.
  */
@@ -85,15 +93,33 @@ export type { WebhookDependencies } from "./libs/PolarWebhookHandler";
  * import { PolarWebhookHandler, PolarEventMapper } from '@croco/billing-polar';
  *
  * const handler = new PolarWebhookHandler({
- *   mapper: new PolarEventMapper(),
- *   eventBus: myEventBus,
- *   secret: 'whsec_...'
+ *   accessToken: 'polar_access_token',
+ *   environment: 'sandbox',
+ *   webhookSecret: 'whsec_...'
+ * }, {
+ *   store,
+ *   eventPublisher
  * });
  *
- * const result = await handler.handle(rawPayload, signature);
+ * const result = await handler.handle(rawPayload, requestHeaders);
  * ```
  */
 export { PolarWebhookHandler } from "./libs/PolarWebhookHandler";
+export { BillingStatusMappingProblem } from "./libs/problems/BillingStatusMappingProblem";
+export {
+  PolarCustomerNotFoundProblem,
+  PolarMissingConfigProblem,
+  PolarRetryableUpstreamProblem,
+  PolarSubscriptionNotFoundProblem,
+  PolarTerminalUpstreamProblem,
+  PolarValidationProblem,
+  normalizePolarBillingError,
+  validatePolarConfig,
+  type PolarBillingErrorContext,
+  type PolarConfigKey,
+} from "./libs/problems/PolarBillingProblems";
+export { WebhookProcessingProblem } from "./libs/problems/WebhookProcessingProblem";
+export { WebhookValidationProblem } from "./libs/problems/WebhookValidationProblem";
 
 // Types
 /**
@@ -104,14 +130,14 @@ export { PolarWebhookHandler } from "./libs/PolarWebhookHandler";
  * import type { PolarConfig, WebhookHandlerResult } from '@croco/billing-polar';
  *
  * const config: PolarConfig = {
- *   apiKey: 'pol_live_...',
+ *   accessToken: 'polar_access_token',
+ *   environment: 'sandbox',
  *   webhookSecret: 'whsec_...',
- *   apiUrl: 'https://api.polar.sh'
  * };
  *
  * const result: WebhookHandlerResult = {
  *   success: true,
- *   processedEvents: 5
+ *   eventId: 'evt_123'
  * };
  * ```
  */

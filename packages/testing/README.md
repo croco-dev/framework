@@ -26,6 +26,7 @@ const response = await app.get("/users");
 | `createRpcTestFetch(app)`                             | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app.                   |
 | `createStorageProviderConformanceSuite(config)`       | Reusable storage provider contract cases for default no-credential CI.                                          |
 | `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                      |
+| `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                      |
 | `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.          |
 | `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating. |
 | `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                    |
@@ -77,6 +78,13 @@ Provider conformance helpers return named cases so packages can wire them into t
 runners with `it.each(...)`. Default cases use mocks or package-local fixtures and must not require
 provider credentials. Optional live-smoke cases are represented by an explicit environment gate, so
 CI skips them unless the provider package intentionally enables real backend credentials.
+
+The billing provider helper currently covers:
+
+- `createBillingProviderConformanceSuite()` for `@croco/billing-core` providers: checkout
+  creation, customer portal access, subscription cancel/resume lifecycle behavior, optional
+  provider failure scenarios, signed webhook handling, webhook idempotency, and invalid webhook
+  rejection as Croco `Problem` instances.
 
 The serverless provider helpers currently cover:
 
