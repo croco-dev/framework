@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as vm from "node:vm";
 import { ProblemCategory } from "@croco/problems-core";
 import {
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
@@ -305,10 +306,86 @@ describe("generateClientFiles", () => {
     expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).not.toContain("function isRpcProblemDetails");
     expect(content).toContain(
-      "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain("export type CreateUserResult = RpcClientResult");
     assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
+  }, 15_000);
+
+  it("should validate React Query key factories without polluting generated route fingerprints", () => {
+    const graph: ContractGraph = {
+      version: "croco.contract-graph.v1",
+      controllers: [
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.getUser", "UsersController.create", "UsersController.delete"],
+        },
+      ],
+      routes: [
+        {
+          routeId: "UsersController.getUser",
+          operationId: "UsersController_getUser",
+          controllerName: "UsersController",
+          methodName: "getUser",
+          httpMethod: "GET",
+          path: "/users/:id",
+          controllerPath: "/users",
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+          access: { guards: [], roles: [] },
+          problemResponses: [],
+        },
+        {
+          routeId: "UsersController.create",
+          operationId: "UsersController_create",
+          controllerName: "UsersController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          controllerPath: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: BODY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+          access: { guards: [], roles: [] },
+          problemResponses: [],
+        },
+        {
+          routeId: "UsersController.delete",
+          operationId: "UsersController_delete",
+          controllerName: "UsersController",
+          methodName: "delete",
+          httpMethod: "DELETE",
+          path: "/users/:id",
+          controllerPath: "/users",
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+          access: { guards: [], roles: [] },
+          problemResponses: [],
+        },
+      ],
+      diagnostics: [],
+    };
+
+    const files = generateClientFilesFromContractGraph(graph, TEMP_DIR, { reactQuery: true });
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(content).toContain(
+      "create: { route: usersContractRoutes[1], invalidates: [usersKeys.all()] },",
+    );
+    expect(content).toContain(
+      "delete: { route: usersContractRoutes[2], invalidates: [usersKeys.all()] },",
+    );
   });
 
   it("should reject ALL routes instead of emitting invalid fetch methods", () => {
@@ -486,7 +563,7 @@ describe("generateClientFiles", () => {
     expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(true);
     expect(fs.existsSync(path.join(TEMP_DIR, "order.ts"))).toBe(true);
     expect(fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8")).toBe(
-      "export * from './rpc';\nexport { orderClient } from './order';\nexport { userClient } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
+      "export * from './rpc';\nexport { orderClient, orderContractRoutes, orderKeys } from './order';\nexport { userClient, userContractRoutes, userKeys } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
     );
   });
 
@@ -587,6 +664,140 @@ describe("generateClientFiles", () => {
     expect(content).toContain("export function useCreateResult<TContext = unknown>");
     expect(content).toContain(
       "return useMutation<unknown | undefined, Error, CreateMutationVariables, TContext>({ ...userMutations.create(), ...options });",
+    );
+  });
+
+  it(
+    "should generate query key factories, invalidation manifests, and barrel exports",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "list",
+          httpMethod: "GET",
+          path: "/users",
+          params: [{ kind: "query", name: "page", schema: null }],
+          inputSchema: null,
+          inputSchemas: QUERY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: BODY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      const indexContent = fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8");
+      expect(content).toContain("export const userKeys = {");
+      expect(content).toContain("all: () => ['user'] as const,");
+      expect(content).toContain(
+        "list: (input: ListInput) => [...userKeys.all(), 'list', serializeRpcQueryKeyInput(input)] as const,",
+      );
+      expect(content).toContain(
+        "create: (input: CreateInput) => [...userKeys.all(), 'create', serializeRpcQueryKeyInput(input)] as const,",
+      );
+      expect(content).toContain("export const userInvalidationManifest = {");
+      expect(content).toContain(
+        "create: { route: userContractRoutes[1], invalidates: [userKeys.all()] },",
+      );
+      expect(indexContent).toContain(
+        "export { userClient, userContractRoutes, userKeys, userInvalidationManifest } from './user';",
+      );
+      assertGeneratedClientTypechecks(`${content}
+const listKey = userKeys.list({ query: { page: '1' } });
+const createInvalidationKey = userInvalidationManifest.create.invalidates[0];
+const createInvalidationRouteId: 'UserController.create' = userInvalidationManifest.create.route.routeId;
+void listKey;
+void createInvalidationKey;
+void createInvalidationRouteId;
+`);
+      assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it("should serialize query key inputs deterministically and reject unsupported values", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [
+          { kind: "path", name: "id", schema: null },
+          { kind: "query", name: "page", schema: null },
+          { kind: "header", name: "x-request-id", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as unknown as RouteIR["inputSchemas"]["path"],
+          query: z.object({
+            active: z.boolean().optional(),
+            page: z.number(),
+            search: z.string().optional(),
+            tags: z.array(z.string().optional()),
+          }) as unknown as RouteIR["inputSchemas"]["query"],
+          headers: z.object({
+            "x-request-id": z.string(),
+          }) as unknown as RouteIR["inputSchemas"]["headers"],
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    generateClientFiles(routes, TEMP_DIR);
+
+    const { serializeRpcQueryKeyInput } = loadGeneratedRpcSupport();
+    const serialized = serializeRpcQueryKeyInput({
+      query: { search: undefined, tags: ["vip", undefined, "new"], page: 2, active: false },
+      path: { id: "42" },
+      headers: { "x-request-id": "abc" },
+    });
+    const serializedRecord = serialized as Record<string, unknown>;
+    const serializedQuery = serializedRecord.query as Record<string, unknown>;
+
+    expect(serialized).toEqual({
+      headers: { "x-request-id": "abc" },
+      path: { id: "42" },
+      query: { active: false, page: 2, tags: ["vip", "new"] },
+    });
+    expect(Object.keys(serializedRecord)).toEqual(["headers", "path", "query"]);
+    expect(Object.keys(serializedQuery)).toEqual(["active", "page", "tags"]);
+    expect(serialized).toEqual(
+      serializeRpcQueryKeyInput({
+        query: { tags: ["vip", "new"], page: 2, active: false },
+        path: { id: "42" },
+        headers: { "x-request-id": "abc" },
+      }),
+    );
+
+    const ordered = serializeRpcQueryKeyInput({
+      z: true,
+      a: true,
+      _: true,
+      A: true,
+      "-": true,
+    }) as Record<string, unknown>;
+
+    expect(Object.keys(ordered)).toEqual(["-", "A", "_", "a", "z"]);
+    expect(() =>
+      serializeRpcQueryKeyInput({ createdAt: new Date("2026-01-01T00:00:00.000Z") }),
+    ).toThrow("unsupported value at input.createdAt");
+    expect(() => serializeRpcQueryKeyInput({ page: Number.NaN })).toThrow(
+      "only supports finite numbers",
     );
   });
 
@@ -870,7 +1081,7 @@ void handleMissingProblemBranch;
 `;
 
       expect(content).toContain(
-        "import { handleJsonResponse, handleJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
       );
       expect(content).toContain(
         "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
@@ -1312,13 +1523,12 @@ void handleMissingProblemBranch;
         "import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';",
       );
       expect(content).toContain("export const userQueries = {");
+      expect(content).toContain("export type GetQueryKey = ReturnType<typeof userKeys.get>;");
+      expect(content).toContain("queryKey: userKeys.get(input, cacheScope),");
       expect(content).toContain(
-        "export type GetQueryKey = readonly ['rpc', 'user', 'get', Pick<GetInput, 'path' | 'query'>, unknown];",
+        "queryKey: [...userKeys.get(input, cacheScope), 'result'] as const,",
       );
-      expect(content).toContain(
-        "queryKey: ['rpc', 'user', 'get', { path: input.path, query: input.query }, cacheScope] as const,",
-      );
-      expect(content).not.toContain("queryKey: ['rpc', 'user', 'get', input] as const,");
+      expect(content).not.toContain("queryKey: ['rpc', 'user', 'get'");
       expect(content).toContain(
         "getResult: (input: GetInput, cacheScope?: unknown): GetResultQueryFactory => ({",
       );
@@ -1438,7 +1648,7 @@ void createResultHook;
         "export type ListInput = { query: { active: boolean | undefined; deletedAt: string | null; page: number; search: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
-        "import { readOptionalJsonResponse, readOptionalJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
       );
       assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
@@ -1531,7 +1741,7 @@ void result;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+        "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
       );
       expect(content).toContain(
         "export type CreateFormFieldName = 'name' | 'email' | 'role' | 'receiveUpdates' | 'retryCount';",
@@ -1827,6 +2037,29 @@ function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
   );
 
   assertVirtualTypeScriptSourcesTypecheck(sources, fileNames);
+}
+
+function loadGeneratedRpcSupport(): {
+  readonly serializeRpcQueryKeyInput: (value: unknown) => unknown;
+} {
+  const rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+  const outputText = ts.transpileModule(rpcSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const context = { exports: {} as Record<string, unknown> };
+
+  vm.runInNewContext(outputText, context);
+
+  const serializeRpcQueryKeyInput = context.exports.serializeRpcQueryKeyInput;
+
+  expect(serializeRpcQueryKeyInput).toBeTypeOf("function");
+
+  return {
+    serializeRpcQueryKeyInput: serializeRpcQueryKeyInput as (value: unknown) => unknown,
+  };
 }
 
 function assertVirtualTypeScriptSourcesTypecheck(

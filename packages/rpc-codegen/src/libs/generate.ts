@@ -48,6 +48,7 @@ type ResponseHelperOptions = {
   readonly hasOutputRoutes: boolean;
   readonly hasNoOutputRoutes: boolean;
   readonly hasFormRoutes: boolean;
+  readonly hasQueryKeyInputs: boolean;
 };
 
 type GeneratedFormField = {
@@ -257,6 +258,7 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
     hasOutputRoutes: domainRoutes.routes.some((route) => route.outputSchema),
     hasNoOutputRoutes: domainRoutes.routes.some((route) => !route.outputSchema),
     hasFormRoutes: formArtifacts.length > 0,
+    hasQueryKeyInputs: domainRoutes.routes.some(needsInput),
   });
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
     ? `type QueryParamValue = string | number | boolean | null | undefined;
@@ -307,11 +309,15 @@ function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<str
   const imports = options.reactQuery ? generateReactQueryImports(domainRoutes) : "";
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
   const routeMetadata = generateContractRouteMetadata(domainRoutes);
+  const queryKeys = generateQueryKeys(domainRoutes);
+  const invalidationManifest = generateInvalidationManifest(domainRoutes);
 
   return `${imports}${responseHelperImports}${types.join("\n")}
 ${problemDeclarations}
 ${formArtifacts.join("\n")}
 ${routeMetadata}
+${queryKeys}
+${invalidationManifest}
 ${queryHelpers}${headerHelpers}
 export const ${clientName} = {
 ${clientMethods}
@@ -330,6 +336,52 @@ function generateContractRouteMetadata(domainRoutes: DomainRoutes): string {
   return `export const ${domainRoutes.domain}ContractRoutes = [
 ${entries}
 ] as const;`;
+}
+
+function generateQueryKeys(domainRoutes: DomainRoutes): string {
+  const keysName = getQueryKeysName(domainRoutes);
+  const entries = domainRoutes.routes
+    .map((route) => {
+      const parameters = getQueryKeyFactoryParameters(route);
+      const keyParts = [`...${keysName}.all()`, literalValueToTypeScript(route.methodName)];
+      const inputExpression = getQueryKeyInputExpression(route);
+
+      if (inputExpression) {
+        keyParts.push(`serializeRpcQueryKeyInput(${inputExpression})`);
+      }
+
+      if (hasReactQueryCacheScope(route)) {
+        keyParts.push("serializeRpcQueryKeyInput(cacheScope)");
+      }
+
+      return `  ${getQueryKeyFactoryProperty(route)}: (${parameters}) => [${keyParts.join(", ")}] as const,`;
+    })
+    .join("\n");
+
+  return `export const ${keysName} = {
+  all: () => [${literalValueToTypeScript(domainRoutes.domain)}] as const,
+${entries}
+};`;
+}
+
+function generateInvalidationManifest(domainRoutes: DomainRoutes): string {
+  const mutationRoutes = domainRoutes.routes.filter(isMutationRoute);
+
+  if (mutationRoutes.length === 0) {
+    return "";
+  }
+
+  const keysName = getQueryKeysName(domainRoutes);
+  const entries = mutationRoutes
+    .map(
+      (route) =>
+        `  ${route.methodName}: { route: ${domainRoutes.domain}ContractRoutes[${domainRoutes.routes.indexOf(route)}], invalidates: [${keysName}.all()] },`,
+    )
+    .join("\n");
+
+  return `export const ${domainRoutes.domain}InvalidationManifest = {
+${entries}
+} as const;`;
 }
 
 function collectGeneratedRpcConsumerRoutes(
@@ -428,7 +480,9 @@ function collectGeneratedRpcConsumedFields(): ContractGraphConsumerRouteField[] 
 function getGeneratedMethodBlock(content: string, methodName: string): string {
   const methodMarker = `  ${methodName}:`;
   const resultMarker = `  ${methodName}Result:`;
-  const methodStart = content.indexOf(methodMarker);
+  const clientStart = content.search(/\nexport const [A-Za-z_$][A-Za-z0-9_$]*Client = \{\n/);
+  const searchStart = clientStart === -1 ? 0 : clientStart;
+  const methodStart = content.indexOf(methodMarker, searchStart);
   const resultStart = content.indexOf(resultMarker, methodStart);
 
   if (methodStart === -1 || resultStart === -1) {
@@ -517,9 +571,18 @@ function escapeRegExp(value: string): string {
 }
 
 function generateClientIndex(domainRoutes: readonly DomainRoutes[]): string {
-  const clientExports = domainRoutes.map(
-    (domainRoute) => `export { ${domainRoute.domain}Client } from './${domainRoute.domain}';`,
-  );
+  const clientExports = domainRoutes.map((domainRoute) => {
+    const exports = [
+      `${domainRoute.domain}Client`,
+      `${domainRoute.domain}ContractRoutes`,
+      getQueryKeysName(domainRoute),
+      ...(domainRoute.routes.some(isMutationRoute)
+        ? [`${domainRoute.domain}InvalidationManifest`]
+        : []),
+    ];
+
+    return `export { ${exports.join(", ")} } from './${domainRoute.domain}';`;
+  });
   const namespaceExports = domainRoutes.map(
     (domainRoute) => `export * as ${domainRoute.domain}Rpc from './${domainRoute.domain}';`,
   );
@@ -544,6 +607,10 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
 
   if (options.hasFormRoutes) {
     helpers.push("toRpcFormProblem");
+  }
+
+  if (options.hasQueryKeyInputs) {
+    helpers.push("serializeRpcQueryKeyInput");
   }
 
   helpers.push("type RpcClientResult", "type RpcDeclaredProblem");
@@ -600,6 +667,7 @@ export type {
   ProblemFormProblem as RpcFormProblem,
   ProblemValidationDeclaration as RpcValidationProblem,
 } from '@croco/frontend-problems';
+${generateRpcQueryKeySupport()}
 `;
   }
 
@@ -667,6 +735,14 @@ export type RpcClientFailure<Problem extends RpcDeclaredProblem = never> =
 export type RpcClientResult<T, Problem extends RpcDeclaredProblem = never> =
   | RpcClientSuccess<T>
   | RpcClientFailure<Problem>;
+
+export type RpcQueryKeyValue =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly RpcQueryKeyValue[]
+  | { readonly [key: string]: RpcQueryKeyValue };
 
 export type RpcFormFieldControl =
   | 'text'
@@ -857,6 +933,83 @@ export function assertExhaustiveProblem(problem: never): never {
   throw new Error(\`Unhandled RPC Problem variant\${suffix}\`);
 }
 
+export function serializeRpcQueryKeyInput(value: unknown): RpcQueryKeyValue {
+  return serializeRpcQueryKeyValue(value, 'input') ?? null;
+}
+
+function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyValue | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    if (Number.isFinite(value)) {
+      return value;
+    }
+
+    throw new Error(\`RPC query key input only supports finite numbers; unsupported value at \${path}.\`);
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => {
+      const result = serializeRpcQueryKeyValue(item, \`\${path}[\${index}]\`);
+
+      return result === undefined ? [] : [result];
+    });
+  }
+
+  if (isRpcQueryKeyRecord(value)) {
+    const serialized: Record<string, RpcQueryKeyValue> = {};
+
+    for (const [key, item] of Object.entries(value).sort(compareRpcQueryKeyRecordEntries)) {
+      const result = serializeRpcQueryKeyValue(item, \`\${path}.\${key}\`);
+
+      if (result !== undefined) {
+        serialized[key] = result;
+      }
+    }
+
+    return serialized;
+  }
+
+  throw new Error(
+    \`RPC query key input only supports JSON-safe primitives, arrays, and plain objects; unsupported value at \${path}.\`,
+  );
+}
+
+function isRpcQueryKeyRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return (
+    prototype === Object.prototype ||
+    prototype === null ||
+    Object.hasOwn(prototype, 'isPrototypeOf')
+  );
+}
+
+function compareRpcQueryKeyRecordEntries(
+  [left]: [string, unknown],
+  [right]: [string, unknown],
+): number {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
+}
+
 async function rejectErrorResponse(response: Response): Promise<never> {
   let body: unknown;
 
@@ -1024,6 +1177,94 @@ function isRpcProblemDetails(value: unknown): value is RpcProblemDetails {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+`;
+}
+
+function generateRpcQueryKeySupport(): string {
+  return `export type RpcQueryKeyValue =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly RpcQueryKeyValue[]
+  | { readonly [key: string]: RpcQueryKeyValue };
+
+export function serializeRpcQueryKeyInput(value: unknown): RpcQueryKeyValue {
+  return serializeRpcQueryKeyValue(value, 'input') ?? null;
+}
+
+function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyValue | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    if (Number.isFinite(value)) {
+      return value;
+    }
+
+    throw new Error(\`RPC query key input only supports finite numbers; unsupported value at \${path}.\`);
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => {
+      const result = serializeRpcQueryKeyValue(item, \`\${path}[\${index}]\`);
+
+      return result === undefined ? [] : [result];
+    });
+  }
+
+  if (isRpcQueryKeyRecord(value)) {
+    const serialized: Record<string, RpcQueryKeyValue> = {};
+
+    for (const [key, item] of Object.entries(value).sort(compareRpcQueryKeyRecordEntries)) {
+      const result = serializeRpcQueryKeyValue(item, \`\${path}.\${key}\`);
+
+      if (result !== undefined) {
+        serialized[key] = result;
+      }
+    }
+
+    return serialized;
+  }
+
+  throw new Error(
+    \`RPC query key input only supports JSON-safe primitives, arrays, and plain objects; unsupported value at \${path}.\`,
+  );
+}
+
+function isRpcQueryKeyRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return (
+    prototype === Object.prototype ||
+    prototype === null ||
+    Object.hasOwn(prototype, 'isPrototypeOf')
+  );
+}
+
+function compareRpcQueryKeyRecordEntries(
+  [left]: [string, unknown],
+  [right]: [string, unknown],
+): number {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
 }
 `;
 }
@@ -1855,22 +2096,30 @@ function getReactQueryCacheSafeInputFieldNames(route: GeneratedClientRoute): rea
   ];
 }
 
-function getReactQueryKeyInputType(route: GeneratedClientRoute): string | null {
-  if (!hasReactQueryUnsafeKeyInput(route)) {
-    return needsInput(route) ? getMutationVariablesType(route) : null;
-  }
+function getQueryKeyFactoryParameters(route: GeneratedClientRoute): string {
+  const parameters = [
+    ...(hasQueryKeyFactoryInput(route) ? [getInputParameter(route)] : []),
+    ...(hasReactQueryCacheScope(route) ? ["cacheScope?: unknown"] : []),
+  ];
 
-  const fieldNames = getReactQueryCacheSafeInputFieldNames(route);
-
-  if (fieldNames.length === 0) {
-    return null;
-  }
-
-  return `Pick<${getInputTypeName(route)}, ${fieldNames.map(literalValueToTypeScript).join(" | ")}>`;
+  return parameters.join(", ");
 }
 
-function getReactQueryKeyInputExpression(route: GeneratedClientRoute): string | null {
-  if (!hasReactQueryUnsafeKeyInput(route)) {
+function getQueryKeyFactoryCallArguments(route: GeneratedClientRoute): string {
+  const parameters = [
+    ...(hasQueryKeyFactoryInput(route) ? ["input"] : []),
+    ...(hasReactQueryCacheScope(route) ? ["cacheScope"] : []),
+  ];
+
+  return parameters.join(", ");
+}
+
+function hasQueryKeyFactoryInput(route: GeneratedClientRoute): boolean {
+  return getQueryKeyInputExpression(route) !== null;
+}
+
+function getQueryKeyInputExpression(route: GeneratedClientRoute): string | null {
+  if (!isReactQueryQueryRoute(route) || !hasReactQueryUnsafeKeyInput(route)) {
     return needsInput(route) ? "input" : null;
   }
 
@@ -1884,27 +2133,9 @@ function getReactQueryKeyInputExpression(route: GeneratedClientRoute): string | 
 }
 
 function getReactQueryKeyType(route: GeneratedClientRoute, result: boolean): string {
-  const parts = [
-    "'rpc'",
-    literalValueToTypeScript(getDomainName(route)),
-    literalValueToTypeScript(route.methodName),
-  ];
+  const keyType = `ReturnType<typeof ${getDomainName(route)}Keys${getQueryKeyFactoryAccessor(route)}>`;
 
-  if (result) {
-    parts.push("'result'");
-  }
-
-  const inputType = getReactQueryKeyInputType(route);
-
-  if (inputType) {
-    parts.push(inputType);
-  }
-
-  if (hasReactQueryCacheScope(route)) {
-    parts.push("unknown");
-  }
-
-  return `readonly [${parts.join(", ")}]`;
+  return result ? `readonly [...${keyType}, 'result']` : keyType;
 }
 
 function getReactQueryKeyExpression(
@@ -1912,27 +2143,9 @@ function getReactQueryKeyExpression(
   route: GeneratedClientRoute,
   result: boolean,
 ): string {
-  const parts = [
-    "'rpc'",
-    literalValueToTypeScript(domain),
-    literalValueToTypeScript(route.methodName),
-  ];
+  const keyExpression = `${domain}Keys${getQueryKeyFactoryAccessor(route)}(${getQueryKeyFactoryCallArguments(route)})`;
 
-  if (result) {
-    parts.push("'result'");
-  }
-
-  const inputExpression = getReactQueryKeyInputExpression(route);
-
-  if (inputExpression) {
-    parts.push(inputExpression);
-  }
-
-  if (hasReactQueryCacheScope(route)) {
-    parts.push("cacheScope");
-  }
-
-  return `[${parts.join(", ")}] as const`;
+  return result ? `[...${keyExpression}, 'result'] as const` : keyExpression;
 }
 
 function zodTypeToTypeScript(schema: unknown): string {
@@ -2177,6 +2390,10 @@ function hasLegacyBodyInput(route: GeneratedClientRoute): boolean {
   );
 }
 
+function isMutationRoute(route: GeneratedClientRoute): boolean {
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(route.httpMethod.toUpperCase());
+}
+
 function getDomainName(route: GeneratedClientRoute): string {
   const rawName = route.domain ?? route.controllerName.replace(/Controller$/, "");
 
@@ -2289,6 +2506,22 @@ function getProblemDeclarationsName(route: GeneratedClientRoute): string {
 
 function getResultMethodName(route: GeneratedClientRoute): string {
   return `${route.methodName}Result`;
+}
+
+function getQueryKeysName(domainRoutes: DomainRoutes): string {
+  return `${domainRoutes.domain}Keys`;
+}
+
+function getQueryKeyFactoryProperty(route: GeneratedClientRoute): string {
+  const name = route.methodName === "all" ? "allRoute" : route.methodName;
+
+  return isJavaScriptIdentifier(name) ? name : formatObjectKey(name);
+}
+
+function getQueryKeyFactoryAccessor(route: GeneratedClientRoute): string {
+  const name = route.methodName === "all" ? "allRoute" : route.methodName;
+
+  return isJavaScriptIdentifier(name) ? `.${name}` : `[${formatObjectKey(name)}]`;
 }
 
 function formatRoute(route: GeneratedClientRoute): string {
