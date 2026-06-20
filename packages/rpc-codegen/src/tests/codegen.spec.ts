@@ -1129,6 +1129,277 @@ void result;
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
 
+  it(
+    "should generate form models, submit payload builders, and typed form Problems from body schemas",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: {
+            body: z.object({
+              name: z.string().min(1),
+              email: z.string().email(),
+              role: z.enum(["admin", "viewer"]),
+              receiveUpdates: z.boolean().optional(),
+              retryCount: z.number().nullable(),
+            }) as any,
+            path: null,
+            query: null,
+            headers: null,
+          },
+          outputSchema: z.object({ id: z.string() }) as any,
+          problemResponses: [
+            {
+              code: "USER_VALIDATION",
+              category: ProblemCategory.ValidationError,
+              status: 422,
+            },
+            {
+              code: "USER_EMAIL_CONFLICT",
+              category: ProblemCategory.Conflict,
+              status: 409,
+            },
+          ],
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain(
+        "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      );
+      expect(content).toContain(
+        "export type CreateFormFieldName = 'name' | 'email' | 'role' | 'receiveUpdates' | 'retryCount';",
+      );
+      expect(content).toContain(
+        "export type CreateFormValues = { name: string; email: string; role: 'admin' | 'viewer'; receiveUpdates: boolean | null; retryCount: number | null; };",
+      );
+      expect(content).toContain("export type CreateSubmitPayload = CreateInput;");
+      expect(content).toContain(
+        "export type CreateFormProblem = RpcFormFieldProblem<CreateFormFieldName, CreateValidationProblem> | RpcFormGlobalProblem<CreateDomainProblem>;",
+      );
+      expect(content).toContain("export const createFormModel = {");
+      expect(content).toContain(
+        "{ name: 'role', label: 'Role', control: 'select', valueKind: 'enum', required: true, initialValue: 'admin', options: [{ label: 'admin', value: 'admin' }, { label: 'viewer', value: 'viewer' }] }",
+      );
+      expect(content).toContain(
+        "initialValues: { name: '', email: '', role: 'admin', receiveUpdates: null, retryCount: null },",
+      );
+      expect(content).toContain(
+        "export function buildCreateFormPayload(values: CreateFormValues): CreateSubmitPayload",
+      );
+      expect(content).toContain(
+        "receiveUpdates: values.receiveUpdates === null ? undefined : values.receiveUpdates",
+      );
+      expect(content).toContain(
+        "export function mapCreateFormProblem(failure: Extract<CreateResult, { ok: false; kind: 'problem' }>): CreateFormProblem",
+      );
+      assertGeneratedClientTypechecks(`${content}
+const createValues: CreateFormValues = {
+  ...createFormModel.initialValues,
+  name: 'Ada',
+  email: 'ada@example.com',
+  role: 'admin',
+};
+const createPayload: CreateSubmitPayload = buildCreateFormPayload(createValues);
+
+async function submitCreateForm() {
+  const result = await userClient.createResult(createPayload);
+
+  if (result.ok || result.kind === 'external') {
+    return;
+  }
+
+  const formProblem = mapCreateFormProblem(result);
+  switch (formProblem.kind) {
+    case 'field-validation': {
+      const emailErrors: readonly string[] | undefined = formProblem.fields.email;
+      const code: 'USER_VALIDATION' = formProblem.code;
+      void emailErrors;
+      void code;
+      return;
+    }
+    case 'global-problem': {
+      const code: 'USER_EMAIL_CONFLICT' = formProblem.code;
+      void code;
+      return;
+    }
+  }
+}
+
+void submitCreateForm;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "should generate context-aware submit payload builders for update body forms",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "update",
+          httpMethod: "PUT",
+          path: "/users/:id",
+          params: [
+            { kind: "path", name: "id", schema: null },
+            { kind: "body", name: "", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: {
+            body: z.object({ name: z.string(), email: z.string().email() }) as any,
+            path: z.object({ id: z.string() }) as any,
+            query: null,
+            headers: null,
+          },
+          outputSchema: z.object({ id: z.string() }) as any,
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain(
+        "export function buildUpdateFormPayload(context: Omit<UpdateInput, 'body'>, values: UpdateFormValues): UpdateSubmitPayload",
+      );
+      expect(content).toContain(
+        "return { ...context, body: { name: values.name, email: values.email } };",
+      );
+      assertGeneratedClientTypechecks(`${content}
+const updatePayload: UpdateSubmitPayload = buildUpdateFormPayload(
+  { path: { id: 'user-1' } },
+  { ...updateFormModel.initialValues, name: 'Ada', email: 'ada@example.com' },
+);
+const updateResult = userClient.update(updatePayload);
+void updateResult;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it("should reject unsupported form body fields with a stable diagnostic and route context", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "create",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: z.object({
+            name: z.string(),
+            profile: z.object({ bio: z.string() }),
+          }) as any,
+          path: null,
+          query: null,
+          headers: null,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    try {
+      generateClientFiles(routes, TEMP_DIR);
+      throw new Error("Expected form schema generation to fail.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "rpc-codegen/unsupported-form-schema",
+        detail:
+          "Cannot generate RPC form model for route UserController.create (/users): field 'profile' uses unsupported form field schema ZodObject.",
+      });
+    }
+    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+  });
+
+  it("should reject unsupported non-object form bodies with a stable diagnostic and route context", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "create",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: z.string() as any,
+          path: null,
+          query: null,
+          headers: null,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    try {
+      generateClientFiles(routes, TEMP_DIR);
+      throw new Error("Expected form schema generation to fail.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "rpc-codegen/unsupported-form-schema",
+        detail:
+          "Cannot generate RPC form model for route UserController.create (/users): body uses unsupported form schema ZodString.",
+      });
+    }
+    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+  });
+
+  it("should reject form body objects that accept dynamic keys", () => {
+    const unsupportedBodies = [
+      {
+        schema: z.object({ name: z.string() }).passthrough(),
+        mode: "passthrough",
+      },
+      {
+        schema: z.object({ name: z.string() }).catchall(z.string()),
+        mode: "catchall",
+      },
+    ];
+
+    for (const { schema, mode } of unsupportedBodies) {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: {
+            body: schema as any,
+            path: null,
+            query: null,
+            headers: null,
+          },
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      try {
+        generateClientFiles(routes, TEMP_DIR);
+        throw new Error("Expected form schema generation to fail.");
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "rpc-codegen/unsupported-form-schema",
+          detail: `Cannot generate RPC form model for route UserController.create (/users): body object accepts unsupported ${mode} keys; generated form fields must cover every accepted body key.`,
+        });
+      }
+      expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+    }
+  });
+
   it("should serialize body, path, and query input when generating combined fetch calls", () => {
     const routes: RouteIR[] = [
       {
