@@ -157,8 +157,11 @@ export class ExecutionManagerImpl
 
     // Check if should retry
     if (error.retryable && execution.attempts < execution.maxAttempts) {
+      const targetStatus: ExecutionStatus = "retrying";
+      validateTransition(execution.status, targetStatus);
+
       return this.store.update(id, {
-        status: "retrying",
+        status: targetStatus,
         error,
       });
     }

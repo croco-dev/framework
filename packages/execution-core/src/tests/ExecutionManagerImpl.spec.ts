@@ -8,7 +8,7 @@ import type {
   ExecutionStore,
   ListExecutionsOptions,
 } from "../index";
-import { createExecutionJobsOperations, ExecutionManagerImpl } from "../index";
+import { createExecutionJobsOperations, ExecutionManagerImpl, ExecutionProblem } from "../index";
 
 class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
   private executions: Map<string, Execution> = new Map();
@@ -278,6 +278,26 @@ describe("ExecutionManagerImpl", () => {
   });
 
   describe("fail", () => {
+    async function expectInvalidRetryableFailPreservesExecution(
+      execution: Execution,
+    ): Promise<void> {
+      const before = await manager.get(execution.id);
+      const error: ExecutionError = { message: "transient error", retryable: true };
+      let thrown: unknown;
+
+      try {
+        await manager.fail(execution.id, error);
+      } catch (caught) {
+        thrown = caught;
+      }
+
+      expect(thrown).toBeInstanceOf(ExecutionProblem);
+      expect(thrown).toMatchObject({
+        code: "execution/invalid-state-transition",
+      });
+      await expect(manager.get(execution.id)).resolves.toEqual(before);
+    }
+
     it("transitions running to failed when not retryable", async () => {
       const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
@@ -309,6 +329,27 @@ describe("ExecutionManagerImpl", () => {
       const failed = await manager.fail(execution.id, error);
 
       expect(failed.status).toBe("failed");
+    });
+
+    it("rejects retryable failure from pending without updating execution", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+
+      await expectInvalidRetryableFailPreservesExecution(execution);
+    });
+
+    it("rejects retryable failure from completed without updating execution", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+      await manager.start(execution.id);
+      const completed = await manager.complete(execution.id);
+
+      await expectInvalidRetryableFailPreservesExecution(completed);
+    });
+
+    it("rejects retryable failure from cancelled without updating execution", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+      const cancelled = await manager.cancel(execution.id);
+
+      await expectInvalidRetryableFailPreservesExecution(cancelled);
     });
   });
 
