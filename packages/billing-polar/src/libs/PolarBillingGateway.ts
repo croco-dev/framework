@@ -3,6 +3,7 @@ import type { ILogger } from "@croco/framework-context";
 import { Component, Inject, LOGGER_TOKEN } from "@croco/framework-context";
 import { Polar } from "@polar-sh/sdk";
 import type { PolarConfig } from "../types";
+import { normalizePolarBillingError, validatePolarConfig } from "./problems/PolarBillingProblems";
 
 const POLAR_RETRY_CONFIG = {
   strategy: "backoff" as const,
@@ -30,11 +31,13 @@ export class PolarBillingGateway implements BillingGateway {
     config: PolarConfig,
     @Inject(LOGGER_TOKEN) private readonly logger: ILogger,
   ) {
+    const validConfig = validatePolarConfig(config);
+
     this.client = new Polar({
-      accessToken: config.accessToken,
-      server: config.environment,
+      accessToken: validConfig.accessToken,
+      server: validConfig.environment,
     });
-    this.organizationId = config.organizationId;
+    this.organizationId = validConfig.organizationId;
   }
 
   async ensureCustomer(billingAccountId: string, email: string): Promise<string> {
@@ -54,7 +57,7 @@ export class PolarBillingGateway implements BillingGateway {
       }
     } catch (error) {
       if (!this.isCustomerNotFoundError(error)) {
-        throw error;
+        throw normalizePolarBillingError(error, "ensureCustomer.lookup");
       }
 
       this.logger.info("Customer not found, creating new customer", {
@@ -62,11 +65,16 @@ export class PolarBillingGateway implements BillingGateway {
       });
     }
 
-    const created = await this.client.customers.create({
-      externalId: billingAccountId,
-      email,
-      organizationId: this.organizationId,
-    });
+    let created: { id: string };
+    try {
+      created = await this.client.customers.create({
+        externalId: billingAccountId,
+        email,
+        organizationId: this.organizationId,
+      });
+    } catch (error) {
+      throw normalizePolarBillingError(error, "ensureCustomer.create");
+    }
 
     return created.id;
   }
@@ -84,12 +92,17 @@ export class PolarBillingGateway implements BillingGateway {
   async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
     const customerId = await this.ensureCustomer(params.billingAccountId, params.email);
 
-    const checkout = await this.client.checkouts.create({
-      products: [params.productId],
-      customerId,
-      successUrl: params.successUrl,
-      ...(params.cancelUrl && { cancelUrl: params.cancelUrl }),
-    });
+    let checkout: { id: string; url: string };
+    try {
+      checkout = await this.client.checkouts.create({
+        products: [params.productId],
+        customerId,
+        successUrl: params.successUrl,
+        ...(params.cancelUrl && { cancelUrl: params.cancelUrl }),
+      });
+    } catch (error) {
+      throw normalizePolarBillingError(error, "createCheckout");
+    }
 
     return {
       checkoutUrl: checkout.url,
@@ -98,33 +111,46 @@ export class PolarBillingGateway implements BillingGateway {
   }
 
   async cancelSubscription(externalSubscriptionId: string, immediate = false): Promise<void> {
-    if (immediate) {
-      await this.client.subscriptions.revoke({
-        id: externalSubscriptionId,
-      });
-    } else {
-      await this.client.subscriptions.update({
-        id: externalSubscriptionId,
-        subscriptionUpdate: {
-          cancelAtPeriodEnd: true,
-        },
-      });
+    try {
+      if (immediate) {
+        await this.client.subscriptions.revoke({
+          id: externalSubscriptionId,
+        });
+      } else {
+        await this.client.subscriptions.update({
+          id: externalSubscriptionId,
+          subscriptionUpdate: {
+            cancelAtPeriodEnd: true,
+          },
+        });
+      }
+    } catch (error) {
+      throw normalizePolarBillingError(error, "cancelSubscription");
     }
   }
 
   async resumeSubscription(externalSubscriptionId: string): Promise<void> {
-    await this.client.subscriptions.update({
-      id: externalSubscriptionId,
-      subscriptionUpdate: {
-        cancelAtPeriodEnd: false,
-      },
-    });
+    try {
+      await this.client.subscriptions.update({
+        id: externalSubscriptionId,
+        subscriptionUpdate: {
+          cancelAtPeriodEnd: false,
+        },
+      });
+    } catch (error) {
+      throw normalizePolarBillingError(error, "resumeSubscription");
+    }
   }
 
   async getCustomerPortalUrl(externalCustomerId: string): Promise<string> {
-    const session = await this.client.customerSessions.create({
-      customerId: externalCustomerId,
-    });
+    let session: { customerPortalUrl: string };
+    try {
+      session = await this.client.customerSessions.create({
+        customerId: externalCustomerId,
+      });
+    } catch (error) {
+      throw normalizePolarBillingError(error, "getCustomerPortalUrl");
+    }
 
     return session.customerPortalUrl;
   }

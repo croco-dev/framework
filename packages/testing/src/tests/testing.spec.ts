@@ -1,11 +1,12 @@
 import "reflect-metadata";
+import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
 import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
 import type { TransactionContext } from "@croco/framework-context";
 import { DomainEvent, RegisterEventHandler } from "@croco/events-core";
 import type { EventHandler } from "@croco/events-core";
 import { InMemoryLlmModel } from "@croco/llm-core";
 import type { GenerateParams, GenerateResult } from "@croco/llm-core";
-import { ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param } from "@croco/protocols-rest";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
@@ -13,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertOpenAPIRoute,
   assertProblemResponse,
+  createBillingProviderConformanceSuite,
   createEventTestingHarness,
   createLlmProviderConformanceSuite,
   createStorageProviderConformanceSuite,
@@ -41,6 +43,75 @@ class FailingLlmModel extends InMemoryLlmModel {
       "testing/llm-provider-failed",
       "provider generate failed",
     );
+  }
+}
+
+class TestingBillingProblem extends Problem {
+  constructor(detail: string) {
+    super("testing/billing-provider-failed", ProblemCategory.InternalServerError, detail);
+  }
+}
+
+class InMemoryBillingGateway implements BillingGateway {
+  readonly subscriptionOperations: string[] = [];
+
+  async ensureCustomer(billingAccountId: string, _email: string): Promise<string> {
+    return `customer-${billingAccountId}`;
+  }
+
+  async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    return {
+      checkoutId: `checkout-${params.billingAccountId}`,
+      checkoutUrl: `https://billing.example.com/checkout/${params.productId}`,
+    };
+  }
+
+  async cancelSubscription(externalSubscriptionId: string, immediate = false): Promise<void> {
+    this.subscriptionOperations.push(
+      immediate ? `revoke:${externalSubscriptionId}` : `cancel:${externalSubscriptionId}`,
+    );
+  }
+
+  async resumeSubscription(externalSubscriptionId: string): Promise<void> {
+    this.subscriptionOperations.push(`resume:${externalSubscriptionId}`);
+  }
+
+  async getCustomerPortalUrl(externalCustomerId: string): Promise<string> {
+    return `https://billing.example.com/portal/${externalCustomerId}`;
+  }
+}
+
+class FailingBillingGateway extends InMemoryBillingGateway {
+  override async createCheckout(_params: CreateCheckoutParams): Promise<CheckoutResult> {
+    throw new TestingBillingProblem("provider checkout failed");
+  }
+}
+
+class InMemoryBillingWebhookHandler {
+  readonly processedEventIds: string[] = [];
+
+  async handle(body: Buffer | string, headers: Record<string, string>) {
+    if (headers["webhook-signature"] !== "valid") {
+      throw new TestingBillingProblem("invalid webhook signature");
+    }
+
+    const event = JSON.parse(Buffer.isBuffer(body) ? body.toString("utf8") : body) as {
+      id?: unknown;
+      type?: unknown;
+    };
+
+    if (typeof event.id !== "string" || typeof event.type !== "string") {
+      throw new TestingBillingProblem("invalid webhook payload");
+    }
+
+    if (!this.processedEventIds.includes(event.id)) {
+      this.processedEventIds.push(event.id);
+    }
+
+    return {
+      success: true,
+      eventId: event.id,
+    };
   }
 }
 
@@ -580,6 +651,89 @@ describe("@croco/testing", () => {
           embedMany: {
             texts: ["croco one", "croco two"],
             expectedDimensions: 1536,
+          },
+        },
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
+  });
+
+  describe("billing provider conformance", () => {
+    it.each(
+      createBillingProviderConformanceSuite({
+        providerName: "in-memory-billing",
+        gateway: {
+          createGateway: () => new InMemoryBillingGateway(),
+          fixtures: {
+            checkout: {
+              billingAccountId: "tenant-conformance",
+              email: "billing@example.com",
+              productId: "product-pro",
+              successUrl: "https://app.example.com/success",
+            },
+            portal: {
+              billingAccountId: "tenant-conformance",
+              email: "billing@example.com",
+            },
+            subscription: {
+              externalSubscriptionId: "sub-conformance",
+            },
+          },
+          assertions: {
+            subscriptionLifecycle: ({ gateway }) => {
+              expect(gateway.subscriptionOperations).toEqual([
+                "cancel:sub-conformance",
+                "resume:sub-conformance",
+                "revoke:sub-conformance",
+              ]);
+            },
+          },
+          failureScenarios: [
+            {
+              name: "surfaces checkout failures as Croco Problems",
+              createGateway: () => new FailingBillingGateway(),
+              run: (gateway) =>
+                gateway.createCheckout({
+                  billingAccountId: "tenant-conformance",
+                  email: "billing@example.com",
+                  productId: "product-pro",
+                  successUrl: "https://app.example.com/success",
+                }),
+              assertProblem: (problem) => {
+                expect(problem.code).toBe("testing/billing-provider-failed");
+              },
+            },
+          ],
+        },
+        webhook: {
+          createHandler: () => new InMemoryBillingWebhookHandler(),
+          fixtures: {
+            subscription: {
+              body: JSON.stringify({ id: "evt-subscription", type: "subscription.created" }),
+              headers: { "webhook-signature": "valid" },
+              eventId: "evt-subscription",
+            },
+            order: {
+              body: JSON.stringify({ id: "evt-order", type: "order.paid" }),
+              headers: { "webhook-signature": "valid" },
+              eventId: "evt-order",
+            },
+            invalidSignature: {
+              body: JSON.stringify({ id: "evt-invalid-signature", type: "subscription.created" }),
+              headers: { "webhook-signature": "invalid" },
+              eventId: "evt-invalid-signature",
+            },
+            invalidPayload: {
+              body: JSON.stringify({ id: null, type: null }),
+              headers: { "webhook-signature": "valid" },
+              eventId: "evt-invalid-payload",
+            },
+          },
+          assertions: {
+            idempotency: (_results, { handler }) => {
+              expect(handler.processedEventIds).toEqual(["evt-subscription"]);
+            },
           },
         },
       }).cases,

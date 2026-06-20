@@ -22,6 +22,7 @@ export default defineConfig({
       "@croco/ratelimit-core": resolve(currentDir, "../ratelimit-core/src/index.ts"),
       "@croco/storage-core": resolve(currentDir, "../storage-core/src/index.ts"),
       "@croco/telemetry-api": resolve(currentDir, "../telemetry-api/src/index.ts"),
+      "@croco/testing": resolve(currentDir, "../testing/src/index.ts"),
       "@croco/transports-http": resolve(currentDir, "../transports-http/src/index.ts"),
     },
   },

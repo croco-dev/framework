@@ -24,6 +24,7 @@ const response = await app.get("/users");
 | `assertProblemResponse(response, expected)`       | Verifies an RFC 7807 Problem Details response without depending on a test runner.             |
 | `assertOpenAPIRoute(controllersOrSpec, expected)` | Verifies generated OpenAPI route metadata and response contracts.                             |
 | `createRpcTestFetch(app)`                         | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app. |
+| `createBillingProviderConformanceSuite(config)`   | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.    |
 
 ## Isolation Contract
 
@@ -64,3 +65,10 @@ class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
 const events = await createEventTestingHarness({ handlers: [UserCreatedHandler] });
 await events.dispatch(new UserCreatedEvent());
 ```
+
+## Provider Conformance
+
+`createBillingProviderConformanceSuite()` returns plain async cases that can be used with Vitest,
+Jest, or another runner. The billing suite checks checkout creation, customer portal access,
+subscription cancel/resume lifecycle behavior, optional provider failure scenarios, signed webhook
+handling, webhook idempotency, and invalid webhook rejection as Croco `Problem` instances.
