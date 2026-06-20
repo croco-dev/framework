@@ -350,6 +350,44 @@ describe("DrizzleExecutionStore", () => {
       });
     });
 
+    it("should clear retry metadata when fields are explicitly set to undefined", async () => {
+      const execution = createMockExecution({
+        status: "retrying",
+        error: { message: "previous attempt", retryable: true },
+        completedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      const updated = {
+        ...execution,
+        status: "running" as ExecutionStatus,
+        error: null,
+        completedAt: null,
+      };
+
+      const setMock = vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve([updated])),
+        })),
+      }));
+      const updateMock = vi.fn(() => ({
+        set: setMock,
+      }));
+      mockDb.update = updateMock;
+
+      const result = await store.update(execution.id, {
+        status: "running",
+        error: undefined,
+        completedAt: undefined,
+      });
+
+      expect(setMock).toHaveBeenCalledWith({
+        status: "running",
+        error: null,
+        completedAt: null,
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.completedAt).toBeUndefined();
+    });
+
     it("should update replay fields and logs", async () => {
       const execution = createMockExecution();
       const logs = [
