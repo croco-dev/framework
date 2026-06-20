@@ -369,7 +369,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **102개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **103개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Package Groups
 
@@ -379,7 +379,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 | Domain       | Business-domain APIs and package-level abstractions                                        |        27 |
 | Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        26 |
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
-| Protocol     | API protocol definitions and code generation                                               |         6 |
+| Protocol     | API protocol definitions and code generation                                               |         7 |
 | Transport    | Runtime adapters that execute protocol routes                                              |         3 |
 | Presentation | Frontend, SSR, and presentation-layer adapters                                             |         6 |
 | Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |         8 |
@@ -392,7 +392,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | ------------------- | ----------------------------------- | --------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |        47 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        32 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        33 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
 ### Extension & Adapter Matrix
@@ -545,40 +545,41 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 ### 🔴 alpha/WIP
 
-| 패키지                                 | 그룹         | 디렉터리                                 | 문서          |
-| -------------------------------------- | ------------ | ---------------------------------------- | ------------- |
-| `@croco/analytics-core`                | Domain       | `packages/analytics-core`                | tests         |
-| `@croco/batch-core`                    | Domain       | `packages/batch-core`                    | README, tests |
-| `@croco/analytics-posthog`             | Integration  | `packages/analytics-posthog`             | README, tests |
-| `@croco/admin-react`                   | Presentation | `packages/admin-react`                   | README, tests |
-| `@croco/frontend-cloudflare`           | Presentation | `packages/frontend-cloudflare`           | README, tests |
-| `@croco/frontend-react`                | Presentation | `packages/frontend-react`                | README, tests |
-| `@croco/frontend-vite`                 | Presentation | `packages/frontend-vite`                 | README, tests |
-| `@croco/access-drizzle`                | Provider     | `packages/access-drizzle`                | README, tests |
-| `@croco/audit-drizzle`                 | Provider     | `packages/audit-drizzle`                 | README, tests |
-| `@croco/auth-better-auth`              | Provider     | `packages/auth-better-auth`              | README, tests |
-| `@croco/auth-clerk`                    | Provider     | `packages/auth-clerk`                    | README, tests |
-| `@croco/auth-drizzle`                  | Provider     | `packages/auth-drizzle`                  | README, tests |
-| `@croco/batch-qstash`                  | Provider     | `packages/batch-qstash`                  | README, tests |
-| `@croco/customer-health-drizzle`       | Provider     | `packages/customer-health-drizzle`       | README, tests |
-| `@croco/entitlements-drizzle`          | Provider     | `packages/entitlements-drizzle`          | README, tests |
-| `@croco/execution-drizzle`             | Provider     | `packages/execution-drizzle`             | README, tests |
-| `@croco/invitation-drizzle`            | Provider     | `packages/invitation-drizzle`            | README, tests |
-| `@croco/membership-drizzle`            | Provider     | `packages/membership-drizzle`            | README, tests |
-| `@croco/metering-drizzle`              | Provider     | `packages/metering-drizzle`              | README, tests |
-| `@croco/metering-upstash`              | Provider     | `packages/metering-upstash`              | README, tests |
-| `@croco/metrics-billing`               | Provider     | `packages/metrics-billing`               | README, tests |
-| `@croco/notifications-resend`          | Provider     | `packages/notifications-resend`          | README, tests |
-| `@croco/onboarding-drizzle`            | Provider     | `packages/onboarding-drizzle`            | README, tests |
-| `@croco/ratelimit-upstash`             | Provider     | `packages/ratelimit-upstash`             | README, tests |
-| `@croco/search-drizzle`                | Provider     | `packages/search-drizzle`                | README, tests |
-| `@croco/search-meilisearch`            | Provider     | `packages/search-meilisearch`            | README, tests |
-| `@croco/storage-cloudflare`            | Provider     | `packages/storage-cloudflare`            | README, tests |
-| `@croco/storage-cloudinary`            | Provider     | `packages/storage-cloudinary`            | README, tests |
-| `@croco/tasks-qstash`                  | Provider     | `packages/tasks-qstash`                  | README, tests |
-| `@croco/triggers-qstash`               | Provider     | `packages/triggers-qstash`               | tests         |
-| `@croco/migration-runner`              | Tooling      | `packages/migration-runner`              | tests         |
-| `@croco/transports-cloudflare-workers` | Transport    | `packages/transports-cloudflare-workers` | README, tests |
+| 패키지                                 | 그룹         | 디렉터리                                 | 문서               |
+| -------------------------------------- | ------------ | ---------------------------------------- | ------------------ |
+| `@croco/analytics-core`                | Domain       | `packages/analytics-core`                | tests              |
+| `@croco/batch-core`                    | Domain       | `packages/batch-core`                    | README, tests      |
+| `@croco/analytics-posthog`             | Integration  | `packages/analytics-posthog`             | README, tests      |
+| `@croco/admin-react`                   | Presentation | `packages/admin-react`                   | README, tests      |
+| `@croco/frontend-cloudflare`           | Presentation | `packages/frontend-cloudflare`           | README, tests      |
+| `@croco/frontend-react`                | Presentation | `packages/frontend-react`                | README, tests      |
+| `@croco/frontend-vite`                 | Presentation | `packages/frontend-vite`                 | README, tests      |
+| `@croco/admin-generated`               | Protocol     | `packages/admin-generated`               | README, API, tests |
+| `@croco/access-drizzle`                | Provider     | `packages/access-drizzle`                | README, tests      |
+| `@croco/audit-drizzle`                 | Provider     | `packages/audit-drizzle`                 | README, tests      |
+| `@croco/auth-better-auth`              | Provider     | `packages/auth-better-auth`              | README, tests      |
+| `@croco/auth-clerk`                    | Provider     | `packages/auth-clerk`                    | README, tests      |
+| `@croco/auth-drizzle`                  | Provider     | `packages/auth-drizzle`                  | README, tests      |
+| `@croco/batch-qstash`                  | Provider     | `packages/batch-qstash`                  | README, tests      |
+| `@croco/customer-health-drizzle`       | Provider     | `packages/customer-health-drizzle`       | README, tests      |
+| `@croco/entitlements-drizzle`          | Provider     | `packages/entitlements-drizzle`          | README, tests      |
+| `@croco/execution-drizzle`             | Provider     | `packages/execution-drizzle`             | README, tests      |
+| `@croco/invitation-drizzle`            | Provider     | `packages/invitation-drizzle`            | README, tests      |
+| `@croco/membership-drizzle`            | Provider     | `packages/membership-drizzle`            | README, tests      |
+| `@croco/metering-drizzle`              | Provider     | `packages/metering-drizzle`              | README, tests      |
+| `@croco/metering-upstash`              | Provider     | `packages/metering-upstash`              | README, tests      |
+| `@croco/metrics-billing`               | Provider     | `packages/metrics-billing`               | README, tests      |
+| `@croco/notifications-resend`          | Provider     | `packages/notifications-resend`          | README, tests      |
+| `@croco/onboarding-drizzle`            | Provider     | `packages/onboarding-drizzle`            | README, tests      |
+| `@croco/ratelimit-upstash`             | Provider     | `packages/ratelimit-upstash`             | README, tests      |
+| `@croco/search-drizzle`                | Provider     | `packages/search-drizzle`                | README, tests      |
+| `@croco/search-meilisearch`            | Provider     | `packages/search-meilisearch`            | README, tests      |
+| `@croco/storage-cloudflare`            | Provider     | `packages/storage-cloudflare`            | README, tests      |
+| `@croco/storage-cloudinary`            | Provider     | `packages/storage-cloudinary`            | README, tests      |
+| `@croco/tasks-qstash`                  | Provider     | `packages/tasks-qstash`                  | README, tests      |
+| `@croco/triggers-qstash`               | Provider     | `packages/triggers-qstash`               | tests              |
+| `@croco/migration-runner`              | Tooling      | `packages/migration-runner`              | tests              |
+| `@croco/transports-cloudflare-workers` | Transport    | `packages/transports-cloudflare-workers` | README, tests      |
 
 ### Documentation Gate
 

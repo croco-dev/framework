@@ -103,6 +103,7 @@
     "Protocol": {
       "description": "API protocol definitions and code generation",
       "packages": [
+        "admin-generated",
         "openapi-spec",
         "protocols-core",
         "protocols-graphql",
@@ -225,6 +226,7 @@
       "label": "🔴 alpha/WIP",
       "packages": [
         "access-drizzle",
+        "admin-generated",
         "admin-react",
         "analytics-core",
         "analytics-posthog",

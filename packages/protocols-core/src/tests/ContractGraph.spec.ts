@@ -444,6 +444,18 @@ describe("buildContractGraph", () => {
         routeCount: 3,
         consumers: [
           expect.objectContaining({
+            consumerId: "admin-generated",
+            requiredRouteFields: expect.arrayContaining([
+              "routeId",
+              "operationId",
+              "request.body",
+              "response",
+              "problems",
+              "access.guards",
+              "access.roles",
+            ]),
+          }),
+          expect.objectContaining({
             consumerId: "openapi",
             requiredRouteFields: expect.arrayContaining([
               "routeId",
@@ -508,7 +520,8 @@ describe("buildContractGraph", () => {
         message: expect.stringContaining("access.roles"),
       }),
     ]);
-    expect(report.consumers[0]?.routes[0]?.unsupportedFields).toEqual([
+    const openApiCoverage = report.consumers.find((consumer) => consumer.consumerId === "openapi");
+    expect(openApiCoverage?.routes[0]?.unsupportedFields).toEqual([
       "access.guards",
       "access.roles",
     ]);
@@ -590,6 +603,63 @@ describe("buildContractGraph", () => {
       expect.stringContaining("operationId"),
       expect.stringContaining("problems"),
       expect.stringContaining("response"),
+    ]);
+  });
+
+  it("should reject admin-generated consumers that drift access metadata", () => {
+    const AuthGuard = class AuthGuard {};
+
+    @UseGuards(AuthGuard)
+    @Roles("admin")
+    @Controller("/admin")
+    class AdminController {
+      @Get("/")
+      listAdmins(): void {}
+    }
+
+    const graph = buildContractGraph([AdminController]);
+    const diagnostics = getContractGraphConsumerRouteCoverageDiagnostics(graph, "admin-generated", [
+      {
+        routeId: "AdminController.listAdmins",
+        operationId: "AdminController_listAdmins",
+        consumedFields: [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+          "access.guards",
+          "access.roles",
+        ],
+        fieldFingerprints: {
+          routeId: "AdminController.listAdmins",
+          operationId: "AdminController_listAdmins",
+          httpMethod: "GET",
+          path: "/admin",
+          "request.body": "absent",
+          "request.path": "absent",
+          "request.query": "absent",
+          "request.headers": "absent",
+          response: "absent",
+          problems: "[]",
+          "access.guards": "[]",
+          "access.roles": "[]",
+        },
+      },
+    ]);
+
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "contract-consumer-route-field-mismatch",
+      "contract-consumer-route-field-mismatch",
+    ]);
+    expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      expect.stringContaining("access.guards"),
+      expect.stringContaining("access.roles"),
     ]);
   });
 
