@@ -115,6 +115,18 @@ describe("CLI cleanup", () => {
       expect(mockExit).toHaveBeenCalledWith(0);
     });
 
+    it.each([
+      ["zero", "0"],
+      ["negative", "-1"],
+      ["non-numeric", "abc"],
+      ["non-integer", "1.5"],
+    ])("should reject %s count before calling the runner", async (_label, count) => {
+      await runDown({ ...baseDownOptions, count });
+
+      expect(mockRunnerDown).not.toHaveBeenCalled();
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
     it("should call pool.end() before process.exit(1) when reversion fails", async () => {
       mockRunnerDown.mockRejectedValue(new Error("Reversion error"));
 

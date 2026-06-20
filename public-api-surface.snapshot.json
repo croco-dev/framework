@@ -7902,6 +7902,12 @@
       "entrypoint": "packages/migration-runner/src/index.ts",
       "runtimeExports": [
         {
+          "name": "InvalidMigrationCountProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/InvalidMigrationCountProblem",
+          "declarationKind": "class"
+        },
+        {
           "name": "MigrationRunner",
           "exportKind": "named",
           "source": "./libs/MigrationRunner",
