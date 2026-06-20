@@ -252,6 +252,23 @@ describe("DefaultEventSerializer", () => {
       expect(() => serializer.deserialize(data)).toThrow("Unknown event type: 'UnknownEvent'");
     });
 
+    it("should fail fast when occurredAt is not a valid serialized timestamp", () => {
+      const data: SerializedEvent = {
+        eventType: "TestEvent",
+        eventId: "evt_invalid_timestamp",
+        occurredAt: "not-a-date",
+        payload: {
+          value: "world",
+          count: 100,
+        },
+      };
+
+      expect(() => serializer.deserialize<TestEvent>(data)).toThrow(EventDeserializationError);
+      expect(() => serializer.deserialize<TestEvent>(data)).toThrow(
+        "Cannot deserialize event 'TestEvent': Invalid occurredAt: not-a-date",
+      );
+    });
+
     it("BUG-79 생성자 인자가 필수인 @EventField 이벤트는 static fromPayload 없이 역직렬화되면 안 된다", () => {
       const data: SerializedEvent = {
         eventType: "ConstructorSensitiveEvent",

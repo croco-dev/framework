@@ -1,4 +1,5 @@
-import { restoreSerializedEventIdentity, type DomainEvent } from "./DomainEvent";
+import { restoreSerializedEventIdentity } from "./DomainEvent";
+import type { DomainEvent } from "./DomainEvent";
 import { getEventFields } from "./decorators/EventField";
 import { EventRegistry } from "./EventRegistry";
 import {
