@@ -268,14 +268,18 @@
     "packages": {
       "admin-react": {
         "domain": "Admin React",
-        "adapter": "Billing entitlement admin panel",
+        "adapter": "Billing and tenant admin primitives",
         "runtimes": ["browser", "node"],
         "requiredEnv": ["none"],
         "features": [
           "billing panel contract",
           "entitlement status primitives",
           "usage quota meters",
-          "provider failure state"
+          "provider failure state",
+          "tenant switcher",
+          "impersonation banner",
+          "permission inspector",
+          "Problem-preserving console failures"
         ]
       },
       "access-drizzle": {

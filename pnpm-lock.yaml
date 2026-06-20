@@ -253,12 +253,18 @@ importers:
       '@croco/entitlements-core':
         specifier: workspace:*
         version: link:../entitlements-core
+      '@croco/impersonation-core':
+        specifier: workspace:*
+        version: link:../impersonation-core
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/tenant-core':
+        specifier: workspace:*
+        version: link:../tenant-core
     devDependencies:
       '@types/react':
         specifier: ^19.0.0
