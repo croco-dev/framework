@@ -36,6 +36,7 @@ export default defineConfig({
       plugins: [
         starlightTypeDoc({
           entryPoints: [
+            "../admin-generated/src/index.ts",
             "../admin-ops/src/index.ts",
             "../audit-core/src/index.ts",
             "../auth-core/src/index.ts",

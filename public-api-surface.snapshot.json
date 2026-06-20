@@ -124,6 +124,116 @@
       "typeExports": []
     },
     {
+      "packageName": "@croco/admin-generated",
+      "relativeDir": "packages/admin-generated",
+      "entrypoint": "packages/admin-generated/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "AdminGeneratedContractProblem",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "class"
+        },
+        {
+          "name": "createAdminGeneratedArtifact",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "function"
+        },
+        {
+          "name": "generateAdminResourceConfigFromContractGraph",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "function"
+        },
+        {
+          "name": "generateAdminResourceFilesFromContractGraph",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "function"
+        },
+        {
+          "name": "generateAdminResourceSourceFromContractGraph",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getAdminGeneratedDiagnostics",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "AdminGeneratedArtifact",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedClientBinding",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedOperationKind",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedOperationScope",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedProblem",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedRequestMetadata",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedResourceAction",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedResourceConfig",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedResourceOperation",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedSchemaPresence",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGeneratedVersion",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminGenerateFilesOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/admin-ops",
       "relativeDir": "packages/admin-ops",
       "entrypoint": "packages/admin-ops/src/index.ts",

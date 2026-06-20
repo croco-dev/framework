@@ -23,6 +23,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@croco/admin-generated": "workspace:*",
     "@croco/admin-ops": "workspace:*",
     "@croco/audit-core": "workspace:*",
     "@croco/auth-core": "workspace:*",

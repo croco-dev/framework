@@ -6,7 +6,7 @@ import {
 } from "./ContractGraph";
 
 export type ContractGraphConsumerCoverageVersion = "croco.contract-consumer-coverage.v1";
-export type ContractGraphConsumerId = "openapi" | "rpc-client";
+export type ContractGraphConsumerId = "admin-generated" | "openapi" | "rpc-client";
 export type ContractGraphConsumerRouteField =
   | "routeId"
   | "operationId"
@@ -67,6 +67,26 @@ export type ContractGraphObservedConsumerRoute = {
 };
 
 export const DEFAULT_CONTRACT_GRAPH_CONSUMERS = [
+  {
+    id: "admin-generated",
+    label: "Admin resource config",
+    generatedArtifact: "admin resource config files",
+    requiredRouteFields: [
+      "routeId",
+      "operationId",
+      "httpMethod",
+      "path",
+      "request.body",
+      "request.path",
+      "request.query",
+      "request.headers",
+      "response",
+      "problems",
+      "access.guards",
+      "access.roles",
+    ],
+    unsupportedRouteFields: [],
+  },
   {
     id: "openapi",
     label: "OpenAPI specification",
@@ -335,8 +355,9 @@ function createRouteFieldFingerprint(
     case "problems":
       return problemResponsesFingerprint(route.problemResponses ?? []);
     case "access.guards":
+      return accessGuardsFingerprint(route.access.guards);
     case "access.roles":
-      return undefined;
+      return accessRolesFingerprint(route.access.roles);
   }
 }
 
@@ -366,6 +387,14 @@ function problemResponsesFingerprint(
       }))
       .sort(compareProblemFingerprints),
   );
+}
+
+function accessGuardsFingerprint(guards: ContractGraphRoute["access"]["guards"]): string {
+  return JSON.stringify([...guards].sort((left, right) => compareStrings(left.id, right.id)));
+}
+
+function accessRolesFingerprint(roles: ContractGraphRoute["access"]["roles"]): string {
+  return JSON.stringify([...roles].sort(compareStrings));
 }
 
 function compareProblemFingerprints(

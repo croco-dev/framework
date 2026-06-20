@@ -58,6 +58,10 @@ describe("contractsCheck", () => {
         routeCount: 1,
         consumers: [
           expect.objectContaining({
+            consumerId: "admin-generated",
+            routeCount: 1,
+          }),
+          expect.objectContaining({
             consumerId: "openapi",
             routeCount: 1,
           }),

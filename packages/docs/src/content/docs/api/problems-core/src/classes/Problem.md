@@ -13,6 +13,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ## Extended by
 
+- [`AdminGeneratedContractProblem`](/api/admin-generated/src/classes/admingeneratedcontractproblem/)
 - [`AuditableDecoratorProblem`](/api/audit-core/src/classes/auditabledecoratorproblem/)
 - [`ApiKeyCreationFailedProblem`](/api/auth-core/src/classes/apikeycreationfailedproblem/)
 - [`ApiKeyExpiredProblem`](/api/auth-core/src/classes/apikeyexpiredproblem/)

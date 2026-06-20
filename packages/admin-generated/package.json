@@ -1,0 +1,50 @@
+{
+  "name": "@croco/admin-generated",
+  "version": "0.0.0",
+  "description": "Contract Graph driven admin resource configuration generator for Croco",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/admin-generated"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "oxlint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@croco/protocols-rest": "workspace:*",
+    "vitest": "4.0.16",
+    "zod": "^3.23.8"
+  },
+  "vitest": {
+    "include": [
+      "src/**/*.test.ts",
+      "src/**/*.spec.ts"
+    ]
+  }
+}
