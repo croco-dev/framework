@@ -209,6 +209,7 @@ describe("ExecutionManagerImpl", () => {
 
       expect(restarted.status).toBe("running");
       expect(restarted.attempts).toBe(2);
+      expect(restarted.error).toBeUndefined();
     });
 
     it("clears previous attempt errors when restarting automatic retries", async () => {
