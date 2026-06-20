@@ -304,9 +304,7 @@ function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<str
 `
     : "";
   const clientMethods = domainRoutes.routes.map(generateClientMethod).join("\n");
-  const imports = options.reactQuery
-    ? "import { useMutation, useQuery } from '@tanstack/react-query';\n"
-    : "";
+  const imports = options.reactQuery ? generateReactQueryImports(domainRoutes) : "";
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
   const routeMetadata = generateContractRouteMetadata(domainRoutes);
 
@@ -1607,28 +1605,232 @@ function getSuccessType(route: GeneratedClientRoute): string {
   return getOutputTypeName(route);
 }
 
-function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {
-  return domainRoutes.routes.map((route) => generateReactQueryHook(route, clientName)).join("\n");
+function generateReactQueryImports(domainRoutes: DomainRoutes): string {
+  const hasQueryRoutes = domainRoutes.routes.some(isReactQueryQueryRoute);
+  const hasMutationRoutes = domainRoutes.routes.some((route) => !isReactQueryQueryRoute(route));
+  const imports = [
+    ...(hasMutationRoutes ? ["useMutation"] : []),
+    ...(hasQueryRoutes ? ["useQuery"] : []),
+    ...(hasMutationRoutes ? ["type UseMutationOptions"] : []),
+    ...(hasQueryRoutes ? ["type UseQueryOptions"] : []),
+  ];
+
+  return `import { ${imports.join(", ")} } from '@tanstack/react-query';\n`;
 }
 
-function generateReactQueryHook(route: GeneratedClientRoute, clientName: string): string {
-  const hookName = `use${toPascalCase(route.methodName)}`;
+function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {
+  const queries = domainRoutes.routes.filter(isReactQueryQueryRoute);
+  const mutations = domainRoutes.routes.filter((route) => !isReactQueryQueryRoute(route));
+  const typeArtifacts = domainRoutes.routes.map(generateReactQueryTypeArtifacts).join("\n");
+  const queryFactories = generateReactQueryFactories(domainRoutes.domain, queries, clientName);
+  const mutationFactories = generateReactMutationFactories(
+    domainRoutes.domain,
+    mutations,
+    clientName,
+  );
+  const hooks = domainRoutes.routes.map((route) => generateReactQueryHook(route)).join("\n");
 
-  if (hasBody(route)) {
-    return `export function ${hookName}() {
-  return useMutation({ mutationFn: ${clientName}.${route.methodName} });
+  return [typeArtifacts, queryFactories, mutationFactories, hooks]
+    .filter((artifact) => artifact.length > 0)
+    .join("\n");
+}
+
+function generateReactQueryTypeArtifacts(route: GeneratedClientRoute): string {
+  if (isReactQueryQueryRoute(route)) {
+    return `export type ${getQueryKeyTypeName(route)} = ${getReactQueryKeyType(route, false)};
+export type ${getResultQueryKeyTypeName(route)} = ${getReactQueryKeyType(route, true)};
+export type ${getQueryFactoryTypeName(route)} = {
+  readonly queryKey: ${getQueryKeyTypeName(route)};
+  readonly queryFn: () => Promise<${getSuccessType(route)}>;
+};
+export type ${getResultQueryFactoryTypeName(route)} = {
+  readonly queryKey: ${getResultQueryKeyTypeName(route)};
+  readonly queryFn: () => Promise<${getResultTypeName(route)}>;
+};
+export type ${getQueryOptionsTypeName(route)}<TData = ${getSuccessType(route)}> = Omit<UseQueryOptions<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>;
+export type ${getResultQueryOptionsTypeName(route)}<TData = ${getResultTypeName(route)}> = Omit<UseQueryOptions<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>;`;
+  }
+
+  return `export type ${getMutationVariablesTypeName(route)} = ${getMutationVariablesType(route)};
+export type ${getMutationFactoryTypeName(route)} = {
+  readonly mutationFn: ${getMutationFnType(route, getSuccessType(route))};
+};
+export type ${getResultMutationFactoryTypeName(route)} = {
+  readonly mutationFn: ${getMutationFnType(route, getResultTypeName(route))};
+};
+export type ${getMutationOptionsTypeName(route)}<TContext = unknown> = Omit<UseMutationOptions<${getSuccessType(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>, 'mutationFn'>;
+export type ${getResultMutationOptionsTypeName(route)}<TContext = unknown> = Omit<UseMutationOptions<${getResultTypeName(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>, 'mutationFn'>;`;
+}
+
+function generateReactQueryFactories(
+  domain: string,
+  routes: readonly GeneratedClientRoute[],
+  clientName: string,
+): string {
+  if (routes.length === 0) {
+    return "";
+  }
+
+  const entries = routes.map((route) => generateReactQueryFactoryEntry(domain, route, clientName));
+
+  return `export const ${domain}Queries = {
+${entries.join("\n")}
+};`;
+}
+
+function generateReactQueryFactoryEntry(
+  domain: string,
+  route: GeneratedClientRoute,
+  clientName: string,
+): string {
+  const input = getInputParameter(route);
+  const callInput = needsInput(route) ? "input" : "";
+  const queryKey = getReactQueryKeyExpression(domain, route, false);
+  const resultQueryKey = getReactQueryKeyExpression(domain, route, true);
+
+  return `  ${route.methodName}: (${input}): ${getQueryFactoryTypeName(route)} => ({
+    queryKey: ${queryKey},
+    queryFn: () => ${clientName}.${route.methodName}(${callInput}),
+  }),
+  ${getResultMethodName(route)}: (${input}): ${getResultQueryFactoryTypeName(route)} => ({
+    queryKey: ${resultQueryKey},
+    queryFn: () => ${clientName}.${getResultMethodName(route)}(${callInput}),
+  }),`;
+}
+
+function generateReactMutationFactories(
+  domain: string,
+  routes: readonly GeneratedClientRoute[],
+  clientName: string,
+): string {
+  if (routes.length === 0) {
+    return "";
+  }
+
+  const entries = routes.map((route) => generateReactMutationFactoryEntry(route, clientName));
+
+  return `export const ${domain}Mutations = {
+${entries.join("\n")}
+};`;
+}
+
+function generateReactMutationFactoryEntry(
+  route: GeneratedClientRoute,
+  clientName: string,
+): string {
+  const input = getMutationFnParameter(route);
+  const callInput = needsInput(route) ? "input" : "";
+
+  return `  ${route.methodName}: (): ${getMutationFactoryTypeName(route)} => ({
+    mutationFn: (${input}) => ${clientName}.${route.methodName}(${callInput}),
+  }),
+  ${getResultMethodName(route)}: (): ${getResultMutationFactoryTypeName(route)} => ({
+    mutationFn: (${input}) => ${clientName}.${getResultMethodName(route)}(${callInput}),
+  }),`;
+}
+
+function generateReactQueryHook(route: GeneratedClientRoute): string {
+  const hookName = `use${toPascalCase(route.methodName)}`;
+  const resultHookName = `use${toPascalCase(getResultMethodName(route))}`;
+
+  if (!isReactQueryQueryRoute(route)) {
+    return `export function ${hookName}<TContext = unknown>(options?: ${getMutationOptionsTypeName(route)}<TContext>) {
+  return useMutation<${getSuccessType(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>({ ...${getDomainName(route)}Mutations.${route.methodName}(), ...options });
+}
+
+export function ${resultHookName}<TContext = unknown>(options?: ${getResultMutationOptionsTypeName(route)}<TContext>) {
+  return useMutation<${getResultTypeName(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>({ ...${getDomainName(route)}Mutations.${getResultMethodName(route)}(), ...options });
 }`;
   }
 
-  const input = needsInput(route)
-    ? `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`
-    : "";
+  const input = getInputParameter(route);
   const callInput = needsInput(route) ? "input" : "";
-  const queryKey = needsInput(route) ? `['${route.methodName}', input]` : `['${route.methodName}']`;
 
-  return `export function ${hookName}(${input}) {
-  return useQuery({ queryKey: ${queryKey}, queryFn: () => ${clientName}.${route.methodName}(${callInput}) });
+  return `export function ${hookName}<TData = ${getSuccessType(route)}>(${input}${needsInput(route) ? ", " : ""}options?: ${getQueryOptionsTypeName(route)}<TData>) {
+  return useQuery<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${route.methodName}(${callInput}), ...options });
+}
+
+export function ${resultHookName}<TData = ${getResultTypeName(route)}>(${input}${needsInput(route) ? ", " : ""}options?: ${getResultQueryOptionsTypeName(route)}<TData>) {
+  return useQuery<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${getResultMethodName(route)}(${callInput}), ...options });
 }`;
+}
+
+function isReactQueryQueryRoute(route: GeneratedClientRoute): boolean {
+  return route.httpMethod.toUpperCase() === "GET";
+}
+
+function getInputParameter(route: GeneratedClientRoute): string {
+  if (!needsInput(route)) {
+    return "";
+  }
+
+  return `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`;
+}
+
+function getMutationFnParameter(route: GeneratedClientRoute): string {
+  if (!needsInput(route)) {
+    return "";
+  }
+
+  return `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`;
+}
+
+function getMutationFnType(route: GeneratedClientRoute, returnType: string): string {
+  if (!needsInput(route)) {
+    return `() => Promise<${returnType}>`;
+  }
+
+  return `(input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}) => Promise<${returnType}>`;
+}
+
+function getMutationVariablesType(route: GeneratedClientRoute): string {
+  if (!needsInput(route)) {
+    return "void";
+  }
+
+  return hasRequiredInput(route)
+    ? getInputTypeName(route)
+    : `${getInputTypeName(route)} | undefined`;
+}
+
+function getReactQueryKeyType(route: GeneratedClientRoute, result: boolean): string {
+  const parts = [
+    "'rpc'",
+    literalValueToTypeScript(getDomainName(route)),
+    literalValueToTypeScript(route.methodName),
+  ];
+
+  if (result) {
+    parts.push("'result'");
+  }
+
+  if (needsInput(route)) {
+    parts.push(getMutationVariablesType(route));
+  }
+
+  return `readonly [${parts.join(", ")}]`;
+}
+
+function getReactQueryKeyExpression(
+  domain: string,
+  route: GeneratedClientRoute,
+  result: boolean,
+): string {
+  const parts = [
+    "'rpc'",
+    literalValueToTypeScript(domain),
+    literalValueToTypeScript(route.methodName),
+  ];
+
+  if (result) {
+    parts.push("'result'");
+  }
+
+  if (needsInput(route)) {
+    parts.push("input");
+  }
+
+  return `[${parts.join(", ")}] as const`;
 }
 
 function zodTypeToTypeScript(schema: unknown): string {
@@ -1933,6 +2135,50 @@ function getProblemDetailsTypeName(route: GeneratedClientRoute): string {
 
 function getResultTypeName(route: GeneratedClientRoute): string {
   return `${toPascalCase(route.methodName)}Result`;
+}
+
+function getQueryKeyTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}QueryKey`;
+}
+
+function getResultQueryKeyTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}ResultQueryKey`;
+}
+
+function getQueryFactoryTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}QueryFactory`;
+}
+
+function getResultQueryFactoryTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}ResultQueryFactory`;
+}
+
+function getQueryOptionsTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}QueryOptions`;
+}
+
+function getResultQueryOptionsTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}ResultQueryOptions`;
+}
+
+function getMutationVariablesTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}MutationVariables`;
+}
+
+function getMutationFactoryTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}MutationFactory`;
+}
+
+function getResultMutationFactoryTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}ResultMutationFactory`;
+}
+
+function getMutationOptionsTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}MutationOptions`;
+}
+
+function getResultMutationOptionsTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}ResultMutationOptions`;
 }
 
 function getProblemDeclarationsName(route: GeneratedClientRoute): string {
