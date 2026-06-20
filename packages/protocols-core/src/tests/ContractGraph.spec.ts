@@ -24,6 +24,7 @@ import {
   type InferRouteSchemaRequest,
   type InferRouteSchemaResponse,
 } from "../libs/RouteSchema";
+import { CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE } from "../libs/SchemaDescriptor";
 import {
   Body,
   Controller,
@@ -280,7 +281,7 @@ describe("buildContractGraph", () => {
     @Controller("/profiles")
     class ProfilesController {
       @Post("/")
-      createProfile(@Body(z.string().transform((value) => value.trim())) _body: string): void {}
+      createProfile(@Body(z.string().refine((value) => value.length > 0)) _body: string): void {}
     }
 
     const graph = buildContractGraph([ProfilesController]);
@@ -303,7 +304,7 @@ describe("buildContractGraph", () => {
     class ProfilesController {
       @Post("/")
       createProfile(
-        @Body(z.object({ name: z.string().transform((value) => value.trim()) }))
+        @Body(z.object({ name: z.string().refine((value) => value.length > 0) }))
         _body: { name: string },
       ): void {}
     }
@@ -318,6 +319,47 @@ describe("buildContractGraph", () => {
       }),
     ]);
     expect(() => assertContractGraphHasNoErrors(graph)).not.toThrow();
+  });
+
+  it("should reject JSON-unsafe schemas with the shared schema diagnostic code", () => {
+    @Controller("/profiles")
+    class ProfilesController {
+      @Post("/")
+      createProfile(
+        @Body(
+          z.object({
+            amount: z.bigint(),
+            checkedAt: z.date(),
+            trimmed: z.string().transform((value) => value.trim()),
+          }),
+        )
+        _body: unknown,
+      ): void {}
+    }
+
+    const graph = buildContractGraph([ProfilesController]);
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+        severity: "error",
+        routeId: "ProfilesController.createProfile",
+        message: expect.stringContaining("body.amount"),
+      }),
+      expect.objectContaining({
+        code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+        severity: "error",
+        routeId: "ProfilesController.createProfile",
+        message: expect.stringContaining("body.checkedAt"),
+      }),
+      expect.objectContaining({
+        code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+        severity: "error",
+        routeId: "ProfilesController.createProfile",
+        message: expect.stringContaining("body.trimmed"),
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
   });
 
   it("should reject routes with more than one request body parameter", () => {

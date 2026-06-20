@@ -15,6 +15,7 @@ import {
   type ContractGraphRoute,
   getContractPathParams,
   type ParamIR,
+  unwrapZodEffectsSchema,
 } from "@croco/protocols-core";
 import { type ZodType, z } from "zod";
 
@@ -233,7 +234,7 @@ function toResponseConfig(
   defaultResponses: RouteResponses,
   problemDetailsRef: OpenAPIReference,
 ): RouteResponses {
-  const outputSchema = unwrapZodEffects(route.outputSchema);
+  const outputSchema = unwrapZodEffectsSchema(route.outputSchema);
 
   return {
     ...defaultResponses,
@@ -320,7 +321,7 @@ function toRequestConfig(route: ContractGraphRoute): RouteConfig["request"] {
   const params = toZodObject(route.params.filter((param) => param.kind === "path"));
   const query = toZodObject(route.params.filter((param) => param.kind === "query"));
   const headers = toZodObject(route.params.filter((param) => param.kind === "header"));
-  const bodySchema = unwrapZodEffects(
+  const bodySchema = unwrapZodEffectsSchema(
     route.inputSchema ?? route.params.find((param) => param.kind === "body")?.schema,
   );
 
@@ -356,7 +357,7 @@ function toZodObject(params: ParamIR[]): z.ZodObject<Record<string, ZodType>> | 
 }
 
 function withParameterMetadata(param: ParamIR): ZodType {
-  const schema = unwrapZodEffects(param.schema) ?? z.string();
+  const schema = unwrapZodEffectsSchema(param.schema) ?? z.string();
   const location = toOpenAPIParamLocation(param.kind);
 
   return schema.openapi({
@@ -366,14 +367,6 @@ function withParameterMetadata(param: ParamIR): ZodType {
       required: param.kind === "path",
     },
   });
-}
-
-function unwrapZodEffects(schema: ZodType | null | undefined): ZodType | null | undefined {
-  if (!schema || !(schema instanceof z.ZodEffects)) {
-    return schema;
-  }
-
-  return unwrapZodEffects(schema.innerType());
 }
 
 function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {

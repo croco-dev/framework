@@ -59,6 +59,21 @@ instead of widening the contract to an implicit fallback type. RFC 7807 response
 `RpcClientProblemError` rejections with `RpcProblemDetails`, so Problem responses are not returned as
 successful response values.
 
+## JSON-safe Zod support matrix
+
+ContractGraph snapshots, OpenAPI generation, and RPC codegen share the
+`JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX` exported by `@croco/protocols-core`. Unsupported schemas fail
+with `contract-schema-json-unsafe` before generator-specific output is written.
+
+| Zod schema                                                                                                                                                       | Contract behavior                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `ZodString`, `ZodNumber`, `ZodBoolean`, `ZodNull`                                                                                                                | Supported as JSON primitives.                                                                                         |
+| `ZodLiteral`, `ZodEnum`, `ZodNativeEnum`                                                                                                                         | Supported for string, number, boolean, and null values.                                                               |
+| `ZodObject`, `ZodArray`, `ZodRecord`, `ZodUnion`, `ZodDiscriminatedUnion`                                                                                        | Supported when nested schemas are JSON-safe.                                                                          |
+| `ZodOptional`, `ZodNullable`, `ZodDefault`, `ZodBranded`, `ZodReadonly`                                                                                          | Supported through the shared inner-schema descriptor.                                                                 |
+| `ZodEffects` refinements                                                                                                                                         | Supported through the inner schema with `contract-schema-zod-effects-unwrapped` warning.                              |
+| `ZodEffects` transforms/preprocessors, `ZodDate`, `ZodBigInt`, `ZodFunction`, `ZodMap`, `ZodSet`, `ZodPromise`, `ZodSymbol`, `ZodNaN`, `ZodVoid`, `ZodUndefined` | Unsupported; use a JSON boundary schema such as an ISO string, plain object, array, or omitted empty response schema. |
+
 ## Direct CLI usage
 
 ```bash

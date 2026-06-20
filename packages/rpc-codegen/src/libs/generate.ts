@@ -7,6 +7,16 @@ import {
   type ContractGraph,
   type ContractGraphConsumerRouteField,
   type ContractGraphObservedConsumerRoute,
+  type ContractSchemaDescriptor,
+  describeZodSchema,
+  formatSchemaDiagnostic,
+  getSchemaDescriptorDiagnostics,
+  getZodArrayElementSchema,
+  getZodDefaultValue,
+  getZodInnerSchema,
+  getZodObjectShape,
+  getZodObjectUnsupportedDynamicKeyMode,
+  getZodSchemaTypeName,
   getContractPathParamNames,
   getContractPathParams,
   type RouteIR,
@@ -24,6 +34,11 @@ type GeneratedClientRoute = RouteIR & {
 type DomainRoutes = {
   readonly domain: string;
   readonly routes: GeneratedClientRoute[];
+};
+
+type GeneratedClientFile = {
+  readonly filePath: string;
+  readonly content: string;
 };
 
 type ResponseHelperOptions = {
@@ -96,28 +111,35 @@ export function generateClientFiles(
   options: GenerateClientOptions = {},
 ): string[] {
   assertGeneratedClientRoutes(routes);
-  fs.mkdirSync(outDir, { recursive: true });
 
   const domainRouteGroups = groupRoutesByDomain(routes);
-  const files = domainRouteGroups.map((domainRoutes) => {
-    const filePath = path.join(outDir, `${domainRoutes.domain}.ts`);
+  const domainFiles = domainRouteGroups.map((domainRoutes) => {
     const content = generateDomainClient(domainRoutes, options);
 
     assertNoZodImport(content);
 
-    fs.writeFileSync(filePath, content);
-
-    return filePath;
+    return {
+      filePath: path.join(outDir, `${domainRoutes.domain}.ts`),
+      content,
+    };
   });
   const supportPath = path.join(outDir, "rpc.ts");
   const supportContent = generateRpcSupport();
   const indexPath = path.join(outDir, "index.ts");
   const indexContent = generateClientIndex(domainRouteGroups);
+  const files: readonly GeneratedClientFile[] = [
+    ...domainFiles,
+    { filePath: supportPath, content: supportContent },
+    { filePath: indexPath, content: indexContent },
+  ];
 
-  fs.writeFileSync(supportPath, supportContent);
-  fs.writeFileSync(indexPath, indexContent);
+  fs.mkdirSync(outDir, { recursive: true });
 
-  return [...files, supportPath, indexPath];
+  for (const file of files) {
+    fs.writeFileSync(file.filePath, file.content);
+  }
+
+  return files.map((file) => file.filePath);
 }
 
 function assertGeneratedClientRoutes(routes: readonly GeneratedClientRoute[]): void {
@@ -171,7 +193,7 @@ function assertGeneratedClientPathParams(route: GeneratedClientRoute): void {
     route.params.filter((param) => param.kind === "path").map((param) => param.name),
   );
   const schemaParamNames = new Set(
-    route.inputSchemas.path ? Object.keys(getObjectShape(route.inputSchemas.path)) : [],
+    route.inputSchemas.path ? getObjectFieldNames(route.inputSchemas.path) : [],
   );
 
   for (const name of pathParamNames) {
@@ -1043,7 +1065,7 @@ function generateFormArtifacts(route: GeneratedClientRoute): string {
     return "";
   }
 
-  const fields = Object.entries(getObjectShape(bodySchema)).map(([name, schema]) =>
+  const fields = Object.entries(getZodObjectShape(bodySchema)).map(([name, schema]) =>
     generateFormField(route, name, schema),
   );
   const fieldNameType = unionTypes(fields.map((field) => literalValueToTypeScript(field.name)));
@@ -1132,30 +1154,7 @@ function getFormBodyObjectSchema(route: GeneratedClientRoute): unknown | undefin
 }
 
 function getUnsupportedFormBodyObjectMode(schema: unknown): string | undefined {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as {
-    readonly catchall?: unknown;
-    readonly unknownKeys?: unknown;
-  };
-
-  if (definition.unknownKeys === "passthrough") {
-    return "passthrough";
-  }
-
-  if (definition.catchall === undefined) {
-    return undefined;
-  }
-
-  const catchallSchemaName = getSchemaName(definition.catchall);
-
-  if (catchallSchemaName === "ZodNever") {
-    return undefined;
-  }
-
-  return catchallSchemaName === "ZodUnknown" ? "passthrough" : "catchall";
+  return getZodObjectUnsupportedDynamicKeyMode(schema);
 }
 
 function generateFormField(
@@ -1234,7 +1233,7 @@ function generateFormField(
   }
 
   if (schemaName === "ZodArray") {
-    const elementAnalysis = analyzeFormFieldSchema(getArrayElementSchema(analysis.schema));
+    const elementAnalysis = analyzeFormFieldSchema(getZodArrayElementSchema(analysis.schema));
     const elementSchemaName = getSchemaName(elementAnalysis.schema);
     const elementOptions = getFormFieldOptions(elementAnalysis.schema);
 
@@ -1280,25 +1279,25 @@ function analyzeFormFieldSchema(schema: unknown): FormFieldSchemaAnalysis {
 
     if (schemaName === "ZodOptional") {
       optional = true;
-      current = getInnerSchema(current);
+      current = getZodInnerSchema(current);
       continue;
     }
 
     if (schemaName === "ZodNullable") {
       nullable = true;
-      current = getInnerSchema(current);
+      current = getZodInnerSchema(current);
       continue;
     }
 
     if (schemaName === "ZodDefault") {
       optional = true;
-      defaultValue = getDefaultValue(current);
-      current = getInnerSchema(current);
+      defaultValue = getZodDefaultValue(current);
+      current = getZodInnerSchema(current);
       continue;
     }
 
     if (schemaName === "ZodBranded" || schemaName === "ZodReadonly") {
-      current = getInnerSchema(current);
+      current = getZodInnerSchema(current);
       continue;
     }
 
@@ -1374,24 +1373,24 @@ function getFormFieldInitialValueExpression(
 }
 
 function getFormFieldOptions(schema: unknown): FormFieldOption[] {
-  const schemaName = getSchemaName(schema);
+  const descriptor = describeZodSchema(schema as never);
 
-  if (schemaName === "ZodEnum") {
-    return getEnumValues(schema).filter(isLiteralTypeValue).map(toFormFieldOption);
+  if (!descriptor?.jsonSafe) {
+    return [];
   }
 
-  if (schemaName === "ZodNativeEnum") {
-    return getNativeEnumValues(schema).filter(isLiteralTypeValue).map(toFormFieldOption);
+  if (descriptor.kind === "enum") {
+    return (descriptor.values ?? []).map(toFormFieldOption);
   }
 
-  if (schemaName === "ZodLiteral") {
-    const value = getLiteralValue(schema);
+  if (descriptor.kind === "literal") {
+    const value = descriptor.value;
 
     return isLiteralTypeValue(value) ? [toFormFieldOption(value)] : [];
   }
 
-  if (schemaName === "ZodUnion" || schemaName === "ZodDiscriminatedUnion") {
-    const literalValues = getUnionOptions(schema).map(getLiteralFormOptionValue);
+  if (descriptor.kind === "union") {
+    const literalValues = (descriptor.options ?? []).map(getLiteralFormOptionValue);
 
     return literalValues.every(isLiteralTypeValue) ? literalValues.map(toFormFieldOption) : [];
   }
@@ -1399,8 +1398,8 @@ function getFormFieldOptions(schema: unknown): FormFieldOption[] {
   return [];
 }
 
-function getLiteralFormOptionValue(schema: unknown): unknown {
-  return getSchemaName(schema) === "ZodLiteral" ? getLiteralValue(schema) : undefined;
+function getLiteralFormOptionValue(descriptor: ContractSchemaDescriptor): unknown {
+  return descriptor.kind === "literal" ? descriptor.value : undefined;
 }
 
 function toFormFieldOption(value: string | number | boolean | null): FormFieldOption {
@@ -1408,6 +1407,15 @@ function toFormFieldOption(value: string | number | boolean | null): FormFieldOp
     label: String(value),
     value,
   };
+}
+
+function isLiteralTypeValue(value: unknown): value is string | number | boolean | null {
+  return (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    value === null ||
+    (typeof value === "number" && Number.isFinite(value))
+  );
 }
 
 function formatFormFieldOptions(options: readonly FormFieldOption[]): string {
@@ -1585,197 +1593,120 @@ function generateReactQueryHook(route: GeneratedClientRoute, clientName: string)
 }
 
 function zodTypeToTypeScript(schema: unknown): string {
-  const schemaName = getSchemaName(schema);
+  const descriptor = describeZodSchema(schema as never);
 
-  if (schemaName === "ZodString") {
+  if (!descriptor) {
+    throw new RpcCodegenContractProblem(
+      "Cannot generate RPC client type for missing schema. Use a JSON-safe Zod schema supported by @croco/protocols-core or remove the schema from generated contracts.",
+    );
+  }
+
+  const unsafeDiagnostic = getSchemaDescriptorDiagnostics(descriptor).find(
+    (diagnostic) => diagnostic.severity === "error",
+  );
+
+  if (unsafeDiagnostic) {
+    throw new RpcCodegenContractProblem(formatSchemaDiagnostic(unsafeDiagnostic));
+  }
+
+  return schemaDescriptorToTypeScript(descriptor);
+}
+
+function schemaDescriptorToTypeScript(descriptor: ContractSchemaDescriptor): string {
+  if (descriptor.kind === "string") {
     return "string";
   }
 
-  if (schemaName === "ZodNumber") {
+  if (descriptor.kind === "number") {
     return "number";
   }
 
-  if (schemaName === "ZodBoolean") {
+  if (descriptor.kind === "boolean") {
     return "boolean";
   }
 
-  if (schemaName === "ZodUnknown" || schemaName === "ZodAny") {
+  if (descriptor.kind === "unknown" || descriptor.kind === "any") {
     return "unknown";
   }
 
-  if (schemaName === "ZodNever") {
+  if (descriptor.kind === "never") {
     return "never";
   }
 
-  if (schemaName === "ZodNull") {
+  if (descriptor.kind === "null") {
     return "null";
   }
 
-  if (schemaName === "ZodUndefined" || schemaName === "ZodVoid") {
+  if (descriptor.kind === "undefined" || descriptor.kind === "void") {
     return "undefined";
   }
 
-  if (schemaName === "ZodLiteral") {
-    return literalValueToTypeScript(getLiteralValue(schema));
+  if (descriptor.kind === "literal") {
+    return literalValueToTypeScript(descriptor.value);
   }
 
-  if (schemaName === "ZodEnum") {
-    return unionTypes(getEnumValues(schema).map(literalValueToTypeScript));
+  if (descriptor.kind === "enum") {
+    return unionTypes((descriptor.values ?? []).map(literalValueToTypeScript));
   }
 
-  if (schemaName === "ZodNativeEnum") {
-    return unionTypes(getNativeEnumValues(schema).map(literalValueToTypeScript));
+  if (descriptor.kind === "union") {
+    return unionTypes((descriptor.options ?? []).map(schemaDescriptorToTypeScript));
   }
 
-  if (schemaName === "ZodUnion" || schemaName === "ZodDiscriminatedUnion") {
-    return unionTypes(getUnionOptions(schema).map(zodTypeToTypeScript));
+  if (descriptor.kind === "optional") {
+    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"))} | undefined`;
   }
 
-  if (schemaName === "ZodOptional") {
-    return `${zodTypeToTypeScript(getInnerSchema(schema))} | undefined`;
+  if (descriptor.kind === "nullable") {
+    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"))} | null`;
   }
 
-  if (schemaName === "ZodNullable") {
-    return `${zodTypeToTypeScript(getInnerSchema(schema))} | null`;
+  if (descriptor.kind === "default") {
+    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"));
   }
 
-  if (schemaName === "ZodDefault") {
-    return zodTypeToTypeScript(getInnerSchema(schema));
+  if (
+    descriptor.kind === "effects" ||
+    descriptor.kind === "branded" ||
+    descriptor.kind === "readonly"
+  ) {
+    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"));
   }
 
-  if (schemaName === "ZodEffects" || schemaName === "ZodBranded" || schemaName === "ZodReadonly") {
-    return zodTypeToTypeScript(getInnerSchema(schema));
+  if (descriptor.kind === "array") {
+    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "element"))}[]`;
   }
 
-  if (schemaName === "ZodArray") {
-    return `${zodTypeToTypeScript(getArrayElementSchema(schema))}[]`;
+  if (descriptor.kind === "record") {
+    return `Record<string, ${descriptor.element ? schemaDescriptorToTypeScript(descriptor.element) : "unknown"}>`;
   }
 
-  if (schemaName === "ZodRecord") {
-    const valueSchema = getRecordValueSchema(schema);
-
-    return `Record<string, ${valueSchema === undefined ? "unknown" : zodTypeToTypeScript(valueSchema)}>`;
-  }
-
-  if (schemaName === "ZodObject") {
-    return getObjectTypeScript(schema);
+  if (descriptor.kind === "object") {
+    return getObjectTypeScript(descriptor);
   }
 
   throw new RpcCodegenContractProblem(
-    `Cannot generate RPC client type for unsupported schema ${schemaName || "unknown schema"}. Use a JSON-safe Zod schema supported by @croco/rpc-codegen or remove the schema from generated contracts.`,
+    `Cannot generate RPC client type for unsupported schema ${descriptor.typeName}. Use a JSON-safe Zod schema supported by @croco/protocols-core or remove the schema from generated contracts.`,
   );
 }
 
+function getRequiredChildDescriptor(
+  descriptor: ContractSchemaDescriptor,
+  key: "element" | "inner",
+): ContractSchemaDescriptor {
+  const child = descriptor[key];
+
+  if (!child) {
+    throw new RpcCodegenContractProblem(
+      `Cannot generate RPC client type for malformed schema ${descriptor.typeName}: missing ${key} schema descriptor.`,
+    );
+  }
+
+  return child;
+}
+
 function getSchemaName(schema: unknown): string {
-  if (!schema || typeof schema !== "object") {
-    return "";
-  }
-
-  return schema.constructor.name;
-}
-
-function getInnerSchema(schema: unknown): unknown {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as {
-    readonly innerType?: unknown;
-    readonly schema?: unknown;
-    readonly type?: unknown;
-  };
-
-  return definition.innerType ?? definition.schema ?? definition.type;
-}
-
-function getDefaultValue(schema: unknown): unknown {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as {
-    readonly defaultValue?: unknown | (() => unknown);
-  };
-  const defaultValue = definition.defaultValue;
-
-  return typeof defaultValue === "function" ? defaultValue() : defaultValue;
-}
-
-function getArrayElementSchema(schema: unknown): unknown {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as {
-    readonly element?: unknown;
-    readonly type?: unknown;
-  };
-
-  return definition.element ?? definition.type;
-}
-
-function getRecordValueSchema(schema: unknown): unknown {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as { readonly valueType?: unknown };
-
-  return definition.valueType;
-}
-
-function getLiteralValue(schema: unknown): unknown {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as {
-    readonly value?: unknown;
-    readonly values?: readonly unknown[];
-  };
-
-  return definition.value ?? definition.values?.[0];
-}
-
-function getEnumValues(schema: unknown): unknown[] {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return [];
-  }
-
-  const definition = schema._def as {
-    readonly entries?: Record<string, unknown>;
-    readonly values?: readonly unknown[];
-  };
-
-  return definition.values ? [...definition.values] : Object.values(definition.entries ?? {});
-}
-
-function getNativeEnumValues(schema: unknown): unknown[] {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return [];
-  }
-
-  const definition = schema._def as {
-    readonly values?: Record<string, unknown>;
-  };
-
-  return [...new Set(Object.values(definition.values ?? {}).filter(isLiteralTypeValue))];
-}
-
-function getUnionOptions(schema: unknown): unknown[] {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return [];
-  }
-
-  const definition = schema._def as {
-    readonly options?: readonly unknown[] | ReadonlyMap<unknown, unknown>;
-  };
-
-  if (definition.options instanceof Map) {
-    return [...definition.options.values()];
-  }
-
-  return [...(definition.options ?? [])];
+  return getZodSchemaTypeName(schema);
 }
 
 function unionTypes(types: readonly string[]): string {
@@ -1802,21 +1733,18 @@ function literalValueToTypeScript(value: unknown): string {
   );
 }
 
-function isLiteralTypeValue(value: unknown): value is string | number | boolean | null {
-  return (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    value === null
-  );
-}
-
-function getObjectTypeScript(schema: unknown): string {
-  const fields = Object.entries(getObjectShape(schema)).map(
-    ([key, value]) => `${formatObjectKey(key)}: ${zodTypeToTypeScript(value)};`,
+function getObjectTypeScript(descriptor: ContractSchemaDescriptor): string {
+  const fields = (descriptor.fields ?? []).map(
+    (field) => `${formatObjectKey(field.name)}: ${schemaDescriptorToTypeScript(field.schema)};`,
   );
 
   return `{ ${fields.join(" ")} }`;
+}
+
+function getObjectFieldNames(schema: unknown): string[] {
+  const descriptor = describeZodSchema(schema as never);
+
+  return descriptor?.kind === "object" ? (descriptor.fields ?? []).map((field) => field.name) : [];
 }
 
 function formatObjectKey(key: string): string {
@@ -1829,27 +1757,6 @@ function formatObjectKey(key: string): string {
 
 function isJavaScriptIdentifier(value: string): boolean {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
-}
-
-function getObjectShape(schema: unknown): Record<string, unknown> {
-  if (!schema || typeof schema !== "object") {
-    return {};
-  }
-
-  if ("shape" in schema) {
-    const shape = schema.shape;
-
-    return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
-  }
-
-  if (!("_def" in schema)) {
-    return {};
-  }
-
-  const definition = schema._def as { readonly shape?: unknown };
-  const shape = typeof definition.shape === "function" ? definition.shape() : definition.shape;
-
-  return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
 }
 
 function getPathExpression(route: GeneratedClientRoute): string {
