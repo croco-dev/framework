@@ -15,6 +15,7 @@ import {
   SlidingWindowStore,
   TokenBucketStore,
 } from "@croco/ratelimit-core";
+import { Problem } from "@croco/problems-core";
 import type { Redis } from "@upstash/redis";
 
 import { fixedWindowLua } from "./lua/fixed-window";
@@ -23,7 +24,11 @@ import { slidingWindowLua } from "./lua/sliding-window";
 import { slidingWindowRefundLua } from "./lua/sliding-window-refund";
 import { tokenBucketLua } from "./lua/token-bucket";
 import { tokenBucketRefundLua } from "./lua/token-bucket-refund";
-import { InvalidRateLimitPolicyProblem } from "./problems/RateLimitUpstashProblems";
+import {
+  InvalidRateLimitPolicyProblem,
+  MissingUpstashRateLimitConfigProblem,
+  UpstashRateLimitUpstreamProblem,
+} from "./problems/RateLimitUpstashProblems";
 
 /**
  * Upstash Redis 저장소에 사용할 공통 옵션입니다.
@@ -58,7 +63,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
 
   constructor(options: UpstashRateLimitStoreOptions) {
     super();
-    this.redis = options.redis;
+    this.redis = requireRedisClient(options.redis);
     this.prefix = options.prefix ?? "ratelimit:sliding";
   }
 
@@ -102,10 +107,12 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
       timestamp: now,
     } as const;
 
-    const result = (await this.redis.eval(
-      slidingWindowLua,
-      [redisKey],
-      [now, windowStart, policy.limit, refundReceipt.id, ttlSeconds],
+    const result = (await runUpstashRateLimitOperation("sliding.check", () =>
+      this.redis.eval(
+        slidingWindowLua,
+        [redisKey],
+        [now, windowStart, policy.limit, refundReceipt.id, ttlSeconds],
+      ),
     )) as [number, number, number];
 
     const success = result[0] === 1;
@@ -137,10 +144,12 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
     const redisKey = `${this.prefix}:${key}`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000) + 1;
 
-    const result = (await this.redis.eval(
-      slidingWindowRefundLua,
-      [redisKey],
-      [windowStart, policy.limit, receipt.id, ttlSeconds],
+    const result = (await runUpstashRateLimitOperation("sliding.refund", () =>
+      this.redis.eval(
+        slidingWindowRefundLua,
+        [redisKey],
+        [windowStart, policy.limit, receipt.id, ttlSeconds],
+      ),
     )) as [number, number, number];
 
     const refunded = result[0] === 1;
@@ -159,9 +168,13 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
 
   async increment(key: string, amount = 1): Promise<number> {
     const redisKey = `${this.prefix}:${key}:increment`;
-    const current = await this.redis.get(redisKey);
+    const current = await runUpstashRateLimitOperation("sliding.increment.get", () =>
+      this.redis.get(redisKey),
+    );
     const newValue = (Number(current) || 0) + amount;
-    await this.redis.set(redisKey, String(newValue));
+    await runUpstashRateLimitOperation("sliding.increment.set", () =>
+      this.redis.set(redisKey, String(newValue)),
+    );
     return newValue;
   }
 
@@ -171,7 +184,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
 
   async reset(key: string): Promise<void> {
     const redisKey = `${this.prefix}:${key}`;
-    await this.redis.del(redisKey);
+    await runUpstashRateLimitOperation("sliding.reset", () => this.redis.del(redisKey));
   }
 
   async expire(): Promise<void> {
@@ -201,7 +214,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
 
   constructor(options: UpstashRateLimitStoreOptions) {
     super();
-    this.redis = options.redis;
+    this.redis = requireRedisClient(options.redis);
     this.prefix = options.prefix ?? "ratelimit:bucket";
   }
 
@@ -242,18 +255,20 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
       expiresAtMs: now + ttlMs,
     } as const;
 
-    const result = (await this.redis.eval(
-      tokenBucketLua,
-      [redisKey, receiptKey],
-      [
-        now,
-        policy.capacity,
-        policy.refillIntervalMs,
-        policy.refillRate,
-        ttlSeconds,
-        refundReceipt.id,
-        refundReceipt.expiresAtMs,
-      ],
+    const result = (await runUpstashRateLimitOperation("token-bucket.check", () =>
+      this.redis.eval(
+        tokenBucketLua,
+        [redisKey, receiptKey],
+        [
+          now,
+          policy.capacity,
+          policy.refillIntervalMs,
+          policy.refillRate,
+          ttlSeconds,
+          refundReceipt.id,
+          refundReceipt.expiresAtMs,
+        ],
+      ),
     )) as [number, number, number];
 
     const success = result[0] === 1;
@@ -291,10 +306,12 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
     const ttlSeconds =
       Math.ceil((policy.capacity * policy.refillIntervalMs) / policy.refillRate / 1000) + 1;
 
-    const result = (await this.redis.eval(
-      tokenBucketRefundLua,
-      [redisKey, receiptKey],
-      [now, policy.capacity, policy.refillIntervalMs, policy.refillRate, ttlSeconds, receipt.id],
+    const result = (await runUpstashRateLimitOperation("token-bucket.refund", () =>
+      this.redis.eval(
+        tokenBucketRefundLua,
+        [redisKey, receiptKey],
+        [now, policy.capacity, policy.refillIntervalMs, policy.refillRate, ttlSeconds, receipt.id],
+      ),
     )) as [number, number, number];
 
     const refunded = result[0] === 1;
@@ -313,9 +330,13 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
 
   async increment(key: string, amount = 1): Promise<number> {
     const redisKey = `${this.prefix}:${key}:increment`;
-    const current = await this.redis.get(redisKey);
+    const current = await runUpstashRateLimitOperation("token-bucket.increment.get", () =>
+      this.redis.get(redisKey),
+    );
     const newValue = (Number(current) || 0) + amount;
-    await this.redis.set(redisKey, String(newValue));
+    await runUpstashRateLimitOperation("token-bucket.increment.set", () =>
+      this.redis.set(redisKey, String(newValue)),
+    );
     return newValue;
   }
 
@@ -325,8 +346,10 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
 
   async reset(key: string): Promise<void> {
     const redisKey = `${this.prefix}:${key}`;
-    await this.redis.del(redisKey);
-    await this.redis.del(`${redisKey}:receipts`);
+    await runUpstashRateLimitOperation("token-bucket.reset", () => this.redis.del(redisKey));
+    await runUpstashRateLimitOperation("token-bucket.reset-receipts", () =>
+      this.redis.del(`${redisKey}:receipts`),
+    );
   }
 
   async expire(): Promise<void> {
@@ -356,7 +379,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
 
   constructor(options: UpstashRateLimitStoreOptions) {
     super();
-    this.redis = options.redis;
+    this.redis = requireRedisClient(options.redis);
     this.prefix = options.prefix ?? "ratelimit:fixed";
   }
 
@@ -376,10 +399,12 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
       windowStart,
     } as const;
 
-    const result = (await this.redis.eval(
-      fixedWindowLua,
-      [redisKey, receiptKey],
-      [policy.limit, ttlSeconds, windowStart, refundReceipt.id],
+    const result = (await runUpstashRateLimitOperation("fixed.check", () =>
+      this.redis.eval(
+        fixedWindowLua,
+        [redisKey, receiptKey],
+        [policy.limit, ttlSeconds, windowStart, refundReceipt.id],
+      ),
     )) as [number, number, number];
 
     const success = result[0] === 1;
@@ -417,10 +442,12 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
     const receiptKey = `${redisKey}:receipts`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000);
 
-    const result = (await this.redis.eval(
-      fixedWindowRefundLua,
-      [redisKey, receiptKey],
-      [policy.limit, ttlSeconds, receipt.windowStart, receipt.id],
+    const result = (await runUpstashRateLimitOperation("fixed.refund", () =>
+      this.redis.eval(
+        fixedWindowRefundLua,
+        [redisKey, receiptKey],
+        [policy.limit, ttlSeconds, receipt.windowStart, receipt.id],
+      ),
     )) as [number, number, number];
 
     const refunded = result[0] === 1;
@@ -451,27 +478,37 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
 
   async increment(key: string, amount = 1): Promise<number> {
     const redisKey = `${this.prefix}:${key}:increment`;
-    const current = await this.redis.get(redisKey);
+    const current = await runUpstashRateLimitOperation("fixed.increment.get", () =>
+      this.redis.get(redisKey),
+    );
     const newValue = (Number(current) || 0) + amount;
-    await this.redis.set(redisKey, String(newValue));
+    await runUpstashRateLimitOperation("fixed.increment.set", () =>
+      this.redis.set(redisKey, String(newValue)),
+    );
     return newValue;
   }
 
   async getCount(key: string): Promise<number> {
     const redisKey = `${this.prefix}:${key}:increment`;
-    const value = await this.redis.get(redisKey);
+    const value = await runUpstashRateLimitOperation("fixed.get-count", () =>
+      this.redis.get(redisKey),
+    );
     return Number(value) || 0;
   }
 
   async reset(key: string): Promise<void> {
     const redisKey = `${this.prefix}:${key}`;
-    await this.redis.del(redisKey);
-    await this.redis.del(`${redisKey}:receipts`);
+    await runUpstashRateLimitOperation("fixed.reset", () => this.redis.del(redisKey));
+    await runUpstashRateLimitOperation("fixed.reset-receipts", () =>
+      this.redis.del(`${redisKey}:receipts`),
+    );
   }
 
   async expire(key: string, ttlMs: number): Promise<void> {
     const redisKey = `${this.prefix}:${key}:expire`;
-    await this.redis.expire(redisKey, Math.ceil(ttlMs / 1000));
+    await runUpstashRateLimitOperation("fixed.expire", () =>
+      this.redis.expire(redisKey, Math.ceil(ttlMs / 1000)),
+    );
   }
 
   async getStats(): Promise<RateLimitStats> {
@@ -489,4 +526,28 @@ function createRefundReceiptId(algorithm: string, timestamp: number): string {
   refundReceiptSequence = (refundReceiptSequence + 1) % Number.MAX_SAFE_INTEGER;
   const randomPart = Math.random().toString(36).slice(2, 10);
   return `${algorithm}:${timestamp}:${refundReceiptSequence}:${randomPart}`;
+}
+
+function requireRedisClient(redis: Redis): Redis {
+  const candidate = redis as { readonly eval?: unknown } | undefined;
+  if (!candidate || typeof candidate.eval !== "function") {
+    throw new MissingUpstashRateLimitConfigProblem("redis");
+  }
+
+  return redis;
+}
+
+async function runUpstashRateLimitOperation<T>(
+  operation: string,
+  action: () => Promise<T> | T,
+): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    if (error instanceof Problem) {
+      throw error;
+    }
+
+    throw new UpstashRateLimitUpstreamProblem(operation, error);
+  }
 }

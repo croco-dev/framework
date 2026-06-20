@@ -5,8 +5,16 @@ import { DomainEvent, RegisterEventHandler } from "@croco/events-core";
 import type { EventHandler } from "@croco/events-core";
 import { InMemoryLlmModel } from "@croco/llm-core";
 import type { GenerateParams, GenerateResult } from "@croco/llm-core";
-import { ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param } from "@croco/protocols-rest";
+import { RateLimitStore } from "@croco/ratelimit-core";
+import type {
+  RateLimitPolicy,
+  RateLimitRefundReceipt,
+  RateLimitRefundResult,
+  RateLimitResult,
+  RateLimitStats,
+} from "@croco/ratelimit-core";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +23,9 @@ import {
   assertProblemResponse,
   createEventTestingHarness,
   createLlmProviderConformanceSuite,
+  createQStashTaskConformanceSuite,
   createStorageProviderConformanceSuite,
+  createUpstashRedisRateLimitConformanceSuite,
   createRpcTestFetch,
   createTestingApp,
   createTestingRequestContext,
@@ -24,7 +34,12 @@ import {
   resetCrocoTestingContext,
   runWithTestingContext,
   TestingTransactionContext,
+  type QStashTaskConformanceScenario,
+  type QStashTaskExecuteOptions,
+  type QStashTaskPublisher,
+  type QStashTaskPublishRecord,
   type TestLogger,
+  type UpstashRedisRateLimitConformanceScenario,
 } from "../index";
 
 class GreetingService {
@@ -41,6 +56,142 @@ class FailingLlmModel extends InMemoryLlmModel {
       "testing/llm-provider-failed",
       "provider generate failed",
     );
+  }
+}
+
+class ConformanceProviderProblem extends Problem {
+  constructor(message: string, retryable: boolean) {
+    super(
+      retryable ? "testing/provider-retryable" : "testing/provider-terminal",
+      retryable ? ProblemCategory.InternalServerError : ProblemCategory.BadRequest,
+      message,
+      {
+        extensions: {
+          retryable,
+        },
+      },
+    );
+  }
+}
+
+class FakeRateLimitStore extends RateLimitStore {
+  private refunded = false;
+  private readonly stats: RateLimitStats = { allowed: 0, denied: 0, total: 0 };
+
+  constructor(private readonly scenario: UpstashRedisRateLimitConformanceScenario) {
+    super();
+  }
+
+  async check(_key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
+    if (policy.algorithm !== "fixed") {
+      throw new ConformanceProviderProblem("unsupported policy", false);
+    }
+
+    if (this.scenario === "retryable-upstream") {
+      throw new ConformanceProviderProblem("retryable outage token=[Redacted]", true);
+    }
+
+    if (this.scenario === "terminal-upstream") {
+      throw new ConformanceProviderProblem("terminal rejection token=[Redacted]", false);
+    }
+
+    this.stats.total += 1;
+    if (this.scenario === "deny") {
+      this.stats.denied += 1;
+      return {
+        success: false,
+        limit: policy.limit,
+        remaining: 0,
+        resetAtMs: Date.now() + policy.windowMs,
+      };
+    }
+
+    this.stats.allowed += 1;
+    return {
+      success: true,
+      limit: policy.limit,
+      remaining: policy.limit - 1,
+      resetAtMs: Date.now() + policy.windowMs,
+      refundReceipt: {
+        algorithm: "fixed",
+        id: "fake-refund-receipt",
+        windowStart: Date.now(),
+      },
+    };
+  }
+
+  override async refund(
+    _key: string,
+    policy: RateLimitPolicy,
+    receipt?: RateLimitRefundReceipt,
+  ): Promise<RateLimitRefundResult> {
+    if (!receipt || this.refunded || policy.algorithm !== "fixed") {
+      return {
+        success: true,
+        limit: "limit" in policy ? policy.limit : 0,
+        remaining: "limit" in policy ? policy.limit : 0,
+        resetAtMs: Date.now(),
+        refunded: false,
+      };
+    }
+
+    this.refunded = true;
+    this.stats.allowed = Math.max(0, this.stats.allowed - 1);
+    this.stats.total = Math.max(0, this.stats.total - 1);
+
+    return {
+      success: true,
+      limit: policy.limit,
+      remaining: policy.limit,
+      resetAtMs: Date.now() + policy.windowMs,
+      refunded: true,
+    };
+  }
+
+  async getStats(): Promise<RateLimitStats> {
+    return { ...this.stats };
+  }
+
+  async pruneExpired(): Promise<number> {
+    return 0;
+  }
+}
+
+class FakeQStashTaskPublisher implements QStashTaskPublisher {
+  readonly published: QStashTaskPublishRecord[] = [];
+
+  constructor(private readonly scenario: QStashTaskConformanceScenario) {}
+
+  async execute(
+    taskId: string,
+    payload: unknown,
+    options: QStashTaskExecuteOptions = {},
+  ): Promise<{ readonly messageId: string }> {
+    if (!taskId) {
+      throw new ConformanceProviderProblem("task id is required", false);
+    }
+
+    if (options.delay !== undefined && options.delay < 0) {
+      throw new ConformanceProviderProblem("delay must be non-negative", false);
+    }
+
+    if (this.scenario === "retryable-upstream") {
+      throw new ConformanceProviderProblem("retryable qstash outage token=[Redacted]", true);
+    }
+
+    if (this.scenario === "terminal-upstream") {
+      throw new ConformanceProviderProblem("terminal qstash rejection token=[Redacted]", false);
+    }
+
+    this.published.push({
+      body: { taskId, payload },
+      deduplicationId: options.idempotencyKey,
+      delay: options.delay,
+      headers: options.headers,
+      url: "https://example.com/tasks",
+    });
+
+    return { messageId: "msg-conformance" };
   }
 }
 
@@ -584,6 +735,60 @@ describe("@croco/testing", () => {
         },
       }).cases,
     )("$name", async ({ run }) => {
+      await run();
+    });
+  });
+
+  describe("serverless provider conformance", () => {
+    it.each(
+      createUpstashRedisRateLimitConformanceSuite({
+        createMissingConfig: () => {
+          throw new ConformanceProviderProblem("missing redis token=[Redacted]", false);
+        },
+        createStore: (scenario) => new FakeRateLimitStore(scenario),
+        invalidPolicy: {
+          algorithm: "sliding",
+          limit: 2,
+          name: "invalid",
+          windowMs: 1_000,
+        },
+        liveSmoke: {
+          isEnabled: () => false,
+          requiredEnv: ["CROCO_LIVE_UPSTASH_REDIS", "UPSTASH_REDIS_REST_URL"],
+        },
+        policy: {
+          algorithm: "fixed",
+          limit: 2,
+          name: "fixed",
+          windowMs: 1_000,
+        },
+        providerName: "fake-upstash-ratelimit",
+        secretSamples: ["super-secret-token"],
+      }).cases,
+    )("Upstash Redis rate-limit: $name", async ({ run }) => {
+      await run();
+    });
+
+    it.each(
+      createQStashTaskConformanceSuite({
+        createMissingConfig: () => {
+          throw new ConformanceProviderProblem("missing qstash token=[Redacted]", false);
+        },
+        createPublisher: (scenario) => {
+          const publisher = new FakeQStashTaskPublisher(scenario);
+          return {
+            publisher,
+            getPublishedMessages: () => publisher.published,
+          };
+        },
+        liveSmoke: {
+          isEnabled: () => false,
+          requiredEnv: ["CROCO_LIVE_QSTASH", "UPSTASH_QSTASH_TOKEN"],
+        },
+        providerName: "fake-qstash-tasks",
+        secretSamples: ["super-secret-token"],
+      }).cases,
+    )("QStash task: $name", async ({ run }) => {
       await run();
     });
   });
