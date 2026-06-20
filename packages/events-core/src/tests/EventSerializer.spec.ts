@@ -207,7 +207,7 @@ describe("DefaultEventSerializer", () => {
       const data: SerializedEvent = {
         eventType: "TestEvent",
         eventId: "evt_123_abc",
-        occurredAt: new Date().toISOString(),
+        occurredAt: "2026-01-02T03:04:05.000Z",
         payload: {
           value: "world",
           count: 100,
@@ -220,6 +220,8 @@ describe("DefaultEventSerializer", () => {
       expect(event.value).toBe("world");
       expect(event.count).toBe(100);
       expect(event.eventName).toBe("TestEvent");
+      expect(event.eventId).toBe(data.eventId);
+      expect(event.timestamp.toISOString()).toBe(data.occurredAt);
     });
 
     it("should deserialize event with aggregateId", () => {
@@ -250,6 +252,23 @@ describe("DefaultEventSerializer", () => {
       expect(() => serializer.deserialize(data)).toThrow("Unknown event type: 'UnknownEvent'");
     });
 
+    it("should fail fast when occurredAt is not a valid serialized timestamp", () => {
+      const data: SerializedEvent = {
+        eventType: "TestEvent",
+        eventId: "evt_invalid_timestamp",
+        occurredAt: "not-a-date",
+        payload: {
+          value: "world",
+          count: 100,
+        },
+      };
+
+      expect(() => serializer.deserialize<TestEvent>(data)).toThrow(EventDeserializationError);
+      expect(() => serializer.deserialize<TestEvent>(data)).toThrow(
+        "Cannot deserialize event 'TestEvent': Invalid occurredAt: not-a-date",
+      );
+    });
+
     it("BUG-79 생성자 인자가 필수인 @EventField 이벤트는 static fromPayload 없이 역직렬화되면 안 된다", () => {
       const data: SerializedEvent = {
         eventType: "ConstructorSensitiveEvent",
@@ -272,7 +291,7 @@ describe("DefaultEventSerializer", () => {
       const data: SerializedEvent = {
         eventType: "ConstructorSensitiveEventWithFactory",
         eventId: "evt_factory_174",
-        occurredAt: new Date().toISOString(),
+        occurredAt: "2026-02-03T04:05:06.000Z",
         payload: {
           message: "safe payload",
         },
@@ -282,6 +301,8 @@ describe("DefaultEventSerializer", () => {
 
       expect(event).toBeInstanceOf(ConstructorSensitiveEventWithFactory);
       expect(event.message).toBe("SAFE PAYLOAD");
+      expect(event.eventId).toBe(data.eventId);
+      expect(event.timestamp.toISOString()).toBe(data.occurredAt);
     });
 
     it("should fail fast when duplicate serialized keys are detected during deserialization", () => {
