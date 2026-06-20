@@ -199,6 +199,10 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
     join(targetDir, "croco-saas-profile.manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
+  writeFileSync(
+    join(targetDir, "croco-runtime-policy.manifest.json"),
+    `${JSON.stringify(createRuntimePolicyManifest(manifest), null, 2)}\n`,
+  );
   writeFileSync(join(targetDir, ".env.example"), renderSaasEnvExample(manifest));
   writeFileSync(join(docsDir, "provider-profile.md"), renderSaasDeployNotes(manifest));
   writeFileSync(join(docsDir, "secrets-checklist.md"), renderSaasSecretsChecklist(manifest));
@@ -207,6 +211,24 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
     `export const generatedSaasProviderProfileManifest = ${JSON.stringify(manifest, null, 2)} as const;\n`,
   );
   writeSaasProviderPackageDependencies(targetDir, manifest);
+}
+
+function createRuntimePolicyManifest(
+  manifest: SaasProviderProfileManifest,
+): Record<string, unknown> {
+  return {
+    schemaVersion: "croco.runtime-policy/v1",
+    runtime: {
+      platform: manifest.profile.runtimeTarget,
+      source: {
+        file: "croco-saas-profile.manifest.json",
+        symbol: manifest.profile.name,
+      },
+    },
+    table: {
+      plans: [],
+    },
+  };
 }
 
 function writeSaasProviderPackageDependencies(

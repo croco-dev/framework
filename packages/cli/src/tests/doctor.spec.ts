@@ -211,6 +211,7 @@ describe("doctor", () => {
     expect(usage).toContain("Croco framework CLI");
     expect(usage).toContain("`contracts`");
     expect(usage).toContain("`doctor`");
+    expect(usage).toContain("`runtime-policy`");
   });
 });
 

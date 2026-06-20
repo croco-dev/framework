@@ -5,4 +5,4 @@ prev: false
 title: "PolicyRuntimeCapability"
 ---
 
-> **PolicyRuntimeCapability** = `"trace"`
+> **PolicyRuntimeCapability** = [`RuntimeCapabilityName`](/api/framework-context/src/type-aliases/runtimecapabilityname/)

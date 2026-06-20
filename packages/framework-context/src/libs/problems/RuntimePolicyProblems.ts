@@ -1,5 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+export const POLICY_CAPABILITY_UNAVAILABLE_CODE = "framework-context/policy-capability-unavailable";
+
 /**
  * 정책 그래프가 같은 대상에 서로 충돌하는 정책을 선언했을 때 발생하는 Problem입니다.
  */
@@ -28,7 +30,7 @@ export class PolicyDefinitionProblem extends Problem {
  * 컴파일된 정책 실행 계획이 현재 런타임 capability로 실행될 수 없을 때 발생하는 Problem입니다.
  */
 export class PolicyCapabilityProblem extends Problem {
-  readonly code = "framework-context/policy-capability-unavailable";
+  readonly code = POLICY_CAPABILITY_UNAVAILABLE_CODE;
   readonly category = ProblemCategory.Conflict;
 
   constructor(detail: string) {

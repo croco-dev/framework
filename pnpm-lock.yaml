@@ -671,6 +671,9 @@ importers:
       '@clack/prompts':
         specifier: ^0.9.1
         version: 0.9.1
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
       '@croco/migration-runner':
         specifier: workspace:*
         version: link:../migration-runner
