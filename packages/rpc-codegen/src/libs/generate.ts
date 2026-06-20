@@ -29,11 +29,46 @@ type DomainRoutes = {
 type ResponseHelperOptions = {
   readonly hasOutputRoutes: boolean;
   readonly hasNoOutputRoutes: boolean;
+  readonly hasFormRoutes: boolean;
+};
+
+type GeneratedFormField = {
+  readonly name: string;
+  readonly label: string;
+  readonly control: "text" | "number" | "checkbox" | "select" | "multi-select" | "list";
+  readonly valueKind: "string" | "number" | "boolean" | "enum" | "array";
+  readonly required: boolean;
+  readonly valueType: string;
+  readonly initialValueExpression: string;
+  readonly payloadValueExpression: string;
+  readonly options: readonly FormFieldOption[];
+};
+
+type FormFieldOption = {
+  readonly label: string;
+  readonly value: string | number | boolean | null;
+};
+
+type FormFieldSchemaAnalysis = {
+  readonly schema: unknown;
+  readonly optional: boolean;
+  readonly nullable: boolean;
+  readonly defaultValue?: unknown;
 };
 
 class RpcCodegenContractProblem extends Problem {
   constructor(detail: string) {
     super("rpc-codegen/invalid-contract", ProblemCategory.ValidationError, detail);
+  }
+}
+
+class RpcCodegenUnsupportedFormSchemaProblem extends Problem {
+  constructor(route: GeneratedClientRoute, detail: string) {
+    super(
+      "rpc-codegen/unsupported-form-schema",
+      ProblemCategory.ValidationError,
+      `Cannot generate RPC form model for route ${formatRoute(route)}: ${detail}`,
+    );
   }
 }
 
@@ -189,10 +224,14 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const problemTypes = domainRoutes.routes.map(generateProblemTypes);
   const problemDeclarations = domainRoutes.routes.map(generateProblemDeclarations).join("\n");
+  const formArtifacts = domainRoutes.routes
+    .map(generateFormArtifacts)
+    .filter((artifact) => artifact.length > 0);
   const types = [...inputTypes, ...outputTypes, ...problemTypes];
   const responseHelperImports = getResponseHelperImports({
     hasOutputRoutes: domainRoutes.routes.some((route) => route.outputSchema),
     hasNoOutputRoutes: domainRoutes.routes.some((route) => !route.outputSchema),
+    hasFormRoutes: formArtifacts.length > 0,
   });
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
     ? `type QueryParamValue = string | number | boolean | null | undefined;
@@ -248,6 +287,7 @@ function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<str
 
   return `${imports}${responseHelperImports}${types.join("\n")}
 ${problemDeclarations}
+${formArtifacts.join("\n")}
 ${routeMetadata}
 ${queryHelpers}${headerHelpers}
 export const ${clientName} = {
@@ -479,7 +519,26 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
     helpers.push("readOptionalJsonResult");
   }
 
-  helpers.push("type RpcClientResult", "type RpcDeclaredProblem", "type RpcProblemDetailsFor");
+  if (options.hasFormRoutes) {
+    helpers.push("toRpcFormProblem");
+  }
+
+  helpers.push("type RpcClientResult", "type RpcDeclaredProblem");
+
+  if (options.hasFormRoutes) {
+    helpers.push(
+      "type RpcDomainProblem",
+      "type RpcFormFieldProblem",
+      "type RpcFormGlobalProblem",
+      "type RpcFormModel",
+    );
+  }
+
+  helpers.push("type RpcProblemDetailsFor");
+
+  if (options.hasFormRoutes) {
+    helpers.push("type RpcValidationProblem");
+  }
 
   return helpers.length === 0 ? "" : `import { ${helpers.join(", ")} } from './rpc';\n`;
 }
@@ -549,6 +608,103 @@ export type RpcClientFailure<Problem extends RpcDeclaredProblem = never> =
 export type RpcClientResult<T, Problem extends RpcDeclaredProblem = never> =
   | RpcClientSuccess<T>
   | RpcClientFailure<Problem>;
+
+export type RpcFormFieldControl =
+  | 'text'
+  | 'number'
+  | 'checkbox'
+  | 'select'
+  | 'multi-select'
+  | 'list';
+
+export type RpcFormFieldValueKind =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'enum'
+  | 'array';
+
+export type RpcFormFieldOption = {
+  readonly label: string;
+  readonly value: string | number | boolean | null;
+};
+
+export type RpcFormField<Value = unknown> = {
+  readonly name: string;
+  readonly label: string;
+  readonly control: RpcFormFieldControl;
+  readonly valueKind: RpcFormFieldValueKind;
+  readonly required: boolean;
+  readonly initialValue: Value;
+  readonly options?: readonly RpcFormFieldOption[];
+};
+
+export type RpcFormModel<
+  Values extends Record<string, unknown>,
+  FieldName extends keyof Values & string,
+> = {
+  readonly routeId: string;
+  readonly operationId: string;
+  readonly methodName: string;
+  readonly method: string;
+  readonly path: string;
+  readonly fieldNames: readonly FieldName[];
+  readonly fields: readonly RpcFormField<Values[FieldName]>[];
+  readonly initialValues: Values;
+};
+
+export type RpcValidationProblem<Problem extends RpcDeclaredProblem> = Extract<
+  Problem,
+  { readonly category: 'ValidationError' }
+>;
+
+export type RpcDomainProblem<Problem extends RpcDeclaredProblem> = Exclude<
+  Problem,
+  RpcValidationProblem<Problem>
+>;
+
+export type RpcFormFieldErrors<FieldName extends string> = Partial<
+  Record<FieldName, readonly string[]>
+>;
+
+export type RpcFormFieldProblem<
+  FieldName extends string,
+  Problem extends RpcDeclaredProblem,
+> = [Problem] extends [never]
+  ? never
+  : Problem extends RpcDeclaredProblem
+    ? {
+        readonly kind: 'field-validation';
+        readonly code: Problem['code'];
+        readonly category: Problem['category'];
+        readonly status: Problem['status'];
+        readonly fields: RpcFormFieldErrors<FieldName>;
+        readonly problem: RpcProblemDetailsFor<Problem>;
+        readonly declaration: Problem;
+        readonly response: Response;
+      }
+    : never;
+
+export type RpcFormGlobalProblem<Problem extends RpcDeclaredProblem> = [Problem] extends [never]
+  ? never
+  : Problem extends RpcDeclaredProblem
+    ? {
+        readonly kind: 'global-problem';
+        readonly code: Problem['code'];
+        readonly category: Problem['category'];
+        readonly status: Problem['status'];
+        readonly problem: RpcProblemDetailsFor<Problem>;
+        readonly declaration: Problem;
+        readonly response: Response;
+      }
+    : never;
+
+export type RpcFormProblem<
+  FieldName extends string,
+  Problem extends RpcDeclaredProblem,
+> =
+  | RpcFormFieldProblem<FieldName, RpcValidationProblem<Problem>>
+  | RpcFormGlobalProblem<RpcDomainProblem<Problem>>;
 
 export class RpcClientProblemError extends Error {
   readonly problem: RpcProblemDetails;
@@ -709,6 +865,80 @@ async function readErrorResult<Problem extends RpcDeclaredProblem>(
   };
 }
 
+export function toRpcFormProblem<
+  FieldName extends string,
+  Problem extends RpcDeclaredProblem,
+>(
+  failure: RpcClientProblemFailure<Problem>,
+  fieldNames: readonly FieldName[],
+): RpcFormProblem<FieldName, Problem> {
+  if (failure.category === 'ValidationError') {
+    return {
+      kind: 'field-validation',
+      code: failure.code,
+      category: failure.category,
+      status: failure.status,
+      fields: extractRpcFormFieldErrors(failure.problem, fieldNames),
+      problem: failure.problem,
+      declaration: failure.declaration,
+      response: failure.response,
+    } as RpcFormProblem<FieldName, Problem>;
+  }
+
+  return {
+    kind: 'global-problem',
+    code: failure.code,
+    category: failure.category,
+    status: failure.status,
+    problem: failure.problem,
+    declaration: failure.declaration,
+    response: failure.response,
+  } as RpcFormProblem<FieldName, Problem>;
+}
+
+function extractRpcFormFieldErrors<FieldName extends string>(
+  problem: RpcProblemDetails,
+  fieldNames: readonly FieldName[],
+): RpcFormFieldErrors<FieldName> {
+  const source = getRpcFormFieldErrorSource(problem);
+  const errors: Partial<Record<FieldName, readonly string[]>> = {};
+
+  if (!source) {
+    return errors;
+  }
+
+  for (const fieldName of fieldNames) {
+    const value = source[fieldName];
+
+    if (typeof value === 'string') {
+      errors[fieldName] = [value];
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      const messages = value.filter((item): item is string => typeof item === 'string');
+
+      if (messages.length > 0) {
+        errors[fieldName] = messages;
+      }
+    }
+  }
+
+  return errors;
+}
+
+function getRpcFormFieldErrorSource(problem: RpcProblemDetails): Record<string, unknown> | undefined {
+  if (isRecord(problem.fields)) {
+    return problem.fields;
+  }
+
+  if (isRecord(problem.fieldErrors)) {
+    return problem.fieldErrors;
+  }
+
+  return undefined;
+}
+
 function findDeclaredProblem<Problem extends RpcDeclaredProblem>(
   problem: RpcProblemDetails,
   declaredProblems: readonly Problem[],
@@ -804,6 +1034,431 @@ function generateProblemDeclarations(route: GeneratedClientRoute): string {
   return `export const ${getProblemDeclarationsName(route)} = [
 ${declarations}
 ] as const satisfies readonly RpcDeclaredProblem[];`;
+}
+
+function generateFormArtifacts(route: GeneratedClientRoute): string {
+  const bodySchema = getFormBodyObjectSchema(route);
+
+  if (!bodySchema) {
+    return "";
+  }
+
+  const fields = Object.entries(getObjectShape(bodySchema)).map(([name, schema]) =>
+    generateFormField(route, name, schema),
+  );
+  const fieldNameType = unionTypes(fields.map((field) => literalValueToTypeScript(field.name)));
+  const valueFields = fields.map((field) => `${formatObjectKey(field.name)}: ${field.valueType};`);
+  const fieldEntries = fields.map(
+    (field) =>
+      `{ name: ${literalValueToTypeScript(field.name)}, label: ${literalValueToTypeScript(field.label)}, control: ${literalValueToTypeScript(field.control)}, valueKind: ${literalValueToTypeScript(field.valueKind)}, required: ${field.required}, initialValue: ${field.initialValueExpression}${formatFormFieldOptions(field.options)} }`,
+  );
+  const fieldNames = fields.map((field) => literalValueToTypeScript(field.name)).join(", ");
+  const initialValues = fields
+    .map((field) => `${formatObjectKey(field.name)}: ${field.initialValueExpression}`)
+    .join(", ");
+  const submitFields = fields
+    .map((field) => `${formatObjectKey(field.name)}: ${field.payloadValueExpression}`)
+    .join(", ");
+  const inputTypeName = getInputTypeName(route);
+  const formValuesTypeName = getFormValuesTypeName(route);
+  const submitPayloadTypeName = getSubmitPayloadTypeName(route);
+  const validationProblemTypeName = getValidationProblemTypeName(route);
+  const domainProblemTypeName = getDomainProblemTypeName(route);
+  const formProblemTypeName = getFormProblemTypeName(route);
+  const formModelName = getFormModelName(route);
+  const buildPayloadName = getBuildFormPayloadName(route);
+  const mapProblemName = getMapFormProblemName(route);
+  const buildPayloadParameters = hasLegacyBodyInput(route)
+    ? `values: ${formValuesTypeName}`
+    : `context: Omit<${inputTypeName}, 'body'>, values: ${formValuesTypeName}`;
+  const payloadExpression = hasLegacyBodyInput(route)
+    ? `{ ${submitFields} }`
+    : `{ ...context, body: { ${submitFields} } }`;
+
+  return `export type ${getFormFieldNameTypeName(route)} = ${fieldNameType};
+export type ${formValuesTypeName} = { ${valueFields.join(" ")} };
+export type ${submitPayloadTypeName} = ${inputTypeName};
+export type ${validationProblemTypeName} = RpcValidationProblem<${getProblemTypeName(route)}>;
+export type ${domainProblemTypeName} = RpcDomainProblem<${getProblemTypeName(route)}>;
+export type ${formProblemTypeName} = RpcFormFieldProblem<${getFormFieldNameTypeName(route)}, ${validationProblemTypeName}> | RpcFormGlobalProblem<${domainProblemTypeName}>;
+
+export const ${formModelName} = {
+  routeId: ${literalValueToTypeScript(getRouteId(route))},
+  operationId: ${literalValueToTypeScript(getOperationId(route))},
+  methodName: ${literalValueToTypeScript(route.methodName)},
+  method: ${literalValueToTypeScript(route.httpMethod.toUpperCase())},
+  path: ${literalValueToTypeScript(route.path)},
+  fieldNames: [${fieldNames}],
+  fields: [
+    ${fieldEntries.join(",\n    ")}
+  ],
+  initialValues: { ${initialValues} },
+} as const satisfies RpcFormModel<${formValuesTypeName}, ${getFormFieldNameTypeName(route)}>;
+
+export function ${buildPayloadName}(${buildPayloadParameters}): ${submitPayloadTypeName} {
+  return ${payloadExpression};
+}
+
+export function ${mapProblemName}(failure: Extract<${getResultTypeName(route)}, { ok: false; kind: 'problem' }>): ${formProblemTypeName} {
+  return toRpcFormProblem<${getFormFieldNameTypeName(route)}, ${getProblemTypeName(route)}>(failure, ${formModelName}.fieldNames);
+}`;
+}
+
+function getFormBodyObjectSchema(route: GeneratedClientRoute): unknown | undefined {
+  if (!route.inputSchemas.body) {
+    return undefined;
+  }
+
+  const analysis = analyzeFormFieldSchema(route.inputSchemas.body);
+  const schemaName = getSchemaName(analysis.schema);
+
+  if (schemaName !== "ZodObject") {
+    throw new RpcCodegenUnsupportedFormSchemaProblem(
+      route,
+      `body uses unsupported form schema ${schemaName || "unknown schema"}.`,
+    );
+  }
+
+  const unsupportedObjectMode = getUnsupportedFormBodyObjectMode(analysis.schema);
+
+  if (unsupportedObjectMode) {
+    throw new RpcCodegenUnsupportedFormSchemaProblem(
+      route,
+      `body object accepts unsupported ${unsupportedObjectMode} keys; generated form fields must cover every accepted body key.`,
+    );
+  }
+
+  return analysis.schema;
+}
+
+function getUnsupportedFormBodyObjectMode(schema: unknown): string | undefined {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return undefined;
+  }
+
+  const definition = schema._def as {
+    readonly catchall?: unknown;
+    readonly unknownKeys?: unknown;
+  };
+
+  if (definition.unknownKeys === "passthrough") {
+    return "passthrough";
+  }
+
+  if (definition.catchall === undefined) {
+    return undefined;
+  }
+
+  const catchallSchemaName = getSchemaName(definition.catchall);
+
+  if (catchallSchemaName === "ZodNever") {
+    return undefined;
+  }
+
+  return catchallSchemaName === "ZodUnknown" ? "passthrough" : "catchall";
+}
+
+function generateFormField(
+  route: GeneratedClientRoute,
+  name: string,
+  schema: unknown,
+): GeneratedFormField {
+  const analysis = analyzeFormFieldSchema(schema);
+  const schemaName = getSchemaName(analysis.schema);
+  const required = !analysis.optional && !analysis.nullable && analysis.defaultValue === undefined;
+  const baseValueType = getFormFieldBaseValueType(route, name, analysis.schema);
+  const valueType =
+    analysis.optional || analysis.nullable ? `${baseValueType} | null` : baseValueType;
+  const initialValueExpression = getFormFieldInitialValueExpression(route, name, analysis);
+  const payloadValueExpression =
+    analysis.optional && !analysis.nullable
+      ? `${getFormValuesAccessor(name)} === null ? undefined : ${getFormValuesAccessor(name)}`
+      : getFormValuesAccessor(name);
+
+  if (schemaName === "ZodString") {
+    return {
+      name,
+      label: toFormLabel(name),
+      control: "text",
+      valueKind: "string",
+      required,
+      valueType,
+      initialValueExpression,
+      payloadValueExpression,
+      options: [],
+    };
+  }
+
+  if (schemaName === "ZodNumber") {
+    return {
+      name,
+      label: toFormLabel(name),
+      control: "number",
+      valueKind: "number",
+      required,
+      valueType,
+      initialValueExpression,
+      payloadValueExpression,
+      options: [],
+    };
+  }
+
+  if (schemaName === "ZodBoolean") {
+    return {
+      name,
+      label: toFormLabel(name),
+      control: "checkbox",
+      valueKind: "boolean",
+      required,
+      valueType,
+      initialValueExpression,
+      payloadValueExpression,
+      options: [],
+    };
+  }
+
+  const options = getFormFieldOptions(analysis.schema);
+
+  if (options.length > 0) {
+    return {
+      name,
+      label: toFormLabel(name),
+      control: "select",
+      valueKind: "enum",
+      required,
+      valueType,
+      initialValueExpression,
+      payloadValueExpression,
+      options,
+    };
+  }
+
+  if (schemaName === "ZodArray") {
+    const elementAnalysis = analyzeFormFieldSchema(getArrayElementSchema(analysis.schema));
+    const elementSchemaName = getSchemaName(elementAnalysis.schema);
+    const elementOptions = getFormFieldOptions(elementAnalysis.schema);
+
+    if (
+      elementSchemaName !== "ZodString" &&
+      elementSchemaName !== "ZodNumber" &&
+      elementSchemaName !== "ZodBoolean" &&
+      elementOptions.length === 0
+    ) {
+      throw new RpcCodegenUnsupportedFormSchemaProblem(
+        route,
+        `field '${name}' uses unsupported array element schema ${elementSchemaName || "unknown schema"}.`,
+      );
+    }
+
+    return {
+      name,
+      label: toFormLabel(name),
+      control: elementOptions.length > 0 ? "multi-select" : "list",
+      valueKind: "array",
+      required,
+      valueType,
+      initialValueExpression,
+      payloadValueExpression,
+      options: elementOptions,
+    };
+  }
+
+  throw new RpcCodegenUnsupportedFormSchemaProblem(
+    route,
+    `field '${name}' uses unsupported form field schema ${schemaName || "unknown schema"}.`,
+  );
+}
+
+function analyzeFormFieldSchema(schema: unknown): FormFieldSchemaAnalysis {
+  let current = schema;
+  let optional = false;
+  let nullable = false;
+  let defaultValue: unknown;
+
+  while (true) {
+    const schemaName = getSchemaName(current);
+
+    if (schemaName === "ZodOptional") {
+      optional = true;
+      current = getInnerSchema(current);
+      continue;
+    }
+
+    if (schemaName === "ZodNullable") {
+      nullable = true;
+      current = getInnerSchema(current);
+      continue;
+    }
+
+    if (schemaName === "ZodDefault") {
+      optional = true;
+      defaultValue = getDefaultValue(current);
+      current = getInnerSchema(current);
+      continue;
+    }
+
+    if (schemaName === "ZodBranded" || schemaName === "ZodReadonly") {
+      current = getInnerSchema(current);
+      continue;
+    }
+
+    return {
+      schema: current,
+      optional,
+      nullable,
+      ...(defaultValue !== undefined ? { defaultValue } : {}),
+    };
+  }
+}
+
+function getFormFieldBaseValueType(
+  route: GeneratedClientRoute,
+  name: string,
+  schema: unknown,
+): string {
+  try {
+    return zodTypeToTypeScript(schema);
+  } catch (error) {
+    if (error instanceof RpcCodegenContractProblem) {
+      throw new RpcCodegenUnsupportedFormSchemaProblem(
+        route,
+        `field '${name}' uses unsupported form field schema ${getSchemaName(schema) || "unknown schema"}.`,
+      );
+    }
+
+    throw error;
+  }
+}
+
+function getFormFieldInitialValueExpression(
+  route: GeneratedClientRoute,
+  name: string,
+  analysis: FormFieldSchemaAnalysis,
+): string {
+  if (analysis.defaultValue !== undefined) {
+    return formLiteralValueToTypeScript(route, name, analysis.defaultValue);
+  }
+
+  if (analysis.optional || analysis.nullable) {
+    return "null";
+  }
+
+  const schemaName = getSchemaName(analysis.schema);
+
+  if (schemaName === "ZodString") {
+    return "''";
+  }
+
+  if (schemaName === "ZodNumber") {
+    return "0";
+  }
+
+  if (schemaName === "ZodBoolean") {
+    return "false";
+  }
+
+  const options = getFormFieldOptions(analysis.schema);
+
+  if (options.length > 0) {
+    return formLiteralValueToTypeScript(route, name, options[0]?.value);
+  }
+
+  if (schemaName === "ZodArray") {
+    return "[]";
+  }
+
+  throw new RpcCodegenUnsupportedFormSchemaProblem(
+    route,
+    `field '${name}' uses unsupported form field schema ${schemaName || "unknown schema"}.`,
+  );
+}
+
+function getFormFieldOptions(schema: unknown): FormFieldOption[] {
+  const schemaName = getSchemaName(schema);
+
+  if (schemaName === "ZodEnum") {
+    return getEnumValues(schema).filter(isLiteralTypeValue).map(toFormFieldOption);
+  }
+
+  if (schemaName === "ZodNativeEnum") {
+    return getNativeEnumValues(schema).filter(isLiteralTypeValue).map(toFormFieldOption);
+  }
+
+  if (schemaName === "ZodLiteral") {
+    const value = getLiteralValue(schema);
+
+    return isLiteralTypeValue(value) ? [toFormFieldOption(value)] : [];
+  }
+
+  if (schemaName === "ZodUnion" || schemaName === "ZodDiscriminatedUnion") {
+    const literalValues = getUnionOptions(schema).map(getLiteralFormOptionValue);
+
+    return literalValues.every(isLiteralTypeValue) ? literalValues.map(toFormFieldOption) : [];
+  }
+
+  return [];
+}
+
+function getLiteralFormOptionValue(schema: unknown): unknown {
+  return getSchemaName(schema) === "ZodLiteral" ? getLiteralValue(schema) : undefined;
+}
+
+function toFormFieldOption(value: string | number | boolean | null): FormFieldOption {
+  return {
+    label: String(value),
+    value,
+  };
+}
+
+function formatFormFieldOptions(options: readonly FormFieldOption[]): string {
+  if (options.length === 0) {
+    return "";
+  }
+
+  const entries = options
+    .map(
+      (option) =>
+        `{ label: ${literalValueToTypeScript(option.label)}, value: ${literalValueToTypeScript(option.value)} }`,
+    )
+    .join(", ");
+
+  return `, options: [${entries}]`;
+}
+
+function formLiteralValueToTypeScript(
+  route: GeneratedClientRoute,
+  name: string,
+  value: unknown,
+): string {
+  if (isLiteralTypeValue(value)) {
+    return literalValueToTypeScript(value);
+  }
+
+  if (Array.isArray(value) && value.every(isLiteralTypeValue)) {
+    return `[${value.map(literalValueToTypeScript).join(", ")}]`;
+  }
+
+  throw new RpcCodegenUnsupportedFormSchemaProblem(
+    route,
+    `field '${name}' has a non-JSON-safe default value.`,
+  );
+}
+
+function getFormValuesAccessor(name: string): string {
+  return isJavaScriptIdentifier(name) ? `values.${name}` : `values[${formatObjectKey(name)}]`;
+}
+
+function toFormLabel(name: string): string {
+  const spaced = name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim();
+
+  if (spaced.length === 0) {
+    return name;
+  }
+
+  return `${spaced.charAt(0).toUpperCase()}${spaced.slice(1)}`;
 }
 
 function generateClientMethod(route: GeneratedClientRoute): string {
@@ -1031,6 +1686,19 @@ function getInnerSchema(schema: unknown): unknown {
   };
 
   return definition.innerType ?? definition.schema ?? definition.type;
+}
+
+function getDefaultValue(schema: unknown): unknown {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return undefined;
+  }
+
+  const definition = schema._def as {
+    readonly defaultValue?: unknown | (() => unknown);
+  };
+  const defaultValue = definition.defaultValue;
+
+  return typeof defaultValue === "function" ? defaultValue() : defaultValue;
 }
 
 function getArrayElementSchema(schema: unknown): unknown {
@@ -1267,6 +1935,42 @@ function getDomainName(route: GeneratedClientRoute): string {
 
 function getInputTypeName(route: GeneratedClientRoute): string {
   return `${toPascalCase(route.methodName)}Input`;
+}
+
+function getFormFieldNameTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}FormFieldName`;
+}
+
+function getFormValuesTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}FormValues`;
+}
+
+function getSubmitPayloadTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}SubmitPayload`;
+}
+
+function getValidationProblemTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}ValidationProblem`;
+}
+
+function getDomainProblemTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}DomainProblem`;
+}
+
+function getFormProblemTypeName(route: GeneratedClientRoute): string {
+  return `${toPascalCase(route.methodName)}FormProblem`;
+}
+
+function getFormModelName(route: GeneratedClientRoute): string {
+  return `${route.methodName}FormModel`;
+}
+
+function getBuildFormPayloadName(route: GeneratedClientRoute): string {
+  return `build${toPascalCase(route.methodName)}FormPayload`;
+}
+
+function getMapFormProblemName(route: GeneratedClientRoute): string {
+  return `map${toPascalCase(route.methodName)}FormProblem`;
 }
 
 function getOutputTypeName(route: GeneratedClientRoute): string {
