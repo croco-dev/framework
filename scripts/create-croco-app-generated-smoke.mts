@@ -510,6 +510,7 @@ try {
       "--filter=create-croco-app...",
       "--filter=@croco/framework-context...",
       "--filter=@croco/frontend-cloudflare...",
+      "--filter=@croco/frontend-problems...",
       "--filter=@croco/frontend-react...",
       "--filter=@croco/frontend-vite...",
       "--filter=@croco/llm-core...",
