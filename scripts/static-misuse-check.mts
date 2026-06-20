@@ -90,7 +90,43 @@ const repositoryBoundaryRule: StaticMisuseRule = {
   ],
 };
 
-const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [repositoryBoundaryRule];
+const restGeneratedContractRule: StaticMisuseRule = {
+  id: "rest-generated-contract-schema-boundary",
+  code: "CROCO_STATIC_REST_GENERATED_CONTRACT_SCHEMA_BOUNDARY",
+  title: "Generated REST contracts must declare concrete route schemas",
+  targetDir: "packages/create-croco-app/templates",
+  description:
+    "Generated app templates are contract-first surfaces. Their REST routes must use concrete HTTP methods and schema-backed body and named parameter decorators so RPC/OpenAPI generation fails before runtime.",
+  limitation:
+    "This first-pass checker is line-oriented and scoped to generated app templates. Compatibility-mode application code and multiline decorator calls remain covered by ContractGraph, RPC codegen, and OpenAPI diagnostics.",
+  recovery:
+    "Use explicit HTTP method decorators and pass Zod schemas to @Body(...), @Param(name, ...), @Query(name, ...), and @Header(name, ...) in generated contract routes.",
+  detectors: [
+    {
+      match: (line) => line.match(/@All\s*\(/),
+      message: "@All cannot be used in generated REST contract routes.",
+      action:
+        "Replace @All with explicit HTTP method decorators such as @Get, @Post, @Put, @Patch, or @Delete so generated clients and OpenAPI can emit concrete operations.",
+    },
+    {
+      match: (line) => line.match(/@Body\s*\(\s*\)/),
+      message: "@Body() in generated REST contract routes must include a schema.",
+      action:
+        "Pass the route contract body schema to @Body(schema) so generated clients and OpenAPI can validate the request body contract.",
+    },
+    {
+      match: (line) => matchSchemaLessNamedParamDecorator(line),
+      message: "Named REST parameter decorators in generated contract routes must include schemas.",
+      action:
+        'Pass a Zod schema as the second decorator argument, for example @Param("id", idSchema) or @Query("limit", limitSchema).',
+    },
+  ],
+};
+
+const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
+  repositoryBoundaryRule,
+  restGeneratedContractRule,
+];
 
 function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMatchArray | null {
   return line.match(
@@ -98,6 +134,10 @@ function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMat
       String.raw`(?:from\s+|import\s*\(\s*|require\s*\(\s*)['"]${specifierPattern.source}['"]`,
     ),
   );
+}
+
+function matchSchemaLessNamedParamDecorator(line: string): RegExpMatchArray | null {
+  return line.match(/@(Param|Query|Header)\s*\(\s*(['"`])[^'"`]+\2\s*\)/);
 }
 
 function toPosixPath(path: string): string {

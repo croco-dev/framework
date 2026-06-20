@@ -4,8 +4,12 @@ import type { JobActionDto } from "./schemas";
 import {
   jobActionSchema,
   jobDetailsSchema,
+  jobIdSchema,
   jobListReportSchema,
   jobLogEntrySchema,
+  optionalJobsIntegerQuerySchema,
+  optionalJobStatusQuerySchema,
+  optionalJobTypeQuerySchema,
 } from "./schemas";
 
 const JOB_STATUSES = new Set<JobStatus>([
@@ -56,10 +60,10 @@ export class JobsController {
   @Get()
   @ResponseSchema(jobListReportSchema)
   async list(
-    @Query("status") status?: string,
-    @Query("type") type?: string,
-    @Query("limit") limit?: string,
-    @Query("offset") offset?: string,
+    @Query("status", optionalJobStatusQuerySchema) status?: string,
+    @Query("type", optionalJobTypeQuerySchema) type?: string,
+    @Query("limit", optionalJobsIntegerQuerySchema) limit?: string,
+    @Query("offset", optionalJobsIntegerQuerySchema) offset?: string,
   ) {
     const { defaultSaasRuntime } = await import("../saasDemo");
 
@@ -73,28 +77,28 @@ export class JobsController {
 
   @Get("/:id")
   @ResponseSchema(jobDetailsSchema)
-  async show(@Param("id") id: string) {
+  async show(@Param("id", jobIdSchema) id: string) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.show(id);
   }
 
   @Get("/:id/logs")
   @ResponseSchema(jobLogEntrySchema.array())
-  async logs(@Param("id") id: string) {
+  async logs(@Param("id", jobIdSchema) id: string) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.logs(id);
   }
 
   @Post("/:id/cancel")
   @ResponseSchema(jobDetailsSchema)
-  async cancel(@Param("id") id: string, @Body(jobActionSchema) body: JobActionDto) {
+  async cancel(@Param("id", jobIdSchema) id: string, @Body(jobActionSchema) body: JobActionDto) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.cancel(id, { reason: body.reason });
   }
 
   @Post("/:id/replay")
   @ResponseSchema(jobDetailsSchema)
-  async replay(@Param("id") id: string, @Body(jobActionSchema) body: JobActionDto) {
+  async replay(@Param("id", jobIdSchema) id: string, @Body(jobActionSchema) body: JobActionDto) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.replay(id, { reason: body.reason });
   }

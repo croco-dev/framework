@@ -170,4 +170,9 @@ export const jobActionSchema = z.object({
   reason: z.string().optional(),
 });
 
+export const jobIdSchema = z.string().min(1);
+export const optionalJobStatusQuerySchema = z.string().optional();
+export const optionalJobTypeQuerySchema = z.string().optional();
+export const optionalJobsIntegerQuerySchema = z.string().optional();
+
 export type JobActionDto = z.infer<typeof jobActionSchema>;

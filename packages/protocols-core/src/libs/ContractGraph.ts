@@ -181,10 +181,14 @@ export function getContractPathParamNames(path: string): string[] {
 
 export function getContractPathParams(path: string): ContractPathParam[] {
   return [...path.matchAll(/:([^/]+)/g)]
-    .map((match) => {
+    .flatMap((match) => {
       const token = match[1];
+      if (!token) {
+        return [];
+      }
 
-      return { token, name: token.replace(/^\.\.\./, "") };
+      const name = token.replace(/^\.\.\./, "");
+      return name.length > 0 ? [{ token, name }] : [];
     })
     .filter((param) => param.name.length > 0);
 }

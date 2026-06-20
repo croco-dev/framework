@@ -94,13 +94,154 @@ describe("static-misuse-check.mts", () => {
 
     expect(result?.status).toBe("pass");
   });
+
+  it("flags @All routes in generated app templates", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/WebhookController.ts",
+      [
+        'import { All, Controller } from "@croco/protocols-rest";',
+        '@Controller("/webhooks")',
+        "export class WebhookController {",
+        '  @All("/:id")',
+        "  handle() {}",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-generated-contract-schema-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        code: "CROCO_STATIC_REST_GENERATED_CONTRACT_SCHEMA_BOUNDARY",
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/WebhookController.ts",
+        line: 4,
+        message: "@All cannot be used in generated REST contract routes.",
+      }),
+    ]);
+  });
+
+  it("flags schema-less body and named parameter decorators in generated app templates", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/UsersController.ts",
+      [
+        'import { Body, Controller, Param, Post, Query } from "@croco/protocols-rest";',
+        '@Controller("/users")',
+        "export class UsersController {",
+        '  @Post("/:id")',
+        "  update(",
+        '    @Param("id") id: string,',
+        '    @Query("include") include: string,',
+        "    @Body() body: unknown,",
+        "  ) {",
+        "    return { id, include, body };",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-generated-contract-schema-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        line: 6,
+        message:
+          "Named REST parameter decorators in generated contract routes must include schemas.",
+      }),
+      expect.objectContaining({
+        line: 7,
+        message:
+          "Named REST parameter decorators in generated contract routes must include schemas.",
+      }),
+      expect.objectContaining({
+        line: 8,
+        message: "@Body() in generated REST contract routes must include a schema.",
+      }),
+    ]);
+  });
+
+  it("passes generated app templates with schema-backed REST decorators", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/UsersController.ts",
+      [
+        'import { Body, Controller, Param, Post, Query } from "@croco/protocols-rest";',
+        'import { z } from "zod";',
+        "const bodySchema = z.object({ name: z.string() });",
+        "const idSchema = z.string().min(1);",
+        "const includeSchema = z.string().optional();",
+        '@Controller("/users")',
+        "export class UsersController {",
+        '  @Post("/:id")',
+        '  update(@Param("id", idSchema) id: string, @Query("include", includeSchema) include: string, @Body(bodySchema) body: unknown) {',
+        "    return { id, include, body };",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-generated-contract-schema-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("honors the REST contract rule escape hatch on a single generated-template line", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/UsersController.ts",
+      [
+        'import { Body, Controller, Post } from "@croco/protocols-rest";',
+        '@Controller("/users")',
+        "export class UsersController {",
+        "  @Post()",
+        "  // croco-static-misuse-ignore-next-line CROCO_STATIC_REST_GENERATED_CONTRACT_SCHEMA_BOUNDARY -- fixture proves reviewed loose-mode escape",
+        "  update(@Body() body: unknown) {",
+        "    return body;",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-generated-contract-schema-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
 });
 
 function createTempRepo(): string {
   const repo = mkdtempSync(join(tmpdir(), "croco-static-misuse-"));
   tempRepos.push(repo);
   mkdirSync(join(repo, "packages", "repository-core", "src"), { recursive: true });
+  mkdirSync(join(repo, "packages", "create-croco-app", "templates"), { recursive: true });
   return repo;
+}
+
+function findResult(repo: string, id: string) {
+  return runStaticMisuseChecks(repo).find((result) => result.id === id);
 }
 
 function writeFile(repo: string, relativePath: string, content: string): void {

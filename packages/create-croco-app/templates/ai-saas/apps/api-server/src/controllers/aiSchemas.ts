@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const optionalTenantIdHeaderSchema = z.string().min(1).optional();
+
 export const aiGenerateRequestSchema = z.object({
   requestId: z.string().min(1),
   modelId: z.string().min(1).optional(),

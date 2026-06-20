@@ -111,11 +111,11 @@ export function isContractGraphSnapshot(value: unknown): value is ContractGraphS
   }
 
   return (
-    value.snapshotVersion === "croco.contract-graph.snapshot.v1" &&
-    value.graphVersion === "croco.contract-graph.v1" &&
-    Array.isArray(value.controllers) &&
-    Array.isArray(value.routes) &&
-    Array.isArray(value.diagnostics)
+    value["snapshotVersion"] === "croco.contract-graph.snapshot.v1" &&
+    value["graphVersion"] === "croco.contract-graph.v1" &&
+    Array.isArray(value["controllers"]) &&
+    Array.isArray(value["routes"]) &&
+    Array.isArray(value["diagnostics"])
   );
 }
 
