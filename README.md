@@ -498,7 +498,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/cache-core`           | Core         | `packages/cache-core`           | README, tests      |
 | `@croco/diagnostics-core`     | Core         | `packages/diagnostics-core`     | tests              |
 | `@croco/events-inmemory`      | Core         | `packages/events-inmemory`      | README, API, tests |
-| `@croco/events-tx`            | Core         | `packages/events-tx`            | tests              |
+| `@croco/events-tx`            | Core         | `packages/events-tx`            | README, tests      |
 | `@croco/framework-config`     | Core         | `packages/framework-config`     | README, tests      |
 | `@croco/framework-logger`     | Core         | `packages/framework-logger`     | README, tests      |
 | `@croco/framework-module`     | Core         | `packages/framework-module`     | README, tests      |

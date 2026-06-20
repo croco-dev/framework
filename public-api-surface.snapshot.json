@@ -3685,13 +3685,272 @@
       "entrypoint": "packages/events-tx/src/index.ts",
       "runtimeExports": [
         {
+          "name": "createEventBusOutboxPublisher",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTransactionalEventDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents",
+          "declarationKind": "function"
+        },
+        {
+          "name": "DrizzleTransactionalEventStore",
+          "exportKind": "named",
+          "source": "./libs/DrizzleTransactionalEventStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InMemoryTransactionalEventStore",
+          "exportKind": "named",
+          "source": "./libs/InMemoryTransactionalEventStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "normalizeTransactionalEventError",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents",
+          "declarationKind": "function"
+        },
+        {
+          "name": "OutboxPublishExhaustedProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OutboxStorageProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OutboxTransactionRequiredProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "TransactionalInboxConsumer",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents",
+          "declarationKind": "class"
+        },
+        {
+          "name": "transactionalInboxRecords",
+          "exportKind": "named",
+          "source": "./libs/schema",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TransactionalOutbox",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents",
+          "declarationKind": "class"
+        },
+        {
+          "name": "transactionalOutboxMessages",
+          "exportKind": "named",
+          "source": "./libs/schema",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TransactionalOutboxRelay",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents",
+          "declarationKind": "class"
+        },
+        {
           "name": "TransactionStateProblem",
           "exportKind": "named",
           "source": "./libs/problems/EventsTxProblems",
           "declarationKind": "class"
         }
       ],
-      "typeExports": []
+      "typeExports": [
+        {
+          "name": "AppendOutboxMessageInput",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "DrizzleTransactionalEventStoreConfig",
+          "exportKind": "named",
+          "source": "./libs/DrizzleTransactionalEventStore"
+        },
+        {
+          "name": "DrizzleTransactionalEventStoreDb",
+          "exportKind": "named",
+          "source": "./libs/DrizzleTransactionalEventStore"
+        },
+        {
+          "name": "DrizzleTransactionalEventStoreTables",
+          "exportKind": "named",
+          "source": "./libs/DrizzleTransactionalEventStore"
+        },
+        {
+          "name": "InboxCompletionInput",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "InboxConsumerResult",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "InboxFailureInput",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "InboxMessageStatus",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "InboxStartInput",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "InboxStartResult",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "InMemoryTransactionalEventStoreClient",
+          "exportKind": "named",
+          "source": "./libs/InMemoryTransactionalEventStore"
+        },
+        {
+          "name": "InMemoryTransactionalEventStoreState",
+          "exportKind": "named",
+          "source": "./libs/InMemoryTransactionalEventStore"
+        },
+        {
+          "name": "ListInboxRecordsOptions",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "ListOutboxMessagesOptions",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "NewTransactionalInboxRecordRow",
+          "exportKind": "named",
+          "source": "./libs/schema"
+        },
+        {
+          "name": "NewTransactionalOutboxMessageRow",
+          "exportKind": "named",
+          "source": "./libs/schema"
+        },
+        {
+          "name": "OutboxAppendOptions",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxClaimOptions",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxCompletionInput",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxDeadLetterInput",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxFailureInput",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxMessageStatus",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxRelayBatchResult",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxRelayConfig",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxRelayMessageResult",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "OutboxRelayRetryPolicy",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalEventDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalEventError",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalEventStore",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalEventStoreContext",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalInboxConsumerConfig",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalInboxRecord",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalInboxRecordRow",
+          "exportKind": "named",
+          "source": "./libs/schema"
+        },
+        {
+          "name": "TransactionalOutboxConfig",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalOutboxMessage",
+          "exportKind": "named",
+          "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalOutboxMessageRow",
+          "exportKind": "named",
+          "source": "./libs/schema"
+        }
+      ]
     },
     {
       "packageName": "@croco/execution-core",

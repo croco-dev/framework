@@ -1,0 +1,558 @@
+import type { TxAdapter } from "@croco/tx-core";
+import {
+  type AppendOutboxMessageInput,
+  createTransactionalEventDiagnostic,
+  type InboxCompletionInput,
+  type InboxFailureInput,
+  type InboxStartInput,
+  type InboxStartResult,
+  type ListInboxRecordsOptions,
+  type ListOutboxMessagesOptions,
+  type OutboxClaimOptions,
+  type OutboxCompletionInput,
+  type OutboxDeadLetterInput,
+  type OutboxFailureInput,
+  type TransactionalEventDiagnostic,
+  type TransactionalEventError,
+  type TransactionalEventStore,
+  type TransactionalEventStoreContext,
+  type TransactionalInboxRecord,
+  type TransactionalOutboxMessage,
+} from "./TransactionalEvents";
+import { OutboxStorageProblem } from "./problems/EventsTxProblems";
+
+export type InMemoryTransactionalEventStoreState = {
+  outbox: Map<string, TransactionalOutboxMessage>;
+  outboxIdByIdempotencyKey: Map<string, string>;
+  inbox: Map<string, TransactionalInboxRecord>;
+};
+
+export type InMemoryTransactionalEventStoreClient = {
+  state: InMemoryTransactionalEventStoreState;
+};
+
+function createEmptyState(): InMemoryTransactionalEventStoreState {
+  return {
+    outbox: new Map(),
+    outboxIdByIdempotencyKey: new Map(),
+    inbox: new Map(),
+  };
+}
+
+function cloneDate(value: Date | undefined): Date | undefined {
+  return value ? new Date(value.getTime()) : undefined;
+}
+
+function cloneRecord(value: Record<string, unknown>): Record<string, unknown> {
+  return { ...value };
+}
+
+function cloneDiagnostic(diagnostic: TransactionalEventDiagnostic): TransactionalEventDiagnostic {
+  return {
+    ...diagnostic,
+    at: new Date(diagnostic.at.getTime()),
+    ...(diagnostic.details ? { details: cloneRecord(diagnostic.details) } : {}),
+  };
+}
+
+function cloneError(
+  error: TransactionalEventError | undefined,
+): TransactionalEventError | undefined {
+  return error ? { ...error } : undefined;
+}
+
+function cloneOutboxMessage(message: TransactionalOutboxMessage): TransactionalOutboxMessage {
+  return {
+    ...message,
+    payload: cloneRecord(message.payload),
+    metadata: cloneRecord(message.metadata),
+    ...(message.traceContext ? { traceContext: { ...message.traceContext } } : {}),
+    visibleAt: new Date(message.visibleAt.getTime()),
+    occurredAt: new Date(message.occurredAt.getTime()),
+    createdAt: new Date(message.createdAt.getTime()),
+    updatedAt: new Date(message.updatedAt.getTime()),
+    ...(cloneDate(message.lockedUntil) ? { lockedUntil: cloneDate(message.lockedUntil) } : {}),
+    ...(cloneDate(message.publishedAt) ? { publishedAt: cloneDate(message.publishedAt) } : {}),
+    ...(cloneDate(message.deadLetteredAt)
+      ? { deadLetteredAt: cloneDate(message.deadLetteredAt) }
+      : {}),
+    ...(cloneError(message.lastError) ? { lastError: cloneError(message.lastError) } : {}),
+    diagnostics: message.diagnostics.map(cloneDiagnostic),
+  };
+}
+
+function cloneInboxRecord(record: TransactionalInboxRecord): TransactionalInboxRecord {
+  return {
+    ...record,
+    createdAt: new Date(record.createdAt.getTime()),
+    updatedAt: new Date(record.updatedAt.getTime()),
+    ...(cloneDate(record.processedAt) ? { processedAt: cloneDate(record.processedAt) } : {}),
+    ...(cloneDate(record.failedAt) ? { failedAt: cloneDate(record.failedAt) } : {}),
+    ...(cloneError(record.lastError) ? { lastError: cloneError(record.lastError) } : {}),
+    metadata: cloneRecord(record.metadata),
+    diagnostics: record.diagnostics.map(cloneDiagnostic),
+  };
+}
+
+function cloneState(
+  state: InMemoryTransactionalEventStoreState,
+): InMemoryTransactionalEventStoreState {
+  const outbox = new Map<string, TransactionalOutboxMessage>();
+  for (const [id, message] of state.outbox) {
+    outbox.set(id, cloneOutboxMessage(message));
+  }
+
+  const inbox = new Map<string, TransactionalInboxRecord>();
+  for (const [key, record] of state.inbox) {
+    inbox.set(key, cloneInboxRecord(record));
+  }
+
+  return {
+    outbox,
+    outboxIdByIdempotencyKey: new Map(state.outboxIdByIdempotencyKey),
+    inbox,
+  };
+}
+
+function compareDates(left: Date, right: Date): number {
+  return left.getTime() - right.getTime();
+}
+
+function inboxStorageKey(consumerId: string, inboxKey: string): string {
+  return `${consumerId}:${inboxKey}`;
+}
+
+function getAbortError(signal?: AbortSignal): Error | null {
+  if (!signal?.aborted) {
+    return null;
+  }
+
+  return signal.reason instanceof Error ? signal.reason : new Error("Transaction aborted");
+}
+
+function assertNotAborted(signal?: AbortSignal): void {
+  const error = getAbortError(signal);
+  if (error) {
+    throw error;
+  }
+}
+
+/**
+ * In-memory transactional event store. It is intended for tests, local fixtures, and conformance suites.
+ */
+export class InMemoryTransactionalEventStore implements TransactionalEventStore<InMemoryTransactionalEventStoreClient> {
+  private rootState = createEmptyState();
+
+  createTxAdapter(): TxAdapter<InMemoryTransactionalEventStoreClient> {
+    return {
+      transaction: async (fn, _options, signal) => {
+        assertNotAborted(signal);
+        const client: InMemoryTransactionalEventStoreClient = {
+          state: cloneState(this.rootState),
+        };
+        const result = await fn(client);
+        assertNotAborted(signal);
+        this.rootState = cloneState(client.state);
+        return result;
+      },
+      savepoint: async (client, fn, _options, signal) => {
+        assertNotAborted(signal);
+        const nestedClient: InMemoryTransactionalEventStoreClient = {
+          state: cloneState(client.state),
+        };
+        const result = await fn(nestedClient);
+        assertNotAborted(signal);
+        client.state = cloneState(nestedClient.state);
+        return result;
+      },
+      supportsSavepoint: () => true,
+    };
+  }
+
+  clear(): void {
+    this.rootState = createEmptyState();
+  }
+
+  async appendOutbox(
+    input: AppendOutboxMessageInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage> {
+    const state = this.resolveState(context);
+    const existingId = state.outboxIdByIdempotencyKey.get(input.idempotencyKey);
+    if (existingId) {
+      const existing = state.outbox.get(existingId);
+      if (existing) {
+        return cloneOutboxMessage(existing);
+      }
+    }
+
+    const now = input.diagnostics?.[0]?.at ?? new Date();
+    const message: TransactionalOutboxMessage = {
+      id: input.id,
+      eventId: input.eventId,
+      eventType: input.eventType,
+      ...(input.aggregateId ? { aggregateId: input.aggregateId } : {}),
+      idempotencyKey: input.idempotencyKey,
+      payload: cloneRecord(input.payload),
+      metadata: cloneRecord(input.metadata ?? {}),
+      ...(input.traceContext ? { traceContext: { ...input.traceContext } } : {}),
+      attempts: 0,
+      maxAttempts: input.maxAttempts,
+      status: "pending",
+      visibleAt: new Date(input.visibleAt.getTime()),
+      occurredAt: new Date(input.occurredAt.getTime()),
+      createdAt: new Date(now.getTime()),
+      updatedAt: new Date(now.getTime()),
+      diagnostics: (input.diagnostics ?? []).map(cloneDiagnostic),
+    };
+
+    state.outbox.set(message.id, cloneOutboxMessage(message));
+    state.outboxIdByIdempotencyKey.set(message.idempotencyKey, message.id);
+    return cloneOutboxMessage(message);
+  }
+
+  async findOutboxById(
+    id: string,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage | null> {
+    const message = this.resolveState(context).outbox.get(id);
+    return message ? cloneOutboxMessage(message) : null;
+  }
+
+  async findOutboxByIdempotencyKey(
+    idempotencyKey: string,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage | null> {
+    const state = this.resolveState(context);
+    const id = state.outboxIdByIdempotencyKey.get(idempotencyKey);
+    if (!id) {
+      return null;
+    }
+
+    const message = state.outbox.get(id);
+    return message ? cloneOutboxMessage(message) : null;
+  }
+
+  async claimOutboxBatch(
+    options: OutboxClaimOptions,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage[]> {
+    const state = this.resolveState(context);
+    const lockedUntil = new Date(options.now.getTime() + options.visibilityTimeoutMs);
+    const ready = [...state.outbox.values()]
+      .filter((message) => this.isClaimable(message, options.now))
+      .sort((left, right) => {
+        const visibleOrder = compareDates(left.visibleAt, right.visibleAt);
+        return visibleOrder === 0 ? compareDates(left.createdAt, right.createdAt) : visibleOrder;
+      })
+      .slice(0, options.limit);
+
+    return ready.map((message) => {
+      const updated: TransactionalOutboxMessage = {
+        ...cloneOutboxMessage(message),
+        attempts: message.attempts + 1,
+        status: "publishing",
+        lockedUntil,
+        updatedAt: new Date(options.now.getTime()),
+        diagnostics: [
+          ...message.diagnostics.map(cloneDiagnostic),
+          createTransactionalEventDiagnostic(
+            "events-tx/outbox-claimed",
+            "Outbox message claimed.",
+            options.now,
+            {
+              attempts: message.attempts + 1,
+            },
+          ),
+        ],
+      };
+      state.outbox.set(updated.id, cloneOutboxMessage(updated));
+      return cloneOutboxMessage(updated);
+    });
+  }
+
+  async markOutboxPublished(
+    input: OutboxCompletionInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage | null> {
+    const state = this.resolveState(context);
+    const message = this.requireOutboxMessage(state, input.id);
+    if (!this.isActiveClaim(message, input.expectedAttempts)) {
+      return null;
+    }
+
+    const updated: TransactionalOutboxMessage = {
+      ...cloneOutboxMessage(message),
+      status: "published",
+      updatedAt: new Date(input.now.getTime()),
+      publishedAt: new Date(input.now.getTime()),
+      lockedUntil: undefined,
+      diagnostics: [
+        ...message.diagnostics.map(cloneDiagnostic),
+        createTransactionalEventDiagnostic(
+          "events-tx/outbox-published",
+          "Outbox message published.",
+          input.now,
+        ),
+      ],
+    };
+    state.outbox.set(input.id, cloneOutboxMessage(updated));
+    return cloneOutboxMessage(updated);
+  }
+
+  async markOutboxFailed(
+    input: OutboxFailureInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage | null> {
+    const state = this.resolveState(context);
+    const message = this.requireOutboxMessage(state, input.id);
+    if (!this.isActiveClaim(message, input.expectedAttempts)) {
+      return null;
+    }
+
+    const exhausted = message.attempts >= message.maxAttempts;
+    const updated: TransactionalOutboxMessage = {
+      ...cloneOutboxMessage(message),
+      status: exhausted ? "poisoned" : "retrying",
+      visibleAt: exhausted
+        ? new Date(input.now.getTime())
+        : new Date(input.nextVisibleAt.getTime()),
+      updatedAt: new Date(input.now.getTime()),
+      lockedUntil: undefined,
+      lastError: cloneError(input.error),
+      ...(exhausted ? { deadLetterReason: input.error.message } : {}),
+      diagnostics: [
+        ...message.diagnostics.map(cloneDiagnostic),
+        cloneDiagnostic(input.diagnostic),
+        ...(exhausted
+          ? [
+              createTransactionalEventDiagnostic(
+                "events-tx/outbox-poisoned",
+                "Outbox message exhausted publish attempts.",
+                input.now,
+                {
+                  attempts: message.attempts,
+                  maxAttempts: message.maxAttempts,
+                },
+              ),
+            ]
+          : []),
+      ],
+    };
+    state.outbox.set(input.id, cloneOutboxMessage(updated));
+    return cloneOutboxMessage(updated);
+  }
+
+  async markOutboxDeadLettered(
+    input: OutboxDeadLetterInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage | null> {
+    const state = this.resolveState(context);
+    const message = this.requireOutboxMessage(state, input.id);
+    if (message.status !== "poisoned" || message.attempts !== input.expectedAttempts) {
+      return null;
+    }
+
+    const updated: TransactionalOutboxMessage = {
+      ...cloneOutboxMessage(message),
+      status: "dead_lettered",
+      updatedAt: new Date(input.now.getTime()),
+      deadLetteredAt: new Date(input.now.getTime()),
+      deadLetterReason: input.reason,
+      lockedUntil: undefined,
+      diagnostics: [...message.diagnostics.map(cloneDiagnostic), cloneDiagnostic(input.diagnostic)],
+    };
+    state.outbox.set(input.id, cloneOutboxMessage(updated));
+    return cloneOutboxMessage(updated);
+  }
+
+  async listOutboxMessages(
+    options: ListOutboxMessagesOptions = {},
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage[]> {
+    const messages = [...this.resolveState(context).outbox.values()]
+      .filter((message) => !options.status || message.status === options.status)
+      .sort((left, right) => compareDates(left.createdAt, right.createdAt));
+
+    return messages.slice(0, options.limit ?? messages.length).map(cloneOutboxMessage);
+  }
+
+  async startInboxProcessing(
+    input: InboxStartInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<InboxStartResult> {
+    const state = this.resolveState(context);
+    const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
+    const existing = state.inbox.get(storageKey);
+
+    if (existing && existing.status !== "failed") {
+      return {
+        status: "duplicate",
+        record: cloneInboxRecord(existing),
+      };
+    }
+
+    if (existing) {
+      const retrying: TransactionalInboxRecord = {
+        ...cloneInboxRecord(existing),
+        status: "processing",
+        attempts: existing.attempts + 1,
+        updatedAt: new Date(input.now.getTime()),
+        diagnostics: [
+          ...existing.diagnostics.map(cloneDiagnostic),
+          createTransactionalEventDiagnostic(
+            "events-tx/inbox-retry-started",
+            "Inbox retry started.",
+            input.now,
+          ),
+        ],
+      };
+      state.inbox.set(storageKey, cloneInboxRecord(retrying));
+      return {
+        status: "started",
+        record: cloneInboxRecord(retrying),
+      };
+    }
+
+    const record: TransactionalInboxRecord = {
+      consumerId: input.consumerId,
+      messageId: input.messageId,
+      inboxKey: input.inboxKey,
+      eventType: input.eventType,
+      status: "processing",
+      attempts: 1,
+      createdAt: new Date(input.now.getTime()),
+      updatedAt: new Date(input.now.getTime()),
+      metadata: cloneRecord(input.metadata ?? {}),
+      diagnostics: [
+        createTransactionalEventDiagnostic(
+          "events-tx/inbox-started",
+          "Inbox processing started.",
+          input.now,
+          {
+            eventType: input.eventType,
+          },
+        ),
+      ],
+    };
+    state.inbox.set(storageKey, cloneInboxRecord(record));
+    return {
+      status: "started",
+      record: cloneInboxRecord(record),
+    };
+  }
+
+  async markInboxProcessed(
+    input: InboxCompletionInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalInboxRecord> {
+    const state = this.resolveState(context);
+    const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
+    const record = this.requireInboxRecord(state, storageKey);
+    const updated: TransactionalInboxRecord = {
+      ...cloneInboxRecord(record),
+      status: "processed",
+      updatedAt: new Date(input.now.getTime()),
+      processedAt: new Date(input.now.getTime()),
+      diagnostics: [
+        ...record.diagnostics.map(cloneDiagnostic),
+        ...(input.diagnostic ? [cloneDiagnostic(input.diagnostic)] : []),
+      ],
+    };
+    state.inbox.set(storageKey, cloneInboxRecord(updated));
+    return cloneInboxRecord(updated);
+  }
+
+  async markInboxFailed(
+    input: InboxFailureInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalInboxRecord> {
+    const state = this.resolveState(context);
+    const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
+    const record = this.requireInboxRecord(state, storageKey);
+    const updated: TransactionalInboxRecord = {
+      ...cloneInboxRecord(record),
+      status: "failed",
+      updatedAt: new Date(input.now.getTime()),
+      failedAt: new Date(input.now.getTime()),
+      lastError: cloneError(input.error),
+      failureReason: input.reason,
+      diagnostics: [
+        ...record.diagnostics.map(cloneDiagnostic),
+        ...(input.diagnostic ? [cloneDiagnostic(input.diagnostic)] : []),
+      ],
+    };
+    state.inbox.set(storageKey, cloneInboxRecord(updated));
+    return cloneInboxRecord(updated);
+  }
+
+  async findInboxRecord(
+    consumerId: string,
+    inboxKey: string,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalInboxRecord | null> {
+    const record = this.resolveState(context).inbox.get(inboxStorageKey(consumerId, inboxKey));
+    return record ? cloneInboxRecord(record) : null;
+  }
+
+  async listInboxRecords(
+    options: ListInboxRecordsOptions = {},
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalInboxRecord[]> {
+    const records = [...this.resolveState(context).inbox.values()]
+      .filter((record) => !options.consumerId || record.consumerId === options.consumerId)
+      .filter((record) => !options.status || record.status === options.status)
+      .sort((left, right) => compareDates(left.createdAt, right.createdAt));
+
+    return records.slice(0, options.limit ?? records.length).map(cloneInboxRecord);
+  }
+
+  private resolveState(
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): InMemoryTransactionalEventStoreState {
+    return context?.client?.state ?? this.rootState;
+  }
+
+  private isClaimable(message: TransactionalOutboxMessage, now: Date): boolean {
+    const visible = message.visibleAt.getTime() <= now.getTime();
+    if (!visible) {
+      return false;
+    }
+
+    if (message.status === "pending" || message.status === "retrying") {
+      return true;
+    }
+
+    return (
+      message.status === "publishing" &&
+      message.lockedUntil !== undefined &&
+      message.lockedUntil.getTime() <= now.getTime()
+    );
+  }
+
+  private isActiveClaim(message: TransactionalOutboxMessage, expectedAttempts: number): boolean {
+    return message.status === "publishing" && message.attempts === expectedAttempts;
+  }
+
+  private requireOutboxMessage(
+    state: InMemoryTransactionalEventStoreState,
+    id: string,
+  ): TransactionalOutboxMessage {
+    const message = state.outbox.get(id);
+    if (!message) {
+      throw new OutboxStorageProblem(`Outbox message '${id}' was not found.`);
+    }
+    return message;
+  }
+
+  private requireInboxRecord(
+    state: InMemoryTransactionalEventStoreState,
+    storageKey: string,
+  ): TransactionalInboxRecord {
+    const record = state.inbox.get(storageKey);
+    if (!record) {
+      throw new OutboxStorageProblem(`Inbox record '${storageKey}' was not found.`);
+    }
+    return record;
+  }
+}
