@@ -1,7 +1,7 @@
 # @croco/admin-react
 
-Provider-neutral React contracts and primitives for SaaS billing and entitlement
-administration.
+Provider-neutral React contracts and primitives for SaaS billing, entitlement,
+tenant switching, impersonation, and permission inspection administration.
 
 ## Install
 
@@ -15,6 +15,8 @@ pnpm add @croco/admin-react
 import {
   BillingEntitlementAdminPanel,
   createInMemoryBillingEntitlementAdminPanelState,
+  createInMemoryTenantImpersonationConsoleState,
+  TenantImpersonationConsole,
 } from "@croco/admin-react";
 
 const state = createInMemoryBillingEntitlementAdminPanelState({
@@ -49,6 +51,65 @@ export function TenantBillingPanel() {
 }
 ```
 
+```tsx
+const tenantConsoleState = createInMemoryTenantImpersonationConsoleState({
+  tenant: {
+    id: "tenant-1",
+    slug: "acme",
+    name: "Acme",
+    status: "active",
+  },
+  tenants: [
+    { tenant: { id: "tenant-1", slug: "acme", name: "Acme", status: "active" } },
+    {
+      tenant: { id: "tenant-2", slug: "globex", name: "Globex", status: "trial" },
+      switchAction: {
+        id: "switch-tenant-2",
+        label: "Switch to Globex",
+        source: "croco",
+        mutability: "editable",
+        permissions: ["tenant:switch"],
+        audit: {
+          eventName: "tenant.admin.switched",
+          subjectType: "tenant",
+          subjectId: "tenant-2",
+        },
+        possibleProblems: [{ code: "tenant/required", source: "tenant" }],
+      },
+    },
+  ],
+  requiredPermissions: ["tenant:read"],
+  grantedPermissions: ["tenant:read", "tenant:switch", "impersonation:stop"],
+  permissions: [
+    { permission: "tenant:read", state: "allowed" },
+    { permission: "impersonation:start", state: "denied" },
+  ],
+  impersonation: {
+    kind: "active",
+    session,
+    impersonator: { userId: "admin-1", label: "Ops Admin" },
+    target: { userId: "user-1", label: "Customer User" },
+    exitAction: {
+      id: "exit-impersonation",
+      label: "Exit impersonation",
+      source: "croco",
+      mutability: "editable",
+      permissions: ["impersonation:stop"],
+      audit: {
+        eventName: "impersonation.admin.exited",
+        subjectType: "impersonation-session",
+        subjectId: session.sessionId,
+      },
+      possibleProblems: [{ code: "IMPERSONATION_SESSION_NOT_FOUND", source: "impersonation" }],
+    },
+  },
+});
+
+export function TenantAdminConsole() {
+  return <TenantImpersonationConsole state={tenantConsoleState} />;
+}
+```
+
 ## Contract
 
 - Croco plan, billing, entitlement, and quota state is represented separately from
@@ -59,3 +120,8 @@ export function TenantBillingPanel() {
   possible Problem codes.
 - Permission failures render as `permission_denied` before editable actions are
   exposed.
+- Tenant switching uses explicit tenant option and switch action contracts.
+- Impersonation renders `inactive`, `active`, `expired`, and `unavailable`
+  states separately; active and expired sessions require an audited exit action.
+- Tenant isolation, provider, and permission inspection failures preserve Croco
+  Problem details instead of rendering a normal success state.

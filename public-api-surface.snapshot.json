@@ -517,13 +517,49 @@
           "declarationKind": "function"
         },
         {
+          "name": "createImpersonationExpiredProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
           "name": "createInMemoryBillingEntitlementAdminPanelState",
           "exportKind": "named",
           "source": "./libs/snapshot",
           "declarationKind": "const"
         },
         {
+          "name": "createInMemoryTenantImpersonationConsoleState",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "const"
+        },
+        {
           "name": "createPermissionDeniedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createPermissionInspectionProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createPermissionInspectionUnavailableProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTenantImpersonationConsoleState",
+          "exportKind": "named",
+          "source": "./libs/snapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTenantUnavailableProblemDetails",
           "exportKind": "named",
           "source": "./libs/snapshot",
           "declarationKind": "function"
@@ -541,6 +577,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "ImpersonationBanner",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "PermissionInspector",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
           "name": "PlanSummary",
           "exportKind": "named",
           "source": "./libs/components",
@@ -548,6 +596,18 @@
         },
         {
           "name": "ProblemNotice",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "TenantImpersonationConsole",
+          "exportKind": "named",
+          "source": "./libs/components",
+          "declarationKind": "function"
+        },
+        {
+          "name": "TenantSwitcher",
           "exportKind": "named",
           "source": "./libs/components",
           "declarationKind": "function"
@@ -591,6 +651,61 @@
           "source": "./libs/types"
         },
         {
+          "name": "AdminImpersonationActiveInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationActiveState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationConsoleState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationExpiredInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationExpiredState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationInactiveInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationInactiveState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationPrincipal",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationStateInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationUnavailableInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminImpersonationUnavailableState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "AdminMeteringState",
           "exportKind": "named",
           "source": "./libs/types"
@@ -602,6 +717,21 @@
         },
         {
           "name": "AdminPanelActionHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminPermissionInspectionInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminPermissionInspectionRow",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminPermissionInspectionState",
           "exportKind": "named",
           "source": "./libs/types"
         },
@@ -622,6 +752,26 @@
         },
         {
           "name": "AdminStateSource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminTenantInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminTenantSummary",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminTenantSwitchOption",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "AdminTenantSwitchOptionInput",
           "exportKind": "named",
           "source": "./libs/types"
         },
@@ -667,6 +817,41 @@
         },
         {
           "name": "PermissionDeniedAdminPanelState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantImpersonationConsoleActiveState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantImpersonationConsoleDeniedState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantImpersonationConsoleLoadingState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantImpersonationConsoleProps",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantImpersonationConsoleState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantImpersonationConsoleStateInput",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantImpersonationConsoleUnavailableState",
           "exportKind": "named",
           "source": "./libs/types"
         }

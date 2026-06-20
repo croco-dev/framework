@@ -6,13 +6,24 @@ import type {
   AdminActionPermissionDecision,
   AdminBillingStatus,
   AdminEntitlementRow,
+  AdminImpersonationConsoleState,
+  AdminImpersonationPrincipal,
+  AdminImpersonationStateInput,
   AdminMeteringState,
+  AdminPermissionInspectionInput,
+  AdminPermissionInspectionRow,
   AdminPlanSummary,
   AdminProviderState,
+  AdminTenantInput,
+  AdminTenantSummary,
+  AdminTenantSwitchOption,
+  AdminTenantSwitchOptionInput,
   AdminUsageMeter,
   AdminUsageMeterInput,
   BillingEntitlementAdminPanelState,
   BillingEntitlementAdminPanelStateInput,
+  TenantImpersonationConsoleState,
+  TenantImpersonationConsoleStateInput,
 } from "./types";
 
 const ABOUT_BLANK = "about:blank";
@@ -44,6 +55,55 @@ export function createPermissionDeniedProblemDetails(
     source: "permissions",
     status: 403,
     title: "Forbidden",
+  });
+}
+
+export function createTenantUnavailableProblemDetails(tenantId?: string): ProblemDetails {
+  return createCoreProblemDetails({
+    code: "admin/tenant-context-unavailable",
+    detail: tenantId
+      ? `Tenant '${tenantId}' is unavailable for the admin console`
+      : "Tenant context is unavailable for the admin console",
+    source: "tenant",
+    status: 503,
+    title: "Service Unavailable",
+  });
+}
+
+export function createPermissionInspectionProblemDetails(
+  permission: string,
+  tenantId?: string,
+): ProblemDetails {
+  return createCoreProblemDetails({
+    code: "admin/permission-inspection-denied",
+    detail: tenantId
+      ? `Permission '${permission}' is denied in tenant '${tenantId}'`
+      : `Permission '${permission}' is denied`,
+    source: "permissions",
+    status: 403,
+    title: "Forbidden",
+  });
+}
+
+export function createPermissionInspectionUnavailableProblemDetails(
+  permission: string,
+): ProblemDetails {
+  return createCoreProblemDetails({
+    code: "admin/permission-inspection-unavailable",
+    detail: `Permission '${permission}' could not be inspected`,
+    source: "permissions",
+    status: 503,
+    title: "Service Unavailable",
+  });
+}
+
+export function createImpersonationExpiredProblemDetails(sessionId: string): ProblemDetails {
+  return createCoreProblemDetails({
+    code: "admin/impersonation-expired",
+    detail: `Impersonation session '${sessionId}' expired and must be exited`,
+    source: "impersonation",
+    status: 409,
+    title: "Impersonation expired",
   });
 }
 
@@ -134,6 +194,85 @@ export function createBillingEntitlementAdminPanelState(
 
 export const createInMemoryBillingEntitlementAdminPanelState =
   createBillingEntitlementAdminPanelState;
+
+export function createTenantImpersonationConsoleState(
+  input: TenantImpersonationConsoleStateInput,
+): TenantImpersonationConsoleState {
+  const generatedAt = input.generatedAt ?? new Date();
+  const actions = input.actions ?? [];
+  const tenant = input.tenant ? createTenantSummary(input.tenant) : undefined;
+  const tenantId = input.selectedTenantId ?? tenant?.tenantId;
+
+  if (input.loading) {
+    return {
+      generatedAt,
+      kind: "loading",
+      tenantId,
+    };
+  }
+
+  const requiredPermissions = input.requiredPermissions ?? [];
+  const grantedPermissions = input.grantedPermissions ?? [];
+  const permissions = createPermissionInspectionRows(input.permissions ?? [], tenantId);
+  const impersonation = createImpersonationState(input.impersonation, generatedAt);
+  const consoleFailure = input.tenantIsolationProblem ?? input.providerFailure;
+
+  if (consoleFailure) {
+    return {
+      actions,
+      generatedAt,
+      grantedPermissions,
+      impersonation,
+      kind: "unavailable",
+      permissions,
+      problem: consoleFailure,
+      ...(tenant ? { tenant } : {}),
+    };
+  }
+
+  if (!tenant) {
+    return {
+      actions,
+      generatedAt,
+      grantedPermissions,
+      impersonation,
+      kind: "unavailable",
+      permissions,
+      problem: createTenantUnavailableProblemDetails(tenantId),
+    };
+  }
+
+  const missingPermissions = requiredPermissions.filter(
+    (permission) => !grantedPermissions.includes(permission),
+  );
+
+  if (missingPermissions.length > 0) {
+    return {
+      actions,
+      generatedAt,
+      grantedPermissions,
+      kind: "denied",
+      problem:
+        input.permissionProblem ??
+        createPermissionDeniedProblemDetails(tenantId ?? "unknown", missingPermissions),
+      requiredPermissions,
+      tenantId,
+    };
+  }
+
+  return {
+    actions,
+    generatedAt,
+    grantedPermissions,
+    impersonation,
+    kind: "active",
+    permissions,
+    tenant,
+    tenants: createTenantSwitchOptions(input.tenants ?? [], tenant.tenantId),
+  };
+}
+
+export const createInMemoryTenantImpersonationConsoleState = createTenantImpersonationConsoleState;
 
 function createPlanSummary(input: BillingEntitlementAdminPanelStateInput): AdminPlanSummary {
   const subscriptionStatus = input.subscription?.status ?? "missing";
@@ -328,4 +467,152 @@ function createUsageMeters(inputs: readonly AdminUsageMeterInput[]): AdminUsageM
       usage: input.usage,
     };
   });
+}
+
+function createTenantSummary(input: AdminTenantInput): AdminTenantSummary {
+  if ("tenantId" in input) {
+    return input;
+  }
+
+  return {
+    mutability: "read-only",
+    name: input.name,
+    slug: input.slug,
+    source: "croco",
+    status: input.status,
+    tenantId: input.id,
+  };
+}
+
+function createTenantSwitchOptions(
+  inputs: readonly AdminTenantSwitchOptionInput[],
+  selectedTenantId: string,
+): AdminTenantSwitchOption[] {
+  return inputs.map((input) => {
+    const tenant = createTenantSummary(input.tenant);
+
+    return {
+      ...tenant,
+      disabledReason: input.disabledReason,
+      problem: input.problem,
+      selected: tenant.tenantId === selectedTenantId,
+      switchAction: input.switchAction,
+    };
+  });
+}
+
+function createPermissionInspectionRows(
+  inputs: readonly AdminPermissionInspectionInput[],
+  activeTenantId: string | undefined,
+): AdminPermissionInspectionRow[] {
+  return inputs.map((input) => {
+    const tenantId = input.tenantId ?? activeTenantId;
+    const scope = input.scope ?? "tenant";
+    const id = input.id ?? `${scope}:${tenantId ?? "global"}:${input.permission}`;
+
+    return {
+      id,
+      label: input.label,
+      mutability: "read-only",
+      permission: input.permission,
+      problem: input.problem ?? createPermissionInspectionProblem(input, tenantId),
+      requiredFor: input.requiredFor,
+      scope,
+      source: "croco",
+      state: input.state,
+      subjectId: input.subjectId,
+      tenantId,
+    };
+  });
+}
+
+function createPermissionInspectionProblem(
+  input: AdminPermissionInspectionInput,
+  tenantId: string | undefined,
+): ProblemDetails | undefined {
+  if (input.state === "denied") {
+    return createPermissionInspectionProblemDetails(input.permission, tenantId);
+  }
+
+  if (input.state === "provider_failure") {
+    return createPermissionInspectionUnavailableProblemDetails(input.permission);
+  }
+
+  return undefined;
+}
+
+function createImpersonationState(
+  input: AdminImpersonationStateInput | undefined,
+  generatedAt: Date,
+): AdminImpersonationConsoleState {
+  if (!input) {
+    return {
+      kind: "inactive",
+      mutability: "read-only",
+      source: "croco",
+    };
+  }
+
+  if (input.kind === "inactive") {
+    return {
+      actor: input.actor,
+      kind: "inactive",
+      mutability: "read-only",
+      source: "croco",
+      startAction: input.startAction,
+    };
+  }
+
+  if (input.kind === "unavailable") {
+    return {
+      kind: "unavailable",
+      mutability: "read-only",
+      problem: input.problem,
+      recoveryAction: input.recoveryAction,
+      source: "croco",
+    };
+  }
+
+  const impersonator = createImpersonationPrincipal(
+    input.session.impersonatorId,
+    input.impersonator,
+  );
+  const target = createImpersonationPrincipal(input.session.targetUserId, input.target);
+  const expired =
+    input.kind === "expired" || input.session.expiresAt.getTime() <= generatedAt.getTime();
+  const expiredProblem = input.kind === "expired" ? input.problem : undefined;
+
+  if (expired) {
+    return {
+      exitAction: input.exitAction,
+      impersonator,
+      kind: "expired",
+      mutability: "editable",
+      problem: expiredProblem ?? createImpersonationExpiredProblemDetails(input.session.sessionId),
+      session: input.session,
+      source: "croco",
+      target,
+    };
+  }
+
+  return {
+    exitAction: input.exitAction,
+    impersonator,
+    kind: "active",
+    mutability: "editable",
+    session: input.session,
+    source: "croco",
+    target,
+  };
+}
+
+function createImpersonationPrincipal(
+  userId: string,
+  input: AdminImpersonationPrincipal | undefined,
+): AdminImpersonationPrincipal {
+  return {
+    email: input?.email,
+    label: input?.label,
+    userId,
+  };
 }
