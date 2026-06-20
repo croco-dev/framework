@@ -98,3 +98,51 @@ title: "RateLimiter"
 #### Returns
 
 `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
+
+***
+
+### refund()
+
+> **refund**(`context`, `policy`, `receipt?`): `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Parameters
+
+##### context
+
+`TContext`
+
+##### policy
+
+[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+
+##### receipt?
+
+[`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
+
+#### Returns
+
+`Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+***
+
+### refundWithKey()
+
+> **refundWithKey**(`key`, `policy`, `receipt?`): `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### policy
+
+[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+
+##### receipt?
+
+[`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
+
+#### Returns
+
+`Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>

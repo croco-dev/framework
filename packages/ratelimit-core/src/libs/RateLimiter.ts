@@ -3,6 +3,8 @@ import type { RateLimitStore } from "./RateLimitStore";
 import type {
   FixedWindowPolicy,
   RateLimitPolicy,
+  RateLimitRefundReceipt,
+  RateLimitRefundResult,
   RateLimitResult,
   RateLimitStats,
   RateLimitStatsError,
@@ -51,6 +53,30 @@ export class RateLimiter<TContext = KeyContext> {
       return { ...result, policyName: policy.algorithm };
     } catch (error) {
       return this.handleStoreError(error, policy);
+    }
+  }
+
+  async refund(
+    context: TContext,
+    policy: RateLimitPolicy,
+    receipt?: RateLimitRefundReceipt,
+  ): Promise<RateLimitRefundResult> {
+    const key = this.keyBuilder(context, policy.name);
+    return this.refundWithKey(key, policy, receipt);
+  }
+
+  async refundWithKey(
+    key: string,
+    policy: RateLimitPolicy,
+    receipt?: RateLimitRefundReceipt,
+  ): Promise<RateLimitRefundResult> {
+    try {
+      const result = await this.store.refund(key, policy, receipt);
+      return { ...result, policyName: policy.algorithm };
+    } catch (error) {
+      const storeError = normalizeStoreError(error);
+      this.onStoreError?.(storeError);
+      throw storeError;
     }
   }
 

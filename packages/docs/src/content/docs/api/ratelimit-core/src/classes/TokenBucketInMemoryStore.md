@@ -35,7 +35,7 @@ title: "TokenBucketInMemoryStore"
 
 ### check()
 
-> **check**(`key`, `policy`): `Promise`\<\{ `limit`: `number`; `remaining`: `number`; `resetAtMs`: `number`; `success`: `boolean`; \}\>
+> **check**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
 #### Parameters
 
@@ -49,7 +49,7 @@ title: "TokenBucketInMemoryStore"
 
 #### Returns
 
-`Promise`\<\{ `limit`: `number`; `remaining`: `number`; `resetAtMs`: `number`; `success`: `boolean`; \}\>
+`Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
 #### Overrides
 
@@ -178,6 +178,34 @@ title: "TokenBucketInMemoryStore"
 #### Overrides
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/tokenbucketstore/#pruneexpired)
+
+***
+
+### refund()
+
+> **refund**(`key`, `policy`, `receipt?`): `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### policy
+
+[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+
+##### receipt?
+
+[`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
+
+#### Returns
+
+`Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Overrides
+
+[`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`refund`](/api/ratelimit-core/src/classes/tokenbucketstore/#refund)
 
 ***
 

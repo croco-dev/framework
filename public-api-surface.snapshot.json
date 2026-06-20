@@ -11410,6 +11410,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "RateLimitRefundUnsupportedProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitConfigProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "RateLimitStore",
           "exportKind": "named",
           "source": "./libs/RateLimitStore",
@@ -11465,6 +11471,11 @@
         },
         {
           "name": "FixedWindowPolicy",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "FixedWindowRefundReceipt",
           "exportKind": "named",
           "source": "./libs/types"
         },
@@ -11544,6 +11555,16 @@
           "source": "./libs/types"
         },
         {
+          "name": "RateLimitRefundReceipt",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RateLimitRefundResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "RateLimitResult",
           "exportKind": "named",
           "source": "./libs/types"
@@ -11569,12 +11590,22 @@
           "source": "./libs/types"
         },
         {
+          "name": "SlidingWindowRefundReceipt",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "TokenBucketEntry",
           "exportKind": "named",
           "source": "./libs/RateLimitStore"
         },
         {
           "name": "TokenBucketPolicy",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TokenBucketRefundReceipt",
           "exportKind": "named",
           "source": "./libs/types"
         }

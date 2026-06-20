@@ -98,6 +98,20 @@ describe("createRateLimitMiddleware", () => {
     );
   });
 
+  it("should store the consumed rate limit key in context", async () => {
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
+      policy,
+      keySegments: ["ip"],
+    });
+    const ctx = createContext({ headers: { "x-real-ip": "203.0.113.9" } });
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware(ctx, next);
+
+    expect(ctx.get("rateLimitKey")).toBe("rl:sliding:203.0.113.9");
+  });
+
   it("should fallback to cf-connecting-ip when x-forwarded-for is empty", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,

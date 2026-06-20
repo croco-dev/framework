@@ -46,6 +46,7 @@ export {
  */
 export {
   RateLimitKeyBuilderProblem,
+  RateLimitRefundUnsupportedProblem,
   RateLimitWindowProblem,
 } from "./libs/problems/RateLimitConfigProblems";
 
@@ -90,6 +91,7 @@ export {
  * 정책, 결과, 통계, 타입 가드에 사용하는 핵심 타입과 유틸리티입니다.
  */
 export {
+  type FixedWindowRefundReceipt,
   type FixedWindowPolicy,
   isFixedWindowPolicy,
   isSlidingWindowPolicy,
@@ -98,9 +100,13 @@ export {
   type RateLimitAlgorithm,
   type RateLimitMiddlewareOptions,
   type RateLimitPolicy,
+  type RateLimitRefundReceipt,
+  type RateLimitRefundResult,
   type RateLimitResult,
   type RateLimitStatsError,
   type RateLimitStats,
+  type SlidingWindowRefundReceipt,
   type SlidingWindowPolicy,
+  type TokenBucketRefundReceipt,
   type TokenBucketPolicy,
 } from "./libs/types";
