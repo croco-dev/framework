@@ -821,7 +821,10 @@ function runSpaBeSplitContractSmoke(): void {
     generatedClientPath,
     "REST SPA contract smoke did not create provider-rpc user client",
   );
-  assertFileContains(generatedClientPath, "export function useList()");
+  assertFileContains(
+    generatedClientPath,
+    "export function useList<TData = ListOutput>(options?: ListQueryOptions<TData>)",
+  );
   assertFileContains(
     generatedClientPath,
     "export type CreateInput = { email: string; name: string; };",
