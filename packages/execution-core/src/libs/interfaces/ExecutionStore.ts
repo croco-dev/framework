@@ -43,6 +43,7 @@ export abstract class ExecutionStore {
    *
    * Only updates fields provided in the data parameter.
    * Should preserve all existing fields not specified in data.
+   * Optional fields provided as undefined should be cleared.
    *
    * @returns Updated execution
    * @throws Error if execution not found or update fails

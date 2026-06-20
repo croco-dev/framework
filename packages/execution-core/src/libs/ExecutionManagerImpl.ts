@@ -137,6 +137,8 @@ export class ExecutionManagerImpl
       status: targetStatus,
       startedAt,
       attempts,
+      completedAt: undefined,
+      error: undefined,
     });
   }
 
@@ -206,6 +208,7 @@ export class ExecutionManagerImpl
     return this.store.update(id, {
       status: targetStatus,
       error: undefined, // Clear previous error
+      completedAt: undefined,
     });
   }
 
