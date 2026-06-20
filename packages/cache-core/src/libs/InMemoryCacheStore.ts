@@ -12,6 +12,13 @@ type CacheEntry<V> = {
   expiresAt: number | null;
 };
 
+type InFlightLoad<V> = {
+  promise: Promise<V | undefined>;
+  state: {
+    invalidated: boolean;
+  };
+};
+
 export type InMemoryCacheStoreOptions = {
   maxEntries?: number;
   cleanupIntervalMs?: number;
@@ -31,7 +38,7 @@ function createPatternRegex(pattern: CachePattern): RegExp {
 
 export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   private readonly store = new Map<string, CacheEntry<V>>();
-  private readonly inFlightLoads = new Map<string, Promise<V | undefined>>();
+  private readonly inFlightLoads = new Map<string, InFlightLoad<V>>();
   private readonly maxEntries: number;
   private readonly stats: Omit<CacheStats, "size"> = {
     hits: 0,
@@ -39,7 +46,6 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
     evictions: 0,
   };
   private readonly cleanupTimer?: ReturnType<typeof setInterval>;
-  private generation = 0;
 
   constructor(
     options: InMemoryCacheStoreOptions = { maxEntries: DEFAULT_MAX_ENTRIES },
@@ -89,15 +95,8 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async delete(key: string): Promise<void> {
-    this.generation++;
-    const inFlight = this.inFlightLoads.get(key);
-    if (inFlight !== undefined) {
-      inFlight.catch(() => {
-        // inFlight 가 reject 되어도 inFlightLoads 에서 제거
-      });
-    }
+    this.invalidateInFlightLoad(key);
     this.store.delete(key);
-    this.inFlightLoads.delete(key);
   }
 
   async has(key: string): Promise<boolean> {
@@ -117,8 +116,13 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async clear(): Promise<void> {
-    this.generation++;
     this.store.clear();
+    for (const inFlight of this.inFlightLoads.values()) {
+      inFlight.state.invalidated = true;
+      inFlight.promise.catch(() => {
+        // inFlight 가 reject 되어도 inFlightLoads 에서 제거
+      });
+    }
     this.inFlightLoads.clear();
   }
 
@@ -129,45 +133,22 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async invalidatePattern(pattern: CachePattern): Promise<number> {
-    this.generation++;
     const matcher = createPatternRegex(pattern);
     let deletedCount = 0;
 
-    const inFlightToRemove = new Set<string>();
-    for (const key of this.store.keys()) {
+    for (const key of Array.from(this.store.keys())) {
       if (!matcher.test(key)) {
         continue;
-      }
-      inFlightToRemove.add(key);
-    }
-
-    // Also clean inFlightLoads entries that match the pattern but aren't in the store yet
-    for (const key of this.inFlightLoads.keys()) {
-      if (!matcher.test(key)) {
-        continue;
-      }
-      inFlightToRemove.add(key);
-    }
-
-    for (const key of this.store.keys()) {
-      if (!matcher.test(key)) {
-        continue;
-      }
-
-      const inFlight = this.inFlightLoads.get(key);
-      if (inFlight !== undefined) {
-        inFlightToRemove.add(key);
-        inFlight.catch(() => {
-          // inFlight 가 reject 되어도 inFlightLoads 에서 제거
-        });
       }
 
       this.deleteEntry(key);
       deletedCount++;
     }
 
-    for (const key of inFlightToRemove) {
-      this.inFlightLoads.delete(key);
+    for (const key of Array.from(this.inFlightLoads.keys())) {
+      if (matcher.test(key)) {
+        this.invalidateInFlightLoad(key);
+      }
     }
 
     return deletedCount;
@@ -189,38 +170,57 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
 
     const pending = this.inFlightLoads.get(key);
     if (pending !== undefined) {
-      return pending;
+      return pending.promise;
     }
 
-    const gen = this.generation;
+    const loadState = {
+      invalidated: false,
+    };
+    let resolveLoad!: (value: V | undefined | PromiseLike<V | undefined>) => void;
+    let rejectLoad!: (reason?: unknown) => void;
 
-    const loadPromise = (async () => {
+    const loadPromise = new Promise<V | undefined>((resolve, reject) => {
+      resolveLoad = resolve;
+      rejectLoad = reject;
+    });
+
+    this.inFlightLoads.set(key, {
+      promise: loadPromise,
+      state: loadState,
+    });
+
+    void (async () => {
       try {
         const loadedValue = await loader();
 
         if (loadedValue !== undefined) {
           // Store was cleared/deleted during load — don't restore
-          if (this.generation !== gen) {
-            return undefined;
+          if (loadState.invalidated) {
+            resolveLoad(undefined);
+            return;
           }
 
           // 현재 캐시 값을 먼저 확인하여 늦은 loader 결과가 새 값으로 덮어쓰는지 확인
           const currentEntry = this.store.get(key);
           if (currentEntry !== undefined) {
             // 현재 캐시에 값이 있다면 저장하지 않음 (다른 set() 이 중간에 호출됨)
-            return currentEntry.value;
+            resolveLoad(currentEntry.value);
+            return;
           }
 
           await this.set(key, loadedValue, options.ttlMs);
         }
 
-        return loadedValue;
+        resolveLoad(loadedValue);
+      } catch (error) {
+        rejectLoad(error);
       } finally {
-        this.inFlightLoads.delete(key);
+        if (this.inFlightLoads.get(key)?.state === loadState) {
+          this.inFlightLoads.delete(key);
+        }
       }
     })();
 
-    this.inFlightLoads.set(key, loadPromise);
     return loadPromise;
   }
 
@@ -250,6 +250,19 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
     if (this.store.delete(key)) {
       this.stats.evictions++;
     }
+  }
+
+  private invalidateInFlightLoad(key: string): void {
+    const inFlight = this.inFlightLoads.get(key);
+    if (inFlight === undefined) {
+      return;
+    }
+
+    inFlight.state.invalidated = true;
+    inFlight.promise.catch(() => {
+      // inFlight 가 reject 되어도 inFlightLoads 에서 제거
+    });
+    this.inFlightLoads.delete(key);
   }
 
   private pruneExpiredSync(): number {
