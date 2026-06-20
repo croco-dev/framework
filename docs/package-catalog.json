@@ -403,7 +403,12 @@
         "adapter": "React integration helpers",
         "runtimes": ["browser", "node"],
         "requiredEnv": ["none"],
-        "features": ["React bindings", "meta-vite integration"]
+        "features": [
+          "React bindings",
+          "meta-vite integration",
+          "auth gate primitives",
+          "tenant and entitlement bridge"
+        ]
       },
       "frontend-vite": {
         "domain": "Frontend Vite",

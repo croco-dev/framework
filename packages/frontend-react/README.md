@@ -5,6 +5,8 @@
 React 앱에서 Croco의 SSR 기능을 사용하기 위한 유틸리티 패키지입니다.
 
 이 패키지는 React 앱에서 Vike와 함께 Croco의 SSR 데이터 전송 기능을 사용하기 위한 훅과 설정 함수를 제공합니다.
+또한 generated client나 앱별 auth provider가 반환한 세션, 테넌트, 권한, 엔터틀먼트 상태를
+React에서 명시적으로 표현하는 provider-neutral bridge를 제공합니다.
 
 ## 설치
 
@@ -55,6 +57,53 @@ export default function Page() {
 }
 ```
 
+### Auth / entitlement bridge
+
+generated client나 앱 provider에서 읽은 상태를 `CrocoAuthBridgeProvider`에 전달하면
+권한/엔터틀먼트 gate가 loading, allowed, denied, unauthenticated, unavailable 상태를
+성공 렌더링과 분리합니다.
+
+```typescript
+import {
+  CrocoAuthBridgeProvider,
+  RequireEntitlement,
+  RequirePermission,
+  createFrontendAuthBridgeState,
+} from "@croco/frontend-react";
+
+async function loadBridgeState() {
+  const [session, tenant, permissions, entitlements] = await Promise.all([
+    generatedClient.auth.session(),
+    generatedClient.tenant.current(),
+    generatedClient.access.permissions(["billing:read"]),
+    generatedClient.entitlements.check(["billing.pro"]),
+  ]);
+
+  return createFrontendAuthBridgeState({
+    session,
+    tenant,
+    permissions,
+    entitlements,
+    providerName: "generated-client",
+  });
+}
+
+export function BillingRoute({ bridgeState }: { bridgeState: Awaited<ReturnType<typeof loadBridgeState>> }) {
+  return (
+    <CrocoAuthBridgeProvider value={bridgeState}>
+      <RequirePermission permissions="billing:read" tenantRequired>
+        <RequireEntitlement entitlements="billing.pro">
+          <BillingDashboard />
+        </RequireEntitlement>
+      </RequirePermission>
+    </CrocoAuthBridgeProvider>
+  );
+}
+```
+
+Denied and unavailable states preserve Croco Problem Details plus optional recovery actions,
+so apps can show sign-in, request-access, or retry actions without treating unknown state as success.
+
 ## API
 
 ### `createCrocoPageConfig(options?)`
@@ -84,6 +133,21 @@ Vike의 `usePageContext`를 래핑하여 데이터에 타입 안전 접근을 �
 
 **반환값:** `T`
 
+### `useSessionGate(requirements?)`
+
+현재 bridge 상태를 session gate union으로 평가합니다. 반환 상태는
+`loading`, `allowed`, `denied`, `unauthenticated`, `unavailable` 중 하나입니다.
+
+### `useTenant()`
+
+현재 tenant 상태를 `loading`, `available`, `missing`, `unavailable` union으로 반환합니다.
+
+### `useEntitlements(entitlements, options?)`
+
+요청된 엔터틀먼트 키를 gate union으로 평가합니다. provider failure와 denied Problem Details를
+그대로 보존합니다.
+인자 없이 호출하면 현재 provider가 전달한 raw entitlement state를 반환합니다.
+
 ## 타입
 
 ### `CrocoPageContext`
@@ -106,6 +170,17 @@ export type CrocoPageContext = {
 
 ```typescript
 export type CrocoDataFn<T = unknown> = (pageContext: CrocoPageContext) => Promise<T> | T;
+```
+
+### `FrontendAuthBridgeState`
+
+```typescript
+export type FrontendAuthBridgeState = {
+  session: FrontendSessionState;
+  tenant: FrontendTenantState;
+  permissions: FrontendPermissionState;
+  entitlements: FrontendEntitlementState;
+};
 ```
 
 ## 라이선스
