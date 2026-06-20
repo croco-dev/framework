@@ -3,10 +3,12 @@ import {
   getContractGraphErrors,
   type ContractGraph,
 } from "@croco/protocols-core";
+import type { GenerateClientProblemRuntime } from "./generate";
 
 type CliOptions = {
   readonly controllers: string;
   readonly outDir: string | null;
+  readonly problemRuntime: GenerateClientProblemRuntime;
   readonly reactQuery: boolean;
   readonly strictProblems: boolean;
   readonly check: boolean;
@@ -66,6 +68,7 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
 
   const { generateClientFilesFromContractGraph } = await import("./generate");
   const files = generateClientFilesFromContractGraph(graph, outDir, {
+    problemRuntime: result.options.problemRuntime,
     reactQuery: result.options.reactQuery,
   });
 
@@ -85,8 +88,9 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const outDir = getFlagValue(args, "--out");
   const check = args.includes("--check");
   const strictProblems = args.includes("--strict-problems");
+  const problemRuntime = parseProblemRuntime(args);
 
-  if (!controllers || (!outDir && !check)) {
+  if (!controllers || (!outDir && !check) || !problemRuntime) {
     return { kind: "invalid" };
   }
 
@@ -95,6 +99,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
     options: {
       controllers,
       outDir,
+      problemRuntime,
       reactQuery: args.includes("--react-query"),
       strictProblems,
       check,
@@ -109,14 +114,26 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
   return value && !value.startsWith("--") ? value : null;
 }
 
+function parseProblemRuntime(args: readonly string[]): GenerateClientProblemRuntime | null {
+  const hasFlag = args.includes("--problem-runtime");
+  const value = getFlagValue(args, "--problem-runtime");
+
+  if (!value) {
+    return hasFlag ? null : "inline";
+  }
+
+  return value === "inline" || value === "frontend-problems" ? value : null;
+}
+
 function printHelp(io: CliIo): void {
-  io.stdout(`Usage: croco-rpc-codegen --controllers <glob> --out <dir> [--react-query]
+  io.stdout(`Usage: croco-rpc-codegen --controllers <glob> --out <dir> [--react-query] [--problem-runtime inline|frontend-problems]
        croco-rpc-codegen --controllers <glob> --check [--strict-problems]
 
 Options:
   --controllers <glob>  Controller files to load
   --out <dir>           Output directory for generated clients
   --react-query         Generate React Query hooks
+  --problem-runtime     Generate inline helpers or import @croco/frontend-problems
   --check               Validate the canonical contract graph without writing clients
   --strict-problems     Warn when routes do not declare generated client Problem unions
   --help, -h            Show this help message`);

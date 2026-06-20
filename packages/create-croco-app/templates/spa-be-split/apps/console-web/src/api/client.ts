@@ -1,24 +1,12 @@
-const DEFAULT_API_BASE_PATH = "http://localhost:3000";
+import { handleJsonResponse } from "@croco/frontend-problems";
 
-type ProblemDetails = {
-  status: number;
-  title: string;
-  code: string;
-  detail?: string;
-};
+const DEFAULT_API_BASE_PATH = "http://localhost:3000";
 
 type ViteImportMeta = ImportMeta & {
   env?: {
     VITE_API_URL?: string;
   };
 };
-
-export class ApiProblemError extends Error {
-  constructor(readonly problem: ProblemDetails) {
-    super(problem.detail ?? problem.title);
-    this.name = "ApiProblemError";
-  }
-}
 
 function ensureTrailingSlash(value: string): string {
   return value.endsWith("/") ? value : `${value}/`;
@@ -33,10 +21,5 @@ function resolveApiBaseUrl(): string {
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(new URL(path.replace(/^\//, ""), resolveApiBaseUrl()), init);
 
-  if (!response.ok) {
-    const problem = (await response.json()) as ProblemDetails;
-    throw new ApiProblemError(problem);
-  }
-
-  return response.json() as Promise<T>;
+  return handleJsonResponse<T>(response);
 }

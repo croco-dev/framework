@@ -573,6 +573,12 @@ describe("E2E: generate()", () => {
 
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const consolePackageJson = readPackageJson(
+        join(testDir, "apps", "console-web", "package.json"),
+      );
+      const rpcPackageJson = readPackageJson(
+        join(testDir, "libs", "shared", "provider-rpc", "package.json"),
+      );
       const readme = readFileSync(join(testDir, "README.md"), "utf8");
       const apiUsersSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "users.ts"),
@@ -595,6 +601,9 @@ describe("E2E: generate()", () => {
         test: "turbo test",
         typecheck: "turbo typecheck",
       });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--problem-runtime frontend-problems",
+      );
       expect(apiPackageJson.scripts).toMatchObject({
         "dev:smoke": "tsx src/dev-smoke.ts",
         build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
@@ -611,6 +620,12 @@ describe("E2E: generate()", () => {
         "@croco/telemetry-sdk-node": "^0.0.2",
         "@croco/transports-http": "^0.0.2",
       });
+      expect(consolePackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": "^0.1.0",
+      });
+      expect(rpcPackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": "^0.1.0",
+      });
       expect(existsSync(join(testDir, "apps", "api-server", "src", "lambda.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "env.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "problems.ts"))).toBe(true);
@@ -623,7 +638,7 @@ describe("E2E: generate()", () => {
       expect(apiUsersSource).toContain("Repository");
       expect(apiAppSource).toContain("HttpExceptionFilter");
       expect(apiAppSource).toContain("globalFilters: [HttpExceptionFilter]");
-      expect(clientSource).toContain("ApiProblemError");
+      expect(clientSource).toContain("handleJsonResponse");
       expect(readme).toContain("운영형 앱 스타터");
       expect(readme).toContain("비범위");
       expect(readme).toContain("HttpExceptionFilter");
@@ -674,6 +689,9 @@ describe("E2E: generate()", () => {
           "apps/api-server/src/{controllers/**/*.ts,admin.ts,users.ts,problems.ts}",
         ),
       });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--problem-runtime frontend-problems",
+      );
       expect(apiPackageJson.scripts).toMatchObject({
         "admin:smoke": "tsx src/dev-smoke.ts",
       });

@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@croco/migration-runner": "workspace:*",
+    "@croco/testing": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^11.10.0",

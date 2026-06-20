@@ -1074,6 +1074,9 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
@@ -1250,6 +1253,12 @@ importers:
         version: link:../frontend-react
       vitest:
         specifier: ^4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  packages/frontend-problems:
+    devDependencies:
+      vitest:
+        specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
   packages/frontend-react:
@@ -1701,6 +1710,9 @@ importers:
       '@croco/migration-runner':
         specifier: workspace:*
         version: link:../migration-runner
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@croco/tx-drizzle':
         specifier: workspace:*
         version: link:../tx-drizzle

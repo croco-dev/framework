@@ -16,6 +16,73 @@ import { generateClientFiles, generateClientFilesFromContractGraph } from "../li
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
+const VIRTUAL_REACT_QUERY_MODULE = "node_modules/@tanstack/react-query/index.d.ts";
+const VIRTUAL_REACT_QUERY_SOURCE = `
+export type QueryKey = readonly unknown[];
+
+export type UseQueryOptions<
+  TQueryFnData = unknown,
+  TError = Error,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+> = {
+  readonly queryKey?: TQueryKey;
+  readonly queryFn?: () => Promise<TQueryFnData>;
+  readonly enabled?: boolean;
+  readonly staleTime?: number;
+  readonly select?: (data: TQueryFnData) => TData;
+};
+
+export type UseQueryResult<TData = unknown, TError = Error> = {
+  readonly data: TData | undefined;
+  readonly error: TError | null;
+};
+
+export declare function useQuery<
+  TQueryFnData = unknown,
+  TError = Error,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+>(
+  options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey> & {
+    readonly queryKey: TQueryKey;
+    readonly queryFn: () => Promise<TQueryFnData>;
+  },
+): UseQueryResult<TData, TError>;
+
+export type UseMutationOptions<
+  TData = unknown,
+  TError = Error,
+  TVariables = void,
+  TContext = unknown,
+> = {
+  readonly mutationFn?: (variables: TVariables) => Promise<TData>;
+  readonly onSuccess?: (data: TData, variables: TVariables, context: TContext | undefined) => void;
+};
+
+export type UseMutationResult<
+  TData = unknown,
+  TError = Error,
+  TVariables = void,
+  TContext = unknown,
+> = {
+  readonly data: TData | undefined;
+  readonly error: TError | null;
+  readonly mutate: (variables: TVariables) => void;
+  readonly context?: TContext;
+};
+
+export declare function useMutation<
+  TData = unknown,
+  TError = Error,
+  TVariables = void,
+  TContext = unknown,
+>(
+  options: UseMutationOptions<TData, TError, TVariables, TContext> & {
+    readonly mutationFn: (variables: TVariables) => Promise<TData>;
+  },
+): UseMutationResult<TData, TError, TVariables, TContext>;
+`;
 const EMPTY_INPUT_SCHEMAS = {
   body: null,
   path: null,
@@ -74,6 +141,14 @@ const BODY_HEADER_INPUT_SCHEMAS = {
   path: null,
   query: null,
   headers: z.object({ "x-request-id": z.string() }) as any,
+};
+const PATH_QUERY_HEADER_INPUT_SCHEMAS: RouteIR["inputSchemas"] = {
+  body: null,
+  path: z.object({ id: z.string() }) as unknown as NonNullable<RouteIR["inputSchemas"]["path"]>,
+  query: z.object({ page: z.string() }) as unknown as NonNullable<RouteIR["inputSchemas"]["query"]>,
+  headers: z.object({ authorization: z.string() }) as unknown as NonNullable<
+    RouteIR["inputSchemas"]["headers"]
+  >,
 };
 const NUMERIC_NATIVE_ENUM = {
   0: "Draft",
@@ -194,6 +269,46 @@ describe("generateClientFiles", () => {
     expect(content).toContain(
       "{ code: 'USER_NOT_FOUND', category: 'NotFound', status: 404, description: 'User id is missing, or the user was deleted.' }",
     );
+  });
+
+  it("should import the shared frontend Problem runtime when configured", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: BODY_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+        problemResponses: [
+          {
+            code: "VALIDATION_FAILED",
+            category: ProblemCategory.ValidationError,
+            status: 422,
+          },
+        ],
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR, {
+      problemRuntime: "frontend-problems",
+    });
+    const content = fs.readFileSync(files[0], "utf-8");
+    const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+
+    expect(rpcContent).toContain("} from '@croco/frontend-problems';");
+    expect(rpcContent).toContain("ProblemClientError as RpcClientProblemError");
+    expect(rpcContent).toContain("ProblemDeclaration as RpcDeclaredProblem");
+    expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
+    expect(rpcContent).not.toContain("function isRpcProblemDetails");
+    expect(content).toContain(
+      "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+    );
+    expect(content).toContain("export type CreateUserResult = RpcClientResult");
+    assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
   });
 
   it("should reject ALL routes instead of emitting invalid fetch methods", () => {
@@ -463,9 +578,16 @@ describe("generateClientFiles", () => {
     const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
 
     const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("import { useMutation, useQuery } from '@tanstack/react-query';");
-    expect(content).toContain("export function useCreate()");
-    expect(content).toContain("return useMutation({ mutationFn: userClient.create });");
+    expect(content).toContain("import { useMutation } from '@tanstack/react-query';");
+    expect(content).toContain("import type { UseMutationOptions } from '@tanstack/react-query';");
+    expect(content).toContain("export const userMutations = {");
+    expect(content).toContain("create: (): CreateMutationFactory => ({");
+    expect(content).toContain("createResult: (): CreateResultMutationFactory => ({");
+    expect(content).toContain("export function useCreate<TContext = unknown>");
+    expect(content).toContain("export function useCreateResult<TContext = unknown>");
+    expect(content).toContain(
+      "return useMutation<unknown | undefined, Error, CreateMutationVariables, TContext>({ ...userMutations.create(), ...options });",
+    );
   });
 
   it("should generate query input types from inputSchemas", () => {
@@ -1137,29 +1259,154 @@ void handleMissingProblemBranch;
     );
   });
 
-  it("should keep React Query hooks delegated to typed query clients", () => {
-    const routes: RouteIR[] = [
-      {
-        controllerName: "UserController",
-        methodName: "list",
-        httpMethod: "GET",
-        path: "/users",
-        params: [{ kind: "query", name: "page", schema: null }],
-        inputSchema: null,
-        inputSchemas: QUERY_INPUT_SCHEMAS,
-        outputSchema: null,
-        domain: null,
-      },
-    ];
+  it(
+    "should typecheck generated React Query factories, hooks, and Result variants",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "get",
+          httpMethod: "GET",
+          path: "/users/:id",
+          params: [
+            { kind: "path", name: "id", schema: null },
+            { kind: "query", name: "page", schema: null },
+            { kind: "header", name: "authorization", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: PATH_QUERY_HEADER_INPUT_SCHEMAS,
+          outputSchema: z.object({
+            id: z.string(),
+            name: z.string(),
+          }) as unknown as RouteIR["outputSchema"],
+          problemResponses: [
+            {
+              code: "USER_NOT_FOUND",
+              category: ProblemCategory.NotFound,
+              status: 404,
+            },
+          ],
+          domain: null,
+        },
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [
+            { kind: "body", name: "", schema: null },
+            { kind: "header", name: "x-request-id", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: BODY_HEADER_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
 
-    const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
+      const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
 
-    const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("export function useList(input: ListInput)");
-    expect(content).toContain(
-      "return useQuery({ queryKey: ['list', input], queryFn: () => userClient.list(input) });",
-    );
-  });
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain("import { useMutation, useQuery } from '@tanstack/react-query';");
+      expect(content).toContain(
+        "import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';",
+      );
+      expect(content).toContain("export const userQueries = {");
+      expect(content).toContain(
+        "export type GetQueryKey = readonly ['rpc', 'user', 'get', Pick<GetInput, 'path' | 'query'>, unknown];",
+      );
+      expect(content).toContain(
+        "queryKey: ['rpc', 'user', 'get', { path: input.path, query: input.query }, cacheScope] as const,",
+      );
+      expect(content).not.toContain("queryKey: ['rpc', 'user', 'get', input] as const,");
+      expect(content).toContain(
+        "getResult: (input: GetInput, cacheScope?: unknown): GetResultQueryFactory => ({",
+      );
+      expect(content).toContain("queryFn: () => userClient.getResult(input),");
+      expect(content).toContain("export function useGetResult<TData = GetResult>");
+      expect(content).toContain("export const userMutations = {");
+      expect(content).toContain("createResult: (): CreateResultMutationFactory => ({");
+      expect(content).toContain(
+        "return useQuery<GetResult, Error, TData, GetResultQueryKey>({ ...userQueries.getResult(input, cacheScope), ...queryOptions });",
+      );
+      expect(content).toContain(
+        "return useMutation<CreateResult, Error, CreateMutationVariables, TContext>({ ...userMutations.createResult(), ...options });",
+      );
+      assertGeneratedReactQueryClientTypechecks(`${content}
+const getInput: GetInput = {
+  path: { id: 'user-1' },
+  query: { page: '1' },
+  headers: { authorization: 'Bearer token' },
+};
+const getFactory = userQueries.get(getInput, 'tenant:user-1');
+const getKey: GetQueryKey = getFactory.queryKey;
+const getResultFactory = userQueries.getResult(getInput, 'tenant:user-1');
+const getResultKey: GetResultQueryKey = getResultFactory.queryKey;
+const getResultPromise: Promise<GetResult> = getResultFactory.queryFn();
+
+const selectedUserName = useGet(getInput, {
+  cacheScope: 'tenant:user-1',
+  staleTime: 1000,
+  select: (user) => user.name,
+});
+const selectedNameData: string | undefined = selectedUserName.data;
+
+const selectedResultProblemCode = useGetResult(getInput, {
+  cacheScope: 'tenant:user-1',
+  enabled: true,
+  select: (result) => {
+    if (result.ok) {
+      return result.data.id;
+    }
+
+    if (result.kind === 'problem') {
+      const code: 'USER_NOT_FOUND' = result.code;
+      return code;
+    }
+
+    return result.response.status;
+  },
+});
+const resultSelection: string | number | undefined = selectedResultProblemCode.data;
+
+const createInput: CreateInput = {
+  body: { name: 'Ada' },
+  headers: { 'x-request-id': 'request-1' },
+};
+const createFactory = userMutations.create();
+const createPromise: Promise<unknown | undefined> = createFactory.mutationFn(createInput);
+const createResultFactory = userMutations.createResult();
+const createResultPromise: Promise<CreateResult> = createResultFactory.mutationFn(createInput);
+const createHook = useCreate({
+  onSuccess: (data, variables) => {
+    const response: unknown | undefined = data;
+    const name: string = variables.body.name;
+    void response;
+    void name;
+  },
+});
+const createResultHook = useCreateResult({
+  onSuccess: (result, variables) => {
+    const resultBranch: CreateResult = result;
+    const requestId: string = variables.headers['x-request-id'];
+    void resultBranch;
+    void requestId;
+  },
+});
+
+void getKey;
+void getResultKey;
+void getResultPromise;
+void selectedNameData;
+void resultSelection;
+void createPromise;
+void createResultPromise;
+void createHook;
+void createResultHook;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
 
   it(
     "should typecheck generated clients with non-string query inputs",
@@ -1557,6 +1804,20 @@ function assertGeneratedClientTypechecks(
   );
 }
 
+function assertGeneratedReactQueryClientTypechecks(
+  source: string,
+  rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8"),
+): void {
+  assertVirtualTypeScriptSourcesTypecheck(
+    new Map([
+      ["generated-client.ts", source],
+      ["rpc.ts", rpcSource],
+      [VIRTUAL_REACT_QUERY_MODULE, VIRTUAL_REACT_QUERY_SOURCE],
+    ]),
+    ["generated-client.ts"],
+  );
+}
+
 function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
   const sources = new Map(
     fileNames.map((fileName) => [
@@ -1573,10 +1834,15 @@ function assertVirtualTypeScriptSourcesTypecheck(
   rootFileNames: readonly string[],
 ): void {
   const compilerOptions: ts.CompilerOptions = {
+    baseUrl: path.resolve(__dirname, "../../.."),
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     noEmit: true,
+    paths: {
+      "@croco/frontend-problems": ["frontend-problems/src/index.ts"],
+      "@croco/problems-core": ["problems-core/src/index.ts"],
+    },
     skipLibCheck: true,
     strict: true,
     target: ts.ScriptTarget.ES2022,
@@ -1585,7 +1851,7 @@ function assertVirtualTypeScriptSourcesTypecheck(
   const host = ts.createCompilerHost(compilerOptions);
 
   host.getSourceFile = (name, languageVersion) => {
-    const text = sources.get(name) ?? sources.get(path.basename(name));
+    const text = getVirtualSource(sources, name);
 
     if (text !== undefined) {
       return ts.createSourceFile(name, text, languageVersion, true);
@@ -1598,9 +1864,22 @@ function assertVirtualTypeScriptSourcesTypecheck(
       : ts.createSourceFile(name, fileText, languageVersion, true);
   };
   host.fileExists = (name) =>
-    sources.has(name) || sources.has(path.basename(name)) || ts.sys.fileExists(name);
-  host.readFile = (name) =>
-    sources.get(name) ?? sources.get(path.basename(name)) ?? ts.sys.readFile(name);
+    getVirtualSource(sources, name) !== undefined || ts.sys.fileExists(name);
+  host.readFile = (name) => getVirtualSource(sources, name) ?? ts.sys.readFile(name);
+  host.resolveModuleNames = (moduleNames, containingFile) =>
+    moduleNames.map((moduleName) => {
+      if (
+        moduleName === "@tanstack/react-query" &&
+        getVirtualSource(sources, VIRTUAL_REACT_QUERY_MODULE) !== undefined
+      ) {
+        return {
+          resolvedFileName: VIRTUAL_REACT_QUERY_MODULE,
+          extension: ts.Extension.Dts,
+        };
+      }
+
+      return ts.resolveModuleName(moduleName, containingFile, compilerOptions, host).resolvedModule;
+    });
 
   const program = ts.createProgram([...rootFileNames], compilerOptions, host);
   const diagnostics = ts.getPreEmitDiagnostics(program);
@@ -1609,4 +1888,24 @@ function assertVirtualTypeScriptSourcesTypecheck(
   );
 
   expect(messages).toEqual([]);
+}
+
+function getVirtualSource(sources: ReadonlyMap<string, string>, name: string): string | undefined {
+  const direct = sources.get(name);
+
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const basenameSource = sources.get(path.basename(name));
+
+  if (basenameSource === undefined) {
+    return undefined;
+  }
+
+  if (!path.isAbsolute(name)) {
+    return path.dirname(name) === "." ? basenameSource : undefined;
+  }
+
+  return path.dirname(name) === process.cwd() ? basenameSource : undefined;
 }

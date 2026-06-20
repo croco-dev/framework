@@ -6718,6 +6718,261 @@
       ]
     },
     {
+      "packageName": "@croco/frontend-problems",
+      "relativeDir": "packages/frontend-problems",
+      "entrypoint": "packages/frontend-problems/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "assertProblemExhaustive",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "extractProblemFormFieldErrors",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "fetchOptionalProblemJson",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "fetchProblemJson",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "findProblemDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "handleJsonResponse",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "handleJsonResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "isProblemDetails",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "parseProblemDetails",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemClientError",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "ProblemResponseError",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "readDeclaredProblemErrorResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readJsonProblemResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readOptionalJsonProblemResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readOptionalJsonResponse",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readOptionalJsonResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readProblemErrorResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "toProblemFormProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "ProblemClientExternalFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientProblemFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientSuccess",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDetails",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDetailsFor",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDomainDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFetch",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFetchOptions",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFetchProblemFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormField",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldControl",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldErrors",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldOption",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldValueKind",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormGlobalProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormModel",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemValidationDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/frontend-react",
       "relativeDir": "packages/frontend-react",
       "entrypoint": "packages/frontend-react/src/index.ts",
@@ -13245,6 +13500,11 @@
           "name": "GenerateClientOptions",
           "exportKind": "named",
           "source": "./libs/generate"
+        },
+        {
+          "name": "GenerateClientProblemRuntime",
+          "exportKind": "named",
+          "source": "./libs/generate"
         }
       ]
     },
@@ -14455,6 +14715,12 @@
       "entrypoint": "packages/testing/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertDrizzleProblem",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertOpenAPIRoute",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -14470,6 +14736,12 @@
           "name": "createBillingProviderConformanceSuite",
           "exportKind": "named",
           "source": "./libs/billing-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createDrizzleProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance",
           "declarationKind": "function"
         },
         {
@@ -14662,6 +14934,46 @@
           "name": "CapturedSpanException",
           "exportKind": "named",
           "source": "./libs/telemetry-testing"
+        },
+        {
+          "name": "DrizzleProblemExpectation",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCapability",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCheck",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderRepositoryErrorConformance",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderTransactionConformance",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
         },
         {
           "name": "EventTestingHarnessOptions",

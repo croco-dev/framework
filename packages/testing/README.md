@@ -29,6 +29,8 @@ const response = await app.get("/users");
 | `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                      |
 | `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.          |
 | `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating. |
+| `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                    |
+| `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                   |
 
 ## Isolation Contract
 
@@ -92,3 +94,17 @@ The serverless provider helpers currently cover:
 - `createQStashTaskConformanceSuite()` for QStash task publishers: missing config, task envelope
   shape, delay/header/deduplication evidence, invalid task input, redacted retryable and terminal
   upstream failures, and no-credential live-smoke gates.
+
+## Drizzle Provider Conformance
+
+`createDrizzleProviderConformanceSuite` keeps Drizzle-backed SaaS provider tests on one evidence
+shape without forcing every provider into one repository interface. Each consumer supplies the
+provider-specific operations for:
+
+- local schema or migration assumptions;
+- transaction participation and rollback behavior;
+- tenant-aware data isolation;
+- not-found, validation, duplicate, conflict, and retryable failure semantics.
+
+Unsupported capabilities are explicit test cases with a required reason. That keeps alpha-provider
+blockers visible in CI instead of silently skipping them.

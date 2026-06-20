@@ -59,6 +59,7 @@
     "framework-preset",
     "framework-routes",
     "frontend-cloudflare",
+    "frontend-problems",
     "frontend-react",
     "frontend-vite",
     "gid-core",

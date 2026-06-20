@@ -64,6 +64,18 @@ export {
   type BillingWebhookResult,
 } from "./libs/billing-provider-conformance";
 export {
+  assertDrizzleProblem,
+  createDrizzleProviderConformanceSuite,
+  type DrizzleProblemExpectation,
+  type DrizzleProviderConformanceCapability,
+  type DrizzleProviderConformanceCase,
+  type DrizzleProviderConformanceCheck,
+  type DrizzleProviderConformanceOptions,
+  type DrizzleProviderConformanceSuite,
+  type DrizzleProviderRepositoryErrorConformance,
+  type DrizzleProviderTransactionConformance,
+} from "./libs/drizzle-provider-conformance";
+export {
   createQStashTaskConformanceSuite,
   createUpstashRedisRateLimitConformanceSuite,
   type QStashTaskConformanceHarness,

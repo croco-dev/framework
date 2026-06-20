@@ -102,7 +102,7 @@ function checkSpaBeSplitStructure() {
   checkFileContains(
     "spa-be-split",
     ["apps", "console-web", "src", "api", "client.ts"],
-    /ApiProblemError/,
+    /handleJsonResponse/,
   );
 
   for (const directory of ["service", "domain", "datasource", "feature", "page", "ui"]) {
@@ -134,7 +134,9 @@ function checkSpaBeSplitStructure() {
       ),
       "ci:contracts": "pnpm contract:verify",
       "contract:openapi": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-openapi-spec/),
-      "contract:client": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-rpc-codegen/),
+      "contract:client": expect.stringMatching(
+        /^pnpm contract:check &&[\s\S]*croco-rpc-codegen[\s\S]*--problem-runtime frontend-problems/,
+      ),
       codegen: expect.any(String),
       lint: "biome lint .",
       test: "turbo test",
@@ -173,6 +175,7 @@ function checkSpaBeSplitStructure() {
   );
   expect(consolePackageJson).toMatchObject({
     dependencies: expect.objectContaining({
+      "@croco/frontend-problems": "workspace:*",
       "{{scope}}/provider-rpc": "workspace:*",
     }),
   });
@@ -190,6 +193,7 @@ function checkSpaBeSplitStructure() {
       typecheck: "tsc --noEmit",
     }),
     dependencies: expect.objectContaining({
+      "@croco/frontend-problems": "workspace:*",
       "@tanstack/react-query": expect.any(String),
     }),
   });
@@ -248,7 +252,9 @@ function checkAdminConsoleStructure() {
       "admin:smoke": expect.stringMatching(/^pnpm contract:client/),
       "contract:coverage": expect.stringMatching(/contract-graph\.coverage\.json/),
       "contract:verify": expect.stringMatching(/contract:diff && pnpm contract:coverage/),
-      "contract:client": expect.stringMatching(/admin\.ts,users\.ts,problems\.ts/),
+      "contract:client": expect.stringMatching(
+        /admin\.ts,users\.ts,problems\.ts[\s\S]*--problem-runtime frontend-problems/,
+      ),
       typecheck: "pnpm contract:client && turbo typecheck",
       build: "pnpm contract:client && turbo build",
     }),
