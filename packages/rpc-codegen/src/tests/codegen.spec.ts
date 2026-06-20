@@ -142,11 +142,13 @@ const BODY_HEADER_INPUT_SCHEMAS = {
   query: null,
   headers: z.object({ "x-request-id": z.string() }) as any,
 };
-const PATH_QUERY_HEADER_INPUT_SCHEMAS = {
+const PATH_QUERY_HEADER_INPUT_SCHEMAS: RouteIR["inputSchemas"] = {
   body: null,
-  path: z.object({ id: z.string() }) as any,
-  query: z.object({ page: z.string() }) as any,
-  headers: z.object({ authorization: z.string() }) as any,
+  path: z.object({ id: z.string() }) as unknown as NonNullable<RouteIR["inputSchemas"]["path"]>,
+  query: z.object({ page: z.string() }) as unknown as NonNullable<RouteIR["inputSchemas"]["query"]>,
+  headers: z.object({ authorization: z.string() }) as unknown as NonNullable<
+    RouteIR["inputSchemas"]["headers"]
+  >,
 };
 const NUMERIC_NATIVE_ENUM = {
   0: "Draft",
@@ -576,9 +578,8 @@ describe("generateClientFiles", () => {
     const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
 
     const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain(
-      "import { useMutation, type UseMutationOptions } from '@tanstack/react-query';",
-    );
+    expect(content).toContain("import { useMutation } from '@tanstack/react-query';");
+    expect(content).toContain("import type { UseMutationOptions } from '@tanstack/react-query';");
     expect(content).toContain("export const userMutations = {");
     expect(content).toContain("create: (): CreateMutationFactory => ({");
     expect(content).toContain("createResult: (): CreateResultMutationFactory => ({");
@@ -1274,7 +1275,10 @@ void handleMissingProblemBranch;
           ],
           inputSchema: null,
           inputSchemas: PATH_QUERY_HEADER_INPUT_SCHEMAS,
-          outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+          outputSchema: z.object({
+            id: z.string(),
+            name: z.string(),
+          }) as unknown as RouteIR["outputSchema"],
           problemResponses: [
             {
               code: "USER_NOT_FOUND",
@@ -1303,18 +1307,27 @@ void handleMissingProblemBranch;
       const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
 
       const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain("import { useMutation, useQuery } from '@tanstack/react-query';");
+      expect(content).toContain(
+        "import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';",
+      );
       expect(content).toContain("export const userQueries = {");
       expect(content).toContain(
-        "export type GetQueryKey = readonly ['rpc', 'user', 'get', GetInput];",
+        "export type GetQueryKey = readonly ['rpc', 'user', 'get', Pick<GetInput, 'path' | 'query'>, unknown];",
       );
-      expect(content).toContain("queryKey: ['rpc', 'user', 'get', input] as const,");
-      expect(content).toContain("getResult: (input: GetInput): GetResultQueryFactory => ({");
+      expect(content).toContain(
+        "queryKey: ['rpc', 'user', 'get', { path: input.path, query: input.query }, cacheScope] as const,",
+      );
+      expect(content).not.toContain("queryKey: ['rpc', 'user', 'get', input] as const,");
+      expect(content).toContain(
+        "getResult: (input: GetInput, cacheScope?: unknown): GetResultQueryFactory => ({",
+      );
       expect(content).toContain("queryFn: () => userClient.getResult(input),");
       expect(content).toContain("export function useGetResult<TData = GetResult>");
       expect(content).toContain("export const userMutations = {");
       expect(content).toContain("createResult: (): CreateResultMutationFactory => ({");
       expect(content).toContain(
-        "return useQuery<GetResult, Error, TData, GetResultQueryKey>({ ...userQueries.getResult(input), ...options });",
+        "return useQuery<GetResult, Error, TData, GetResultQueryKey>({ ...userQueries.getResult(input, cacheScope), ...queryOptions });",
       );
       expect(content).toContain(
         "return useMutation<CreateResult, Error, CreateMutationVariables, TContext>({ ...userMutations.createResult(), ...options });",
@@ -1325,19 +1338,21 @@ const getInput: GetInput = {
   query: { page: '1' },
   headers: { authorization: 'Bearer token' },
 };
-const getFactory = userQueries.get(getInput);
+const getFactory = userQueries.get(getInput, 'tenant:user-1');
 const getKey: GetQueryKey = getFactory.queryKey;
-const getResultFactory = userQueries.getResult(getInput);
+const getResultFactory = userQueries.getResult(getInput, 'tenant:user-1');
 const getResultKey: GetResultQueryKey = getResultFactory.queryKey;
 const getResultPromise: Promise<GetResult> = getResultFactory.queryFn();
 
 const selectedUserName = useGet(getInput, {
+  cacheScope: 'tenant:user-1',
   staleTime: 1000,
   select: (user) => user.name,
 });
 const selectedNameData: string | undefined = selectedUserName.data;
 
 const selectedResultProblemCode = useGetResult(getInput, {
+  cacheScope: 'tenant:user-1',
   enabled: true,
   select: (result) => {
     if (result.ok) {

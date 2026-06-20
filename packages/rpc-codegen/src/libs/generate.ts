@@ -1608,14 +1608,24 @@ function getSuccessType(route: GeneratedClientRoute): string {
 function generateReactQueryImports(domainRoutes: DomainRoutes): string {
   const hasQueryRoutes = domainRoutes.routes.some(isReactQueryQueryRoute);
   const hasMutationRoutes = domainRoutes.routes.some((route) => !isReactQueryQueryRoute(route));
-  const imports = [
+  const valueImports = [
     ...(hasMutationRoutes ? ["useMutation"] : []),
     ...(hasQueryRoutes ? ["useQuery"] : []),
-    ...(hasMutationRoutes ? ["type UseMutationOptions"] : []),
-    ...(hasQueryRoutes ? ["type UseQueryOptions"] : []),
+  ];
+  const typeImports = [
+    ...(hasMutationRoutes ? ["UseMutationOptions"] : []),
+    ...(hasQueryRoutes ? ["UseQueryOptions"] : []),
+  ];
+  const imports = [
+    ...(valueImports.length > 0
+      ? [`import { ${valueImports.join(", ")} } from '@tanstack/react-query';`]
+      : []),
+    ...(typeImports.length > 0
+      ? [`import type { ${typeImports.join(", ")} } from '@tanstack/react-query';`]
+      : []),
   ];
 
-  return `import { ${imports.join(", ")} } from '@tanstack/react-query';\n`;
+  return `${imports.join("\n")}\n`;
 }
 
 function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {
@@ -1647,8 +1657,8 @@ export type ${getResultQueryFactoryTypeName(route)} = {
   readonly queryKey: ${getResultQueryKeyTypeName(route)};
   readonly queryFn: () => Promise<${getResultTypeName(route)}>;
 };
-export type ${getQueryOptionsTypeName(route)}<TData = ${getSuccessType(route)}> = Omit<UseQueryOptions<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>;
-export type ${getResultQueryOptionsTypeName(route)}<TData = ${getResultTypeName(route)}> = Omit<UseQueryOptions<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>;`;
+export type ${getQueryOptionsTypeName(route)}<TData = ${getSuccessType(route)}> = Omit<UseQueryOptions<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>${getReactQueryCacheScopeOptionsType(route)};
+export type ${getResultQueryOptionsTypeName(route)}<TData = ${getResultTypeName(route)}> = Omit<UseQueryOptions<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>${getReactQueryCacheScopeOptionsType(route)};`;
   }
 
   return `export type ${getMutationVariablesTypeName(route)} = ${getMutationVariablesType(route)};
@@ -1683,7 +1693,7 @@ function generateReactQueryFactoryEntry(
   route: GeneratedClientRoute,
   clientName: string,
 ): string {
-  const input = getInputParameter(route);
+  const input = getReactQueryFactoryParameters(route);
   const callInput = needsInput(route) ? "input" : "";
   const queryKey = getReactQueryKeyExpression(domain, route, false);
   const resultQueryKey = getReactQueryKeyExpression(domain, route, true);
@@ -1745,6 +1755,21 @@ export function ${resultHookName}<TContext = unknown>(options?: ${getResultMutat
 
   const input = getInputParameter(route);
   const callInput = needsInput(route) ? "input" : "";
+  const factoryCallArguments = getReactQueryFactoryCallArguments(route);
+
+  if (hasReactQueryCacheScope(route)) {
+    return `export function ${hookName}<TData = ${getSuccessType(route)}>(${input}, options?: ${getQueryOptionsTypeName(route)}<TData>) {
+  const { cacheScope, ...queryOptions } = options ?? {};
+
+  return useQuery<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${route.methodName}(${factoryCallArguments}), ...queryOptions });
+}
+
+export function ${resultHookName}<TData = ${getResultTypeName(route)}>(${input}, options?: ${getResultQueryOptionsTypeName(route)}<TData>) {
+  const { cacheScope, ...queryOptions } = options ?? {};
+
+  return useQuery<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${getResultMethodName(route)}(${factoryCallArguments}), ...queryOptions });
+}`;
+  }
 
   return `export function ${hookName}<TData = ${getSuccessType(route)}>(${input}${needsInput(route) ? ", " : ""}options?: ${getQueryOptionsTypeName(route)}<TData>) {
   return useQuery<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${route.methodName}(${callInput}), ...options });
@@ -1793,6 +1818,71 @@ function getMutationVariablesType(route: GeneratedClientRoute): string {
     : `${getInputTypeName(route)} | undefined`;
 }
 
+function getReactQueryFactoryParameters(route: GeneratedClientRoute): string {
+  const parameters = [
+    ...(needsInput(route) ? [getInputParameter(route)] : []),
+    ...(hasReactQueryCacheScope(route) ? ["cacheScope?: unknown"] : []),
+  ];
+
+  return parameters.join(", ");
+}
+
+function getReactQueryFactoryCallArguments(route: GeneratedClientRoute): string {
+  const parameters = [
+    ...(needsInput(route) ? ["input"] : []),
+    ...(hasReactQueryCacheScope(route) ? ["cacheScope"] : []),
+  ];
+
+  return parameters.join(", ");
+}
+
+function getReactQueryCacheScopeOptionsType(route: GeneratedClientRoute): string {
+  return hasReactQueryCacheScope(route) ? " & { readonly cacheScope?: unknown }" : "";
+}
+
+function hasReactQueryCacheScope(route: GeneratedClientRoute): boolean {
+  return isReactQueryQueryRoute(route) && hasReactQueryUnsafeKeyInput(route);
+}
+
+function hasReactQueryUnsafeKeyInput(route: GeneratedClientRoute): boolean {
+  return Boolean(route.inputSchemas.body || route.inputSchemas.headers);
+}
+
+function getReactQueryCacheSafeInputFieldNames(route: GeneratedClientRoute): readonly string[] {
+  return [
+    ...(route.inputSchemas.path ? ["path"] : []),
+    ...(route.inputSchemas.query ? ["query"] : []),
+  ];
+}
+
+function getReactQueryKeyInputType(route: GeneratedClientRoute): string | null {
+  if (!hasReactQueryUnsafeKeyInput(route)) {
+    return needsInput(route) ? getMutationVariablesType(route) : null;
+  }
+
+  const fieldNames = getReactQueryCacheSafeInputFieldNames(route);
+
+  if (fieldNames.length === 0) {
+    return null;
+  }
+
+  return `Pick<${getInputTypeName(route)}, ${fieldNames.map(literalValueToTypeScript).join(" | ")}>`;
+}
+
+function getReactQueryKeyInputExpression(route: GeneratedClientRoute): string | null {
+  if (!hasReactQueryUnsafeKeyInput(route)) {
+    return needsInput(route) ? "input" : null;
+  }
+
+  const fieldNames = getReactQueryCacheSafeInputFieldNames(route);
+
+  if (fieldNames.length === 0) {
+    return null;
+  }
+
+  return `{ ${fieldNames.map((fieldName) => `${fieldName}: input.${fieldName}`).join(", ")} }`;
+}
+
 function getReactQueryKeyType(route: GeneratedClientRoute, result: boolean): string {
   const parts = [
     "'rpc'",
@@ -1804,8 +1894,14 @@ function getReactQueryKeyType(route: GeneratedClientRoute, result: boolean): str
     parts.push("'result'");
   }
 
-  if (needsInput(route)) {
-    parts.push(getMutationVariablesType(route));
+  const inputType = getReactQueryKeyInputType(route);
+
+  if (inputType) {
+    parts.push(inputType);
+  }
+
+  if (hasReactQueryCacheScope(route)) {
+    parts.push("unknown");
   }
 
   return `readonly [${parts.join(", ")}]`;
@@ -1826,8 +1922,14 @@ function getReactQueryKeyExpression(
     parts.push("'result'");
   }
 
-  if (needsInput(route)) {
-    parts.push("input");
+  const inputExpression = getReactQueryKeyInputExpression(route);
+
+  if (inputExpression) {
+    parts.push(inputExpression);
+  }
+
+  if (hasReactQueryCacheScope(route)) {
+    parts.push("cacheScope");
   }
 
   return `[${parts.join(", ")}] as const`;
