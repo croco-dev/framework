@@ -18,29 +18,42 @@ const COMPRESSION_ALGORITHMS: CompressionEncoding[] = ["br", "gzip", "deflate"];
 export const compressionMiddleware = (options: CompressionOptions = {}): MiddlewareFunction => {
   const { threshold = DEFAULT_THRESHOLD, encodings = DEFAULT_ENCODINGS } = options;
 
-  return async (ctx, next): Promise<void> => {
-    await next();
+  return async (ctx, next): Promise<Response | void> => {
+    const response = await next();
 
-    if (ctx.res.status >= 300) return;
+    if (!(response instanceof Response)) return;
+    if (response.status >= 300) return response;
+    if (response.headers.has("Content-Encoding")) return response;
 
     const acceptEncoding = ctx.header("accept-encoding") ?? "";
-    const contentType = ctx.header("content-type") ?? "";
+    const contentType = response.headers.get("Content-Type") ?? "";
 
-    if (!shouldCompress(contentType)) return;
+    if (!shouldCompress(contentType)) return response;
 
     const encoding = selectEncoding(acceptEncoding, encodings);
-    if (!encoding) return;
+    if (!encoding) return response;
 
-    const body = await getResponseBody(ctx);
-    if (!body || body.length < threshold) return;
+    const body = getResponseBody(ctx);
+    if (!body || body.length < threshold) return response;
 
     const compressed = await compressBody(body, encoding);
-    if (!compressed) return;
+    if (!compressed) return response;
 
-    ctx.raw.header("Content-Encoding", encoding);
-    ctx.raw.header("Vary", "Accept-Encoding");
+    const headers = new Headers(response.headers);
+    headers.set("Content-Encoding", encoding);
+    setVaryHeader(headers, "Accept-Encoding");
+    headers.delete("Content-Length");
 
+    ctx.res.status = response.status;
     ctx.res.headers["content-encoding"] = encoding;
+    ctx.res.headers.vary = headers.get("Vary") ?? "Accept-Encoding";
+    delete ctx.res.headers["content-length"];
+
+    return new Response(toResponseBody(compressed), {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   };
 };
 
@@ -82,26 +95,40 @@ function selectEncoding(
   return accepted[0] ?? null;
 }
 
-async function getResponseBody(ctx: { raw: { res: { body: unknown } } }): Promise<Buffer | null> {
-  const body = ctx.raw.res.body;
+function getResponseBody(ctx: Parameters<MiddlewareFunction>[0]): Buffer | null {
+  const bufferedBody = readBufferedResponseBody(ctx);
+  return bufferedBody ? Buffer.from(bufferedBody) : null;
+}
 
-  if (body === null || body === undefined) {
+function setVaryHeader(headers: Headers, value: string): void {
+  const currentValue = headers.get("Vary");
+
+  if (!currentValue) {
+    headers.set("Vary", value);
+    return;
+  }
+
+  const existingValues = currentValue.split(",").map((entry) => entry.trim().toLowerCase());
+  if (existingValues.includes("*") || existingValues.includes(value.toLowerCase())) {
+    return;
+  }
+
+  headers.set("Vary", `${currentValue}, ${value}`);
+}
+
+function toResponseBody(body: Buffer): Uint8Array<ArrayBuffer> {
+  const copy = new Uint8Array(body.byteLength);
+  copy.set(body);
+  return copy;
+}
+
+function readBufferedResponseBody(ctx: Parameters<MiddlewareFunction>[0]): Uint8Array | null {
+  if (!("getBufferedResponseBody" in ctx) || typeof ctx.getBufferedResponseBody !== "function") {
     return null;
   }
 
-  if (body instanceof Buffer) {
-    return body;
-  }
-
-  if (body instanceof Uint8Array) {
-    return Buffer.from(body);
-  }
-
-  if (typeof body === "string") {
-    return Buffer.from(body, "utf-8");
-  }
-
-  return null;
+  const body = ctx.getBufferedResponseBody();
+  return body instanceof Uint8Array ? body : null;
 }
 
 async function compressBody(body: Buffer, encoding: CompressionEncoding): Promise<Buffer | null> {

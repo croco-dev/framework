@@ -35,8 +35,8 @@ export interface ListenOptions {
 
 export type MiddlewareFunction = (
   ctx: CrocoHttpContext,
-  next: () => Promise<void>,
-) => Promise<void> | void;
+  next: () => Promise<Response | void>,
+) => Promise<Response | void> | Response | void;
 
 export interface CrocoHttpContext {
   readonly req: CrocoRequest;

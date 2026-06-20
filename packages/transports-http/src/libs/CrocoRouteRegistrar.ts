@@ -226,7 +226,7 @@ export class CrocoRouteRegistrar {
     let index = -1;
     let response: Response | undefined;
 
-    const dispatch = async (nextIndex: number): Promise<void> => {
+    const dispatch = async (nextIndex: number): Promise<Response> => {
       if (nextIndex <= index) {
         throw ProblemFactory.internalServerError(
           "transports-http/middleware-next-called-multiple-times",
@@ -239,20 +239,38 @@ export class CrocoRouteRegistrar {
       const middleware = middlewares[nextIndex];
       if (!middleware) {
         response = await terminal();
-        return;
+        return response;
       }
 
-      await middleware(ctx, () => dispatch(nextIndex + 1));
+      let downstreamResponse: Response | undefined;
+      const middlewareResponse = await middleware(ctx, async () => {
+        downstreamResponse = await dispatch(nextIndex + 1);
+        return downstreamResponse;
+      });
+      if (middlewareResponse instanceof Response) {
+        if (downstreamResponse && middlewareResponse !== downstreamResponse) {
+          ctx.clearBufferedResponseBody();
+        }
+
+        response = middlewareResponse;
+        return middlewareResponse;
+      }
+
+      if (response) {
+        return response;
+      }
+
+      response = this.toShortCircuitResponse(ctx);
+      return response;
     };
 
-    await dispatch(0);
-
-    return response ?? this.toShortCircuitResponse(ctx);
+    return dispatch(0);
   }
 
   private toResponse(ctx: HttpContext, result: unknown): Response {
     if (result instanceof Response) {
       ctx.res.status = result.status;
+      ctx.clearBufferedResponseBody();
       return result;
     }
 
