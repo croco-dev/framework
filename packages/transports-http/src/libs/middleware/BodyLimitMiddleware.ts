@@ -1,4 +1,5 @@
 import type { MiddlewareFunction } from "../types";
+import { markSecurityMiddleware } from "./SecurityMiddlewareMarker";
 
 export type BodyLimitOptions = {
   limit?: number;
@@ -16,7 +17,7 @@ const DEFAULT_MESSAGE = "Request body too large";
 export const bodyLimitMiddleware = (options: BodyLimitOptions = {}): MiddlewareFunction => {
   const { limit = DEFAULT_LIMIT, statusCode = DEFAULT_STATUS, message = DEFAULT_MESSAGE } = options;
 
-  return async (ctx, next): Promise<void> => {
+  const middleware: MiddlewareFunction = async (ctx, next): Promise<void> => {
     const contentLength = ctx.header("content-length");
 
     if (contentLength) {
@@ -38,6 +39,8 @@ export const bodyLimitMiddleware = (options: BodyLimitOptions = {}): MiddlewareF
 
     await next();
   };
+
+  return markSecurityMiddleware(middleware, "bodyLimitMiddleware");
 };
 
 /**

@@ -40,7 +40,7 @@ import { bodyLimitMiddleware, mb } from "../libs/middleware/BodyLimitMiddleware"
 import { corsMiddleware } from "../libs/middleware/CorsMiddleware";
 import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
 import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
-import type { LambdaContext, LambdaEvent } from "../libs/types";
+import type { LambdaContext, LambdaEvent, MiddlewareFunction } from "../libs/types";
 
 vi.mock("@hono/node-server", () => ({
   serve: vi.fn((_options: unknown, callback?: () => void) => {
@@ -304,6 +304,15 @@ describe("CrocoApp", () => {
     ];
   }
 
+  function hideMiddlewareSource(middleware: MiddlewareFunction): MiddlewareFunction {
+    Object.defineProperty(middleware, "toString", {
+      configurable: true,
+      value: () => "async()=>{}",
+    });
+
+    return middleware;
+  }
+
   async function createStaticFixture(files: Record<string, string>): Promise<string> {
     const directory = await mkdtemp(join(tmpdir(), "croco-transports-http-"));
 
@@ -506,6 +515,18 @@ describe("CrocoApp", () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: createRequiredSecurityMiddlewares(),
+      securityValidation: "enforce",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+  });
+
+  it("should bootstrap when packaged security middleware source is minified", async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: createRequiredSecurityMiddlewares().map(hideMiddlewareSource),
       securityValidation: "enforce",
     });
 
