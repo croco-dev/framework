@@ -6,16 +6,22 @@ import type {
   ServiceIdentifier,
   ServiceMetadata,
 } from "typedi";
+import "reflect-metadata";
 import { detectCircularDependency } from "./CircularDependencyDetector";
 import { ModuleContext } from "./ModuleContext";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
 import {
   InvalidModuleDefinitionProblem,
+  ModuleCircularDependencyProblem,
   ModuleLifecycleProblem,
   ModuleProviderVisibilityProblem,
 } from "./problems";
 import type {
+  ModuleGraphDiagnostic,
+  ModuleGraphManifest,
+  ModuleGraphModule,
+  ModuleGraphProvider,
   ModuleDiagnosticsSnapshot,
   ModuleLifecyclePhase,
   ModuleOptions,
@@ -39,6 +45,12 @@ type ModuleRuntimeState = {
 
 type ContainerServiceMetadataSnapshot = {
   readonly services?: readonly ServiceMetadata<unknown>[];
+};
+
+type ModuleProviderVisibilityFailure = {
+  readonly moduleName: string;
+  readonly providerClass: Constructor<unknown>;
+  readonly token: ModuleToken<unknown>;
 };
 
 class CapturedTypediInjectionToken extends Error {
@@ -162,6 +174,27 @@ export function getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[] {
   }));
 }
 
+export function createModuleGraphManifest(
+  rootModules: readonly ModuleOptions[] = Array.from(registeredModules.values()),
+): ModuleGraphManifest {
+  const modules = collectModules(rootModules);
+  const states = new Map(modules.map((module) => [module.name, createModuleState(module)]));
+  const diagnostics = createModuleGraphDiagnostics(modules, states);
+
+  return {
+    version: "croco.module-graph.manifest.v1",
+    status: diagnostics.length === 0 ? "ready" : "failed",
+    modules: modules
+      .map(createModuleGraphModule)
+      .sort((left, right) => left.name.localeCompare(right.name)),
+    diagnostics,
+  };
+}
+
+export function stringifyModuleGraphManifest(manifest: ModuleGraphManifest): string {
+  return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
 function validateModule(module: ModuleOptions): void {
   if (typeof module.name !== "string" || module.name.trim().length === 0) {
     throw new InvalidModuleDefinitionProblem("Module name must be a non-empty string.");
@@ -181,6 +214,106 @@ function validateModule(module: ModuleOptions): void {
       { moduleName: module.name },
     );
   }
+}
+
+function createModuleGraphDiagnostics(
+  modules: readonly ModuleOptions[],
+  states: ReadonlyMap<string, ModuleRuntimeState>,
+): ModuleGraphDiagnostic[] {
+  const diagnostics: ModuleGraphDiagnostic[] = [];
+
+  try {
+    detectCircularDependency(modules);
+  } catch (error) {
+    if (!(error instanceof ModuleCircularDependencyProblem)) {
+      throw error;
+    }
+
+    const cycle = Array.isArray(error.extensions?.cycle)
+      ? error.extensions.cycle.filter((entry): entry is string => typeof entry === "string")
+      : [];
+
+    diagnostics.push({
+      code: "framework-module/module-circular-dependency",
+      severity: "error",
+      moduleName: cycle[0] ?? "<unknown>",
+      message: error.detail ?? error.message,
+      path: cycle,
+    });
+  }
+
+  for (const module of modules) {
+    for (const provider of module.providers ?? []) {
+      const classProvider = getClassProviderEntry(provider);
+      if (!classProvider) {
+        continue;
+      }
+
+      const [, providerClass] = classProvider;
+      for (const failure of getClassProviderVisibilityFailures(
+        module.name,
+        providerClass,
+        states,
+      )) {
+        const provider = getModuleTokenLabel(failure.token);
+        diagnostics.push({
+          code: "framework-module/provider-not-visible",
+          severity: "error",
+          moduleName: module.name,
+          token: provider,
+          message: `Module '${module.name}' cannot access provider '${provider}'. Export it from an imported module or register it locally.`,
+          path: [module.name, getModuleTokenLabel(failure.providerClass), provider],
+        });
+      }
+    }
+  }
+
+  return diagnostics.sort((left, right) => {
+    const codeOrder = left.code.localeCompare(right.code);
+    if (codeOrder !== 0) {
+      return codeOrder;
+    }
+
+    const moduleOrder = left.moduleName.localeCompare(right.moduleName);
+    return moduleOrder === 0 ? (left.token ?? "").localeCompare(right.token ?? "") : moduleOrder;
+  });
+}
+
+function createModuleGraphModule(module: ModuleOptions): ModuleGraphModule {
+  return {
+    name: module.name,
+    imports: (module.imports?.map((importedModule) => importedModule.name) ?? []).sort(),
+    providers: (module.providers?.map(createModuleGraphProvider) ?? []).sort((left, right) =>
+      left.token.localeCompare(right.token),
+    ),
+    exports: (module.exports?.map(getModuleTokenLabel) ?? []).sort(),
+    controllers: (module.controllers?.map(getModuleTokenLabel) ?? []).sort(),
+  };
+}
+
+function createModuleGraphProvider(
+  provider: ModuleProviderDefinition | ModuleToken<unknown>,
+): ModuleGraphProvider {
+  if (!isProviderDefinition(provider)) {
+    return {
+      token: getModuleTokenLabel(provider),
+      provider: isConstructorToken(provider) ? "class" : "token",
+      ...(isConstructorToken(provider) ? { className: getModuleTokenLabel(provider) } : {}),
+    };
+  }
+
+  if ("useClass" in provider) {
+    return {
+      token: getModuleTokenLabel(provider.provide),
+      provider: "class",
+      className: getModuleTokenLabel(provider.useClass),
+    };
+  }
+
+  return {
+    token: getModuleTokenLabel(provider.provide),
+    provider: "useFactory" in provider ? "factory" : "value",
+  };
 }
 
 function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] {
@@ -313,13 +446,28 @@ function registerProviderOwnership(moduleName: string, token: ModuleToken<unknow
 }
 
 function isKnownToken(token: ModuleToken<unknown>): boolean {
-  return Array.from(moduleStates.values()).some(
+  return isKnownTokenInStates(token, moduleStates);
+}
+
+function isKnownTokenInStates(
+  token: ModuleToken<unknown>,
+  states: ReadonlyMap<string, ModuleRuntimeState>,
+): boolean {
+  return Array.from(states.values()).some(
     (state) => state.providers.has(token) || state.exports.has(token),
   );
 }
 
 function canAccessToken(moduleName: string, token: ModuleToken<unknown>): boolean {
-  const state = moduleStates.get(moduleName);
+  return canAccessTokenInStates(moduleName, token, moduleStates);
+}
+
+function canAccessTokenInStates(
+  moduleName: string,
+  token: ModuleToken<unknown>,
+  states: ReadonlyMap<string, ModuleRuntimeState>,
+): boolean {
+  const state = states.get(moduleName);
   if (!state) {
     return false;
   }
@@ -328,9 +476,7 @@ function canAccessToken(moduleName: string, token: ModuleToken<unknown>): boolea
     return true;
   }
 
-  return (state.module.imports ?? []).some((module) =>
-    moduleStates.get(module.name)?.exports.has(token),
-  );
+  return (state.module.imports ?? []).some((module) => states.get(module.name)?.exports.has(token));
 }
 
 function validateProviderAccess(
@@ -353,11 +499,12 @@ function validateProviderAccess(
 function getAccessibleClassProvider(
   moduleName: string,
   token: ModuleToken<unknown>,
+  states: ReadonlyMap<string, ModuleRuntimeState> = moduleStates,
 ): {
   readonly moduleName: string;
   readonly providerClass: Constructor<unknown>;
 } | null {
-  const state = moduleStates.get(moduleName);
+  const state = states.get(moduleName);
   if (!state) {
     return null;
   }
@@ -368,7 +515,7 @@ function getAccessibleClassProvider(
   }
 
   for (const importedModule of state.module.imports ?? []) {
-    const importedState = moduleStates.get(importedModule.name);
+    const importedState = states.get(importedModule.name);
     if (!importedState?.exports.has(token)) {
       continue;
     }
@@ -386,6 +533,19 @@ function validateClassProviderVisibility<T>(
   moduleName: string,
   providerClass: Constructor<T>,
 ): void {
+  const failure = getClassProviderVisibilityFailures(moduleName, providerClass, moduleStates)[0];
+
+  if (failure) {
+    throw new ModuleProviderVisibilityProblem(moduleName, failure.token);
+  }
+}
+
+function getClassProviderVisibilityFailures<T>(
+  moduleName: string,
+  providerClass: Constructor<T>,
+  states: ReadonlyMap<string, ModuleRuntimeState>,
+): ModuleProviderVisibilityFailure[] {
+  const failures: ModuleProviderVisibilityFailure[] = [];
   const dependencies = getConstructorDependencies(providerClass);
 
   for (const dependency of dependencies) {
@@ -394,16 +554,24 @@ function validateClassProviderVisibility<T>(
     }
 
     const dependencyToken = dependency as ModuleToken<unknown>;
-    if (isKnownToken(dependencyToken) && !canAccessToken(moduleName, dependencyToken)) {
-      throw new ModuleProviderVisibilityProblem(moduleName, dependencyToken);
+    if (
+      isKnownTokenInStates(dependencyToken, states) &&
+      !canAccessTokenInStates(moduleName, dependencyToken, states)
+    ) {
+      failures.push({ moduleName, providerClass, token: dependencyToken });
     }
   }
 
   for (const dependency of getTypediHandlerDependencies(providerClass)) {
-    if (isKnownToken(dependency) && !canAccessToken(moduleName, dependency)) {
-      throw new ModuleProviderVisibilityProblem(moduleName, dependency);
+    if (
+      isKnownTokenInStates(dependency, states) &&
+      !canAccessTokenInStates(moduleName, dependency, states)
+    ) {
+      failures.push({ moduleName, providerClass, token: dependency });
     }
   }
+
+  return failures;
 }
 
 function getConstructorDependencies<T>(providerClass: Constructor<T>): readonly unknown[] {

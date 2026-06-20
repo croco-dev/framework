@@ -3133,6 +3133,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "di",
+          "exportKind": "named",
+          "source": "./commands/di",
+          "declarationKind": "const"
+        },
+        {
+          "name": "diCheck",
+          "exportKind": "named",
+          "source": "./commands/diCheck",
+          "declarationKind": "const"
+        },
+        {
           "name": "doctor",
           "exportKind": "named",
           "source": "./commands/doctor",
@@ -3295,6 +3307,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "parseDiCheckArgs",
+          "exportKind": "named",
+          "source": "./commands/diCheck",
+          "declarationKind": "function"
+        },
+        {
           "name": "pluralize",
           "exportKind": "named",
           "source": "./libs/naming",
@@ -3304,6 +3322,12 @@
           "name": "runContractsCheck",
           "exportKind": "named",
           "source": "./commands/contractsCheck",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runDiCheck",
+          "exportKind": "named",
+          "source": "./commands/diCheck",
           "declarationKind": "function"
         },
         {
@@ -3405,6 +3429,21 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "DiCheckDiagnostic",
+          "exportKind": "named",
+          "source": "./commands/diCheck"
+        },
+        {
+          "name": "DiCheckIo",
+          "exportKind": "named",
+          "source": "./commands/diCheck"
+        },
+        {
+          "name": "DiCheckReport",
+          "exportKind": "named",
+          "source": "./commands/diCheck"
+        },
         {
           "name": "DoctorCheckResult",
           "exportKind": "named",
@@ -5495,6 +5534,36 @@
           "source": "./libs/RuntimePolicy"
         },
         {
+          "name": "DependencyGraphDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphManifest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphManifestStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphManifestVersion",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphProvider",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "DependencyProviderKind",
           "exportKind": "named",
           "source": "./libs/types"
@@ -5516,6 +5585,11 @@
         },
         {
           "name": "DependencyResolutionTraceStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencySourceLocation",
           "exportKind": "named",
           "source": "./libs/types"
         },
@@ -5886,6 +5960,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createModuleGraphManifest",
+          "exportKind": "named",
+          "source": "./ModuleRegistry",
+          "declarationKind": "function"
+        },
+        {
           "name": "detectCircularDependency",
           "exportKind": "named",
           "source": "./CircularDependencyDetector",
@@ -5926,6 +6006,12 @@
           "exportKind": "named",
           "source": "./problems",
           "declarationKind": "class"
+        },
+        {
+          "name": "stringifyModuleGraphManifest",
+          "exportKind": "named",
+          "source": "./ModuleRegistry",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
@@ -5937,6 +6023,41 @@
         },
         {
           "name": "ModuleDiagnosticsSnapshot",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphDiagnostic",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphDiagnosticCode",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphManifest",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphManifestStatus",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphManifestVersion",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphModule",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphProvider",
           "exportKind": "named",
           "source": "./types"
         },
