@@ -512,6 +512,7 @@ try {
       "--filter=create-croco-app...",
       "--filter=@croco/framework-context...",
       "--filter=@croco/frontend-cloudflare...",
+      "--filter=@croco/frontend-problems...",
       "--filter=@croco/frontend-react...",
       "--filter=@croco/frontend-vite...",
       "--filter=@croco/llm-core...",
@@ -834,7 +835,10 @@ function runSpaBeSplitContractSmoke(): void {
     generatedClientPath,
     "REST SPA contract smoke did not create provider-rpc user client",
   );
-  assertFileContains(generatedClientPath, "export function useList()");
+  assertFileContains(
+    generatedClientPath,
+    "export function useList<TData = ListOutput>(options?: ListQueryOptions<TData>)",
+  );
   assertFileContains(
     generatedClientPath,
     "export type CreateInput = { email: string; name: string; };",
