@@ -155,6 +155,7 @@ describe("generateClientFiles", () => {
           outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
           domain: null,
           access: { guards: [], roles: [] },
+          entitlements: [],
           problemResponses: [
             {
               code: "USER_NOT_FOUND",

@@ -3969,6 +3969,12 @@
       "entrypoint": "packages/entitlements-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "EntitlementAuditSink",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
+          "declarationKind": "class"
+        },
+        {
           "name": "EntitlementEventPublisher",
           "exportKind": "declaration",
           "source": "./libs/interfaces",
@@ -3999,6 +4005,30 @@
           "declarationKind": "class"
         },
         {
+          "name": "appendEntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineEntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ENTITLEMENT_REQUIRED_KEY",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "const"
+        },
+        {
+          "name": "ENTITLEMENT_REQUIREMENTS_KEY",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "const"
+        },
+        {
           "name": "EntitlementDeniedEvent",
           "exportKind": "named",
           "source": "./libs/events",
@@ -4017,9 +4047,21 @@
           "declarationKind": "class"
         },
         {
+          "name": "EntitlementInactiveSubscriptionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "EntitlementManager",
           "exportKind": "named",
           "source": "./libs/EntitlementManager",
+          "declarationKind": "class"
+        },
+        {
+          "name": "EntitlementMissingPlanProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
           "declarationKind": "class"
         },
         {
@@ -4035,10 +4077,34 @@
           "declarationKind": "class"
         },
         {
+          "name": "EntitlementProviderUnavailableProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "EntitlementQuotaExceededEvent",
           "exportKind": "named",
           "source": "./libs/events",
           "declarationKind": "class"
+        },
+        {
+          "name": "EntitlementQuotaExceededProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "EntitlementRequirementProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "getEntitlementRequirements",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "function"
         },
         {
           "name": "InMemoryPlanEntitlementRegistry",
@@ -4064,6 +4130,36 @@
           "name": "EntitlementCheckResult",
           "exportKind": "declaration",
           "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementCheckStatus",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementFailureReason",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardAuditEvent",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardAuditResource",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardAuditRoute",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
           "declarationKind": "type"
         },
         {
@@ -4107,6 +4203,46 @@
           "exportKind": "declaration",
           "source": "./libs/types",
           "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardInput",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementGuardResource",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementGuardRoute",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementGuardSubject",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement"
+        },
+        {
+          "name": "EntitlementRequirementMetadata",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement"
+        },
+        {
+          "name": "EntitlementResourceRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement"
+        },
+        {
+          "name": "RouteExecutionContext",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
         }
       ]
     },
@@ -10073,6 +10209,16 @@
           "source": "./libs/ContractGraph"
         },
         {
+          "name": "ContractEntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/ContractGraph"
+        },
+        {
+          "name": "ContractEntitlementResourceRequirement",
+          "exportKind": "named",
+          "source": "./libs/ContractGraph"
+        },
+        {
           "name": "ContractGraph",
           "exportKind": "named",
           "source": "./libs/ContractGraph"
@@ -10158,6 +10304,11 @@
           "source": "./libs/ContractGraphSnapshot"
         },
         {
+          "name": "ContractGraphSnapshotEntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
           "name": "ContractGraphSnapshotParam",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
@@ -10216,6 +10367,16 @@
           "name": "DefinedRouteSchema",
           "exportKind": "named",
           "source": "./libs/RouteSchema"
+        },
+        {
+          "name": "EntitlementRequirementMetadata",
+          "exportKind": "named",
+          "source": "./libs/sharedTypes"
+        },
+        {
+          "name": "EntitlementResourceRequirementMetadata",
+          "exportKind": "named",
+          "source": "./libs/sharedTypes"
         },
         {
           "name": "InferRouteSchemaRequest",

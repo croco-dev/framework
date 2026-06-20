@@ -3,6 +3,8 @@ export type {
   ContractDiagnostic,
   ContractDiagnosticSeverity,
   ContractDiagnosticTarget,
+  ContractEntitlementRequirement,
+  ContractEntitlementResourceRequirement,
   ContractGraph,
   ContractGraphController,
   ContractGraphRoute,
@@ -55,6 +57,7 @@ export { diffContractGraphSnapshots } from "./libs/ContractGraphDiff";
 export type {
   ContractGraphSnapshot,
   ContractGraphSnapshotController,
+  ContractGraphSnapshotEntitlementRequirement,
   ContractGraphSnapshotParam,
   ContractGraphSnapshotProblemResponse,
   ContractGraphSnapshotRoute,
@@ -75,4 +78,8 @@ export {
 } from "./libs/controllerDiscovery";
 export { extractRouteIR } from "./libs/extractRouteIR";
 export type { ParamIR, ProblemResponseIR, RouteIR } from "./libs/RouteIR";
-export type { Constructor } from "./libs/sharedTypes";
+export type {
+  Constructor,
+  EntitlementRequirementMetadata,
+  EntitlementResourceRequirementMetadata,
+} from "./libs/sharedTypes";

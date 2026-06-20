@@ -11,6 +11,7 @@ import {
   buildContractGraph,
   type ContractGraph,
   type ContractGraphConsumerRouteField,
+  type ContractEntitlementRequirement,
   type ContractGraphObservedConsumerRoute,
   type ContractGraphRoute,
   getContractPathParams,
@@ -45,6 +46,11 @@ type DeclaredProblemOpenAPI = {
   readonly status: number;
   readonly description?: string;
   readonly type?: string;
+};
+type DeclaredEntitlementOpenAPI = {
+  readonly feature: string;
+  readonly description?: string;
+  readonly resource?: ContractEntitlementRequirement["resource"];
 };
 
 export type ProblemResponseConfig = {
@@ -224,8 +230,23 @@ function toRouteConfig(
     summary: route.routeId,
     tags: [route.domain ?? route.controllerName],
     responses: toResponseConfig(route, defaultResponses, problemDetailsRef),
+    ...(route.entitlements.length > 0
+      ? { "x-croco-entitlements": toOpenAPIEntitlements(route.entitlements) }
+      : {}),
     ...(route.params.length > 0 || route.inputSchema ? { request: toRequestConfig(route) } : {}),
   };
+}
+
+function toOpenAPIEntitlements(
+  entitlements: readonly ContractEntitlementRequirement[],
+): readonly DeclaredEntitlementOpenAPI[] {
+  return entitlements
+    .map((entitlement) => ({
+      feature: entitlement.feature,
+      ...(entitlement.description ? { description: entitlement.description } : {}),
+      ...(entitlement.resource ? { resource: entitlement.resource } : {}),
+    }))
+    .sort(compareDeclaredEntitlements);
 }
 
 function toResponseConfig(
@@ -305,6 +326,13 @@ function compareDeclaredProblems(
   right: DeclaredProblemOpenAPI,
 ): number {
   return left.code.localeCompare(right.code) || left.status - right.status;
+}
+
+function compareDeclaredEntitlements(
+  left: DeclaredEntitlementOpenAPI,
+  right: DeclaredEntitlementOpenAPI,
+): number {
+  return JSON.stringify(left).localeCompare(JSON.stringify(right));
 }
 
 function toTags(routes: ContractGraphRoute[]): { name: string; description: string }[] {
@@ -453,6 +481,7 @@ function collectOpenAPICoveredRoutes(
           "request.headers": hasOpenAPIParameters(operation, "header") ? "present" : "absent",
           response: hasOpenAPIJsonSuccessResponse(operation) ? "present" : "absent",
           problems: openAPIProblemsFingerprint(operation),
+          entitlements: openAPIEntitlementsFingerprint(operation),
         },
       });
     }
@@ -479,6 +508,7 @@ function collectOpenAPIConsumedFields(
     "request.headers",
     "response",
     "problems",
+    "entitlements",
   ];
 }
 
@@ -527,6 +557,14 @@ function openAPIProblemsFingerprint(operation: Record<string, unknown>): string 
   return JSON.stringify(problems.sort(compareOpenAPIProblemFingerprints));
 }
 
+function openAPIEntitlementsFingerprint(operation: Record<string, unknown>): string {
+  const entitlements = Array.isArray(operation["x-croco-entitlements"])
+    ? operation["x-croco-entitlements"].filter(isRecord).map(toOpenAPIEntitlementFingerprint)
+    : [];
+
+  return JSON.stringify(entitlements.sort(compareOpenAPIEntitlementFingerprints));
+}
+
 function toOpenAPIProblemFingerprint(problem: Record<string, unknown>): DeclaredProblemOpenAPI {
   return {
     code: String(problem.code),
@@ -546,4 +584,35 @@ function compareOpenAPIProblemFingerprints(
     left.category.localeCompare(right.category) ||
     left.status - right.status
   );
+}
+
+function toOpenAPIEntitlementFingerprint(
+  entitlement: Record<string, unknown>,
+): DeclaredEntitlementOpenAPI {
+  return {
+    feature: String(entitlement.feature),
+    ...(typeof entitlement.description === "string"
+      ? { description: entitlement.description }
+      : {}),
+    ...(isRecord(entitlement.resource)
+      ? { resource: toOpenAPIEntitlementResourceFingerprint(entitlement.resource) }
+      : {}),
+  };
+}
+
+function toOpenAPIEntitlementResourceFingerprint(
+  resource: Record<string, unknown>,
+): NonNullable<DeclaredEntitlementOpenAPI["resource"]> {
+  return {
+    type: String(resource.type),
+    ...(typeof resource.id === "string" ? { id: resource.id } : {}),
+    ...(typeof resource.idParam === "string" ? { idParam: resource.idParam } : {}),
+  };
+}
+
+function compareOpenAPIEntitlementFingerprints(
+  left: DeclaredEntitlementOpenAPI,
+  right: DeclaredEntitlementOpenAPI,
+): number {
+  return JSON.stringify(left).localeCompare(JSON.stringify(right));
 }

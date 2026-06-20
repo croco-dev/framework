@@ -160,6 +160,7 @@ function diffExistingRoute(
 
   changes.push(...diffRequestSchemas(baseline, current));
   changes.push(...diffProblemResponses(baseline, current));
+  changes.push(...diffEntitlementRequirements(baseline, current));
 
   if (!isResponseSchemaCompatible(baseline.response, current.response)) {
     changes.push({
@@ -173,6 +174,57 @@ function diffExistingRoute(
   }
 
   return changes;
+}
+
+function diffEntitlementRequirements(
+  baseline: ContractGraphSnapshotRoute,
+  current: ContractGraphSnapshotRoute,
+): ContractGraphDiffChange[] {
+  const changes: ContractGraphDiffChange[] = [];
+  const baselineEntitlements = new Map(
+    baseline.entitlements.map((entitlement) => [entitlementFingerprint(entitlement), entitlement]),
+  );
+  const currentEntitlements = new Map(
+    current.entitlements.map((entitlement) => [entitlementFingerprint(entitlement), entitlement]),
+  );
+
+  for (const [fingerprint, entitlement] of currentEntitlements) {
+    if (!baselineEntitlements.has(fingerprint)) {
+      changes.push({
+        code: "contract-entitlement-requirement-added",
+        severity: "breaking",
+        routeId: baseline.routeId,
+        operationId: baseline.operationId,
+        fieldPath: entitlement.feature,
+        message: `Route '${baseline.routeId}' added entitlement requirement '${entitlement.feature}', adding a pre-handler denial path.`,
+      });
+    }
+  }
+
+  for (const [fingerprint, entitlement] of baselineEntitlements) {
+    if (!currentEntitlements.has(fingerprint)) {
+      changes.push({
+        code: "contract-entitlement-requirement-removed",
+        severity: "non-breaking",
+        routeId: baseline.routeId,
+        operationId: baseline.operationId,
+        fieldPath: entitlement.feature,
+        message: `Route '${baseline.routeId}' removed entitlement requirement '${entitlement.feature}'.`,
+      });
+    }
+  }
+
+  return changes;
+}
+
+function entitlementFingerprint(
+  entitlement: ContractGraphSnapshotRoute["entitlements"][number],
+): string {
+  return JSON.stringify({
+    feature: entitlement.feature,
+    description: entitlement.description,
+    resource: entitlement.resource,
+  });
 }
 
 function diffProblemResponses(

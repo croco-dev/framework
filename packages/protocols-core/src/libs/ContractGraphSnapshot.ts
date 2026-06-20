@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type {
   ContractAccessMetadata,
   ContractDiagnostic,
+  ContractEntitlementRequirement,
   ContractGraph,
   ContractGraphRoute,
   ContractGraphVersion,
@@ -55,6 +56,8 @@ export type ContractGraphSnapshotProblemResponse = {
   readonly type?: string;
 };
 
+export type ContractGraphSnapshotEntitlementRequirement = ContractEntitlementRequirement;
+
 export type ContractGraphSnapshotRoute = {
   readonly routeId: string;
   readonly operationId: string;
@@ -65,6 +68,7 @@ export type ContractGraphSnapshotRoute = {
   readonly controllerPath: string;
   readonly domain: string | null;
   readonly access: ContractAccessMetadata;
+  readonly entitlements: readonly ContractGraphSnapshotEntitlementRequirement[];
   readonly params: readonly ContractGraphSnapshotParam[];
   readonly request: {
     readonly body: ContractSchemaSnapshot | null;
@@ -155,6 +159,7 @@ function toSnapshotRoute(route: ContractGraphRoute): ContractGraphSnapshotRoute 
       guards: sortGuards(route.access.guards),
       roles: [...route.access.roles].sort(compareStrings),
     },
+    entitlements: sortEntitlements(route.entitlements),
     params: route.params.map((param) => ({
       kind: param.kind,
       name: param.name,
@@ -433,6 +438,27 @@ function sortGuards(
   guards: readonly ContractMetadataReference[],
 ): readonly ContractMetadataReference[] {
   return [...guards].sort((left, right) => compareStrings(left.id, right.id));
+}
+
+function sortEntitlements(
+  entitlements: readonly ContractEntitlementRequirement[],
+): readonly ContractEntitlementRequirement[] {
+  return [...entitlements].sort(compareEntitlements);
+}
+
+function compareEntitlements(
+  left: ContractEntitlementRequirement,
+  right: ContractEntitlementRequirement,
+): number {
+  return compareStrings(entitlementFingerprint(left), entitlementFingerprint(right));
+}
+
+function entitlementFingerprint(entitlement: ContractEntitlementRequirement): string {
+  return JSON.stringify({
+    feature: entitlement.feature,
+    description: entitlement.description,
+    resource: entitlement.resource,
+  });
 }
 
 function compareControllers(

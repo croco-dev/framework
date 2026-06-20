@@ -6,6 +6,9 @@ import type { RouteIR } from "./RouteIR";
 import {
   type Constructor,
   type ControllerMetadata,
+  ENTITLEMENT_REQUIRED_KEY,
+  ENTITLEMENT_REQUIREMENTS_KEY,
+  type EntitlementRequirementMetadata,
   REST_CONTROLLER_KEY,
   REST_GUARDS_KEY,
   REST_ROLES_KEY,
@@ -55,6 +58,18 @@ export type ContractAccessMetadata = {
   readonly roles: readonly string[];
 };
 
+export type ContractEntitlementResourceRequirement = {
+  readonly type: string;
+  readonly id?: string;
+  readonly idParam?: string;
+};
+
+export type ContractEntitlementRequirement = {
+  readonly feature: string;
+  readonly description?: string;
+  readonly resource?: ContractEntitlementResourceRequirement;
+};
+
 export type ContractPathParam = {
   readonly token: string;
   readonly name: string;
@@ -65,6 +80,7 @@ export type ContractGraphRoute = RouteIR & {
   readonly operationId: string;
   readonly controllerPath: string;
   readonly access: ContractAccessMetadata;
+  readonly entitlements: readonly ContractEntitlementRequirement[];
 };
 
 export type ContractGraph = {
@@ -210,6 +226,12 @@ function toContractGraphRoute(
         ),
       ],
     },
+    entitlements: [
+      ...getEntitlementRequirements(controllerCtor),
+      ...getEntitlementRequirements(controllerCtor.prototype),
+      ...getEntitlementRequirements(controllerCtor, route.methodName),
+      ...getEntitlementRequirements(controllerCtor.prototype, route.methodName),
+    ],
   };
 }
 
@@ -634,4 +656,89 @@ function getMetadataStrings(value: unknown): string[] {
   }
 
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function getEntitlementRequirements(
+  target: object,
+  propertyKey?: string | symbol,
+): ContractEntitlementRequirement[] {
+  const current =
+    propertyKey === undefined
+      ? Reflect.getMetadata(ENTITLEMENT_REQUIREMENTS_KEY, target)
+      : Reflect.getMetadata(ENTITLEMENT_REQUIREMENTS_KEY, target, propertyKey);
+  const requirements = normalizeEntitlementRequirements(current);
+
+  if (requirements.length > 0) {
+    return requirements;
+  }
+
+  const legacy =
+    propertyKey === undefined
+      ? Reflect.getMetadata(ENTITLEMENT_REQUIRED_KEY, target)
+      : Reflect.getMetadata(ENTITLEMENT_REQUIRED_KEY, target, propertyKey);
+
+  return typeof legacy === "string" && legacy.length > 0 ? [{ feature: legacy }] : [];
+}
+
+function normalizeEntitlementRequirements(value: unknown): ContractEntitlementRequirement[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isEntitlementRequirementMetadata).map((requirement) => ({
+    feature: requirement.feature,
+    ...(requirement.description ? { description: requirement.description } : {}),
+    ...(requirement.resource
+      ? { resource: normalizeEntitlementResource(requirement.resource) }
+      : {}),
+  }));
+}
+
+function isEntitlementRequirementMetadata(value: unknown): value is EntitlementRequirementMetadata {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    readonly feature?: unknown;
+    readonly resource?: unknown;
+  };
+
+  return (
+    typeof candidate.feature === "string" &&
+    candidate.feature.length > 0 &&
+    (candidate.resource === undefined || isEntitlementResourceMetadata(candidate.resource))
+  );
+}
+
+function normalizeEntitlementResource(
+  resource: NonNullable<EntitlementRequirementMetadata["resource"]>,
+): ContractEntitlementResourceRequirement {
+  return {
+    type: resource.type,
+    ...(resource.id ? { id: resource.id } : {}),
+    ...(resource.idParam ? { idParam: resource.idParam } : {}),
+  };
+}
+
+function isEntitlementResourceMetadata(
+  value: unknown,
+): value is NonNullable<EntitlementRequirementMetadata["resource"]> {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    readonly type?: unknown;
+    readonly id?: unknown;
+    readonly idParam?: unknown;
+  };
+
+  return (
+    typeof candidate.type === "string" &&
+    candidate.type.length > 0 &&
+    (candidate.id === undefined || (typeof candidate.id === "string" && candidate.id.length > 0)) &&
+    (candidate.idParam === undefined ||
+      (typeof candidate.idParam === "string" && candidate.idParam.length > 0))
+  );
 }

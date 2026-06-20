@@ -44,6 +44,7 @@
     "@croco/framework-context": "workspace:*",
     "@croco/metering-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
