@@ -33,3 +33,17 @@ export abstract class DomainEvent {
     this.metadata = {};
   }
 }
+
+export function restoreSerializedEventIdentity(
+  event: DomainEvent,
+  eventId: string,
+  occurredAt: string,
+): void {
+  const mutableEvent = event as unknown as {
+    eventId: string;
+    timestamp: Date;
+  };
+
+  mutableEvent.eventId = eventId;
+  mutableEvent.timestamp = new Date(occurredAt);
+}
