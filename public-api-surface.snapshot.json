@@ -8832,6 +8832,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "createServerActionSuccess",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createServerActionSuccessResponse",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "function"
+        },
+        {
           "name": "crocoMetaVitePlugin",
           "exportKind": "named",
           "source": "./libs/vite/crocoMetaVitePlugin",
@@ -8904,7 +8916,25 @@
           "declarationKind": "class"
         },
         {
+          "name": "ServerActionInvalidPathProblem",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ServerActionNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "class"
+        },
+        {
           "name": "ServerActionRegistry",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ServerActionValidationProblem",
           "exportKind": "named",
           "source": "./libs/actions/serverActions",
           "declarationKind": "class"
@@ -9064,6 +9094,46 @@
         },
         {
           "name": "ServerActionConfig",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionFailureResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionHandlerResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionOutputContract",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionProblemContract",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionProblemKind",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionSuccessResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionValidationFields",
           "exportKind": "named",
           "source": "./libs/actions/serverActions"
         },

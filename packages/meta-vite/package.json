@@ -30,14 +30,15 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/libs/isr/adapters/index.ts --format esm,cjs --minify --clean --dts --external vite --external react --external react-dom --external 'react-dom/*' --external '@croco/cache-core'",
+    "build": "tsup src/index.ts src/libs/isr/adapters/index.ts --format esm,cjs --minify --clean --dts --external vite --external react --external react-dom --external 'react-dom/*' --external '@croco/cache-core' --external '@croco/problems-core'",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
   },
   "dependencies": {
     "@croco/cache-core": "workspace:*",
-    "@croco/presentation-preset": "workspace:*"
+    "@croco/presentation-preset": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "@vitejs/plugin-rsc": "^0.5.0",
