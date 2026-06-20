@@ -8,7 +8,7 @@
 | ------------------------------ | ----: |
 | Public packages                |   102 |
 | Private packages skipped       |     2 |
-| Missing package README         |    21 |
+| Missing package README         |    20 |
 | Missing generated API docs     |    75 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    40 |
@@ -20,7 +20,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/analytics-core` (`packages/analytics-core`) — legacy baseline
 - `create-croco-app` (`packages/create-croco-app`) — legacy baseline
 - `@croco/diagnostics-core` (`packages/diagnostics-core`) — legacy baseline
-- `@croco/events-tx` (`packages/events-tx`) — legacy baseline
 - `@croco/features-core` (`packages/features-core`) — legacy baseline
 - `@croco/framework-preset` (`packages/framework-preset`) — legacy baseline
 - `@croco/framework-routes` (`packages/framework-routes`) — legacy baseline
