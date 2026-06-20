@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RateLimiter } from "../libs/RateLimiter";
 import { type KeyContext, RateLimitKeyBuilder } from "../libs/RateLimitKeyBuilder";
 import type { RateLimitStore } from "../libs/RateLimitStore";
-import type { RateLimitPolicy, RateLimitResult } from "../libs/types";
+import type { RateLimitPolicy, RateLimitRefundReceipt, RateLimitResult } from "../libs/types";
 
 describe("RateLimiter", () => {
   let mockStore!: RateLimitStore;
@@ -28,6 +28,11 @@ describe("RateLimiter", () => {
     resetAtMs: Date.now() + 60000,
     policyName: "sliding",
   };
+  const refundReceipt: RateLimitRefundReceipt = {
+    algorithm: "sliding",
+    id: "receipt-1",
+    timestamp: Date.now(),
+  };
 
   const failedResult: RateLimitResult = {
     success: false,
@@ -41,6 +46,7 @@ describe("RateLimiter", () => {
   beforeEach(() => {
     mockStore = {
       check: vi.fn().mockResolvedValue(successResult),
+      refund: vi.fn().mockResolvedValue({ ...successResult, remaining: 10, refunded: true }),
       getStats: vi.fn().mockResolvedValue({ allowed: 0, denied: 0, total: 0 }),
       pruneExpired: vi.fn().mockResolvedValue(0),
     } as unknown as RateLimitStore;
@@ -78,6 +84,43 @@ describe("RateLimiter", () => {
 
       expect(mockStore.check).toHaveBeenCalledWith("custom:key", policy);
       expect(result).toEqual(successResult);
+    });
+  });
+
+  describe("refund", () => {
+    it("should build key and refund store quota", async () => {
+      const context = createContext({
+        tenant: { id: "tenant_123" },
+        user: { id: "user_456" },
+      });
+
+      const result = await rateLimiter.refund(context, policy, refundReceipt);
+
+      expect(mockStore.refund).toHaveBeenCalledWith(
+        "rl:test-policy:tenant_123:user_456",
+        policy,
+        refundReceipt,
+      );
+      expect(result.remaining).toBe(10);
+    });
+
+    it("should refund a provided key directly", async () => {
+      const result = await rateLimiter.refundWithKey("custom:key", policy, refundReceipt);
+
+      expect(mockStore.refund).toHaveBeenCalledWith("custom:key", policy, refundReceipt);
+      expect(result.remaining).toBe(10);
+    });
+
+    it("should report refund store errors without failing open", async () => {
+      const onStoreError = vi.fn();
+      const error = new Error("refund unavailable");
+      rateLimiter = new RateLimiter(mockStore, keyBuilder, { onStoreError });
+      vi.mocked(mockStore.refund).mockRejectedValue(error);
+
+      await expect(rateLimiter.refundWithKey("custom:key", policy, refundReceipt)).rejects.toThrow(
+        "refund unavailable",
+      );
+      expect(onStoreError).toHaveBeenCalledWith(error);
     });
   });
 

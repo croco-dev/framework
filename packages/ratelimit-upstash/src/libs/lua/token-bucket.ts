@@ -1,10 +1,13 @@
 export const tokenBucketLua = `
 local key = KEYS[1]
+local receiptKey = KEYS[2]
 local now = tonumber(ARGV[1])
 local capacity = tonumber(ARGV[2])
 local intervalMs = tonumber(ARGV[3])
 local refillRate = tonumber(ARGV[4])
 local ttl = tonumber(ARGV[5])
+local receiptId = ARGV[6]
+local receiptExpiresAt = tonumber(ARGV[7])
 
 local bucketData = redis.call('GET', key)
 
@@ -38,6 +41,9 @@ if tokens >= 1 then
   tokens = tokens - 1
   success = 1
   remaining = tokens
+  redis.call('ZREMRANGEBYSCORE', receiptKey, '-inf', now)
+  redis.call('ZADD', receiptKey, receiptExpiresAt, receiptId)
+  redis.call('EXPIRE', receiptKey, ttl)
 end
 
 redis.call('SET', key, tokens .. ':' .. lastRefill, 'EX', ttl)

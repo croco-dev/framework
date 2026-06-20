@@ -4,8 +4,12 @@ import type {
   RateLimiter,
   RateLimitHeaders,
   RateLimitPolicy,
+  RateLimitResult,
 } from "@croco/ratelimit-core";
-import { createRateLimitMiddleware } from "@croco/ratelimit-core";
+import {
+  createRateLimitMiddleware,
+  RateLimitRefundUnsupportedProblem,
+} from "@croco/ratelimit-core";
 import type { CrocoHttpContext, MiddlewareFunction } from "../types";
 
 export type RateLimitSkipPredicate = (ctx: CrocoHttpContext) => boolean | Promise<boolean>;
@@ -49,16 +53,25 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
 
     const adapter = createContextAdapter(ctx as CrocoHttpContextAdapter);
     const wrappedNext = async (): Promise<void> => {
-      await next();
+      try {
+        await next();
+      } catch (error) {
+        if (skipFailedRequests) {
+          await refundRateLimit(ctx, createOptions.rateLimiter, createOptions.policy);
+        }
+        throw error;
+      }
 
       const status = ctx.res.status;
       const isSuccess = status >= 200 && status < 300;
 
       if (skipSuccessfulRequests && isSuccess) {
+        await refundRateLimit(ctx, createOptions.rateLimiter, createOptions.policy);
         return;
       }
 
       if (skipFailedRequests && !isSuccess) {
+        await refundRateLimit(ctx, createOptions.rateLimiter, createOptions.policy);
         return;
       }
 
@@ -74,6 +87,25 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
 
     await baseMiddleware(adapter, wrappedNext);
   };
+}
+
+async function refundRateLimit(
+  ctx: CrocoHttpContext,
+  rateLimiter: RateLimiter,
+  policy: RateLimitPolicy,
+): Promise<void> {
+  const result = ctx.get<RateLimitResult>("rateLimitResult");
+  if (!result?.success || result.degraded) {
+    return;
+  }
+
+  const key = ctx.get<string>("rateLimitKey");
+  const receipt = result.refundReceipt;
+  if (!key || !receipt) {
+    throw new RateLimitRefundUnsupportedProblem();
+  }
+
+  await rateLimiter.refundWithKey(key, policy, receipt);
 }
 
 export type RateLimitMiddlewareFactoryOptions = {

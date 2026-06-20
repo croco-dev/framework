@@ -37,6 +37,7 @@ class ApiController {
 ### 핵심 클래스
 
 - `RateLimiter`, 정책 평가와 저장소 오류 처리까지 담당하는 핵심 서비스입니다.
+- `RateLimiter#refund`, `RateLimiter#refundWithKey`, 성공한 체크가 최종적으로 quota를 소비하지 않아야 할 때 해당 체크의 `refundReceipt`로 되돌립니다.
 - `RateLimitGuard`, 라우트 메타데이터를 읽어 요청을 차단합니다.
 - `RateLimitKeyBuilder`, tenant, user, ip, route 조합으로 키를 생성합니다.
 
@@ -53,13 +54,16 @@ class ApiController {
 
 ### 주요 타입과 문제 타입
 
-- `RateLimitPolicy`, `RateLimitResult`, `RateLimitStats`, `RateLimitAlgorithm`
+- `RateLimitPolicy`, `RateLimitResult`, `RateLimitRefundReceipt`, `RateLimitRefundResult`, `RateLimitStats`, `RateLimitAlgorithm`
 - `RateLimitDecoratorOptions`, `RateLimitMetadata`, `RateLimitHeaders`, `HttpContext`
 - 문제 타입: `RateLimitExceededProblem`, `RateLimitWindowProblem`, `RateLimitKeyBuilderProblem`
+- refund 미지원 저장소 문제 타입: `RateLimitRefundUnsupportedProblem`
 
 ## 구현 포인트
 
 - 분산 저장소가 필요하면 `RateLimitStore` 계층을 상속해 Redis, Upstash 등으로 확장합니다.
+- outcome 기반 HTTP skip처럼 성공한 체크를 되돌려야 하는 어댑터는 `RateLimitResult.refundReceipt`를 `refund()`에 넘겨 quota와 통계를 함께 복구합니다.
+- refund는 receipt 기준으로 idempotent하게 동작합니다. 이미 환불됐거나 저장소에 남아 있지 않은 receipt는 quota를 변경하지 않습니다.
 - `failOpen` 옵션으로 저장소 장애 시 허용 전략을 선택할 수 있습니다.
 - `getStats()`는 저장소 통계 조회가 실패하면 `degraded: true`와 직렬화 가능한 `error` 메타데이터를 함께 반환합니다.
 - 윈도우 문자열은 `1s`, `1m`, `1h`, `1d` 형식을 사용합니다.
