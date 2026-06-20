@@ -349,6 +349,7 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "package.json.hbs");
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
   checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "provider-profile-check.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "saasSmokeContract.ts");
   checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
@@ -384,7 +385,11 @@ function checkSaasStructure() {
         /^pnpm contract:check && NODE_PATH=\.\/node_modules croco-openapi-spec[\s\S]*--out openapi\.json/,
       ),
       "demo:seed": expect.any(String),
-      "demo:smoke": expect.stringMatching(/contract:check[\s\S]*api-server demo:smoke/),
+      "profile:check": "pnpm --filter {{scope}}/api-server profile:check",
+      "profile:smoke:real": "pnpm --filter {{scope}}/api-server profile:smoke:real",
+      "demo:smoke": expect.stringMatching(
+        /profile:check[\s\S]*contract:check[\s\S]*api-server demo:smoke/,
+      ),
       "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
       typecheck: "turbo typecheck",
       build: "turbo build",
@@ -403,6 +408,8 @@ function checkSaasStructure() {
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
+      "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
+      "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
       test: "vitest run",
     }),
     dependencies: expect.objectContaining({
@@ -454,7 +461,23 @@ function checkSaasStructure() {
     ["apps", "api-server", "src", "providerProfiles.ts"],
     /drizzle-polar-upstash/,
   );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "providerProfiles.ts"],
+    /saas-node-postgres/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /CROCO_SAAS_PROFILE_ENV_MISSING/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /CROCO_SAAS_PROFILE_PACKAGE_MISSING/,
+  );
   checkFileContains("saas", ["README.md.hbs"], /SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter/);
+  checkFileContains("saas", ["README.md.hbs"], /croco-saas-profile\.manifest\.json/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /billing-sync/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LifecycleRuleEvaluator/);

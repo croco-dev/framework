@@ -2,6 +2,7 @@ import { intro, outro } from "@clack/prompts";
 import { Problem } from "@croco/problems-core";
 import { Command } from "commander";
 import { getPackageVersion } from "./package-version.js";
+import { formatSaasProviderProfileChoices } from "./saas-provider-profiles.js";
 import type { GeneratorOptions } from "./types.js";
 
 export function createProgram(): Command {
@@ -21,6 +22,10 @@ export function createProgram(): Command {
       "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas)",
     )
     .option("--scope <scope>", "Package scope (e.g. @myorg)")
+    .option(
+      "--saas-profile <profile>",
+      `Production SaaS provider profile (${formatSaasProviderProfileChoices()})`,
+    )
     .option("--api <api>", "API type (graphql|trpc)")
     .option("--api-hosting <hosting>", "API hosting (standalone|nextjs)")
     .option("--web-apps <apps>", "Comma-separated web app names")

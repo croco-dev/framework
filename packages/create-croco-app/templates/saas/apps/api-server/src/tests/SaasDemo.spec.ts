@@ -186,6 +186,29 @@ describe("SaaS golden path demo", () => {
       ]),
       env: expect.arrayContaining(["DATABASE_URL", "POLAR_ACCESS_TOKEN", "UPSTASH_REDIS_REST_URL"]),
     });
+    expect(getSaasProviderProfile("saas-node-postgres")).toMatchObject({
+      status: "documented-seam",
+      packages: expect.arrayContaining([
+        "@croco/auth-better-auth",
+        "@croco/billing-polar",
+        "@croco/tasks-qstash",
+        "@croco/telemetry-sdk-node",
+      ]),
+      env: expect.arrayContaining(["DATABASE_URL", "POLAR_WEBHOOK_SECRET", "CLOUDINARY_URL"]),
+    });
+    expect(getSaasProviderProfile("saas-cloudflare")).toMatchObject({
+      status: "documented-seam",
+      packages: expect.arrayContaining([
+        "@croco/transports-cloudflare-workers",
+        "@croco/storage-r2",
+      ]),
+      env: expect.arrayContaining(["CLOUDFLARE_ACCOUNT_ID", "R2_BUCKET", "CLERK_SECRET_KEY"]),
+    });
+    expect(getSaasProviderProfile("saas-lambda")).toMatchObject({
+      status: "documented-seam",
+      packages: expect.arrayContaining(["@croco/preset-lambda", "@croco/storage-cloudinary"]),
+      env: expect.arrayContaining(["AWS_REGION", "CLERK_SECRET_KEY", "CLOUDINARY_URL"]),
+    });
   });
 
   it("keeps demo endpoints closed unless explicitly enabled outside production", async () => {

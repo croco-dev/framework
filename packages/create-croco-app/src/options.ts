@@ -6,6 +6,10 @@ import {
   validateResolvedGoalOptions,
 } from "./goals.js";
 import { InvalidSaasPresetOptionProblem } from "./libs/problems/InvalidSaasPresetOptionProblem.js";
+import {
+  DEFAULT_SAAS_PROVIDER_PROFILE,
+  getSaasProviderProfileDefinition,
+} from "./saas-provider-profiles.js";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "./supported-options.js";
 import type { GeneratorOptions } from "./types.js";
 
@@ -15,8 +19,16 @@ const API_HOSTING = SUPPORTED_CREATE_CROCO_APP_CHOICES.apiHosting;
 const BACKEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.backendDeploys;
 const FRONTEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys;
 const DATABASES = SUPPORTED_CREATE_CROCO_APP_CHOICES.databases;
+const SAAS_PROVIDER_PROFILES = SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles;
 
-type ChoiceName = "preset" | "api" | "api-hosting" | "backend-deploy" | "frontend-deploy" | "db";
+type ChoiceName =
+  | "preset"
+  | "api"
+  | "api-hosting"
+  | "backend-deploy"
+  | "frontend-deploy"
+  | "db"
+  | "saas-profile";
 
 type RawCliOptions = Record<string, string | boolean | undefined>;
 type SaasPreset = Extract<GeneratorOptions["preset"], "saas" | "ai-saas">;
@@ -34,6 +46,10 @@ export function parseCliOptions(
   if (typeof rawOptions.preset === "string")
     cliOptions.preset = rawOptions.preset as GeneratorOptions["preset"];
   if (typeof rawOptions.scope === "string") cliOptions.scope = rawOptions.scope;
+  if (typeof rawOptions.saasProfile === "string") {
+    cliOptions.saasProviderProfile =
+      rawOptions.saasProfile as GeneratorOptions["saasProviderProfile"];
+  }
   if (typeof rawOptions.api === "string")
     cliOptions.api = rawOptions.api as GeneratorOptions["api"];
   if (typeof rawOptions.apiHosting === "string") {
@@ -85,6 +101,9 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
 
   if (cliOptions.goal !== undefined) validateGoalCliOptions(cliOptions);
   if (cliOptions.preset !== undefined) readChoice("preset", cliOptions.preset, PRESETS);
+  if (cliOptions.saasProviderProfile !== undefined) {
+    readChoice("saas-profile", cliOptions.saasProviderProfile, SAAS_PROVIDER_PROFILES);
+  }
   if (cliOptions.api !== undefined) readChoice("api", cliOptions.api, APIS);
   if (cliOptions.apiHosting !== undefined)
     readChoice("api-hosting", cliOptions.apiHosting, API_HOSTING);
@@ -114,6 +133,9 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
 
   readChoice("preset", options.preset, PRESETS);
   if (options.goal) readGoal(options.goal);
+  if (options.saasProviderProfile) {
+    readChoice("saas-profile", options.saasProviderProfile, SAAS_PROVIDER_PROFILES);
+  }
   readChoice("api-hosting", options.apiHosting, API_HOSTING);
   if (options.api) readChoice("api", options.api, APIS);
   if (options.backendDeploy) readChoice("backend-deploy", options.backendDeploy, BACKEND_DEPLOYS);
@@ -121,6 +143,10 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
     readChoice("frontend-deploy", options.frontendDeploy, FRONTEND_DEPLOYS);
   for (const db of options.db) {
     readChoice("db", db, DATABASES);
+  }
+
+  if (!isSaasPreset(options.preset) && options.saasProviderProfile) {
+    throw new Error("--saas-profile is only supported with the saas and ai-saas presets");
   }
 
   if (options.preset === "blank") {
@@ -229,6 +255,7 @@ export function normalizeNonInteractiveOptions(
       projectName,
       scope,
       preset,
+      saasProviderProfile: cliOptions.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE,
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -282,6 +309,7 @@ export function normalizeNonInteractiveOptions(
     apiHosting,
     backendDeploy,
     frontendDeploy,
+    saasProviderProfile: cliOptions.saasProviderProfile,
     db,
     agentRules: cliOptions.agentRules ?? true,
     installDeps: cliOptions.installDeps ?? true,
@@ -294,6 +322,9 @@ export function normalizeNonInteractiveOptions(
 }
 
 function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
+  if (cliOptions.saasProviderProfile) {
+    throw new Error("--saas-profile is only supported with the saas and ai-saas presets");
+  }
   if (cliOptions.api) throw new Error("--api is not supported with the blank preset");
   if (cliOptions.apiHosting)
     throw new Error("--api-hosting is not supported with the blank preset");
@@ -321,6 +352,8 @@ function isProductionPreset(
 
 function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPreset): void {
   const presetName = preset;
+  const saasProviderProfile = options.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE;
+  getSaasProviderProfileDefinition(saasProviderProfile);
 
   if (options.api)
     throw new InvalidSaasPresetOptionProblem(
@@ -353,6 +386,9 @@ function assertProductionOptions(
   options: Partial<GeneratorOptions>,
   preset: ProductionPreset,
 ): void {
+  if (options.saasProviderProfile) {
+    throw new Error("--saas-profile is only supported with the saas and ai-saas presets");
+  }
   if (options.api) throw new Error(`--api is not supported with the ${preset} preset`);
   if (options.apiHosting && options.apiHosting !== "standalone") {
     throw new Error(`--api-hosting is not configurable with the ${preset} preset`);

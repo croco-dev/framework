@@ -24,6 +24,10 @@ type SmokeValidation = {
     readonly path: string;
     readonly matches: Record<string, unknown>;
   };
+  readonly env?: Readonly<Record<string, string>>;
+  readonly expectFailure?: {
+    readonly outputIncludes: readonly string[];
+  };
 };
 
 type SmokeCase = {
@@ -323,8 +327,53 @@ const smokeCases: readonly SmokeCase[] = [
   },
   {
     name: "saas-golden-path",
-    args: ["--preset", "saas", "--scope", "@smoke", "--no-install", "--no-git"],
+    args: [
+      "--preset",
+      "saas",
+      "--scope",
+      "@smoke",
+      "--saas-profile",
+      "saas-node-postgres",
+      "--no-install",
+      "--no-git",
+    ],
     validations: [
+      {
+        label: "provider profile manifest",
+        args: ["profile:check"],
+        paths: [
+          "croco-saas-profile.manifest.json",
+          ".env.example",
+          "docs/provider-profile.md",
+          "docs/secrets-checklist.md",
+          "apps/api-server/src/generatedSaasProviderProfile.ts",
+        ],
+      },
+      {
+        label: "real-provider missing env diagnostic",
+        args: ["profile:smoke:real"],
+        env: {
+          SAAS_PROVIDER_PROFILE: "saas-node-postgres",
+          DATABASE_URL: "",
+          BETTER_AUTH_SECRET: "",
+          BETTER_AUTH_URL: "",
+          POLAR_ACCESS_TOKEN: "",
+          POLAR_WEBHOOK_SECRET: "",
+          POLAR_PRODUCT_ID_TEAM: "",
+          UPSTASH_QSTASH_TOKEN: "",
+          UPSTASH_QSTASH_CURRENT_SIGNING_KEY: "",
+          UPSTASH_QSTASH_NEXT_SIGNING_KEY: "",
+          CLOUDINARY_URL: "",
+        },
+        expectFailure: {
+          outputIncludes: [
+            "CROCO_SAAS_PROFILE_ENV_MISSING",
+            "DATABASE_URL",
+            "POLAR_ACCESS_TOKEN",
+            "CLOUDINARY_URL",
+          ],
+        },
+      },
       {
         label: "usage dashboard generator",
         args: ["exec", "croco", "generate", "usage-dashboard", "--no-page"],
@@ -347,6 +396,66 @@ const smokeCases: readonly SmokeCase[] = [
         paths: ["contract-graph.coverage.json"],
       },
       { label: "demo seed", args: ["demo:seed"] },
+      { label: "demo flow", args: ["demo:smoke"] },
+    ],
+  },
+  {
+    name: "saas-cloudflare-profile",
+    args: [
+      "--preset",
+      "saas",
+      "--scope",
+      "@smoke",
+      "--saas-profile",
+      "saas-cloudflare",
+      "--no-install",
+      "--no-git",
+    ],
+    validations: [
+      {
+        label: "provider profile manifest",
+        args: ["profile:check"],
+        paths: [
+          "croco-saas-profile.manifest.json",
+          ".env.example",
+          "docs/provider-profile.md",
+          "docs/secrets-checklist.md",
+          "apps/api-server/src/generatedSaasProviderProfile.ts",
+        ],
+      },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "test", args: ["test"] },
+      { label: "demo flow", args: ["demo:smoke"] },
+    ],
+  },
+  {
+    name: "saas-lambda-profile",
+    args: [
+      "--preset",
+      "saas",
+      "--scope",
+      "@smoke",
+      "--saas-profile",
+      "saas-lambda",
+      "--no-install",
+      "--no-git",
+    ],
+    validations: [
+      {
+        label: "provider profile manifest",
+        args: ["profile:check"],
+        paths: [
+          "croco-saas-profile.manifest.json",
+          ".env.example",
+          "docs/provider-profile.md",
+          "docs/secrets-checklist.md",
+          "apps/api-server/src/generatedSaasProviderProfile.ts",
+        ],
+      },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "test", args: ["test"] },
       { label: "demo flow", args: ["demo:smoke"] },
     ],
   },
@@ -391,6 +500,10 @@ try {
     [
       turboPath,
       "build",
+      "--filter=@croco/auth-better-auth...",
+      "--filter=@croco/auth-clerk...",
+      "--filter=@croco/auth-drizzle...",
+      "--filter=@croco/billing-polar...",
       "--filter=@croco/cli...",
       "--filter=@croco/events-core...",
       "--filter=@croco/events-inmemory...",
@@ -403,14 +516,23 @@ try {
       "--filter=@croco/llm-metering...",
       "--filter=@croco/meta-vite...",
       "--filter=@croco/lifecycle-core...",
+      "--filter=@croco/metering-drizzle...",
+      "--filter=@croco/metering-upstash...",
       "--filter=@croco/openapi-spec...",
       "--filter=@croco/problems-core...",
+      "--filter=@croco/preset-cloudflare...",
+      "--filter=@croco/preset-lambda...",
       "--filter=@croco/repository-core...",
       "--filter=@croco/retry-core...",
       "--filter=@croco/rpc-codegen...",
+      "--filter=@croco/storage-cloudinary...",
+      "--filter=@croco/storage-r2...",
+      "--filter=@croco/tasks-qstash...",
       "--filter=@croco/telemetry-api...",
       "--filter=@croco/telemetry-sdk-node...",
       "--filter=@croco/transports-http...",
+      "--filter=@croco/triggers-qstash...",
+      "--filter=@croco/tx-drizzle...",
       "--force",
     ],
     rootDir,
@@ -494,7 +616,17 @@ function runValidation(
     : projectDir;
 
   if (validation.args) {
-    run("pnpm", ["--dir", validationDir, ...validation.args], rootDir);
+    if (validation.expectFailure) {
+      runExpectFailure(
+        "pnpm",
+        ["--dir", validationDir, ...validation.args],
+        rootDir,
+        validation.expectFailure.outputIncludes,
+        validation.env,
+      );
+    } else {
+      run("pnpm", ["--dir", validationDir, ...validation.args], rootDir, validation.env);
+    }
   }
 
   for (const relativePath of validation.paths ?? []) {
@@ -536,6 +668,11 @@ function assertSmokeCoverage(cases: readonly SmokeCase[]): void {
     coverage.frontendDeploys,
   );
   assertCovers("db", SUPPORTED_CREATE_CROCO_APP_CHOICES.databases, coverage.databases);
+  assertCovers(
+    "saas-profile",
+    SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles,
+    coverage.saasProviderProfiles,
+  );
 }
 
 function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
@@ -545,7 +682,7 @@ function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
     `create-croco-app-generated-smoke: matrix cases ${cases.map(({ name }) => name).join(", ")}`,
   );
   console.log(
-    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; db=${coverage.databases.join(", ")}`,
+    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}`,
   );
 }
 
@@ -556,6 +693,7 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
   readonly backendDeploys: readonly string[];
   readonly frontendDeploys: readonly string[];
   readonly databases: readonly string[];
+  readonly saasProviderProfiles: readonly string[];
 } {
   return {
     presets: readCoveredValues(cases, "--preset", SUPPORTED_CREATE_CROCO_APP_CHOICES.presets),
@@ -578,6 +716,11 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
     databases: readCoveredValues(cases, "--db", SUPPORTED_CREATE_CROCO_APP_CHOICES.databases, {
       splitCommaValues: true,
     }),
+    saasProviderProfiles: readCoveredValues(
+      cases,
+      "--saas-profile",
+      SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles,
+    ),
   };
 }
 
@@ -690,9 +833,16 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
   const packDir = join(smokeRoot, "generated-package-packs");
 
   return {
+    "@croco/auth-better-auth": `file:${packWorkspacePackage("@croco/auth-better-auth", "auth-better-auth", packDir)}`,
+    "@croco/auth-clerk": `file:${packWorkspacePackage("@croco/auth-clerk", "auth-clerk", packDir)}`,
+    "@croco/auth-core": `file:${packWorkspacePackage("@croco/auth-core", "auth-core", packDir)}`,
+    "@croco/auth-drizzle": `file:${packWorkspacePackage("@croco/auth-drizzle", "auth-drizzle", packDir)}`,
+    "@croco/billing-core": `file:${packWorkspacePackage("@croco/billing-core", "billing-core", packDir)}`,
+    "@croco/billing-polar": `file:${packWorkspacePackage("@croco/billing-polar", "billing-polar", packDir)}`,
     "@croco/cache-core": `file:${packWorkspacePackage("@croco/cache-core", "cache-core", packDir)}`,
     "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
     "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
+    "@croco/execution-core": `file:${packWorkspacePackage("@croco/execution-core", "execution-core", packDir)}`,
     "@croco/events-core": `file:${packWorkspacePackage("@croco/events-core", "events-core", packDir)}`,
     "@croco/events-inmemory": `file:${packWorkspacePackage("@croco/events-inmemory", "events-inmemory", packDir)}`,
     "@croco/framework-config": `file:${packWorkspacePackage("@croco/framework-config", "framework-config", packDir)}`,
@@ -707,10 +857,14 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/llm-core": `file:${packWorkspacePackage("@croco/llm-core", "llm-core", packDir)}`,
     "@croco/llm-metering": `file:${packWorkspacePackage("@croco/llm-metering", "llm-metering", packDir)}`,
     "@croco/meta-vite": `file:${packWorkspacePackage("@croco/meta-vite", "meta-vite", packDir)}`,
+    "@croco/metering-drizzle": `file:${packWorkspacePackage("@croco/metering-drizzle", "metering-drizzle", packDir)}`,
     "@croco/metering-core": `file:${packWorkspacePackage("@croco/metering-core", "metering-core", packDir)}`,
+    "@croco/metering-upstash": `file:${packWorkspacePackage("@croco/metering-upstash", "metering-upstash", packDir)}`,
     "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
     "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
     "@croco/presentation-preset": `file:${packWorkspacePackage("@croco/presentation-preset", "presentation-preset", packDir)}`,
+    "@croco/preset-cloudflare": `file:${packWorkspacePackage("@croco/preset-cloudflare", "preset-cloudflare", packDir)}`,
+    "@croco/preset-lambda": `file:${packWorkspacePackage("@croco/preset-lambda", "preset-lambda", packDir)}`,
     "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
     "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
     "@croco/protocols-rest": `file:${packWorkspacePackage("@croco/protocols-rest", "protocols-rest", packDir)}`,
@@ -718,9 +872,19 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/repository-core": `file:${packWorkspacePackage("@croco/repository-core", "repository-core", packDir)}`,
     "@croco/retry-core": `file:${packWorkspacePackage("@croco/retry-core", "retry-core", packDir)}`,
     "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
+    "@croco/storage-cloudinary": `file:${packWorkspacePackage("@croco/storage-cloudinary", "storage-cloudinary", packDir)}`,
+    "@croco/storage-core": `file:${packWorkspacePackage("@croco/storage-core", "storage-core", packDir)}`,
+    "@croco/storage-r2": `file:${packWorkspacePackage("@croco/storage-r2", "storage-r2", packDir)}`,
+    "@croco/tasks-core": `file:${packWorkspacePackage("@croco/tasks-core", "tasks-core", packDir)}`,
+    "@croco/tasks-qstash": `file:${packWorkspacePackage("@croco/tasks-qstash", "tasks-qstash", packDir)}`,
     "@croco/telemetry-api": `file:${packWorkspacePackage("@croco/telemetry-api", "telemetry-api", packDir)}`,
     "@croco/telemetry-sdk-node": `file:${packWorkspacePackage("@croco/telemetry-sdk-node", "telemetry-sdk-node", packDir)}`,
+    "@croco/tenant-core": `file:${packWorkspacePackage("@croco/tenant-core", "tenant-core", packDir)}`,
     "@croco/transports-http": `file:${packWorkspacePackage("@croco/transports-http", "transports-http", packDir)}`,
+    "@croco/triggers-core": `file:${packWorkspacePackage("@croco/triggers-core", "triggers-core", packDir)}`,
+    "@croco/triggers-qstash": `file:${packWorkspacePackage("@croco/triggers-qstash", "triggers-qstash", packDir)}`,
+    "@croco/tx-core": `file:${packWorkspacePackage("@croco/tx-core", "tx-core", packDir)}`,
+    "@croco/tx-drizzle": `file:${packWorkspacePackage("@croco/tx-drizzle", "tx-drizzle", packDir)}`,
   };
 }
 
@@ -940,9 +1104,15 @@ function assertJsonMatches(path: string, expected: Record<string, unknown>, labe
   }
 }
 
-function run(command: string, args: readonly string[], cwd: string): void {
+function run(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  env?: Readonly<Record<string, string>>,
+): void {
   const result = spawnSync(command, [...args], {
     cwd,
+    env: env ? { ...process.env, ...env } : undefined,
     stdio: "inherit",
     timeout: commandTimeoutMs,
   });
@@ -953,5 +1123,38 @@ function run(command: string, args: readonly string[], cwd: string): void {
 
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.status}`);
+  }
+}
+
+function runExpectFailure(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  expectedOutput: readonly string[],
+  env?: Readonly<Record<string, string>>,
+): void {
+  const result = spawnSync(command, [...args], {
+    cwd,
+    encoding: "utf8",
+    env: env ? { ...process.env, ...env } : undefined,
+    timeout: commandTimeoutMs,
+  });
+
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status === 0) {
+    throw new Error(`${command} ${args.join(" ")} was expected to fail but exited 0`);
+  }
+
+  for (const expectedText of expectedOutput) {
+    if (!output.includes(expectedText)) {
+      throw new Error(
+        `${command} ${args.join(" ")} failed without expected output: ${expectedText}\n${output}`,
+      );
+    }
   }
 }
