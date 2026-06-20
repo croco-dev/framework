@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   105 |
+| Public packages                |   106 |
 | Private packages skipped       |     2 |
 | Missing package README         |    20 |
-| Missing generated API docs     |    76 |
+| Missing generated API docs     |    77 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    40 |
+| Extension matrix packages      |    41 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.
 
@@ -73,6 +73,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/framework-preset` (`packages/framework-preset`) — legacy baseline
 - `@croco/framework-routes` (`packages/framework-routes`) — legacy baseline
 - `@croco/frontend-cloudflare` (`packages/frontend-cloudflare`) — legacy baseline
+- `@croco/frontend-problems` (`packages/frontend-problems`) — legacy baseline
 - `@croco/frontend-react` (`packages/frontend-react`) — legacy baseline
 - `@croco/frontend-vite` (`packages/frontend-vite`) — legacy baseline
 - `@croco/gid-core` (`packages/gid-core`) — legacy baseline
@@ -131,14 +132,14 @@ None.
 | Integration  |        5 |
 | Protocol     |        7 |
 | Transport    |        3 |
-| Presentation |        6 |
+| Presentation |        7 |
 | Tooling      |        8 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       49 |
-| 🔴 alpha/WIP        |       33 |
+| 🔴 alpha/WIP        |       34 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -150,4 +151,4 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 | Provider     |       26 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        3 |                     0 |
-| Presentation |        6 |                     0 |
+| Presentation |        7 |                     0 |

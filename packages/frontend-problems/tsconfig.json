@@ -1,0 +1,10 @@
+{
+  "exclude": ["node_modules"],
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "esnext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src/**/*.ts"]
+}
