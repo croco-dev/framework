@@ -6485,6 +6485,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createProblemToastPayload",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
+        },
+        {
           "name": "CrocoAuthBridgeProvider",
           "exportKind": "named",
           "source": "./libs/authBridge",
@@ -6494,6 +6500,12 @@
           "name": "evaluateSessionGateState",
           "exportKind": "named",
           "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
           "declarationKind": "function"
         },
         {
@@ -6507,6 +6519,30 @@
           "exportKind": "named",
           "source": "./libs/hooks/usePageData",
           "declarationKind": "const"
+        },
+        {
+          "name": "ProblemBoundary",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ProblemPanel",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemRecoveryActions",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemToastAdapter",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
         },
         {
           "name": "RequireEntitlement",
@@ -6709,6 +6745,56 @@
           "name": "FrontendTenantState",
           "exportKind": "named",
           "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "ProblemBoundaryFallback",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemBoundaryFallbackState",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemBoundaryProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemBoundaryState",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemPanelProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemRecoveryAction",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemRecoveryActionKind",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemRecoveryActionsProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemToastAdapterProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemToastPayload",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
         },
         {
           "name": "RequireEntitlementProps",

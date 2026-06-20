@@ -6,6 +6,8 @@ import type {
   FrontendAuthBridgeState,
   FrontendAuthGateState,
   FrontendPermissionCheck,
+  ProblemPanelProps,
+  ProblemRecoveryAction,
 } from "../index";
 
 describe("public types", () => {
@@ -25,5 +27,20 @@ describe("public types", () => {
       | { readonly kind: "unavailable" }
     >();
     expectTypeOf<FrontendPermissionCheck>().toHaveProperty("permission").toEqualTypeOf<string>();
+  });
+
+  it("exports Problem UI contracts from the package entrypoint", () => {
+    expectTypeOf<ProblemPanelProps>().toHaveProperty("problem");
+    expectTypeOf<ProblemRecoveryAction>()
+      .toHaveProperty("kind")
+      .toEqualTypeOf<
+        | "retry"
+        | "signIn"
+        | "requestAccess"
+        | "changeTenant"
+        | "contactSupport"
+        | "custom"
+        | undefined
+      >();
   });
 });

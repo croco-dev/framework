@@ -104,6 +104,42 @@ export function BillingRoute({ bridgeState }: { bridgeState: Awaited<ReturnType<
 Denied and unavailable states preserve Croco Problem Details plus optional recovery actions,
 so apps can show sign-in, request-access, or retry actions without treating unknown state as success.
 
+### Problem UI primitives
+
+Croco Problem Details can be rendered without collapsing diagnostic evidence into a generic string.
+`ProblemPanel` displays the RFC 7807 fields and typed recovery actions, `ProblemBoundary`
+normalizes thrown Croco Problems, unknown thrown values, and external `Error` objects, and
+`ProblemToastAdapter` maps the same model to provider-specific toast libraries.
+
+```typescript
+import type { ReactNode } from "react";
+import type { ProblemDetails } from "@croco/problems-core";
+import {
+  ProblemBoundary,
+  ProblemPanel,
+  type ProblemRecoveryAction,
+} from "@croco/frontend-react";
+
+declare function refetch(): Promise<void>;
+
+const recoveryActions: readonly ProblemRecoveryAction[] = [
+  { id: "retry", kind: "retry", label: "Retry", onRecover: () => refetch() },
+  { href: "/support", id: "support", kind: "contactSupport", label: "Contact support" },
+];
+
+export function ProblemState({ problem }: { problem: ProblemDetails }) {
+  return <ProblemPanel problem={problem} recoveryActions={recoveryActions} />;
+}
+
+export function AppBoundary({ children }: { children: ReactNode }) {
+  return (
+    <ProblemBoundary recoveryActions={recoveryActions}>
+      {children}
+    </ProblemBoundary>
+  );
+}
+```
+
 ## API
 
 ### `createCrocoPageConfig(options?)`
@@ -147,6 +183,22 @@ Vike의 `usePageContext`를 래핑하여 데이터에 타입 안전 접근을 �
 요청된 엔터틀먼트 키를 gate union으로 평가합니다. provider failure와 denied Problem Details를
 그대로 보존합니다.
 인자 없이 호출하면 현재 provider가 전달한 raw entitlement state를 반환합니다.
+
+### `ProblemPanel({ problem, recoveryActions, renderProblem })`
+
+`ProblemDetails`의 `code`, `title`, `detail`, `status`, `instance`를 접근 가능한 패널로 렌더링합니다.
+`renderProblem`과 `renderRecoveryAction`은 원본 `ProblemDetails`와 `ProblemRecoveryAction`을 그대로 받아
+앱별 UI로 대체할 수 있습니다.
+
+### `ProblemBoundary`
+
+React 자식 트리에서 던져진 Croco Problem, plain Problem Details, 외부 `Error`, unknown 값을
+`ProblemDetails`로 정규화하고 fallback 또는 `ProblemPanel`로 렌더링합니다.
+
+### `ProblemToastAdapter`
+
+toast 라이브러리에 넘길 수 있는 `{ title, description, code, status, problem, recoveryActions }`
+payload를 생성합니다.
 
 ## 타입
 
