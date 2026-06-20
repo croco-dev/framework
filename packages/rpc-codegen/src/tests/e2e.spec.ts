@@ -74,7 +74,7 @@ describe("rpc-codegen e2e", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     const rpcContent = fs.readFileSync(path.join(outDir, "rpc.ts"), "utf-8");
     expect(content).toContain(
-      "import { handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, toRpcFormProblem, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      "import { handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain(
       "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; headers: { 'x-request-id': string; }; };",
@@ -85,6 +85,12 @@ describe("rpc-codegen e2e", () => {
     expect(content).toContain("export const createUserFormModel = {");
     expect(content).toContain(
       "export function buildCreateUserFormPayload(values: CreateUserFormValues): CreateUserSubmitPayload",
+    );
+    expect(content).toContain(
+      "getUser: (input: GetUserInput, cacheScope?: unknown) => [...testKeys.all(), 'getUser', serializeRpcQueryKeyInput({ path: input.path, query: input.query }), serializeRpcQueryKeyInput(cacheScope)] as const,",
+    );
+    expect(content).toContain(
+      "createUser: { route: testContractRoutes[1], invalidates: [testKeys.all()] },",
     );
     expect(content).toContain(
       "const path = `/users/${encodeURIComponent(String(input.path.id))}`;",
@@ -135,6 +141,13 @@ async function exerciseGeneratedClient() {
     query: { include: undefined },
     headers: { 'x-request-id': 'request-1' },
   });
+  const getUserKey = testKeys.getUser({
+    path: { id: createdId },
+    query: { include: undefined },
+    headers: { 'x-request-id': 'request-1' },
+  });
+  const createUserInvalidationKey = testInvalidationManifest.createUser.invalidates[0];
+  const createUserInvalidationRouteId: 'TestController.createUser' = testInvalidationManifest.createUser.route.routeId;
 
   // @ts-expect-error generated path params expose id, not userId.
   void testClient.getUser({ path: { userId: createdId }, query: { include: undefined }, headers: { 'x-request-id': 'request-1' } });
@@ -148,6 +161,9 @@ async function exerciseGeneratedClient() {
   void createdName;
   void createdResultBranch;
   void getUserResult;
+  void getUserKey;
+  void createUserInvalidationKey;
+  void createUserInvalidationRouteId;
   void badCreatedId;
 }
 void exerciseGeneratedClient;
