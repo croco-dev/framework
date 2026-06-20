@@ -14358,6 +14358,12 @@
       "entrypoint": "packages/testing/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertDrizzleProblem",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertOpenAPIRoute",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -14367,6 +14373,12 @@
           "name": "assertProblemResponse",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createDrizzleProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance",
           "declarationKind": "function"
         },
         {
@@ -14499,6 +14511,46 @@
           "name": "CapturedSpanException",
           "exportKind": "named",
           "source": "./libs/telemetry-testing"
+        },
+        {
+          "name": "DrizzleProblemExpectation",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCapability",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCheck",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderRepositoryErrorConformance",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderTransactionConformance",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
         },
         {
           "name": "EventTestingHarnessOptions",

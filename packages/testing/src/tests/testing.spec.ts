@@ -20,7 +20,9 @@ import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertOpenAPIRoute,
+  assertDrizzleProblem,
   assertProblemResponse,
+  createDrizzleProviderConformanceSuite,
   createEventTestingHarness,
   createLlmProviderConformanceSuite,
   createQStashTaskConformanceSuite,
@@ -665,6 +667,153 @@ describe("@croco/testing", () => {
       }).cases,
     )("$name", async ({ run }) => {
       await run();
+    });
+  });
+
+  describe("Drizzle provider conformance", () => {
+    const supportedCheck = (name: string) => ({
+      name,
+      run: vi.fn(async () => undefined),
+    });
+
+    it("creates supported and explicitly unsupported capability cases", async () => {
+      const schemaCheck = supportedCheck("verifies local table columns");
+      const participationCheck = supportedCheck("uses the active transaction client");
+      const rollbackCheck = supportedCheck("rolls back writes after transaction failure");
+      const isolationCheck = supportedCheck("does not leak records across tenants");
+      const notFoundCheck = supportedCheck("throws deterministic not-found Problem");
+
+      const suite = createDrizzleProviderConformanceSuite({
+        providerName: "drizzle-test-provider",
+        schema: {
+          supported: true,
+          checks: [schemaCheck],
+        },
+        transaction: {
+          participation: {
+            supported: true,
+            checks: [participationCheck],
+          },
+          rollback: {
+            supported: true,
+            checks: [rollbackCheck],
+          },
+        },
+        tenantIsolation: {
+          supported: true,
+          checks: [isolationCheck],
+        },
+        repositoryErrors: {
+          notFound: {
+            supported: true,
+            checks: [notFoundCheck],
+          },
+          validation: {
+            supported: false,
+            reason: "The fixture exposes no user-input validation boundary.",
+          },
+          duplicate: {
+            supported: false,
+            reason: "The fixture has no unique business key.",
+          },
+          conflict: {
+            supported: false,
+            reason: "The fixture has no conflict-producing operation.",
+          },
+          retryableFailure: {
+            supported: false,
+            reason: "The fixture has no retryable upstream boundary.",
+          },
+        },
+      });
+
+      expect(suite.cases.map((testCase) => testCase.name)).toEqual([
+        "drizzle-test-provider: schema and migration assumptions: verifies local table columns",
+        "drizzle-test-provider: transaction participation: uses the active transaction client",
+        "drizzle-test-provider: transaction rollback: rolls back writes after transaction failure",
+        "drizzle-test-provider: tenant isolation: does not leak records across tenants",
+        "drizzle-test-provider: not-found error semantics: throws deterministic not-found Problem",
+        "drizzle-test-provider: documents unsupported validation error semantics",
+        "drizzle-test-provider: documents unsupported duplicate error semantics",
+        "drizzle-test-provider: documents unsupported conflict error semantics",
+        "drizzle-test-provider: documents unsupported retryable failure semantics",
+      ]);
+
+      for (const testCase of suite.cases) {
+        await testCase.run();
+      }
+
+      expect(schemaCheck.run).toHaveBeenCalledTimes(1);
+      expect(participationCheck.run).toHaveBeenCalledTimes(1);
+      expect(rollbackCheck.run).toHaveBeenCalledTimes(1);
+      expect(isolationCheck.run).toHaveBeenCalledTimes(1);
+      expect(notFoundCheck.run).toHaveBeenCalledTimes(1);
+    });
+
+    it("requires unsupported capabilities to document a reason", async () => {
+      const suite = createDrizzleProviderConformanceSuite({
+        providerName: "drizzle-test-provider",
+        schema: {
+          supported: false,
+          reason: "",
+        },
+        transaction: {
+          participation: {
+            supported: false,
+            reason: "No transaction manager.",
+          },
+          rollback: {
+            supported: false,
+            reason: "No transaction manager.",
+          },
+        },
+        tenantIsolation: {
+          supported: false,
+          reason: "No tenant contract.",
+        },
+        repositoryErrors: {
+          notFound: {
+            supported: false,
+            reason: "No lookup contract.",
+          },
+          validation: {
+            supported: false,
+            reason: "No validation contract.",
+          },
+          duplicate: {
+            supported: false,
+            reason: "No duplicate contract.",
+          },
+          conflict: {
+            supported: false,
+            reason: "No conflict contract.",
+          },
+          retryableFailure: {
+            supported: false,
+            reason: "No retryable boundary.",
+          },
+        },
+      });
+
+      await expect(suite.cases[0]?.run()).rejects.toThrow(
+        "drizzle-test-provider must document why schema and migration assumptions is unsupported.",
+      );
+    });
+
+    it("asserts deterministic Croco Problem codes and categories", async () => {
+      const problem = await assertDrizzleProblem(
+        () =>
+          Promise.reject(
+            ProblemFactory.notFound("testing/drizzle-missing-row", "row was not found"),
+          ),
+        {
+          category: ProblemCategory.NotFound,
+          code: "testing/drizzle-missing-row",
+          status: 404,
+        },
+      );
+
+      expect(problem.code).toBe("testing/drizzle-missing-row");
     });
   });
 
