@@ -25,13 +25,14 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/meta-vite",
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/meta-vite --external @croco/problems-core",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
   },
   "dependencies": {
-    "@croco/meta-vite": "workspace:*"
+    "@croco/meta-vite": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "@croco/meta-vite": "^0.0.3",

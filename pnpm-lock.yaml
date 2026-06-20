@@ -1248,6 +1248,9 @@ importers:
       '@croco/meta-vite':
         specifier: workspace:*
         version: link:../meta-vite
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       '@types/react':
         specifier: ^19.0.0

@@ -6407,9 +6407,93 @@
       "entrypoint": "packages/frontend-react/src/index.ts",
       "runtimeExports": [
         {
+          "name": "AuthBridgeContext",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "const"
+        },
+        {
+          "name": "AuthBridgeGateStatus",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "AuthBridgeProblemNotice",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "AuthBridgeRecoveryActions",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAuthBridgeMissingProviderProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
           "name": "createCrocoPageConfig",
           "exportKind": "named",
           "source": "./libs/createCrocoPages",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendEntitlementDeniedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendPermissionDeniedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendTenantUnavailableProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendUnauthenticatedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createMissingProviderAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "CrocoAuthBridgeProvider",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "evaluateSessionGateState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
           "declarationKind": "function"
         },
         {
@@ -6425,6 +6509,36 @@
           "declarationKind": "const"
         },
         {
+          "name": "RequireEntitlement",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "RequirePermission",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "RequireSession",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useEntitlements",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
           "name": "usePageData",
           "exportKind": "named",
           "source": "./libs/hooks/usePageData",
@@ -6435,9 +6549,37 @@
           "exportKind": "named",
           "source": "./libs/hooks/usePageData",
           "declarationKind": "function"
+        },
+        {
+          "name": "usePermissionGate",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useSessionGate",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useTenant",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
+        {
+          "name": "AuthBridgeGateStatusProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "CrocoAuthBridgeProviderProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
         {
           "name": "CrocoDataFn",
           "exportKind": "named",
@@ -6457,6 +6599,131 @@
           "name": "CrocoPageOptions",
           "exportKind": "named",
           "source": "./libs/createCrocoPages"
+        },
+        {
+          "name": "FrontendAuthBridgeSource",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthBridgeStateInput",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateAllowedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateBlockedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateDeniedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateFallback",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateLoadingState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateRequirements",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateUnauthenticatedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateUnavailableState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendEntitlementCheck",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendEntitlementState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendPermissionCheck",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendPermissionState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendRecoveryAction",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendSession",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendSessionPrincipal",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendSessionState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendTenant",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendTenantState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "RequireEntitlementProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "RequirePermissionProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "RequireSessionProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
         }
       ]
     },
