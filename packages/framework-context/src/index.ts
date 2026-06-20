@@ -192,11 +192,19 @@ export { LOGGER_TOKEN } from "./libs/ILogger";
 export { MiddlewareChain } from "./libs/Middleware";
 
 export {
+  assertPolicyTableRuntimeCapabilities,
   assertPolicyRuntimeCapabilities,
+  checkPolicyRuntimeCapabilities,
+  checkPolicyTableRuntimeCapabilities,
   compilePolicyTable,
+  compilePolicyTableForRuntime,
   createPolicyTarget,
+  definePolicyForRuntime,
   definePolicy,
+  defineRuntimePolicyPreset,
+  formatPolicyCapabilityDiagnostic,
   getPolicyExecutionPlan,
+  getRuntimePolicyPresetCapabilities,
   POLICY_EXECUTION_ORDER,
   POLICY_KINDS,
   POLICY_TARGET_KINDS,
@@ -243,6 +251,7 @@ export {
 export { CircularDependencyProblem } from "./libs/problems/CircularDependencyProblem";
 export { MiddlewareProblem } from "./libs/problems/MiddlewareProblems";
 export {
+  POLICY_CAPABILITY_UNAVAILABLE_CODE,
   PolicyCapabilityProblem,
   PolicyConflictProblem,
   PolicyDefinitionProblem,
@@ -322,7 +331,9 @@ export type { ComponentOptions } from "./libs/types";
 export type { Constructor } from "./libs/types";
 
 export type {
+  DefineRuntimePolicyOptions,
   DefinePolicyOptions,
+  PolicyCapabilityDiagnostic,
   PolicyDefinition,
   PolicyExecutionEntry,
   PolicyExecutionPlan,
@@ -335,6 +346,7 @@ export type {
   PolicyTarget,
   PolicyTargetKind,
   RetryPolicyDefinition,
+  RuntimePolicyPresetConfig,
   RuntimePolicy,
   TimeoutPolicy,
   TracingPolicy,
