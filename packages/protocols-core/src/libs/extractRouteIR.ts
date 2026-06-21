@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { ProblemCategoryMapper } from "@croco/problems-core";
+import { getProblemCookbookPath, ProblemCategoryMapper } from "@croco/problems-core";
 import type { z } from "zod";
 import type {
   ParamIR,
@@ -140,6 +140,7 @@ function toProblemResponseIR(response: ProblemResponseMetadata): ProblemResponse
     code: response.code,
     category: response.category,
     status: getProblemResponseStatus(response),
+    cookbookPath: getProblemCookbookPath(response.code),
     ...(response.description ? { description: response.description } : {}),
     ...(response.type ? { type: response.type } : {}),
     ...(routeContractProblems ? { routeContractProblems } : {}),
@@ -151,6 +152,7 @@ function toContractProblemResponseIR(response: ProblemResponseMetadata): Problem
     code: response.code,
     category: response.category,
     status: getProblemResponseStatus(response),
+    cookbookPath: getProblemCookbookPath(response.code),
     ...(response.description ? { description: response.description } : {}),
     ...(response.type ? { type: response.type } : {}),
   };

@@ -33,7 +33,7 @@ export class LlmTokenLimitExceededProblem extends Problem {
 }
 
 export class LlmRateLimitProblem extends Problem {
-  static readonly CODE = "RATE_LIMIT_EXCEEDED";
+  static readonly CODE = "llm-core/rate-limit-exceeded";
 
   constructor(retryAfter: number, retryAt?: string) {
     const detail = retryAt

@@ -214,9 +214,22 @@ describe("TriggerRegistry", () => {
       async execute(): Promise<void> {}
     }
 
-    expect(() => {
+    let error: unknown;
+
+    try {
       TriggerRegistryClass.getInstance().getTriggers(MultiDecoratedHandler.prototype);
-    }).toThrow("Multiple trigger metadata entries are registered for method 'execute'");
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        code: "triggers-core/duplicate-trigger-metadata-entry",
+        message: expect.stringContaining(
+          "Multiple trigger metadata entries are registered for method 'execute'",
+        ),
+      }),
+    );
   });
 
   it("should preserve trigger options", () => {

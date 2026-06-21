@@ -128,7 +128,12 @@ describe("AccessGuard", () => {
 
     vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false });
 
-    await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
+    const result = accessGuard.canActivate(context);
+
+    await expect(result).rejects.toThrow(ForbiddenProblem);
+    await expect(result).rejects.toMatchObject({
+      code: "access-core/forbidden",
+    });
     expect(mockAccessEngine.check).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: mockTenantId,

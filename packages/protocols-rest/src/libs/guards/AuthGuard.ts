@@ -1,5 +1,5 @@
 import type { Guard } from "@croco/framework-context";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemFactory } from "@croco/problems-core";
 import type { ExecutionContext } from "../interfaces/ExecutionContext";
 import type { HttpRequestLike } from "../types";
 
@@ -11,29 +11,11 @@ export type AuthGuardOptions = {
   scheme?: string;
 };
 
-class AuthGuardProblem extends Problem {
-  constructor(status: number, code: string, detail: string) {
-    const category =
-      status === 400
-        ? ProblemCategory.BadRequest
-        : status === 500
-          ? ProblemCategory.InternalServerError
-          : ProblemCategory.Unauthorized;
-
-    super(code, category, detail);
-  }
-}
-
-function unauthorized(code: string, detail: string): AuthGuardProblem {
-  return new AuthGuardProblem(401, code, detail);
-}
-
-function badRequest(code: string, detail: string): AuthGuardProblem {
-  return new AuthGuardProblem(400, code, detail);
-}
-
-function verifierUnavailable(detail: string): AuthGuardProblem {
-  return new AuthGuardProblem(500, "AUTH_VERIFIER_UNAVAILABLE", detail);
+function invalidTokenProblem(): Problem {
+  return ProblemFactory.unauthorized(
+    "protocols-rest/auth-invalid-token",
+    "Invalid or expired token",
+  );
 }
 
 function isTokenVerificationError(error: unknown): boolean {
@@ -74,41 +56,53 @@ export class AuthGuard implements Guard<ExecutionContext> {
 
     // 타입 가드로 HttpRequestLike 최소 속성 검증
     if (typeof request !== "object" || request === null || !("headers" in request)) {
-      throw badRequest("AUTH_INVALID_REQUEST", "Invalid request object");
+      throw ProblemFactory.badRequest(
+        "protocols-rest/auth-invalid-request",
+        "Invalid request object",
+      );
     }
 
     const typedRequest = request as HttpRequestLike & { user?: unknown };
     const authHeader = this.getHeaderValue(typedRequest.headers, this.headerName);
 
     if (!authHeader) {
-      throw unauthorized("AUTH_MISSING_HEADER", "Missing authorization header");
+      throw ProblemFactory.unauthorized(
+        "protocols-rest/auth-missing-header",
+        "Missing authorization header",
+      );
     }
 
     const token = this.extractToken(authHeader);
     if (!token) {
-      throw badRequest("AUTH_INVALID_HEADER_FORMAT", "Invalid authorization header format");
+      throw ProblemFactory.badRequest(
+        "protocols-rest/auth-invalid-header-format",
+        "Invalid authorization header format",
+      );
     }
 
     try {
       const user = await this.verifier(token);
 
       if (!user) {
-        throw unauthorized("AUTH_INVALID_TOKEN", "Invalid or expired token");
+        throw invalidTokenProblem();
       }
 
       typedRequest.user = user;
 
       return true;
     } catch (error) {
-      if (error instanceof Problem && error.code === "AUTH_INVALID_TOKEN") {
+      if (error instanceof Problem && error.code === "protocols-rest/auth-invalid-token") {
         throw error;
       }
 
       if (isTokenVerificationError(error)) {
-        throw unauthorized("AUTH_INVALID_TOKEN", "Invalid or expired token");
+        throw invalidTokenProblem();
       }
 
-      throw verifierUnavailable("Authentication verifier is unavailable");
+      throw ProblemFactory.internalServerError(
+        "protocols-rest/auth-verifier-unavailable",
+        "Authentication verifier is unavailable",
+      );
     }
   }
 

@@ -1,0 +1,1257 @@
+#!/usr/bin/env node
+
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, relative, resolve } from "node:path";
+import { argv, exit, stdout } from "node:process";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import ts from "typescript";
+
+export type ProblemRegistryMode = "check" | "write";
+export type ProblemCategory = (typeof ProblemCategory)[keyof typeof ProblemCategory];
+export type ProblemCodeRegistryVersion = "croco.problem-code-registry.v1";
+export type ProblemCodeSourceKind =
+  | "problem-class"
+  | "problem-constructor"
+  | "problem-factory"
+  | "problem-metadata";
+export type ProblemRetryability = "retryable" | "conditional" | "not-retryable";
+export type ProblemRedactionPolicy = "public" | "safe-message" | "operator-only";
+export type ProblemTelemetrySeverity = "info" | "warning" | "error";
+
+export type ProblemCodeSource = {
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
+  readonly kind: ProblemCodeSourceKind;
+};
+
+export type ProblemCodeDiscovery = {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly sources: readonly ProblemCodeSource[];
+};
+
+export type ProblemRecoveryMetadata = {
+  readonly cause: string;
+  readonly userAction: string;
+  readonly operatorAction: string;
+  readonly retryability: ProblemRetryability;
+  readonly redactionPolicy: ProblemRedactionPolicy;
+  readonly telemetry: {
+    readonly eventName: string;
+    readonly severity: ProblemTelemetrySeverity;
+    readonly attributes: readonly string[];
+  };
+};
+
+export type ProblemCodeRegistryEntry = {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly status: number;
+  readonly title: string;
+  readonly cookbookPath: string;
+  readonly recovery: ProblemRecoveryMetadata;
+  readonly sources: readonly ProblemCodeSource[];
+};
+
+export type ProblemCodeRegistry = {
+  readonly version: ProblemCodeRegistryVersion;
+  readonly problemCount: number;
+  readonly problems: readonly ProblemCodeRegistryEntry[];
+};
+
+export type ProblemRegistryRunResult = {
+  readonly status: "pass" | "fail";
+  readonly diagnostics: readonly string[];
+  readonly discoveryCount: number;
+  readonly problemCount: number;
+  readonly registryPath: string;
+  readonly cookbookPath: string;
+};
+
+type ProblemCodeDiscoveryCandidate = {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly kind: ProblemCodeSourceKind;
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
+};
+
+type StringConstants = {
+  readonly identifiers: ReadonlyMap<string, string>;
+  readonly propertyAccesses: ReadonlyMap<string, string>;
+};
+
+type ProblemConstructorForwarder = {
+  readonly code?: string;
+  readonly codeArgumentIndex?: number;
+  readonly category?: ProblemCategory;
+  readonly categoryArgumentIndex?: number;
+};
+
+const registryPath = join("docs", "problem-code-registry.json");
+const repoRootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const cookbookPath = join(
+  "packages",
+  "docs",
+  "src",
+  "content",
+  "docs",
+  "en",
+  "reference",
+  "problem-recovery-cookbook.md",
+);
+
+export const ProblemCategory = {
+  BadRequest: "BadRequest",
+  Unauthorized: "Unauthorized",
+  Forbidden: "Forbidden",
+  NotFound: "NotFound",
+  Conflict: "Conflict",
+  Gone: "Gone",
+  ValidationError: "ValidationError",
+  BusinessRuleViolation: "BusinessRuleViolation",
+  TooManyRequests: "TooManyRequests",
+  InternalServerError: "InternalServerError",
+  NotImplemented: "NotImplemented",
+} as const;
+
+class ProblemRegistryValidationProblem extends Error {
+  public readonly errors: readonly string[];
+
+  public constructor(errors: readonly string[]) {
+    super(errors.join("\n"));
+    this.name = "ProblemRegistryValidationProblem";
+    this.errors = errors;
+  }
+}
+
+const factoryMethodCategory = {
+  badRequest: ProblemCategory.BadRequest,
+  invalidArgument: ProblemCategory.BadRequest,
+  unauthorized: ProblemCategory.Unauthorized,
+  forbidden: ProblemCategory.Forbidden,
+  notFound: ProblemCategory.NotFound,
+  conflict: ProblemCategory.Conflict,
+  gone: ProblemCategory.Gone,
+  validationError: ProblemCategory.ValidationError,
+  businessRuleViolation: ProblemCategory.BusinessRuleViolation,
+  tooManyRequests: ProblemCategory.TooManyRequests,
+  internalServerError: ProblemCategory.InternalServerError,
+  notImplemented: ProblemCategory.NotImplemented,
+} as const satisfies Record<string, ProblemCategory>;
+
+export function runProblemRegistryCheck(
+  rootDir = process.cwd(),
+  mode: ProblemRegistryMode = "check",
+): ProblemRegistryRunResult {
+  const absoluteRootDir = resolve(rootDir);
+
+  try {
+    const discoveries = discoverProblemCodes(absoluteRootDir);
+    const registry = createProblemCodeRegistry(discoveries);
+    const artifacts = formatProblemRegistryArtifacts(createProblemRegistryArtifacts(registry));
+    const diagnostics = syncProblemRegistryArtifacts(absoluteRootDir, artifacts, mode);
+
+    return {
+      status: diagnostics.length === 0 ? "pass" : "fail",
+      diagnostics,
+      discoveryCount: discoveries.reduce((count, discovery) => count + discovery.sources.length, 0),
+      problemCount: registry.problemCount,
+      registryPath,
+      cookbookPath,
+    };
+  } catch (error) {
+    return {
+      status: "fail",
+      diagnostics: formatProblemRegistryError(error),
+      discoveryCount: 0,
+      problemCount: 0,
+      registryPath,
+      cookbookPath,
+    };
+  }
+}
+
+export function discoverProblemCodes(rootDir = process.cwd()): readonly ProblemCodeDiscovery[] {
+  const candidates = getSourceFiles(rootDir).flatMap((file) =>
+    discoverProblemCodeCandidates(rootDir, file),
+  );
+  const candidatesByCodeAndCategory = new Map<string, ProblemCodeDiscoveryCandidate[]>();
+
+  for (const candidate of candidates) {
+    const key = `${candidate.code}\0${candidate.category}`;
+    const existing = candidatesByCodeAndCategory.get(key) ?? [];
+    candidatesByCodeAndCategory.set(key, [...existing, candidate]);
+  }
+
+  return [...candidatesByCodeAndCategory.entries()]
+    .map(([, groupedCandidates]) => {
+      const [first] = groupedCandidates;
+
+      if (!first) {
+        throw new Error("Problem code discovery grouping produced an empty group.");
+      }
+
+      return {
+        code: first.code,
+        category: first.category,
+        sources: groupedCandidates
+          .map((candidate) => ({
+            file: candidate.file,
+            line: candidate.line,
+            column: candidate.column,
+            kind: candidate.kind,
+          }))
+          .sort(compareSources),
+      };
+    })
+    .sort(
+      (left, right) =>
+        left.code.localeCompare(right.code) || left.category.localeCompare(right.category),
+    );
+}
+
+export function createProblemCodeRegistry(
+  discoveries: readonly ProblemCodeDiscovery[],
+): ProblemCodeRegistry {
+  const errors: string[] = [];
+  const discoveriesByCode = new Map<string, ProblemCodeDiscovery[]>();
+
+  for (const discovery of discoveries) {
+    const existing = discoveriesByCode.get(discovery.code) ?? [];
+    discoveriesByCode.set(discovery.code, [...existing, discovery]);
+  }
+
+  const problems: ProblemCodeRegistryEntry[] = [];
+
+  for (const [code, codeDiscoveries] of discoveriesByCode) {
+    const categories = new Set(codeDiscoveries.map((discovery) => discovery.category));
+    const sources = codeDiscoveries.flatMap((discovery) => discovery.sources).sort(compareSources);
+
+    if (categories.size !== 1) {
+      errors.push(
+        `Problem code '${code}' has multiple categories: ${[...categories].sort().join(", ")}.`,
+      );
+      continue;
+    }
+
+    const [category] = categories;
+
+    if (!category) {
+      errors.push(`Problem code '${code}' did not resolve to a category.`);
+      continue;
+    }
+
+    if (sources.length > 1) {
+      errors.push(
+        `Problem code '${code}' is declared ${sources.length} times: ${sources.map(formatSource).join(", ")}.`,
+      );
+      continue;
+    }
+
+    problems.push({
+      code,
+      category,
+      status: toHttpStatus(category),
+      title: toTitle(category),
+      cookbookPath: `/reference/problem-recovery-cookbook/#${slugifyProblemCode(code)}`,
+      recovery: recoveryMetadataByCategory[category],
+      sources,
+    });
+  }
+
+  const registry = {
+    version: "croco.problem-code-registry.v1",
+    problemCount: problems.length,
+    problems: problems.sort((left, right) => left.code.localeCompare(right.code)),
+  } as const satisfies ProblemCodeRegistry;
+
+  errors.push(...getProblemCodeRegistryValidationErrors(registry));
+
+  if (errors.length > 0) {
+    throw new ProblemRegistryValidationProblem(errors);
+  }
+
+  return registry;
+}
+
+export function createProblemRegistryArtifacts(
+  registry: ProblemCodeRegistry,
+): ReadonlyMap<string, string> {
+  return new Map([
+    [registryPath, `${JSON.stringify(registry, null, 2)}\n`],
+    [cookbookPath, formatProblemRecoveryCookbook(registry)],
+  ]);
+}
+
+export function formatProblemRegistryArtifacts(
+  artifacts: ReadonlyMap<string, string>,
+): ReadonlyMap<string, string> {
+  const tempRoot = mkdtempSync(join(tmpdir(), "croco-problem-registry-format-"));
+
+  try {
+    const tempFiles: string[] = [];
+
+    for (const [relativePath, content] of artifacts) {
+      const tempFile = join(tempRoot, relativePath);
+      mkdirSync(dirname(tempFile), { recursive: true });
+      writeFileSync(tempFile, content);
+      tempFiles.push(tempFile);
+    }
+
+    const result = spawnSync("pnpm", ["exec", "oxfmt", "--write", ...tempFiles], {
+      cwd: repoRootDir,
+      encoding: "utf-8",
+    });
+
+    if (result.status !== 0) {
+      throw new Error(
+        [
+          "Failed to format generated Problem registry artifacts with oxfmt.",
+          result.stdout.trim(),
+          result.stderr.trim(),
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    }
+
+    return new Map(
+      [...artifacts.keys()].map((relativePath) => [
+        relativePath,
+        readFileSync(join(tempRoot, relativePath), "utf-8"),
+      ]),
+    );
+  } finally {
+    rmSync(tempRoot, { force: true, recursive: true });
+  }
+}
+
+function syncProblemRegistryArtifacts(
+  rootDir: string,
+  artifacts: ReadonlyMap<string, string>,
+  mode: ProblemRegistryMode,
+): readonly string[] {
+  const diagnostics: string[] = [];
+
+  for (const [relativePath, content] of artifacts) {
+    const absolutePath = join(rootDir, relativePath);
+
+    if (mode === "write") {
+      mkdirSync(dirname(absolutePath), { recursive: true });
+      writeFileSync(absolutePath, content);
+      continue;
+    }
+
+    if (!existsSync(absolutePath)) {
+      diagnostics.push(`${relativePath} is missing; run pnpm problem-registry:write.`);
+      continue;
+    }
+
+    const current = readFileSync(absolutePath, "utf-8");
+
+    if (current !== content) {
+      diagnostics.push(`${relativePath} drift detected; run pnpm problem-registry:write.`);
+    }
+  }
+
+  return diagnostics;
+}
+
+function discoverProblemCodeCandidates(
+  rootDir: string,
+  file: string,
+): readonly ProblemCodeDiscoveryCandidate[] {
+  const source = readFileSync(file, "utf-8");
+  const sourceFile = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const stringConstants = collectStringConstants(sourceFile);
+  const problemConstructors = collectProblemConstructorForwarders(sourceFile, stringConstants);
+  const discoveries: ProblemCodeDiscoveryCandidate[] = [];
+  const classProblemFieldStack: boolean[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isClassDeclaration(node) || ts.isClassExpression(node)) {
+      const classFieldProblem = getProblemClassFields(sourceFile, node, stringConstants);
+
+      if (classFieldProblem) {
+        discoveries.push(
+          createCandidate(rootDir, sourceFile, classFieldProblem.node, classFieldProblem),
+        );
+      }
+
+      classProblemFieldStack.push(Boolean(classFieldProblem));
+      ts.forEachChild(node, visit);
+      classProblemFieldStack.pop();
+      return;
+    }
+
+    if (ts.isCallExpression(node)) {
+      const superCall = classProblemFieldStack.at(-1)
+        ? null
+        : getProblemConstructorCall(sourceFile, node, stringConstants);
+
+      if (superCall) {
+        discoveries.push(createCandidate(rootDir, sourceFile, node, superCall));
+      }
+
+      const factoryCall = getProblemFactoryCall(sourceFile, node, stringConstants);
+
+      if (factoryCall) {
+        discoveries.push(createCandidate(rootDir, sourceFile, node, factoryCall));
+      }
+    }
+
+    if (ts.isNewExpression(node)) {
+      const constructorCall = getForwardedProblemConstructorCall(
+        sourceFile,
+        node,
+        stringConstants,
+        problemConstructors,
+      );
+
+      if (constructorCall) {
+        discoveries.push(createCandidate(rootDir, sourceFile, node, constructorCall));
+      }
+    }
+
+    if (ts.isObjectLiteralExpression(node)) {
+      const metadata = getProblemMetadataObject(sourceFile, node, stringConstants);
+
+      if (metadata) {
+        discoveries.push(createCandidate(rootDir, sourceFile, node, metadata));
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return discoveries;
+}
+
+function getProblemConstructorCall(
+  sourceFile: ts.SourceFile,
+  node: ts.CallExpression,
+  stringConstants: StringConstants,
+): Pick<ProblemCodeDiscoveryCandidate, "category" | "code" | "kind"> | null {
+  if (node.expression.kind !== ts.SyntaxKind.SuperKeyword) {
+    return null;
+  }
+
+  const code = getStringValue(sourceFile, node.arguments[0], stringConstants);
+  const category = getProblemCategory(sourceFile, node.arguments[1]);
+
+  return code && category ? { code, category, kind: "problem-constructor" } : null;
+}
+
+function getProblemFactoryCall(
+  sourceFile: ts.SourceFile,
+  node: ts.CallExpression,
+  stringConstants: StringConstants,
+): Pick<ProblemCodeDiscoveryCandidate, "category" | "code" | "kind"> | null {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return null;
+  }
+
+  if (node.expression.expression.getText(sourceFile) !== "ProblemFactory") {
+    return null;
+  }
+
+  const code = getStringValue(sourceFile, node.arguments[0], stringConstants);
+  const category = factoryMethodCategory[node.expression.name.text];
+
+  return code && category ? { code, category, kind: "problem-factory" } : null;
+}
+
+function getForwardedProblemConstructorCall(
+  sourceFile: ts.SourceFile,
+  node: ts.NewExpression,
+  stringConstants: StringConstants,
+  problemConstructors: ReadonlyMap<string, ProblemConstructorForwarder>,
+): Pick<ProblemCodeDiscoveryCandidate, "category" | "code" | "kind"> | null {
+  if (!ts.isIdentifier(node.expression)) {
+    return null;
+  }
+
+  const constructor = problemConstructors.get(node.expression.text);
+
+  if (!constructor) {
+    return null;
+  }
+
+  const args = node.arguments ?? [];
+  const code =
+    constructor.code ??
+    (constructor.codeArgumentIndex === undefined
+      ? null
+      : getStringValue(sourceFile, args[constructor.codeArgumentIndex], stringConstants));
+  const category =
+    constructor.category ??
+    (constructor.categoryArgumentIndex === undefined
+      ? null
+      : getProblemCategory(sourceFile, args[constructor.categoryArgumentIndex]));
+
+  return code && category ? { code, category, kind: "problem-constructor" } : null;
+}
+
+function getProblemMetadataObject(
+  sourceFile: ts.SourceFile,
+  node: ts.ObjectLiteralExpression,
+  stringConstants: StringConstants,
+): Pick<ProblemCodeDiscoveryCandidate, "category" | "code" | "kind"> | null {
+  let code: string | null = null;
+  let category: ProblemCategory | null = null;
+
+  for (const property of node.properties) {
+    if (!ts.isPropertyAssignment(property)) {
+      continue;
+    }
+
+    const name = getPropertyName(property.name);
+
+    if (name === "code") {
+      code = getStringValue(sourceFile, property.initializer, stringConstants);
+    }
+
+    if (name === "category") {
+      category = getProblemCategory(sourceFile, property.initializer);
+    }
+  }
+
+  return code && category ? { code, category, kind: "problem-metadata" } : null;
+}
+
+function getProblemClassFields(
+  sourceFile: ts.SourceFile,
+  node: ts.ClassDeclaration | ts.ClassExpression,
+  stringConstants: StringConstants,
+):
+  | (Pick<ProblemCodeDiscoveryCandidate, "category" | "code" | "kind"> & { readonly node: ts.Node })
+  | null {
+  let code: string | null = null;
+  let category: ProblemCategory | null = null;
+  let codeNode: ts.Node | null = null;
+
+  for (const member of node.members) {
+    if (!ts.isPropertyDeclaration(member)) {
+      continue;
+    }
+
+    const name = getPropertyName(member.name);
+
+    if (name === "code") {
+      code = getStringValue(sourceFile, member.initializer, stringConstants);
+      codeNode = member;
+    }
+
+    if (name === "category") {
+      category = getProblemCategory(sourceFile, member.initializer);
+    }
+  }
+
+  return code && category && codeNode
+    ? {
+        code,
+        category,
+        kind: "problem-class",
+        node: codeNode,
+      }
+    : null;
+}
+
+function createCandidate(
+  rootDir: string,
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  discovery: Pick<ProblemCodeDiscoveryCandidate, "category" | "code" | "kind">,
+): ProblemCodeDiscoveryCandidate {
+  const location = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+
+  return {
+    ...discovery,
+    file: toPosixPath(relative(rootDir, sourceFile.fileName)),
+    line: location.line + 1,
+    column: location.character + 1,
+  };
+}
+
+function getSourceFiles(rootDir: string): readonly string[] {
+  const packagesDir = join(rootDir, "packages");
+
+  if (!existsSync(packagesDir)) {
+    return [];
+  }
+
+  const files: string[] = [];
+
+  function walk(dir: string): void {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (shouldSkipPath(entry.name)) {
+        continue;
+      }
+
+      const fullPath = join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        walk(fullPath);
+        continue;
+      }
+
+      if (isProductionTypeScriptFile(fullPath)) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  walk(packagesDir);
+
+  return files.sort();
+}
+
+function isProductionTypeScriptFile(file: string): boolean {
+  const isTypeScript = file.endsWith(".ts") || file.endsWith(".tsx");
+  const isDeclarationFile = file.endsWith(".d.ts");
+  const isTestFile =
+    file.endsWith(".spec.ts") ||
+    file.endsWith(".spec.tsx") ||
+    file.endsWith(".test.ts") ||
+    file.endsWith(".test.tsx");
+
+  return (
+    isTypeScript &&
+    !isDeclarationFile &&
+    !isTestFile &&
+    !file.split("/").includes("tests") &&
+    !file.split("/").includes("__fixtures__")
+  );
+}
+
+function shouldSkipPath(name: string): boolean {
+  return name === "node_modules" || name === "dist" || name === ".turbo" || name === "coverage";
+}
+
+function collectStringConstants(sourceFile: ts.SourceFile): StringConstants {
+  const identifiers = new Map<string, string>();
+  const propertyAccesses = new Map<string, string>();
+
+  function collect(node: ts.Node): void {
+    if (ts.isEnumDeclaration(node)) {
+      for (const member of node.members) {
+        const name = getPropertyName(member.name);
+        const initializer = unwrapExpression(member.initializer);
+
+        if (
+          name &&
+          initializer &&
+          (ts.isStringLiteral(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer))
+        ) {
+          propertyAccesses.set(`${node.name.text}.${name}`, initializer.text);
+        }
+      }
+    }
+
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const initializer = unwrapExpression(node.initializer);
+
+      if (
+        initializer &&
+        (ts.isStringLiteral(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer))
+      ) {
+        identifiers.set(node.name.text, initializer.text);
+      }
+
+      if (initializer && ts.isObjectLiteralExpression(initializer)) {
+        collectObjectLiteralStringProperties(node.name.text, initializer, propertyAccesses);
+      }
+    }
+
+    if ((ts.isClassDeclaration(node) || ts.isClassExpression(node)) && node.name) {
+      for (const member of node.members) {
+        if (!ts.isPropertyDeclaration(member) || !hasStaticModifier(member)) {
+          continue;
+        }
+
+        const name = getPropertyName(member.name);
+        const initializer = unwrapExpression(member.initializer);
+
+        if (
+          name &&
+          initializer &&
+          (ts.isStringLiteral(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer))
+        ) {
+          propertyAccesses.set(`${node.name.text}.${name}`, initializer.text);
+        }
+      }
+    }
+
+    ts.forEachChild(node, collect);
+  }
+
+  collect(sourceFile);
+
+  return { identifiers, propertyAccesses };
+}
+
+function collectProblemConstructorForwarders(
+  sourceFile: ts.SourceFile,
+  stringConstants: StringConstants,
+): ReadonlyMap<string, ProblemConstructorForwarder> {
+  const problemConstructors = new Map<string, ProblemConstructorForwarder>();
+
+  function collect(node: ts.Node): void {
+    if ((ts.isClassDeclaration(node) || ts.isClassExpression(node)) && node.name) {
+      const constructor = node.members.find(ts.isConstructorDeclaration);
+      const forwarder = constructor
+        ? getProblemConstructorForwarder(sourceFile, constructor, stringConstants)
+        : null;
+
+      if (forwarder) {
+        problemConstructors.set(node.name.text, forwarder);
+      }
+    }
+
+    ts.forEachChild(node, collect);
+  }
+
+  collect(sourceFile);
+
+  return problemConstructors;
+}
+
+function getProblemConstructorForwarder(
+  sourceFile: ts.SourceFile,
+  constructor: ts.ConstructorDeclaration,
+  stringConstants: StringConstants,
+): ProblemConstructorForwarder | null {
+  let forwarder: ProblemConstructorForwarder | null = null;
+
+  function visit(node: ts.Node): void {
+    if (forwarder) {
+      return;
+    }
+
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.SuperKeyword) {
+      const code = getStringValue(sourceFile, node.arguments[0], stringConstants);
+      const category = getProblemCategory(sourceFile, node.arguments[1]);
+      const codeArgumentIndex = getConstructorParameterIndex(constructor, node.arguments[0]);
+      const categoryArgumentIndex = getConstructorParameterIndex(constructor, node.arguments[1]);
+
+      if (code && category) {
+        return;
+      }
+
+      if (
+        (!code && codeArgumentIndex === undefined) ||
+        (!category && categoryArgumentIndex === undefined)
+      ) {
+        return;
+      }
+
+      forwarder = {
+        ...(code ? { code } : {}),
+        ...(codeArgumentIndex === undefined ? {} : { codeArgumentIndex }),
+        ...(category ? { category } : {}),
+        ...(categoryArgumentIndex === undefined ? {} : { categoryArgumentIndex }),
+      };
+      return;
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(constructor);
+
+  return forwarder;
+}
+
+function getConstructorParameterIndex(
+  constructor: ts.ConstructorDeclaration,
+  node: ts.Node | undefined,
+): number | undefined {
+  const expression = unwrapExpression(node);
+
+  if (!expression || !ts.isIdentifier(expression)) {
+    return undefined;
+  }
+
+  const parameterIndex = constructor.parameters.findIndex(
+    (parameter) => ts.isIdentifier(parameter.name) && parameter.name.text === expression.text,
+  );
+
+  return parameterIndex === -1 ? undefined : parameterIndex;
+}
+
+function collectObjectLiteralStringProperties(
+  baseName: string,
+  object: ts.ObjectLiteralExpression,
+  propertyAccesses: Map<string, string>,
+): void {
+  for (const property of object.properties) {
+    if (!ts.isPropertyAssignment(property)) {
+      continue;
+    }
+
+    const name = getPropertyName(property.name);
+    const initializer = unwrapExpression(property.initializer);
+
+    if (
+      name &&
+      initializer &&
+      (ts.isStringLiteral(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer))
+    ) {
+      propertyAccesses.set(`${baseName}.${name}`, initializer.text);
+    }
+  }
+}
+
+function getStringValue(
+  sourceFile: ts.SourceFile,
+  node: ts.Node | undefined,
+  stringConstants: StringConstants,
+): string | null {
+  const expression = unwrapExpression(node);
+
+  if (!expression) {
+    return null;
+  }
+
+  if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
+    return expression.text;
+  }
+
+  if (ts.isIdentifier(expression)) {
+    return (
+      stringConstants.identifiers.get(expression.text) ??
+      getConstructorParameterDefaultString(sourceFile, expression, stringConstants)
+    );
+  }
+
+  if (ts.isPropertyAccessExpression(expression)) {
+    return stringConstants.propertyAccesses.get(expression.getText(sourceFile)) ?? null;
+  }
+
+  return null;
+}
+
+function getConstructorParameterDefaultString(
+  sourceFile: ts.SourceFile,
+  identifier: ts.Identifier,
+  stringConstants: StringConstants,
+): string | null {
+  let current: ts.Node | undefined = identifier.parent;
+
+  while (current) {
+    if (ts.isConstructorDeclaration(current)) {
+      const parameter = current.parameters.find(
+        (candidate) => ts.isIdentifier(candidate.name) && candidate.name.text === identifier.text,
+      );
+
+      return parameter?.initializer
+        ? getStringValue(sourceFile, parameter.initializer, stringConstants)
+        : null;
+    }
+
+    current = current.parent;
+  }
+
+  return null;
+}
+
+function unwrapExpression(node: ts.Node | undefined): ts.Expression | undefined {
+  if (!node || !ts.isExpression(node)) {
+    return undefined;
+  }
+
+  let expression: ts.Expression = node;
+
+  while (ts.isAsExpression(expression) || ts.isSatisfiesExpression(expression)) {
+    expression = expression.expression;
+  }
+
+  return expression;
+}
+
+function hasStaticModifier(node: ts.Node): boolean {
+  return Boolean(
+    ts.canHaveModifiers(node) &&
+    ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword),
+  );
+}
+
+function getProblemCategory(
+  sourceFile: ts.SourceFile,
+  node: ts.Node | undefined,
+): ProblemCategory | null {
+  if (!node || !ts.isPropertyAccessExpression(node)) {
+    return null;
+  }
+
+  if (node.expression.getText(sourceFile) !== "ProblemCategory") {
+    return null;
+  }
+
+  const category = ProblemCategory[node.name.text as keyof typeof ProblemCategory];
+
+  return category ?? null;
+}
+
+function getPropertyName(name: ts.PropertyName): string | null {
+  return ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : null;
+}
+
+const telemetryAttributes = ["problem.code", "problem.category", "problem.status"] as const;
+
+const recoveryMetadataByCategory = {
+  [ProblemCategory.BadRequest]: recovery({
+    cause: "The caller sent malformed input or unsupported request options.",
+    userAction: "Correct the request input and retry after validation passes.",
+    operatorAction: "Inspect validation details and request logs; do not retry unchanged input.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  [ProblemCategory.Unauthorized]: recovery({
+    cause: "The request did not include valid authentication credentials.",
+    userAction: "Sign in again or provide a valid credential.",
+    operatorAction: "Check authentication configuration, token issuer, and clock skew.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  [ProblemCategory.Forbidden]: recovery({
+    cause: "The authenticated caller is not allowed to perform the requested action.",
+    userAction: "Request the required permission or choose an allowed action.",
+    operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  [ProblemCategory.NotFound]: recovery({
+    cause: "The requested resource or route-visible record does not exist.",
+    userAction: "Verify the identifier and refresh the resource list before retrying.",
+    operatorAction: "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  [ProblemCategory.Conflict]: recovery({
+    cause: "The request conflicts with current state or an idempotency constraint.",
+    userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+    operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  [ProblemCategory.Gone]: recovery({
+    cause: "The requested resource is no longer available through this API surface.",
+    userAction: "Stop using the stale reference and follow the replacement flow when available.",
+    operatorAction: "Verify lifecycle, migration, deprecation, and retention state.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  [ProblemCategory.ValidationError]: recovery({
+    cause: "The request or generated contract failed schema or semantic validation.",
+    userAction: "Fix the invalid fields and retry with schema-conformant input.",
+    operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  [ProblemCategory.BusinessRuleViolation]: recovery({
+    cause: "The request is syntactically valid but violates a domain rule.",
+    userAction: "Change the workflow state or request values so the business rule is satisfied.",
+    operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  [ProblemCategory.TooManyRequests]: recovery({
+    cause: "The caller exceeded a rate, quota, or concurrency limit.",
+    userAction: "Wait for the retry window or reduce request volume.",
+    operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+    retryability: "retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  [ProblemCategory.InternalServerError]: recovery({
+    cause: "Croco or an upstream dependency failed after accepting the request.",
+    userAction:
+      "Retry later only when the operation is idempotent or the caller owns retry safety.",
+    operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  [ProblemCategory.NotImplemented]: recovery({
+    cause: "The requested capability is not supported by this runtime or adapter.",
+    userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+    operatorAction: "Check runtime capability declarations and provider maturity documentation.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+} as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
+
+function recovery(options: {
+  readonly cause: string;
+  readonly userAction: string;
+  readonly operatorAction: string;
+  readonly retryability: ProblemRetryability;
+  readonly redactionPolicy: ProblemRedactionPolicy;
+  readonly severity: ProblemTelemetrySeverity;
+}): ProblemRecoveryMetadata {
+  return {
+    cause: options.cause,
+    userAction: options.userAction,
+    operatorAction: options.operatorAction,
+    retryability: options.retryability,
+    redactionPolicy: options.redactionPolicy,
+    telemetry: {
+      eventName: `croco.problem.${options.severity}`,
+      severity: options.severity,
+      attributes: telemetryAttributes,
+    },
+  };
+}
+
+function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): readonly string[] {
+  const errors: string[] = [];
+  const seenCodes = new Set<string>();
+
+  if (registry.problemCount !== registry.problems.length) {
+    errors.push(
+      `Problem registry count ${registry.problemCount} does not match ${registry.problems.length} entries.`,
+    );
+  }
+
+  for (const problem of registry.problems) {
+    if (seenCodes.has(problem.code)) {
+      errors.push(`Problem registry contains duplicate code '${problem.code}'.`);
+      continue;
+    }
+
+    seenCodes.add(problem.code);
+
+    if (problem.status !== toHttpStatus(problem.category)) {
+      errors.push(`Problem code '${problem.code}' has a status/category mismatch.`);
+    }
+
+    if (!isCompleteRecoveryMetadata(problem.recovery)) {
+      errors.push(`Problem code '${problem.code}' is missing recovery cookbook metadata.`);
+    }
+
+    if (problem.sources.length === 0) {
+      errors.push(`Problem code '${problem.code}' has no source locations.`);
+    } else if (problem.sources.length > 1) {
+      errors.push(
+        `Problem code '${problem.code}' is declared ${problem.sources.length} times: ${problem.sources.map(formatSource).join(", ")}.`,
+      );
+    }
+  }
+
+  return errors;
+}
+
+function toHttpStatus(category: ProblemCategory): number {
+  switch (category) {
+    case ProblemCategory.BadRequest:
+      return 400;
+    case ProblemCategory.Unauthorized:
+      return 401;
+    case ProblemCategory.Forbidden:
+      return 403;
+    case ProblemCategory.NotFound:
+      return 404;
+    case ProblemCategory.Conflict:
+      return 409;
+    case ProblemCategory.Gone:
+      return 410;
+    case ProblemCategory.ValidationError:
+    case ProblemCategory.BusinessRuleViolation:
+      return 422;
+    case ProblemCategory.TooManyRequests:
+      return 429;
+    case ProblemCategory.InternalServerError:
+      return 500;
+    case ProblemCategory.NotImplemented:
+      return 501;
+  }
+}
+
+function toTitle(category: ProblemCategory): string {
+  switch (category) {
+    case ProblemCategory.BadRequest:
+      return "Bad Request";
+    case ProblemCategory.Unauthorized:
+      return "Unauthorized";
+    case ProblemCategory.Forbidden:
+      return "Forbidden";
+    case ProblemCategory.NotFound:
+      return "Not Found";
+    case ProblemCategory.Conflict:
+      return "Conflict";
+    case ProblemCategory.Gone:
+      return "Gone";
+    case ProblemCategory.ValidationError:
+      return "Validation Error";
+    case ProblemCategory.BusinessRuleViolation:
+      return "Business Rule Violation";
+    case ProblemCategory.TooManyRequests:
+      return "Too Many Requests";
+    case ProblemCategory.InternalServerError:
+      return "Internal Server Error";
+    case ProblemCategory.NotImplemented:
+      return "Not Implemented";
+  }
+}
+
+function slugifyProblemCode(code: string): string {
+  return (
+    code
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "problem"
+  );
+}
+
+function formatSource(source: ProblemCodeSource): string {
+  return `${source.file}:${source.line}:${source.column}`;
+}
+
+function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean {
+  return (
+    metadata.cause.length > 0 &&
+    metadata.userAction.length > 0 &&
+    metadata.operatorAction.length > 0 &&
+    metadata.retryability.length > 0 &&
+    metadata.redactionPolicy.length > 0 &&
+    metadata.telemetry.eventName.length > 0 &&
+    metadata.telemetry.severity.length > 0 &&
+    metadata.telemetry.attributes.length > 0
+  );
+}
+
+function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
+  const lines = [
+    "---",
+    "title: Problem Recovery Cookbook",
+    "description: Generated Croco Problem code registry with recovery and telemetry metadata.",
+    "---",
+    "",
+    "# Problem Recovery Cookbook",
+    "",
+    "> Generated by `pnpm problem-registry:write`. Do not edit this file by hand.",
+    "",
+    `This cookbook documents ${registry.problemCount} public Croco Problem codes. The deterministic JSON registry is generated at \`${registryPath}\`.`,
+    "",
+    "## Index",
+    "",
+    "| Code | Category | Status | Retryability | Redaction | Sources |",
+    "| --- | --- | ---: | --- | --- | ---: |",
+    ...registry.problems.map(
+      (problem) =>
+        `| [\`${escapeMarkdownTable(problem.code)}\`](#${slugifyProblemCode(problem.code)}) | ${problem.category} | ${problem.status} | ${problem.recovery.retryability} | ${problem.recovery.redactionPolicy} | ${problem.sources.length} |`,
+    ),
+    "",
+  ];
+
+  for (const problem of registry.problems) {
+    lines.push(
+      `<a id="${slugifyProblemCode(problem.code)}"></a>`,
+      "",
+      `## \`${problem.code}\``,
+      "",
+      `- Category: \`${problem.category}\``,
+      `- HTTP status: \`${problem.status}\` ${problem.title}`,
+      `- Retryability: \`${problem.recovery.retryability}\``,
+      `- Redaction policy: \`${problem.recovery.redactionPolicy}\``,
+      `- Cause: ${problem.recovery.cause}`,
+      `- User action: ${problem.recovery.userAction}`,
+      `- Operator action: ${problem.recovery.operatorAction}`,
+      `- Telemetry: \`${problem.recovery.telemetry.eventName}\` (${problem.recovery.telemetry.severity}) with ${problem.recovery.telemetry.attributes.map((attribute) => `\`${attribute}\``).join(", ")}`,
+      "",
+      "Sources:",
+      "",
+      ...problem.sources.map(
+        (source) => `- \`${source.file}:${source.line}:${source.column}\` (${source.kind})`,
+      ),
+      "",
+    );
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+function escapeMarkdownTable(value: string): string {
+  return value.replace(/\|/g, "\\|");
+}
+
+function compareSources(
+  left: ProblemCodeDiscovery["sources"][number],
+  right: ProblemCodeDiscovery["sources"][number],
+): number {
+  return (
+    left.file.localeCompare(right.file) ||
+    left.line - right.line ||
+    left.column - right.column ||
+    left.kind.localeCompare(right.kind)
+  );
+}
+
+function formatProblemRegistryError(error: unknown): readonly string[] {
+  if (error instanceof ProblemRegistryValidationProblem) {
+    return error.errors;
+  }
+
+  if (error instanceof Error) {
+    return [error.message];
+  }
+
+  return ["Unknown Problem registry generation failure."];
+}
+
+function toPosixPath(path: string): string {
+  return path.split("\\").join("/");
+}
+
+function parseMode(args: readonly string[]): ProblemRegistryMode {
+  return args.includes("--write") ? "write" : "check";
+}
+
+if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
+  const result = runProblemRegistryCheck(process.cwd(), parseMode(argv.slice(2)));
+
+  if (result.status === "pass") {
+    stdout.write(
+      `Problem registry ${parseMode(argv.slice(2))} passed: ${result.problemCount} codes from ${result.discoveryCount} discoveries.\n`,
+    );
+  } else {
+    stdout.write(`Problem registry ${parseMode(argv.slice(2))} failed:\n`);
+
+    for (const diagnostic of result.diagnostics) {
+      stdout.write(`- ${diagnostic}\n`);
+    }
+  }
+
+  exit(result.status === "pass" ? 0 : 1);
+}

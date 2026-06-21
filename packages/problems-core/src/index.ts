@@ -56,6 +56,29 @@ export type { ProblemExtensions } from "./libs/ProblemExtensions";
  * 자주 쓰는 Problem 인스턴스를 빠르게 생성하는 팩토리입니다.
  */
 export { ProblemFactory } from "./libs/ProblemFactory";
+export type {
+  CreateProblemCodeRegistryOptions,
+  ProblemCodeDiscovery,
+  ProblemCodeRegistry,
+  ProblemCodeRegistryEntry,
+  ProblemCodeRegistryVersion,
+  ProblemCodeSource,
+  ProblemCodeSourceKind,
+  ProblemRecoveryMetadata,
+  ProblemRedactionPolicy,
+  ProblemRetryability,
+  ProblemTelemetryMapping,
+  ProblemTelemetrySeverity,
+} from "./libs/ProblemRegistry";
+export {
+  assertProblemCodeRegistryValid,
+  createProblemCodeRegistry,
+  getProblemCodeRegistryValidationErrors,
+  getProblemCookbookPath,
+  getProblemRecoveryMetadata,
+  ProblemRegistryValidationProblem,
+  slugifyProblemCode,
+} from "./libs/ProblemRegistry";
 /**
  * Problem Details를 직렬화하고 역직렬화하는 유틸리티입니다.
  */

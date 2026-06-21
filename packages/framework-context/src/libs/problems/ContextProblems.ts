@@ -4,7 +4,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
  * 컨텍스트 미들웨어 실행 중 오류가 발생했을 때 사용하는 Problem입니다.
  */
 export class MiddlewareProblem extends Problem {
-  readonly code = "MIDDLEWARE_EXECUTION_ERROR";
+  readonly code = "framework-context/context-middleware-execution-error";
   readonly category = ProblemCategory.InternalServerError;
 }
 

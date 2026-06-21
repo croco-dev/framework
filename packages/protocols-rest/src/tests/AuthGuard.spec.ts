@@ -45,7 +45,17 @@ describe("AuthGuard", () => {
     await expect(guard.canActivate(mockContext)).rejects.toThrow("Missing authorization header");
     await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
       status: 401,
-      code: "AUTH_MISSING_HEADER",
+      code: "protocols-rest/auth-missing-header",
+    });
+    expect(mockVerifier).not.toHaveBeenCalled();
+  });
+
+  it("should deny access when request headers are unavailable", async () => {
+    mockContext.getRequest = vi.fn().mockReturnValue(null);
+
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
+      status: 400,
+      code: "protocols-rest/auth-invalid-request",
     });
     expect(mockVerifier).not.toHaveBeenCalled();
   });
@@ -59,7 +69,7 @@ describe("AuthGuard", () => {
     await expect(guard.canActivate(mockContext)).rejects.toThrow("Invalid or expired token");
     await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
       status: 401,
-      code: "AUTH_INVALID_TOKEN",
+      code: "protocols-rest/auth-invalid-token",
     });
     expect(mockVerifier).toHaveBeenCalledWith("invalid-token");
   });
@@ -74,7 +84,7 @@ describe("AuthGuard", () => {
     );
     await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
       status: 500,
-      code: "AUTH_VERIFIER_UNAVAILABLE",
+      code: "protocols-rest/auth-verifier-unavailable",
     });
   });
 
@@ -98,7 +108,7 @@ describe("AuthGuard", () => {
     );
     await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
       status: 400,
-      code: "AUTH_INVALID_HEADER_FORMAT",
+      code: "protocols-rest/auth-invalid-header-format",
     });
   });
 
@@ -111,7 +121,7 @@ describe("AuthGuard", () => {
     );
     await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
       status: 400,
-      code: "AUTH_INVALID_HEADER_FORMAT",
+      code: "protocols-rest/auth-invalid-header-format",
     });
   });
 

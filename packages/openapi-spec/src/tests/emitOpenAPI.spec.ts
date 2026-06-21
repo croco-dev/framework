@@ -111,6 +111,7 @@ describe("emitOpenAPI", () => {
         {
           category: "NotFound",
           code: "USER_NOT_FOUND",
+          cookbookPath: "/reference/problem-recovery-cookbook/#user-not-found",
           description: "User id is missing.",
           status: 404,
         },
@@ -592,6 +593,7 @@ describe("emitOpenAPI", () => {
         {
           code: "USER_NOT_FOUND",
           category: "NotFound",
+          cookbookPath: "/reference/problem-recovery-cookbook/#user-not-found",
           status: 404,
           description: "The user id does not exist.",
         },
@@ -611,12 +613,14 @@ describe("emitOpenAPI", () => {
         {
           code: "USER_BLOCKED",
           category: "BusinessRuleViolation",
+          cookbookPath: "/reference/problem-recovery-cookbook/#user-blocked",
           status: 422,
           description: "The user cannot be read in the current workflow state.",
         },
         {
           code: "USER_INVALID",
           category: "ValidationError",
+          cookbookPath: "/reference/problem-recovery-cookbook/#user-invalid",
           status: 422,
           type: "https://errors.example.com/user-invalid",
         },

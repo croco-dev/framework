@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "LlmRateLimitProblem"
+title: "ProblemRegistryValidationProblem"
 ---
 
-LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
 
 ## Extends
 
@@ -15,21 +15,17 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 ### Constructor
 
-> **new LlmRateLimitProblem**(`retryAfter`, `retryAt?`): `LlmRateLimitProblem`
+> **new ProblemRegistryValidationProblem**(`errors`): `ProblemRegistryValidationProblem`
 
 #### Parameters
 
-##### retryAfter
+##### errors
 
-`number`
-
-##### retryAt?
-
-`string`
+readonly `string`[]
 
 #### Returns
 
-`LlmRateLimitProblem`
+`ProblemRegistryValidationProblem`
 
 #### Overrides
 
@@ -74,6 +70,12 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
+
+***
+
+### errors
+
+> `readonly` **errors**: readonly `string`[]
 
 ***
 
@@ -134,12 +136,6 @@ LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
-
-***
-
-### CODE
-
-> `readonly` `static` **CODE**: `"llm-core/rate-limit-exceeded"` = `"llm-core/rate-limit-exceeded"`
 
 ***
 

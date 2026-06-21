@@ -45,6 +45,7 @@ type DeclaredProblemOpenAPI = {
   readonly code: string;
   readonly category: string;
   readonly status: number;
+  readonly cookbookPath?: string;
   readonly description?: string;
   readonly type?: string;
 };
@@ -292,6 +293,7 @@ function toDeclaredProblemResponseConfig(
       code: problem.code,
       category: problem.category,
       status: problem.status,
+      ...(problem.cookbookPath ? { cookbookPath: problem.cookbookPath } : {}),
       ...(problem.description ? { description: problem.description } : {}),
       ...(problem.type ? { type: problem.type } : {}),
     };

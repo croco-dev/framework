@@ -823,11 +823,13 @@ describe("buildContractGraph", () => {
       {
         code: "USER_FORBIDDEN",
         category: "Forbidden",
+        cookbookPath: "/reference/problem-recovery-cookbook/#user-forbidden",
         status: 403,
       },
       {
         code: "USER_NOT_FOUND",
         category: "NotFound",
+        cookbookPath: "/reference/problem-recovery-cookbook/#user-not-found",
         description: "User id is missing.",
         status: 404,
       },
