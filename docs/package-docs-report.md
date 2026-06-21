@@ -8,8 +8,8 @@
 | ------------------------------ | ----: |
 | Public packages                |   106 |
 | Private packages skipped       |     2 |
-| Missing package README         |    20 |
-| Missing generated API docs     |    77 |
+| Missing package README         |     0 |
+| Missing generated API docs     |    57 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -17,26 +17,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 
 ## Missing Package README
 
-- `@croco/analytics-core` (`packages/analytics-core`) — legacy baseline
-- `create-croco-app` (`packages/create-croco-app`) — legacy baseline
-- `@croco/diagnostics-core` (`packages/diagnostics-core`) — legacy baseline
-- `@croco/features-core` (`packages/features-core`) — legacy baseline
-- `@croco/framework-preset` (`packages/framework-preset`) — legacy baseline
-- `@croco/framework-routes` (`packages/framework-routes`) — legacy baseline
-- `@croco/integrations-posthog` (`packages/integrations-posthog`) — legacy baseline
-- `@croco/migration-runner` (`packages/migration-runner`) — legacy baseline
-- `@croco/notifications-core` (`packages/notifications-core`) — legacy baseline
-- `@croco/openapi-spec` (`packages/openapi-spec`) — legacy baseline
-- `@croco/preset-cloudflare` (`packages/preset-cloudflare`) — legacy baseline
-- `@croco/preset-lambda` (`packages/preset-lambda`) — legacy baseline
-- `@croco/preset-node` (`packages/preset-node`) — legacy baseline
-- `@croco/protocols-core` (`packages/protocols-core`) — legacy baseline
-- `@croco/protocols-graphql` (`packages/protocols-graphql`) — legacy baseline
-- `@croco/protocols-trpc` (`packages/protocols-trpc`) — legacy baseline
-- `@croco/rpc-codegen` (`packages/rpc-codegen`) — legacy baseline
-- `@croco/storage-core` (`packages/storage-core`) — legacy baseline
-- `@croco/transports-graphql` (`packages/transports-graphql`) — legacy baseline
-- `@croco/triggers-qstash` (`packages/triggers-qstash`) — legacy baseline
+None.
 
 ## Missing Generated API Docs
 
@@ -44,7 +25,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/access-drizzle` (`packages/access-drizzle`) — legacy baseline
 - `@croco/admin-core` (`packages/admin-core`) — legacy baseline
 - `@croco/admin-react` (`packages/admin-react`) — legacy baseline
-- `@croco/analytics-core` (`packages/analytics-core`) — legacy baseline
 - `@croco/analytics-posthog` (`packages/analytics-posthog`) — legacy baseline
 - `@croco/audit-drizzle` (`packages/audit-drizzle`) — legacy baseline
 - `@croco/auth-better-auth` (`packages/auth-better-auth`) — legacy baseline
@@ -55,23 +35,18 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/billing-polar` (`packages/billing-polar`) — legacy baseline
 - `@croco/cache-core` (`packages/cache-core`) — legacy baseline
 - `@croco/cli` (`packages/cli`) — legacy baseline
-- `create-croco-app` (`packages/create-croco-app`) — legacy baseline
 - `@croco/customer-health-core` (`packages/customer-health-core`) — legacy baseline
 - `@croco/customer-health-drizzle` (`packages/customer-health-drizzle`) — legacy baseline
-- `@croco/diagnostics-core` (`packages/diagnostics-core`) — legacy baseline
 - `@croco/entitlements-core` (`packages/entitlements-core`) — legacy baseline
 - `@croco/entitlements-drizzle` (`packages/entitlements-drizzle`) — legacy baseline
 - `@croco/esbuild-plugin` (`packages/esbuild-plugin`) — legacy baseline
 - `@croco/events-tx` (`packages/events-tx`) — legacy baseline
 - `@croco/execution-core` (`packages/execution-core`) — legacy baseline
 - `@croco/execution-drizzle` (`packages/execution-drizzle`) — legacy baseline
-- `@croco/features-core` (`packages/features-core`) — legacy baseline
 - `@croco/features-posthog` (`packages/features-posthog`) — legacy baseline
 - `@croco/framework-config` (`packages/framework-config`) — legacy baseline
 - `@croco/framework-logger` (`packages/framework-logger`) — legacy baseline
 - `@croco/framework-module` (`packages/framework-module`) — legacy baseline
-- `@croco/framework-preset` (`packages/framework-preset`) — legacy baseline
-- `@croco/framework-routes` (`packages/framework-routes`) — legacy baseline
 - `@croco/frontend-cloudflare` (`packages/frontend-cloudflare`) — legacy baseline
 - `@croco/frontend-problems` (`packages/frontend-problems`) — legacy baseline
 - `@croco/frontend-react` (`packages/frontend-react`) — legacy baseline
@@ -79,7 +54,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/gid-core` (`packages/gid-core`) — legacy baseline
 - `@croco/health-core` (`packages/health-core`) — legacy baseline
 - `@croco/impersonation-core` (`packages/impersonation-core`) — legacy baseline
-- `@croco/integrations-posthog` (`packages/integrations-posthog`) — legacy baseline
 - `@croco/invitation-drizzle` (`packages/invitation-drizzle`) — legacy baseline
 - `@croco/lifecycle-core` (`packages/lifecycle-core`) — legacy baseline
 - `@croco/membership-drizzle` (`packages/membership-drizzle`) — legacy baseline
@@ -87,36 +61,32 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/metering-drizzle` (`packages/metering-drizzle`) — legacy baseline
 - `@croco/metering-upstash` (`packages/metering-upstash`) — legacy baseline
 - `@croco/metrics-billing` (`packages/metrics-billing`) — legacy baseline
-- `@croco/migration-runner` (`packages/migration-runner`) — legacy baseline
-- `@croco/notifications-core` (`packages/notifications-core`) — legacy baseline
 - `@croco/notifications-resend` (`packages/notifications-resend`) — legacy baseline
 - `@croco/onboarding-core` (`packages/onboarding-core`) — legacy baseline
 - `@croco/onboarding-drizzle` (`packages/onboarding-drizzle`) — legacy baseline
-- `@croco/openapi-spec` (`packages/openapi-spec`) — legacy baseline
 - `@croco/pagination-core` (`packages/pagination-core`) — legacy baseline
 - `@croco/presentation-preset` (`packages/presentation-preset`) — legacy baseline
-- `@croco/preset-cloudflare` (`packages/preset-cloudflare`) — legacy baseline
-- `@croco/preset-lambda` (`packages/preset-lambda`) — legacy baseline
-- `@croco/preset-node` (`packages/preset-node`) — legacy baseline
-- `@croco/protocols-core` (`packages/protocols-core`) — legacy baseline
-- `@croco/protocols-graphql` (`packages/protocols-graphql`) — legacy baseline
-- `@croco/protocols-trpc` (`packages/protocols-trpc`) — legacy baseline
 - `@croco/ratelimit-upstash` (`packages/ratelimit-upstash`) — legacy baseline
-- `@croco/rpc-codegen` (`packages/rpc-codegen`) — legacy baseline
 - `@croco/search-drizzle` (`packages/search-drizzle`) — legacy baseline
 - `@croco/search-meilisearch` (`packages/search-meilisearch`) — legacy baseline
 - `@croco/storage-cloudflare` (`packages/storage-cloudflare`) — legacy baseline
 - `@croco/storage-cloudinary` (`packages/storage-cloudinary`) — legacy baseline
-- `@croco/storage-core` (`packages/storage-core`) — legacy baseline
 - `@croco/storage-r2` (`packages/storage-r2`) — legacy baseline
 - `@croco/tasks-core` (`packages/tasks-core`) — legacy baseline
 - `@croco/tasks-qstash` (`packages/tasks-qstash`) — legacy baseline
 - `@croco/tenant-core` (`packages/tenant-core`) — legacy baseline
 - `@croco/transports-cloudflare-workers` (`packages/transports-cloudflare-workers`) — legacy baseline
-- `@croco/transports-graphql` (`packages/transports-graphql`) — legacy baseline
 - `@croco/triggers-core` (`packages/triggers-core`) — legacy baseline
-- `@croco/triggers-qstash` (`packages/triggers-qstash`) — legacy baseline
 - `@croco/workflow-core` (`packages/workflow-core`) — legacy baseline
+
+## Generated API Docs Backlog By Maturity
+
+| Maturity            | Missing API docs |
+| ------------------- | ---------------: |
+| 🟢 production-ready |                0 |
+| 🟡 beta             |               27 |
+| 🔴 alpha/WIP        |               30 |
+| ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory
 

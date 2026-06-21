@@ -7,7 +7,7 @@ title: "ContainerDiagnosticsProvider"
 
 ## Implements
 
-- `DiagnosticsProvider`
+- [`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/)
 
 ## Constructors
 
@@ -27,18 +27,18 @@ title: "ContainerDiagnosticsProvider"
 
 #### Implementation of
 
-`DiagnosticsProvider.name`
+[`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/).[`name`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/#name)
 
 ## Methods
 
 ### getHealth()
 
-> **getHealth**(): `Promise`\<`HealthStatus`\>
+> **getHealth**(): `Promise`\<[`HealthStatus`](/api/diagnostics-core/src/type-aliases/healthstatus/)\>
 
 #### Returns
 
-`Promise`\<`HealthStatus`\>
+`Promise`\<[`HealthStatus`](/api/diagnostics-core/src/type-aliases/healthstatus/)\>
 
 #### Implementation of
 
-`DiagnosticsProvider.getHealth`
+[`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/).[`getHealth`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/#gethealth)

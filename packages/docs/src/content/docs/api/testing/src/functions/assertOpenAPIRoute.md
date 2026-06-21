@@ -19,7 +19,7 @@ readonly `TestingConstructor`\<`unknown`\>[] | `OpenAPIDocumentLike`
 
 ### options?
 
-`EmitOpenAPIOptions` = `{}`
+[`EmitOpenAPIOptions`](/api/openapi-spec/src/type-aliases/emitopenapioptions/) = `{}`
 
 ## Returns
 

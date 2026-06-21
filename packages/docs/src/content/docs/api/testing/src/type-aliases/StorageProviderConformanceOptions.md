@@ -11,11 +11,11 @@ title: "StorageProviderConformanceOptions"
 
 ### createProvider()
 
-> `readonly` **createProvider**: () => `StorageProvider` \| `Promise`\<`StorageProvider`\>
+> `readonly` **createProvider**: () => [`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/) \| `Promise`\<[`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/)\>
 
 #### Returns
 
-`StorageProvider` \| `Promise`\<`StorageProvider`\>
+[`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/) \| `Promise`\<[`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/)\>
 
 ***
 

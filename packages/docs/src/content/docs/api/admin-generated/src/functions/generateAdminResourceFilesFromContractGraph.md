@@ -11,7 +11,7 @@ title: "generateAdminResourceFilesFromContractGraph"
 
 ### graph
 
-`ContractGraph`
+[`ContractGraph`](/api/protocols-core/src/type-aliases/contractgraph/)
 
 ### outDir
 

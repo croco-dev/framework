@@ -11,7 +11,7 @@ title: "getAdminGeneratedDiagnostics"
 
 ### graph
 
-`ContractGraph`
+[`ContractGraph`](/api/protocols-core/src/type-aliases/contractgraph/)
 
 ## Returns
 
