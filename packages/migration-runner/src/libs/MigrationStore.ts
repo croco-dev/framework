@@ -82,7 +82,7 @@ export class MigrationStore {
 
 function getResultRows(result: unknown): Record<string, unknown>[] {
   if (result === null || result === undefined) {
-    return [];
+    throw new UnsupportedMigrationQueryResultProblem();
   }
 
   if (Array.isArray(result)) {

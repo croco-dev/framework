@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { Problem } from "@croco/problems-core";
 import { Command } from "commander";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -56,7 +57,7 @@ export async function runUp(options: UpOptions): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Migration failed:", error instanceof Error ? error.message : error);
+    writeCliError("Migration failed", error);
     exitCode = 1;
   } finally {
     await pool?.end();
@@ -84,7 +85,7 @@ export async function runDown(options: DownOptions): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Migration failed:", error instanceof Error ? error.message : error);
+    writeCliError("Migration failed", error);
     exitCode = 1;
   } finally {
     await pool?.end();
@@ -115,7 +116,7 @@ export async function runStatus(options: StatusOptions): Promise<void> {
       console.log(`\n${executed}/${status.length} migrations executed`);
     }
   } catch (error) {
-    console.error("Status check failed:", error instanceof Error ? error.message : error);
+    writeCliError("Status check failed", error);
     exitCode = 1;
   } finally {
     await pool?.end();
@@ -130,7 +131,7 @@ program
   .option("-t, --target <id>", "target migration ID")
   .option("-c, --connection <url>", "database connection URL")
   .option("--table <name>", "migrations table name", "_migrations")
-  .option("--dialect <dialect>", "database dialect (postgres, sqlite, mysql)", "postgres")
+  .option("--dialect <dialect>", "database dialect (postgres)", "postgres")
   .action(async (options) => {
     await runUp(options);
   });
@@ -143,7 +144,7 @@ program
   .option("-n, --count <number>", "number of migrations to revert", "1")
   .option("-c, --connection <url>", "database connection URL")
   .option("--table <name>", "migrations table name", "_migrations")
-  .option("--dialect <dialect>", "database dialect (postgres, sqlite, mysql)", "postgres")
+  .option("--dialect <dialect>", "database dialect (postgres)", "postgres")
   .action(async (options) => {
     await runDown(options);
   });
@@ -154,7 +155,7 @@ program
   .option("-d, --dir <path>", "migrations directory", "./migrations")
   .option("-c, --connection <url>", "database connection URL")
   .option("--table <name>", "migrations table name", "_migrations")
-  .option("--dialect <dialect>", "database dialect (postgres, sqlite, mysql)", "postgres")
+  .option("--dialect <dialect>", "database dialect (postgres)", "postgres")
   .action(async (options) => {
     await runStatus(options);
   });
@@ -178,6 +179,24 @@ async function createDbClient(
     default:
       throw new UnsupportedDialectProblem(dialect);
   }
+}
+
+function writeCliError(prefix: string, error: unknown): void {
+  console.error(`${prefix}: ${formatCliError(error)}`);
+}
+
+function formatCliError(error: unknown): string {
+  if (error instanceof Problem) {
+    const details = error.toJSON();
+    const detail = typeof details.detail === "string" ? `: ${details.detail}` : "";
+    return `${details.code} (${details.status} ${details.title})${detail}`;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }
 
 if (typeof require !== "undefined" && typeof module !== "undefined" && require.main === module) {

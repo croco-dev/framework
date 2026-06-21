@@ -54,6 +54,8 @@ import {
 } from "../cli";
 
 describe("CLI cleanup", () => {
+  const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
   const mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
   const baseUpOptions: UpOptions = {
@@ -80,6 +82,10 @@ describe("CLI cleanup", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPoolEnd.mockResolvedValue(undefined);
+    mockRunnerUp.mockResolvedValue(["20240101000001_test"]);
+    mockRunnerDown.mockResolvedValue(["20240101000001_test"]);
+    mockRunnerStatus.mockResolvedValue([]);
   });
 
   describe("up command", () => {
@@ -103,6 +109,20 @@ describe("CLI cleanup", () => {
       await runUp({ ...baseUpOptions, connection: undefined });
 
       expect(mockPoolEnd).toHaveBeenCalledTimes(0);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining("migration-runner/database-url-required"),
+      );
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should report unsupported dialects with a stable Problem code", async () => {
+      await runUp({ ...baseUpOptions, dialect: "sqlite" });
+
+      expect(mockRunnerUp).not.toHaveBeenCalled();
+      expect(mockPoolEnd).toHaveBeenCalledTimes(0);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining("migration-runner/unsupported-dialect"),
+      );
       expect(mockExit).toHaveBeenCalledWith(1);
     });
   });
@@ -124,6 +144,9 @@ describe("CLI cleanup", () => {
       await runDown({ ...baseDownOptions, count });
 
       expect(mockRunnerDown).not.toHaveBeenCalled();
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining("migration-runner/invalid-count"),
+      );
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
@@ -140,6 +163,9 @@ describe("CLI cleanup", () => {
       await runDown({ ...baseDownOptions, connection: undefined });
 
       expect(mockPoolEnd).toHaveBeenCalledTimes(0);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining("migration-runner/database-url-required"),
+      );
       expect(mockExit).toHaveBeenCalledWith(1);
     });
   });
@@ -159,6 +185,8 @@ describe("CLI cleanup", () => {
       await runStatus(baseStatusOptions);
 
       expect(mockPoolEnd).toHaveBeenCalledTimes(1);
+      expect(mockConsoleLog).toHaveBeenCalledWith("Migration status:");
+      expect(mockConsoleLog).toHaveBeenCalledWith("\n1/2 migrations executed");
       expect(mockExit).toHaveBeenCalledWith(0);
     });
 
@@ -175,6 +203,20 @@ describe("CLI cleanup", () => {
       await runStatus({ ...baseStatusOptions, connection: undefined });
 
       expect(mockPoolEnd).toHaveBeenCalledTimes(0);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining("migration-runner/database-url-required"),
+      );
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should report unsupported dialects with a stable Problem code", async () => {
+      await runStatus({ ...baseStatusOptions, dialect: "mysql" });
+
+      expect(mockRunnerStatus).not.toHaveBeenCalled();
+      expect(mockPoolEnd).toHaveBeenCalledTimes(0);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining("migration-runner/unsupported-dialect"),
+      );
       expect(mockExit).toHaveBeenCalledWith(1);
     });
   });

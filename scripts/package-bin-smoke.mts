@@ -45,6 +45,7 @@ type BinTarget = {
 
 type SmokeCommand = {
   readonly args: readonly string[];
+  readonly expectedExitCode?: number;
   readonly expectedOutput: string;
 };
 
@@ -373,32 +374,34 @@ function runPackageBinSmoke(
   );
 
   for (const binTarget of binTargets) {
-    const smokeCommand = smokeCommandFor(binTarget, packageInfo);
-    const result = run(
-      "pnpm",
-      ["exec", binTarget.commandName, ...smokeCommand.args],
-      packageSmokeRoot,
-      {
-        label: `${packageInfo.packageName}: pnpm exec ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
-      },
-    );
-    const output = `${result.stdout}\n${result.stderr}`;
-    if (!output.includes(smokeCommand.expectedOutput)) {
-      throw new Error(
-        [
-          `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not print expected output`,
-          `Expected to include: ${smokeCommand.expectedOutput}`,
-          result.stdout.trim(),
-          result.stderr.trim(),
-        ]
-          .filter(Boolean)
-          .join("\n"),
+    for (const smokeCommand of smokeCommandsFor(binTarget, packageInfo)) {
+      const result = run(
+        "pnpm",
+        ["exec", binTarget.commandName, ...smokeCommand.args],
+        packageSmokeRoot,
+        {
+          expectedExitCode: smokeCommand.expectedExitCode,
+          label: `${packageInfo.packageName}: pnpm exec ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
+        },
+      );
+      const output = `${result.stdout}\n${result.stderr}`;
+      if (!output.includes(smokeCommand.expectedOutput)) {
+        throw new Error(
+          [
+            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not print expected output`,
+            `Expected to include: ${smokeCommand.expectedOutput}`,
+            result.stdout.trim(),
+            result.stderr.trim(),
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        );
+      }
+
+      console.log(
+        `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
       );
     }
-
-    console.log(
-      `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
-    );
   }
 }
 
@@ -460,20 +463,35 @@ function internalPeerPackagesFor(graphPackages: readonly PackedPackageInfo[]): P
   );
 }
 
-function smokeCommandFor(binTarget: BinTarget, packageInfo: PackedPackageInfo): SmokeCommand {
+function smokeCommandsFor(
+  binTarget: BinTarget,
+  packageInfo: PackedPackageInfo,
+): readonly SmokeCommand[] {
   switch (binTarget.commandName) {
     case "create-croco-app":
-      return { args: ["--version"], expectedOutput: packageVersionFor(packageInfo) };
+      return [{ args: ["--version"], expectedOutput: packageVersionFor(packageInfo) }];
     case "croco":
-      return { args: ["--help"], expectedOutput: "Croco framework CLI" };
+      return [{ args: ["--help"], expectedOutput: "Croco framework CLI" }];
     case "croco-openapi-spec":
-      return { args: ["--help"], expectedOutput: "Usage: croco-openapi-spec" };
+      return [{ args: ["--help"], expectedOutput: "Usage: croco-openapi-spec" }];
     case "croco-rpc-codegen":
-      return { args: ["--help"], expectedOutput: "Usage: croco-rpc-codegen" };
+      return [{ args: ["--help"], expectedOutput: "Usage: croco-rpc-codegen" }];
     case "migrate":
-      return { args: ["--help"], expectedOutput: "Drizzle migration runner" };
+      return [
+        { args: ["--help"], expectedOutput: "Drizzle migration runner" },
+        {
+          args: ["status"],
+          expectedExitCode: 1,
+          expectedOutput: "migration-runner/database-url-required",
+        },
+        {
+          args: ["down", "--count", "abc"],
+          expectedExitCode: 1,
+          expectedOutput: "migration-runner/invalid-count",
+        },
+      ];
     default:
-      return { args: ["--help"], expectedOutput: binTarget.commandName };
+      return [{ args: ["--help"], expectedOutput: binTarget.commandName }];
   }
 }
 
@@ -514,19 +532,23 @@ function run(
   command: string,
   args: readonly string[],
   cwd: string,
-  options: { readonly label: string },
+  options: { readonly expectedExitCode?: number; readonly label: string },
 ): RunResult {
+  const expectedExitCode = options.expectedExitCode ?? 0;
   const result = spawnSync(command, [...args], {
     cwd,
     encoding: "utf-8",
+    env: { ...process.env, DATABASE_URL: "" },
     stdio: "pipe",
     timeout: spawnTimeoutMs,
   });
 
-  if (result.error || result.status !== 0) {
+  if (result.error || result.status !== expectedExitCode) {
     throw new Error(
       [
         `${options.label}: ${command} ${args.map((arg) => relativeArg(cwd, arg)).join(" ")} failed`,
+        `Expected exit code: ${expectedExitCode}`,
+        `Actual exit code: ${result.status ?? "null"}`,
         result.error ? `${result.error.name}: ${result.error.message}` : undefined,
         result.stdout.trim(),
         result.stderr.trim(),
