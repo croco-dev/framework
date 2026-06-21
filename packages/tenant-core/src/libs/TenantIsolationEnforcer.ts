@@ -1,3 +1,11 @@
+import {
+  addPolicyDecisionIdExtension,
+  createPolicyDecisionTrace,
+  recordPolicyDecisionTrace,
+  type PolicyDecisionSourceLocation,
+  type PolicyDecisionTrace,
+  type PolicyDecisionTraceSink,
+} from "@croco/access-core";
 import { recordEvent } from "@croco/telemetry-api";
 import {
   TenantAdminBypassReasonRequiredProblem,
@@ -37,10 +45,13 @@ export type TenantScopedOperation = TenantScopedOperationMarker & {
   readonly kind: TenantOperationKind;
   readonly isolation?: TenantOperationIsolation;
   readonly resource?: string;
+  readonly ruleId?: string;
+  readonly sourceLocation?: PolicyDecisionSourceLocation;
   readonly tenantId?: string | null;
   readonly requestedTenantId?: string | null;
   readonly defaultTenantId?: string | null;
   readonly bypass?: TenantBypassReason;
+  readonly inputs?: Record<string, unknown>;
   readonly metadata?: Record<string, string | number | boolean | null | undefined>;
 };
 
@@ -65,6 +76,8 @@ export type TenantIsolationAuditEvent = {
   readonly resource?: string;
   readonly reason?: string;
   readonly problemCode?: string;
+  readonly decisionId?: string;
+  readonly policyDecisionTrace?: PolicyDecisionTrace;
   readonly metadata?: Record<string, unknown>;
 };
 
@@ -76,6 +89,7 @@ export type TenantIsolationEnforcerOptions = {
   readonly contextProvider?: TenantContextProvider;
   readonly defaultTenantIds?: readonly string[];
   readonly auditSink?: TenantIsolationAuditSink;
+  readonly policyDecisionTraceSink?: PolicyDecisionTraceSink;
 };
 
 export type TenantQueryPredicate = {
@@ -148,11 +162,13 @@ export class TenantIsolationEnforcer {
   private readonly contextProvider: TenantContextProvider;
   private readonly defaultTenantIds: ReadonlySet<string>;
   private readonly auditSink: TenantIsolationAuditSink | undefined;
+  private readonly policyDecisionTraceSink: PolicyDecisionTraceSink | undefined;
 
   constructor(options: TenantIsolationEnforcerOptions = {}) {
     this.contextProvider = options.contextProvider ?? new TenantManager();
     this.defaultTenantIds = new Set(options.defaultTenantIds ?? ["default"]);
     this.auditSink = options.auditSink;
+    this.policyDecisionTraceSink = options.policyDecisionTraceSink;
   }
 
   async enforce<TResult>(
@@ -397,9 +413,21 @@ export class TenantIsolationEnforcer {
   ): Promise<void> {
     const eventType =
       evidence.status === "bypassed" ? "tenant-isolation.bypassed" : "tenant-isolation.allowed";
+    const trace = await this.recordPolicyDecision(
+      operation,
+      "allow",
+      evidence.tenantId,
+      evidence.bypassReason?.reason,
+    );
     recordEvent(
       eventType,
-      toTelemetryAttributes(operation, evidence.tenantId, evidence.bypassReason?.reason),
+      toTelemetryAttributes(
+        operation,
+        evidence.tenantId,
+        evidence.bypassReason?.reason,
+        undefined,
+        trace.decisionId,
+      ),
     );
     await this.auditSink?.recordTenantIsolation({
       type: eventType,
@@ -408,6 +436,8 @@ export class TenantIsolationEnforcer {
       tenantId: evidence.tenantId,
       resource: operation.resource,
       reason: evidence.bypassReason?.reason,
+      decisionId: trace.decisionId,
+      policyDecisionTrace: trace,
       metadata: operation.metadata,
     });
   }
@@ -421,9 +451,23 @@ export class TenantIsolationEnforcer {
       | TenantUnsafeQueryProblem,
     tenantId: string | null,
   ): Promise<never> {
+    const trace = await this.recordPolicyDecision(
+      operation,
+      "deny",
+      tenantId,
+      problem.detail ?? problem.message,
+      problem.code,
+    );
+    addPolicyDecisionIdExtension(problem, trace.decisionId);
     recordEvent(
       "tenant-isolation.denied",
-      toTelemetryAttributes(operation, tenantId, problem.detail ?? problem.message, problem.code),
+      toTelemetryAttributes(
+        operation,
+        tenantId,
+        problem.detail ?? problem.message,
+        problem.code,
+        trace.decisionId,
+      ),
     );
     await this.auditSink?.recordTenantIsolation({
       type: "tenant-isolation.denied",
@@ -433,9 +477,45 @@ export class TenantIsolationEnforcer {
       resource: operation.resource,
       reason: problem.detail ?? problem.message,
       problemCode: problem.code,
+      decisionId: trace.decisionId,
+      policyDecisionTrace: trace,
       metadata: operation.metadata,
     });
     throw problem;
+  }
+
+  private async recordPolicyDecision(
+    operation: TenantScopedOperation,
+    result: "allow" | "deny",
+    tenantId: string | null,
+    reason?: string,
+    problemCode?: string,
+  ): Promise<PolicyDecisionTrace> {
+    const trace = createPolicyDecisionTrace({
+      policyKind: "tenant-isolation",
+      result,
+      ruleId: operation.ruleId ?? `tenant-isolation:${operation.kind}:${operation.name}`,
+      subjectRef: operation.bypass?.actorId ? `actor:${operation.bypass.actorId}` : undefined,
+      resourceRef: operation.resource,
+      tenantId: tenantId ?? undefined,
+      sourceLocation: operation.sourceLocation,
+      reason,
+      inputs: {
+        operation: operation.name,
+        kind: operation.kind,
+        isolation: operation.isolation ?? "tenant-scoped",
+        requestedTenantId: operation.requestedTenantId,
+        defaultTenantId: operation.defaultTenantId,
+        resource: operation.resource,
+        problemCode,
+        bypass: operation.bypass,
+        metadata: operation.metadata,
+        ...operation.inputs,
+      },
+    });
+    await recordPolicyDecisionTrace(trace, { auditSink: this.policyDecisionTraceSink });
+
+    return trace;
   }
 }
 
@@ -548,6 +628,7 @@ function toTelemetryAttributes(
   tenantId: string | null,
   reason?: string,
   problemCode?: string,
+  decisionId?: string,
 ): Record<string, string | number | boolean> {
   const attributes: Record<string, string | number | boolean> = {
     "tenant.operation": operation.name,
@@ -568,6 +649,10 @@ function toTelemetryAttributes(
 
   if (problemCode) {
     attributes["tenant.problem_code"] = problemCode;
+  }
+
+  if (decisionId) {
+    attributes["tenant.policy_decision_id"] = decisionId;
   }
 
   return attributes;

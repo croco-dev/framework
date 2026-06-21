@@ -1,4 +1,5 @@
 import { Container } from "@croco/framework-context";
+import type { PolicyDecisionTrace } from "@croco/access-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EntitlementManager } from "../libs/EntitlementManager";
 import { EntitlementOverageAllowedEvent, EntitlementQuotaExceededEvent } from "../libs/events";
@@ -105,12 +106,19 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "advanced_support");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: true,
       status: "allowed",
       featureKey: "advanced_support",
       type: "boolean",
       planId: "pro",
+    });
+    expect(result.trace).toMatchObject({
+      policyKind: "entitlement",
+      result: "allow",
+      ruleId: "entitlement:advanced_support",
+      resourceRef: "entitlement:advanced_support",
+      tenantId: "tenant-1",
     });
   });
 
@@ -119,7 +127,7 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "team_members");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: true,
       status: "allowed",
       featureKey: "team_members",
@@ -148,7 +156,7 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "api_calls");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: true,
       status: "allowed",
       featureKey: "api_calls",
@@ -174,7 +182,7 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "storage");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: true,
       status: "allowed",
       featureKey: "storage",
@@ -196,7 +204,7 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "advanced_support");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: false,
       status: "denied",
       featureKey: "advanced_support",
@@ -210,7 +218,7 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "audit_logs");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: false,
       status: "denied",
       featureKey: "audit_logs",
@@ -227,7 +235,7 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "events");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: false,
       status: "denied",
       featureKey: "events",
@@ -250,7 +258,7 @@ describe("EntitlementManager", () => {
 
     const result = await manager.check("tenant-1", "reports");
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       granted: false,
       status: "denied",
       featureKey: "reports",
@@ -272,6 +280,56 @@ describe("EntitlementManager", () => {
         quota: 3,
       }),
     );
+    expect(result.trace).toMatchObject({
+      policyKind: "entitlement",
+      result: "deny",
+      reason: "quota_exceeded",
+      ruleId: "entitlement:reports",
+    });
+  });
+
+  it("should record redacted entitlement decision traces through the audit sink", async () => {
+    const traces: PolicyDecisionTrace[] = [];
+    manager = new EntitlementManager(
+      registry,
+      new StaticSubscriptionProvider("pro"),
+      quotaChecker,
+      meterLookup,
+      {
+        traceSink: {
+          recordPolicyDecisionTrace: (trace) => {
+            traces.push(trace);
+          },
+        },
+      },
+    );
+
+    const result = await manager.check("tenant-1", "audit_logs", {
+      subjectRef: "user:user-1",
+      sourceLocation: {
+        file: "routes/audit.ts",
+        line: 7,
+      },
+      inputs: {
+        apiKey: "secret-key",
+      },
+    });
+
+    expect(result).toMatchObject({
+      granted: false,
+      reason: "not_entitled",
+    });
+    expect(result.trace).toMatchObject({
+      policyKind: "entitlement",
+      result: "deny",
+      subjectRef: "user:user-1",
+      sourceLocation: {
+        file: "routes/audit.ts",
+        line: 7,
+      },
+    });
+    expect(result.trace?.inputs.apiKey).toBe("[Redacted]");
+    expect(traces).toEqual([result.trace]);
   });
 
   it("should allow requests that exceed quota with WARN policy", async () => {

@@ -15,6 +15,11 @@ describe("Access", () => {
     expect(metadata).not.toBeUndefined();
     expect(metadata.objectType).toBe("document");
     expect(metadata.relation).toBe("editor");
+    expect(metadata.ruleId).toBe("access:document:editor");
+    expect(metadata.sourceLocation).toMatchObject({
+      file: expect.stringContaining("Access.spec.ts"),
+      line: expect.any(Number),
+    });
   });
 
   it("should store different metadata for different methods", () => {

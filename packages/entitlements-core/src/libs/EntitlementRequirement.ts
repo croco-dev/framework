@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import type { PolicyDecisionSourceLocation } from "@croco/access-core";
 import { EntitlementRequirementProblem } from "./problems/EntitlementProblems";
 
 export const ENTITLEMENT_REQUIRED_KEY = "entitlement:required";
@@ -14,6 +15,8 @@ export type EntitlementRequirement = {
   readonly feature: string;
   readonly description?: string;
   readonly resource?: EntitlementResourceRequirement;
+  readonly ruleId?: string;
+  readonly sourceLocation?: PolicyDecisionSourceLocation;
 };
 
 export type EntitlementRequirementMetadata = EntitlementRequirement;
@@ -29,6 +32,8 @@ export function defineEntitlementRequirement(
     ...(requirement.resource
       ? { resource: normalizeResourceRequirement(requirement.resource) }
       : {}),
+    ruleId: requirement.ruleId ?? `entitlement:${requirement.feature}`,
+    ...(requirement.sourceLocation ? { sourceLocation: requirement.sourceLocation } : {}),
   };
 }
 
@@ -107,7 +112,9 @@ function readEntitlementRequirements(
       ? Reflect.getMetadata(ENTITLEMENT_REQUIRED_KEY, target)
       : Reflect.getMetadata(ENTITLEMENT_REQUIRED_KEY, target, propertyKey);
 
-  return typeof legacy === "string" && legacy.length > 0 ? [{ feature: legacy }] : [];
+  return typeof legacy === "string" && legacy.length > 0
+    ? [defineEntitlementRequirement({ feature: legacy })]
+    : [];
 }
 
 function normalizeRequirementList(value: unknown): readonly EntitlementRequirement[] {

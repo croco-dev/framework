@@ -39,6 +39,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/access-core": "workspace:*",
     "@croco/auth-core": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/framework-context": "workspace:*",

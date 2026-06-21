@@ -1,3 +1,9 @@
+import {
+  createPolicyDecisionTrace,
+  recordPolicyDecisionTrace,
+  type PolicyDecisionResult,
+  type PolicyDecisionTraceSink,
+} from "@croco/access-core";
 import { Component, Container, Inject } from "@croco/framework-context";
 import { EntitlementOverageAllowedEvent, EntitlementQuotaExceededEvent } from "./events";
 import {
@@ -7,7 +13,16 @@ import {
   PlanEntitlementRegistry,
   SubscriptionProvider,
 } from "./interfaces";
-import type { EntitlementCheckResult, EntitlementRule, OveragePolicy } from "./types";
+import type {
+  EntitlementCheckOptions,
+  EntitlementCheckResult,
+  EntitlementRule,
+  OveragePolicy,
+} from "./types";
+
+export type EntitlementManagerOptions = {
+  readonly traceSink?: PolicyDecisionTraceSink;
+};
 
 @Component()
 export class EntitlementManager {
@@ -16,54 +31,75 @@ export class EntitlementManager {
     @Inject(SubscriptionProvider.token) private readonly subscriptionProvider: SubscriptionProvider,
     @Inject(EntitlementQuotaChecker.token) private readonly quotaChecker: EntitlementQuotaChecker,
     @Inject(EntitlementMeterLookup.token) private readonly meterLookup: EntitlementMeterLookup,
+    private readonly options: EntitlementManagerOptions = {},
   ) {}
 
-  async check(tenantId: string, featureKey: string): Promise<EntitlementCheckResult> {
+  async check(
+    tenantId: string,
+    featureKey: string,
+    checkOptions: EntitlementCheckOptions = {},
+  ): Promise<EntitlementCheckResult> {
     const planId = await this.subscriptionProvider.getCurrentPlanId(tenantId);
     if (!planId) {
-      return {
-        granted: false,
-        status: "denied",
-        featureKey,
-        type: "boolean",
-        reason: "no_subscription",
-      };
+      return this.withTrace(
+        tenantId,
+        {
+          granted: false,
+          status: "denied",
+          featureKey,
+          type: "boolean",
+          reason: "no_subscription",
+        },
+        checkOptions,
+      );
     }
 
     const rule = await this.registry.findRule(planId, featureKey);
     if (!rule) {
-      return {
-        granted: false,
-        status: "denied",
-        featureKey,
-        type: "boolean",
-        reason: "not_entitled",
-        planId,
-      };
+      return this.withTrace(
+        tenantId,
+        {
+          granted: false,
+          status: "denied",
+          featureKey,
+          type: "boolean",
+          reason: "not_entitled",
+          planId,
+        },
+        checkOptions,
+      );
     }
 
     switch (rule.type) {
       case "boolean":
-        return {
-          granted: true,
-          status: "allowed",
-          featureKey,
-          type: "boolean",
-          planId,
-        };
+        return this.withTrace(
+          tenantId,
+          {
+            granted: true,
+            status: "allowed",
+            featureKey,
+            type: "boolean",
+            planId,
+          },
+          checkOptions,
+        );
 
       case "static":
-        return {
-          granted: true,
-          status: "allowed",
-          featureKey,
-          type: "static",
-          value: rule.value,
-          planId,
-        };
+        return this.withTrace(
+          tenantId,
+          {
+            granted: true,
+            status: "allowed",
+            featureKey,
+            type: "static",
+            value: rule.value,
+            planId,
+          },
+          checkOptions,
+        );
 
       case "metered":
-        return this.checkMetered(tenantId, featureKey, rule, planId);
+        return this.checkMetered(tenantId, featureKey, rule, planId, checkOptions);
     }
   }
 
@@ -72,6 +108,7 @@ export class EntitlementManager {
     featureKey: string,
     rule: EntitlementRule,
     planId: string,
+    checkOptions: EntitlementCheckOptions,
   ): Promise<EntitlementCheckResult> {
     const usageKey = rule.meterId ?? featureKey;
     const meterQuota = rule.meterId
@@ -80,31 +117,43 @@ export class EntitlementManager {
     const quota = rule.quota ?? meterQuota;
 
     if (quota == null) {
-      return {
-        granted: false,
-        status: "denied",
-        featureKey,
-        type: "metered",
-        reason: "no_quota_defined",
-        planId,
-      };
+      return this.withTrace(
+        tenantId,
+        {
+          granted: false,
+          status: "denied",
+          featureKey,
+          type: "metered",
+          reason: "no_quota_defined",
+          planId,
+        },
+        checkOptions,
+        {
+          meterId: rule.meterId,
+          quotaSource: "missing",
+        },
+      );
     }
 
     const quotaStatus = await this.quotaChecker.checkQuota(tenantId, usageKey, quota);
     const overagePolicy = rule.overagePolicy ?? "BLOCK";
 
     if (!quotaStatus.exceeded) {
-      return this.createMeteredResult({
-        granted: true,
-        status: "allowed",
-        featureKey,
-        planId,
-        quota,
-        usage: quotaStatus.usage,
-        remaining: quotaStatus.remaining,
-        exceeded: false,
-        overagePolicy,
-      });
+      return this.withTrace(
+        tenantId,
+        this.createMeteredResult({
+          granted: true,
+          status: "allowed",
+          featureKey,
+          planId,
+          quota,
+          usage: quotaStatus.usage,
+          remaining: quotaStatus.remaining,
+          exceeded: false,
+          overagePolicy,
+        }),
+        checkOptions,
+      );
     }
 
     await this.publishEvent(
@@ -113,31 +162,39 @@ export class EntitlementManager {
 
     switch (overagePolicy) {
       case "BLOCK":
-        return this.createMeteredResult({
-          granted: false,
-          status: "denied",
-          featureKey,
-          planId,
-          quota,
-          usage: quotaStatus.usage,
-          remaining: quotaStatus.remaining,
-          exceeded: true,
-          reason: "quota_exceeded",
-          overagePolicy,
-        });
+        return this.withTrace(
+          tenantId,
+          this.createMeteredResult({
+            granted: false,
+            status: "denied",
+            featureKey,
+            planId,
+            quota,
+            usage: quotaStatus.usage,
+            remaining: quotaStatus.remaining,
+            exceeded: true,
+            reason: "quota_exceeded",
+            overagePolicy,
+          }),
+          checkOptions,
+        );
 
       case "WARN":
-        return this.createMeteredResult({
-          granted: true,
-          status: "soft-limit",
-          featureKey,
-          planId,
-          quota,
-          usage: quotaStatus.usage,
-          remaining: quotaStatus.remaining,
-          exceeded: true,
-          overagePolicy,
-        });
+        return this.withTrace(
+          tenantId,
+          this.createMeteredResult({
+            granted: true,
+            status: "soft-limit",
+            featureKey,
+            planId,
+            quota,
+            usage: quotaStatus.usage,
+            remaining: quotaStatus.remaining,
+            exceeded: true,
+            overagePolicy,
+          }),
+          checkOptions,
+        );
 
       case "ALLOW_WITH_OVERAGE":
         await this.publishEvent(
@@ -150,17 +207,21 @@ export class EntitlementManager {
           ),
         );
 
-        return this.createMeteredResult({
-          granted: true,
-          status: "overage-allowed",
-          featureKey,
-          planId,
-          quota,
-          usage: quotaStatus.usage,
-          remaining: quotaStatus.remaining,
-          exceeded: true,
-          overagePolicy,
-        });
+        return this.withTrace(
+          tenantId,
+          this.createMeteredResult({
+            granted: true,
+            status: "overage-allowed",
+            featureKey,
+            planId,
+            quota,
+            usage: quotaStatus.usage,
+            remaining: quotaStatus.remaining,
+            exceeded: true,
+            overagePolicy,
+          }),
+          checkOptions,
+        );
     }
   }
 
@@ -200,5 +261,43 @@ export class EntitlementManager {
     }
 
     await publisher.publish(event);
+  }
+
+  private async withTrace(
+    tenantId: string,
+    result: EntitlementCheckResult,
+    checkOptions: EntitlementCheckOptions,
+    extraInputs: Record<string, unknown> = {},
+  ): Promise<EntitlementCheckResult> {
+    const decision: PolicyDecisionResult = result.granted ? "allow" : "deny";
+    const trace = createPolicyDecisionTrace({
+      policyKind: "entitlement",
+      result: decision,
+      ruleId: checkOptions.ruleId ?? `entitlement:${result.featureKey}`,
+      subjectRef: checkOptions.subjectRef,
+      resourceRef: `entitlement:${result.featureKey}`,
+      tenantId,
+      sourceLocation: checkOptions.sourceLocation,
+      reason: result.reason,
+      inputs: {
+        tenantId,
+        featureKey: result.featureKey,
+        type: result.type,
+        planId: result.planId,
+        usage: result.usage,
+        quota: result.quota,
+        remaining: result.remaining,
+        exceeded: result.exceeded,
+        overagePolicy: result.overagePolicy,
+        ...extraInputs,
+        ...checkOptions.inputs,
+      },
+    });
+    await recordPolicyDecisionTrace(trace, { auditSink: this.options.traceSink });
+
+    return {
+      ...result,
+      trace,
+    };
   }
 }

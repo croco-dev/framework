@@ -172,7 +172,7 @@ describe("EntitlementIntegration", () => {
 
       const result = await manager.check("tenant-1", "api_calls");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         granted: true,
         status: "allowed",
         featureKey: "api_calls",
@@ -200,7 +200,7 @@ describe("EntitlementIntegration", () => {
 
       const result = await manager.check("tenant-1", "api_calls");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         granted: false,
         status: "denied",
         featureKey: "api_calls",
@@ -232,7 +232,7 @@ describe("EntitlementIntegration", () => {
 
       const result = await manager.check("tenant-1", "api_calls");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         granted: true,
         status: "soft-limit",
         featureKey: "api_calls",
@@ -263,7 +263,7 @@ describe("EntitlementIntegration", () => {
 
       const result = await manager.check("tenant-1", "api_calls");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         granted: true,
         status: "overage-allowed",
         featureKey: "api_calls",
@@ -301,7 +301,7 @@ describe("EntitlementIntegration", () => {
 
       const result = await manager.check("tenant-1", "storage");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         granted: true,
         status: "allowed",
         featureKey: "storage",
@@ -330,7 +330,7 @@ describe("EntitlementIntegration", () => {
 
       const result = await manager.check("tenant-1", "events");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         granted: false,
         status: "denied",
         featureKey: "events",
