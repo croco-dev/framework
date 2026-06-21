@@ -75,6 +75,7 @@ describe("GraphQLResolver decorator", () => {
     const meta = getResolverMetadata(TestResolver);
     expect(meta).not.toBeUndefined();
     expect(meta?.target).toBe(TestResolver);
+    expect(meta?.scope).toBe("singleton");
     expect(MetadataStorage.get<boolean>(RESOLVERS_KEY, TestResolver)).toBe(true);
     expect(getAllResolversFromRegistry(resolverRegistry)).toHaveLength(0);
   });
@@ -86,6 +87,7 @@ describe("GraphQLResolver decorator", () => {
     const meta = getResolverMetadata(RequestScopedResolver);
     expect(meta).not.toBeUndefined();
     expect(meta?.target).toBe(RequestScopedResolver);
+    expect(meta?.scope).toBe("request");
   });
 });
 

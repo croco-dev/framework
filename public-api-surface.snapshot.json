@@ -12683,9 +12683,21 @@
           "source": "./libs/decorators"
         },
         {
+          "name": "createGraphQLContractSnapshot",
+          "exportKind": "named",
+          "source": "./libs/contract",
+          "declarationKind": "function"
+        },
+        {
           "name": "Ctx",
           "exportKind": "named",
           "source": "./libs/decorators"
+        },
+        {
+          "name": "diffGraphQLContractSnapshots",
+          "exportKind": "named",
+          "source": "./libs/contract",
+          "declarationKind": "function"
         },
         {
           "name": "Field",
@@ -12733,6 +12745,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "GRAPHQL_PROBLEM_RESPONSES_KEY",
+          "exportKind": "named",
+          "source": "./libs/constants",
+          "declarationKind": "const"
+        },
+        {
           "name": "GRAPHQL_ROLES_KEY",
           "exportKind": "named",
           "source": "./libs/constants",
@@ -12767,6 +12785,18 @@
           "exportKind": "named",
           "source": "./libs/errors",
           "declarationKind": "class"
+        },
+        {
+          "name": "GraphQLProblemResponse",
+          "exportKind": "named",
+          "source": "./libs/decorators",
+          "declarationKind": "function"
+        },
+        {
+          "name": "GraphQLProblemResponses",
+          "exportKind": "named",
+          "source": "./libs/decorators",
+          "declarationKind": "function"
         },
         {
           "name": "GraphQLResolver",
@@ -12836,6 +12866,12 @@
           "source": "./libs/decorators"
         },
         {
+          "name": "isGraphQLContractSnapshot",
+          "exportKind": "named",
+          "source": "./libs/contract",
+          "declarationKind": "function"
+        },
+        {
           "name": "isProblem",
           "exportKind": "named",
           "source": "./libs/errors",
@@ -12897,6 +12933,12 @@
           "source": "./libs/decorators"
         },
         {
+          "name": "stringifyGraphQLContractSnapshot",
+          "exportKind": "named",
+          "source": "./libs/contract",
+          "declarationKind": "function"
+        },
+        {
           "name": "Subscription",
           "exportKind": "named",
           "source": "./libs/decorators"
@@ -12924,6 +12966,71 @@
           "source": "./libs/types"
         },
         {
+          "name": "GraphQLContractDiff",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractDiffChange",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractDiffSeverity",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractOperationKind",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshot",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotArgument",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotOperation",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotOptions",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotProblemResponse",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotResolver",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotResolverMethod",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
+          "name": "GraphQLContractSnapshotVersion",
+          "exportKind": "named",
+          "source": "./libs/contract"
+        },
+        {
           "name": "GraphQLGuard",
           "exportKind": "named",
           "source": "./libs/types"
@@ -12942,6 +13049,16 @@
           "name": "GraphQLInterceptorContext",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "GraphQLProblemResponseMetadata",
+          "exportKind": "named",
+          "source": "./libs/decorators"
+        },
+        {
+          "name": "GraphQLProblemResponseOptions",
+          "exportKind": "named",
+          "source": "./libs/decorators"
         },
         {
           "name": "GraphQLResolverMetadata",

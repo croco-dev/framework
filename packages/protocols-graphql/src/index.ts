@@ -1,11 +1,17 @@
 export {
   GRAPHQL_GUARDS_KEY,
   GRAPHQL_INTERCEPTORS_KEY,
+  GRAPHQL_PROBLEM_RESPONSES_KEY,
   GRAPHQL_ROLES_KEY,
   RESOLVER_KEY,
   RESOLVERS_KEY,
 } from "./libs/constants";
-export type { GraphQLResolverOptions, PubSub } from "./libs/decorators";
+export type {
+  GraphQLProblemResponseMetadata,
+  GraphQLProblemResponseOptions,
+  GraphQLResolverOptions,
+  PubSub,
+} from "./libs/decorators";
 export {
   Arg,
   Args,
@@ -15,6 +21,8 @@ export {
   Field,
   FieldResolver,
   Float,
+  GraphQLProblemResponse,
+  GraphQLProblemResponses,
   GraphQLResolver,
   ID,
   Info,
@@ -28,6 +36,27 @@ export {
   Root,
   Subscription,
 } from "./libs/decorators";
+export {
+  createGraphQLContractSnapshot,
+  diffGraphQLContractSnapshots,
+  isGraphQLContractSnapshot,
+  stringifyGraphQLContractSnapshot,
+} from "./libs/contract";
+export type {
+  GraphQLContractDiff,
+  GraphQLContractDiffChange,
+  GraphQLContractDiffSeverity,
+  GraphQLContractOperationKind,
+  GraphQLContractSnapshot,
+  GraphQLContractSnapshotArgument,
+  GraphQLContractSnapshotDiagnostic,
+  GraphQLContractSnapshotOperation,
+  GraphQLContractSnapshotOptions,
+  GraphQLContractSnapshotProblemResponse,
+  GraphQLContractSnapshotResolver,
+  GraphQLContractSnapshotResolverMethod,
+  GraphQLContractSnapshotVersion,
+} from "./libs/contract";
 export {
   GraphQLAuthenticationProblem,
   GraphQLAuthorizationProblem,

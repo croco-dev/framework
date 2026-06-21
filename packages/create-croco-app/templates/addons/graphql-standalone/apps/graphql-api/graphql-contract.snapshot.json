@@ -1,0 +1,30 @@
+{
+  "snapshotVersion": "croco.graphql-contract.snapshot.v1",
+  "sdl": "type Query {\n  health: String!\n}\n",
+  "operationCount": 1,
+  "resolverCount": 1,
+  "operations": [
+    {
+      "kind": "query",
+      "name": "health",
+      "type": "String!",
+      "args": []
+    }
+  ],
+  "resolvers": [
+    {
+      "resolverName": "HealthResolver",
+      "diScope": null,
+      "methods": [
+        {
+          "methodName": "health",
+          "guards": [],
+          "interceptors": [],
+          "roles": [],
+          "problems": []
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

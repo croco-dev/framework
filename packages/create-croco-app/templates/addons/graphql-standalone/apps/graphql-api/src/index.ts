@@ -1,14 +1,10 @@
 import "reflect-metadata";
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
-import { buildSchema } from "type-graphql";
-import { HealthResolver } from "./resolvers/health.resolver.js";
+import { createSchema } from "./schema.js";
 
 async function bootstrap() {
-  const schema = await buildSchema({
-    resolvers: [HealthResolver],
-    validate: false,
-  });
+  const schema = await createSchema();
 
   const server = new ApolloServer({ schema });
   const { url } = await startStandaloneServer(server, {

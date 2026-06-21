@@ -137,11 +137,13 @@ describe("ExponentialBackoff", () => {
     });
 
     it("delay=0이면 즉시 반환해야 한다", async () => {
-      const backoff = new ExponentialBackoff({ delay: 0 });
-      const start = Date.now();
+      const sleepSpy = vi.fn(() => Promise.resolve());
+      const deps: BackoffDependencies = { sleep: sleepSpy };
+      const backoff = new ExponentialBackoff({ delay: 0 }, deps);
+
       await backoff.wait(0);
-      const end = Date.now();
-      expect(end - start).toBeLessThan(10);
+
+      expect(sleepSpy).not.toHaveBeenCalled();
     });
   });
 

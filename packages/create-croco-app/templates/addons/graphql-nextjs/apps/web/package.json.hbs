@@ -3,15 +3,18 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "pnpm contract:check && next build",
+    "contract:check": "tsx src/server/graphql-contract.ts --check",
+    "contract:snapshot": "tsx src/server/graphql-contract.ts --write",
     "dev": "next dev",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm contract:check && tsc --noEmit"
   },
   "dependencies": {
     "@apollo/client": "^3.11.0",
     "@apollo/server": "^4.11.0",
     "@as-integrations/next": "^3.2.0",
+    "@croco/protocols-graphql": "workspace:*",
     "graphql": "^16.0.0",
     "type-graphql": "^2.0.0-rc.3",
     "reflect-metadata": "^0.2.0",
@@ -23,6 +26,7 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.0"
   }
 }

@@ -615,6 +615,81 @@ function checkAiSaasStructure() {
   checkFileContains("ai-saas", ["README.md.hbs"], /Do not expose provider API keys/);
 }
 
+describe("GraphQL addon templates", () => {
+  it("wires contract snapshot scripts into standalone and Next.js GraphQL apps", () => {
+    const standalonePackageJson = readJsonTemplate(
+      "addons/graphql-standalone",
+      "apps",
+      "graphql-api",
+      "package.json.hbs",
+    );
+    expect(standalonePackageJson).toMatchObject({
+      scripts: expect.objectContaining({
+        build: "pnpm contract:check && tsup src/index.ts --format cjs --clean",
+        "contract:check": "tsx src/graphql-contract.ts --check",
+        "contract:snapshot": "tsx src/graphql-contract.ts --write",
+        typecheck: "pnpm contract:check && tsc --noEmit",
+      }),
+      dependencies: expect.objectContaining({
+        "@croco/protocols-graphql": "workspace:*",
+      }),
+    });
+    checkFileExists(
+      "addons/graphql-standalone",
+      "apps",
+      "graphql-api",
+      "graphql-contract.snapshot.json",
+    );
+    checkFileContains(
+      "addons/graphql-standalone",
+      ["apps", "graphql-api", "src", "graphql-contract.ts"],
+      /createGraphQLContractSnapshot/,
+    );
+
+    const nextjsPackageJson = readJsonTemplate(
+      "addons/graphql-nextjs",
+      "apps",
+      "web",
+      "package.json.hbs",
+    );
+    expect(nextjsPackageJson).toMatchObject({
+      scripts: expect.objectContaining({
+        build: "pnpm contract:check && next build",
+        "contract:check": "tsx src/server/graphql-contract.ts --check",
+        "contract:snapshot": "tsx src/server/graphql-contract.ts --write",
+        typecheck: "pnpm contract:check && tsc --noEmit",
+      }),
+      dependencies: expect.objectContaining({
+        "@croco/protocols-graphql": "workspace:*",
+      }),
+      devDependencies: expect.objectContaining({
+        tsx: "^4.20.3",
+      }),
+    });
+    const nextjsTsconfig = readJsonTemplate(
+      "addons/graphql-nextjs",
+      "apps",
+      "web",
+      "tsconfig.json.hbs",
+    );
+    expect(nextjsTsconfig).toMatchObject({
+      compilerOptions: expect.objectContaining({
+        jsx: "preserve",
+        module: "esnext",
+        moduleResolution: "bundler",
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true,
+      }),
+    });
+    checkFileExists("addons/graphql-nextjs", "apps", "web", "graphql-contract.snapshot.json");
+    checkFileContains(
+      "addons/graphql-nextjs",
+      ["apps", "web", "src", "server", "graphql-contract.ts"],
+      /diffGraphQLContractSnapshots/,
+    );
+  });
+});
+
 describe.each([
   "spa-be-split",
   "ssr-lambda",
