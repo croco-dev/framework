@@ -164,6 +164,26 @@ jobs:
         id: test
         run: pnpm turbo run test --summarize --continue=always
 
+      - name: Production-ready package gate
+        id: production_ready_package_gate
+        if: always()
+        shell: bash
+        run: |
+          production_ready_args=()
+          if [ "${{ steps.build.outcome }}" != "skipped" ] && [ "${{ steps.typecheck.outcome }}" != "skipped" ] && [ "${{ steps.test.outcome }}" != "skipped" ]; then
+            production_ready_args+=(--require-task-summaries)
+          fi
+          set +e
+          pnpm production-ready:check -- "${production_ready_args[@]}"
+          status=$?
+          set -e
+          if [ -f ci-reports/package-quality/production-ready.md ]; then
+            cat ci-reports/package-quality/production-ready.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Production-ready package report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
       - name: Publish package quality dashboard
         if: always()
         env:

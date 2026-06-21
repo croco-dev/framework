@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 350,
+  "problemCount": 354,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -3378,6 +3378,114 @@
       ]
     },
     {
+      "code": "governance-core/delete-not-supported",
+      "category": "NotImplemented",
+      "status": 501,
+      "title": "Not Implemented",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#governance-core-delete-not-supported",
+      "recovery": {
+        "cause": "The requested capability is not supported by this runtime or adapter.",
+        "userAction": "Use a supported capability or choose an adapter/runtime that provides it.",
+        "operatorAction": "Check runtime capability declarations and provider maturity documentation.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/governance-core/src/libs/problems/DataGovernanceProblems.ts",
+          "line": 34,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "governance-core/export-not-supported",
+      "category": "NotImplemented",
+      "status": 501,
+      "title": "Not Implemented",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#governance-core-export-not-supported",
+      "recovery": {
+        "cause": "The requested capability is not supported by this runtime or adapter.",
+        "userAction": "Use a supported capability or choose an adapter/runtime that provides it.",
+        "operatorAction": "Check runtime capability declarations and provider maturity documentation.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/governance-core/src/libs/problems/DataGovernanceProblems.ts",
+          "line": 15,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "governance-core/resource-validation-failed",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#governance-core-resource-validation-failed",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/governance-core/src/libs/DataGovernanceResource.ts",
+          "line": 102,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "governance-core/retention-policy-violation",
+      "category": "BusinessRuleViolation",
+      "status": 422,
+      "title": "Business Rule Violation",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#governance-core-retention-policy-violation",
+      "recovery": {
+        "cause": "The request is syntactically valid but violates a domain rule.",
+        "userAction": "Change the workflow state or request values so the business rule is satisfied.",
+        "operatorAction": "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/governance-core/src/libs/problems/DataGovernanceProblems.ts",
+          "line": 59,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "GRAPHQL_NOT_FOUND",
       "category": "NotFound",
       "status": 404,
@@ -5909,7 +6017,7 @@
       "sources": [
         {
           "file": "packages/protocols-core/src/libs/ContractGraph.ts",
-          "line": 109,
+          "line": 121,
           "column": 5,
           "kind": "problem-constructor"
         }

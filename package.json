@@ -34,6 +34,7 @@
     "dependency-boundaries:check": "node --experimental-strip-types scripts/package-quality-report.mts --boundary-check-only",
     "first-success:verify": "node --experimental-strip-types scripts/first-success-verify.mts",
     "package-quality:report": "node --experimental-strip-types scripts/package-quality-report.mts",
+    "production-ready:check": "node --experimental-strip-types scripts/production-ready-check.mts",
     "problem-registry:check": "node --experimental-strip-types scripts/problem-registry.mts --check",
     "problem-registry:write": "node --experimental-strip-types scripts/problem-registry.mts --write",
     "public-api:check": "node --experimental-strip-types scripts/public-api-surface.mts --check",
