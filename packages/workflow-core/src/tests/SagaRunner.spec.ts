@@ -1,0 +1,618 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import { trace } from "@opentelemetry/api";
+import type { Span, Tracer } from "@opentelemetry/api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  SagaDefinitionProblem,
+  SagaExecutionFailedProblem,
+  SagaRunner,
+  type SagaDefinition,
+} from "../index";
+
+class ProviderProblem extends Problem {
+  constructor(detail: string) {
+    super("workflow-core/test-provider-problem", ProblemCategory.InternalServerError, detail);
+  }
+}
+
+class RetryableProviderProblem extends Problem {
+  readonly retryable = true;
+
+  constructor(detail: string) {
+    super(
+      "workflow-core/test-retryable-provider-problem",
+      ProblemCategory.InternalServerError,
+      detail,
+    );
+  }
+}
+
+class CompensationProblem extends Problem {
+  constructor(detail: string) {
+    super("workflow-core/test-compensation-problem", ProblemCategory.InternalServerError, detail);
+  }
+}
+
+function getOrderId(payload: unknown): string {
+  if (typeof payload !== "object" || payload === null || !("orderId" in payload)) {
+    throw new ProviderProblem("orderId is required");
+  }
+
+  return String(payload.orderId);
+}
+
+function createMockSpan(): Span {
+  return {
+    spanContext: () => ({
+      traceId: "00000000000000000000000000000001",
+      spanId: "0000000000000001",
+      traceFlags: 1,
+      isRemote: false,
+    }),
+    setAttribute: vi.fn(),
+    setAttributes: vi.fn(),
+    addEvent: vi.fn(),
+    addLink: vi.fn(),
+    addLinks: vi.fn(),
+    setStatus: vi.fn(),
+    updateName: vi.fn(),
+    end: vi.fn(),
+    isRecording: vi.fn(() => true),
+    recordException: vi.fn(),
+  } as unknown as Span;
+}
+
+function createMockTracer(spanNames: string[], span: Span): Tracer {
+  return {
+    startActiveSpan: async <T>(name: string, fn: (span: Span) => T | Promise<T>) => {
+      spanNames.push(name);
+      return fn(span);
+    },
+    startSpan: () => span,
+  } as Tracer;
+}
+
+describe("SagaRunner", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("compensates completed steps in reverse order and keeps saga state queryable", async () => {
+    const events: string[] = [];
+    const publishedMessages: string[] = [];
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "subscription-seat-change",
+      idempotencyKey: ({ payload }) => `seat-change:${getOrderId(payload)}`,
+      outbox: {
+        publish: (message) => {
+          publishedMessages.push(`${message.stepId}:${message.topic}:${message.idempotencyKey}`);
+        },
+      },
+      steps: [
+        {
+          id: "reserve-payment",
+          idempotencyKey: ({ stepInput }) => `payment:${getOrderId(stepInput)}`,
+          run: (input, { enqueueOutbox }) => {
+            events.push("reserve-payment");
+            enqueueOutbox({
+              id: "payment-reserved",
+              topic: "billing.reserved",
+              payload: { orderId: getOrderId(input) },
+              idempotencyKey: `outbox:${getOrderId(input)}`,
+            });
+            return { paymentId: "pay_123", orderId: getOrderId(input) };
+          },
+          compensate: (input, { enqueueOutbox }) => {
+            events.push(`refund-payment:${getOrderId(input)}`);
+            enqueueOutbox({
+              id: "payment-refunded",
+              topic: "billing.refunded",
+              payload: { orderId: getOrderId(input) },
+              idempotencyKey: `refund:${getOrderId(input)}`,
+            });
+            return { refunded: getOrderId(input) };
+          },
+        },
+        {
+          id: "provision-seat",
+          input: ({ previousResults }) => previousResults[0]?.result,
+          run: (input) => {
+            events.push("provision-seat");
+            return { seatId: "seat_123", orderId: getOrderId(input) };
+          },
+          compensate: (input) => {
+            events.push(`remove-seat:${getOrderId(input)}`);
+            return { removed: getOrderId(input) };
+          },
+        },
+        {
+          id: "notify-customer",
+          run: () => {
+            throw new ProviderProblem("notification provider unavailable");
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    const queried = await runner.getExecution(execution.id);
+
+    expect(queried).toBe(execution);
+    expect(execution.status).toBe("compensated");
+    expect(execution.error).toEqual(
+      expect.objectContaining({
+        code: "workflow-core/test-provider-problem",
+        message: "notification provider unavailable",
+      }),
+    );
+    expect(execution.compensationFailures).toEqual([]);
+    expect(events).toEqual([
+      "reserve-payment",
+      "provision-seat",
+      "remove-seat:ord_123",
+      "refund-payment:ord_123",
+    ]);
+    expect(publishedMessages).toEqual([
+      "reserve-payment:billing.reserved:outbox:ord_123",
+      "reserve-payment:billing.refunded:refund:ord_123",
+    ]);
+    expect(execution.steps).toEqual([
+      expect.objectContaining({
+        id: "reserve-payment",
+        status: "compensated",
+        attempts: 1,
+        maxAttempts: 1,
+        idempotencyKey: "payment:ord_123",
+        outboxMessages: expect.arrayContaining([
+          expect.objectContaining({
+            topic: "billing.reserved",
+            stepId: "reserve-payment",
+            idempotencyKey: "outbox:ord_123",
+          }),
+          expect.objectContaining({
+            topic: "billing.refunded",
+            stepId: "reserve-payment",
+            idempotencyKey: "refund:ord_123",
+          }),
+        ]),
+      }),
+      expect.objectContaining({
+        id: "provision-seat",
+        status: "compensated",
+        attempts: 1,
+        result: { seatId: "seat_123", orderId: "ord_123" },
+      }),
+      expect.objectContaining({
+        id: "notify-customer",
+        status: "failed",
+        attempts: 1,
+        error: expect.objectContaining({
+          message: "notification provider unavailable",
+        }),
+      }),
+    ]);
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    expect(events).toEqual([
+      "reserve-payment",
+      "provision-seat",
+      "remove-seat:ord_123",
+      "refund-payment:ord_123",
+    ]);
+    await expect(runner.listExecutions({ sagaName: definition.name })).resolves.toHaveLength(1);
+  });
+
+  it("records compensation failures separately from the original step failure", async () => {
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "compensation-failure",
+      steps: [
+        {
+          id: "create-payment",
+          run: () => ({ paymentId: "pay_123" }),
+          compensate: () => {
+            throw new CompensationProblem("refund provider unavailable");
+          },
+        },
+        {
+          id: "provision-seat",
+          run: () => {
+            throw new ProviderProblem("seat provider unavailable");
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(execution.status).toBe("failed");
+    expect(execution.error).toEqual(
+      expect.objectContaining({
+        code: "workflow-core/test-provider-problem",
+        message: "seat provider unavailable",
+      }),
+    );
+    expect(execution.compensationFailures).toEqual([
+      expect.objectContaining({
+        code: "workflow-core/test-compensation-problem",
+        message: "refund provider unavailable",
+      }),
+    ]);
+    expect(execution.steps).toEqual([
+      expect.objectContaining({
+        id: "create-payment",
+        status: "compensation_failed",
+        compensationError: expect.objectContaining({
+          message: "refund provider unavailable",
+        }),
+      }),
+      expect.objectContaining({
+        id: "provision-seat",
+        status: "failed",
+        error: expect.objectContaining({
+          message: "seat provider unavailable",
+        }),
+      }),
+    ]);
+  });
+
+  it("records exhausted retry attempts and step idempotency keys", async () => {
+    let attempts = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "retry-exhaustion",
+      idempotencyKey: ({ payload }) => `retry-exhaustion:${getOrderId(payload)}`,
+      steps: [
+        {
+          id: "charge-provider",
+          retry: { maxAttempts: 2 },
+          idempotencyKey: ({ executionId, stepInput }) =>
+            `charge:${executionId}:${getOrderId(stepInput)}`,
+          run: () => {
+            attempts += 1;
+            throw new RetryableProviderProblem("payment provider retryable outage");
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(attempts).toBe(2);
+    expect(execution.status).toBe("failed");
+    expect(execution.steps).toEqual([
+      expect.objectContaining({
+        id: "charge-provider",
+        status: "failed",
+        attempts: 2,
+        maxAttempts: 2,
+        idempotencyKey: `charge:${execution.id}:ord_123`,
+        error: expect.objectContaining({
+          retryable: true,
+          message: "payment provider retryable outage",
+        }),
+      }),
+    ]);
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    expect(attempts).toBe(2);
+    await expect(runner.listExecutions({ sagaName: definition.name })).resolves.toHaveLength(1);
+  });
+
+  it("scopes saga idempotency keys by saga name", async () => {
+    const events: string[] = [];
+    const runner = new SagaRunner();
+    const firstDefinition: SagaDefinition = {
+      name: "first-saga",
+      idempotencyKey: () => "shared-idempotency-key",
+      steps: [
+        {
+          id: "first-step",
+          run: () => {
+            events.push("first");
+            return { saga: "first" };
+          },
+        },
+      ],
+    };
+    const secondDefinition: SagaDefinition = {
+      name: "second-saga",
+      idempotencyKey: () => "shared-idempotency-key",
+      steps: [
+        {
+          id: "second-step",
+          run: () => {
+            events.push("second");
+            return { saga: "second" };
+          },
+        },
+      ],
+    };
+
+    const first = await runner.execute(firstDefinition, {});
+    const second = await runner.execute(secondDefinition, {});
+
+    expect(first.executionId).not.toBe(second.executionId);
+    expect(events).toEqual(["first", "second"]);
+    await expect(runner.listExecutions()).resolves.toHaveLength(2);
+  });
+
+  it("reserves idempotent saga execution before concurrent side effects run", async () => {
+    let releaseStep: () => void = () => {
+      throw new ProviderProblem("step gate was not initialized");
+    };
+    const stepGate = new Promise<void>((resolve) => {
+      releaseStep = resolve;
+    });
+    let runs = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "concurrent-idempotency",
+      idempotencyKey: ({ payload }) => `concurrent:${getOrderId(payload)}`,
+      steps: [
+        {
+          id: "slow-provider-call",
+          run: async (input) => {
+            runs += 1;
+            await stepGate;
+            return { handled: getOrderId(input) };
+          },
+        },
+      ],
+    };
+
+    const first = runner.execute(definition, { orderId: "ord_123" });
+    const second = runner.execute(definition, { orderId: "ord_123" });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseStep();
+    const results = await Promise.all([first, second]);
+    const executions = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(runs).toBe(1);
+    expect(new Set(results.map((result) => result.executionId))).toEqual(
+      new Set([results[0]?.executionId]),
+    );
+    expect(results.map((result) => result.reused).sort()).toEqual([false, true]);
+    expect(executions).toHaveLength(1);
+  });
+
+  it("reserves empty string saga idempotency keys consistently", async () => {
+    let releaseStep: () => void = () => {
+      throw new ProviderProblem("empty key gate was not initialized");
+    };
+    const stepGate = new Promise<void>((resolve) => {
+      releaseStep = resolve;
+    });
+    let runs = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "empty-idempotency-key",
+      idempotencyKey: () => "",
+      steps: [
+        {
+          id: "slow-provider-call",
+          run: async () => {
+            runs += 1;
+            await stepGate;
+            return { handled: true };
+          },
+        },
+      ],
+    };
+
+    const first = runner.execute(definition, {});
+    const second = runner.execute(definition, {});
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseStep();
+    const results = await Promise.all([first, second]);
+    const executions = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(runs).toBe(1);
+    expect(new Set(results.map((result) => result.executionId))).toEqual(
+      new Set([results[0]?.executionId]),
+    );
+    expect(results.map((result) => result.reused).sort()).toEqual([false, true]);
+    expect(executions).toHaveLength(1);
+    expect(executions[0]?.idempotencyKey).toBe("");
+  });
+
+  it("replays a failed saga execution without durable adapter dependencies", async () => {
+    let providerRecovered = false;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "replayable-seat-change",
+      steps: [
+        {
+          id: "provision-seat",
+          run: (input) => {
+            if (!providerRecovered) {
+              throw new ProviderProblem("seat provider unavailable");
+            }
+
+            return { provisioned: getOrderId(input) };
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    const [failedExecution] = await runner.listExecutions({ sagaName: definition.name });
+    providerRecovered = true;
+
+    const replayed = await runner.replay(definition, failedExecution.id, {
+      reason: "provider recovered",
+    });
+    const executions = await runner.listExecutions({ sagaName: definition.name });
+    const originalExecutions = await runner.listExecutions({ replayOf: null });
+    const replayExecutions = await runner.listExecutions({ replayOf: failedExecution.id });
+
+    expect(replayed.execution).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        replayOf: failedExecution.id,
+        metadata: expect.objectContaining({
+          replayOf: failedExecution.id,
+          replayReason: "provider recovered",
+        }),
+      }),
+    );
+    expect(replayed.steps).toEqual([
+      {
+        stepId: "provision-seat",
+        result: { provisioned: "ord_123" },
+      },
+    ]);
+    expect(executions).toHaveLength(2);
+    expect(originalExecutions).toEqual([failedExecution]);
+    expect(replayExecutions).toEqual([replayed.execution]);
+  });
+
+  it("rejects replay for completed saga executions", async () => {
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "completed-replay-rejection",
+      steps: [
+        {
+          id: "complete-step",
+          run: () => ({ completed: true }),
+        },
+      ],
+    };
+
+    const completed = await runner.execute(definition, {});
+
+    await expect(runner.replay(definition, completed.executionId)).rejects.toThrow(
+      "execution in 'completed' status is not replayable",
+    );
+    await expect(runner.listExecutions({ sagaName: definition.name })).resolves.toHaveLength(1);
+  });
+
+  it("records input resolver failures as failed step state before compensation", async () => {
+    const events: string[] = [];
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "resolver-failure",
+      steps: [
+        {
+          id: "reserve-payment",
+          run: () => {
+            events.push("reserve-payment");
+            return { paymentId: "pay_123" };
+          },
+          compensate: () => {
+            events.push("refund-payment");
+            return { refunded: true };
+          },
+        },
+        {
+          id: "derive-seat-input",
+          input: () => {
+            throw new ProviderProblem("seat input could not be derived");
+          },
+          run: () => ({ unreachable: true }),
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(events).toEqual(["reserve-payment", "refund-payment"]);
+    expect(execution.status).toBe("compensated");
+    expect(execution.steps).toEqual([
+      expect.objectContaining({
+        id: "reserve-payment",
+        status: "compensated",
+      }),
+      expect.objectContaining({
+        id: "derive-seat-input",
+        status: "failed",
+        attempts: 0,
+        input: undefined,
+        error: expect.objectContaining({
+          message: "seat input could not be derived",
+        }),
+      }),
+    ]);
+  });
+
+  it("emits telemetry spans for saga steps and compensation steps", async () => {
+    const spanNames: string[] = [];
+    vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(spanNames, createMockSpan()));
+
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "telemetry-saga",
+      steps: [
+        {
+          id: "reserve-payment",
+          run: () => ({ paymentId: "pay_123" }),
+          compensate: () => ({ refunded: true }),
+        },
+        {
+          id: "fail-after-payment",
+          run: () => {
+            throw new ProviderProblem("provider unavailable");
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+
+    expect(spanNames).toEqual(
+      expect.arrayContaining([
+        "saga:telemetry-saga",
+        "saga:telemetry-saga:step:reserve-payment",
+        "saga:telemetry-saga:step:fail-after-payment",
+        "saga:telemetry-saga:compensate:reserve-payment",
+      ]),
+    );
+  });
+
+  it("rejects invalid saga definitions before creating execution state", async () => {
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "invalid-saga",
+      steps: [
+        {
+          id: "duplicate",
+          run: () => undefined,
+        },
+        {
+          id: "duplicate",
+          run: () => undefined,
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, {})).rejects.toThrow(SagaDefinitionProblem);
+    await expect(runner.listExecutions()).resolves.toEqual([]);
+  });
+});

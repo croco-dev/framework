@@ -16128,6 +16128,48 @@
           "declarationKind": "class"
         },
         {
+          "name": "InMemorySagaStore",
+          "exportKind": "named",
+          "source": "./libs/saga/InMemorySagaStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaDefinitionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaExecutionFailedProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaExecutionNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaReplayProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaRunner",
+          "exportKind": "named",
+          "source": "./libs/saga/SagaRunner",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaStoreConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "WORKFLOW_METADATA_KEY",
           "exportKind": "named",
           "source": "./libs/decorators/Workflow",
@@ -16177,6 +16219,151 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "CreateSagaExecutionParams",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "ListSagaExecutionsOptions",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "ReplaySagaParams",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaCompensationContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaCompensationHandler",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaDefinition",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaExecution",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaExecutionStatus",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaFailure",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaIdempotencyContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaIdempotencyResolver",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxMessage",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxPublishContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxPublisher",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxRecord",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaRetryContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaRetryPolicy",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaRunResult",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepDefinition",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepExecutionRecord",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepHandler",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepIdempotencyContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepIdempotencyResolver",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepInputContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepInputResolver",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepResult",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepStatus",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStore",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
         {
           "name": "WorkflowDefinition",
           "exportKind": "named",
