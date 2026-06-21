@@ -93,6 +93,45 @@ describe("package-bin-smoke.mts", () => {
     },
     spawnTimeoutMs,
   );
+
+  it(
+    "accepts expected nonzero migration diagnostics in packed bin smoke",
+    () => {
+      const root = createTempRoot();
+      writeBinPackage(root, {
+        commandName: "migrate",
+        script: [
+          "#!/usr/bin/env node",
+          "const args = process.argv.slice(2);",
+          'if (args.length === 1 && args[0] === "--help") {',
+          '  console.log("Drizzle migration runner");',
+          "  process.exit(0);",
+          "}",
+          'if (args.length === 1 && args[0] === "status") {',
+          '  console.error("migration-runner/database-url-required");',
+          "  process.exit(1);",
+          "}",
+          'if (args.join(" ") === "down --count abc") {',
+          '  console.error("migration-runner/invalid-count");',
+          "  process.exit(1);",
+          "}",
+          'console.error(`unexpected args: ${args.join(" ")}`);',
+          "process.exit(9);",
+          "",
+        ].join("\n"),
+      });
+
+      const result = runScript(root);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("package-bin-smoke: @croco/bin-tool migrate --help");
+      expect(result.stdout).toContain("package-bin-smoke: @croco/bin-tool migrate status");
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/bin-tool migrate down --count abc",
+      );
+    },
+    spawnTimeoutMs,
+  );
 });
 
 function createTempRoot(): string {
@@ -169,6 +208,7 @@ function writeBridgePackage(root: string): void {
 function writeBinPackage(
   root: string,
   options: {
+    readonly commandName?: string;
     readonly dependencies?: Record<string, string>;
     readonly script: string;
   },
@@ -183,7 +223,7 @@ function writeBinPackage(
         name: "@croco/bin-tool",
         version: "0.0.0",
         bin: {
-          "smoke-bin": "./dist/cli.js",
+          [options.commandName ?? "smoke-bin"]: "./dist/cli.js",
         },
         dependencies: options.dependencies,
         files: ["dist"],

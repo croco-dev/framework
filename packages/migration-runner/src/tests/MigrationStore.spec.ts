@@ -60,6 +60,26 @@ describe("MigrationStore", () => {
     );
   });
 
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+  ])("should reject %s row-bearing query results", async (_label, result) => {
+    const db = {
+      execute: vi.fn().mockResolvedValue(result),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore("_migrations");
+
+    await expect(store.getExecutedMigrations(db)).rejects.toBeInstanceOf(
+      UnsupportedMigrationQueryResultProblem,
+    );
+    await expect(
+      store.reserveMigration(db, "20260615000001", "create_users"),
+    ).rejects.toBeInstanceOf(UnsupportedMigrationQueryResultProblem);
+    await expect(store.claimMigrationForRollback(db, "20260615000001")).rejects.toBeInstanceOf(
+      UnsupportedMigrationQueryResultProblem,
+    );
+  });
+
   it("should reserve unclaimed migrations", async () => {
     const db = {
       execute: vi.fn().mockResolvedValue({ rows: [{ id: "20260615000001" }] }),

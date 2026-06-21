@@ -390,9 +390,9 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 
 | 상태                | 의미                                | 패키지 수 |
 | ------------------- | ----------------------------------- | --------: |
-| 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
+| 🟢 production-ready | 안정화, 적극 사용 권장              |        24 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |        52 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        34 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        33 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
 ### Extension & Adapter Matrix
@@ -490,6 +490,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/telemetry-api`      | Integration | `packages/telemetry-api`      | README, API, tests |
 | `@croco/telemetry-sdk-node` | Integration | `packages/telemetry-sdk-node` | README, API, tests |
 | `@croco/protocols-rest`     | Protocol    | `packages/protocols-rest`     | README, API, tests |
+| `@croco/migration-runner`   | Tooling     | `packages/migration-runner`   | README, API, tests |
 | `@croco/transports-http`    | Transport   | `packages/transports-http`    | README, API, tests |
 
 ### 🟡 beta
@@ -585,7 +586,6 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/storage-cloudinary`            | Provider     | `packages/storage-cloudinary`            | README, tests      |
 | `@croco/tasks-qstash`                  | Provider     | `packages/tasks-qstash`                  | README, tests      |
 | `@croco/triggers-qstash`               | Provider     | `packages/triggers-qstash`               | README, API, tests |
-| `@croco/migration-runner`              | Tooling      | `packages/migration-runner`              | README, API, tests |
 | `@croco/transports-cloudflare-workers` | Transport    | `packages/transports-cloudflare-workers` | README, tests      |
 
 ### Documentation Gate

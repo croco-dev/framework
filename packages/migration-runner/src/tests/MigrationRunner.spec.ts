@@ -14,7 +14,7 @@ describe("MigrationRunner", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockDb = { execute: vi.fn() } as unknown as DatabaseClient;
+    mockDb = { execute: vi.fn().mockResolvedValue([]) } as unknown as DatabaseClient;
 
     const migrationsDir = join(__dirname, "fixtures", "migrations");
     runner = new MigrationRunner(mockDb, migrationsDir, "_migrations");
@@ -49,7 +49,7 @@ describe("MigrationRunner", () => {
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined);
       const transaction = vi.fn(async <T>(fn: (tx: DatabaseClient) => Promise<T>) => fn(txDb));
-      mockDb = { execute: vi.fn(), transaction } as unknown as DatabaseClient;
+      mockDb = { execute: vi.fn().mockResolvedValue([]), transaction } as unknown as DatabaseClient;
       runner = new MigrationRunner(
         mockDb,
         join(__dirname, "fixtures", "migrations"),

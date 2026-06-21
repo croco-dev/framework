@@ -10994,6 +10994,12 @@
       "entrypoint": "packages/migration-runner/src/index.ts",
       "runtimeExports": [
         {
+          "name": "DatabaseUrlRequiredProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/DatabaseUrlRequiredProblem",
+          "declarationKind": "class"
+        },
+        {
           "name": "InvalidMigrationCountProblem",
           "exportKind": "named",
           "source": "./libs/problems/InvalidMigrationCountProblem",
@@ -11015,6 +11021,36 @@
           "name": "MigrationStore",
           "exportKind": "named",
           "source": "./libs/MigrationStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "MigrationTransactionRequiredProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MigrationTransactionRequiredProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "MissingDownFunctionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MissingDownFunctionProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "MissingUpFunctionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MissingUpFunctionProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UnsupportedDialectProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/UnsupportedDialectProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UnsupportedMigrationQueryResultProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/UnsupportedMigrationQueryResultProblem",
           "declarationKind": "class"
         }
       ],
