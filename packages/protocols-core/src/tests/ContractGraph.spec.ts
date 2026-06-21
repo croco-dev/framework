@@ -25,6 +25,7 @@ import {
   type InferRouteSchemaResponse,
 } from "../libs/RouteSchema";
 import { CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE } from "../libs/SchemaDescriptor";
+import { ENTITLEMENT_REQUIRED_KEY, ENTITLEMENT_REQUIREMENTS_KEY } from "../libs/sharedTypes";
 import {
   Body,
   Controller,
@@ -33,6 +34,7 @@ import {
   Post,
   ProblemResponse,
   Query,
+  RequiresEntitlement,
   ResponseSchema,
   Roles,
   UseGuards,
@@ -638,10 +640,12 @@ describe("buildContractGraph", () => {
 
     expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
       "contract-consumer-missing-generated-route-field",
+      "contract-consumer-missing-generated-route-field",
       "contract-consumer-route-field-mismatch",
       "contract-consumer-route-field-mismatch",
     ]);
     expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      expect.stringContaining("entitlements"),
       expect.stringContaining("operationId"),
       expect.stringContaining("problems"),
       expect.stringContaining("response"),
@@ -737,6 +741,105 @@ describe("buildContractGraph", () => {
         description: "User id is missing.",
         status: 404,
       },
+    ]);
+  });
+
+  it("should snapshot entitlement requirements as route contract artifacts", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/:id")
+      @RequiresEntitlement({
+        feature: "reports.export",
+        description: "Export report data.",
+        resource: { type: "report", idParam: "id" },
+      })
+      exportReport(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const snapshot = createContractGraphSnapshot(graph);
+    const report = createContractGraphConsumerCoverage(graph);
+
+    expect(graph.routes[0]?.entitlements).toEqual([
+      {
+        feature: "reports.export",
+        description: "Export report data.",
+        resource: { type: "report", idParam: "id" },
+      },
+    ]);
+    expect(snapshot.routes[0]?.entitlements).toEqual([
+      {
+        feature: "reports.export",
+        description: "Export report data.",
+        resource: { type: "report", idParam: "id" },
+      },
+    ]);
+
+    @Controller("/legacy-reports")
+    class LegacyReportsController {
+      @Get("/:id")
+      getReport(@Param("id") _id: string): void {}
+    }
+
+    Reflect.defineMetadata(
+      ENTITLEMENT_REQUIRED_KEY,
+      "reports.read",
+      LegacyReportsController.prototype,
+      "getReport",
+    );
+
+    expect(buildContractGraph([LegacyReportsController]).routes[0]?.entitlements).toEqual([
+      { feature: "reports.read" },
+    ]);
+    expect(report.consumers.find((consumer) => consumer.consumerId === "openapi")).toMatchObject({
+      requiredRouteFields: expect.arrayContaining(["entitlements"]),
+    });
+    expect(report.consumers.find((consumer) => consumer.consumerId === "rpc-client")).toMatchObject(
+      {
+        routes: [
+          expect.objectContaining({
+            unsupportedFields: ["entitlements"],
+          }),
+        ],
+      },
+    );
+
+    @Controller("/multi-reports")
+    class MultiReportsController {
+      @Get("/")
+      @RequiresEntitlement({ feature: "reports.export" })
+      @RequiresEntitlement({ feature: "reports.read" })
+      listReports(): void {}
+    }
+
+    const multiEntitlements = buildContractGraph([MultiReportsController]).routes[0]?.entitlements;
+
+    expect(multiEntitlements).toHaveLength(2);
+    expect(multiEntitlements).toEqual(
+      expect.arrayContaining([{ feature: "reports.export" }, { feature: "reports.read" }]),
+    );
+
+    @Controller("/invalid-reports")
+    class InvalidReportsController {
+      @Get("/:id")
+      getReport(@Param("id") _id: string): void {}
+    }
+
+    Reflect.defineMetadata(
+      ENTITLEMENT_REQUIREMENTS_KEY,
+      [
+        { feature: "reports.export", resource: { type: 42 } },
+        {
+          feature: "reports.read",
+          resource: { type: "report", idParam: "id" },
+        },
+      ],
+      InvalidReportsController.prototype,
+      "getReport",
+    );
+
+    expect(buildContractGraph([InvalidReportsController]).routes[0]?.entitlements).toEqual([
+      { feature: "reports.read", resource: { type: "report", idParam: "id" } },
     ]);
   });
 
@@ -1221,6 +1324,87 @@ describe("buildContractGraph", () => {
         code: "contract-problem-response-removed",
         fieldPath: "USER_FORBIDDEN",
         location: "problem",
+      }),
+    ]);
+  });
+
+  it("should classify added entitlement requirements as breaking contract changes", () => {
+    const BaselineController = (() => {
+      @Controller("/reports")
+      class ReportsController {
+        @Get("/:id")
+        getReport(@Param("id") _id: string): void {}
+      }
+
+      return ReportsController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/reports")
+      class ReportsController {
+        @Get("/:id")
+        @RequiresEntitlement({
+          feature: "reports.export",
+          resource: { type: "report", idParam: "id" },
+        })
+        getReport(@Param("id") _id: string): void {}
+      }
+
+      return ReportsController;
+    })();
+    const baseline = createContractGraphSnapshot(buildContractGraph([BaselineController]));
+    const current = createContractGraphSnapshot(buildContractGraph([CurrentController]));
+
+    const additiveDiff = diffContractGraphSnapshots(baseline, current);
+    const removalDiff = diffContractGraphSnapshots(current, baseline);
+
+    expect(additiveDiff.hasBreakingChanges).toBe(true);
+    expect(additiveDiff.breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-entitlement-requirement-added",
+        fieldPath: "reports.export",
+      }),
+    ]);
+    expect(removalDiff.hasBreakingChanges).toBe(false);
+    expect(removalDiff.nonBreakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-entitlement-requirement-removed",
+        fieldPath: "reports.export",
+      }),
+    ]);
+  });
+
+  it("should dedupe repeated entitlement requirements before diffing snapshots", () => {
+    const BaselineController = (() => {
+      @Controller("/reports")
+      class ReportsController {
+        @Get("/:id")
+        getReport(@Param("id") _id: string): void {}
+      }
+
+      return ReportsController;
+    })();
+    const CurrentController = (() => {
+      @Controller("/reports")
+      class ReportsController {
+        @Get("/:id")
+        @RequiresEntitlement({ feature: "reports.export" })
+        @RequiresEntitlement({ feature: "reports.export" })
+        getReport(@Param("id") _id: string): void {}
+      }
+
+      return ReportsController;
+    })();
+    const baseline = createContractGraphSnapshot(buildContractGraph([BaselineController]));
+    const current = createContractGraphSnapshot(buildContractGraph([CurrentController]));
+    const diff = diffContractGraphSnapshots(baseline, current);
+
+    expect(
+      diff.breakingChanges.filter(
+        (change) => change.code === "contract-entitlement-requirement-added",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        fieldPath: "reports.export",
       }),
     ]);
   });

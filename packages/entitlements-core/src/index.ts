@@ -10,9 +10,32 @@
 export { RequireEntitlement } from "./libs/decorators/RequireEntitlement";
 
 /**
+ * route/service 경계에서 공유하는 entitlement requirement metadata contract입니다.
+ */
+export {
+  appendEntitlementRequirement,
+  defineEntitlementRequirement,
+  ENTITLEMENT_REQUIRED_KEY,
+  ENTITLEMENT_REQUIREMENTS_KEY,
+  getEntitlementRequirements,
+} from "./libs/EntitlementRequirement";
+export type {
+  EntitlementRequirement,
+  EntitlementRequirementMetadata,
+  EntitlementResourceRequirement,
+} from "./libs/EntitlementRequirement";
+
+/**
  * 라우트 실행 전에 entitlement를 검사하는 가드입니다.
  */
 export { EntitlementGuard } from "./libs/EntitlementGuard";
+export type {
+  EntitlementGuardInput,
+  EntitlementGuardResource,
+  EntitlementGuardRoute,
+  EntitlementGuardSubject,
+  RouteExecutionContext,
+} from "./libs/EntitlementGuard";
 
 /**
  * 플랜 규칙과 quota를 조합해 entitlement 결과를 계산하는 핵심 서비스입니다.
@@ -43,7 +66,12 @@ export * from "./libs/interfaces";
  */
 export {
   EntitlementDeniedProblem,
+  EntitlementInactiveSubscriptionProblem,
+  EntitlementMissingPlanProblem,
   EntitlementNotFoundProblem,
+  EntitlementProviderUnavailableProblem,
+  EntitlementQuotaExceededProblem,
+  EntitlementRequirementProblem,
 } from "./libs/problems/EntitlementProblems";
 
 /**

@@ -2,6 +2,8 @@ import "reflect-metadata";
 import type { z } from "zod";
 import {
   type ControllerMetadata,
+  ENTITLEMENT_REQUIREMENTS_KEY,
+  type EntitlementRequirementMetadata,
   type ParamMetadata,
   ParamType,
   PROBLEM_RESPONSES_KEY,
@@ -90,6 +92,44 @@ export function Roles(...roles: string[]): ClassDecorator & MethodDecorator {
 
     Reflect.defineMetadata(REST_ROLES_KEY, roles, target);
   };
+}
+
+export function RequiresEntitlement(
+  requirement: EntitlementRequirementMetadata,
+): ClassDecorator & MethodDecorator {
+  return (target: object, propertyKey?: string | symbol) => {
+    if (propertyKey !== undefined) {
+      const metadataTarget = typeof target === "function" ? target : target.constructor;
+      appendEntitlementRequirement(metadataTarget, requirement, propertyKey);
+      return;
+    }
+
+    appendEntitlementRequirement(target, requirement);
+  };
+}
+
+function appendEntitlementRequirement(
+  target: object,
+  requirement: EntitlementRequirementMetadata,
+  propertyKey?: string | symbol,
+): void {
+  const existing =
+    propertyKey === undefined
+      ? Reflect.getMetadata(ENTITLEMENT_REQUIREMENTS_KEY, target)
+      : Reflect.getMetadata(ENTITLEMENT_REQUIREMENTS_KEY, target, propertyKey);
+  const requirements = Array.isArray(existing) ? existing : [];
+
+  if (propertyKey === undefined) {
+    Reflect.defineMetadata(ENTITLEMENT_REQUIREMENTS_KEY, [...requirements, requirement], target);
+    return;
+  }
+
+  Reflect.defineMetadata(
+    ENTITLEMENT_REQUIREMENTS_KEY,
+    [...requirements, requirement],
+    target,
+    propertyKey,
+  );
 }
 
 function createRouteDecorator(method: string, path: string): MethodDecorator {

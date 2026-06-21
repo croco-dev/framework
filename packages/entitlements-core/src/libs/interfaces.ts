@@ -1,6 +1,7 @@
 import type { DomainEvent } from "@croco/events-core";
 import { Token } from "@croco/framework-context";
 import type {
+  EntitlementCheckStatus,
   EntitlementQuotaStatus,
   EntitlementRule,
   UsageHistoryEntry,
@@ -51,4 +52,34 @@ export abstract class EntitlementEventPublisher {
   static readonly token = new Token<EntitlementEventPublisher>("EntitlementEventPublisher");
 
   abstract publish(event: DomainEvent): Promise<void>;
+}
+
+export type EntitlementGuardAuditResource = {
+  readonly type: string;
+  readonly id: string;
+};
+
+export type EntitlementGuardAuditRoute = {
+  readonly controllerName: string;
+  readonly handlerName: string;
+  readonly routeId: string;
+};
+
+export type EntitlementGuardAuditEvent = {
+  readonly type: "entitlement.guard.allowed" | "entitlement.guard.denied";
+  readonly tenantId: string;
+  readonly feature: string;
+  readonly status: EntitlementCheckStatus;
+  readonly userId?: string;
+  readonly resource?: EntitlementGuardAuditResource;
+  readonly route?: EntitlementGuardAuditRoute;
+  readonly reason?: string;
+  readonly problemCode?: string;
+  readonly metadata?: Record<string, string | number | boolean | null | undefined>;
+};
+
+export abstract class EntitlementAuditSink {
+  static readonly token = new Token<EntitlementAuditSink>("EntitlementAuditSink");
+
+  abstract recordEntitlementGuard(event: EntitlementGuardAuditEvent): void | Promise<void>;
 }

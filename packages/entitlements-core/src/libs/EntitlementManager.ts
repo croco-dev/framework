@@ -21,18 +21,32 @@ export class EntitlementManager {
   async check(tenantId: string, featureKey: string): Promise<EntitlementCheckResult> {
     const planId = await this.subscriptionProvider.getCurrentPlanId(tenantId);
     if (!planId) {
-      return { granted: false, featureKey, type: "boolean", reason: "no_subscription" };
+      return {
+        granted: false,
+        status: "denied",
+        featureKey,
+        type: "boolean",
+        reason: "no_subscription",
+      };
     }
 
     const rule = await this.registry.findRule(planId, featureKey);
     if (!rule) {
-      return { granted: false, featureKey, type: "boolean", reason: "not_entitled", planId };
+      return {
+        granted: false,
+        status: "denied",
+        featureKey,
+        type: "boolean",
+        reason: "not_entitled",
+        planId,
+      };
     }
 
     switch (rule.type) {
       case "boolean":
         return {
           granted: true,
+          status: "allowed",
           featureKey,
           type: "boolean",
           planId,
@@ -41,6 +55,7 @@ export class EntitlementManager {
       case "static":
         return {
           granted: true,
+          status: "allowed",
           featureKey,
           type: "static",
           value: rule.value,
@@ -67,6 +82,7 @@ export class EntitlementManager {
     if (quota == null) {
       return {
         granted: false,
+        status: "denied",
         featureKey,
         type: "metered",
         reason: "no_quota_defined",
@@ -80,6 +96,7 @@ export class EntitlementManager {
     if (!quotaStatus.exceeded) {
       return this.createMeteredResult({
         granted: true,
+        status: "allowed",
         featureKey,
         planId,
         quota,
@@ -98,6 +115,7 @@ export class EntitlementManager {
       case "BLOCK":
         return this.createMeteredResult({
           granted: false,
+          status: "denied",
           featureKey,
           planId,
           quota,
@@ -111,6 +129,7 @@ export class EntitlementManager {
       case "WARN":
         return this.createMeteredResult({
           granted: true,
+          status: "soft-limit",
           featureKey,
           planId,
           quota,
@@ -133,6 +152,7 @@ export class EntitlementManager {
 
         return this.createMeteredResult({
           granted: true,
+          status: "overage-allowed",
           featureKey,
           planId,
           quota,
@@ -146,6 +166,7 @@ export class EntitlementManager {
 
   private createMeteredResult(options: {
     granted: boolean;
+    status: EntitlementCheckResult["status"];
     featureKey: string;
     planId: string;
     quota: number;
@@ -153,10 +174,11 @@ export class EntitlementManager {
     remaining: number;
     exceeded: boolean;
     overagePolicy: OveragePolicy;
-    reason?: string;
+    reason?: EntitlementCheckResult["reason"];
   }): EntitlementCheckResult {
     return {
       granted: options.granted,
+      status: options.status,
       featureKey: options.featureKey,
       type: "metered",
       quota: options.quota,

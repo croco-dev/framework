@@ -123,6 +123,7 @@ describe("compiler", () => {
           outputSchema: null,
           domain: null,
           access: { guards: [], roles: [] },
+          entitlements: [],
         },
         {
           routeId: "SampleController.createUser",
@@ -138,6 +139,7 @@ describe("compiler", () => {
           outputSchema: null,
           domain: null,
           access: { guards: [], roles: [] },
+          entitlements: [],
         },
       ],
       diagnostics: [],
