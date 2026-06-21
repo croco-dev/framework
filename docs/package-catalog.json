@@ -25,7 +25,8 @@
         "retry-core",
         "tenant-core",
         "tx-core",
-        "tx-drizzle"
+        "tx-drizzle",
+        "webhooks-core"
       ]
     },
     "Domain": {
@@ -224,6 +225,7 @@
         "testing",
         "transports-graphql",
         "triggers-core",
+        "webhooks-core",
         "workflow-core"
       ]
     },

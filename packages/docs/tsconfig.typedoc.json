@@ -39,6 +39,7 @@
     "../testing/src/index.ts",
     "../transports-http/src/index.ts",
     "../tx-core/src/index.ts",
-    "../tx-drizzle/src/index.ts"
+    "../tx-drizzle/src/index.ts",
+    "../webhooks-core/src/index.ts"
   ]
 }

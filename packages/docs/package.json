@@ -51,6 +51,7 @@
     "@croco/transports-http": "workspace:*",
     "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
+    "@croco/webhooks-core": "workspace:*",
     "@playwright/test": "1.58.2"
   }
 }

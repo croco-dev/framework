@@ -16117,6 +16117,273 @@
       ]
     },
     {
+      "packageName": "@croco/webhooks-core",
+      "relativeDir": "packages/webhooks-core",
+      "entrypoint": "packages/webhooks-core/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "createWebhookEventRouter",
+          "exportKind": "named",
+          "source": "./libs/WebhookEventRouter",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createWebhookGateway",
+          "exportKind": "named",
+          "source": "./libs/WebhookGateway",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createWebhookProviderAdapterConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createWebhookReplayFixture",
+          "exportKind": "named",
+          "source": "./libs/fixture",
+          "declarationKind": "function"
+        },
+        {
+          "name": "DuplicateWebhookEventProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InMemoryIdempotencyStore",
+          "exportKind": "named",
+          "source": "@croco/idempotency-core"
+        },
+        {
+          "name": "InvalidWebhookEnvelopeProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InvalidWebhookFixtureProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InvalidWebhookSignatureProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "loadWebhookReplayFixture",
+          "exportKind": "named",
+          "source": "./libs/fixture",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeWebhookHeaders",
+          "exportKind": "named",
+          "source": "./libs/headers",
+          "declarationKind": "function"
+        },
+        {
+          "name": "parseWebhookReplayFixture",
+          "exportKind": "named",
+          "source": "./libs/fixture",
+          "declarationKind": "function"
+        },
+        {
+          "name": "UnknownWebhookEventProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "WEBHOOK_DIAGNOSTIC_CODES",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "WebhookDispatchProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "WebhookEventRouter",
+          "exportKind": "named",
+          "source": "./libs/WebhookEventRouter",
+          "declarationKind": "class"
+        },
+        {
+          "name": "WebhookGateway",
+          "exportKind": "named",
+          "source": "./libs/WebhookGateway",
+          "declarationKind": "class"
+        },
+        {
+          "name": "WebhookGatewayConfigurationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "WebhookReporterProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems",
+          "declarationKind": "class"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "DerivedIdempotencyKey",
+          "exportKind": "named",
+          "source": "@croco/idempotency-core"
+        },
+        {
+          "name": "IdempotencyCompletedRecord",
+          "exportKind": "named",
+          "source": "@croco/idempotency-core"
+        },
+        {
+          "name": "IdempotencyFailedRecord",
+          "exportKind": "named",
+          "source": "@croco/idempotency-core"
+        },
+        {
+          "name": "IdempotencyInFlightRecord",
+          "exportKind": "named",
+          "source": "@croco/idempotency-core"
+        },
+        {
+          "name": "IdempotencyStore",
+          "exportKind": "named",
+          "source": "@croco/idempotency-core"
+        },
+        {
+          "name": "NormalizedWebhookHeaders",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "UnknownEventPolicy",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProblems"
+        },
+        {
+          "name": "WebhookDispatchContext",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookDispatchResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookEvent",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookEventCatalog",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookEventDefinition",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookEventHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayHandledResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayIdempotentResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayIgnoredResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayReplayFixture",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayRequest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookGatewayStoredResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookHeaders",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookProviderAdapter",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookProviderAdapterConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "WebhookProviderAdapterConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "WebhookProviderAdapterConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "WebhookRawBody",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "WebhookUnknownEventReporter",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/workflow-core",
       "relativeDir": "packages/workflow-core",
       "entrypoint": "packages/workflow-core/src/index.ts",
