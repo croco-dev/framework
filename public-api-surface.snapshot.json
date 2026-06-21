@@ -1707,6 +1707,141 @@
       "typeExports": []
     },
     {
+      "packageName": "@croco/architecture-policy",
+      "relativeDir": "packages/architecture-policy",
+      "entrypoint": "packages/architecture-policy/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "ARCHITECTURE_POLICY_SCHEMA_VERSION",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "const"
+        },
+        {
+          "name": "ArchitecturePolicyManifestJsonParseProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "ArchitecturePolicyManifestSchemaVersionProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "ArchitecturePolicyManifestShapeProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "ArchitecturePolicyPackageJsonParseProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "checkArchitecturePolicy",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "formatArchitecturePolicyDiagnostic",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "parseArchitecturePolicyManifest",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readArchitecturePolicyManifest",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "ArchitectureAllowedGroupImportRule",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitectureEntrypointIgnore",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitectureForbiddenImportRule",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitectureImportSourceKind",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePolicyCheckOptions",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePolicyDiagnostic",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePolicyDiagnosticCode",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePolicyManifest",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePolicyMatcher",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePolicyPackageGroup",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePolicyReport",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ArchitecturePublicEntrypointRule",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/audit-core",
       "relativeDir": "packages/audit-core",
       "entrypoint": "packages/audit-core/src/index.ts",
@@ -3284,6 +3419,18 @@
       "entrypoint": "packages/cli/src/index.ts",
       "runtimeExports": [
         {
+          "name": "architecturePolicy",
+          "exportKind": "named",
+          "source": "./commands/architecturePolicy",
+          "declarationKind": "const"
+        },
+        {
+          "name": "architecturePolicyCheck",
+          "exportKind": "named",
+          "source": "./commands/architecturePolicy",
+          "declarationKind": "const"
+        },
+        {
           "name": "codegen",
           "exportKind": "named",
           "source": "./commands/codegen",
@@ -3518,6 +3665,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "parseArchitecturePolicyCheckArgs",
+          "exportKind": "named",
+          "source": "./commands/architecturePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "parseDiCheckArgs",
           "exportKind": "named",
           "source": "./commands/diCheck",
@@ -3533,6 +3686,12 @@
           "name": "pluralize",
           "exportKind": "named",
           "source": "./libs/naming",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runArchitecturePolicyCheck",
+          "exportKind": "named",
+          "source": "./commands/architecturePolicy",
           "declarationKind": "function"
         },
         {
@@ -3664,6 +3823,11 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "ArchitecturePolicyCheckIo",
+          "exportKind": "named",
+          "source": "./commands/architecturePolicy"
+        },
         {
           "name": "DiCheckDiagnostic",
           "exportKind": "named",

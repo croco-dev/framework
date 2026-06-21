@@ -203,6 +203,10 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
     join(targetDir, "croco-runtime-policy.manifest.json"),
     `${JSON.stringify(createRuntimePolicyManifest(manifest), null, 2)}\n`,
   );
+  writeFileSync(
+    join(targetDir, "croco.arch.json"),
+    `${JSON.stringify(createArchitecturePolicyManifest(options), null, 2)}\n`,
+  );
   writeFileSync(join(targetDir, ".env.example"), renderSaasEnvExample(manifest));
   writeFileSync(join(docsDir, "provider-profile.md"), renderSaasDeployNotes(manifest));
   writeFileSync(join(docsDir, "secrets-checklist.md"), renderSaasSecretsChecklist(manifest));
@@ -227,6 +231,148 @@ function createRuntimePolicyManifest(
     },
     table: {
       plans: [],
+    },
+  };
+}
+
+function createArchitecturePolicyManifest(options: GeneratorOptions): Record<string, unknown> {
+  return {
+    schemaVersion: "croco.architecture-policy/v1",
+    policyName: `${options.projectName}-generated-app`,
+    packageRoots: ["apps", "libs"],
+    include: [
+      "apps/*/src/**/*.ts",
+      "apps/*/src/**/*.tsx",
+      "libs/shared/*/src/**/*.ts",
+      "libs/shared/*/src/**/*.tsx",
+    ],
+    ignore: [
+      "apps/*/src/**/__tests__/**",
+      "apps/*/src/**/tests/**",
+      "apps/*/src/**/*.spec.ts",
+      "apps/*/src/**/*.spec.tsx",
+      "apps/*/src/**/*.test.ts",
+      "apps/*/src/**/*.test.tsx",
+      "libs/shared/*/src/**/__tests__/**",
+      "libs/shared/*/src/**/tests/**",
+      "libs/shared/*/src/**/*.spec.ts",
+      "libs/shared/*/src/**/*.spec.tsx",
+      "libs/shared/*/src/**/*.test.ts",
+      "libs/shared/*/src/**/*.test.tsx",
+    ],
+    packageGroups: {
+      app: {
+        description: "Generated application entrypoints.",
+        paths: ["apps/*"],
+      },
+      "provider-contract": {
+        description: "Generated RPC provider contract package.",
+        packages: [`${options.scope}/provider-rpc`],
+      },
+      provider: {
+        description: "Generated provider adapter packages.",
+        paths: ["libs/shared/provider-*"],
+      },
+      framework: {
+        description: "Croco framework and domain contracts.",
+        packages: [
+          "@croco/*-core",
+          "@croco/diagnostics-core",
+          "@croco/framework-*",
+          "@croco/llm-metering",
+          "@croco/problems-core",
+          "@croco/telemetry-api",
+          "@croco/tx-core",
+        ],
+      },
+      protocols: {
+        description: "Croco protocol and generated contract tooling.",
+        packages: ["@croco/openapi-spec", "@croco/protocols-*", "@croco/rpc-codegen"],
+      },
+      transports: {
+        description: "Croco runtime transports used by the generated app.",
+        packages: ["@croco/transports-*"],
+      },
+      integrations: {
+        description: "Concrete provider/runtime integrations selected by the profile.",
+        packages: [
+          "@croco/*-drizzle",
+          "@croco/*-qstash",
+          "@croco/*-upstash",
+          "@croco/auth-better-auth",
+          "@croco/auth-clerk",
+          "@croco/billing-polar",
+          "@croco/storage-*",
+          "@croco/telemetry-sdk-node",
+          "@croco/triggers-qstash",
+          "@croco/tx-drizzle",
+        ],
+      },
+      tooling: {
+        description: "Build-time generated app tooling.",
+        packages: ["@croco/cli"],
+      },
+    },
+    rules: {
+      allowedGroupImports: [
+        {
+          id: "generated-app-layer-edges",
+          description:
+            "Generated app packages can depend on Croco contracts, selected adapters, and the generated provider-rpc contract, but provider packages must not import app entrypoints.",
+          fromGroups: ["app"],
+          allowGroups: [
+            "framework",
+            "protocols",
+            "transports",
+            "integrations",
+            "provider-contract",
+            "tooling",
+          ],
+          allowPackages: [`${options.scope}/provider-rpc`],
+          allowExternal: true,
+          message:
+            "Generated app entrypoints can import Croco contracts, selected adapters, and provider-rpc only.",
+          recovery:
+            "Move shared provider code into libs/shared and expose app-facing types through the provider-rpc package.",
+        },
+        {
+          id: "generated-provider-layer-edges",
+          fromGroups: ["provider", "provider-contract"],
+          allowGroups: ["framework", "protocols"],
+          allowExternal: true,
+          message: "Generated provider packages cannot import app entrypoints.",
+          recovery:
+            "Keep provider packages reusable by depending only on Croco contracts, protocols, and external SDKs.",
+        },
+      ],
+      publicEntrypoints: {
+        id: "generated-app-public-entrypoints",
+        description:
+          "Generated app packages import declared package entrypoints instead of source internals.",
+        includePackages: ["@croco/*", `${options.scope}/*`],
+        ignoreImports: [
+          {
+            paths: [
+              "apps/*/src/**/__tests__/**",
+              "apps/*/src/**/tests/**",
+              "apps/*/src/**/*.spec.ts",
+              "apps/*/src/**/*.spec.tsx",
+              "apps/*/src/**/*.test.ts",
+              "apps/*/src/**/*.test.tsx",
+              "libs/shared/*/src/**/__tests__/**",
+              "libs/shared/*/src/**/tests/**",
+              "libs/shared/*/src/**/*.spec.ts",
+              "libs/shared/*/src/**/*.spec.tsx",
+              "libs/shared/*/src/**/*.test.ts",
+              "libs/shared/*/src/**/*.test.tsx",
+            ],
+            specifiers: ["@croco/*/src/**", `${options.scope}/*/src/**`],
+          },
+        ],
+        message: "Generated app code must import declared public package entrypoints.",
+        recovery:
+          "Export the required type or runtime surface from the package entrypoint before consuming it.",
+      },
     },
   };
 }

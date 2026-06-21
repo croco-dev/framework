@@ -7,6 +7,7 @@
     "admin-core",
     "admin-react",
     "analytics-posthog",
+    "architecture-policy",
     "audit-drizzle",
     "auth-better-auth",
     "auth-clerk",

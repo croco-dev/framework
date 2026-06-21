@@ -111,6 +111,19 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.status).toBe(1);
     expect(`${result.stdout}\n${result.stderr}`).toContain("@croco-smoke/missing-types");
   });
+
+  it("does not treat diagnostic code string literals as type dependency imports", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "diagnostic-codes", {
+      declarationContent:
+        'type DiagnosticCode = "architecture-policy/forbidden-import" | "architecture-policy/private-entrypoint-import";\nexport type Value = { readonly code: DiagnosticCode };\n',
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain("undeclared type dependency");
+  });
 });
 
 function createTempRoot(): string {

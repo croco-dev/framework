@@ -6,10 +6,10 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   108 |
+| Public packages                |   109 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    58 |
+| Missing generated API docs     |    59 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -26,6 +26,7 @@ None.
 - `@croco/admin-core` (`packages/admin-core`) — legacy baseline
 - `@croco/admin-react` (`packages/admin-react`) — legacy baseline
 - `@croco/analytics-posthog` (`packages/analytics-posthog`) — legacy baseline
+- `@croco/architecture-policy` (`packages/architecture-policy`) — legacy baseline
 - `@croco/audit-drizzle` (`packages/audit-drizzle`) — legacy baseline
 - `@croco/auth-better-auth` (`packages/auth-better-auth`) — legacy baseline
 - `@croco/auth-clerk` (`packages/auth-clerk`) — legacy baseline
@@ -85,7 +86,7 @@ None.
 | Maturity            | Missing API docs |
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
-| 🟡 beta             |               28 |
+| 🟡 beta             |               29 |
 | 🔴 alpha/WIP        |               30 |
 | ⚠️ deprecated       |                0 |
 
@@ -104,12 +105,12 @@ None.
 | Protocol     |        7 |
 | Transport    |        3 |
 | Presentation |        7 |
-| Tooling      |        8 |
+| Tooling      |        9 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       51 |
+| 🟡 beta             |       52 |
 | 🔴 alpha/WIP        |       34 |
 | ⚠️ deprecated       |        0 |
 

@@ -13,6 +13,12 @@ export { confirmOverwrite, selectMode, textInput, NoTtyError } from "./libs/prom
 export { codegen } from "./commands/codegen";
 export { codegenOpenapi } from "./commands/codegenOpenapi";
 export { codegenRpc } from "./commands/codegenRpc";
+export {
+  architecturePolicy,
+  architecturePolicyCheck,
+  parseArchitecturePolicyCheckArgs,
+  runArchitecturePolicyCheck,
+} from "./commands/architecturePolicy";
 export { contracts } from "./commands/contracts";
 export { contractsCheck, runContractsCheck } from "./commands/contractsCheck";
 export { create } from "./commands/create";
@@ -65,6 +71,7 @@ export {
 export { GLOBAL_OPTIONS } from "./commands/options";
 
 export type { DiCheckDiagnostic, DiCheckIo, DiCheckReport } from "./commands/diCheck";
+export type { ArchitecturePolicyCheckIo } from "./commands/architecturePolicy";
 
 export type {
   DoctorCheckResult,

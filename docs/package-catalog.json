@@ -135,6 +135,7 @@
     "Tooling": {
       "description": "CLIs, scaffolds, presets, migration tools, and build-time helpers",
       "packages": [
+        "architecture-policy",
         "cli",
         "create-croco-app",
         "esbuild-plugin",
@@ -181,6 +182,7 @@
         "access-core",
         "admin-core",
         "admin-ops",
+        "architecture-policy",
         "billing-polar",
         "cache-core",
         "cli",
