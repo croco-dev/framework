@@ -1,12 +1,18 @@
-import { usePageData } from "@croco/frontend-react";
+import React from "react";
+import type { RuntimeContext } from "@croco/meta-vite";
 
-export default function Page() {
-  const { message } = usePageData<{ message: string }>();
+type PageProps = {
+  readonly request: Request;
+  readonly context?: RuntimeContext;
+};
 
+export default function Page({ context }: PageProps) {
   return (
     <div>
       <h1>Welcome to {{ projectName }}</h1>
-      <p>{message}</p>
+      <p>Hello from {{ projectName }}!</p>
+      <p>Runtime: {context?.platform ?? "unknown"}</p>
+      <p>Worker env: {context?.env ? "bound" : "missing"}</p>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Window } from "happy-dom";
 import { act, createElement } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
+import type { SsrWorkerEnv } from "@croco/frontend-cloudflare";
 import { PageDataProvider, usePageData, usePageMeta } from "@croco/frontend-react";
 import {
   createIsrMiddleware,
@@ -15,6 +16,7 @@ import {
   RouteRegistry,
 } from "@croco/meta-vite";
 import type { IsrCacheStore, RuntimeContext } from "@croco/meta-vite";
+import worker from "../index";
 
 class SmokeResponseCache implements IsrCacheStore {
   private readonly entries = new Map<
@@ -165,6 +167,36 @@ async function assertHydrationMismatchIsVisible(): Promise<void> {
   );
 }
 
+function normalizeRenderedHtml(html: string): string {
+  return html.replace(/<!--.*?-->/g, "");
+}
+
+function createExecutionContext(): ExecutionContext {
+  return {
+    waitUntil: () => {},
+    passThroughOnException: () => {},
+  };
+}
+
+function createStream(payload: string): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(payload));
+      controller.close();
+    },
+  });
+}
+
+async function readFirstChunk(response: Response): Promise<string> {
+  const reader = response.body?.getReader();
+  assert(reader, "Expected response to expose a readable stream body");
+
+  const chunk = await reader.read();
+  assert(chunk.done === false, "Expected streaming response to yield a chunk");
+
+  return new TextDecoder().decode(chunk.value);
+}
+
 async function main(): Promise<void> {
   resetServerActions();
 
@@ -248,6 +280,91 @@ async function main(): Promise<void> {
     JSON.stringify(await apiResponse.json()) ===
       JSON.stringify({ ok: true, platform: "cloudflare" }),
     "Generated API route returned an unexpected payload",
+  );
+
+  const missingAssets = {
+    fetch: async () => new Response("missing", { status: 404 }),
+  } as Fetcher;
+  const apiBinding = {
+    fetch: async (request: Request) => {
+      const pathname = new URL(request.url).pathname;
+
+      if (pathname === "/api/stream") {
+        return new Response(createStream("streamed from API_WORKER"), {
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      }
+
+      return Response.json({
+        ok: true,
+        path: pathname,
+        traceparent: request.headers.get("traceparent"),
+      });
+    },
+  } as Fetcher;
+  const workerEnv: SsrWorkerEnv = {
+    ASSETS: missingAssets,
+    API_WORKER: apiBinding,
+    FEATURE_FLAG: "worker-smoke",
+  };
+
+  const assetResponse = await worker.fetch(
+    new Request("https://presentation.test/assets/main.js"),
+    {
+      ...workerEnv,
+      ASSETS: {
+        fetch: async () => new Response("served by ASSETS", { status: 200 }),
+      } as Fetcher,
+    },
+    createExecutionContext(),
+  );
+  assert(assetResponse.status === 200, `Expected asset status 200, got ${assetResponse.status}`);
+  await expectText(assetResponse, "served by ASSETS");
+
+  const serviceResponse = await worker.fetch(
+    new Request("https://presentation.test/api/ping", {
+      headers: {
+        traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+      },
+    }),
+    workerEnv,
+    createExecutionContext(),
+  );
+  assert(
+    JSON.stringify(await serviceResponse.json()) ===
+      JSON.stringify({
+        ok: true,
+        path: "/api/ping",
+        traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+      }),
+    "Generated Worker service binding route returned an unexpected payload",
+  );
+
+  const streamingResponse = await worker.fetch(
+    new Request("https://presentation.test/api/stream"),
+    workerEnv,
+    createExecutionContext(),
+  );
+  assert(
+    (await readFirstChunk(streamingResponse)) === "streamed from API_WORKER",
+    "Generated Worker did not preserve the service-binding streaming response body",
+  );
+
+  const pageResponse = await worker.fetch(
+    new Request("https://presentation.test/"),
+    workerEnv,
+    createExecutionContext(),
+  );
+  assert(pageResponse.status === 200, `Expected Worker SSR status 200, got ${pageResponse.status}`);
+  const pageText = normalizeRenderedHtml(await pageResponse.text());
+  assert(pageText.includes("Welcome to"), "Generated Worker SSR page did not render");
+  assert(
+    pageText.includes("Runtime: cloudflare"),
+    "Generated Worker SSR page did not receive Cloudflare RuntimeContext",
+  );
+  assert(
+    pageText.includes("Worker env: bound"),
+    "Generated Worker SSR page did not receive Worker env",
   );
 
   const formData = new FormData();

@@ -1,3 +1,4 @@
+import React from "react";
 import { usePageData } from "@croco/frontend-react";
 
 export default function Page() {

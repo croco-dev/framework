@@ -1,10 +1,26 @@
 # @croco/frontend-cloudflare
 
-> Croco Presentation Tier — 5th layer: Framework → Protocols → Transports → Integrations → Presentation
+> Croco Presentation Tier - Framework -> Protocols -> Transports -> Integrations -> Presentation
 
-Cloudflare Workers 환경에서 SSR 핸들러를 제공하는 패키지입니다.
+Cloudflare Workers에서 meta-vite `RenderServer` 기반 SSR을 실행하는 Worker 핸들러입니다.
+서비스 바인딩 API 라우팅, Worker assets fallback, streaming `Response` 보존, 그리고
+Cloudflare `RuntimeContext` 전달을 패키지 테스트와 생성 앱 smoke로 검증합니다.
 
-이 패키지는 Cloudflare Workers 환경에서 Vike 기반 SSR을 수행하기 위한 핸들러를 제공합니다.
+## 상태
+
+`@croco/frontend-cloudflare`는 Worker SSR beta gate evidence를 갖춘 beta 패키지입니다.
+
+검증 evidence:
+
+- `packages/frontend-cloudflare/src/tests/CloudflareSsrHandler.spec.ts`
+  - Worker SSR 성공/실패 경로
+  - `API_WORKER` 및 커스텀 서비스 바인딩 라우팅
+  - `ASSETS` 응답/404 fallback/실패 fallback
+  - streaming `Response` body 보존
+  - `RuntimeContext.env`와 `RuntimeContext.executionContext` 전달
+- `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke`
+  - 생성된 Cloudflare SSR Worker가 실제 Worker export를 통해 assets, service binding API,
+    streaming response, SSR page, env/context propagation을 검증
 
 ## 설치
 
@@ -12,97 +28,96 @@ Cloudflare Workers 환경에서 SSR 핸들러를 제공하는 패키지입니다
 pnpm add @croco/frontend-cloudflare
 ```
 
-## 사용법
-
-### Worker 핸들러 생성
-
-`worker.ts`에서 SSR 핸들러를 생성합니다:
+## Worker 엔트리
 
 ```typescript
 import { createSsrHandler } from "@croco/frontend-cloudflare";
+import { RenderServer } from "@croco/meta-vite";
+import registry from "./pages/route";
 
+const renderServer = new RenderServer(registry.compile());
+const fetch = createSsrHandler({ renderServer });
+
+export default { fetch };
+```
+
+## Bindings
+
+`wrangler.toml` 예시:
+
+```toml
+[assets]
+directory = "dist/client"
+
+[[services]]
+binding = "API_WORKER"
+service = "my-api-worker"
+```
+
+`API_WORKER`와 `ASSETS`는 선택 사항입니다. 추가 Worker binding은 `env`에 보존되어
+`RenderServer`로 전달됩니다.
+
+## Request Routing
+
+핸들러는 같은 `Request` 객체를 유지하며 다음 순서로 처리합니다.
+
+1. `env.ASSETS.fetch(request)`가 404가 아닌 응답을 반환하면 그 응답을 그대로 반환합니다.
+2. assets 응답이 404이면 다음 단계로 진행합니다.
+3. assets binding 호출이 throw되면 `console.warn`에 boundary failure를 남기고 API 또는 SSR
+   fallback으로 진행합니다.
+4. 요청 path가 `/api/`로 시작하고 API service binding이 있으면 `apiBindingName`에 해당하는
+   `Fetcher`로 라우팅합니다.
+5. `renderServer`가 있으면 `{ platform: "cloudflare", env, executionContext }`를
+   `RuntimeContext`로 전달해 SSR을 실행합니다.
+
+`apiBindingName` 기본값은 `API_WORKER`입니다.
+
+```typescript
 export default {
-  fetch: createSsrHandler(),
+  fetch: createSsrHandler({
+    renderServer,
+    apiBindingName: "INTERNAL_API",
+  }),
 };
 ```
 
-### Service Binding 설정
+## Streaming
 
-`wrangler.toml`에서 Service Binding을 설정합니다:
+서비스 바인딩이나 SSR render server가 반환한 `Response`는 buffering 없이 그대로 반환됩니다.
+Workers 런타임이 지원하는 streaming body는 `ReadableStream` 상태로 보존됩니다.
 
-```toml
-[env.production]
-services = [
-  { binding = "API_WORKER", service = "api-worker" },
-  { binding = "ASSETS", service = "assets-worker" },
-]
-```
+## Failure Behavior
 
-## API
+| State                            | Response                                          | Recovery                                                                            |
+| -------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ASSETS` binding returns 404     | API 또는 SSR fallback 계속                        | 해당 asset이 build output에 포함됐는지 확인합니다.                                  |
+| `ASSETS` binding throws          | API 또는 SSR fallback 계속, `console.warn` 기록   | binding 이름과 Worker assets 설정을 확인합니다.                                     |
+| API service binding throws       | `500 API request failed`                          | API Worker deploy, service binding 이름, upstream 로그를 확인합니다.                |
+| SSR render server throws         | `500 Internal server error`, `console.error` 기록 | route component, server-only import, render 로그를 확인합니다.                      |
+| `renderServer` missing           | `500 No render server configured`                 | Worker entry에서 `new RenderServer(registry.compile())`를 넘깁니다.                 |
+| API binding missing for `/api/*` | SSR fallback 또는 render-server 404/500           | API를 service binding으로 제공하려면 `apiBindingName`과 `wrangler.toml`을 맞춥니다. |
 
-### `createSsrHandler(options?)`
-
-SSR 핸들러를 생성합니다.
-
-**옵션:**
-
-- `apiBindingName?: string` - API 서비스 Worker의 바인딩 이름 (기본값: `'API_WORKER'`)
-
-**반환값:** `(request: Request, env: SsrWorkerEnv, ctx: ExecutionContext) => Promise<Response>`
-
-## 동작
-
-핸들러는 다음 순서로 요청을 처리합니다:
-
-1. 정적 자산 요청 (`env.ASSETS`)
-2. API 요청 (`/api/*` 경로, `env.API_WORKER`)
-3. 페이지 렌더링 (Vike SSR)
-
-## 타입
-
-### `SsrWorkerEnv`
-
-Cloudflare Worker 환경 타입입니다.
+## Types
 
 ```typescript
-export type SsrWorkerEnv = {
+export type SsrWorkerEnv = Record<string, unknown> & {
   API_WORKER?: Fetcher;
   ASSETS?: Fetcher;
 };
-```
 
-### `SsrHandlerOptions`
-
-SSR 핸들러 옵션 타입입니다.
-
-```typescript
 export type SsrHandlerOptions = {
   apiBindingName?: string;
 };
 ```
 
-## 예제
+## Verification
 
-### 기본 설정
-
-```typescript
-import { createSsrHandler } from "@croco/frontend-cloudflare";
-
-export default {
-  fetch: createSsrHandler(),
-};
+```bash
+pnpm --filter @croco/frontend-cloudflare test
+CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke
+pnpm docs:catalog:check
 ```
 
-### 커스텀 API 바인딩 이름
-
-```typescript
-import { createSsrHandler } from "@croco/frontend-cloudflare";
-
-export default {
-  fetch: createSsrHandler({ apiBindingName: "MY_API" }),
-};
-```
-
-## 라이선스
+## License
 
 MIT
