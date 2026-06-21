@@ -429,6 +429,7 @@ describe("E2E: generate()", () => {
       expect(packageJson.scripts?.["presentation:smoke"]).toBe(
         "tsx src/smoke/presentationSmoke.ts",
       );
+      expect(packageJson.devDependencies?.["happy-dom"]).toBe("^20.10.6");
       expect(packageJson.devDependencies?.tsx).toBe("^4.20.3");
       expect(existsSync(join(webDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
       assertViteConfigImportsDeclared(webDir);
@@ -466,6 +467,7 @@ describe("E2E: generate()", () => {
       expect(ssrWorkerPackageJson.scripts?.["presentation:smoke"]).toBe(
         "tsx src/smoke/presentationSmoke.ts",
       );
+      expect(ssrWorkerPackageJson.devDependencies?.["happy-dom"]).toBe("^20.10.6");
       expect(ssrWorkerPackageJson.devDependencies?.tsx).toBe("^4.20.3");
       expect(existsSync(join(ssrWorkerDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
       assertViteConfigImportsDeclared(ssrWorkerDir);

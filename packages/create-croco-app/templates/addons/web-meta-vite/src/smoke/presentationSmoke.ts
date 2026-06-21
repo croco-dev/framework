@@ -1,4 +1,8 @@
-import { createElement } from "react";
+import { Window } from "happy-dom";
+import { act, createElement } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
+import { PageDataProvider, usePageData, usePageMeta } from "@croco/frontend-react";
 import {
   createIsrMiddleware,
   createMetaFetchHandler,
@@ -45,6 +49,120 @@ function assert(condition: unknown, message: string): asserts condition {
 async function expectText(response: Response, expected: string): Promise<void> {
   const text = await response.text();
   assert(text.includes(expected), `Expected response text to include '${expected}', got '${text}'`);
+}
+
+type HydrationPageData = {
+  readonly message: string;
+  readonly count: number;
+};
+
+function HydratedPage() {
+  const data = usePageData<HydrationPageData>();
+  const meta = usePageMeta();
+
+  if (!data) {
+    throw new Error("Generated page data was not available during hydration");
+  }
+
+  return createElement(
+    "main",
+    { "data-croco-hydrated": "true" },
+    createElement("h1", null, meta.title ?? "missing-title"),
+    createElement("p", { id: "page-data" }, `${data.message}:${data.count}:${meta.urlOriginal}`),
+  );
+}
+
+function createHydrationElement(pageData: HydrationPageData) {
+  return createElement(
+    PageDataProvider,
+    {
+      value: {
+        data: pageData,
+        description: "Generated browser hydration smoke",
+        title: "Generated Meta Vite page",
+        urlOriginal: "/hydration-smoke",
+      },
+    },
+    createElement(HydratedPage),
+  );
+}
+
+function installBrowserGlobals(window: Window): void {
+  const globals = globalThis as Record<string, unknown>;
+
+  globals.window = window;
+  globals.document = window.document;
+  globals.HTMLElement = window.HTMLElement;
+  globals.Node = window.Node;
+  globals.Text = window.Text;
+  globals.Event = window.Event;
+  globals.requestAnimationFrame = window.requestAnimationFrame.bind(window);
+  globals.cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
+  globals.IS_REACT_ACT_ENVIRONMENT = true;
+
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: window.navigator,
+  });
+}
+
+function createHydrationRoot(serverHtml: string): HTMLElement {
+  const window = new Window({ url: "https://presentation.test/hydration-smoke" });
+  installBrowserGlobals(window);
+  window.document.body.innerHTML = `<div id="root">${serverHtml}</div>`;
+
+  const rootElement = window.document.getElementById("root");
+  assert(rootElement, "Hydration smoke root was not created");
+
+  return rootElement;
+}
+
+async function assertBrowserHydrationSmoke(): Promise<void> {
+  const pageData = { count: 7, message: "Hello from generated page data" };
+  const app = createHydrationElement(pageData);
+  const serverHtml = renderToString(app);
+  const rootElement = createHydrationRoot(serverHtml);
+  const hydrationErrors: unknown[] = [];
+
+  await act(async () => {
+    hydrateRoot(rootElement, app, {
+      onRecoverableError(error) {
+        hydrationErrors.push(error);
+      },
+    });
+  });
+
+  const hydratedText = rootElement.querySelector("#page-data")?.textContent;
+  assert(
+    hydratedText === "Hello from generated page data:7:/hydration-smoke",
+    "Page data did not survive hydration",
+  );
+  assert(
+    hydrationErrors.length === 0,
+    `Hydration reported recoverable errors: ${hydrationErrors.join(", ")}`,
+  );
+}
+
+async function assertHydrationMismatchIsVisible(): Promise<void> {
+  const pageData = { count: 7, message: "Hello from generated page data" };
+  const staleServerHtml = renderToString(
+    createHydrationElement({ ...pageData, message: "stale server data" }),
+  );
+  const rootElement = createHydrationRoot(staleServerHtml);
+  const hydrationErrors: unknown[] = [];
+
+  await act(async () => {
+    hydrateRoot(rootElement, createHydrationElement(pageData), {
+      onRecoverableError(error) {
+        hydrationErrors.push(error);
+      },
+    });
+  });
+
+  assert(
+    hydrationErrors.length > 0,
+    "Hydration mismatch did not surface through onRecoverableError and could look successful",
+  );
 }
 
 async function main(): Promise<void> {
@@ -151,6 +269,9 @@ async function main(): Promise<void> {
   await expectText(await handler(new Request("https://presentation.test/cached")), "isr:1:/cached");
   await expectText(await handler(new Request("https://presentation.test/cached")), "isr:1:/cached");
   assert(isrRenderCount === 1, `Expected ISR cache hit after first render, got ${isrRenderCount}`);
+
+  await assertBrowserHydrationSmoke();
+  await assertHydrationMismatchIsVisible();
 
   console.log("meta-vite presentation smoke passed");
 }
