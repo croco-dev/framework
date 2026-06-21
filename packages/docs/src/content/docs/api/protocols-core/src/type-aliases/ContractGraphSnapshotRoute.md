@@ -33,6 +33,12 @@ title: "ContractGraphSnapshotRoute"
 
 ***
 
+### entitlements
+
+> `readonly` **entitlements**: readonly [`ContractGraphSnapshotEntitlementRequirement`](/api/protocols-core/src/type-aliases/contractgraphsnapshotentitlementrequirement/)[]
+
+***
+
 ### httpMethod
 
 > `readonly` **httpMethod**: `string`

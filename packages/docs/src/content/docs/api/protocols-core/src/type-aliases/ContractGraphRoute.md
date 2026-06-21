@@ -17,6 +17,10 @@ title: "ContractGraphRoute"
 
 > `readonly` **controllerPath**: `string`
 
+### entitlements
+
+> `readonly` **entitlements**: readonly [`ContractEntitlementRequirement`](/api/protocols-core/src/type-aliases/contractentitlementrequirement/)[]
+
 ### operationId
 
 > `readonly` **operationId**: `string`

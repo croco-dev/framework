@@ -419,6 +419,7 @@ function createContractSnapshot(diagnostics: ContractDiagnostic[] = []): Contrac
         controllerPath: "/users",
         domain: "users",
         access: { guards: [], roles: [] },
+        entitlements: [],
         params: [],
         request: { body: null, path: null, query: null, headers: null },
         response: null,
