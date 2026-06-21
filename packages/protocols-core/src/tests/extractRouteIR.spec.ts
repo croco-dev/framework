@@ -268,6 +268,7 @@ describe("extractRouteIR", () => {
       {
         code: "USER_NOT_FOUND",
         category: ProblemCategory.NotFound,
+        cookbookPath: "/reference/problem-recovery-cookbook/#user-not-found",
         description: "The requested user does not exist.",
         status: 404,
       },

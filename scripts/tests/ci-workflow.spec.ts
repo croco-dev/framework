@@ -16,6 +16,8 @@ describe("CI package quality dashboard", () => {
       "run: pnpm turbo run typecheck --summarize --continue=always",
       "- name: Test",
       "run: pnpm turbo run test --summarize --continue=always",
+      "- name: Production-ready package gate",
+      "pnpm production-ready:check -- --require-task-summaries",
       "- name: Publish package quality dashboard",
       "pnpm package-quality:report",
       "- name: Upload package quality dashboard",
@@ -41,5 +43,15 @@ describe("CI package quality dashboard", () => {
     expect(workflow).toContain("PACKAGE_QUALITY_BUILD_STATUS: ${{ steps.build.outcome");
     expect(workflow).toContain("PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome");
     expect(workflow).toContain("PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome");
+  });
+
+  it("appends the production-ready package report before exiting the blocking gate", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain("ci-reports/package-quality/production-ready.md");
+    expect(workflow).toContain(
+      'cat ci-reports/package-quality/production-ready.md >> "$GITHUB_STEP_SUMMARY"',
+    );
+    expect(workflow).toContain('exit "$status"');
   });
 });
