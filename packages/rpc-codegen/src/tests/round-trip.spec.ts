@@ -116,17 +116,17 @@ describe("rpc-codegen round trip", () => {
 
     expect(userContent).toContain("export const userClient = {");
     expect(userContent).toContain(
-      "listUsers: (): Promise<unknown | undefined> => fetch('/users', { method: 'GET' })",
+      "listUsers: (options?: RpcClientRequestOptions): Promise<unknown | undefined> =>",
     );
     expect(userContent).toContain(
-      "createUser: (input: CreateUserInput): Promise<unknown | undefined> =>",
+      "createUser: (input: CreateUserInput, options?: RpcClientRequestOptions): Promise<unknown | undefined> =>",
     );
     expect(userContent).toContain(
-      "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
+      "const request = createRpcClientRequest(userContractRoutes[1], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options);",
     );
     expect(orderContent).toContain("export const orderClient = {");
     expect(orderContent).toContain(
-      "listOrders: (): Promise<unknown | undefined> => fetch('/orders', { method: 'GET' })",
+      "listOrders: (options?: RpcClientRequestOptions): Promise<unknown | undefined> =>",
     );
 
     const userModule = await importGeneratedClient("user-path-query.ts", userContent);
@@ -218,12 +218,8 @@ describe("rpc-codegen round trip", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(rpcContent).toContain(
-      "export async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined>",
-    );
-    expect(rpcContent).toContain(
-      "async function rejectErrorResponse(response: Response): Promise<never>",
-    );
+    expect(rpcContent).toContain("export async function readOptionalJsonResponse(");
+    expect(rpcContent).toContain("async function rejectErrorResponse(");
     await expect(healthModule.healthClient.health()).resolves.toBeUndefined();
     await expect(healthModule.healthClient.clear()).resolves.toBeUndefined();
     await expect(healthModule.healthClient.fail()).rejects.toThrow(
@@ -313,6 +309,271 @@ describe("rpc-codegen round trip", () => {
       method: "GET",
       headers: { authorization: "Bearer token" },
     });
+  });
+
+  it("propagates telemetry headers and records generated client request events", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: z.object({ search: z.string() }) as any,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: "user",
+      },
+      {
+        controllerName: "UserController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        routeContract: null,
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: BODY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-telemetry.ts", userContent);
+    const events: Record<string, unknown>[] = [];
+    const headerContexts: Record<string, unknown>[] = [];
+    const telemetry = {
+      createHeaders: vi.fn((context: Record<string, unknown>) => {
+        headerContexts.push(context);
+
+        return {
+          traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+          "x-croco-correlation-id": "corr-1",
+          "x-croco-interaction-id": "interaction-1",
+        };
+      }),
+      record: vi.fn((event: Record<string, unknown>) => {
+        events.push(event);
+      }),
+    };
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/users/user-secret%40example.com?search=token-123") {
+        return jsonResponse({ id: "1", name: "Alice" });
+      }
+
+      if (url === "/users/missing?search=missing-secret") {
+        return jsonResponse(
+          {
+            type: "https://errors.example.com/not-found",
+            title: "Not Found",
+            status: 404,
+            code: "USER_NOT_FOUND",
+            detail: "missing private detail",
+          },
+          404,
+        );
+      }
+
+      if (url === "/users/forbidden?search=external-secret") {
+        return jsonResponse(
+          {
+            type: "https://errors.example.com/forbidden",
+            title: "Forbidden",
+            status: 403,
+            code: "USER_FORBIDDEN",
+            detail: "external private detail",
+          },
+          403,
+        );
+      }
+
+      return new Response(null, { status: 204 });
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      userModule.userClient.getUser(
+        { path: { id: "user-secret@example.com" }, query: { search: "token-123" } },
+        {
+          attempt: 2,
+          correlationId: "corr-1",
+          interactionId: "interaction-1",
+          telemetry,
+        },
+      ),
+    ).resolves.toEqual({ id: "1", name: "Alice" });
+
+    expect(fetchMock).toHaveBeenCalledWith("/users/user-secret%40example.com?search=token-123", {
+      method: "GET",
+      headers: {
+        traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+        "x-croco-correlation-id": "corr-1",
+        "x-croco-interaction-id": "interaction-1",
+      },
+    });
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.retry",
+      "rpc.request.succeeded",
+    ]);
+    expect(events[0]).toMatchObject({
+      attempt: 2,
+      correlationId: "corr-1",
+      interactionId: "interaction-1",
+      operationId: "UserController_getUser",
+      routeId: "UserController.getUser",
+      routeKind: "query",
+    });
+    expect(headerContexts[0]).not.toHaveProperty("url");
+    expect(JSON.stringify(events)).not.toContain("user-secret@example.com");
+    expect(JSON.stringify(events)).not.toContain("token-123");
+
+    events.length = 0;
+
+    const problemResult = await userModule.userClient.getUserResult(
+      { path: { id: "missing" }, query: { search: "missing-secret" } },
+      { telemetry },
+    );
+
+    expect(problemResult).toMatchObject({
+      ok: false,
+      kind: "problem",
+      code: "USER_NOT_FOUND",
+    });
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.problem",
+    ]);
+    expect(events[1]).toMatchObject({
+      problem: {
+        code: "USER_NOT_FOUND",
+        status: 404,
+        category: "NotFound",
+        type: "https://errors.example.com/not-found",
+        title: "Not Found",
+      },
+      status: 404,
+    });
+    expect(events[1]).not.toHaveProperty("body");
+    expect(events[1]).not.toHaveProperty("url");
+    expect(JSON.stringify(events)).not.toContain("missing-secret");
+    expect(JSON.stringify(events)).not.toContain("missing private detail");
+
+    events.length = 0;
+
+    const externalResult = await userModule.userClient.getUserResult(
+      { path: { id: "forbidden" }, query: { search: "external-secret" } },
+      { telemetry },
+    );
+
+    expect(externalResult).toMatchObject({
+      ok: false,
+      kind: "external",
+    });
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
+    expect(events[1]).toMatchObject({
+      errorName: "RpcClientProblemError",
+      problem: {
+        code: "USER_FORBIDDEN",
+        status: 403,
+        type: "https://errors.example.com/forbidden",
+        title: "Forbidden",
+      },
+      status: 403,
+    });
+    expect(events[1]).not.toHaveProperty("errorMessage");
+    expect(events[1]).not.toHaveProperty("url");
+    expect(JSON.stringify(events)).not.toContain("external-secret");
+    expect(JSON.stringify(events)).not.toContain("external private detail");
+
+    events.length = 0;
+
+    await expect(
+      userModule.userClient.createUser({ name: "Bob" }, { telemetry }),
+    ).resolves.toBeUndefined();
+
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.mutation.started",
+      "rpc.request.succeeded",
+      "rpc.mutation.succeeded",
+    ]);
+  });
+
+  it("records cancelled generated client requests without masking the abort", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-cancelled-telemetry.ts", userContent);
+    const events: Record<string, unknown>[] = [];
+    const abort = new Error("The operation was aborted.");
+    abort.name = "AbortError";
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw abort;
+      }),
+    );
+
+    await expect(
+      userModule.userClient.getUser(
+        { path: { id: "1" } },
+        {
+          telemetry: {
+            record: (event: Record<string, unknown>) => {
+              events.push(event);
+            },
+          },
+        },
+      ),
+    ).rejects.toBe(abort);
+
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.cancelled",
+    ]);
+    expect(events[1]).toMatchObject({
+      errorName: "AbortError",
+    });
+    expect(events[1]).not.toHaveProperty("errorMessage");
   });
 
   it("generates outputSchema types that compile", async () => {
@@ -629,27 +890,24 @@ async function importGeneratedClient(fileName: string, source: string) {
   return import(pathToFileURL(modulePath).href) as Promise<{
     readonly userClient: {
       readonly listUsers: () => Promise<unknown>;
-      readonly createUser: (input: { readonly name: string }) => Promise<unknown>;
-      readonly getUser: (input: {
-        readonly path: { readonly id: string };
-        readonly query?: {
-          readonly includePosts: boolean;
-          readonly page: number;
-          readonly search: string | undefined;
-          readonly tags: string[];
-          readonly deletedAt: string | null;
-        };
-      }) => Promise<unknown>;
-      readonly getUserResult: (input: {
-        readonly path: { readonly id: string };
-        readonly query?: {
-          readonly includePosts: boolean;
-          readonly page: number;
-          readonly search: string | undefined;
-          readonly tags: string[];
-          readonly deletedAt: string | null;
-        };
-      }) => Promise<
+      readonly createUser: (
+        input: { readonly name: string },
+        options?: unknown,
+      ) => Promise<unknown>;
+      readonly getUser: (
+        input: {
+          readonly path: { readonly id: string };
+          readonly query?: Record<string, unknown>;
+        },
+        options?: unknown,
+      ) => Promise<unknown>;
+      readonly getUserResult: (
+        input: {
+          readonly path: { readonly id: string };
+          readonly query?: Record<string, unknown>;
+        },
+        options?: unknown,
+      ) => Promise<
         | {
             readonly ok: true;
             readonly data: unknown;
@@ -673,12 +931,15 @@ async function importGeneratedClient(fileName: string, source: string) {
             readonly body?: unknown;
           }
       >;
-      readonly getCurrentUser: (input: {
-        readonly headers: {
-          readonly authorization: string;
-          readonly "x-request-id": string | undefined;
-        };
-      }) => Promise<unknown>;
+      readonly getCurrentUser: (
+        input: {
+          readonly headers: {
+            readonly authorization: string;
+            readonly "x-request-id": string | undefined;
+          };
+        },
+        options?: unknown,
+      ) => Promise<unknown>;
     };
     readonly healthClient: {
       readonly health: () => Promise<unknown>;

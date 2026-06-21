@@ -305,7 +305,9 @@ function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<str
 }
 `
     : "";
-  const clientMethods = domainRoutes.routes.map(generateClientMethod).join("\n");
+  const clientMethods = domainRoutes.routes
+    .map((route, index) => generateClientMethod(route, domainRoutes.domain, index))
+    .join("\n");
   const imports = options.reactQuery ? generateReactQueryImports(domainRoutes) : "";
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
   const routeMetadata = generateContractRouteMetadata(domainRoutes);
@@ -593,7 +595,7 @@ ${[...clientExports, ...namespaceExports].join("\n")}
 }
 
 function getResponseHelperImports(options: ResponseHelperOptions): string {
-  const helpers: string[] = [];
+  const helpers: string[] = ["createRpcClientRequest", "handleRpcRequestError"];
 
   if (options.hasOutputRoutes) {
     helpers.push("handleJsonResponse");
@@ -613,7 +615,7 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
     helpers.push("serializeRpcQueryKeyInput");
   }
 
-  helpers.push("type RpcClientResult", "type RpcDeclaredProblem");
+  helpers.push("type RpcClientRequestOptions", "type RpcClientResult", "type RpcDeclaredProblem");
 
   if (options.hasFormRoutes) {
     helpers.push(
@@ -635,16 +637,45 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
 
 function generateRpcSupport(options: GenerateClientOptions = {}): string {
   if (options.problemRuntime === "frontend-problems") {
-    return `export {
+    return `import {
   ProblemClientError as RpcClientProblemError,
   ProblemResponseError as RpcClientResponseError,
   assertProblemExhaustive as assertExhaustiveProblem,
-  handleJsonResponse,
-  handleJsonResult,
-  readOptionalJsonResponse,
-  readOptionalJsonResult,
+  handleJsonResponse as handleProblemJsonResponse,
+  handleJsonResult as handleProblemJsonResult,
+  readOptionalJsonResponse as readProblemOptionalJsonResponse,
+  readOptionalJsonResult as readProblemOptionalJsonResult,
   toProblemFormProblem as toRpcFormProblem,
 } from '@croco/frontend-problems';
+
+import type {
+  ProblemClientExternalFailure as RpcClientExternalFailure,
+  ProblemClientFailure as RpcClientFailure,
+  ProblemClientProblemFailure as RpcClientProblemFailure,
+  ProblemClientResult as RpcClientResult,
+  ProblemClientSuccess as RpcClientSuccess,
+  ProblemDeclaration as RpcDeclaredProblem,
+  ProblemDetails as RpcProblemDetails,
+  ProblemDetailsFor as RpcProblemDetailsFor,
+  ProblemDomainDeclaration as RpcDomainProblem,
+  ProblemFormField as RpcFormField,
+  ProblemFormFieldControl as RpcFormFieldControl,
+  ProblemFormFieldErrors as RpcFormFieldErrors,
+  ProblemFormFieldOption as RpcFormFieldOption,
+  ProblemFormFieldProblem as RpcFormFieldProblem,
+  ProblemFormFieldValueKind as RpcFormFieldValueKind,
+  ProblemFormGlobalProblem as RpcFormGlobalProblem,
+  ProblemFormModel as RpcFormModel,
+  ProblemFormProblem as RpcFormProblem,
+  ProblemValidationDeclaration as RpcValidationProblem,
+} from '@croco/frontend-problems';
+
+export {
+  RpcClientProblemError,
+  RpcClientResponseError,
+  assertExhaustiveProblem,
+  toRpcFormProblem,
+};
 
 export type {
   ProblemClientExternalFailure as RpcClientExternalFailure,
@@ -668,6 +699,75 @@ export type {
   ProblemValidationDeclaration as RpcValidationProblem,
 } from '@croco/frontend-problems';
 ${generateRpcQueryKeySupport()}
+${generateRpcTelemetrySupport()}
+
+export async function handleJsonResponse<T = unknown>(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<T> {
+  try {
+    const data = await handleProblemJsonResponse<T>(response);
+    recordRpcTelemetrySuccess(response, telemetry);
+
+    return data;
+  } catch (error) {
+    recordRpcTelemetryProblemRuntimeError(error, response, telemetry);
+    throw error;
+  }
+}
+
+export async function handleJsonResult<
+  T = unknown,
+  Problem extends RpcDeclaredProblem = never,
+>(
+  response: Response,
+  declaredProblems: readonly Problem[] = [],
+  telemetry?: RpcTelemetryRequestState,
+): Promise<RpcClientResult<T, Problem>> {
+  const result = await handleProblemJsonResult<T, Problem>(response, declaredProblems);
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
+}
+
+export async function readOptionalJsonResponse(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<unknown | undefined> {
+  try {
+    const data = await readProblemOptionalJsonResponse(response);
+    recordRpcTelemetrySuccess(response, telemetry);
+
+    return data;
+  } catch (error) {
+    recordRpcTelemetryProblemRuntimeError(error, response, telemetry);
+    throw error;
+  }
+}
+
+export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem = never>(
+  response: Response,
+  declaredProblems: readonly Problem[] = [],
+  telemetry?: RpcTelemetryRequestState,
+): Promise<RpcClientResult<unknown | undefined, Problem>> {
+  const result = await readProblemOptionalJsonResult<Problem>(response, declaredProblems);
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
+}
+
+function recordRpcTelemetryProblemRuntimeError(
+  error: unknown,
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  if (error instanceof RpcClientProblemError) {
+    recordRpcTelemetryProblem(error.problem, undefined, response, telemetry);
+    return;
+  }
+
+  recordRpcTelemetryExternal(error, response, telemetry);
+}
 `;
   }
 
@@ -735,6 +835,8 @@ export type RpcClientFailure<Problem extends RpcDeclaredProblem = never> =
 export type RpcClientResult<T, Problem extends RpcDeclaredProblem = never> =
   | RpcClientSuccess<T>
   | RpcClientFailure<Problem>;
+
+${generateRpcTelemetrySupport()}
 
 export type RpcQueryKeyValue =
   | string
@@ -865,12 +967,23 @@ export class RpcClientResponseError extends Error {
   }
 }
 
-export async function handleJsonResponse<T = unknown>(response: Response): Promise<T> {
+export async function handleJsonResponse<T = unknown>(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<T> {
   if (!response.ok) {
-    return rejectErrorResponse(response);
+    return rejectErrorResponse(response, telemetry);
   }
 
-  return response.json() as Promise<T>;
+  try {
+    const data = (await response.json()) as T;
+    recordRpcTelemetrySuccess(response, telemetry);
+
+    return data;
+  } catch (error) {
+    recordRpcTelemetryExternal(error, response, telemetry);
+    throw error;
+  }
 }
 
 export async function handleJsonResult<
@@ -879,51 +992,88 @@ export async function handleJsonResult<
 >(
   response: Response,
   declaredProblems: readonly Problem[] = [],
+  telemetry?: RpcTelemetryRequestState,
 ): Promise<RpcClientResult<T, Problem>> {
   if (!response.ok) {
-    return readErrorResult(response, declaredProblems);
+    return readErrorResult(response, declaredProblems, telemetry);
   }
 
-  return { ok: true, data: (await response.json()) as T, response };
+  try {
+    const result: RpcClientResult<T, Problem> = { ok: true, data: (await response.json()) as T, response };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
+  } catch (error) {
+    recordRpcTelemetryExternal(error, response, telemetry);
+    throw error;
+  }
 }
 
-export async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
+export async function readOptionalJsonResponse(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<unknown | undefined> {
   if (!response.ok) {
-    return rejectErrorResponse(response);
+    return rejectErrorResponse(response, telemetry);
   }
 
   if (response.status === 204) {
+    recordRpcTelemetrySuccess(response, telemetry);
     return undefined;
   }
 
   const body = await response.text();
 
   if (body.length === 0) {
+    recordRpcTelemetrySuccess(response, telemetry);
     return undefined;
   }
 
-  return JSON.parse(body) as unknown;
+  try {
+    const data = JSON.parse(body) as unknown;
+    recordRpcTelemetrySuccess(response, telemetry);
+
+    return data;
+  } catch (error) {
+    recordRpcTelemetryExternal(error, response, telemetry);
+    throw error;
+  }
 }
 
 export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem = never>(
   response: Response,
   declaredProblems: readonly Problem[] = [],
+  telemetry?: RpcTelemetryRequestState,
 ): Promise<RpcClientResult<unknown | undefined, Problem>> {
   if (!response.ok) {
-    return readErrorResult(response, declaredProblems);
+    return readErrorResult(response, declaredProblems, telemetry);
   }
 
   if (response.status === 204) {
-    return { ok: true, data: undefined, response };
+    const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data: undefined, response };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
   }
 
   const body = await response.text();
 
   if (body.length === 0) {
-    return { ok: true, data: undefined, response };
+    const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data: undefined, response };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
   }
 
-  return { ok: true, data: JSON.parse(body) as unknown, response };
+  try {
+    const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data: JSON.parse(body) as unknown, response };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
+  } catch (error) {
+    recordRpcTelemetryExternal(error, response, telemetry);
+    throw error;
+  }
 }
 
 export function assertExhaustiveProblem(problem: never): never {
@@ -991,7 +1141,7 @@ function isRpcQueryKeyRecord(value: unknown): value is Record<string, unknown> {
   return (
     prototype === Object.prototype ||
     prototype === null ||
-    Object.hasOwn(prototype, 'isPrototypeOf')
+    Object.prototype.hasOwnProperty.call(prototype, 'isPrototypeOf')
   );
 }
 
@@ -1010,44 +1160,58 @@ function compareRpcQueryKeyRecordEntries(
   return 0;
 }
 
-async function rejectErrorResponse(response: Response): Promise<never> {
+async function rejectErrorResponse(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<never> {
   let body: unknown;
 
   try {
     body = await response.json();
   } catch {
-    throw new RpcClientResponseError(response);
+    const error = new RpcClientResponseError(response);
+    recordRpcTelemetryExternal(error, response, telemetry);
+    throw error;
   }
 
   if (isRpcProblemDetails(body)) {
-    throw new RpcClientProblemError(body, response);
+    const error = new RpcClientProblemError(body, response);
+    recordRpcTelemetryProblem(body, undefined, response, telemetry);
+    throw error;
   }
 
-  throw new RpcClientResponseError(response, body);
+  const error = new RpcClientResponseError(response, body);
+  recordRpcTelemetryExternal(error, response, telemetry);
+  throw error;
 }
 
 async function readErrorResult<Problem extends RpcDeclaredProblem>(
   response: Response,
   declaredProblems: readonly Problem[],
+  telemetry?: RpcTelemetryRequestState,
 ): Promise<RpcClientFailure<Problem>> {
   let body: unknown;
 
   try {
     body = await response.json();
   } catch {
-    return {
+    const error = new RpcClientResponseError(response);
+    const result: RpcClientFailure<Problem> = {
       ok: false,
       kind: 'external',
-      error: new RpcClientResponseError(response),
+      error,
       response,
     };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
   }
 
   if (isRpcProblemDetails(body)) {
     const declaration = findDeclaredProblem(body, declaredProblems);
 
     if (declaration) {
-      return {
+      const result = {
         ok: false,
         kind: 'problem',
         code: declaration.code,
@@ -1057,24 +1221,36 @@ async function readErrorResult<Problem extends RpcDeclaredProblem>(
         declaration,
         response,
       } as RpcClientFailure<Problem>;
+      recordRpcTelemetryResult(result, telemetry);
+
+      return result;
     }
 
-    return {
+    const error = new RpcClientProblemError(body, response);
+    const result: RpcClientFailure<Problem> = {
       ok: false,
       kind: 'external',
-      error: new RpcClientProblemError(body, response),
+      error,
       response,
       body,
     };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return {
+      ...result,
+    };
   }
 
-  return {
+  const result: RpcClientFailure<Problem> = {
     ok: false,
     kind: 'external',
     error: new RpcClientResponseError(response, body),
     response,
     body,
   };
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
 }
 
 export function toRpcFormProblem<
@@ -1178,6 +1354,332 @@ function isRpcProblemDetails(value: unknown): value is RpcProblemDetails {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
+  `;
+}
+
+function generateRpcTelemetrySupport(): string {
+  return `export type RpcRouteKind = 'query' | 'mutation';
+
+export type RpcRouteTelemetryMetadata = {
+  readonly routeId: string;
+  readonly operationId: string;
+  readonly methodName: string;
+  readonly method: string;
+  readonly path: string;
+};
+
+export type RpcTelemetryEventKind =
+  | 'rpc.request.started'
+  | 'rpc.request.retry'
+  | 'rpc.request.succeeded'
+  | 'rpc.request.problem'
+  | 'rpc.request.external_failure'
+  | 'rpc.request.cancelled'
+  | 'rpc.mutation.started'
+  | 'rpc.mutation.succeeded'
+  | 'rpc.mutation.problem'
+  | 'rpc.mutation.external_failure'
+  | 'rpc.mutation.cancelled';
+
+export type RpcTelemetryProblemSummary = {
+  readonly code: string;
+  readonly status: number;
+  readonly category?: string;
+  readonly type?: string;
+  readonly title?: string;
+};
+
+export type RpcTelemetryRequestContext = RpcRouteTelemetryMetadata & {
+  readonly routeKind: RpcRouteKind;
+  readonly interactionId?: string;
+  readonly correlationId?: string;
+  readonly traceparent?: string;
+  readonly attempt?: number;
+};
+
+export type RpcTelemetryEvent = RpcTelemetryRequestContext & {
+  readonly kind: RpcTelemetryEventKind;
+  readonly timestamp: number;
+  readonly durationMs?: number;
+  readonly status?: number;
+  readonly problem?: RpcTelemetryProblemSummary;
+  readonly errorName?: string;
+  readonly errorMessage?: string;
+};
+
+export type RpcTelemetryBridge = {
+  readonly createHeaders?: (
+    context: RpcTelemetryRequestContext,
+  ) => Record<string, string> | undefined;
+  readonly record?: (event: RpcTelemetryEvent) => void;
+};
+
+export type RpcClientRequestOptions = {
+  readonly telemetry?: RpcTelemetryBridge;
+  readonly interactionId?: string;
+  readonly correlationId?: string;
+  readonly traceparent?: string;
+  readonly attempt?: number;
+  readonly signal?: AbortSignal;
+};
+
+export type RpcTelemetryRequestState = RpcTelemetryRequestContext & {
+  readonly telemetry: RpcTelemetryBridge;
+  readonly startedAt: number;
+};
+
+export type RpcClientRequest = {
+  readonly url: string;
+  readonly init: RequestInit;
+  readonly telemetry?: RpcTelemetryRequestState;
+};
+
+export function createRpcClientRequest(
+  route: RpcRouteTelemetryMetadata,
+  routeKind: RpcRouteKind,
+  url: string,
+  init: RequestInit,
+  options: RpcClientRequestOptions = {},
+): RpcClientRequest {
+  const context = createRpcTelemetryRequestContext(route, routeKind, options);
+  const telemetryHeaders = options.telemetry?.createHeaders?.(context);
+  const headers = mergeRpcHeaders(init.headers, telemetryHeaders);
+  const requestInit: RequestInit = {
+    ...init,
+    ...(headers ? { headers } : {}),
+    ...(options.signal ? { signal: options.signal } : {}),
+  };
+
+  if (!options.telemetry) {
+    return { url, init: requestInit };
+  }
+
+  const telemetry: RpcTelemetryRequestState = {
+    ...context,
+    telemetry: options.telemetry,
+    startedAt: nowRpcTelemetry(),
+  };
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.started');
+
+  if ((options.attempt ?? 1) > 1) {
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.retry');
+  }
+
+  if (routeKind === 'mutation') {
+    recordRpcTelemetryEvent(telemetry, 'rpc.mutation.started');
+  }
+
+  return { url, init: requestInit, telemetry };
+}
+
+export function handleRpcRequestError(
+  error: unknown,
+  telemetry?: RpcTelemetryRequestState,
+): never {
+  if (isRpcAbortError(error)) {
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.cancelled', describeRpcError(error));
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.cancelled', describeRpcError(error));
+    throw error;
+  }
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', describeRpcError(error));
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', describeRpcError(error));
+  throw error;
+}
+
+function createRpcTelemetryRequestContext(
+  route: RpcRouteTelemetryMetadata,
+  routeKind: RpcRouteKind,
+  options: RpcClientRequestOptions,
+): RpcTelemetryRequestContext {
+  return {
+    routeId: route.routeId,
+    operationId: route.operationId,
+    methodName: route.methodName,
+    method: route.method,
+    path: route.path,
+    routeKind,
+    ...(options.interactionId ? { interactionId: options.interactionId } : {}),
+    ...(options.correlationId ? { correlationId: options.correlationId } : {}),
+    ...(options.traceparent ? { traceparent: options.traceparent } : {}),
+    ...(options.attempt ? { attempt: options.attempt } : {}),
+  };
+}
+
+function mergeRpcHeaders(
+  ...sources: readonly (HeadersInit | Record<string, string> | undefined)[]
+): Record<string, string> | undefined {
+  const headers: Record<string, string> = {};
+
+  for (const source of sources) {
+    if (!source) {
+      continue;
+    }
+
+    if (typeof Headers !== 'undefined' && source instanceof Headers) {
+      source.forEach((value, key) => {
+        headers[key] = value;
+      });
+      continue;
+    }
+
+    if (Array.isArray(source)) {
+      for (const [key, value] of source) {
+        headers[key] = value;
+      }
+      continue;
+    }
+
+    for (const [key, value] of Object.entries(source)) {
+      headers[key] = String(value);
+    }
+  }
+
+  return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
+function recordRpcTelemetryResult<Problem extends RpcDeclaredProblem>(
+  result: RpcClientResult<unknown, Problem>,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  if (result.ok) {
+    recordRpcTelemetrySuccess(result.response, telemetry);
+    return;
+  }
+
+  if (result.kind === 'problem') {
+    recordRpcTelemetryProblem(result.problem, result.declaration, result.response, telemetry);
+    return;
+  }
+
+  recordRpcTelemetryExternal(result.error, result.response, telemetry);
+}
+
+function recordRpcTelemetrySuccess(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.succeeded', { status: response.status });
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.succeeded', { status: response.status });
+}
+
+function recordRpcTelemetryProblem<Problem extends RpcDeclaredProblem>(
+  problem: RpcProblemDetails,
+  declaration: Problem | undefined,
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  const event = {
+    status: response.status,
+    problem: summarizeRpcProblem(problem, declaration),
+  };
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.problem', event);
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.problem', event);
+}
+
+function recordRpcTelemetryExternal(
+  error: unknown,
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  if (error instanceof RpcClientProblemError) {
+    const problemEvent = {
+      status: response.status,
+      errorName: error.name,
+      problem: summarizeRpcProblem(error.problem, undefined),
+    };
+
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', problemEvent);
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', problemEvent);
+    return;
+  }
+
+  const event = {
+    status: response.status,
+    ...describeRpcError(error),
+  };
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', event);
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', event);
+}
+
+function recordRpcMutationTelemetryEvent(
+  telemetry: RpcTelemetryRequestState | undefined,
+  kind: Extract<RpcTelemetryEventKind, \`rpc.mutation.\${string}\`>,
+  fields: Partial<RpcTelemetryEvent> = {},
+): void {
+  if (telemetry?.routeKind !== 'mutation') {
+    return;
+  }
+
+  recordRpcTelemetryEvent(telemetry, kind, fields);
+}
+
+function recordRpcTelemetryEvent(
+  telemetry: RpcTelemetryRequestState | undefined,
+  kind: RpcTelemetryEventKind,
+  fields: Partial<RpcTelemetryEvent> = {},
+): void {
+  if (!telemetry) {
+    return;
+  }
+
+  const durationMs = kind === 'rpc.request.started' || kind === 'rpc.request.retry' || kind === 'rpc.mutation.started'
+    ? undefined
+    : Math.max(0, nowRpcTelemetry() - telemetry.startedAt);
+
+  telemetry.telemetry.record?.({
+    routeId: telemetry.routeId,
+    operationId: telemetry.operationId,
+    methodName: telemetry.methodName,
+    method: telemetry.method,
+    path: telemetry.path,
+    routeKind: telemetry.routeKind,
+    ...(telemetry.interactionId ? { interactionId: telemetry.interactionId } : {}),
+    ...(telemetry.correlationId ? { correlationId: telemetry.correlationId } : {}),
+    ...(telemetry.traceparent ? { traceparent: telemetry.traceparent } : {}),
+    ...(telemetry.attempt ? { attempt: telemetry.attempt } : {}),
+    kind,
+    timestamp: Date.now(),
+    ...(durationMs === undefined ? {} : { durationMs }),
+    ...fields,
+  });
+}
+
+function summarizeRpcProblem<Problem extends RpcDeclaredProblem>(
+  problem: RpcProblemDetails,
+  declaration?: Problem,
+): RpcTelemetryProblemSummary {
+  return {
+    code: problem.code,
+    status: problem.status,
+    ...(declaration?.category ? { category: declaration.category } : {}),
+    ...(problem.type ? { type: problem.type } : {}),
+    ...(problem.title ? { title: problem.title } : {}),
+  };
+}
+
+function describeRpcError(error: unknown): Pick<RpcTelemetryEvent, 'errorName'> {
+  if (error instanceof Error) {
+    return {
+      errorName: error.name,
+    };
+  }
+
+  return {
+    errorName: typeof error,
+  };
+}
+
+function isRpcAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function nowRpcTelemetry(): number {
+  return typeof performance === 'undefined' ? Date.now() : performance.now();
+}
 `;
 }
 
@@ -1248,7 +1750,7 @@ function isRpcQueryKeyRecord(value: unknown): value is Record<string, unknown> {
   return (
     prototype === Object.prototype ||
     prototype === null ||
-    Object.hasOwn(prototype, 'isPrototypeOf')
+    Object.prototype.hasOwnProperty.call(prototype, 'isPrototypeOf')
   );
 }
 
@@ -1747,7 +2249,11 @@ function toFormLabel(name: string): string {
   return `${spaced.charAt(0).toUpperCase()}${spaced.slice(1)}`;
 }
 
-function generateClientMethod(route: GeneratedClientRoute): string {
+function generateClientMethod(
+  route: GeneratedClientRoute,
+  domain: string,
+  routeIndex: number,
+): string {
   const input = needsInput(route)
     ? `input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}`
     : "";
@@ -1756,20 +2262,34 @@ function generateClientMethod(route: GeneratedClientRoute): string {
   const resultResponse = getResultResponseExpression(route);
   const returnType = getReturnType(route);
   const resultReturnType = getResultReturnType(route);
+  const routeMetadata = `${domain}ContractRoutes[${routeIndex}]`;
+  const routeKind = isMutationRoute(route) ? "mutation" : "query";
+  const requestOptions =
+    input.length > 0
+      ? `${input}, options?: RpcClientRequestOptions`
+      : "options?: RpcClientRequestOptions";
 
   if (hasStructuredInput(route)) {
-    return `  ${route.methodName}: (${input}): ${returnType} => {
+    return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
     const path = ${getPathExpression(route)};
-${getQueryStatements(route)}    return fetch(${getUrlExpression(route)}, ${fetchOptions}).then((response) => ${response});
+${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options);
+    return fetch(request.url, request.init).then((response) => ${response}).catch((error) => handleRpcRequestError(error, request.telemetry));
   },
-  ${getResultMethodName(route)}: (${input}): ${resultReturnType} => {
+  ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
     const path = ${getPathExpression(route)};
-${getQueryStatements(route)}    return fetch(${getUrlExpression(route)}, ${fetchOptions}).then((response) => ${resultResponse});
+${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options);
+    return fetch(request.url, request.init).then((response) => ${resultResponse}).catch((error) => handleRpcRequestError(error, request.telemetry));
   },`;
   }
 
-  return `  ${route.methodName}: (${input}): ${returnType} => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${response}),
-  ${getResultMethodName(route)}: (${input}): ${resultReturnType} => fetch(${getPathExpression(route)}, ${fetchOptions}).then((response) => ${resultResponse}),`;
+  return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
+    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options);
+    return fetch(request.url, request.init).then((response) => ${response}).catch((error) => handleRpcRequestError(error, request.telemetry));
+  },
+  ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
+    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options);
+    return fetch(request.url, request.init).then((response) => ${resultResponse}).catch((error) => handleRpcRequestError(error, request.telemetry));
+  },`;
 }
 
 function getFetchOptions(route: GeneratedClientRoute): string {
@@ -1809,10 +2329,10 @@ function getHeadersExpression(route: GeneratedClientRoute): string {
 
 function getResponseExpression(route: GeneratedClientRoute): string {
   if (!route.outputSchema) {
-    return "readOptionalJsonResponse(response)";
+    return "readOptionalJsonResponse(response, request.telemetry)";
   }
 
-  return `handleJsonResponse<${getOutputTypeName(route)}>(response)`;
+  return `handleJsonResponse<${getOutputTypeName(route)}>(response, request.telemetry)`;
 }
 
 function getResultResponseExpression(route: GeneratedClientRoute): string {
@@ -1820,10 +2340,10 @@ function getResultResponseExpression(route: GeneratedClientRoute): string {
   const problemType = getProblemTypeName(route);
 
   if (!route.outputSchema) {
-    return `readOptionalJsonResult<${problemType}>(response, ${problemDeclarations})`;
+    return `readOptionalJsonResult<${problemType}>(response, ${problemDeclarations}, request.telemetry)`;
   }
 
-  return `handleJsonResult<${getOutputTypeName(route)}, ${problemType}>(response, ${problemDeclarations})`;
+  return `handleJsonResult<${getOutputTypeName(route)}, ${problemType}>(response, ${problemDeclarations}, request.telemetry)`;
 }
 
 function getReturnType(route: GeneratedClientRoute): string {
@@ -1898,8 +2418,8 @@ export type ${getResultQueryFactoryTypeName(route)} = {
   readonly queryKey: ${getResultQueryKeyTypeName(route)};
   readonly queryFn: () => Promise<${getResultTypeName(route)}>;
 };
-export type ${getQueryOptionsTypeName(route)}<TData = ${getSuccessType(route)}> = Omit<UseQueryOptions<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>${getReactQueryCacheScopeOptionsType(route)};
-export type ${getResultQueryOptionsTypeName(route)}<TData = ${getResultTypeName(route)}> = Omit<UseQueryOptions<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>${getReactQueryCacheScopeOptionsType(route)};`;
+export type ${getQueryOptionsTypeName(route)}<TData = ${getSuccessType(route)}> = Omit<UseQueryOptions<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>${getReactQueryCacheScopeOptionsType(route)} & { readonly rpc?: RpcClientRequestOptions };
+export type ${getResultQueryOptionsTypeName(route)}<TData = ${getResultTypeName(route)}> = Omit<UseQueryOptions<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>, 'queryKey' | 'queryFn'>${getReactQueryCacheScopeOptionsType(route)} & { readonly rpc?: RpcClientRequestOptions };`;
   }
 
   return `export type ${getMutationVariablesTypeName(route)} = ${getMutationVariablesType(route)};
@@ -1909,8 +2429,8 @@ export type ${getMutationFactoryTypeName(route)} = {
 export type ${getResultMutationFactoryTypeName(route)} = {
   readonly mutationFn: ${getMutationFnType(route, getResultTypeName(route))};
 };
-export type ${getMutationOptionsTypeName(route)}<TContext = unknown> = Omit<UseMutationOptions<${getSuccessType(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>, 'mutationFn'>;
-export type ${getResultMutationOptionsTypeName(route)}<TContext = unknown> = Omit<UseMutationOptions<${getResultTypeName(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>, 'mutationFn'>;`;
+export type ${getMutationOptionsTypeName(route)}<TContext = unknown> = Omit<UseMutationOptions<${getSuccessType(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ${getResultMutationOptionsTypeName(route)}<TContext = unknown> = Omit<UseMutationOptions<${getResultTypeName(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };`;
 }
 
 function generateReactQueryFactories(
@@ -1934,18 +2454,17 @@ function generateReactQueryFactoryEntry(
   route: GeneratedClientRoute,
   clientName: string,
 ): string {
-  const input = getReactQueryFactoryParameters(route);
-  const callInput = needsInput(route) ? "input" : "";
+  const input = `${getReactQueryFactoryParameters(route)}${needsInput(route) ? ", " : ""}rpc?: RpcClientRequestOptions`;
   const queryKey = getReactQueryKeyExpression(domain, route, false);
   const resultQueryKey = getReactQueryKeyExpression(domain, route, true);
 
   return `  ${route.methodName}: (${input}): ${getQueryFactoryTypeName(route)} => ({
     queryKey: ${queryKey},
-    queryFn: () => ${clientName}.${route.methodName}(${callInput}),
+    queryFn: () => ${getClientCallExpression(clientName, route, route.methodName, "rpc")},
   }),
   ${getResultMethodName(route)}: (${input}): ${getResultQueryFactoryTypeName(route)} => ({
     queryKey: ${resultQueryKey},
-    queryFn: () => ${clientName}.${getResultMethodName(route)}(${callInput}),
+    queryFn: () => ${getClientCallExpression(clientName, route, getResultMethodName(route), "rpc")},
   }),`;
 }
 
@@ -1970,13 +2489,12 @@ function generateReactMutationFactoryEntry(
   clientName: string,
 ): string {
   const input = getMutationFnParameter(route);
-  const callInput = needsInput(route) ? "input" : "";
 
-  return `  ${route.methodName}: (): ${getMutationFactoryTypeName(route)} => ({
-    mutationFn: (${input}) => ${clientName}.${route.methodName}(${callInput}),
+  return `  ${route.methodName}: (rpc?: RpcClientRequestOptions): ${getMutationFactoryTypeName(route)} => ({
+    mutationFn: (${input}) => ${getClientCallExpression(clientName, route, route.methodName, "rpc")},
   }),
-  ${getResultMethodName(route)}: (): ${getResultMutationFactoryTypeName(route)} => ({
-    mutationFn: (${input}) => ${clientName}.${getResultMethodName(route)}(${callInput}),
+  ${getResultMethodName(route)}: (rpc?: RpcClientRequestOptions): ${getResultMutationFactoryTypeName(route)} => ({
+    mutationFn: (${input}) => ${getClientCallExpression(clientName, route, getResultMethodName(route), "rpc")},
   }),`;
 }
 
@@ -1986,11 +2504,15 @@ function generateReactQueryHook(route: GeneratedClientRoute): string {
 
   if (!isReactQueryQueryRoute(route)) {
     return `export function ${hookName}<TContext = unknown>(options?: ${getMutationOptionsTypeName(route)}<TContext>) {
-  return useMutation<${getSuccessType(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>({ ...${getDomainName(route)}Mutations.${route.methodName}(), ...options });
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<${getSuccessType(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>({ ...${getDomainName(route)}Mutations.${route.methodName}(rpc), ...mutationOptions });
 }
 
 export function ${resultHookName}<TContext = unknown>(options?: ${getResultMutationOptionsTypeName(route)}<TContext>) {
-  return useMutation<${getResultTypeName(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>({ ...${getDomainName(route)}Mutations.${getResultMethodName(route)}(), ...options });
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<${getResultTypeName(route)}, Error, ${getMutationVariablesTypeName(route)}, TContext>({ ...${getDomainName(route)}Mutations.${getResultMethodName(route)}(rpc), ...mutationOptions });
 }`;
   }
 
@@ -2000,24 +2522,28 @@ export function ${resultHookName}<TContext = unknown>(options?: ${getResultMutat
 
   if (hasReactQueryCacheScope(route)) {
     return `export function ${hookName}<TData = ${getSuccessType(route)}>(${input}, options?: ${getQueryOptionsTypeName(route)}<TData>) {
-  const { cacheScope, ...queryOptions } = options ?? {};
+  const { cacheScope, rpc, ...queryOptions } = options ?? {};
 
-  return useQuery<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${route.methodName}(${factoryCallArguments}), ...queryOptions });
+  return useQuery<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${route.methodName}(${factoryCallArguments}${factoryCallArguments.length > 0 ? ", " : ""}rpc), ...queryOptions });
 }
 
 export function ${resultHookName}<TData = ${getResultTypeName(route)}>(${input}, options?: ${getResultQueryOptionsTypeName(route)}<TData>) {
-  const { cacheScope, ...queryOptions } = options ?? {};
+  const { cacheScope, rpc, ...queryOptions } = options ?? {};
 
-  return useQuery<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${getResultMethodName(route)}(${factoryCallArguments}), ...queryOptions });
+  return useQuery<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${getResultMethodName(route)}(${factoryCallArguments}${factoryCallArguments.length > 0 ? ", " : ""}rpc), ...queryOptions });
 }`;
   }
 
   return `export function ${hookName}<TData = ${getSuccessType(route)}>(${input}${needsInput(route) ? ", " : ""}options?: ${getQueryOptionsTypeName(route)}<TData>) {
-  return useQuery<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${route.methodName}(${callInput}), ...options });
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<${getSuccessType(route)}, Error, TData, ${getQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${route.methodName}(${callInput}${callInput.length > 0 ? ", " : ""}rpc), ...queryOptions });
 }
 
 export function ${resultHookName}<TData = ${getResultTypeName(route)}>(${input}${needsInput(route) ? ", " : ""}options?: ${getResultQueryOptionsTypeName(route)}<TData>) {
-  return useQuery<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${getResultMethodName(route)}(${callInput}), ...options });
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<${getResultTypeName(route)}, Error, TData, ${getResultQueryKeyTypeName(route)}>({ ...${getDomainName(route)}Queries.${getResultMethodName(route)}(${callInput}${callInput.length > 0 ? ", " : ""}rpc), ...queryOptions });
 }`;
 }
 
@@ -2047,6 +2573,19 @@ function getMutationFnType(route: GeneratedClientRoute, returnType: string): str
   }
 
   return `(input${hasRequiredInput(route) ? "" : "?"}: ${getInputTypeName(route)}) => Promise<${returnType}>`;
+}
+
+function getClientCallExpression(
+  clientName: string,
+  route: GeneratedClientRoute,
+  methodName: string,
+  optionsExpression: string,
+): string {
+  if (!needsInput(route)) {
+    return `${clientName}.${methodName}(${optionsExpression})`;
+  }
+
+  return `${clientName}.${methodName}(input, ${optionsExpression})`;
 }
 
 function getMutationVariablesType(route: GeneratedClientRoute): string {

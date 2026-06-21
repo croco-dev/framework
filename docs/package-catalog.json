@@ -633,9 +633,15 @@
       "telemetry-api": {
         "domain": "Telemetry",
         "adapter": "OpenTelemetry application API",
-        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "runtimes": ["node", "lambda", "cloudflare-workers", "browser"],
         "requiredEnv": ["none"],
-        "features": ["Trace decorator", "withSpan", "recordError", "trace context lookup"]
+        "features": [
+          "Trace decorator",
+          "withSpan",
+          "recordError",
+          "trace context lookup",
+          "browser RPC correlation bridge"
+        ]
       },
       "telemetry-sdk-node": {
         "domain": "Telemetry",

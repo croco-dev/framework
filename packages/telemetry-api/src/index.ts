@@ -25,6 +25,29 @@ export { Trace } from "./libs/decorators/Trace.js";
 export type { SpanOptions, TraceInfo } from "./libs/span.js";
 
 /**
+ * 브라우저 상호작용과 생성된 RPC 클라이언트 요청을 연결하는 provider-neutral telemetry bridge 타입입니다.
+ */
+export type {
+  FrontendTelemetryBridge,
+  FrontendTelemetryBridgeOptions,
+  FrontendTelemetryEvent,
+  FrontendTelemetryEventKind,
+  FrontendTelemetryHeaderNames,
+  FrontendTelemetryProblemSummary,
+  FrontendTelemetryRequestContext,
+  FrontendTelemetryRouteKind,
+  FrontendTelemetrySink,
+} from "./libs/frontendBridge.js";
+
+/**
+ * 브라우저에서 사용할 수 있는 interaction/correlation header bridge를 생성합니다.
+ */
+export {
+  createFrontendInteractionId,
+  createFrontendTelemetryBridge,
+} from "./libs/frontendBridge.js";
+
+/**
  * Span 실행, 이벤트 기록, 에러 기록, 현재 Trace 조회를 위한 유틸리티 함수입니다.
  */
 export { getActiveTraceInfo, recordError, recordEvent, withSpan } from "./libs/span.js";

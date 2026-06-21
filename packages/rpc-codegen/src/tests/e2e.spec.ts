@@ -74,7 +74,7 @@ describe("rpc-codegen e2e", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     const rpcContent = fs.readFileSync(path.join(outDir, "rpc.ts"), "utf-8");
     expect(content).toContain(
-      "import { handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain(
       "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; headers: { 'x-request-id': string; }; };",
@@ -97,19 +97,22 @@ describe("rpc-codegen e2e", () => {
     );
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain(
-      "return fetch(url, { method: 'GET', headers: serializeHeaders(input.headers) }).then((response) => readOptionalJsonResponse(response));",
+      "const request = createRpcClientRequest(testContractRoutes[0], 'query', url, { method: 'GET', headers: serializeHeaders(input.headers) }, options);",
     );
     expect(content).toContain(
-      "return fetch(url, { method: 'GET', headers: serializeHeaders(input.headers) }).then((response) => readOptionalJsonResult<GetUserProblem>(response, getUserProblemDeclarations));",
+      "return fetch(request.url, request.init).then((response) => readOptionalJsonResponse(response, request.telemetry)).catch((error) => handleRpcRequestError(error, request.telemetry));",
     );
     expect(content).toContain(
-      "fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } })",
+      "return fetch(request.url, request.init).then((response) => readOptionalJsonResult<GetUserProblem>(response, getUserProblemDeclarations, request.telemetry)).catch((error) => handleRpcRequestError(error, request.telemetry));",
     );
     expect(content).toContain(
-      "health: (): Promise<unknown | undefined> => fetch('/health', { method: 'GET' }).then((response) => readOptionalJsonResponse(response)),",
+      "const request = createRpcClientRequest(testContractRoutes[1], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options);",
     );
     expect(content).toContain(
-      "healthResult: (): Promise<HealthResult> => fetch('/health', { method: 'GET' }).then((response) => readOptionalJsonResult<HealthProblem>(response, healthProblemDeclarations)),",
+      "health: (options?: RpcClientRequestOptions): Promise<unknown | undefined> => {",
+    );
+    expect(content).toContain(
+      "healthResult: (options?: RpcClientRequestOptions): Promise<HealthResult> => {",
     );
     expect(content).not.toContain("zod");
     assertGeneratedClientTypechecks(
@@ -122,9 +125,13 @@ async function exerciseGeneratedClient() {
   const createPayload = buildCreateUserFormPayload(formValues);
   const created = await testClient.createUser(createPayload);
   const createdResult = await testClient.createUserResult(createPayload);
+  const tracedCreated = await testClient.createUser(createPayload, {
+    correlationId: 'correlation-1',
+  });
   const createdId: string = created.id;
   const createdName: string = created.name;
   const createdResultBranch: CreateUserResult = createdResult;
+  const tracedCreatedId: string = tracedCreated.id;
 
   if (createdResult.ok) {
     const resultId: string = createdResult.data.id;
@@ -140,6 +147,8 @@ async function exerciseGeneratedClient() {
     path: { id: createdId },
     query: { include: undefined },
     headers: { 'x-request-id': 'request-1' },
+  }, {
+    correlationId: 'correlation-2',
   });
   const getUserKey = testKeys.getUser({
     path: { id: createdId },
@@ -160,6 +169,7 @@ async function exerciseGeneratedClient() {
 
   void createdName;
   void createdResultBranch;
+  void tracedCreatedId;
   void getUserResult;
   void getUserKey;
   void createUserInvalidationKey;
