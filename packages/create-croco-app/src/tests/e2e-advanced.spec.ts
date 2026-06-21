@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
+import { DirectoryNotEmptyProblem } from "../libs/problems/DirectoryNotEmptyProblem.js";
 import type { GeneratorOptions } from "../types.js";
 
 const TEXT_FILE_EXTENSIONS = new Set([
@@ -217,7 +218,20 @@ describe("E2E Advanced: generate()", () => {
     // Generate once
     await generate(testDir, options);
 
-    // Try to generate again into same non-empty dir — should throw
-    await expect(generate(testDir, options)).rejects.toThrow("not empty");
+    let error: unknown;
+    try {
+      await generate(testDir, options);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(DirectoryNotEmptyProblem);
+    expect(error).toMatchObject({
+      code: "create-croco-app/directory-not-empty",
+      extensions: {
+        recovery:
+          "Choose an empty directory, remove the existing files, or pass a new target directory.",
+      },
+    });
   });
 });

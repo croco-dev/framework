@@ -8,7 +8,7 @@ import type {
   ExecutionStore,
   ListExecutionsOptions,
 } from "../index";
-import { createExecutionJobsOperations, ExecutionManagerImpl } from "../index";
+import { createExecutionJobsOperations, ExecutionManagerImpl, ExecutionProblem } from "../index";
 
 class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
   private executions: Map<string, Execution> = new Map();
@@ -209,6 +209,18 @@ describe("ExecutionManagerImpl", () => {
 
       expect(restarted.status).toBe("running");
       expect(restarted.attempts).toBe(2);
+      expect(restarted.error).toBeUndefined();
+    });
+
+    it("clears previous attempt errors when restarting automatic retries", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: "transient error", retryable: true });
+
+      const restarted = await manager.start(execution.id);
+
+      expect(restarted.status).toBe("running");
+      expect(restarted.error).toBeUndefined();
     });
 
     it("resets startedAt when restarting from retrying", async () => {
@@ -278,6 +290,26 @@ describe("ExecutionManagerImpl", () => {
   });
 
   describe("fail", () => {
+    async function expectInvalidRetryableFailPreservesExecution(
+      execution: Execution,
+    ): Promise<void> {
+      const before = await manager.get(execution.id);
+      const error: ExecutionError = { message: "transient error", retryable: true };
+      let thrown: unknown;
+
+      try {
+        await manager.fail(execution.id, error);
+      } catch (caught) {
+        thrown = caught;
+      }
+
+      expect(thrown).toBeInstanceOf(ExecutionProblem);
+      expect(thrown).toMatchObject({
+        code: "execution/invalid-state-transition",
+      });
+      await expect(manager.get(execution.id)).resolves.toEqual(before);
+    }
+
     it("transitions running to failed when not retryable", async () => {
       const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
@@ -309,6 +341,27 @@ describe("ExecutionManagerImpl", () => {
       const failed = await manager.fail(execution.id, error);
 
       expect(failed.status).toBe("failed");
+    });
+
+    it("rejects retryable failure from pending without updating execution", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+
+      await expectInvalidRetryableFailPreservesExecution(execution);
+    });
+
+    it("rejects retryable failure from completed without updating execution", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+      await manager.start(execution.id);
+      const completed = await manager.complete(execution.id);
+
+      await expectInvalidRetryableFailPreservesExecution(completed);
+    });
+
+    it("rejects retryable failure from cancelled without updating execution", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+      const cancelled = await manager.cancel(execution.id);
+
+      await expectInvalidRetryableFailPreservesExecution(cancelled);
     });
   });
 
@@ -354,6 +407,7 @@ describe("ExecutionManagerImpl", () => {
       expect(retrying.status).toBe("retrying");
       expect(retrying.attempts).toBe(1);
       expect(retrying.error).toBeUndefined();
+      expect(retrying.completedAt).toBeUndefined();
     });
 
     it("transitions timed_out to retrying", async () => {
@@ -365,6 +419,7 @@ describe("ExecutionManagerImpl", () => {
 
       expect(retrying.status).toBe("retrying");
       expect(retrying.attempts).toBe(1);
+      expect(retrying.completedAt).toBeUndefined();
     });
 
     it("increments attempts only once across retry and restart", async () => {
@@ -745,6 +800,42 @@ describe("ExecutionManagerImpl", () => {
           message: "Billing sync started",
         },
       ]);
+    });
+
+    it("does not expose stale terminal fields after retry restart", async () => {
+      const manualRetry = await manager.create({ type: "workflow", maxAttempts: 3 });
+      await manager.start(manualRetry.id);
+      await manager.fail(manualRetry.id, {
+        message: "manual failure",
+        retryable: false,
+      });
+      await manager.retry(manualRetry.id);
+      await manager.start(manualRetry.id);
+
+      const automaticRetry = await manager.create({ type: "workflow", maxAttempts: 3 });
+      await manager.start(automaticRetry.id);
+      await manager.fail(automaticRetry.id, {
+        message: "automatic failure",
+        retryable: true,
+      });
+      await manager.start(automaticRetry.id);
+
+      const jobs = createExecutionJobsOperations(manager);
+
+      await expect(jobs.show(manualRetry.id)).resolves.toEqual(
+        expect.objectContaining({
+          status: "running",
+          completedAt: undefined,
+          errorMessage: undefined,
+        }),
+      );
+      await expect(jobs.show(automaticRetry.id)).resolves.toEqual(
+        expect.objectContaining({
+          status: "running",
+          completedAt: undefined,
+          errorMessage: undefined,
+        }),
+      );
     });
 
     it("cancels and replays jobs through the public operations contract", async () => {

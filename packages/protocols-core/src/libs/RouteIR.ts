@@ -37,4 +37,5 @@ export type ProblemResponseIR<
   readonly status: Status;
   readonly description?: string;
   readonly type?: string;
+  readonly routeContractProblems?: readonly ProblemResponseIR[];
 };

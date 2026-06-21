@@ -2,12 +2,14 @@ import type { BillingStore, Subscription } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { Trace } from "@croco/telemetry-api";
 import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
+import { ZodError } from "zod";
 import type { PolarConfig, WebhookHandlerResult } from "../types";
 import { PolarEventMapper } from "./PolarEventMapper";
 import { BillingStatusMappingProblem } from "./problems/BillingStatusMappingProblem";
+import { validatePolarConfig } from "./problems/PolarBillingProblems";
 import { WebhookProcessingProblem } from "./problems/WebhookProcessingProblem";
 import { WebhookValidationProblem } from "./problems/WebhookValidationProblem";
-import type { PolarSubscriptionData } from "./schemas/polarWebhookSchema";
+import type { PolarEvent, PolarSubscriptionData } from "./schemas/polarWebhookSchema";
 import {
   PolarEventSchema,
   PolarOrderDataSchema,
@@ -70,7 +72,7 @@ export class PolarWebhookHandler {
   private static readonly inFlightEvents = new Map<string, Promise<WebhookHandlerResult>>();
 
   constructor(config: PolarConfig, deps: WebhookDependencies) {
-    this.webhookSecret = config.webhookSecret;
+    this.webhookSecret = validatePolarConfig(config).webhookSecret;
     this.store = deps.store;
     this.eventPublisher = deps.eventPublisher;
     this.eventMapper = new PolarEventMapper();
@@ -91,20 +93,31 @@ export class PolarWebhookHandler {
       throw new WebhookValidationProblem(error instanceof Error ? error.message : "Unknown error");
     }
 
-    const parsedEvent = PolarEventSchema.parse(event);
+    let parsedEvent: PolarEvent;
+    try {
+      parsedEvent = PolarEventSchema.parse(event);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new WebhookValidationProblem(`Invalid webhook payload: ${formatZodError(error)}`);
+      }
+      throw new WebhookValidationProblem("Invalid webhook payload");
+    }
+
     const eventId = parsedEvent.id ?? headers["webhook-id"];
     const eventType = parsedEvent.type;
 
     if (!eventId || !eventType) {
-      return { success: false, error: "Missing event ID or type" };
+      throw new WebhookValidationProblem("Missing event ID or type");
     }
+
+    const parsedWebhookEvent = this.parseSignedEventPayload(eventType, parsedEvent.data);
 
     const inFlightEvent = PolarWebhookHandler.inFlightEvents.get(eventId);
     if (inFlightEvent) {
       return inFlightEvent;
     }
 
-    const processingEvent = this.processEventAtomically(eventId, eventType, parsedEvent.data);
+    const processingEvent = this.processEventAtomically(eventId, eventType, parsedWebhookEvent);
     PolarWebhookHandler.inFlightEvents.set(eventId, processingEvent);
 
     try {
@@ -117,27 +130,22 @@ export class PolarWebhookHandler {
   private async processEventAtomically(
     eventId: string,
     eventType: string,
-    data: unknown,
+    parsedEvent: ParsedWebhookEvent,
   ): Promise<WebhookHandlerResult> {
     let rollbackErrorMessage: string | null = null;
 
-    try {
-      const parsedEvent = this.parseEvent(eventType, data);
-      const shouldProcess = await this.reserveWebhook(eventId, eventType);
-      if (!shouldProcess) {
-        return { success: true, eventId };
-      }
+    const shouldProcess = await this.reserveWebhook(eventId, eventType);
+    if (!shouldProcess) {
+      return { success: true, eventId };
+    }
 
-      try {
-        await this.processParsedEvent(parsedEvent);
-        await this.store.completeWebhook(eventId);
-      } catch (error) {
-        rollbackErrorMessage = await this.tryRollbackWebhook(eventId);
-        throw error;
-      }
+    try {
+      await this.processParsedEvent(parsedEvent);
+      await this.store.completeWebhook(eventId);
 
       return { success: true, eventId };
     } catch (error) {
+      rollbackErrorMessage = await this.tryRollbackWebhook(eventId);
       const baseErrorMessage = `Event processing failed: ${this.getErrorMessage(error)}`;
 
       return {
@@ -158,7 +166,11 @@ export class PolarWebhookHandler {
       if (this.isDuplicateWebhookError(error)) {
         return false;
       }
-      throw error;
+      throw error instanceof WebhookProcessingProblem
+        ? error
+        : new WebhookProcessingProblem(
+            `Webhook reservation failed: ${this.getErrorMessage(error)}`,
+          );
     }
   }
 
@@ -191,6 +203,17 @@ export class PolarWebhookHandler {
     }
 
     return { kind: "ignored" };
+  }
+
+  private parseSignedEventPayload(eventType: string, data: unknown): ParsedWebhookEvent {
+    try {
+      return this.parseEvent(eventType, data);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new WebhookValidationProblem(`Invalid webhook payload: ${formatZodError(error)}`);
+      }
+      throw error;
+    }
   }
 
   private parseSubscriptionPayload(data: unknown): ParsedSubscriptionPayload {
@@ -387,4 +410,13 @@ export class PolarWebhookHandler {
   private isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.length > 0;
   }
+}
+
+function formatZodError(error: ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join(".") : "<root>";
+      return `${path}: ${issue.message}`;
+    })
+    .join("; ");
 }

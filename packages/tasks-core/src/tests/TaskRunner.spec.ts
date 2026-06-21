@@ -109,6 +109,66 @@ describe("TaskRunner", () => {
     });
   });
 
+  it("should pass execution-level idempotency key when provided", async () => {
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await runner.execute("test-task", { data: "test" }, { idempotencyKey: "workflow-1:sync" });
+
+    expect(mockExecutionManager.create).toHaveBeenCalledWith({
+      type: "test-task",
+      payload: { data: "test" },
+      maxAttempts: undefined,
+      timeout: undefined,
+      idempotencyKey: "workflow-1:sync",
+    });
+  });
+
+  it("should compose execution-level idempotency key with configured task key", async () => {
+    @Component()
+    class IdempotentTaskHandler {
+      @Task({ name: "configured-idempotent-task", idempotencyKey: "configured-key" })
+      async process(payload: { data: string }): Promise<string> {
+        return `processed: ${payload.data}`;
+      }
+    }
+
+    Container.set(IdempotentTaskHandler, new IdempotentTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await runner.execute(
+      "configured-idempotent-task",
+      { data: "test" },
+      { idempotencyKey: "workflow-1:configured" },
+    );
+
+    expect(mockExecutionManager.create).toHaveBeenCalledWith({
+      type: "configured-idempotent-task",
+      payload: { data: "test" },
+      maxAttempts: undefined,
+      timeout: undefined,
+      idempotencyKey: "workflow-1:configured:task:configured-key",
+    });
+  });
+
+  it("should return completed idempotent execution result without restarting it", async () => {
+    mockExecutionManager.create = vi.fn().mockResolvedValue({
+      id: "exec-completed",
+      type: "test-task",
+      payload: { data: "test" },
+      result: "processed: cached",
+      status: "completed",
+      createdAt: new Date(),
+    });
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    const result = await runner.execute("test-task", { data: "test" }, { idempotencyKey: "key" });
+
+    expect(result).toBe("processed: cached");
+    expect(mockExecutionManager.start).not.toHaveBeenCalled();
+    expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+  });
+
   it("should throw error for non-existent task", async () => {
     const runner = new TaskRunner(mockExecutionManager, registry);
 

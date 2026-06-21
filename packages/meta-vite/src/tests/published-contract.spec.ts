@@ -9,7 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageDir = resolve(__dirname, "../..");
 const rootDir = resolve(packageDir, "../..");
-const spawnTimeoutMs = 180_000;
+const commandTimeoutMs = 180_000;
+const publishedContractTimeoutMs = 360_000;
 
 type PackageTarballs = {
   readonly cacheCore: string;
@@ -60,11 +61,16 @@ describe("published @croco/meta-vite contract", () => {
           join(rootConsumerRoot, "index.ts"),
           [
             "import type { ServerActionConfig } from '@croco/meta-vite';",
+            "import { createServerActionSuccess, type ServerActionResult } from '@croco/meta-vite';",
             "",
-            "export const action: ServerActionConfig<{ email: string }> = {",
+            "export const action: ServerActionConfig<{ email: string }, { accepted: boolean }> = {",
             "  name: 'signup',",
-            "  handler: async () => new Response('ok'),",
+            "  output: { description: 'Signup response' },",
+            "  problems: [{ code: 'auth/signup-closed', status: 422 }],",
+            "  handler: async (data) => createServerActionSuccess({ accepted: data.email.length > 0 }),",
             "};",
+            "",
+            "export const result: ServerActionResult<{ accepted: boolean }> = createServerActionSuccess({ accepted: true });",
             "",
           ].join("\n"),
         );
@@ -118,7 +124,7 @@ describe("published @croco/meta-vite contract", () => {
         rmSync(redisConsumerRoot, { force: true, recursive: true });
       }
     },
-    spawnTimeoutMs,
+    publishedContractTimeoutMs,
   );
 });
 
@@ -247,7 +253,7 @@ function run(
     cwd,
     encoding: "utf-8",
     stdio: "pipe",
-    timeout: spawnTimeoutMs,
+    timeout: commandTimeoutMs,
   });
 
   if (result.error || result.status !== 0) {

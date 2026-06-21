@@ -1,0 +1,846 @@
+import type { z } from "zod";
+
+export const CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE = "contract-schema-json-unsafe";
+export const CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE =
+  "contract-schema-zod-effects-unwrapped";
+
+export type ContractSchemaPrimitiveValue = string | number | boolean | null;
+export type ContractSchemaJsonSafeStatus = "supported" | "unsupported";
+export type ContractSchemaDiagnosticSeverity = "error" | "warning";
+
+export type ContractSchemaDiagnostic = {
+  readonly code: string;
+  readonly severity: ContractSchemaDiagnosticSeverity;
+  readonly typeName: string;
+  readonly message: string;
+  readonly schemaPath: readonly string[];
+};
+
+export type ContractSchemaSupportMatrixEntry = {
+  readonly typeName: string;
+  readonly kind: string;
+  readonly jsonSafe: ContractSchemaJsonSafeStatus;
+  readonly note: string;
+};
+
+export type ContractSchemaDescriptor = {
+  readonly kind: string;
+  readonly typeName: string;
+  readonly jsonSafe: boolean;
+  readonly unsupportedReason?: string;
+  readonly effectType?: string;
+  readonly fields?: readonly ContractSchemaFieldDescriptor[];
+  readonly element?: ContractSchemaDescriptor | null;
+  readonly inner?: ContractSchemaDescriptor | null;
+  readonly options?: readonly ContractSchemaDescriptor[];
+  readonly values?: readonly (string | number)[];
+  readonly value?: ContractSchemaPrimitiveValue;
+};
+
+export type ContractSchemaFieldDescriptor = {
+  readonly name: string;
+  readonly required: boolean;
+  readonly schema: ContractSchemaDescriptor;
+};
+
+export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
+  {
+    typeName: "ZodString",
+    kind: "string",
+    jsonSafe: "supported",
+    note: "Emitted as a JSON string contract.",
+  },
+  {
+    typeName: "ZodNumber",
+    kind: "number",
+    jsonSafe: "supported",
+    note: "Emitted as a JSON number contract.",
+  },
+  {
+    typeName: "ZodBoolean",
+    kind: "boolean",
+    jsonSafe: "supported",
+    note: "Emitted as a JSON boolean contract.",
+  },
+  {
+    typeName: "ZodNull",
+    kind: "null",
+    jsonSafe: "supported",
+    note: "Emitted as a JSON null contract.",
+  },
+  {
+    typeName: "ZodLiteral",
+    kind: "literal",
+    jsonSafe: "supported",
+    note: "Supported for string, number, boolean, and null literal values.",
+  },
+  {
+    typeName: "ZodEnum",
+    kind: "enum",
+    jsonSafe: "supported",
+    note: "Supported for string enum values.",
+  },
+  {
+    typeName: "ZodNativeEnum",
+    kind: "enum",
+    jsonSafe: "supported",
+    note: "Supported for string and number enum values.",
+  },
+  {
+    typeName: "ZodObject",
+    kind: "object",
+    jsonSafe: "supported",
+    note: "Supported when every field schema is JSON-safe.",
+  },
+  {
+    typeName: "ZodArray",
+    kind: "array",
+    jsonSafe: "supported",
+    note: "Supported when the element schema is JSON-safe.",
+  },
+  {
+    typeName: "ZodRecord",
+    kind: "record",
+    jsonSafe: "supported",
+    note: "Supported for string-keyed records when the value schema is JSON-safe.",
+  },
+  {
+    typeName: "ZodUnion",
+    kind: "union",
+    jsonSafe: "supported",
+    note: "Supported when every option schema is JSON-safe.",
+  },
+  {
+    typeName: "ZodDiscriminatedUnion",
+    kind: "union",
+    jsonSafe: "supported",
+    note: "Supported when every option schema is JSON-safe.",
+  },
+  {
+    typeName: "ZodOptional",
+    kind: "optional",
+    jsonSafe: "supported",
+    note: "Unwraps to the inner schema and marks object fields as optional.",
+  },
+  {
+    typeName: "ZodNullable",
+    kind: "nullable",
+    jsonSafe: "supported",
+    note: "Unwraps to the inner schema plus null.",
+  },
+  {
+    typeName: "ZodDefault",
+    kind: "default",
+    jsonSafe: "supported",
+    note: "Unwraps to the inner schema and marks object fields as optional.",
+  },
+  {
+    typeName: "ZodEffects",
+    kind: "effects",
+    jsonSafe: "supported",
+    note: "Refinements unwrap to the inner schema with a diagnostic warning; transforms and preprocessors are rejected.",
+  },
+  {
+    typeName: "ZodBranded",
+    kind: "branded",
+    jsonSafe: "supported",
+    note: "Unwraps to the inner schema.",
+  },
+  {
+    typeName: "ZodReadonly",
+    kind: "readonly",
+    jsonSafe: "supported",
+    note: "Unwraps to the inner schema.",
+  },
+  {
+    typeName: "ZodAny",
+    kind: "any",
+    jsonSafe: "supported",
+    note: "Emitted as an explicit unknown JSON value contract.",
+  },
+  {
+    typeName: "ZodUnknown",
+    kind: "unknown",
+    jsonSafe: "supported",
+    note: "Emitted as an explicit unknown JSON value contract.",
+  },
+  {
+    typeName: "ZodNever",
+    kind: "never",
+    jsonSafe: "supported",
+    note: "Emitted as an impossible contract branch.",
+  },
+  {
+    typeName: "ZodDate",
+    kind: "date",
+    jsonSafe: "unsupported",
+    note: "Date instances are not JSON values; use an ISO string contract.",
+  },
+  {
+    typeName: "ZodBigInt",
+    kind: "bigint",
+    jsonSafe: "unsupported",
+    note: "BigInt values are not JSON values; use a string or number boundary contract.",
+  },
+  {
+    typeName: "ZodFunction",
+    kind: "function",
+    jsonSafe: "unsupported",
+    note: "Functions are not serializable JSON contract values.",
+  },
+  {
+    typeName: "ZodMap",
+    kind: "map",
+    jsonSafe: "unsupported",
+    note: "Maps are not JSON objects with stable string keys; use an object or array contract.",
+  },
+  {
+    typeName: "ZodSet",
+    kind: "set",
+    jsonSafe: "unsupported",
+    note: "Sets are not JSON arrays with stable element semantics; use an array contract.",
+  },
+  {
+    typeName: "ZodPromise",
+    kind: "promise",
+    jsonSafe: "unsupported",
+    note: "Promises are runtime behavior, not JSON contract values.",
+  },
+  {
+    typeName: "ZodSymbol",
+    kind: "symbol",
+    jsonSafe: "unsupported",
+    note: "Symbols are not JSON values.",
+  },
+  {
+    typeName: "ZodNaN",
+    kind: "nan",
+    jsonSafe: "unsupported",
+    note: "NaN is not a JSON number.",
+  },
+  {
+    typeName: "ZodVoid",
+    kind: "void",
+    jsonSafe: "unsupported",
+    note: "Void is not a JSON value; omit the response schema for empty responses.",
+  },
+  {
+    typeName: "ZodUndefined",
+    kind: "undefined",
+    jsonSafe: "unsupported",
+    note: "Undefined is not a JSON value; use optional object fields or omit the schema.",
+  },
+] as const satisfies readonly ContractSchemaSupportMatrixEntry[];
+
+type ZodDefinition = {
+  readonly shape?: unknown;
+  readonly innerType?: unknown;
+  readonly schema?: unknown;
+  readonly type?: unknown;
+  readonly element?: unknown;
+  readonly valueType?: unknown;
+  readonly options?: unknown;
+  readonly values?: unknown;
+  readonly entries?: unknown;
+  readonly value?: unknown;
+  readonly defaultValue?: unknown | (() => unknown);
+  readonly catchall?: unknown;
+  readonly unknownKeys?: unknown;
+  readonly effect?: {
+    readonly type?: unknown;
+  };
+};
+
+export function describeZodSchema(
+  schema: z.ZodType | null | undefined,
+): ContractSchemaDescriptor | null {
+  if (!schema) {
+    return null;
+  }
+
+  return describeUnknownSchema(schema, new Set());
+}
+
+export function getSchemaDescriptorDiagnostics(
+  descriptor: ContractSchemaDescriptor | null,
+): readonly ContractSchemaDiagnostic[] {
+  if (!descriptor) {
+    return [];
+  }
+
+  return collectSchemaDescriptorDiagnostics(descriptor, []);
+}
+
+export function formatSchemaDiagnostic(diagnostic: ContractSchemaDiagnostic): string {
+  const location = diagnostic.schemaPath.length > 0 ? ` at ${diagnostic.schemaPath.join(".")}` : "";
+
+  return `${diagnostic.code}${location}: ${diagnostic.message}`;
+}
+
+export function unwrapZodEffectsSchema<TSchema extends z.ZodType | null | undefined>(
+  schema: TSchema,
+): TSchema {
+  const unwrapped = unwrapUnknownZodEffectsSchema(schema);
+
+  return unwrapped as TSchema;
+}
+
+export function getZodSchemaTypeName(schema: unknown): string {
+  return getSchemaTypeName(schema);
+}
+
+export function getZodInnerSchema(schema: unknown): unknown {
+  const definition = getZodDefinition(schema);
+
+  return definition?.innerType ?? definition?.schema ?? definition?.type;
+}
+
+export function getZodDefaultValue(schema: unknown): unknown {
+  const defaultValue = getZodDefinition(schema)?.defaultValue;
+
+  return typeof defaultValue === "function" ? defaultValue() : defaultValue;
+}
+
+export function getZodArrayElementSchema(schema: unknown): unknown {
+  const definition = getZodDefinition(schema);
+
+  return definition?.element ?? definition?.type;
+}
+
+export function getZodObjectShape(schema: unknown): Record<string, unknown> {
+  return getObjectShape(schema);
+}
+
+export function getZodObjectUnsupportedDynamicKeyMode(
+  schema: unknown,
+): "catchall" | "passthrough" | undefined {
+  const definition = getZodDefinition(schema);
+
+  if (definition?.unknownKeys === "passthrough") {
+    return "passthrough";
+  }
+
+  if (definition?.catchall === undefined) {
+    return undefined;
+  }
+
+  const catchallSchemaName = getSchemaTypeName(definition.catchall);
+
+  if (catchallSchemaName === "ZodNever") {
+    return undefined;
+  }
+
+  return catchallSchemaName === "ZodUnknown" ? "passthrough" : "catchall";
+}
+
+function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSchemaDescriptor {
+  if (!isZodType(schema)) {
+    return unsupportedDescriptor("unknown", typeof schema, "Schema value is not a Zod schema.");
+  }
+
+  if (seen.has(schema)) {
+    return unsupportedDescriptor(
+      "recursive",
+      getSchemaTypeName(schema),
+      "Recursive schemas are not supported by generated JSON contracts.",
+    );
+  }
+
+  seen.add(schema);
+
+  const typeName = getSchemaTypeName(schema);
+  const definition = getZodDefinition(schema);
+
+  if (typeName === "ZodString") {
+    return supportedDescriptor("string", typeName);
+  }
+
+  if (typeName === "ZodNumber") {
+    return supportedDescriptor("number", typeName);
+  }
+
+  if (typeName === "ZodBoolean") {
+    return supportedDescriptor("boolean", typeName);
+  }
+
+  if (typeName === "ZodNull") {
+    return supportedDescriptor("null", typeName);
+  }
+
+  if (typeName === "ZodAny" || typeName === "ZodUnknown" || typeName === "ZodNever") {
+    return supportedDescriptor(typeName.replace(/^Zod/, "").toLowerCase(), typeName);
+  }
+
+  if (typeName === "ZodUndefined") {
+    return unsupportedDescriptor(
+      "undefined",
+      typeName,
+      "Undefined is not a JSON value; use an optional object field or omit the schema.",
+    );
+  }
+
+  if (typeName === "ZodVoid") {
+    return unsupportedDescriptor(
+      "void",
+      typeName,
+      "Void is not a JSON value; omit the response schema for empty responses.",
+    );
+  }
+
+  if (typeName === "ZodBigInt") {
+    return unsupportedDescriptor(
+      "bigint",
+      typeName,
+      "BigInt values are not JSON-safe; use a string or number boundary schema.",
+    );
+  }
+
+  if (typeName === "ZodDate") {
+    return unsupportedDescriptor(
+      "date",
+      typeName,
+      "Date instances are not JSON-safe; use an ISO string schema at the contract boundary.",
+    );
+  }
+
+  if (typeName === "ZodFunction") {
+    return unsupportedDescriptor("function", typeName, "Functions are not JSON contract values.");
+  }
+
+  if (typeName === "ZodMap") {
+    return unsupportedDescriptor(
+      "map",
+      typeName,
+      "Maps are not stable JSON object contracts; use an object or array schema.",
+    );
+  }
+
+  if (typeName === "ZodSet") {
+    return unsupportedDescriptor(
+      "set",
+      typeName,
+      "Sets are not stable JSON array contracts; use an array schema.",
+    );
+  }
+
+  if (typeName === "ZodPromise") {
+    return unsupportedDescriptor(
+      "promise",
+      typeName,
+      "Promises are runtime behavior, not JSON values.",
+    );
+  }
+
+  if (typeName === "ZodSymbol") {
+    return unsupportedDescriptor("symbol", typeName, "Symbols are not JSON values.");
+  }
+
+  if (typeName === "ZodNaN") {
+    return unsupportedDescriptor("nan", typeName, "NaN is not a JSON number.");
+  }
+
+  if (typeName === "ZodLiteral") {
+    const value = normalizeLiteralValue(
+      definition?.value ?? getFirstArrayValue(definition?.values),
+    );
+
+    return value.supported
+      ? { ...supportedDescriptor("literal", typeName), value: value.value }
+      : unsupportedDescriptor("literal", typeName, value.reason);
+  }
+
+  if (typeName === "ZodEnum") {
+    const enumValues = getEnumValues(definition?.values ?? definition?.entries);
+
+    if (enumValues.unsupportedReason) {
+      return {
+        ...unsupportedDescriptor("enum", typeName, enumValues.unsupportedReason),
+        values: enumValues.values,
+      };
+    }
+
+    return {
+      ...supportedDescriptor("enum", typeName),
+      values: enumValues.values.sort(comparePrimitiveValues),
+    };
+  }
+
+  if (typeName === "ZodNativeEnum") {
+    const enumValues = getNativeEnumValues(definition?.values);
+
+    if (enumValues.unsupportedReason) {
+      return {
+        ...unsupportedDescriptor("enum", typeName, enumValues.unsupportedReason),
+        values: enumValues.values,
+      };
+    }
+
+    return {
+      ...supportedDescriptor("enum", typeName),
+      values: enumValues.values.sort(comparePrimitiveValues),
+    };
+  }
+
+  if (typeName === "ZodOptional" || typeName === "ZodDefault") {
+    const inner = describeMaybeSchema(definition?.innerType, seen);
+    const kind = typeName === "ZodOptional" ? "optional" : "default";
+
+    return {
+      ...descriptorFromChildren(kind, typeName, [inner]),
+      inner,
+    };
+  }
+
+  if (typeName === "ZodNullable") {
+    const inner = describeMaybeSchema(definition?.innerType, seen);
+
+    return {
+      ...descriptorFromChildren("nullable", typeName, [inner]),
+      inner,
+    };
+  }
+
+  if (typeName === "ZodEffects") {
+    const effectType =
+      typeof definition?.effect?.type === "string" ? definition.effect.type : "unknown";
+    const inner = describeMaybeSchema(definition?.schema ?? definition?.innerType, seen);
+
+    if (effectType === "transform" || effectType === "preprocess" || effectType === "unknown") {
+      return {
+        ...unsupportedDescriptor(
+          "effects",
+          typeName,
+          `Zod ${effectType} effects can change runtime values and are not JSON-safe contract schemas.`,
+        ),
+        effectType,
+        inner,
+      };
+    }
+
+    return {
+      ...descriptorFromChildren("effects", typeName, [inner]),
+      effectType,
+      inner,
+    };
+  }
+
+  if (typeName === "ZodBranded" || typeName === "ZodReadonly") {
+    const inner = describeMaybeSchema(definition?.type ?? definition?.innerType, seen);
+    const kind = typeName === "ZodBranded" ? "branded" : "readonly";
+
+    return {
+      ...descriptorFromChildren(kind, typeName, [inner]),
+      inner,
+    };
+  }
+
+  if (typeName === "ZodArray") {
+    const element = describeMaybeSchema(definition?.element ?? definition?.type, seen);
+
+    return {
+      ...descriptorFromChildren("array", typeName, [element]),
+      element,
+    };
+  }
+
+  if (typeName === "ZodRecord") {
+    const element = describeMaybeSchema(definition?.valueType, seen);
+
+    return {
+      ...descriptorFromChildren("record", typeName, [element]),
+      element,
+    };
+  }
+
+  if (typeName === "ZodObject") {
+    const fields = Object.entries(getObjectShape(schema))
+      .map(([name, fieldSchema]) => ({
+        name,
+        required: !isOptionalInputSchema(fieldSchema),
+        schema: describeUnknownSchema(fieldSchema, new Set(seen)),
+      }))
+      .sort(compareSchemaFields);
+
+    return {
+      ...descriptorFromChildren(
+        "object",
+        typeName,
+        fields.map((field) => field.schema),
+      ),
+      fields,
+    };
+  }
+
+  if (typeName === "ZodUnion" || typeName === "ZodDiscriminatedUnion") {
+    const options = getSchemaOptions(definition)
+      .map((option) => describeUnknownSchema(option, new Set(seen)))
+      .sort(compareSchemaDescriptors);
+
+    return {
+      ...descriptorFromChildren("union", typeName, options),
+      options,
+    };
+  }
+
+  return unsupportedDescriptor(
+    "other",
+    typeName,
+    `Unsupported Zod schema ${typeName}; use a schema listed in JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX.`,
+  );
+}
+
+function describeMaybeSchema(value: unknown, seen: Set<unknown>): ContractSchemaDescriptor | null {
+  return isZodType(value) ? describeUnknownSchema(value, new Set(seen)) : null;
+}
+
+function collectSchemaDescriptorDiagnostics(
+  descriptor: ContractSchemaDescriptor,
+  path: readonly string[],
+): ContractSchemaDiagnostic[] {
+  const diagnostics: ContractSchemaDiagnostic[] = [];
+
+  if (!descriptor.jsonSafe && descriptor.unsupportedReason) {
+    diagnostics.push({
+      code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+      severity: "error",
+      typeName: descriptor.typeName,
+      schemaPath: path,
+      message:
+        descriptor.unsupportedReason ??
+        `Unsupported Zod schema ${descriptor.typeName}; use a JSON-safe contract schema.`,
+    });
+  } else if (descriptor.kind === "effects") {
+    diagnostics.push({
+      code: CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE,
+      severity: "warning",
+      typeName: descriptor.typeName,
+      schemaPath: path,
+      message:
+        "Zod refinements are represented from their inner schema in generated contracts; runtime refinements still run on the server.",
+    });
+  }
+
+  if (descriptor.inner) {
+    diagnostics.push(...collectSchemaDescriptorDiagnostics(descriptor.inner, path));
+  }
+
+  if (descriptor.element) {
+    diagnostics.push(...collectSchemaDescriptorDiagnostics(descriptor.element, [...path, "[]"]));
+  }
+
+  for (const [index, option] of (descriptor.options ?? []).entries()) {
+    diagnostics.push(...collectSchemaDescriptorDiagnostics(option, [...path, `option${index}`]));
+  }
+
+  for (const field of descriptor.fields ?? []) {
+    diagnostics.push(...collectSchemaDescriptorDiagnostics(field.schema, [...path, field.name]));
+  }
+
+  return diagnostics;
+}
+
+function supportedDescriptor(kind: string, typeName: string): ContractSchemaDescriptor {
+  return { kind, typeName, jsonSafe: true };
+}
+
+function unsupportedDescriptor(
+  kind: string,
+  typeName: string,
+  unsupportedReason: string,
+): ContractSchemaDescriptor {
+  return { kind, typeName, jsonSafe: false, unsupportedReason };
+}
+
+function descriptorFromChildren(
+  kind: string,
+  typeName: string,
+  children: readonly (ContractSchemaDescriptor | null)[],
+): ContractSchemaDescriptor {
+  const unsupportedChild = children.find((child) => child && !child.jsonSafe);
+
+  if (unsupportedChild) {
+    return { kind, typeName, jsonSafe: false };
+  }
+
+  return supportedDescriptor(kind, typeName);
+}
+
+function isOptionalInputSchema(schema: unknown): boolean {
+  const typeName = getSchemaTypeName(schema);
+
+  if (typeName === "ZodOptional" || typeName === "ZodDefault") {
+    return true;
+  }
+
+  if (typeName === "ZodEffects") {
+    const definition = getZodDefinition(schema);
+
+    return isOptionalInputSchema(definition?.schema ?? definition?.innerType);
+  }
+
+  return false;
+}
+
+function unwrapUnknownZodEffectsSchema(schema: unknown): unknown {
+  if (!isZodType(schema) || getSchemaTypeName(schema) !== "ZodEffects") {
+    return schema;
+  }
+
+  const definition = getZodDefinition(schema);
+
+  return unwrapUnknownZodEffectsSchema(definition?.schema ?? definition?.innerType);
+}
+
+function getSchemaTypeName(schema: unknown): string {
+  if (!schema || typeof schema !== "object") {
+    return typeof schema;
+  }
+
+  return schema.constructor.name;
+}
+
+function getZodDefinition(schema: unknown): ZodDefinition | undefined {
+  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
+    return undefined;
+  }
+
+  return schema._def as ZodDefinition;
+}
+
+function getObjectShape(schema: unknown): Record<string, unknown> {
+  if (!schema || typeof schema !== "object") {
+    return {};
+  }
+
+  if ("shape" in schema) {
+    const shape = schema.shape;
+
+    if (shape && typeof shape === "object") {
+      return shape as Record<string, unknown>;
+    }
+  }
+
+  const definition = getZodDefinition(schema);
+  const shape = typeof definition?.shape === "function" ? definition.shape() : definition?.shape;
+
+  return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
+}
+
+function getSchemaOptions(definition: ZodDefinition | undefined): unknown[] {
+  if (!definition) {
+    return [];
+  }
+
+  if (Array.isArray(definition.options)) {
+    return definition.options;
+  }
+
+  if (definition.options instanceof Map) {
+    return [...definition.options.values()];
+  }
+
+  return [];
+}
+
+function isZodType(value: unknown): value is z.ZodType {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as { readonly safeParse?: unknown };
+
+  return typeof candidate.safeParse === "function";
+}
+
+function normalizeLiteralValue(value: unknown):
+  | { readonly supported: true; readonly value: ContractSchemaPrimitiveValue }
+  | {
+      readonly supported: false;
+      readonly reason: string;
+    } {
+  if (typeof value === "string" || typeof value === "boolean" || value === null) {
+    return { supported: true, value };
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return { supported: true, value };
+  }
+
+  return {
+    supported: false,
+    reason: `Literal value ${String(value)} is not JSON-safe; use a string, number, boolean, or null literal.`,
+  };
+}
+
+type EnumValuesResult = {
+  readonly values: (string | number)[];
+  readonly unsupportedReason?: string;
+};
+
+function getEnumValues(value: unknown): EnumValuesResult {
+  if (!Array.isArray(value)) {
+    return getNativeEnumValues(value);
+  }
+
+  return toEnumValuesResult(value);
+}
+
+function getFirstArrayValue(value: unknown): unknown {
+  return Array.isArray(value) ? value[0] : undefined;
+}
+
+function getNativeEnumValues(value: unknown): EnumValuesResult {
+  if (!isRecord(value)) {
+    return { values: [] };
+  }
+
+  return toEnumValuesResult(
+    Object.entries(value)
+      .filter(([key]) => !isNumericEnumReverseMappingKey(key))
+      .map(([, enumValue]) => enumValue),
+  );
+}
+
+function toEnumValuesResult(values: readonly unknown[]): EnumValuesResult {
+  const unsupportedValues = values.filter((value) => !isJsonEnumValue(value));
+  const jsonValues = [...new Set(values.filter(isJsonEnumValue))];
+
+  if (unsupportedValues.length > 0) {
+    return {
+      values: jsonValues,
+      unsupportedReason: `Enum values ${unsupportedValues.map(String).join(", ")} are not JSON-safe; use string or finite number enum values.`,
+    };
+  }
+
+  return { values: jsonValues };
+}
+
+function isJsonEnumValue(value: unknown): value is string | number {
+  return typeof value === "string" || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isNumericEnumReverseMappingKey(key: string): boolean {
+  return key.length > 0 && Number.isFinite(Number(key)) && String(Number(key)) === key;
+}
+
+function compareSchemaFields(
+  left: ContractSchemaFieldDescriptor,
+  right: ContractSchemaFieldDescriptor,
+): number {
+  return left.name.localeCompare(right.name);
+}
+
+function compareSchemaDescriptors(
+  left: ContractSchemaDescriptor,
+  right: ContractSchemaDescriptor,
+): number {
+  return JSON.stringify(left).localeCompare(JSON.stringify(right));
+}
+
+function comparePrimitiveValues(left: string | number, right: string | number): number {
+  return String(left).localeCompare(String(right));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}

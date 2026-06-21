@@ -15,6 +15,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/framework-context": "^0.0.2",
   "@croco/framework-logger": "^0.0.2",
   "@croco/frontend-cloudflare": "^0.0.2",
+  "@croco/frontend-problems": "^0.1.0",
   "@croco/frontend-react": "^0.0.2",
   "@croco/frontend-vite": "^0.0.2",
   "@croco/health-core": "^0.0.2",

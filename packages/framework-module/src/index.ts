@@ -1,5 +1,11 @@
 import type { ModuleContext } from "./ModuleContext";
-import { initializeModules, registerModule, resetModules, shutdownModules } from "./ModuleRegistry";
+import {
+  createModuleGraphManifest,
+  initializeModules,
+  registerModule,
+  resetModules,
+  shutdownModules,
+} from "./ModuleRegistry";
 import type { ModuleOptions } from "./types";
 
 export class CrocoModule {
@@ -18,6 +24,10 @@ export class CrocoModule {
   static reset(): void {
     resetModules();
   }
+
+  static createGraphManifest() {
+    return createModuleGraphManifest();
+  }
 }
 
 export function defineCrocoModule(module: ModuleOptions): ModuleOptions {
@@ -31,6 +41,7 @@ export function defineCrocoModule(module: ModuleOptions): ModuleOptions {
 }
 
 export { detectCircularDependency } from "./CircularDependencyDetector";
+export { createModuleGraphManifest, stringifyModuleGraphManifest } from "./ModuleRegistry";
 export { ModuleContext } from "./ModuleContext";
 export { ModuleDiagnosticsProvider } from "./libs/diagnostics/ModuleDiagnosticsProvider";
 export {
@@ -42,6 +53,13 @@ export {
 export type {
   CrocoModule as CrocoModuleDefinition,
   ModuleDiagnosticsSnapshot,
+  ModuleGraphDiagnostic,
+  ModuleGraphDiagnosticCode,
+  ModuleGraphManifest,
+  ModuleGraphManifestStatus,
+  ModuleGraphManifestVersion,
+  ModuleGraphModule,
+  ModuleGraphProvider,
   ModuleLifecycleHook,
   ModuleLifecyclePhase,
   ModuleOptions,

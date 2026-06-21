@@ -3,6 +3,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
 import type { RouteIR } from "./RouteIR";
+import { describeZodSchema, getSchemaDescriptorDiagnostics } from "./SchemaDescriptor";
 import {
   type Constructor,
   type ControllerMetadata,
@@ -75,12 +76,23 @@ export type ContractPathParam = {
   readonly name: string;
 };
 
+type RouteSchemaDiagnosticLocation = "body" | "path" | "query" | "headers" | "response";
+
+type RouteSchemaDiagnosticEntry = {
+  readonly schema: z.ZodType;
+  readonly location: RouteSchemaDiagnosticLocation;
+};
+
 export type ContractGraphRoute = RouteIR & {
   readonly routeId: string;
   readonly operationId: string;
   readonly controllerPath: string;
   readonly access: ContractAccessMetadata;
   readonly entitlements: readonly ContractEntitlementRequirement[];
+};
+
+export type BuildContractGraphOptions = {
+  readonly strictProblemResponses?: boolean;
 };
 
 export type ContractGraph = {
@@ -104,7 +116,10 @@ export class ContractGraphDiagnosticError extends Problem {
   }
 }
 
-export function buildContractGraph(controllers: readonly Constructor[]): ContractGraph {
+export function buildContractGraph(
+  controllers: readonly Constructor[],
+  options: BuildContractGraphOptions = {},
+): ContractGraph {
   const graphControllers: ContractGraphController[] = [];
   const graphRoutes: ContractGraphRoute[] = [];
   const diagnostics: ContractDiagnostic[] = [];
@@ -138,7 +153,7 @@ export function buildContractGraph(controllers: readonly Constructor[]): Contrac
     graphRoutes.push(...routes);
 
     for (const route of routes) {
-      diagnostics.push(...validateRoute(route));
+      diagnostics.push(...validateRoute(route, options));
     }
   }
 
@@ -182,10 +197,14 @@ export function getContractPathParamNames(path: string): string[] {
 
 export function getContractPathParams(path: string): ContractPathParam[] {
   return [...path.matchAll(/:([^/]+)/g)]
-    .map((match) => {
+    .flatMap((match) => {
       const token = match[1];
+      if (!token) {
+        return [];
+      }
 
-      return { token, name: token.replace(/^\.\.\./, "") };
+      const name = token.replace(/^\.\.\./, "");
+      return name.length > 0 ? [{ token, name }] : [];
     })
     .filter((param) => param.name.length > 0);
 }
@@ -235,7 +254,10 @@ function toContractGraphRoute(
   };
 }
 
-function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
+function validateRoute(
+  route: ContractGraphRoute,
+  options: BuildContractGraphOptions,
+): ContractDiagnostic[] {
   const diagnostics: ContractDiagnostic[] = [];
 
   if (route.httpMethod.toUpperCase() === "ALL") {
@@ -252,8 +274,9 @@ function validateRoute(route: ContractGraphRoute): ContractDiagnostic[] {
   diagnostics.push(...validatePathParams(route));
   diagnostics.push(...validateNamedParams(route));
   diagnostics.push(...validateBodyParams(route));
-  diagnostics.push(...validateSchemaEffects(route));
+  diagnostics.push(...validateRouteSchemas(route));
   diagnostics.push(...validateProblemResponses(route));
+  diagnostics.push(...validateStrictProblemResponses(route, options));
 
   return diagnostics;
 }
@@ -263,7 +286,9 @@ function validateProblemResponses(route: ContractGraphRoute): ContractDiagnostic
   const seenCodes = new Set<string>();
 
   for (const response of route.problemResponses ?? []) {
-    if (seenCodes.has(response.code)) {
+    const existing = seenCodes.has(response.code);
+
+    if (existing) {
       diagnostics.push(
         createRouteDiagnostic(
           route,
@@ -278,7 +303,122 @@ function validateProblemResponses(route: ContractGraphRoute): ContractDiagnostic
     seenCodes.add(response.code);
   }
 
+  diagnostics.push(...validateRouteContractProblemResponses(route));
+
   return diagnostics;
+}
+
+function validateRouteContractProblemResponses(route: ContractGraphRoute): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const problemResponses = route.problemResponses ?? [];
+  const contractResponses = getRouteContractProblemResponses(problemResponses);
+
+  if (contractResponses.length === 0) {
+    return diagnostics;
+  }
+
+  const declaredByCode = new Map(problemResponses.map((response) => [response.code, response]));
+  const contractByCode = new Map(contractResponses.map((response) => [response.code, response]));
+
+  for (const contractResponse of contractResponses) {
+    const declared = declaredByCode.get(contractResponse.code);
+
+    if (!declared) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-missing-problem-response",
+          "error",
+          `Route contract declares Problem code '${contractResponse.code}', but the route metadata does not include it. Use routeProblemResponses(contract) without filtering the contract failure surface.`,
+        ),
+      );
+      continue;
+    }
+
+    if (!hasSameProblemClassification(declared, contractResponse)) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-problem-response-mismatch",
+          "error",
+          `Route metadata declares Problem code '${declared.code}' as ${declared.category}/${declared.status}, but the route contract declares ${contractResponse.category}/${contractResponse.status}. Keep @ProblemResponse metadata derived from the route contract.`,
+        ),
+      );
+    }
+  }
+
+  for (const declared of problemResponses) {
+    if (contractByCode.has(declared.code)) {
+      continue;
+    }
+
+    diagnostics.push(
+      createRouteDiagnostic(
+        route,
+        "contract-route-problem-response-not-in-contract",
+        "error",
+        `Route declares Problem code '${declared.code}' outside the route contract. Add it to the contract problems list or remove the extra @ProblemResponse declaration.`,
+      ),
+    );
+  }
+
+  return diagnostics;
+}
+
+function validateStrictProblemResponses(
+  route: ContractGraphRoute,
+  options: BuildContractGraphOptions,
+): ContractDiagnostic[] {
+  if (!options.strictProblemResponses || (route.problemResponses?.length ?? 0) > 0) {
+    return [];
+  }
+
+  return [
+    createRouteDiagnostic(
+      route,
+      "contract-route-missing-problem-response-contract",
+      "warning",
+      "Strict Problem contract mode could not find declared route failures. Keep the generated client failure union as never only when this public route cannot throw Croco Problems; otherwise declare failures with routeProblemResponses(contract).",
+    ),
+  ];
+}
+
+function getRouteContractProblemResponses(
+  problemResponses: NonNullable<ContractGraphRoute["problemResponses"]>,
+): NonNullable<ContractGraphRoute["problemResponses"]> {
+  const responsesByCode = new Map<
+    string,
+    NonNullable<ContractGraphRoute["problemResponses"]>[number]
+  >();
+
+  for (const response of problemResponses) {
+    for (const contractResponse of response.routeContractProblems ?? []) {
+      const existing = responsesByCode.get(contractResponse.code);
+
+      if (existing && !hasSameProblemClassification(existing, contractResponse)) {
+        responsesByCode.set(contractResponse.code, contractResponse);
+        continue;
+      }
+
+      responsesByCode.set(contractResponse.code, contractResponse);
+    }
+  }
+
+  return [...responsesByCode.values()].sort(compareProblemResponses);
+}
+
+function hasSameProblemClassification(
+  left: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+  right: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+): boolean {
+  return left.category === right.category && left.status === right.status;
+}
+
+function compareProblemResponses(
+  left: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+  right: NonNullable<ContractGraphRoute["problemResponses"]>[number],
+): number {
+  return left.code.localeCompare(right.code) || left.status - right.status;
 }
 
 function validatePathParams(route: ContractGraphRoute): ContractDiagnostic[] {
@@ -372,19 +512,19 @@ function validateBodyParams(route: ContractGraphRoute): ContractDiagnostic[] {
   ];
 }
 
-function validateSchemaEffects(route: ContractGraphRoute): ContractDiagnostic[] {
+function validateRouteSchemas(route: ContractGraphRoute): ContractDiagnostic[] {
   const diagnostics: ContractDiagnostic[] = [];
 
-  for (const schema of getRouteSchemas(route)) {
-    const effectsCount = countZodEffects(schema);
+  for (const entry of getRouteSchemaEntries(route)) {
+    const descriptor = describeZodSchema(entry.schema);
 
-    for (let index = 0; index < effectsCount; index += 1) {
+    for (const diagnostic of getSchemaDescriptorDiagnostics(descriptor)) {
       diagnostics.push(
         createRouteDiagnostic(
           route,
-          "contract-schema-zod-effects-unwrapped",
-          "warning",
-          "Zod effects are represented from their inner schema in generated contracts; runtime transforms/refinements still run on the server.",
+          diagnostic.code,
+          diagnostic.severity,
+          `${formatSchemaLocation(entry.location, diagnostic.schemaPath)}: ${diagnostic.message}`,
         ),
       );
     }
@@ -470,89 +610,37 @@ function validateUniqueOperationIds(routes: readonly ContractGraphRoute[]): Cont
   return diagnostics;
 }
 
-function getRouteSchemas(route: ContractGraphRoute): z.ZodType[] {
-  const schemas = [
-    route.inputSchemas.body,
-    route.inputSchemas.path,
-    route.inputSchemas.query,
-    route.inputSchemas.headers,
-    route.outputSchema,
-    ...route.params.map((param) => param.schema),
-  ].filter((schema): schema is z.ZodType => Boolean(schema));
-
-  return [...new Set(schemas)];
-}
-
-function isZodEffects(schema: z.ZodType): boolean {
-  return schema.constructor.name === "ZodEffects";
-}
-
-function countZodEffects(schema: z.ZodType, seen = new Set<z.ZodType>()): number {
-  if (seen.has(schema)) {
-    return 0;
-  }
-
-  seen.add(schema);
-
-  const currentCount = isZodEffects(schema) ? 1 : 0;
-  const nestedCount = getNestedZodSchemas(schema).reduce(
-    (count, nestedSchema) => count + countZodEffects(nestedSchema, seen),
-    0,
-  );
-
-  return currentCount + nestedCount;
-}
-
-function getNestedZodSchemas(schema: z.ZodType): z.ZodType[] {
-  const definition = getZodDefinition(schema);
-
-  if (!definition) {
-    return [];
-  }
-
-  const nestedSchemas = [
-    ...Object.values(getZodObjectShape(definition)),
-    definition.innerType,
-    definition.schema,
-    definition.type,
-    definition.element,
-    ...(Array.isArray(definition.options) ? definition.options : []),
+function getRouteSchemaEntries(route: ContractGraphRoute): RouteSchemaDiagnosticEntry[] {
+  const candidates: readonly {
+    readonly schema: z.ZodType | null;
+    readonly location: RouteSchemaDiagnosticLocation;
+  }[] = [
+    { schema: route.inputSchemas.body, location: "body" },
+    { schema: route.inputSchemas.path, location: "path" },
+    { schema: route.inputSchemas.query, location: "query" },
+    { schema: route.inputSchemas.headers, location: "headers" },
+    { schema: route.outputSchema, location: "response" },
   ];
+  const entries: RouteSchemaDiagnosticEntry[] = [];
+  const seen = new Set<z.ZodType>();
 
-  return nestedSchemas.filter(isZodType);
-}
+  for (const candidate of candidates) {
+    if (!candidate.schema || seen.has(candidate.schema)) {
+      continue;
+    }
 
-type ZodDefinition = {
-  readonly shape?: unknown;
-  readonly innerType?: unknown;
-  readonly schema?: unknown;
-  readonly type?: unknown;
-  readonly element?: unknown;
-  readonly options?: unknown;
-};
-
-function getZodDefinition(schema: z.ZodType): ZodDefinition | undefined {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
+    seen.add(candidate.schema);
+    entries.push({ schema: candidate.schema, location: candidate.location });
   }
 
-  return schema._def as ZodDefinition;
+  return entries;
 }
 
-function getZodObjectShape(definition: ZodDefinition): Record<string, unknown> {
-  const shape = typeof definition.shape === "function" ? definition.shape() : definition.shape;
-
-  return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
-}
-
-function isZodType(value: unknown): value is z.ZodType {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as { readonly safeParse?: unknown };
-
-  return typeof candidate.safeParse === "function";
+function formatSchemaLocation(
+  location: RouteSchemaDiagnosticLocation,
+  schemaPath: readonly string[],
+): string {
+  return schemaPath.length > 0 ? `${location}.${schemaPath.join(".")}` : location;
 }
 
 function createRouteDiagnostic(

@@ -1,7 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as vm from "node:vm";
 import { ProblemCategory } from "@croco/problems-core";
 import {
+  CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   type ContractGraph,
   defineRouteSchema,
   type InferRouteSchemaRequest,
@@ -15,6 +17,73 @@ import { generateClientFiles, generateClientFilesFromContractGraph } from "../li
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
+const VIRTUAL_REACT_QUERY_MODULE = "node_modules/@tanstack/react-query/index.d.ts";
+const VIRTUAL_REACT_QUERY_SOURCE = `
+export type QueryKey = readonly unknown[];
+
+export type UseQueryOptions<
+  TQueryFnData = unknown,
+  TError = Error,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+> = {
+  readonly queryKey?: TQueryKey;
+  readonly queryFn?: () => Promise<TQueryFnData>;
+  readonly enabled?: boolean;
+  readonly staleTime?: number;
+  readonly select?: (data: TQueryFnData) => TData;
+};
+
+export type UseQueryResult<TData = unknown, TError = Error> = {
+  readonly data: TData | undefined;
+  readonly error: TError | null;
+};
+
+export declare function useQuery<
+  TQueryFnData = unknown,
+  TError = Error,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+>(
+  options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey> & {
+    readonly queryKey: TQueryKey;
+    readonly queryFn: () => Promise<TQueryFnData>;
+  },
+): UseQueryResult<TData, TError>;
+
+export type UseMutationOptions<
+  TData = unknown,
+  TError = Error,
+  TVariables = void,
+  TContext = unknown,
+> = {
+  readonly mutationFn?: (variables: TVariables) => Promise<TData>;
+  readonly onSuccess?: (data: TData, variables: TVariables, context: TContext | undefined) => void;
+};
+
+export type UseMutationResult<
+  TData = unknown,
+  TError = Error,
+  TVariables = void,
+  TContext = unknown,
+> = {
+  readonly data: TData | undefined;
+  readonly error: TError | null;
+  readonly mutate: (variables: TVariables) => void;
+  readonly context?: TContext;
+};
+
+export declare function useMutation<
+  TData = unknown,
+  TError = Error,
+  TVariables = void,
+  TContext = unknown,
+>(
+  options: UseMutationOptions<TData, TError, TVariables, TContext> & {
+    readonly mutationFn: (variables: TVariables) => Promise<TData>;
+  },
+): UseMutationResult<TData, TError, TVariables, TContext>;
+`;
 const EMPTY_INPUT_SCHEMAS = {
   body: null,
   path: null,
@@ -74,6 +143,25 @@ const BODY_HEADER_INPUT_SCHEMAS = {
   query: null,
   headers: z.object({ "x-request-id": z.string() }) as any,
 };
+const PATH_QUERY_HEADER_INPUT_SCHEMAS: RouteIR["inputSchemas"] = {
+  body: null,
+  path: z.object({ id: z.string() }) as unknown as NonNullable<RouteIR["inputSchemas"]["path"]>,
+  query: z.object({ page: z.string() }) as unknown as NonNullable<RouteIR["inputSchemas"]["query"]>,
+  headers: z.object({ authorization: z.string() }) as unknown as NonNullable<
+    RouteIR["inputSchemas"]["headers"]
+  >,
+};
+const NUMERIC_NATIVE_ENUM = {
+  0: "Draft",
+  1: "Published",
+  Draft: 0,
+  Published: 1,
+} as const;
+const MIXED_NATIVE_ENUM = {
+  0: "Draft",
+  Draft: 0,
+  Published: "published",
+} as const;
 
 describe("generateClientFiles", () => {
   beforeEach(() => {
@@ -182,6 +270,125 @@ describe("generateClientFiles", () => {
     );
     expect(content).toContain(
       "{ code: 'USER_NOT_FOUND', category: 'NotFound', status: 404, description: 'User id is missing, or the user was deleted.' }",
+    );
+  });
+
+  it("should import the shared frontend Problem runtime when configured", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: BODY_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+        problemResponses: [
+          {
+            code: "VALIDATION_FAILED",
+            category: ProblemCategory.ValidationError,
+            status: 422,
+          },
+        ],
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR, {
+      problemRuntime: "frontend-problems",
+    });
+    const content = fs.readFileSync(files[0], "utf-8");
+    const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+
+    expect(rpcContent).toContain("} from '@croco/frontend-problems';");
+    expect(rpcContent).toContain("ProblemClientError as RpcClientProblemError");
+    expect(rpcContent).toContain("ProblemDeclaration as RpcDeclaredProblem");
+    expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
+    expect(rpcContent).not.toContain("function isRpcProblemDetails");
+    expect(content).toContain(
+      "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+    );
+    expect(content).toContain("export type CreateUserResult = RpcClientResult");
+    assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
+  }, 15_000);
+
+  it("should validate React Query key factories without polluting generated route fingerprints", () => {
+    const graph: ContractGraph = {
+      version: "croco.contract-graph.v1",
+      controllers: [
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.getUser", "UsersController.create", "UsersController.delete"],
+        },
+      ],
+      routes: [
+        {
+          routeId: "UsersController.getUser",
+          operationId: "UsersController_getUser",
+          controllerName: "UsersController",
+          methodName: "getUser",
+          httpMethod: "GET",
+          path: "/users/:id",
+          controllerPath: "/users",
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+          access: { guards: [], roles: [] },
+          entitlements: [],
+          problemResponses: [],
+        },
+        {
+          routeId: "UsersController.create",
+          operationId: "UsersController_create",
+          controllerName: "UsersController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          controllerPath: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: BODY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+          access: { guards: [], roles: [] },
+          entitlements: [],
+          problemResponses: [],
+        },
+        {
+          routeId: "UsersController.delete",
+          operationId: "UsersController_delete",
+          controllerName: "UsersController",
+          methodName: "delete",
+          httpMethod: "DELETE",
+          path: "/users/:id",
+          controllerPath: "/users",
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+          access: { guards: [], roles: [] },
+          entitlements: [],
+          problemResponses: [],
+        },
+      ],
+      diagnostics: [],
+    };
+
+    const files = generateClientFilesFromContractGraph(graph, TEMP_DIR, { reactQuery: true });
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(content).toContain(
+      "create: { route: usersContractRoutes[1], invalidates: [usersKeys.all()] },",
+    );
+    expect(content).toContain(
+      "delete: { route: usersContractRoutes[2], invalidates: [usersKeys.all()] },",
     );
   });
 
@@ -360,7 +567,7 @@ describe("generateClientFiles", () => {
     expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(true);
     expect(fs.existsSync(path.join(TEMP_DIR, "order.ts"))).toBe(true);
     expect(fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8")).toBe(
-      "export * from './rpc';\nexport { orderClient } from './order';\nexport { userClient } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
+      "export * from './rpc';\nexport { orderClient, orderContractRoutes, orderKeys } from './order';\nexport { userClient, userContractRoutes, userKeys } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
     );
   });
 
@@ -452,9 +659,150 @@ describe("generateClientFiles", () => {
     const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
 
     const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("import { useMutation, useQuery } from '@tanstack/react-query';");
-    expect(content).toContain("export function useCreate()");
-    expect(content).toContain("return useMutation({ mutationFn: userClient.create });");
+    expect(content).toContain("import { useMutation } from '@tanstack/react-query';");
+    expect(content).toContain("import type { UseMutationOptions } from '@tanstack/react-query';");
+    expect(content).toContain("export const userMutations = {");
+    expect(content).toContain("create: (): CreateMutationFactory => ({");
+    expect(content).toContain("createResult: (): CreateResultMutationFactory => ({");
+    expect(content).toContain("export function useCreate<TContext = unknown>");
+    expect(content).toContain("export function useCreateResult<TContext = unknown>");
+    expect(content).toContain(
+      "return useMutation<unknown | undefined, Error, CreateMutationVariables, TContext>({ ...userMutations.create(), ...options });",
+    );
+  });
+
+  it(
+    "should generate query key factories, invalidation manifests, and barrel exports",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "list",
+          httpMethod: "GET",
+          path: "/users",
+          params: [{ kind: "query", name: "page", schema: null }],
+          inputSchema: null,
+          inputSchemas: QUERY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: BODY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      const indexContent = fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8");
+      expect(content).toContain("export const userKeys = {");
+      expect(content).toContain("all: () => ['user'] as const,");
+      expect(content).toContain(
+        "list: (input: ListInput) => [...userKeys.all(), 'list', serializeRpcQueryKeyInput(input)] as const,",
+      );
+      expect(content).toContain(
+        "create: (input: CreateInput) => [...userKeys.all(), 'create', serializeRpcQueryKeyInput(input)] as const,",
+      );
+      expect(content).toContain("export const userInvalidationManifest = {");
+      expect(content).toContain(
+        "create: { route: userContractRoutes[1], invalidates: [userKeys.all()] },",
+      );
+      expect(indexContent).toContain(
+        "export { userClient, userContractRoutes, userKeys, userInvalidationManifest } from './user';",
+      );
+      assertGeneratedClientTypechecks(`${content}
+const listKey = userKeys.list({ query: { page: '1' } });
+const createInvalidationKey = userInvalidationManifest.create.invalidates[0];
+const createInvalidationRouteId: 'UserController.create' = userInvalidationManifest.create.route.routeId;
+void listKey;
+void createInvalidationKey;
+void createInvalidationRouteId;
+`);
+      assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it("should serialize query key inputs deterministically and reject unsupported values", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users/:id",
+        params: [
+          { kind: "path", name: "id", schema: null },
+          { kind: "query", name: "page", schema: null },
+          { kind: "header", name: "x-request-id", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as unknown as RouteIR["inputSchemas"]["path"],
+          query: z.object({
+            active: z.boolean().optional(),
+            page: z.number(),
+            search: z.string().optional(),
+            tags: z.array(z.string().optional()),
+          }) as unknown as RouteIR["inputSchemas"]["query"],
+          headers: z.object({
+            "x-request-id": z.string(),
+          }) as unknown as RouteIR["inputSchemas"]["headers"],
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    generateClientFiles(routes, TEMP_DIR);
+
+    const { serializeRpcQueryKeyInput } = loadGeneratedRpcSupport();
+    const serialized = serializeRpcQueryKeyInput({
+      query: { search: undefined, tags: ["vip", undefined, "new"], page: 2, active: false },
+      path: { id: "42" },
+      headers: { "x-request-id": "abc" },
+    });
+    const serializedRecord = serialized as Record<string, unknown>;
+    const serializedQuery = serializedRecord.query as Record<string, unknown>;
+
+    expect(serialized).toEqual({
+      headers: { "x-request-id": "abc" },
+      path: { id: "42" },
+      query: { active: false, page: 2, tags: ["vip", "new"] },
+    });
+    expect(Object.keys(serializedRecord)).toEqual(["headers", "path", "query"]);
+    expect(Object.keys(serializedQuery)).toEqual(["active", "page", "tags"]);
+    expect(serialized).toEqual(
+      serializeRpcQueryKeyInput({
+        query: { tags: ["vip", "new"], page: 2, active: false },
+        path: { id: "42" },
+        headers: { "x-request-id": "abc" },
+      }),
+    );
+
+    const ordered = serializeRpcQueryKeyInput({
+      z: true,
+      a: true,
+      _: true,
+      A: true,
+      "-": true,
+    }) as Record<string, unknown>;
+
+    expect(Object.keys(ordered)).toEqual(["-", "A", "_", "a", "z"]);
+    expect(() =>
+      serializeRpcQueryKeyInput({ createdAt: new Date("2026-01-01T00:00:00.000Z") }),
+    ).toThrow("unsupported value at input.createdAt");
+    expect(() => serializeRpcQueryKeyInput({ page: Number.NaN })).toThrow(
+      "only supports finite numbers",
+    );
   });
 
   it("should generate query input types from inputSchemas", () => {
@@ -606,9 +954,9 @@ describe("generateClientFiles", () => {
 
     expect(validResponse.id).toBe("user-1");
     expect(invalidBody).toBeDefined();
-    expect(content).toContain("export type CreateUserInput = { name: string; email: string; };");
+    expect(content).toContain("export type CreateUserInput = { email: string; name: string; };");
     expect(content).toContain(
-      "export type CreateUserOutput = { id: string; name: string; email: string; };",
+      "export type CreateUserOutput = { email: string; id: string; name: string; };",
     );
     expect(content).toContain("createUser: (input: CreateUserInput): Promise<CreateUserOutput>");
   });
@@ -655,6 +1003,18 @@ describe("generateClientFiles", () => {
               code: "USER_NOT_FOUND",
               category: ProblemCategory.NotFound,
               status: 404,
+              routeContractProblems: [
+                {
+                  code: "USER_NOT_FOUND",
+                  category: ProblemCategory.NotFound,
+                  status: 404,
+                },
+                {
+                  code: "USER_FORBIDDEN",
+                  category: ProblemCategory.Forbidden,
+                  status: 403,
+                },
+              ],
             },
             {
               code: "USER_FORBIDDEN",
@@ -725,7 +1085,7 @@ void handleMissingProblemBranch;
 `;
 
       expect(content).toContain(
-        "import { handleJsonResponse, handleJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
       );
       expect(content).toContain(
         "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
@@ -742,6 +1102,28 @@ void handleMissingProblemBranch;
     },
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
+
+  it("should keep undeclared route Problem unions as never", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.array(z.object({ id: z.string() })) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain("export type ListProblem = never;");
+    expect(content).toContain("export type ListResult = RpcClientResult<ListOutput, ListProblem>;");
+  });
 
   it("should generate JSON-safe literal, enum, union, and record output types", () => {
     const routes: RouteIR[] = [
@@ -767,8 +1149,36 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "export type GetOutput = { version: 'status/v1'; status: 'up' | 'down'; mode: 'live' | 'test'; details: Record<string, unknown>; };",
+      "export type GetOutput = { details: Record<string, unknown>; mode: 'live' | 'test'; status: 'down' | 'up'; version: 'status/v1'; };",
     );
+  });
+
+  it("should generate native enum output types without TypeScript reverse mappings", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "StatusController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/status",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.object({
+          numeric: z.nativeEnum(NUMERIC_NATIVE_ENUM),
+          mixed: z.nativeEnum(MIXED_NATIVE_ENUM),
+        }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+
+    const content = fs.readFileSync(files[0], "utf-8");
+    expect(content).toContain(
+      "export type GetOutput = { mixed: 0 | 'published'; numeric: 0 | 1; };",
+    );
+    expect(content).not.toContain("'Draft'");
+    expect(content).not.toContain("'Published'");
   });
 
   it("should reject unsupported Zod schemas instead of emitting unknown fallbacks", () => {
@@ -789,9 +1199,46 @@ void handleMissingProblemBranch;
     ];
 
     expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
-      "Cannot generate RPC client type for unsupported schema ZodDate.",
+      `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE} at checkedAt`,
     );
     expect(fs.existsSync(path.join(TEMP_DIR, "status.ts"))).toBe(false);
+  });
+
+  it("should not write earlier domain files when a later domain has an unsupported schema", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "AlphaController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/alpha",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+      {
+        controllerName: "ZetaController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/zeta",
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.object({
+          checkedAt: z.date(),
+        }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE} at checkedAt`,
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "alpha.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "zeta.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "rpc.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "index.ts"))).toBe(false);
   });
 
   it("should not emit zod references for body-only routes", () => {
@@ -1027,29 +1474,153 @@ void handleMissingProblemBranch;
     );
   });
 
-  it("should keep React Query hooks delegated to typed query clients", () => {
-    const routes: RouteIR[] = [
-      {
-        controllerName: "UserController",
-        methodName: "list",
-        httpMethod: "GET",
-        path: "/users",
-        params: [{ kind: "query", name: "page", schema: null }],
-        inputSchema: null,
-        inputSchemas: QUERY_INPUT_SCHEMAS,
-        outputSchema: null,
-        domain: null,
-      },
-    ];
+  it(
+    "should typecheck generated React Query factories, hooks, and Result variants",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "get",
+          httpMethod: "GET",
+          path: "/users/:id",
+          params: [
+            { kind: "path", name: "id", schema: null },
+            { kind: "query", name: "page", schema: null },
+            { kind: "header", name: "authorization", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: PATH_QUERY_HEADER_INPUT_SCHEMAS,
+          outputSchema: z.object({
+            id: z.string(),
+            name: z.string(),
+          }) as unknown as RouteIR["outputSchema"],
+          problemResponses: [
+            {
+              code: "USER_NOT_FOUND",
+              category: ProblemCategory.NotFound,
+              status: 404,
+            },
+          ],
+          domain: null,
+        },
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [
+            { kind: "body", name: "", schema: null },
+            { kind: "header", name: "x-request-id", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: BODY_HEADER_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
 
-    const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
+      const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
 
-    const content = fs.readFileSync(files[0], "utf-8");
-    expect(content).toContain("export function useList(input: ListInput)");
-    expect(content).toContain(
-      "return useQuery({ queryKey: ['list', input], queryFn: () => userClient.list(input) });",
-    );
-  });
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain("import { useMutation, useQuery } from '@tanstack/react-query';");
+      expect(content).toContain(
+        "import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';",
+      );
+      expect(content).toContain("export const userQueries = {");
+      expect(content).toContain("export type GetQueryKey = ReturnType<typeof userKeys.get>;");
+      expect(content).toContain("queryKey: userKeys.get(input, cacheScope),");
+      expect(content).toContain(
+        "queryKey: [...userKeys.get(input, cacheScope), 'result'] as const,",
+      );
+      expect(content).not.toContain("queryKey: ['rpc', 'user', 'get'");
+      expect(content).toContain(
+        "getResult: (input: GetInput, cacheScope?: unknown): GetResultQueryFactory => ({",
+      );
+      expect(content).toContain("queryFn: () => userClient.getResult(input),");
+      expect(content).toContain("export function useGetResult<TData = GetResult>");
+      expect(content).toContain("export const userMutations = {");
+      expect(content).toContain("createResult: (): CreateResultMutationFactory => ({");
+      expect(content).toContain(
+        "return useQuery<GetResult, Error, TData, GetResultQueryKey>({ ...userQueries.getResult(input, cacheScope), ...queryOptions });",
+      );
+      expect(content).toContain(
+        "return useMutation<CreateResult, Error, CreateMutationVariables, TContext>({ ...userMutations.createResult(), ...options });",
+      );
+      assertGeneratedReactQueryClientTypechecks(`${content}
+const getInput: GetInput = {
+  path: { id: 'user-1' },
+  query: { page: '1' },
+  headers: { authorization: 'Bearer token' },
+};
+const getFactory = userQueries.get(getInput, 'tenant:user-1');
+const getKey: GetQueryKey = getFactory.queryKey;
+const getResultFactory = userQueries.getResult(getInput, 'tenant:user-1');
+const getResultKey: GetResultQueryKey = getResultFactory.queryKey;
+const getResultPromise: Promise<GetResult> = getResultFactory.queryFn();
+
+const selectedUserName = useGet(getInput, {
+  cacheScope: 'tenant:user-1',
+  staleTime: 1000,
+  select: (user) => user.name,
+});
+const selectedNameData: string | undefined = selectedUserName.data;
+
+const selectedResultProblemCode = useGetResult(getInput, {
+  cacheScope: 'tenant:user-1',
+  enabled: true,
+  select: (result) => {
+    if (result.ok) {
+      return result.data.id;
+    }
+
+    if (result.kind === 'problem') {
+      const code: 'USER_NOT_FOUND' = result.code;
+      return code;
+    }
+
+    return result.response.status;
+  },
+});
+const resultSelection: string | number | undefined = selectedResultProblemCode.data;
+
+const createInput: CreateInput = {
+  body: { name: 'Ada' },
+  headers: { 'x-request-id': 'request-1' },
+};
+const createFactory = userMutations.create();
+const createPromise: Promise<unknown | undefined> = createFactory.mutationFn(createInput);
+const createResultFactory = userMutations.createResult();
+const createResultPromise: Promise<CreateResult> = createResultFactory.mutationFn(createInput);
+const createHook = useCreate({
+  onSuccess: (data, variables) => {
+    const response: unknown | undefined = data;
+    const name: string = variables.body.name;
+    void response;
+    void name;
+  },
+});
+const createResultHook = useCreateResult({
+  onSuccess: (result, variables) => {
+    const resultBranch: CreateResult = result;
+    const requestId: string = variables.headers['x-request-id'];
+    void resultBranch;
+    void requestId;
+  },
+});
+
+void getKey;
+void getResultKey;
+void getResultPromise;
+void selectedNameData;
+void resultSelection;
+void createPromise;
+void createResultPromise;
+void createHook;
+void createResultHook;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
 
   it(
     "should typecheck generated clients with non-string query inputs",
@@ -1078,10 +1649,10 @@ void handleMissingProblemBranch;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "export type ListInput = { query: { page: number; active: boolean | undefined; search: string | undefined; tags: string[]; deletedAt: string | null; }; };",
+        "export type ListInput = { query: { active: boolean | undefined; deletedAt: string | null; page: number; search: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
-        "import { readOptionalJsonResponse, readOptionalJsonResult, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
       );
       assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
@@ -1130,6 +1701,277 @@ void result;
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
 
+  it(
+    "should generate form models, submit payload builders, and typed form Problems from body schemas",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: {
+            body: z.object({
+              name: z.string().min(1),
+              email: z.string().email(),
+              role: z.enum(["admin", "viewer"]),
+              receiveUpdates: z.boolean().optional(),
+              retryCount: z.number().nullable(),
+            }) as any,
+            path: null,
+            query: null,
+            headers: null,
+          },
+          outputSchema: z.object({ id: z.string() }) as any,
+          problemResponses: [
+            {
+              code: "USER_VALIDATION",
+              category: ProblemCategory.ValidationError,
+              status: 422,
+            },
+            {
+              code: "USER_EMAIL_CONFLICT",
+              category: ProblemCategory.Conflict,
+              status: 409,
+            },
+          ],
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain(
+        "import { handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      );
+      expect(content).toContain(
+        "export type CreateFormFieldName = 'name' | 'email' | 'role' | 'receiveUpdates' | 'retryCount';",
+      );
+      expect(content).toContain(
+        "export type CreateFormValues = { name: string; email: string; role: 'admin' | 'viewer'; receiveUpdates: boolean | null; retryCount: number | null; };",
+      );
+      expect(content).toContain("export type CreateSubmitPayload = CreateInput;");
+      expect(content).toContain(
+        "export type CreateFormProblem = RpcFormFieldProblem<CreateFormFieldName, CreateValidationProblem> | RpcFormGlobalProblem<CreateDomainProblem>;",
+      );
+      expect(content).toContain("export const createFormModel = {");
+      expect(content).toContain(
+        "{ name: 'role', label: 'Role', control: 'select', valueKind: 'enum', required: true, initialValue: 'admin', options: [{ label: 'admin', value: 'admin' }, { label: 'viewer', value: 'viewer' }] }",
+      );
+      expect(content).toContain(
+        "initialValues: { name: '', email: '', role: 'admin', receiveUpdates: null, retryCount: null },",
+      );
+      expect(content).toContain(
+        "export function buildCreateFormPayload(values: CreateFormValues): CreateSubmitPayload",
+      );
+      expect(content).toContain(
+        "receiveUpdates: values.receiveUpdates === null ? undefined : values.receiveUpdates",
+      );
+      expect(content).toContain(
+        "export function mapCreateFormProblem(failure: Extract<CreateResult, { ok: false; kind: 'problem' }>): CreateFormProblem",
+      );
+      assertGeneratedClientTypechecks(`${content}
+const createValues: CreateFormValues = {
+  ...createFormModel.initialValues,
+  name: 'Ada',
+  email: 'ada@example.com',
+  role: 'admin',
+};
+const createPayload: CreateSubmitPayload = buildCreateFormPayload(createValues);
+
+async function submitCreateForm() {
+  const result = await userClient.createResult(createPayload);
+
+  if (result.ok || result.kind === 'external') {
+    return;
+  }
+
+  const formProblem = mapCreateFormProblem(result);
+  switch (formProblem.kind) {
+    case 'field-validation': {
+      const emailErrors: readonly string[] | undefined = formProblem.fields.email;
+      const code: 'USER_VALIDATION' = formProblem.code;
+      void emailErrors;
+      void code;
+      return;
+    }
+    case 'global-problem': {
+      const code: 'USER_EMAIL_CONFLICT' = formProblem.code;
+      void code;
+      return;
+    }
+  }
+}
+
+void submitCreateForm;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "should generate context-aware submit payload builders for update body forms",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "update",
+          httpMethod: "PUT",
+          path: "/users/:id",
+          params: [
+            { kind: "path", name: "id", schema: null },
+            { kind: "body", name: "", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: {
+            body: z.object({ name: z.string(), email: z.string().email() }) as any,
+            path: z.object({ id: z.string() }) as any,
+            query: null,
+            headers: null,
+          },
+          outputSchema: z.object({ id: z.string() }) as any,
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain(
+        "export function buildUpdateFormPayload(context: Omit<UpdateInput, 'body'>, values: UpdateFormValues): UpdateSubmitPayload",
+      );
+      expect(content).toContain(
+        "return { ...context, body: { name: values.name, email: values.email } };",
+      );
+      assertGeneratedClientTypechecks(`${content}
+const updatePayload: UpdateSubmitPayload = buildUpdateFormPayload(
+  { path: { id: 'user-1' } },
+  { ...updateFormModel.initialValues, name: 'Ada', email: 'ada@example.com' },
+);
+const updateResult = userClient.update(updatePayload);
+void updateResult;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it("should reject unsupported form body fields with a stable diagnostic and route context", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "create",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: z.object({
+            name: z.string(),
+            profile: z.object({ bio: z.string() }),
+          }) as any,
+          path: null,
+          query: null,
+          headers: null,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    try {
+      generateClientFiles(routes, TEMP_DIR);
+      throw new Error("Expected form schema generation to fail.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "rpc-codegen/unsupported-form-schema",
+        detail:
+          "Cannot generate RPC form model for route UserController.create (/users): field 'profile' uses unsupported form field schema ZodObject.",
+      });
+    }
+    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+  });
+
+  it("should reject unsupported non-object form bodies with a stable diagnostic and route context", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "create",
+        httpMethod: "POST",
+        path: "/users",
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: z.string() as any,
+          path: null,
+          query: null,
+          headers: null,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    try {
+      generateClientFiles(routes, TEMP_DIR);
+      throw new Error("Expected form schema generation to fail.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "rpc-codegen/unsupported-form-schema",
+        detail:
+          "Cannot generate RPC form model for route UserController.create (/users): body uses unsupported form schema ZodString.",
+      });
+    }
+    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+  });
+
+  it("should reject form body objects that accept dynamic keys", () => {
+    const unsupportedBodies = [
+      {
+        schema: z.object({ name: z.string() }).passthrough(),
+        mode: "passthrough",
+      },
+      {
+        schema: z.object({ name: z.string() }).catchall(z.string()),
+        mode: "catchall",
+      },
+    ];
+
+    for (const { schema, mode } of unsupportedBodies) {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: {
+            body: schema as any,
+            path: null,
+            query: null,
+            headers: null,
+          },
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      try {
+        generateClientFiles(routes, TEMP_DIR);
+        throw new Error("Expected form schema generation to fail.");
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "rpc-codegen/unsupported-form-schema",
+          detail: `Cannot generate RPC form model for route UserController.create (/users): body object accepts unsupported ${mode} keys; generated form fields must cover every accepted body key.`,
+        });
+      }
+      expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+    }
+  });
+
   it("should serialize body, path, and query input when generating combined fetch calls", () => {
     const routes: RouteIR[] = [
       {
@@ -1176,6 +2018,20 @@ function assertGeneratedClientTypechecks(
   );
 }
 
+function assertGeneratedReactQueryClientTypechecks(
+  source: string,
+  rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8"),
+): void {
+  assertVirtualTypeScriptSourcesTypecheck(
+    new Map([
+      ["generated-client.ts", source],
+      ["rpc.ts", rpcSource],
+      [VIRTUAL_REACT_QUERY_MODULE, VIRTUAL_REACT_QUERY_SOURCE],
+    ]),
+    ["generated-client.ts"],
+  );
+}
+
 function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
   const sources = new Map(
     fileNames.map((fileName) => [
@@ -1187,15 +2043,43 @@ function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
   assertVirtualTypeScriptSourcesTypecheck(sources, fileNames);
 }
 
+function loadGeneratedRpcSupport(): {
+  readonly serializeRpcQueryKeyInput: (value: unknown) => unknown;
+} {
+  const rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+  const outputText = ts.transpileModule(rpcSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const context = { exports: {} as Record<string, unknown> };
+
+  vm.runInNewContext(outputText, context);
+
+  const serializeRpcQueryKeyInput = context.exports.serializeRpcQueryKeyInput;
+
+  expect(serializeRpcQueryKeyInput).toBeTypeOf("function");
+
+  return {
+    serializeRpcQueryKeyInput: serializeRpcQueryKeyInput as (value: unknown) => unknown,
+  };
+}
+
 function assertVirtualTypeScriptSourcesTypecheck(
   sources: ReadonlyMap<string, string>,
   rootFileNames: readonly string[],
 ): void {
   const compilerOptions: ts.CompilerOptions = {
+    baseUrl: path.resolve(__dirname, "../../.."),
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     noEmit: true,
+    paths: {
+      "@croco/frontend-problems": ["frontend-problems/src/index.ts"],
+      "@croco/problems-core": ["problems-core/src/index.ts"],
+    },
     skipLibCheck: true,
     strict: true,
     target: ts.ScriptTarget.ES2022,
@@ -1204,7 +2088,7 @@ function assertVirtualTypeScriptSourcesTypecheck(
   const host = ts.createCompilerHost(compilerOptions);
 
   host.getSourceFile = (name, languageVersion) => {
-    const text = sources.get(name) ?? sources.get(path.basename(name));
+    const text = getVirtualSource(sources, name);
 
     if (text !== undefined) {
       return ts.createSourceFile(name, text, languageVersion, true);
@@ -1217,9 +2101,22 @@ function assertVirtualTypeScriptSourcesTypecheck(
       : ts.createSourceFile(name, fileText, languageVersion, true);
   };
   host.fileExists = (name) =>
-    sources.has(name) || sources.has(path.basename(name)) || ts.sys.fileExists(name);
-  host.readFile = (name) =>
-    sources.get(name) ?? sources.get(path.basename(name)) ?? ts.sys.readFile(name);
+    getVirtualSource(sources, name) !== undefined || ts.sys.fileExists(name);
+  host.readFile = (name) => getVirtualSource(sources, name) ?? ts.sys.readFile(name);
+  host.resolveModuleNames = (moduleNames, containingFile) =>
+    moduleNames.map((moduleName) => {
+      if (
+        moduleName === "@tanstack/react-query" &&
+        getVirtualSource(sources, VIRTUAL_REACT_QUERY_MODULE) !== undefined
+      ) {
+        return {
+          resolvedFileName: VIRTUAL_REACT_QUERY_MODULE,
+          extension: ts.Extension.Dts,
+        };
+      }
+
+      return ts.resolveModuleName(moduleName, containingFile, compilerOptions, host).resolvedModule;
+    });
 
   const program = ts.createProgram([...rootFileNames], compilerOptions, host);
   const diagnostics = ts.getPreEmitDiagnostics(program);
@@ -1228,4 +2125,24 @@ function assertVirtualTypeScriptSourcesTypecheck(
   );
 
   expect(messages).toEqual([]);
+}
+
+function getVirtualSource(sources: ReadonlyMap<string, string>, name: string): string | undefined {
+  const direct = sources.get(name);
+
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const basenameSource = sources.get(path.basename(name));
+
+  if (basenameSource === undefined) {
+    return undefined;
+  }
+
+  if (!path.isAbsolute(name)) {
+    return path.dirname(name) === "." ? basenameSource : undefined;
+  }
+
+  return path.dirname(name) === process.cwd() ? basenameSource : undefined;
 }

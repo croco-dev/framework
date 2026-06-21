@@ -43,6 +43,7 @@ export type ProblemResponseMetadata = {
   readonly status?: number;
   readonly description?: string;
   readonly type?: string;
+  readonly routeContractProblems?: readonly ProblemResponseMetadata[];
 };
 
 export type EntitlementResourceRequirementMetadata = {

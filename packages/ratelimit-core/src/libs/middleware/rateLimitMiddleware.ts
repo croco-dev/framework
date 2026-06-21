@@ -47,9 +47,14 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
     const keyContext = createKeyContextAdapter(ctx);
     const key = keyBuilder.build(keyContext, policy.algorithm ?? "sliding");
 
+    ctx.set("rateLimitKey", key);
+
     const result = await rateLimiter.checkWithKey(key, policy);
 
     ctx.set("rateLimitResult", result);
+    if (result.refundReceipt) {
+      ctx.set("rateLimitRefundReceipt", result.refundReceipt);
+    }
 
     if (addHeaders) {
       ctx.set("rateLimitHeaders", buildHeaders(result));

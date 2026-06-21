@@ -1,6 +1,13 @@
 import { intro, outro } from "@clack/prompts";
-import { Problem } from "@croco/problems-core";
 import { Command } from "commander";
+import {
+  createFailureResult,
+  createSuccessResult,
+  formatHumanFailure,
+  formatHumanSuccess,
+  formatJsonResult,
+} from "./cli-result.js";
+import { InvalidCliOptionProblem } from "./libs/problems/InvalidCliOptionProblem.js";
 import { getPackageVersion } from "./package-version.js";
 import { formatSaasProviderProfileChoices } from "./saas-provider-profiles.js";
 import type { GeneratorOptions } from "./types.js";
@@ -38,9 +45,14 @@ export function createProgram(): Command {
     .option("--no-agent-rules", "Skip agent rules")
     .option("--no-install", "Skip pnpm dependency installation")
     .option("--no-git", "Skip git initialization")
+    .option("--json", "Print a machine-readable JSON result")
     .action(async (directory: string | undefined, rawOptions: Record<string, string | boolean>) => {
+      const outputJson = rawOptions.json === true;
+
       try {
-        intro("create-croco-app");
+        if (!outputJson) {
+          intro("create-croco-app");
+        }
 
         const {
           isNonInteractiveOptions,
@@ -51,6 +63,14 @@ export function createProgram(): Command {
         } = await import("./options.js");
         const cliOptions = parseCliOptions(directory, rawOptions);
         validateCliOptions(cliOptions);
+
+        if (outputJson && !isNonInteractiveOptions(cliOptions)) {
+          throw new InvalidCliOptionProblem(
+            "--json requires noninteractive create-croco-app options.",
+            "Pass a target directory, --scope, and either --goal or --preset, or remove --json.",
+            "--json",
+          );
+        }
 
         let options: GeneratorOptions;
 
@@ -67,27 +87,18 @@ export function createProgram(): Command {
         const { generate } = await import("./generator.js");
         await generate(targetDir, options);
 
-        outro(`Project created in ${targetDir} 🎉`);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (err instanceof Problem) {
-          console.error(`\nError [${err.code}]: ${message}`);
-          const recovery = readRecovery(err.extensions);
-          if (recovery) {
-            console.error(`Recovery: ${recovery}`);
-          }
+        const result = createSuccessResult(targetDir, options);
+        if (outputJson) {
+          console.log(formatJsonResult(result));
         } else {
-          console.error(`\nError: ${message}`);
+          outro(formatHumanSuccess(result));
         }
+      } catch (err: unknown) {
+        const result = createFailureResult(err);
+        console.error(outputJson ? formatJsonResult(result) : formatHumanFailure(result));
         process.exit(1);
       }
     });
 
   return program;
-}
-
-function readRecovery(extensions: Problem["extensions"]): string | undefined {
-  const recovery = extensions?.recovery;
-
-  return typeof recovery === "string" ? recovery : undefined;
 }

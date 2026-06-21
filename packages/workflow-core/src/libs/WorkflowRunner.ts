@@ -42,6 +42,14 @@ function createInvocationId(workflowName: string): string {
   return `${workflowName}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 }
 
+function createStepExecutionIdempotencyKey(
+  workflowExecutionId: string,
+  stepIndex: number,
+  stepName: string,
+): string {
+  return `workflow-step:${workflowExecutionId}:${stepIndex}:${stepName}`;
+}
+
 function toExecutionError(error: unknown) {
   return {
     message: error instanceof Error ? error.message : String(error),
@@ -168,7 +176,7 @@ export class WorkflowRunner {
     });
 
     try {
-      for (const step of workflow.steps) {
+      for (const [stepIndex, step] of workflow.steps.entries()) {
         const stepAttributes = {
           "workflow.name": workflow.name,
           "workflow.execution.id": running.id,
@@ -188,6 +196,7 @@ export class WorkflowRunner {
             this.resolveStepInput(workflow, running, payload, step, steps),
             {
               parentId: running.id,
+              idempotencyKey: createStepExecutionIdempotencyKey(running.id, stepIndex, step.name),
               metadata: {
                 workflowName: workflow.name,
                 workflowExecutionId: running.id,

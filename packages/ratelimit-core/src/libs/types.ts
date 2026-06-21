@@ -35,6 +35,29 @@ export type RateLimitPolicy =
       algorithm?: RateLimitAlgorithm;
     };
 
+export type FixedWindowRefundReceipt = {
+  algorithm: "fixed";
+  id: string;
+  windowStart: number;
+};
+
+export type SlidingWindowRefundReceipt = {
+  algorithm: "sliding";
+  id: string;
+  timestamp: number;
+};
+
+export type TokenBucketRefundReceipt = {
+  algorithm: "token-bucket";
+  id: string;
+  expiresAtMs: number;
+};
+
+export type RateLimitRefundReceipt =
+  | FixedWindowRefundReceipt
+  | SlidingWindowRefundReceipt
+  | TokenBucketRefundReceipt;
+
 export type RateLimitResult = {
   success: boolean;
   degraded?: boolean;
@@ -42,6 +65,11 @@ export type RateLimitResult = {
   remaining: number;
   resetAtMs: number;
   policyName?: string;
+  refundReceipt?: RateLimitRefundReceipt;
+};
+
+export type RateLimitRefundResult = RateLimitResult & {
+  refunded: boolean;
 };
 
 export type RateLimitStatsError = {

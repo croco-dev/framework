@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   buildContractGraph,
+  type BuildContractGraphOptions,
   type Constructor,
   type ContractGraph,
   discoverControllerConstructors,
@@ -51,11 +52,17 @@ class ControllerTypeScriptDiagnosticsProblem extends Problem {
   }
 }
 
-export async function loadRoutes(glob: string): Promise<RouteIR[]> {
-  return [...(await loadContractGraph(glob)).routes];
+export async function loadRoutes(
+  glob: string,
+  options: BuildContractGraphOptions = {},
+): Promise<RouteIR[]> {
+  return [...(await loadContractGraph(glob, options)).routes];
 }
 
-export async function loadContractGraph(glob: string): Promise<ContractGraph> {
+export async function loadContractGraph(
+  glob: string,
+  options: BuildContractGraphOptions = {},
+): Promise<ContractGraph> {
   const project = new Project({
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
@@ -100,7 +107,7 @@ export async function loadContractGraph(glob: string): Promise<ContractGraph> {
       throw new NoRestControllersFoundProblem(glob);
     }
 
-    return buildContractGraph(controllerConstructors);
+    return buildContractGraph(controllerConstructors, options);
   } finally {
     fs.rmSync(emitDir, { recursive: true, force: true });
   }

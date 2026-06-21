@@ -56,6 +56,31 @@ export type EntitlementGuardInput = {
   readonly route: EntitlementGuardRoute;
 };
 
+type EntitlementGuardPrecheckFailureReason = "missing_tenant" | "missing_resource";
+
+type EntitlementGuardInputResolution =
+  | {
+      readonly ok: true;
+      readonly input: EntitlementGuardInput;
+    }
+  | {
+      readonly ok: false;
+      readonly input: EntitlementGuardInput;
+      readonly reason: EntitlementGuardPrecheckFailureReason;
+      readonly problem: EntitlementDeniedProblem;
+    };
+
+type EntitlementGuardResourceResolution =
+  | {
+      readonly ok: true;
+      readonly resource: Pick<EntitlementGuardInput, "resource">;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "missing_resource";
+      readonly problem: EntitlementDeniedProblem;
+    };
+
 export class EntitlementGuard implements Guard<RouteExecutionContext> {
   constructor(private readonly entitlementManager: EntitlementManager) {}
 
@@ -69,7 +94,19 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
     }
 
     for (const requirement of requirements) {
-      const input = this.createGuardInput(context, requirement);
+      const inputResolution = this.createGuardInput(context, requirement);
+
+      if (!inputResolution.ok) {
+        await this.recordDenied(
+          inputResolution.input,
+          "denied",
+          inputResolution.reason,
+          inputResolution.problem.code,
+        );
+        throw inputResolution.problem;
+      }
+
+      const input = inputResolution.input;
       let result: EntitlementCheckResult;
 
       try {
@@ -104,21 +141,44 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
   private createGuardInput(
     context: RouteExecutionContext,
     requirement: EntitlementRequirement,
-  ): EntitlementGuardInput {
+  ): EntitlementGuardInputResolution {
     const request = context.getRequest();
     const user = request.user as EntitlementAuthUser | undefined;
     const tenantId = this.resolveTenantId(context, request, user);
+    const route = this.resolveRoute(context);
+    const inputBase: EntitlementGuardInput = {
+      requirement,
+      tenantId: tenantId ?? "unknown",
+      ...(user?.id ? { subject: { type: "user", id: user.id } } : {}),
+      route,
+    };
 
     if (!tenantId) {
-      throw new EntitlementDeniedProblem(requirement.feature, "tenantId not found in request");
+      return {
+        ok: false,
+        input: inputBase,
+        reason: "missing_tenant",
+        problem: new EntitlementDeniedProblem(requirement.feature, "tenantId not found in request"),
+      };
+    }
+
+    const resource = this.resolveResource(context, request, requirement);
+
+    if (!resource.ok) {
+      return {
+        ok: false,
+        input: inputBase,
+        reason: resource.reason,
+        problem: resource.problem,
+      };
     }
 
     return {
-      requirement,
-      tenantId,
-      ...(user?.id ? { subject: { type: "user", id: user.id } } : {}),
-      ...this.resolveResource(context, request, requirement),
-      route: this.resolveRoute(context),
+      ok: true,
+      input: {
+        ...inputBase,
+        ...resource.resource,
+      },
     };
   }
 
@@ -152,23 +212,36 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
     context: RouteExecutionContext,
     request: AuthRequest,
     requirement: EntitlementRequirement,
-  ): Pick<EntitlementGuardInput, "resource"> {
+  ): EntitlementGuardResourceResolution {
     const resource = requirement.resource;
 
     if (!resource) {
-      return {};
+      return {
+        ok: true,
+        resource: {},
+      };
     }
 
     const id = resource.id ?? this.resolveResourceId(context, request, resource.idParam);
 
     if (!id) {
-      throw new EntitlementDeniedProblem(requirement.feature, "resource id not found in request");
+      return {
+        ok: false,
+        reason: "missing_resource",
+        problem: new EntitlementDeniedProblem(
+          requirement.feature,
+          "resource id not found in request",
+        ),
+      };
     }
 
     return {
+      ok: true,
       resource: {
-        type: resource.type,
-        id,
+        resource: {
+          type: resource.type,
+          id,
+        },
       },
     };
   }

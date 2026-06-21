@@ -770,7 +770,7 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     "| Gate | Scope | CI mode | Current outcome | Evidence |",
     "| --- | --- | --- | --- | --- |",
     `| \`changeset-required:check\` | publishable package behavior changes | blocking on PR | ${report.gateOutcomes["changeset-required:check"]} | links public package changes to a required non-README changeset |`,
-    `| \`pnpm check\` | repository policy, lint, format, dependency boundaries, static misuse checks, public API drift | blocking on PR/trunk | ${report.gateOutcomes["pnpm check"]} | includes \`dependency-boundaries:check\`, \`static-misuse:check\`, and \`public-api:check\` |`,
+    `| \`pnpm check\` | repository policy, lint, format, dependency boundaries, strict contract checks, static misuse checks, public API drift | blocking on PR/trunk | ${report.gateOutcomes["pnpm check"]} | includes \`dependency-boundaries:check\`, \`strict-contract-typecheck\`, \`static-misuse:check\`, and \`public-api:check\` |`,
     `| \`public-api:check\` | package public export surface drift | blocking through \`pnpm check\` | ${formatPublicApiStatus(report.publicApi)} | ${formatPublicApiEvidence(report.publicApi)} |`,
     `| \`build\` | package build tasks | blocking on PR/trunk | ${report.gateOutcomes.build} | Turbo \`build\` summary below |`,
     `| \`typecheck\` | package TypeScript tasks | blocking on PR/trunk | ${report.gateOutcomes.typecheck} | Turbo \`typecheck\` summary below |`,

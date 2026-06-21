@@ -32,6 +32,7 @@
     "@croco/events-core": "workspace:*",
     "@croco/events-inmemory": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/idempotency-core": "workspace:*",
     "@croco/invitation-core": "workspace:*",
     "@croco/llm-core": "workspace:*",
     "@croco/llm-metering": "workspace:*",

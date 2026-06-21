@@ -1,3 +1,4 @@
+import { restoreSerializedEventIdentity } from "./DomainEvent";
 import type { DomainEvent } from "./DomainEvent";
 import { getEventFields } from "./decorators/EventField";
 import { EventRegistry } from "./EventRegistry";
@@ -57,7 +58,10 @@ export class DefaultEventSerializer implements EventSerializer {
       throw new UnknownEventTypeProblem(data.eventType);
     }
 
-    return this.reconstructEvent(EventClass, data) as T;
+    const event = this.reconstructEvent(EventClass, data);
+    restoreSerializedEventIdentity(event, data.eventId, data.occurredAt);
+
+    return event as T;
   }
 
   private extractAggregateId(event: DomainEvent): string | undefined {

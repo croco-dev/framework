@@ -1,8 +1,9 @@
 import type { BillingStore } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
+import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ZodError } from "zod";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
+import { WebhookProcessingProblem } from "../libs/problems/WebhookProcessingProblem";
 import { WebhookValidationProblem } from "../libs/problems/WebhookValidationProblem";
 import type { PolarConfig } from "../types";
 
@@ -68,6 +69,127 @@ describe("PolarWebhookHandler", () => {
     });
 
     vi.clearAllMocks();
+  });
+
+  describe("billing provider conformance", () => {
+    const subscriptionEvent = {
+      id: "evt-conformance-subscription",
+      type: "subscription.created",
+      data: {
+        id: "sub-conformance",
+        customer: { externalId: "tenant-conformance", metadata: {} },
+        product: { id: "plan-pro" },
+        status: "active",
+        currentPeriodEnd: "2026-02-01T00:00:00Z",
+        cancelAtPeriodEnd: false,
+      },
+    };
+
+    const orderEvent = {
+      id: "evt-conformance-order",
+      type: "order.paid",
+      data: {
+        id: "order-conformance",
+        amount: 9900,
+        currency: "USD",
+        customer: { externalId: "tenant-conformance", metadata: {} },
+        createdAt: "2026-01-31T00:00:00Z",
+      },
+    };
+
+    function configureConformanceHandler(): PolarWebhookHandler {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.failWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.reserveWebhook)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValue(new Error("duplicate webhook event"));
+      vi.mocked(mockValidateEvent).mockImplementation(
+        (body: Buffer | string, headers: Record<string, string>) => {
+          if (headers["webhook-signature"] !== "valid") {
+            throw new Error("Invalid signature");
+          }
+
+          return JSON.parse(Buffer.isBuffer(body) ? body.toString("utf8") : body) as never;
+        },
+      );
+
+      return handler;
+    }
+
+    it.each(
+      createBillingProviderConformanceSuite({
+        providerName: "billing-polar",
+        webhook: {
+          createHandler: configureConformanceHandler,
+          fixtures: {
+            subscription: {
+              body: JSON.stringify(subscriptionEvent),
+              headers: {
+                "webhook-id": subscriptionEvent.id,
+                "webhook-signature": "valid",
+              },
+              eventId: subscriptionEvent.id,
+            },
+            order: {
+              body: JSON.stringify(orderEvent),
+              headers: {
+                "webhook-id": orderEvent.id,
+                "webhook-signature": "valid",
+              },
+              eventId: orderEvent.id,
+            },
+            invalidSignature: {
+              body: JSON.stringify(subscriptionEvent),
+              headers: {
+                "webhook-id": subscriptionEvent.id,
+                "webhook-signature": "invalid",
+              },
+              eventId: subscriptionEvent.id,
+            },
+            invalidPayload: {
+              body: JSON.stringify({
+                id: "evt-invalid-payload",
+                type: "subscription.created",
+                data: {
+                  id: "sub-invalid-payload",
+                  customer: { externalId: "tenant-conformance", metadata: {} },
+                  product: { id: "plan-pro" },
+                  status: "future_status",
+                  currentPeriodEnd: "2026-02-01T00:00:00Z",
+                  cancelAtPeriodEnd: false,
+                },
+              }),
+              headers: {
+                "webhook-id": "evt-invalid-payload",
+                "webhook-signature": "valid",
+              },
+              eventId: "evt-invalid-payload",
+            },
+          },
+          assertions: {
+            subscription: () => {
+              expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
+            },
+            order: () => {
+              expect(mockStore.saveOrder).toHaveBeenCalledTimes(1);
+            },
+            idempotency: () => {
+              expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
+              expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
+            },
+            invalidSignature: (problem) => {
+              expect(problem).toBeInstanceOf(WebhookValidationProblem);
+            },
+            invalidPayload: (problem) => {
+              expect(problem).toBeInstanceOf(WebhookValidationProblem);
+            },
+          },
+        },
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
   });
 
   describe("이미 처리된 이벤트는 스킵 (멱등성)", () => {
@@ -209,18 +331,25 @@ describe("PolarWebhookHandler", () => {
 
       vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
 
-      const result = await handler.handle(JSON.stringify(eventData), {
-        "webhook-id": "evt-null-period",
+      await expect(
+        handler.handle(JSON.stringify(eventData), {
+          "webhook-id": "evt-null-period",
+        }),
+      ).rejects.toBeInstanceOf(WebhookProcessingProblem);
+      await expect(
+        handler.handle(JSON.stringify(eventData), {
+          "webhook-id": "evt-null-period",
+        }),
+      ).rejects.toMatchObject({
+        code: "WEBHOOK_PROCESSING_FAILED",
+        detail: "Webhook processing failed: currentPeriodEnd is required",
       });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("currentPeriodEnd is required");
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
       expect(mockStore.failWebhook).not.toHaveBeenCalled();
     });
 
-    it("should return a failure result for unknown status", async () => {
+    it("should reject a signed webhook with an unknown subscription status", async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
 
       const eventData = {
@@ -238,12 +367,19 @@ describe("PolarWebhookHandler", () => {
 
       vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
 
-      const result = await handler.handle(JSON.stringify(eventData), {
-        "webhook-id": "evt-unknown-status",
+      await expect(
+        handler.handle(JSON.stringify(eventData), {
+          "webhook-id": "evt-unknown-status",
+        }),
+      ).rejects.toBeInstanceOf(WebhookValidationProblem);
+      await expect(
+        handler.handle(JSON.stringify(eventData), {
+          "webhook-id": "evt-unknown-status",
+        }),
+      ).rejects.toMatchObject({
+        code: "WEBHOOK_VALIDATION_FAILED",
+        detail: expect.stringContaining("Invalid webhook payload"),
       });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Event processing failed:");
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
       expect(mockStore.failWebhook).not.toHaveBeenCalled();
@@ -361,7 +497,11 @@ describe("PolarWebhookHandler", () => {
         type: null,
       } as never);
 
-      await expect(handler.handle(body, headers)).rejects.toBeInstanceOf(ZodError);
+      await expect(handler.handle(body, headers)).rejects.toBeInstanceOf(WebhookValidationProblem);
+      await expect(handler.handle(body, headers)).rejects.toMatchObject({
+        code: "WEBHOOK_VALIDATION_FAILED",
+        detail: expect.stringContaining("Invalid webhook payload"),
+      });
     });
   });
 

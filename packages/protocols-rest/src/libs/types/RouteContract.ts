@@ -1,6 +1,8 @@
-import type { Problem } from "@croco/problems-core";
+import { ProblemCategoryMapper, type Problem, type ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 import type { HttpMethod } from "../constants";
+import { attachRouteContractProblems } from "../internal/routeContractProblemMetadata";
+import type { ProblemResponseMetadata, ProblemResponseOptions } from "../types";
 
 type AnyZodObject = z.ZodObject<z.ZodRawShape>;
 type EmptyObject = Record<never, never>;
@@ -13,6 +15,52 @@ export type ProblemConstructor<TProblem extends Problem = Problem> = {
   readonly prototype: TProblem;
 };
 
+export type RouteProblemStatus<Category extends ProblemCategory> =
+  Category extends ProblemCategory.BadRequest
+    ? 400
+    : Category extends ProblemCategory.Unauthorized
+      ? 401
+      : Category extends ProblemCategory.Forbidden
+        ? 403
+        : Category extends ProblemCategory.NotFound
+          ? 404
+          : Category extends ProblemCategory.Conflict
+            ? 409
+            : Category extends ProblemCategory.Gone
+              ? 410
+              : Category extends ProblemCategory.ValidationError
+                ? 422
+                : Category extends ProblemCategory.BusinessRuleViolation
+                  ? 422
+                  : Category extends ProblemCategory.TooManyRequests
+                    ? 429
+                    : Category extends ProblemCategory.InternalServerError
+                      ? 500
+                      : Category extends ProblemCategory.NotImplemented
+                        ? 501
+                        : number;
+
+export type RouteProblemDeclaration<
+  TProblem extends Problem = Problem,
+  Code extends string = RouteProblemCode<TProblem>,
+  Category extends ProblemCategory = RouteProblemCategory<TProblem>,
+  Status extends number = RouteProblemStatus<Category>,
+> = {
+  readonly problem: ProblemConstructor<TProblem>;
+  readonly code: Code;
+  readonly category: Category;
+  readonly status: Status;
+  readonly description?: string;
+  readonly type?: string;
+};
+
+type RouteContractProblem = ProblemConstructor | RouteProblemDeclaration;
+type RouteProblemCode<TProblem extends Problem> = TProblem["code"] extends infer Code extends string
+  ? Code
+  : string;
+type RouteProblemCategory<TProblem extends Problem> =
+  TProblem["category"] extends infer Category extends ProblemCategory ? Category : ProblemCategory;
+
 export type RouteContractSpec<
   Method extends HttpMethod = HttpMethod,
   Path extends string = string,
@@ -20,8 +68,8 @@ export type RouteContractSpec<
   Query extends AnyZodObject | undefined = AnyZodObject | undefined,
   Body extends z.ZodType | undefined = z.ZodType | undefined,
   Response extends z.ZodType | undefined = z.ZodType | undefined,
-  Problems extends readonly ProblemConstructor[] | undefined =
-    | readonly ProblemConstructor[]
+  Problems extends readonly RouteContractProblem[] | undefined =
+    | readonly RouteContractProblem[]
     | undefined,
 > = {
   readonly method: Method;
@@ -67,9 +115,13 @@ export type RouteResponse<TContract extends RouteContractSpec> = TContract exten
   : unknown;
 
 export type RouteProblem<TContract extends RouteContractSpec> = TContract extends {
-  readonly problems: readonly (infer ProblemCtor extends ProblemConstructor)[];
+  readonly problems: readonly (infer ProblemEntry)[];
 }
-  ? ProblemCtor["prototype"]
+  ? ProblemEntry extends ProblemConstructor<infer TProblem>
+    ? TProblem
+    : ProblemEntry extends RouteProblemDeclaration<infer TProblem>
+      ? TProblem
+      : never
   : never;
 
 export type RouteContractRequest<TContract extends RouteContractSpec> = {
@@ -102,6 +154,41 @@ export function defineRouteContract<const TContract extends RouteContractSpec>(
   contract: TContract & ValidateRouteContractPathParams<TContract>,
 ): TContract {
   return contract;
+}
+
+export function defineRouteProblem<
+  const TProblem extends Problem,
+  const Code extends RouteProblemCode<TProblem>,
+  const Category extends RouteProblemCategory<TProblem>,
+>(
+  problem: ProblemConstructor<TProblem>,
+  declaration: {
+    readonly code: Code;
+    readonly category: Category;
+    readonly description?: string;
+    readonly type?: string;
+  },
+): RouteProblemDeclaration<TProblem, Code, Category, RouteProblemStatus<Category>> {
+  return {
+    problem,
+    code: declaration.code,
+    category: declaration.category,
+    status: ProblemCategoryMapper.toHttpStatus(
+      declaration.category,
+    ) as RouteProblemStatus<Category>,
+    ...(declaration.description ? { description: declaration.description } : {}),
+    ...(declaration.type ? { type: declaration.type } : {}),
+  };
+}
+
+export function routeProblemResponses<
+  const TProblems extends readonly RouteProblemDeclaration[],
+>(contract: { readonly problems: TProblems }): RouteProblemResponses<TProblems> {
+  const contractProblems = contract.problems.map(toProblemResponseMetadata);
+
+  return contractProblems.map((problem) =>
+    attachRouteContractProblems(problem, contractProblems),
+  ) as RouteProblemResponses<TProblems>;
 }
 
 export function routeParam<
@@ -180,3 +267,25 @@ type ZodObjectKey<Schema extends AnyZodObject | undefined> =
 type NormalizePathParamToken<Token extends string> = Token extends `...${infer Name}`
   ? Name
   : Token;
+
+type RouteProblemResponses<TProblems extends readonly RouteProblemDeclaration[]> = {
+  readonly [Index in keyof TProblems]: RouteProblemResponseFor<TProblems[Index]>;
+};
+
+type RouteProblemResponseFor<TProblem extends RouteProblemDeclaration> = TProblem extends {
+  readonly code: infer Code extends string;
+  readonly category: infer Category extends ProblemCategory;
+  readonly status: infer Status extends number;
+}
+  ? ProblemResponseOptions<Code, Category, Status> & ProblemResponseMetadata<Code, Category, Status>
+  : never;
+
+function toProblemResponseMetadata(problem: RouteProblemDeclaration): ProblemResponseMetadata {
+  return {
+    code: problem.code,
+    category: problem.category,
+    status: problem.status,
+    ...(problem.description ? { description: problem.description } : {}),
+    ...(problem.type ? { type: problem.type } : {}),
+  };
+}

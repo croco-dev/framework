@@ -19,6 +19,24 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 ## Methods
 
+### createDependencyGraphManifest()
+
+> `static` **createDependencyGraphManifest**(`options?`): [`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
+
+#### Parameters
+
+##### options?
+
+###### roots?
+
+readonly `TokenIdentifier`\<`unknown`\>[]
+
+#### Returns
+
+[`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
+
+***
+
 ### get()
 
 > `static` **get**\<`T`\>(`token`): `T`

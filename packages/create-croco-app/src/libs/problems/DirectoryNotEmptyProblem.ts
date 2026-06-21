@@ -5,6 +5,11 @@ export class DirectoryNotEmptyProblem extends Problem {
   readonly category = ProblemCategory.ValidationError;
 
   constructor(directoryPath: string) {
-    super(undefined, undefined, `Directory '${directoryPath}' is not empty.`);
+    super(undefined, undefined, `Directory '${directoryPath}' is not empty.`, {
+      extensions: {
+        recovery:
+          "Choose an empty directory, remove the existing files, or pass a new target directory.",
+      },
+    });
   }
 }

@@ -191,6 +191,8 @@ describe("EntitlementGuard", () => {
   });
 
   it("should throw EntitlementDeniedProblem when tenantId is missing", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+
     class TestController {
       testMethod() {}
     }
@@ -207,8 +209,91 @@ describe("EntitlementGuard", () => {
       request: {},
     });
 
-    await expect(guard.canActivate(context)).rejects.toThrow(EntitlementDeniedProblem);
-    await expect(guard.canActivate(context)).rejects.toThrow("tenantId not found");
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(EntitlementDeniedProblem);
+    await expect(activation).rejects.toThrow("tenantId not found");
+    expect(recordEventSpy).toHaveBeenCalledWith(
+      "entitlement.guard.denied",
+      expect.objectContaining({
+        "entitlement.feature": "test_feature",
+        "entitlement.status": "denied",
+        "tenant.id": "unknown",
+        "route.id": "TestController.testMethod",
+        "entitlement.reason": "missing_tenant",
+        "problem.code": "ENTITLEMENT_DENIED",
+      }),
+    );
+    expect(auditSink.events).toEqual([
+      expect.objectContaining({
+        type: "entitlement.guard.denied",
+        tenantId: "unknown",
+        feature: "test_feature",
+        status: "denied",
+        reason: "missing_tenant",
+        problemCode: "ENTITLEMENT_DENIED",
+        route: {
+          controllerName: "TestController",
+          handlerName: "testMethod",
+          routeId: "TestController.testMethod",
+        },
+      }),
+    ]);
+  });
+
+  it("should record denied evidence when resource id is missing", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+
+    class TestController {
+      @RequireEntitlement({
+        feature: "reports.export",
+        resource: { type: "report", idParam: "reportId" },
+      })
+      testMethod() {}
+    }
+
+    const checkSpy = vi.spyOn(mockManager, "check");
+    const context = createContext({
+      target: TestController,
+      request: {
+        tenantId: "tenant-123",
+        user: createUser("tenant-123"),
+      },
+    });
+
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(EntitlementDeniedProblem);
+    await expect(activation).rejects.toThrow("resource id not found");
+    expect(checkSpy).not.toHaveBeenCalled();
+    expect(recordEventSpy).toHaveBeenCalledWith(
+      "entitlement.guard.denied",
+      expect.objectContaining({
+        "entitlement.feature": "reports.export",
+        "entitlement.status": "denied",
+        "tenant.id": "tenant-123",
+        "user.id": "user-1",
+        "route.id": "TestController.testMethod",
+        "entitlement.reason": "missing_resource",
+        "problem.code": "ENTITLEMENT_DENIED",
+      }),
+    );
+    expect(auditSink.events).toEqual([
+      expect.objectContaining({
+        type: "entitlement.guard.denied",
+        tenantId: "tenant-123",
+        feature: "reports.export",
+        status: "denied",
+        userId: "user-1",
+        reason: "missing_resource",
+        problemCode: "ENTITLEMENT_DENIED",
+        route: {
+          controllerName: "TestController",
+          handlerName: "testMethod",
+          routeId: "TestController.testMethod",
+        },
+      }),
+    ]);
   });
 
   it("should use request.tenantId when available", async () => {

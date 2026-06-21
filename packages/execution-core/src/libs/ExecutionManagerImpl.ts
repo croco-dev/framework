@@ -137,6 +137,8 @@ export class ExecutionManagerImpl
       status: targetStatus,
       startedAt,
       attempts,
+      completedAt: undefined,
+      error: undefined,
     });
   }
 
@@ -157,8 +159,11 @@ export class ExecutionManagerImpl
 
     // Check if should retry
     if (error.retryable && execution.attempts < execution.maxAttempts) {
+      const targetStatus: ExecutionStatus = "retrying";
+      validateTransition(execution.status, targetStatus);
+
       return this.store.update(id, {
-        status: "retrying",
+        status: targetStatus,
         error,
       });
     }
@@ -203,6 +208,7 @@ export class ExecutionManagerImpl
     return this.store.update(id, {
       status: targetStatus,
       error: undefined, // Clear previous error
+      completedAt: undefined,
     });
   }
 

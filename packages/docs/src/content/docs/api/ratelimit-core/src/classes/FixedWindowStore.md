@@ -177,6 +177,34 @@ title: "FixedWindowStore"
 
 ***
 
+### refund()
+
+> **refund**(`key`, `policy`, `receipt?`): `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### policy
+
+[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+
+##### receipt?
+
+[`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
+
+#### Returns
+
+`Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Overrides
+
+[`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`refund`](/api/ratelimit-core/src/classes/distributedratelimitstore/#refund)
+
+***
+
 ### reset()
 
 > `abstract` **reset**(`key`): `Promise`\<`void`\>

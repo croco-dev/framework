@@ -573,6 +573,12 @@ describe("E2E: generate()", () => {
 
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const consolePackageJson = readPackageJson(
+        join(testDir, "apps", "console-web", "package.json"),
+      );
+      const rpcPackageJson = readPackageJson(
+        join(testDir, "libs", "shared", "provider-rpc", "package.json"),
+      );
       const readme = readFileSync(join(testDir, "README.md"), "utf8");
       const apiUsersSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "users.ts"),
@@ -595,6 +601,9 @@ describe("E2E: generate()", () => {
         test: "turbo test",
         typecheck: "turbo typecheck",
       });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--problem-runtime frontend-problems",
+      );
       expect(apiPackageJson.scripts).toMatchObject({
         "dev:smoke": "tsx src/dev-smoke.ts",
         build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
@@ -611,6 +620,12 @@ describe("E2E: generate()", () => {
         "@croco/telemetry-sdk-node": "^0.0.2",
         "@croco/transports-http": "^0.0.2",
       });
+      expect(consolePackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": "^0.1.0",
+      });
+      expect(rpcPackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": "^0.1.0",
+      });
       expect(existsSync(join(testDir, "apps", "api-server", "src", "lambda.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "env.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "problems.ts"))).toBe(true);
@@ -623,7 +638,7 @@ describe("E2E: generate()", () => {
       expect(apiUsersSource).toContain("Repository");
       expect(apiAppSource).toContain("HttpExceptionFilter");
       expect(apiAppSource).toContain("globalFilters: [HttpExceptionFilter]");
-      expect(clientSource).toContain("ApiProblemError");
+      expect(clientSource).toContain("handleJsonResponse");
       expect(readme).toContain("운영형 앱 스타터");
       expect(readme).toContain("비범위");
       expect(readme).toContain("HttpExceptionFilter");
@@ -674,6 +689,9 @@ describe("E2E: generate()", () => {
           "apps/api-server/src/{controllers/**/*.ts,admin.ts,users.ts,problems.ts}",
         ),
       });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--problem-runtime frontend-problems",
+      );
       expect(apiPackageJson.scripts).toMatchObject({
         "admin:smoke": "tsx src/dev-smoke.ts",
       });
@@ -727,9 +745,11 @@ describe("E2E: generate()", () => {
       test: "turbo test",
       "demo:seed": "pnpm --filter @test/api-server demo:seed",
       "profile:check": "pnpm --filter @test/api-server profile:check",
+      "runtime-policy:check":
+        "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
-        "pnpm profile:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+        "pnpm profile:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
     });
     expect(apiPackageJson.dependencies).toMatchObject({
@@ -768,11 +788,15 @@ describe("E2E: generate()", () => {
       existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
     ).toBe(true);
     expect(existsSync(join(testDir, "croco-saas-profile.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, "croco-runtime-policy.manifest.json"))).toBe(true);
     expect(existsSync(join(testDir, ".env.example"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "provider-profile.md"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "secrets-checklist.md"))).toBe(true);
     const profileManifest = JSON.parse(
       readFileSync(join(testDir, "croco-saas-profile.manifest.json"), "utf8"),
+    );
+    const runtimePolicyManifest = JSON.parse(
+      readFileSync(join(testDir, "croco-runtime-policy.manifest.json"), "utf8"),
     );
     const envExample = readFileSync(join(testDir, ".env.example"), "utf8");
     const providerProfileDocs = readFileSync(join(testDir, "docs", "provider-profile.md"), "utf8");
@@ -790,6 +814,19 @@ describe("E2E: generate()", () => {
       smoke: {
         zeroCredential: "pnpm demo:smoke",
         realProviderOptIn: "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
+      },
+    });
+    expect(runtimePolicyManifest).toMatchObject({
+      schemaVersion: "croco.runtime-policy/v1",
+      runtime: {
+        platform: "cloudflare-workers",
+        source: {
+          file: "croco-saas-profile.manifest.json",
+          symbol: "saas-cloudflare",
+        },
+      },
+      table: {
+        plans: [],
       },
     });
     expect(profileManifest.packages).toEqual(
@@ -900,7 +937,7 @@ describe("E2E: generate()", () => {
         "contract:verify":
           "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
         "demo:smoke":
-          "pnpm profile:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+          "pnpm profile:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       });
       expect(manifest).toMatchObject({
         schemaVersion: 1,

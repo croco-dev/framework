@@ -57,6 +57,30 @@ describe("rpc-codegen contract check CLI", () => {
     },
     CONTRACT_CHECK_TIMEOUT_MS,
   );
+
+  it(
+    "prints strict Problem response diagnostics without failing warnings",
+    async () => {
+      fs.writeFileSync(path.join(sourceDir, "AssetsController.ts"), getCatchAllController());
+      const stdout: string[] = [];
+
+      const exitCode = await runCli(
+        ["--controllers", path.join(sourceDir, "*.ts"), "--check", "--strict-problems"],
+        {
+          stdout: (message) => stdout.push(message),
+        },
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain(
+        "WARNING contract-route-missing-problem-response-contract AssetsController.getAsset: Strict Problem contract mode could not find declared route failures. Keep the generated client failure union as never only when this public route cannot throw Croco Problems; otherwise declare failures with routeProblemResponses(contract).",
+      );
+      expect(stdout).toContain(
+        "Contract graph check passed for 1 route(s) across 1 controller(s).",
+      );
+    },
+    CONTRACT_CHECK_TIMEOUT_MS,
+  );
 });
 
 function getCatchAllController(): string {

@@ -1,0 +1,132 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
+
+export class QStashTaskConfigProblem extends Problem {
+  readonly code = "tasks-qstash/missing-config";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(configKey: string) {
+    super(undefined, undefined, `Missing required QStash task configuration: ${configKey}`, {
+      extensions: {
+        configKey,
+        retryable: false,
+      },
+    });
+  }
+}
+
+export class QStashTaskValidationProblem extends Problem {
+  readonly code = "tasks-qstash/invalid-publish-request";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(message: string) {
+    super(undefined, undefined, message, {
+      extensions: {
+        retryable: false,
+      },
+    });
+  }
+}
+
+export class QStashTaskPublishProblem extends Problem {
+  readonly code = "tasks-qstash/publish-failed";
+
+  constructor(error: unknown) {
+    const status = getUpstreamStatus(error);
+    const retryable = isRetryableQStashTaskError(error);
+    const message = redactSensitiveValue(getErrorMessage(error));
+
+    super(
+      "tasks-qstash/publish-failed",
+      mapUpstreamProblemCategory(status, retryable),
+      `QStash task publish failed: ${message}`,
+      {
+        extensions: {
+          provider: "qstash",
+          retryable,
+          ...(status !== undefined ? { upstreamStatus: status } : {}),
+        },
+      },
+    );
+  }
+}
+
+export function isRetryableQStashTaskError(error: unknown): boolean {
+  const status = getUpstreamStatus(error);
+  if (status !== undefined) {
+    return status === 408 || status === 429 || status >= 500;
+  }
+
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("econnreset") ||
+    message.includes("econnrefused") ||
+    message.includes("rate limit") ||
+    message.includes("temporarily unavailable")
+  );
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error) {
+    return error;
+  }
+
+  return "unknown upstream error";
+}
+
+function getUpstreamStatus(error: unknown): number | undefined {
+  const record = asRecord(error);
+  const directStatus = normalizeStatus(record?.status ?? record?.statusCode);
+  if (directStatus !== undefined) {
+    return directStatus;
+  }
+
+  const response = asRecord(record?.response);
+  return normalizeStatus(response?.status ?? response?.statusCode);
+}
+
+function normalizeStatus(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const status = Number(value);
+    return Number.isInteger(status) ? status : undefined;
+  }
+
+  return undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function mapUpstreamProblemCategory(
+  status: number | undefined,
+  retryable: boolean,
+): ProblemCategory {
+  if (status === 429) {
+    return ProblemCategory.TooManyRequests;
+  }
+
+  if (status !== undefined && status >= 400 && status < 500 && !retryable) {
+    return ProblemCategory.BadRequest;
+  }
+
+  return ProblemCategory.InternalServerError;
+}
+
+function redactSensitiveValue(value: string): string {
+  return value.replace(
+    /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|qstash[-_]?url|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
+    "$1$2[Redacted]",
+  );
+}

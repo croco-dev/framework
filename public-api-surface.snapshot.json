@@ -2935,9 +2935,33 @@
       "entrypoint": "packages/billing-polar/src/index.ts",
       "runtimeExports": [
         {
+          "name": "BillingStatusMappingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/BillingStatusMappingProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "normalizePolarBillingError",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "PolarBillingDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "PolarBillingGateway",
           "exportKind": "named",
           "source": "./libs/PolarBillingGateway",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarCustomerNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
           "declarationKind": "class"
         },
         {
@@ -2947,17 +2971,90 @@
           "declarationKind": "class"
         },
         {
+          "name": "PolarMissingConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarRetryableUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarSubscriptionNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarTerminalUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PolarValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "PolarWebhookHandler",
           "exportKind": "named",
           "source": "./libs/PolarWebhookHandler",
+          "declarationKind": "class"
+        },
+        {
+          "name": "validatePolarConfig",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "WebhookProcessingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookProcessingProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "WebhookValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WebhookValidationProblem",
           "declarationKind": "class"
         }
       ],
       "typeExports": [
         {
+          "name": "PolarBillingDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider"
+        },
+        {
+          "name": "PolarBillingErrorContext",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems"
+        },
+        {
           "name": "PolarConfig",
           "exportKind": "named",
           "source": "./types"
+        },
+        {
+          "name": "PolarConfigKey",
+          "exportKind": "named",
+          "source": "./libs/problems/PolarBillingProblems"
+        },
+        {
+          "name": "PolarReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider"
+        },
+        {
+          "name": "PolarReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/PolarBillingDiagnosticsProvider"
         },
         {
           "name": "WebhookDependencies",
@@ -3133,6 +3230,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "di",
+          "exportKind": "named",
+          "source": "./commands/di",
+          "declarationKind": "const"
+        },
+        {
+          "name": "diCheck",
+          "exportKind": "named",
+          "source": "./commands/diCheck",
+          "declarationKind": "const"
+        },
+        {
           "name": "doctor",
           "exportKind": "named",
           "source": "./commands/doctor",
@@ -3295,6 +3404,18 @@
           "declarationKind": "const"
         },
         {
+          "name": "parseDiCheckArgs",
+          "exportKind": "named",
+          "source": "./commands/diCheck",
+          "declarationKind": "function"
+        },
+        {
+          "name": "parseRuntimePolicyCheckArgs",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "pluralize",
           "exportKind": "named",
           "source": "./libs/naming",
@@ -3304,6 +3425,12 @@
           "name": "runContractsCheck",
           "exportKind": "named",
           "source": "./commands/contractsCheck",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runDiCheck",
+          "exportKind": "named",
+          "source": "./commands/diCheck",
           "declarationKind": "function"
         },
         {
@@ -3361,6 +3488,24 @@
           "declarationKind": "function"
         },
         {
+          "name": "runRuntimePolicyCheck",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runtimePolicy",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "const"
+        },
+        {
+          "name": "runtimePolicyCheck",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy",
+          "declarationKind": "const"
+        },
+        {
           "name": "selectMode",
           "exportKind": "named",
           "source": "./libs/prompts",
@@ -3405,6 +3550,21 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "DiCheckDiagnostic",
+          "exportKind": "named",
+          "source": "./commands/diCheck"
+        },
+        {
+          "name": "DiCheckIo",
+          "exportKind": "named",
+          "source": "./commands/diCheck"
+        },
+        {
+          "name": "DiCheckReport",
+          "exportKind": "named",
+          "source": "./commands/diCheck"
+        },
         {
           "name": "DoctorCheckResult",
           "exportKind": "named",
@@ -3524,6 +3684,11 @@
           "name": "RunOpsStatusOptions",
           "exportKind": "named",
           "source": "./commands/ops"
+        },
+        {
+          "name": "RuntimePolicyCheckIo",
+          "exportKind": "named",
+          "source": "./commands/runtimePolicy"
         },
         {
           "name": "WriteOptions",
@@ -5319,6 +5484,24 @@
           "declarationKind": "function"
         },
         {
+          "name": "assertPolicyTableRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "checkPolicyRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "checkPolicyTableRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "CircularDependencyProblem",
           "exportKind": "named",
           "source": "./libs/problems/CircularDependencyProblem",
@@ -5326,6 +5509,12 @@
         },
         {
           "name": "compilePolicyTable",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "compilePolicyTableForRuntime",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
           "declarationKind": "function"
@@ -5390,6 +5579,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "definePolicyForRuntime",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineRuntimePolicyPreset",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "DEV_INSPECTOR_TOKEN",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
@@ -5408,6 +5609,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "formatPolicyCapabilityDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "getPolicyExecutionPlan",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
@@ -5417,6 +5624,12 @@
           "name": "getRuntimeCapabilitySupport",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getRuntimePolicyPresetCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
           "declarationKind": "function"
         },
         {
@@ -5472,6 +5685,12 @@
           "exportKind": "named",
           "source": "./libs/problems/PipelineGraphProblems",
           "declarationKind": "class"
+        },
+        {
+          "name": "POLICY_CAPABILITY_UNAVAILABLE_CODE",
+          "exportKind": "named",
+          "source": "./libs/problems/RuntimePolicyProblems",
+          "declarationKind": "const"
         },
         {
           "name": "POLICY_EXECUTION_ORDER",
@@ -5631,6 +5850,41 @@
           "source": "./libs/RuntimePolicy"
         },
         {
+          "name": "DefineRuntimePolicyOptions",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
+          "name": "DependencyGraphDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphManifest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphManifestStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphManifestVersion",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencyGraphProvider",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "DependencyProviderKind",
           "exportKind": "named",
           "source": "./libs/types"
@@ -5652,6 +5906,11 @@
         },
         {
           "name": "DependencyResolutionTraceStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DependencySourceLocation",
           "exportKind": "named",
           "source": "./libs/types"
         },
@@ -5684,6 +5943,11 @@
           "name": "Middleware",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "PolicyCapabilityDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
         },
         {
           "name": "PolicyDefinition",
@@ -5926,6 +6190,11 @@
           "source": "./libs/RuntimePolicy"
         },
         {
+          "name": "RuntimePolicyPresetConfig",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy"
+        },
+        {
           "name": "RuntimeTraceContext",
           "exportKind": "named",
           "source": "./libs/types"
@@ -6022,6 +6291,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createModuleGraphManifest",
+          "exportKind": "named",
+          "source": "./ModuleRegistry",
+          "declarationKind": "function"
+        },
+        {
           "name": "detectCircularDependency",
           "exportKind": "named",
           "source": "./CircularDependencyDetector",
@@ -6062,6 +6337,12 @@
           "exportKind": "named",
           "source": "./problems",
           "declarationKind": "class"
+        },
+        {
+          "name": "stringifyModuleGraphManifest",
+          "exportKind": "named",
+          "source": "./ModuleRegistry",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
@@ -6073,6 +6354,41 @@
         },
         {
           "name": "ModuleDiagnosticsSnapshot",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphDiagnostic",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphDiagnosticCode",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphManifest",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphManifestStatus",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphManifestVersion",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphModule",
+          "exportKind": "named",
+          "source": "./types"
+        },
+        {
+          "name": "ModuleGraphProvider",
           "exportKind": "named",
           "source": "./types"
         },
@@ -6538,14 +6854,365 @@
       ]
     },
     {
+      "packageName": "@croco/frontend-problems",
+      "relativeDir": "packages/frontend-problems",
+      "entrypoint": "packages/frontend-problems/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "assertProblemExhaustive",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "extractProblemFormFieldErrors",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "fetchOptionalProblemJson",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "fetchProblemJson",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "findProblemDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "handleJsonResponse",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "handleJsonResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "isProblemDetails",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "parseProblemDetails",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemClientError",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "ProblemResponseError",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
+          "name": "readDeclaredProblemErrorResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readJsonProblemResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readOptionalJsonProblemResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readOptionalJsonResponse",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readOptionalJsonResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "readProblemErrorResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        },
+        {
+          "name": "toProblemFormProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "ProblemClientExternalFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientProblemFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemClientSuccess",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDetails",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDetailsFor",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemDomainDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFetch",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFetchOptions",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFetchProblemFailure",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormField",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldControl",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldErrors",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldOption",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormFieldValueKind",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormGlobalProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormModel",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemFormProblem",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemResult",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        },
+        {
+          "name": "ProblemValidationDeclaration",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "type"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/frontend-react",
       "relativeDir": "packages/frontend-react",
       "entrypoint": "packages/frontend-react/src/index.ts",
       "runtimeExports": [
         {
+          "name": "AuthBridgeContext",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "const"
+        },
+        {
+          "name": "AuthBridgeGateStatus",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "AuthBridgeProblemNotice",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "AuthBridgeRecoveryActions",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createAuthBridgeMissingProviderProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
           "name": "createCrocoPageConfig",
           "exportKind": "named",
           "source": "./libs/createCrocoPages",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendEntitlementDeniedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendPermissionDeniedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendTenantUnavailableProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendUnauthenticatedProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createMissingProviderAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createProblemToastPayload",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
+        },
+        {
+          "name": "CrocoAuthBridgeProvider",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "evaluateSessionGateState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeProblemDetails",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
           "declarationKind": "function"
         },
         {
@@ -6561,6 +7228,60 @@
           "declarationKind": "const"
         },
         {
+          "name": "ProblemBoundary",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ProblemPanel",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemRecoveryActions",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ProblemToastAdapter",
+          "exportKind": "named",
+          "source": "./libs/problemUi",
+          "declarationKind": "function"
+        },
+        {
+          "name": "RequireEntitlement",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "RequirePermission",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "RequireSession",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useEntitlements",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
           "name": "usePageData",
           "exportKind": "named",
           "source": "./libs/hooks/usePageData",
@@ -6571,9 +7292,37 @@
           "exportKind": "named",
           "source": "./libs/hooks/usePageData",
           "declarationKind": "function"
+        },
+        {
+          "name": "usePermissionGate",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useSessionGate",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
+        },
+        {
+          "name": "useTenant",
+          "exportKind": "named",
+          "source": "./libs/authBridge",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
+        {
+          "name": "AuthBridgeGateStatusProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "CrocoAuthBridgeProviderProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
         {
           "name": "CrocoDataFn",
           "exportKind": "named",
@@ -6593,6 +7342,181 @@
           "name": "CrocoPageOptions",
           "exportKind": "named",
           "source": "./libs/createCrocoPages"
+        },
+        {
+          "name": "FrontendAuthBridgeSource",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthBridgeState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthBridgeStateInput",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateAllowedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateBlockedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateDeniedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateFallback",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateLoadingState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateRequirements",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateUnauthenticatedState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendAuthGateUnavailableState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendEntitlementCheck",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendEntitlementState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendPermissionCheck",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendPermissionState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendRecoveryAction",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendSession",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendSessionPrincipal",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendSessionState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendTenant",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "FrontendTenantState",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "ProblemBoundaryFallback",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemBoundaryFallbackState",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemBoundaryProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemBoundaryState",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemPanelProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemRecoveryAction",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemRecoveryActionKind",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemRecoveryActionsProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemToastAdapterProps",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "ProblemToastPayload",
+          "exportKind": "named",
+          "source": "./libs/problemUiTypes"
+        },
+        {
+          "name": "RequireEntitlementProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "RequirePermissionProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
+        },
+        {
+          "name": "RequireSessionProps",
+          "exportKind": "named",
+          "source": "./libs/authBridgeTypes"
         }
       ]
     },
@@ -6740,6 +7664,281 @@
           "name": "ReadinessIndicator",
           "exportKind": "named",
           "source": "./libs/HealthIndicator"
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/idempotency-core",
+      "relativeDir": "packages/idempotency-core",
+      "entrypoint": "packages/idempotency-core/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "createIdempotencyCoordinator",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createIdempotencyStoreConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createIdempotencyTelemetryAttributes",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createIdempotentHandler",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveEventConsumerIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveHttpIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveTaskIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "deriveWebhookIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/deriveIdempotencyKey",
+          "declarationKind": "function"
+        },
+        {
+          "name": "IDEMPOTENCY_DIAGNOSTIC_CODES",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "IdempotencyConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "IdempotencyCoordinator",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator",
+          "declarationKind": "class"
+        },
+        {
+          "name": "IdempotencyReservationNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "IdempotencyReservationStateProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InMemoryIdempotencyStore",
+          "exportKind": "named",
+          "source": "./libs/InMemoryIdempotencyStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "InvalidIdempotencyKeyProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "DerivedIdempotencyKey",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DeriveIdempotencyKeyOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ExplicitIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyAuditEvent",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyAuditSink",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyCommitOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyCompletedRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyCoordinatorOptions",
+          "exportKind": "named",
+          "source": "./libs/IdempotencyCoordinator"
+        },
+        {
+          "name": "IdempotencyDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems"
+        },
+        {
+          "name": "IdempotencyExecutionRequest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyExecutionResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyExpireOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyFailedRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyFailOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyInFlightRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyKeySourceKind",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyRecordBase",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyRecordStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyReservation",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyReserveOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyReserveResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyScope",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyStore",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "IdempotencyStoreConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "IdempotencyStoreConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "IdempotencyStoreConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "IdempotencyTelemetryAttributes",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "InMemoryIdempotencyStoreOptions",
+          "exportKind": "named",
+          "source": "./libs/InMemoryIdempotencyStore"
+        },
+        {
+          "name": "ProviderEventIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RequestFingerprintIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TenantScopedIdempotencyKeySource",
+          "exportKind": "named",
+          "source": "./libs/types"
         }
       ]
     },
@@ -8340,6 +9539,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "createServerActionSuccess",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createServerActionSuccessResponse",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "function"
+        },
+        {
           "name": "crocoMetaVitePlugin",
           "exportKind": "named",
           "source": "./libs/vite/crocoMetaVitePlugin",
@@ -8412,7 +9623,25 @@
           "declarationKind": "class"
         },
         {
+          "name": "ServerActionInvalidPathProblem",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ServerActionNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "class"
+        },
+        {
           "name": "ServerActionRegistry",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ServerActionValidationProblem",
           "exportKind": "named",
           "source": "./libs/actions/serverActions",
           "declarationKind": "class"
@@ -8572,6 +9801,46 @@
         },
         {
           "name": "ServerActionConfig",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionFailureResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionHandlerResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionOutputContract",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionProblemContract",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionProblemKind",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionSuccessResult",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionValidationFields",
           "exportKind": "named",
           "source": "./libs/actions/serverActions"
         },
@@ -10074,6 +11343,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "const"
+        },
+        {
+          "name": "CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "const"
+        },
+        {
           "name": "ContractGraphDiagnosticError",
           "exportKind": "named",
           "source": "./libs/ContractGraph",
@@ -10101,6 +11382,12 @@
           "name": "defineRouteSchema",
           "exportKind": "named",
           "source": "./libs/RouteSchema",
+          "declarationKind": "function"
+        },
+        {
+          "name": "describeZodSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
           "declarationKind": "function"
         },
         {
@@ -10134,6 +11421,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "formatSchemaDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
           "name": "getContractGraphConsumerRouteCoverageDiagnostics",
           "exportKind": "named",
           "source": "./libs/ContractGraphConsumerCoverage",
@@ -10158,6 +11451,48 @@
           "declarationKind": "function"
         },
         {
+          "name": "getSchemaDescriptorDiagnostics",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodArrayElementSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodDefaultValue",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodInnerSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodObjectShape",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodObjectUnsupportedDynamicKeyMode",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodSchemaTypeName",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
           "name": "isContractGraphSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
@@ -10170,6 +11505,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "const"
+        },
+        {
           "name": "snapshotZodSchema",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
@@ -10180,9 +11521,20 @@
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
           "declarationKind": "function"
+        },
+        {
+          "name": "unwrapZodEffectsSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
+        {
+          "name": "BuildContractGraphOptions",
+          "exportKind": "named",
+          "source": "./libs/ContractGraph"
+        },
         {
           "name": "Constructor",
           "exportKind": "named",
@@ -10349,9 +11701,34 @@
           "source": "./libs/ContractGraph"
         },
         {
+          "name": "ContractSchemaDescriptor",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
+          "name": "ContractSchemaDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
+          "name": "ContractSchemaDiagnosticSeverity",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
+          "name": "ContractSchemaFieldDescriptor",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
           "name": "ContractSchemaFieldSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractSchemaJsonSafeStatus",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
         },
         {
           "name": "ContractSchemaLocation",
@@ -10359,9 +11736,19 @@
           "source": "./libs/ContractGraphSnapshot"
         },
         {
+          "name": "ContractSchemaPrimitiveValue",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
+        },
+        {
           "name": "ContractSchemaSnapshot",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractSchemaSupportMatrixEntry",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor"
         },
         {
           "name": "DefinedRouteSchema",
@@ -10812,6 +12199,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "defineRouteProblem",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
           "name": "defineRouteSchema",
           "exportKind": "named",
           "source": "@croco/protocols-core"
@@ -11070,6 +12463,12 @@
         },
         {
           "name": "routePathParamsSchema",
+          "exportKind": "named",
+          "source": "./RouteContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "routeProblemResponses",
           "exportKind": "named",
           "source": "./RouteContract",
           "declarationKind": "function"
@@ -11387,6 +12786,16 @@
           "source": "./RouteContract"
         },
         {
+          "name": "RouteProblemDeclaration",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
+          "name": "RouteProblemStatus",
+          "exportKind": "named",
+          "source": "./RouteContract"
+        },
+        {
           "name": "RouteQuery",
           "exportKind": "named",
           "source": "./RouteContract"
@@ -11571,6 +12980,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "RateLimitRefundUnsupportedProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitConfigProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "RateLimitStore",
           "exportKind": "named",
           "source": "./libs/RateLimitStore",
@@ -11626,6 +13041,11 @@
         },
         {
           "name": "FixedWindowPolicy",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "FixedWindowRefundReceipt",
           "exportKind": "named",
           "source": "./libs/types"
         },
@@ -11705,6 +13125,16 @@
           "source": "./libs/types"
         },
         {
+          "name": "RateLimitRefundReceipt",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RateLimitRefundResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "RateLimitResult",
           "exportKind": "named",
           "source": "./libs/types"
@@ -11730,12 +13160,22 @@
           "source": "./libs/types"
         },
         {
+          "name": "SlidingWindowRefundReceipt",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "TokenBucketEntry",
           "exportKind": "named",
           "source": "./libs/RateLimitStore"
         },
         {
           "name": "TokenBucketPolicy",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TokenBucketRefundReceipt",
           "exportKind": "named",
           "source": "./libs/types"
         }
@@ -11753,9 +13193,21 @@
           "declarationKind": "class"
         },
         {
+          "name": "MissingUpstashRateLimitConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitUpstashProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "UpstashFixedWindowStore",
           "exportKind": "named",
           "source": "./libs/UpstashRateLimitStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UpstashRateLimitUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/RateLimitUpstashProblems",
           "declarationKind": "class"
         },
         {
@@ -12207,6 +13659,11 @@
       "typeExports": [
         {
           "name": "GenerateClientOptions",
+          "exportKind": "named",
+          "source": "./libs/generate"
+        },
+        {
+          "name": "GenerateClientProblemRuntime",
           "exportKind": "named",
           "source": "./libs/generate"
         }
@@ -12833,13 +14290,36 @@
       "entrypoint": "packages/tasks-qstash/src/index.ts",
       "runtimeExports": [
         {
+          "name": "QStashTaskConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "QStashTaskPublishProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "QStashTaskRunner",
           "exportKind": "named",
           "source": "./libs/QStashTaskRunner",
           "declarationKind": "class"
+        },
+        {
+          "name": "QStashTaskValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/QStashTaskProblems",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
+        {
+          "name": "QStashTaskExecuteOptions",
+          "exportKind": "named",
+          "source": "./libs/QStashTaskRunner"
+        },
         {
           "name": "QStashTaskRunnerOptions",
           "exportKind": "named",
@@ -13396,6 +14876,12 @@
       "entrypoint": "packages/testing/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertDrizzleProblem",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertOpenAPIRoute",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -13408,6 +14894,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "createBillingProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createDrizzleProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "createEventTestingHarness",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -13417,6 +14915,12 @@
           "name": "createLlmProviderConformanceSuite",
           "exportKind": "named",
           "source": "./libs/llm-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createQStashTaskConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
           "declarationKind": "function"
         },
         {
@@ -13453,6 +14957,12 @@
           "name": "createTestingTransactionContext",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createUpstashRedisRateLimitConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
           "declarationKind": "function"
         },
         {
@@ -13512,6 +15022,66 @@
       ],
       "typeExports": [
         {
+          "name": "BillingGatewayConformanceAssertions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingGatewayConformanceFixtures",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingGatewayConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingGatewayFailureScenario",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingProviderConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookConformanceAssertions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookFixture",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookHandlerContract",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
+          "name": "BillingWebhookResult",
+          "exportKind": "named",
+          "source": "./libs/billing-provider-conformance"
+        },
+        {
           "name": "CapturedSpan",
           "exportKind": "named",
           "source": "./libs/telemetry-testing"
@@ -13525,6 +15095,46 @@
           "name": "CapturedSpanException",
           "exportKind": "named",
           "source": "./libs/telemetry-testing"
+        },
+        {
+          "name": "DrizzleProblemExpectation",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCapability",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceCheck",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderRepositoryErrorConformance",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
+        },
+        {
+          "name": "DrizzleProviderTransactionConformance",
+          "exportKind": "named",
+          "source": "./libs/drizzle-provider-conformance"
         },
         {
           "name": "EventTestingHarnessOptions",
@@ -13562,9 +15172,54 @@
           "source": "./libs/testing"
         },
         {
+          "name": "QStashTaskConformanceHarness",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskExecuteOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskPublisher",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTaskPublishRecord",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
           "name": "ResetCrocoTestingContextOptions",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "ServerlessProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "ServerlessProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "ServerlessProviderLiveSmokeGate",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
         },
         {
           "name": "StorageProviderConformanceCase",
@@ -13625,6 +15280,16 @@
           "name": "TestLogger",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "UpstashRedisRateLimitConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "UpstashRedisRateLimitConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
         }
       ]
     },

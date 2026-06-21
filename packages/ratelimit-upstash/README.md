@@ -29,16 +29,39 @@ const result = await limiter.check({ ip: "127.0.0.1" }, policy);
 
 ## API 레퍼런스
 
-| API                             | 설명                                            |
-| ------------------------------- | ----------------------------------------------- |
-| `UpstashSlidingWindowStore`     | 슬라이딩 윈도우 제한을 수행합니다.              |
-| `UpstashTokenBucketStore`       | 토큰 버킷 제한을 수행합니다.                    |
-| `UpstashFixedWindowStore`       | 고정 윈도우 제한을 수행합니다.                  |
-| `UpstashRateLimitStoreOptions`  | `redis`와 `prefix`를 받는 공통 옵션 타입입니다. |
-| `InvalidRateLimitPolicyProblem` | 저장소와 정책 타입이 맞지 않을 때 발생합니다.   |
+| API                                    | 설명                                                                |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| `UpstashSlidingWindowStore`            | 슬라이딩 윈도우 제한을 수행합니다.                                  |
+| `UpstashTokenBucketStore`              | 토큰 버킷 제한을 수행합니다.                                        |
+| `UpstashFixedWindowStore`              | 고정 윈도우 제한을 수행합니다.                                      |
+| `UpstashRateLimitStoreOptions`         | `redis`와 `prefix`를 받는 공통 옵션 타입입니다.                     |
+| `InvalidRateLimitPolicyProblem`        | 저장소와 정책 타입이 맞지 않을 때 발생하는 terminal Problem입니다.  |
+| `MissingUpstashRateLimitConfigProblem` | Redis 클라이언트 설정 누락을 나타내는 terminal Problem입니다.       |
+| `UpstashRateLimitUpstreamProblem`      | Upstash Redis 오류를 redaction과 retryable evidence로 정규화합니다. |
 
 ## 동작 메모
 
 - 모든 알고리즘은 Redis Lua 스크립트로 원자성을 보장합니다.
 - 기본 prefix는 저장소별로 `ratelimit:sliding`, `ratelimit:bucket`, `ratelimit:fixed`를 사용합니다.
 - 통계는 메모리 기준으로 allowed, denied, total을 누적합니다.
+- Redis upstream 오류는 `UpstashRateLimitUpstreamProblem`으로 변환되며 `retryable` 확장 필드로
+  일시 장애와 terminal 오류를 구분합니다. 토큰, secret, credential 형태의 값은 Problem detail에서
+  redaction됩니다.
+
+## Conformance
+
+`@croco/testing`의 `createUpstashRedisRateLimitConformanceSuite()`를 패키지 테스트에서 실행합니다.
+기본 테스트는 mocked Redis fixture만 사용하므로 Upstash credential이 없어도 통과해야 합니다.
+
+현재 conformance coverage:
+
+- 필수 Redis 클라이언트 누락 Problem
+- unsupported policy Problem
+- allow/deny stats
+- refund idempotency
+- retryable upstream failure와 terminal upstream failure 구분
+- live smoke env gate skip
+
+선택적 live smoke는 별도 opt-in env gate(`CROCO_LIVE_UPSTASH_REDIS`,
+`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) 뒤에 두어야 합니다. 실제 Upstash backend smoke와
+diagnostics/readiness provider는 아직 beta/production promotion blocker입니다.

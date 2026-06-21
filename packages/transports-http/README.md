@@ -224,6 +224,8 @@ const app = createApp({
 });
 ```
 
+`rateLimitHttpMiddleware`의 `skipSuccessfulRequests`와 `skipFailedRequests`는 응답 상태가 결정된 뒤 성공한 limiter 체크의 refund receipt를 사용해 해당 outcome이 quota를 소비하지 않게 합니다. `skip` predicate는 기존처럼 limiter 체크 자체를 실행하지 않습니다.
+
 기존 앱을 단계적으로 마이그레이션해야 한다면 명시적으로 opt-out 할 수 있습니다.
 
 ```typescript

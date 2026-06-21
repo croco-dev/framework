@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { ProblemCategoryMapper } from "@croco/problems-core";
 import { PROBLEM_RESPONSES_KEY } from "../constants";
+import { getRouteContractProblems } from "../internal/routeContractProblemMetadata";
 import type { ProblemResponseMetadata, ProblemResponseOptions } from "../types";
 
 export function ProblemResponse<
@@ -31,9 +32,31 @@ export function ProblemResponses<const Responses extends readonly ProblemRespons
   };
 }
 
-function toProblemResponseMetadata(response: ProblemResponseOptions): ProblemResponseMetadata {
+type NormalizedProblemResponseMetadata = ProblemResponseMetadata & {
+  readonly routeContractProblems?: readonly ProblemResponseMetadata[];
+};
+
+function toProblemResponseMetadata(
+  response: ProblemResponseOptions,
+): NormalizedProblemResponseMetadata {
+  const routeContractProblems = getRouteContractProblems(response)?.map(toContractProblemMetadata);
+
   return {
-    ...response,
-    status: ProblemCategoryMapper.toHttpStatus(response.category),
+    code: response.code,
+    category: response.category,
+    status: response.status ?? ProblemCategoryMapper.toHttpStatus(response.category),
+    ...(response.description ? { description: response.description } : {}),
+    ...(response.type ? { type: response.type } : {}),
+    ...(routeContractProblems ? { routeContractProblems } : {}),
+  };
+}
+
+function toContractProblemMetadata(response: ProblemResponseMetadata): ProblemResponseMetadata {
+  return {
+    code: response.code,
+    category: response.category,
+    status: response.status,
+    ...(response.description ? { description: response.description } : {}),
+    ...(response.type ? { type: response.type } : {}),
   };
 }

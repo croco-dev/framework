@@ -495,6 +495,8 @@ try {
     printSmokeCoverageSummary(smokeCases);
   }
 
+  runGeneratedAppContractGates();
+
   run(
     process.execPath,
     [
@@ -510,6 +512,7 @@ try {
       "--filter=create-croco-app...",
       "--filter=@croco/framework-context...",
       "--filter=@croco/frontend-cloudflare...",
+      "--filter=@croco/frontend-problems...",
       "--filter=@croco/frontend-react...",
       "--filter=@croco/frontend-vite...",
       "--filter=@croco/llm-core...",
@@ -569,6 +572,17 @@ try {
   console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
 } finally {
   rmSync(smokeRoot, { force: true, recursive: true });
+}
+
+function runGeneratedAppContractGates(): void {
+  runGate("strict contract typecheck", ["strict-contract-typecheck"]);
+  runGate("static misuse check", ["static-misuse:check"]);
+  runGate("generated template oxlint", ["exec", "oxlint", "packages/create-croco-app/templates"]);
+}
+
+function runGate(label: string, args: readonly string[]): void {
+  run("pnpm", args, rootDir);
+  console.log(`create-croco-app-generated-smoke: ${label} passed`);
 }
 
 function selectSmokeCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
@@ -821,10 +835,13 @@ function runSpaBeSplitContractSmoke(): void {
     generatedClientPath,
     "REST SPA contract smoke did not create provider-rpc user client",
   );
-  assertFileContains(generatedClientPath, "export function useList()");
   assertFileContains(
     generatedClientPath,
-    "export type CreateInput = { name: string; email: string; };",
+    "export function useList<TData = ListOutput>(options?: ListQueryOptions<TData>)",
+  );
+  assertFileContains(
+    generatedClientPath,
+    "export type CreateInput = { email: string; name: string; };",
   );
   console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
 }
@@ -850,6 +867,7 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/framework-logger": `file:${packWorkspacePackage("@croco/framework-logger", "framework-logger", packDir)}`,
     "@croco/framework-preset": `file:${packWorkspacePackage("@croco/framework-preset", "framework-preset", packDir)}`,
     "@croco/frontend-cloudflare": `file:${packWorkspacePackage("@croco/frontend-cloudflare", "frontend-cloudflare", packDir)}`,
+    "@croco/frontend-problems": `file:${packWorkspacePackage("@croco/frontend-problems", "frontend-problems", packDir)}`,
     "@croco/frontend-react": `file:${packWorkspacePackage("@croco/frontend-react", "frontend-react", packDir)}`,
     "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
     "@croco/health-core": `file:${packWorkspacePackage("@croco/health-core", "health-core", packDir)}`,
@@ -899,6 +917,7 @@ function getContractSmokeRangeOverrides(): Record<string, string> {
     "@croco/framework-config": `file:${packWorkspacePackage("@croco/framework-config", "framework-config", packDir)}`,
     "@croco/framework-context": `file:${packWorkspacePackage("@croco/framework-context", "framework-context", packDir)}`,
     "@croco/framework-logger": `file:${packWorkspacePackage("@croco/framework-logger", "framework-logger", packDir)}`,
+    "@croco/frontend-problems": `file:${packWorkspacePackage("@croco/frontend-problems", "frontend-problems", packDir)}`,
     "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
     "@croco/health-core": `file:${packWorkspacePackage("@croco/health-core", "health-core", packDir)}`,
     "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,

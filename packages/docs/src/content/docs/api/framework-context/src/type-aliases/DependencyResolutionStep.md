@@ -15,6 +15,12 @@ title: "DependencyResolutionStep"
 
 ***
 
+### dependencyOfId?
+
+> `readonly` `optional` **dependencyOfId**: `string`
+
+***
+
 ### parameterIndex?
 
 > `readonly` `optional` **parameterIndex**: `number`
@@ -24,6 +30,12 @@ title: "DependencyResolutionStep"
 ### path
 
 > `readonly` **path**: readonly `string`[]
+
+***
+
+### pathIds
+
+> `readonly` **pathIds**: readonly `string`[]
 
 ***
 
@@ -54,6 +66,12 @@ title: "DependencyResolutionStep"
 ### token
 
 > `readonly` **token**: `string`
+
+***
+
+### tokenId
+
+> `readonly` **tokenId**: `string`
 
 ***
 

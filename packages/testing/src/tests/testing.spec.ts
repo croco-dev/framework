@@ -1,21 +1,35 @@
 import "reflect-metadata";
+import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
 import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
 import type { TransactionContext } from "@croco/framework-context";
 import { DomainEvent, RegisterEventHandler } from "@croco/events-core";
 import type { EventHandler } from "@croco/events-core";
 import { InMemoryLlmModel } from "@croco/llm-core";
 import type { GenerateParams, GenerateResult } from "@croco/llm-core";
-import { ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param } from "@croco/protocols-rest";
+import { RateLimitStore } from "@croco/ratelimit-core";
+import type {
+  RateLimitPolicy,
+  RateLimitRefundReceipt,
+  RateLimitRefundResult,
+  RateLimitResult,
+  RateLimitStats,
+} from "@croco/ratelimit-core";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertOpenAPIRoute,
+  assertDrizzleProblem,
   assertProblemResponse,
+  createBillingProviderConformanceSuite,
+  createDrizzleProviderConformanceSuite,
   createEventTestingHarness,
   createLlmProviderConformanceSuite,
+  createQStashTaskConformanceSuite,
   createStorageProviderConformanceSuite,
+  createUpstashRedisRateLimitConformanceSuite,
   createRpcTestFetch,
   createTestingApp,
   createTestingRequestContext,
@@ -24,7 +38,12 @@ import {
   resetCrocoTestingContext,
   runWithTestingContext,
   TestingTransactionContext,
+  type QStashTaskConformanceScenario,
+  type QStashTaskExecuteOptions,
+  type QStashTaskPublisher,
+  type QStashTaskPublishRecord,
   type TestLogger,
+  type UpstashRedisRateLimitConformanceScenario,
 } from "../index";
 
 class GreetingService {
@@ -41,6 +60,211 @@ class FailingLlmModel extends InMemoryLlmModel {
       "testing/llm-provider-failed",
       "provider generate failed",
     );
+  }
+}
+
+class TestingBillingProblem extends Problem {
+  constructor(detail: string) {
+    super("testing/billing-provider-failed", ProblemCategory.InternalServerError, detail);
+  }
+}
+
+class InMemoryBillingGateway implements BillingGateway {
+  readonly subscriptionOperations: string[] = [];
+
+  async ensureCustomer(billingAccountId: string, _email: string): Promise<string> {
+    return `customer-${billingAccountId}`;
+  }
+
+  async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    return {
+      checkoutId: `checkout-${params.billingAccountId}`,
+      checkoutUrl: `https://billing.example.com/checkout/${params.productId}`,
+    };
+  }
+
+  async cancelSubscription(externalSubscriptionId: string, immediate = false): Promise<void> {
+    this.subscriptionOperations.push(
+      immediate ? `revoke:${externalSubscriptionId}` : `cancel:${externalSubscriptionId}`,
+    );
+  }
+
+  async resumeSubscription(externalSubscriptionId: string): Promise<void> {
+    this.subscriptionOperations.push(`resume:${externalSubscriptionId}`);
+  }
+
+  async getCustomerPortalUrl(externalCustomerId: string): Promise<string> {
+    return `https://billing.example.com/portal/${externalCustomerId}`;
+  }
+}
+
+class FailingBillingGateway extends InMemoryBillingGateway {
+  override async createCheckout(_params: CreateCheckoutParams): Promise<CheckoutResult> {
+    throw new TestingBillingProblem("provider checkout failed");
+  }
+}
+
+class InMemoryBillingWebhookHandler {
+  readonly processedEventIds: string[] = [];
+
+  async handle(body: Buffer | string, headers: Record<string, string>) {
+    if (headers["webhook-signature"] !== "valid") {
+      throw new TestingBillingProblem("invalid webhook signature");
+    }
+
+    const event = JSON.parse(Buffer.isBuffer(body) ? body.toString("utf8") : body) as {
+      id?: unknown;
+      type?: unknown;
+    };
+
+    if (typeof event.id !== "string" || typeof event.type !== "string") {
+      throw new TestingBillingProblem("invalid webhook payload");
+    }
+
+    if (!this.processedEventIds.includes(event.id)) {
+      this.processedEventIds.push(event.id);
+    }
+
+    return {
+      success: true,
+      eventId: event.id,
+    };
+  }
+}
+
+class ConformanceProviderProblem extends Problem {
+  constructor(message: string, retryable: boolean) {
+    super(
+      retryable ? "testing/provider-retryable" : "testing/provider-terminal",
+      retryable ? ProblemCategory.InternalServerError : ProblemCategory.BadRequest,
+      message,
+      {
+        extensions: {
+          retryable,
+        },
+      },
+    );
+  }
+}
+
+class FakeRateLimitStore extends RateLimitStore {
+  private refunded = false;
+  private readonly stats: RateLimitStats = { allowed: 0, denied: 0, total: 0 };
+
+  constructor(private readonly scenario: UpstashRedisRateLimitConformanceScenario) {
+    super();
+  }
+
+  async check(_key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
+    if (policy.algorithm !== "fixed") {
+      throw new ConformanceProviderProblem("unsupported policy", false);
+    }
+
+    if (this.scenario === "retryable-upstream") {
+      throw new ConformanceProviderProblem("retryable outage token=[Redacted]", true);
+    }
+
+    if (this.scenario === "terminal-upstream") {
+      throw new ConformanceProviderProblem("terminal rejection token=[Redacted]", false);
+    }
+
+    this.stats.total += 1;
+    if (this.scenario === "deny") {
+      this.stats.denied += 1;
+      return {
+        success: false,
+        limit: policy.limit,
+        remaining: 0,
+        resetAtMs: Date.now() + policy.windowMs,
+      };
+    }
+
+    this.stats.allowed += 1;
+    return {
+      success: true,
+      limit: policy.limit,
+      remaining: policy.limit - 1,
+      resetAtMs: Date.now() + policy.windowMs,
+      refundReceipt: {
+        algorithm: "fixed",
+        id: "fake-refund-receipt",
+        windowStart: Date.now(),
+      },
+    };
+  }
+
+  override async refund(
+    _key: string,
+    policy: RateLimitPolicy,
+    receipt?: RateLimitRefundReceipt,
+  ): Promise<RateLimitRefundResult> {
+    if (!receipt || this.refunded || policy.algorithm !== "fixed") {
+      return {
+        success: true,
+        limit: "limit" in policy ? policy.limit : 0,
+        remaining: "limit" in policy ? policy.limit : 0,
+        resetAtMs: Date.now(),
+        refunded: false,
+      };
+    }
+
+    this.refunded = true;
+    this.stats.allowed = Math.max(0, this.stats.allowed - 1);
+    this.stats.total = Math.max(0, this.stats.total - 1);
+
+    return {
+      success: true,
+      limit: policy.limit,
+      remaining: policy.limit,
+      resetAtMs: Date.now() + policy.windowMs,
+      refunded: true,
+    };
+  }
+
+  async getStats(): Promise<RateLimitStats> {
+    return { ...this.stats };
+  }
+
+  async pruneExpired(): Promise<number> {
+    return 0;
+  }
+}
+
+class FakeQStashTaskPublisher implements QStashTaskPublisher {
+  readonly published: QStashTaskPublishRecord[] = [];
+
+  constructor(private readonly scenario: QStashTaskConformanceScenario) {}
+
+  async execute(
+    taskId: string,
+    payload: unknown,
+    options: QStashTaskExecuteOptions = {},
+  ): Promise<{ readonly messageId: string }> {
+    if (!taskId) {
+      throw new ConformanceProviderProblem("task id is required", false);
+    }
+
+    if (options.delay !== undefined && options.delay < 0) {
+      throw new ConformanceProviderProblem("delay must be non-negative", false);
+    }
+
+    if (this.scenario === "retryable-upstream") {
+      throw new ConformanceProviderProblem("retryable qstash outage token=[Redacted]", true);
+    }
+
+    if (this.scenario === "terminal-upstream") {
+      throw new ConformanceProviderProblem("terminal qstash rejection token=[Redacted]", false);
+    }
+
+    this.published.push({
+      body: { taskId, payload },
+      deduplicationId: options.idempotencyKey,
+      delay: options.delay,
+      headers: options.headers,
+      url: "https://example.com/tasks",
+    });
+
+    return { messageId: "msg-conformance" };
   }
 }
 
@@ -517,6 +741,153 @@ describe("@croco/testing", () => {
     });
   });
 
+  describe("Drizzle provider conformance", () => {
+    const supportedCheck = (name: string) => ({
+      name,
+      run: vi.fn(async () => undefined),
+    });
+
+    it("creates supported and explicitly unsupported capability cases", async () => {
+      const schemaCheck = supportedCheck("verifies local table columns");
+      const participationCheck = supportedCheck("uses the active transaction client");
+      const rollbackCheck = supportedCheck("rolls back writes after transaction failure");
+      const isolationCheck = supportedCheck("does not leak records across tenants");
+      const notFoundCheck = supportedCheck("throws deterministic not-found Problem");
+
+      const suite = createDrizzleProviderConformanceSuite({
+        providerName: "drizzle-test-provider",
+        schema: {
+          supported: true,
+          checks: [schemaCheck],
+        },
+        transaction: {
+          participation: {
+            supported: true,
+            checks: [participationCheck],
+          },
+          rollback: {
+            supported: true,
+            checks: [rollbackCheck],
+          },
+        },
+        tenantIsolation: {
+          supported: true,
+          checks: [isolationCheck],
+        },
+        repositoryErrors: {
+          notFound: {
+            supported: true,
+            checks: [notFoundCheck],
+          },
+          validation: {
+            supported: false,
+            reason: "The fixture exposes no user-input validation boundary.",
+          },
+          duplicate: {
+            supported: false,
+            reason: "The fixture has no unique business key.",
+          },
+          conflict: {
+            supported: false,
+            reason: "The fixture has no conflict-producing operation.",
+          },
+          retryableFailure: {
+            supported: false,
+            reason: "The fixture has no retryable upstream boundary.",
+          },
+        },
+      });
+
+      expect(suite.cases.map((testCase) => testCase.name)).toEqual([
+        "drizzle-test-provider: schema and migration assumptions: verifies local table columns",
+        "drizzle-test-provider: transaction participation: uses the active transaction client",
+        "drizzle-test-provider: transaction rollback: rolls back writes after transaction failure",
+        "drizzle-test-provider: tenant isolation: does not leak records across tenants",
+        "drizzle-test-provider: not-found error semantics: throws deterministic not-found Problem",
+        "drizzle-test-provider: documents unsupported validation error semantics",
+        "drizzle-test-provider: documents unsupported duplicate error semantics",
+        "drizzle-test-provider: documents unsupported conflict error semantics",
+        "drizzle-test-provider: documents unsupported retryable failure semantics",
+      ]);
+
+      for (const testCase of suite.cases) {
+        await testCase.run();
+      }
+
+      expect(schemaCheck.run).toHaveBeenCalledTimes(1);
+      expect(participationCheck.run).toHaveBeenCalledTimes(1);
+      expect(rollbackCheck.run).toHaveBeenCalledTimes(1);
+      expect(isolationCheck.run).toHaveBeenCalledTimes(1);
+      expect(notFoundCheck.run).toHaveBeenCalledTimes(1);
+    });
+
+    it("requires unsupported capabilities to document a reason", async () => {
+      const suite = createDrizzleProviderConformanceSuite({
+        providerName: "drizzle-test-provider",
+        schema: {
+          supported: false,
+          reason: "",
+        },
+        transaction: {
+          participation: {
+            supported: false,
+            reason: "No transaction manager.",
+          },
+          rollback: {
+            supported: false,
+            reason: "No transaction manager.",
+          },
+        },
+        tenantIsolation: {
+          supported: false,
+          reason: "No tenant contract.",
+        },
+        repositoryErrors: {
+          notFound: {
+            supported: false,
+            reason: "No lookup contract.",
+          },
+          validation: {
+            supported: false,
+            reason: "No validation contract.",
+          },
+          duplicate: {
+            supported: false,
+            reason: "No duplicate contract.",
+          },
+          conflict: {
+            supported: false,
+            reason: "No conflict contract.",
+          },
+          retryableFailure: {
+            supported: false,
+            reason: "No retryable boundary.",
+          },
+        },
+      });
+
+      await expect(suite.cases[0]?.run()).rejects.toThrow(
+        "drizzle-test-provider must document why schema and migration assumptions is unsupported.",
+      );
+    });
+
+    it("asserts deterministic Croco Problem codes and categories", async () => {
+      const problem = await assertDrizzleProblem(
+        () =>
+          Promise.reject(
+            ProblemFactory.notFound("testing/drizzle-missing-row", "row was not found"),
+          ),
+        {
+          category: ProblemCategory.NotFound,
+          code: "testing/drizzle-missing-row",
+          status: 404,
+        },
+      );
+
+      expect(problem.code).toBe("testing/drizzle-missing-row");
+    });
+  });
+
   describe("LLM provider conformance", () => {
     const modelId = "conformance-model";
     const createModel = () =>
@@ -584,6 +955,143 @@ describe("@croco/testing", () => {
         },
       }).cases,
     )("$name", async ({ run }) => {
+      await run();
+    });
+  });
+
+  describe("billing provider conformance", () => {
+    it.each(
+      createBillingProviderConformanceSuite({
+        providerName: "in-memory-billing",
+        gateway: {
+          createGateway: () => new InMemoryBillingGateway(),
+          fixtures: {
+            checkout: {
+              billingAccountId: "tenant-conformance",
+              email: "billing@example.com",
+              productId: "product-pro",
+              successUrl: "https://app.example.com/success",
+            },
+            portal: {
+              billingAccountId: "tenant-conformance",
+              email: "billing@example.com",
+            },
+            subscription: {
+              externalSubscriptionId: "sub-conformance",
+            },
+          },
+          assertions: {
+            subscriptionLifecycle: ({ gateway }) => {
+              expect(gateway.subscriptionOperations).toEqual([
+                "cancel:sub-conformance",
+                "resume:sub-conformance",
+                "revoke:sub-conformance",
+              ]);
+            },
+          },
+          failureScenarios: [
+            {
+              name: "surfaces checkout failures as Croco Problems",
+              createGateway: () => new FailingBillingGateway(),
+              run: (gateway) =>
+                gateway.createCheckout({
+                  billingAccountId: "tenant-conformance",
+                  email: "billing@example.com",
+                  productId: "product-pro",
+                  successUrl: "https://app.example.com/success",
+                }),
+              assertProblem: (problem) => {
+                expect(problem.code).toBe("testing/billing-provider-failed");
+              },
+            },
+          ],
+        },
+        webhook: {
+          createHandler: () => new InMemoryBillingWebhookHandler(),
+          fixtures: {
+            subscription: {
+              body: JSON.stringify({ id: "evt-subscription", type: "subscription.created" }),
+              headers: { "webhook-signature": "valid" },
+              eventId: "evt-subscription",
+            },
+            order: {
+              body: JSON.stringify({ id: "evt-order", type: "order.paid" }),
+              headers: { "webhook-signature": "valid" },
+              eventId: "evt-order",
+            },
+            invalidSignature: {
+              body: JSON.stringify({ id: "evt-invalid-signature", type: "subscription.created" }),
+              headers: { "webhook-signature": "invalid" },
+              eventId: "evt-invalid-signature",
+            },
+            invalidPayload: {
+              body: JSON.stringify({ id: null, type: null }),
+              headers: { "webhook-signature": "valid" },
+              eventId: "evt-invalid-payload",
+            },
+          },
+          assertions: {
+            idempotency: (_results, { handler }) => {
+              expect(handler.processedEventIds).toEqual(["evt-subscription"]);
+            },
+          },
+        },
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
+  });
+
+  describe("serverless provider conformance", () => {
+    it.each(
+      createUpstashRedisRateLimitConformanceSuite({
+        createMissingConfig: () => {
+          throw new ConformanceProviderProblem("missing redis token=[Redacted]", false);
+        },
+        createStore: (scenario) => new FakeRateLimitStore(scenario),
+        invalidPolicy: {
+          algorithm: "sliding",
+          limit: 2,
+          name: "invalid",
+          windowMs: 1_000,
+        },
+        liveSmoke: {
+          isEnabled: () => false,
+          requiredEnv: ["CROCO_LIVE_UPSTASH_REDIS", "UPSTASH_REDIS_REST_URL"],
+        },
+        policy: {
+          algorithm: "fixed",
+          limit: 2,
+          name: "fixed",
+          windowMs: 1_000,
+        },
+        providerName: "fake-upstash-ratelimit",
+        secretSamples: ["super-secret-token"],
+      }).cases,
+    )("Upstash Redis rate-limit: $name", async ({ run }) => {
+      await run();
+    });
+
+    it.each(
+      createQStashTaskConformanceSuite({
+        createMissingConfig: () => {
+          throw new ConformanceProviderProblem("missing qstash token=[Redacted]", false);
+        },
+        createPublisher: (scenario) => {
+          const publisher = new FakeQStashTaskPublisher(scenario);
+          return {
+            publisher,
+            getPublishedMessages: () => publisher.published,
+          };
+        },
+        liveSmoke: {
+          isEnabled: () => false,
+          requiredEnv: ["CROCO_LIVE_QSTASH", "UPSTASH_QSTASH_TOKEN"],
+        },
+        providerName: "fake-qstash-tasks",
+        secretSamples: ["super-secret-token"],
+      }).cases,
+    )("QStash task: $name", async ({ run }) => {
       await run();
     });
   });

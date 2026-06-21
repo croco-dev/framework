@@ -18,6 +18,7 @@
         "framework-routes",
         "gid-core",
         "health-core",
+        "idempotency-core",
         "pagination-core",
         "problems-core",
         "repository-core",
@@ -122,6 +123,7 @@
       "packages": [
         "admin-react",
         "frontend-cloudflare",
+        "frontend-problems",
         "frontend-react",
         "frontend-vite",
         "meta-vite",
@@ -197,6 +199,7 @@
         "framework-routes",
         "gid-core",
         "health-core",
+        "idempotency-core",
         "impersonation-core",
         "integrations-posthog",
         "lifecycle-core",
@@ -242,6 +245,7 @@
         "entitlements-drizzle",
         "execution-drizzle",
         "frontend-cloudflare",
+        "frontend-problems",
         "frontend-react",
         "frontend-vite",
         "invitation-drizzle",
@@ -396,12 +400,29 @@
           "streaming response smoke"
         ]
       },
+      "frontend-problems": {
+        "domain": "Frontend Problems",
+        "adapter": "Problem-aware client runtime",
+        "runtimes": ["browser", "cloudflare-workers"],
+        "requiredEnv": ["none"],
+        "features": [
+          "Problem Details parsing",
+          "Problem-aware fetch results",
+          "declared Problem unions",
+          "form Problem mapping"
+        ]
+      },
       "frontend-react": {
         "domain": "Frontend React",
         "adapter": "React integration helpers",
         "runtimes": ["browser", "node"],
         "requiredEnv": ["none"],
-        "features": ["React bindings", "meta-vite integration"]
+        "features": [
+          "React bindings",
+          "meta-vite integration",
+          "auth gate primitives",
+          "tenant and entitlement bridge"
+        ]
       },
       "frontend-vite": {
         "domain": "Frontend Vite",
@@ -520,7 +541,14 @@
         "adapter": "Upstash Redis rate-limit store",
         "runtimes": ["node", "lambda", "cloudflare-workers"],
         "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
-        "features": ["sliding window", "token bucket", "fixed window", "Lua atomicity"]
+        "features": [
+          "sliding window",
+          "token bucket",
+          "fixed window",
+          "Lua atomicity",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "search-drizzle": {
         "domain": "Search",
@@ -561,8 +589,15 @@
         "domain": "Tasks",
         "adapter": "QStash task runner",
         "runtimes": ["node", "lambda", "cloudflare-workers"],
-        "requiredEnv": ["QSTASH_TOKEN", "destination webhook URL"],
-        "features": ["task publish", "delay override", "custom headers"]
+        "requiredEnv": ["UPSTASH_QSTASH_TOKEN", "UPSTASH_QSTASH_DESTINATION_URL"],
+        "features": [
+          "task publish",
+          "delay override",
+          "custom headers",
+          "deduplication id",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "telemetry-api": {
         "domain": "Telemetry",

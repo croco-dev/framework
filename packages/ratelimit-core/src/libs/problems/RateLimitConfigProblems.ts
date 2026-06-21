@@ -19,3 +19,13 @@ export class RateLimitWindowProblem extends Problem {
     super(detail);
   }
 }
+
+export class RateLimitRefundUnsupportedProblem extends Problem {
+  constructor() {
+    super(
+      "RATE_LIMIT_REFUND_UNSUPPORTED",
+      ProblemCategory.InternalServerError,
+      "Rate limit store does not support refunding a consumed request.",
+    );
+  }
+}

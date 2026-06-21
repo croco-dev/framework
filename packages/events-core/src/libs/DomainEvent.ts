@@ -1,4 +1,4 @@
-import { EventDefinitionProblem } from "./problems/EventsProblems";
+import { EventDefinitionProblem, EventDeserializationError } from "./problems/EventsProblems";
 
 export type EventTraceContext = {
   traceId?: string;
@@ -32,4 +32,23 @@ export abstract class DomainEvent {
     this.timestamp = new Date();
     this.metadata = {};
   }
+}
+
+export function restoreSerializedEventIdentity(
+  event: DomainEvent,
+  eventId: string,
+  occurredAt: string,
+): void {
+  const parsedOccurredAt = new Date(occurredAt);
+  if (Number.isNaN(parsedOccurredAt.getTime())) {
+    throw new EventDeserializationError(event.eventName, `Invalid occurredAt: ${occurredAt}`);
+  }
+
+  const mutableEvent = event as unknown as {
+    eventId: string;
+    timestamp: Date;
+  };
+
+  mutableEvent.eventId = eventId;
+  mutableEvent.timestamp = parsedOccurredAt;
 }

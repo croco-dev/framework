@@ -34,10 +34,12 @@
   },
   "dependencies": {
     "@croco/execution-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@croco/tasks-core": "workspace:*",
     "@upstash/qstash": "^2.0.0"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "vitest": "4.0.16"
   }
 }

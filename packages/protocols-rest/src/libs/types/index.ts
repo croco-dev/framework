@@ -3,16 +3,20 @@
  */
 export * from "../types";
 export {
+  defineRouteProblem,
   defineRouteContract,
   routeBodySchema,
   routeParam,
   routePathParamsSchema,
+  routeProblemResponses,
   routeQueryParam,
   routeQuerySchema,
   routeResponseSchema,
 } from "./RouteContract";
 export type {
   ProblemConstructor,
+  RouteProblemDeclaration,
+  RouteProblemStatus,
   RouteBody,
   RouteContractHandler,
   RouteContractRequest,
