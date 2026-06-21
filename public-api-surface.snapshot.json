@@ -15112,6 +15112,18 @@
       "entrypoint": "packages/telemetry-api/src/index.ts",
       "runtimeExports": [
         {
+          "name": "createFrontendInteractionId",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendTelemetryBridge",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js",
+          "declarationKind": "function"
+        },
+        {
           "name": "getActiveTraceInfo",
           "exportKind": "named",
           "source": "./libs/span.js",
@@ -15149,6 +15161,51 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "FrontendTelemetryBridge",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetryBridgeOptions",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetryEvent",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetryEventKind",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetryHeaderNames",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetryProblemSummary",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetryRequestContext",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetryRouteKind",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
+        {
+          "name": "FrontendTelemetrySink",
+          "exportKind": "named",
+          "source": "./libs/frontendBridge.js"
+        },
         {
           "name": "SpanOptions",
           "exportKind": "named",

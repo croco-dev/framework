@@ -23,6 +23,41 @@ await generateClientFilesFromContractGraph(graph, {
 });
 ```
 
+Generated clients accept an optional `RpcClientRequestOptions` argument. Browser apps can pass a
+provider-neutral telemetry bridge from `@croco/telemetry-api` to attach correlation headers and
+record request lifecycle events without replacing `fetch`.
+
+```typescript
+import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
+import { userClient } from "./generated/rpc";
+
+const telemetry = createFrontendTelemetryBridge({
+  sink: {
+    record: (event) => {
+      console.debug(event.kind, event.routeId, event.durationMs);
+    },
+  },
+});
+
+const result = await userClient.getUserResult(
+  { path: { id: "user-1" } },
+  { telemetry, correlationId: telemetry.correlationId },
+);
+```
+
+The generated runtime records `rpc.request.*` events for start, retry attempts, success, declared
+Problems, external failures, and cancellations. Non-GET routes also emit `rpc.mutation.*` lifecycle
+events. Event payloads are limited to route metadata, status, latency, correlation ids, and stable
+Problem metadata; request bodies, query values, raw headers, response bodies, credentials, and
+Problem `detail`/`instance` fields are intentionally not emitted.
+
+Generated React Query hooks and mutation factories expose the same path through `options.rpc`:
+
+```typescript
+useGetUser({ path: { id: "user-1" } }, { rpc: { telemetry } });
+useCreateUser({ rpc: { telemetry } });
+```
+
 ## Verification
 
 ```bash

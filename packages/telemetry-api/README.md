@@ -40,6 +40,39 @@ import { getActiveTraceInfo } from "@croco/telemetry-api";
 const traceInfo = getActiveTraceInfo();
 ```
 
+### 브라우저 RPC correlation bridge
+
+```typescript
+import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
+import { userClient } from "./generated/rpc";
+
+const bridge = createFrontendTelemetryBridge({
+  sink: {
+    record: (event) => {
+      console.debug(event.kind, event.routeId, event.status);
+    },
+  },
+});
+
+await userClient.getUser(
+  { path: { id: "user-1" } },
+  {
+    telemetry: bridge,
+    interactionId: bridge.interactionId,
+    correlationId: bridge.correlationId,
+  },
+);
+```
+
+`createFrontendTelemetryBridge()` is browser-safe and does not initialize an SDK or import
+`@croco/telemetry-sdk-node`. Generated RPC clients can use it to attach `traceparent`,
+`x-croco-correlation-id`, and `x-croco-interaction-id` headers without app-local fetch wrappers.
+
+Frontend telemetry events intentionally carry route metadata, latency, HTTP status, retry/cancel
+markers, and stable Problem metadata (`code`, `status`, `category`, `type`, `title`). They do not
+include request bodies, query values, raw headers, response bodies, credentials, or Problem
+`detail`/`instance` fields. Send only redacted, provider-approved payloads from the sink.
+
 ## API 레퍼런스
 
 - `Trace`: 비동기 메서드를 Span으로 감싸는 데코레이터
@@ -48,7 +81,10 @@ const traceInfo = getActiveTraceInfo();
 - `recordError`: 현재 활성 Span에 에러 기록
 - `getActiveTraceInfo`: 현재 traceId, spanId, traceFlags 조회
 - `getTracer`: 수동 Span 생성용 Tracer 반환
-- 타입: `TraceDecoratorOptions`, `SpanOptions`, `TraceInfo`, `TracerOptions`
+- `createFrontendTelemetryBridge`: 브라우저 RPC correlation header/event bridge 생성
+- `createFrontendInteractionId`: 브라우저 interaction id 생성
+- 타입: `TraceDecoratorOptions`, `SpanOptions`, `TraceInfo`, `TracerOptions`,
+  `FrontendTelemetryBridge`, `FrontendTelemetryEvent`, `FrontendTelemetrySink`
 
 ## 참고
 
