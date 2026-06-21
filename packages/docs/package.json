@@ -27,6 +27,8 @@
     "@croco/admin-ops": "workspace:*",
     "@croco/analytics-core": "workspace:*",
     "@croco/audit-core": "workspace:*",
+    "@croco/auth-better-auth": "workspace:*",
+    "@croco/auth-clerk": "workspace:*",
     "@croco/auth-core": "workspace:*",
     "@croco/batch-qstash": "workspace:*",
     "@croco/billing-core": "workspace:*",

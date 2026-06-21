@@ -257,6 +257,8 @@ jobs:
               - 'packages/admin-ops/src/**'
               - 'packages/analytics-core/src/**'
               - 'packages/audit-core/src/**'
+              - 'packages/auth-better-auth/src/**'
+              - 'packages/auth-clerk/src/**'
               - 'packages/auth-core/src/**'
               - 'packages/batch-qstash/src/**'
               - 'packages/billing-core/src/**'

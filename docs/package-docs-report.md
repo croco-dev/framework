@@ -9,7 +9,7 @@
 | Public packages                |   109 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    51 |
+| Missing generated API docs     |    49 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -28,8 +28,6 @@ None.
 - `@croco/analytics-posthog` (`packages/analytics-posthog`) — legacy baseline
 - `@croco/architecture-policy` (`packages/architecture-policy`) — legacy baseline
 - `@croco/audit-drizzle` (`packages/audit-drizzle`) — legacy baseline
-- `@croco/auth-better-auth` (`packages/auth-better-auth`) — legacy baseline
-- `@croco/auth-clerk` (`packages/auth-clerk`) — legacy baseline
 - `@croco/auth-drizzle` (`packages/auth-drizzle`) — legacy baseline
 - `@croco/batch-core` (`packages/batch-core`) — legacy baseline
 - `@croco/billing-polar` (`packages/billing-polar`) — legacy baseline
@@ -79,7 +77,7 @@ None.
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
 | 🟡 beta             |               29 |
-| 🔴 alpha/WIP        |               22 |
+| 🔴 alpha/WIP        |               20 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory

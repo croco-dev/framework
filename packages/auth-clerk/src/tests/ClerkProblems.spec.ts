@@ -4,6 +4,7 @@ import {
   ClerkExternalServiceProblem,
   ClerkPublicUserDataMissingProblem,
   ClerkTokenVerificationProblem,
+  ClerkTokenVerificationUpstreamProblem,
   InvalidWebhookPayloadProblem,
   WebhookVerificationProblem,
 } from "../index";
@@ -45,6 +46,41 @@ describe("ClerkProblems", () => {
       const problem = new ClerkTokenVerificationProblem("jwt expired");
 
       expect(problem.detail).toBe("jwt expired");
+    });
+
+    it("redacts sensitive detail values", () => {
+      const problem = new ClerkTokenVerificationProblem("secret=sk_test_123 token=tok_123");
+
+      expect(problem.detail).toBe("secret=[Redacted] token=[Redacted]");
+    });
+  });
+
+  describe("ClerkTokenVerificationUpstreamProblem", () => {
+    it("has correct code and category", () => {
+      const problem = new ClerkTokenVerificationUpstreamProblem({
+        status: 503,
+        message: "Clerk temporarily unavailable",
+      });
+
+      expect(problem.code).toBe("auth-clerk/token-verification-upstream-failed");
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
+      expect(problem.extensions).toMatchObject({
+        operation: "verifyToken",
+        provider: "clerk",
+        retryable: true,
+        upstreamStatus: 503,
+      });
+    });
+
+    it("redacts sensitive detail values", () => {
+      const problem = new ClerkTokenVerificationUpstreamProblem({
+        status: 503,
+        message: "token=tok_123 clerk-secret-key=sk_test_123",
+      });
+
+      expect(problem.detail).toBe(
+        "Clerk verifyToken failed: token=[Redacted] clerk-secret-key=[Redacted]",
+      );
     });
   });
 

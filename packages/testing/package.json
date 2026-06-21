@@ -32,7 +32,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/auth-core": "workspace:*",
     "@croco/billing-core": "workspace:*",
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/events-inmemory": "workspace:*",
     "@croco/framework-context": "workspace:*",

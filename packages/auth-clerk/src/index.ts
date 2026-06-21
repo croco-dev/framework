@@ -1,4 +1,15 @@
 /**
+ * Clerk 인증 readiness diagnostics provider입니다.
+ */
+export {
+  type ClerkAuthDiagnosticsConfig,
+  type ClerkAuthDiagnosticsOptions,
+  ClerkAuthDiagnosticsProvider,
+  type ClerkAuthReadinessCheckContext,
+  type ClerkAuthReadinessCheckResult,
+} from "./libs/ClerkAuthDiagnosticsProvider";
+
+/**
  * Clerk 인증 제공자 생성 옵션입니다.
  */
 export type { ClerkAuthOptions } from "./libs/ClerkAuthProvider";
@@ -60,26 +71,14 @@ export { ClerkUserService } from "./libs/ClerkUserService";
  * Clerk 웹훅 서명 검증과 이벤트 분기를 처리하는 핸들러입니다.
  */
 export { ClerkWebhookHandler } from "./libs/ClerkWebhookHandler";
-/**
- * Clerk 웹훅 서명 검증 실패를 나타내는 Problem입니다.
- */
-/**
- * Clerk 웹훅 본문이 기대한 구조와 다를 때 발생하는 Problem입니다.
- */
-/**
- * Clerk 토큰 검증이 실패했을 때 발생하는 Problem입니다.
- */
-/**
- * Clerk 토큰 클레임 타입이 잘못되었을 때 발생하는 Problem입니다.
- */
-/**
- * Clerk 조직이 이미 다른 tenant에 매핑되어 있을 때 발생하는 Problem입니다.
- */
+export type { ClerkTokenVerificationOperation } from "./libs/problems/ClerkProblems";
 export {
   ClerkExternalServiceProblem,
   ClerkMalformedClaimProblem,
   ClerkPublicUserDataMissingProblem,
   ClerkTokenVerificationProblem,
+  ClerkTokenVerificationUpstreamProblem,
+  createClerkTokenVerificationProblem,
   DuplicateTenantMappingProblem,
   InvalidWebhookPayloadProblem,
   WebhookVerificationProblem,

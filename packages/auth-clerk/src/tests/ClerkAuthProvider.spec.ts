@@ -102,6 +102,20 @@ describe("ClerkAuthProvider", () => {
     );
   });
 
+  it("should fail when verified token subject is missing", async () => {
+    const request = createRequest("Bearer valid-token");
+    const mockVerifiedToken = {
+      email: "test@example.com",
+      org_permissions: ["perm:read"],
+    };
+
+    vi.mocked(verifyToken).mockResolvedValue(mockVerifiedToken as unknown as VerifiedToken);
+
+    await expect(authProvider.authenticate(request)).rejects.toBeInstanceOf(
+      ClerkMalformedClaimProblem,
+    );
+  });
+
   it("should fail when org_permissions claim is not an array", async () => {
     const request = createRequest("Bearer valid-token");
     const mockVerifiedToken = {

@@ -3,6 +3,7 @@ import type { AuthProvider } from "@croco/auth-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BetterAuthFactory } from "../libs/BetterAuthFactory";
 import { BetterAuthProvider } from "../libs/BetterAuthProvider";
+import { BetterAuthAuthenticationProblem } from "../libs/problems/BetterAuthAuthenticationProblem";
 import { BetterAuthInvalidSessionProblem } from "../libs/problems/BetterAuthInvalidSessionProblem";
 
 function createMockBetterAuthFactory(session: Record<string, unknown> | null): BetterAuthFactory {
@@ -253,7 +254,7 @@ describe("BetterAuthProvider", () => {
       expect(providerAsInterface.authenticate).not.toBeUndefined();
     });
 
-    it("should handle API errors gracefully", async () => {
+    it("should map unexpected API errors to a stable Problem", async () => {
       const mockError = new Error("Network error");
       const errorFactory = {
         getAuth: () => ({
@@ -269,7 +270,43 @@ describe("BetterAuthProvider", () => {
 
       const request = createMockRequest();
 
-      await expect(provider.authenticate(request)).rejects.toThrow("Network error");
+      await expect(provider.authenticate(request)).rejects.toBeInstanceOf(
+        BetterAuthAuthenticationProblem,
+      );
+    });
+
+    it("should return null for rejected invalid session lookups", async () => {
+      const errorFactory = {
+        getAuth: () => ({
+          api: {
+            getSession: vi
+              .fn<(args: { headers: Headers }) => Promise<Record<string, unknown> | null>>()
+              .mockRejectedValue({ statusCode: 401 }),
+          },
+        }),
+      } as unknown as BetterAuthFactory;
+
+      provider = new BetterAuthProvider(errorFactory);
+
+      await expect(provider.authenticate(createMockRequest())).resolves.toBeNull();
+    });
+
+    it("should map retryable rejected session lookups to a stable Problem", async () => {
+      const errorFactory = {
+        getAuth: () => ({
+          api: {
+            getSession: vi
+              .fn<(args: { headers: Headers }) => Promise<Record<string, unknown> | null>>()
+              .mockRejectedValue({ statusCode: 429, message: "rate limit" }),
+          },
+        }),
+      } as unknown as BetterAuthFactory;
+
+      provider = new BetterAuthProvider(errorFactory);
+
+      await expect(provider.authenticate(createMockRequest())).rejects.toBeInstanceOf(
+        BetterAuthAuthenticationProblem,
+      );
     });
 
     it("should handle malformed session response", async () => {

@@ -6,6 +6,7 @@ import {
   BetterAuthSessionNotFoundProblem,
   BetterAuthUserNotFoundProblem,
 } from "../libs/problems/AuthProblems";
+import { BetterAuthAuthenticationProblem } from "../libs/problems/BetterAuthAuthenticationProblem";
 import { BetterAuthInvalidSessionProblem } from "../libs/problems/BetterAuthInvalidSessionProblem";
 import { BetterAuthSessionLookupProblem } from "../libs/problems/BetterAuthSessionLookupProblem";
 import {
@@ -55,6 +56,34 @@ describe("BetterAuthSessionLookupProblem", () => {
   it("should return 500 status", () => {
     const problem = new BetterAuthSessionLookupProblem(new Error("upstream failed"));
     expect(problem.status).toBe(500);
+  });
+});
+
+describe("BetterAuthAuthenticationProblem", () => {
+  it("should have stable code and category", () => {
+    const problem = new BetterAuthAuthenticationProblem("authenticate", {
+      status: 503,
+      message: "Better Auth temporarily unavailable",
+    });
+
+    expect(problem.code).toBe("auth-better-auth/authentication-failed");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.extensions).toMatchObject({
+      operation: "authenticate",
+      provider: "better-auth",
+      retryable: true,
+      upstreamStatus: 503,
+    });
+  });
+
+  it("should redact sensitive detail values", () => {
+    const problem = new BetterAuthAuthenticationProblem("readiness", {
+      message: "token=tok_123 better-auth-url=https://secret.example.com",
+    });
+
+    expect(problem.detail).toBe(
+      "Better Auth readiness failed: token=[Redacted] better-auth-url=[Redacted]",
+    );
   });
 });
 

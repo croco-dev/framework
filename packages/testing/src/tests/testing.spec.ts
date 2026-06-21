@@ -1,14 +1,13 @@
 import "reflect-metadata";
 import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
-import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
-import type { TransactionContext } from "@croco/framework-context";
-import { DomainEvent, RegisterEventHandler } from "@croco/events-core";
 import type { EventHandler } from "@croco/events-core";
-import { InMemoryLlmModel } from "@croco/llm-core";
+import { DomainEvent, RegisterEventHandler } from "@croco/events-core";
+import type { TransactionContext } from "@croco/framework-context";
+import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
 import type { GenerateParams, GenerateResult } from "@croco/llm-core";
+import { InMemoryLlmModel } from "@croco/llm-core";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param } from "@croco/protocols-rest";
-import { RateLimitStore } from "@croco/ratelimit-core";
 import type {
   RateLimitPolicy,
   RateLimitRefundReceipt,
@@ -16,33 +15,35 @@ import type {
   RateLimitResult,
   RateLimitStats,
 } from "@croco/ratelimit-core";
+import { RateLimitStore } from "@croco/ratelimit-core";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  assertOpenAPIRoute,
   assertDrizzleProblem,
+  assertOpenAPIRoute,
   assertProblemResponse,
+  createAuthProviderConformanceSuite,
   createBillingProviderConformanceSuite,
   createDrizzleProviderConformanceSuite,
   createEventTestingHarness,
   createLlmProviderConformanceSuite,
   createProviderConformanceMatrixSuite,
   createQStashTaskConformanceSuite,
-  createStorageProviderConformanceSuite,
-  createUpstashRedisRateLimitConformanceSuite,
   createRpcTestFetch,
+  createStorageProviderConformanceSuite,
   createTestingApp,
   createTestingRequestContext,
   createTestingTransactionContext,
+  createUpstashRedisRateLimitConformanceSuite,
   installTestingTelemetryCapture,
-  resetCrocoTestingContext,
-  runWithTestingContext,
-  TestingTransactionContext,
   type QStashTaskConformanceScenario,
   type QStashTaskExecuteOptions,
   type QStashTaskPublisher,
   type QStashTaskPublishRecord,
+  resetCrocoTestingContext,
+  runWithTestingContext,
+  TestingTransactionContext,
   type TestLogger,
   type UpstashRedisRateLimitConformanceScenario,
 } from "../index";
@@ -346,7 +347,9 @@ describe("@croco/testing", () => {
     const response = await app.get("/greetings/Ada");
 
     expect(response.status).toBe(200);
-    await expect(readJson(response)).resolves.toEqual({ message: "Hello, Ada" });
+    await expect(readJson(response)).resolves.toEqual({
+      message: "Hello, Ada",
+    });
   });
 
   it("resets provider state between testing apps", async () => {
@@ -417,7 +420,9 @@ describe("@croco/testing", () => {
 
     const generatedStyleClient = {
       getGreeting: async (name: string) => {
-        const response = await rpcFetch(`/greetings/${name}`, { method: "GET" });
+        const response = await rpcFetch(`/greetings/${name}`, {
+          method: "GET",
+        });
         return readJson(response);
       },
     };
@@ -476,7 +481,9 @@ describe("@croco/testing", () => {
 
   it("resets transaction context hooks between testing contexts", async () => {
     const committed: string[] = [];
-    const transactionContext = createTestingTransactionContext({ inTransaction: true });
+    const transactionContext = createTestingTransactionContext({
+      inTransaction: true,
+    });
 
     resetCrocoTestingContext({ transactionContext });
     const registered = Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN);
@@ -567,7 +574,9 @@ describe("@croco/testing", () => {
 
     expect(committed).toEqual(["first", "second"]);
     expect(logger.error).toHaveBeenCalledWith("AfterCommit hook failed:", {
-      error: expect.objectContaining({ code: "testing/after-commit-hook-failed" }),
+      error: expect.objectContaining({
+        code: "testing/after-commit-hook-failed",
+      }),
     });
   });
 
@@ -739,6 +748,191 @@ describe("@croco/testing", () => {
       }).cases,
     )("$name", async ({ run }) => {
       await run();
+    });
+  });
+
+  describe("auth provider conformance", () => {
+    it("creates executable auth provider conformance cases", async () => {
+      const liveSmokeRun = vi.fn();
+      let validWebhookHandled = false;
+      const expectedUser = {
+        id: "user_123",
+        email: "user@example.com",
+        roles: ["admin"],
+        permissions: ["tenant:read"],
+        metadata: {
+          orgId: "org_123",
+          tenantId: "tenant_123",
+        },
+      };
+      const suite = createAuthProviderConformanceSuite({
+        providerName: "testing-auth",
+        secretSamples: ["super-secret"],
+        auth: {
+          expectedUser,
+          authenticateValid: () => expectedUser,
+          authenticateMissingCredentials: () => null,
+          invalidCredentials: {
+            allowNull: true,
+            run: () => null,
+          },
+          malformedPayload: {
+            code: "testing/provider-terminal",
+            category: ProblemCategory.BadRequest,
+            retryable: false,
+            run: () => {
+              throw new ConformanceProviderProblem("malformed token payload", false);
+            },
+          },
+          upstreamFailure: {
+            code: "testing/provider-retryable",
+            category: ProblemCategory.InternalServerError,
+            retryable: true,
+            run: () => {
+              throw new ConformanceProviderProblem("retryable outage token=[Redacted]", true);
+            },
+          },
+        },
+        webhooks: {
+          processValid: () => {
+            validWebhookHandled = true;
+          },
+          invalidSignature: {
+            code: "testing/provider-terminal",
+            category: ProblemCategory.BadRequest,
+            retryable: false,
+            run: () => {
+              throw new ConformanceProviderProblem("invalid webhook signature", false);
+            },
+          },
+          invalidPayload: {
+            code: "testing/provider-terminal",
+            category: ProblemCategory.BadRequest,
+            retryable: false,
+            run: () => {
+              throw new ConformanceProviderProblem("invalid webhook payload", false);
+            },
+          },
+        },
+        readiness: {
+          requiredEnv: ["AUTH_SECRET"],
+          createMissingConfigHealth: () => ({
+            status: "unhealthy",
+            component: "testing-auth",
+            message: "Missing AUTH_SECRET",
+            details: {
+              requiredEnv: ["AUTH_SECRET"],
+              hasSecret: false,
+            },
+            lastChecked: new Date("2026-01-01T00:00:00Z").toISOString(),
+          }),
+          createReadyHealth: () => ({
+            status: "healthy",
+            component: "testing-auth",
+            message: "Auth configuration is present",
+            details: {
+              requiredEnv: ["AUTH_SECRET"],
+              hasSecret: true,
+            },
+            lastChecked: new Date("2026-01-01T00:00:00Z").toISOString(),
+          }),
+        },
+        tenantMapping: {
+          createEvidence: () => ({
+            externalOrgId: "org_123",
+            expectedTenantId: "tenant_123",
+            resolvedTenantId: "tenant_123",
+            unknownResolvedTenantId: null,
+            userMetadata: expectedUser.metadata,
+            expectedUserMetadata: {
+              orgId: "org_123",
+              tenantId: "tenant_123",
+            },
+          }),
+        },
+        liveSmoke: {
+          requiredEnv: ["AUTH_LIVE_TOKEN"],
+          isEnabled: () => false,
+          run: liveSmokeRun,
+        },
+      });
+
+      expect(suite.cases.map((testCase) => testCase.name)).toContain(
+        "keeps live auth smoke optional and skipped unless explicitly env-gated",
+      );
+
+      for (const testCase of suite.cases) {
+        await testCase.run();
+      }
+
+      expect(validWebhookHandled).toBe(true);
+      expect(liveSmokeRun).not.toHaveBeenCalled();
+    });
+
+    it("fails when auth conformance evidence leaks secret samples", async () => {
+      const suite = createAuthProviderConformanceSuite({
+        providerName: "leaky-auth",
+        secretSamples: ["super-secret"],
+        auth: {
+          expectedUser: {
+            id: "user_123",
+            roles: [],
+            permissions: [],
+          },
+          authenticateValid: () => ({
+            id: "user_123",
+            roles: [],
+            permissions: [],
+          }),
+          authenticateMissingCredentials: () => null,
+          invalidCredentials: {
+            allowNull: true,
+            run: () => null,
+          },
+          malformedPayload: {
+            code: "testing/provider-terminal",
+            run: () => {
+              throw new ConformanceProviderProblem("malformed payload", false);
+            },
+          },
+          upstreamFailure: {
+            code: "testing/provider-retryable",
+            run: () => {
+              throw new ConformanceProviderProblem("upstream leaked token=super-secret", true);
+            },
+          },
+        },
+        webhooks: {
+          processValid: () => undefined,
+          invalidSignature: {
+            code: "testing/provider-terminal",
+            run: () => {
+              throw new ConformanceProviderProblem("invalid webhook signature", false);
+            },
+          },
+        },
+        readiness: {
+          requiredEnv: ["AUTH_SECRET"],
+          createMissingConfigHealth: () => ({
+            status: "unhealthy",
+            component: "leaky-auth",
+            message: "Missing AUTH_SECRET",
+            details: { requiredEnv: ["AUTH_SECRET"] },
+            lastChecked: new Date("2026-01-01T00:00:00Z").toISOString(),
+          }),
+        },
+      });
+      const upstreamCase = suite.cases.find((testCase) =>
+        testCase.name.includes("upstream auth failures"),
+      );
+      expect(upstreamCase).toBeDefined();
+      if (!upstreamCase) {
+        throw new ConformanceProviderProblem("missing upstream auth failures test case", false);
+      }
+
+      await expect(upstreamCase.run()).rejects.toThrow(
+        "Conformance evidence must not leak secret sample 'super-secret'.",
+      );
     });
   });
 
@@ -1230,7 +1424,10 @@ describe("@croco/testing", () => {
           createHandler: () => new InMemoryBillingWebhookHandler(),
           fixtures: {
             subscription: {
-              body: JSON.stringify({ id: "evt-subscription", type: "subscription.created" }),
+              body: JSON.stringify({
+                id: "evt-subscription",
+                type: "subscription.created",
+              }),
               headers: { "webhook-signature": "valid" },
               eventId: "evt-subscription",
             },
@@ -1240,7 +1437,10 @@ describe("@croco/testing", () => {
               eventId: "evt-order",
             },
             invalidSignature: {
-              body: JSON.stringify({ id: "evt-invalid-signature", type: "subscription.created" }),
+              body: JSON.stringify({
+                id: "evt-invalid-signature",
+                type: "subscription.created",
+              }),
               headers: { "webhook-signature": "invalid" },
               eventId: "evt-invalid-signature",
             },

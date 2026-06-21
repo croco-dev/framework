@@ -40,6 +40,8 @@ export default defineConfig({
             "../admin-ops/src/index.ts",
             "../analytics-core/src/index.ts",
             "../audit-core/src/index.ts",
+            "../auth-better-auth/src/index.ts",
+            "../auth-clerk/src/index.ts",
             "../auth-core/src/index.ts",
             "../billing-core/src/index.ts",
             "../batch-qstash/src/index.ts",
