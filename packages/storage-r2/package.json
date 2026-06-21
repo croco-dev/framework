@@ -42,6 +42,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1057.0",
     "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-config": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",

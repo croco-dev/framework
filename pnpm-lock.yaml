@@ -2522,6 +2522,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1057.0
         version: 3.1057.0
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-config':
         specifier: workspace:*
         version: link:../framework-config

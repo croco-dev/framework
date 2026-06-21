@@ -14905,6 +14905,18 @@
           "declarationKind": "class"
         },
         {
+          "name": "R2ReadinessProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/R2ReadinessProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "R2StorageDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/R2StorageDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "R2StorageProvider",
           "exportKind": "named",
           "source": "./libs/R2StorageProvider",
@@ -14916,6 +14928,21 @@
           "name": "R2Options",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "R2ReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/R2StorageDiagnosticsProvider"
+        },
+        {
+          "name": "R2ReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/R2StorageDiagnosticsProvider"
+        },
+        {
+          "name": "R2StorageDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/R2StorageDiagnosticsProvider"
         }
       ]
     },
