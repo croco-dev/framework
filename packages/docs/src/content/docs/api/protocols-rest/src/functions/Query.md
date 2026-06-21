@@ -5,7 +5,7 @@ prev: false
 title: "Query"
 ---
 
-## Call Signature
+## Contract Overload
 
 > **Query**\<`TContract`, `Name`\>(`contract`, `name`): `ParameterDecorator`
 
@@ -15,11 +15,11 @@ title: "Query"
 
 #### TContract
 
-`TContract` *extends* [`RouteContractWithQuery`](/api/protocols-rest/src/type-aliases/routecontractwithquery/)
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
 
 #### Name
 
-`Name` *extends* `string`
+`Name` *extends* keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
 
 ### Parameters
 
@@ -35,7 +35,7 @@ title: "Query"
 
 `ParameterDecorator`
 
-## Call Signature
+## Schema Overload
 
 > **Query**(`name`, `schema?`): `ParameterDecorator`
 

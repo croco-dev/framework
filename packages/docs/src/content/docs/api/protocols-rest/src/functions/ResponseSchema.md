@@ -5,15 +5,17 @@ prev: false
 title: "ResponseSchema"
 ---
 
-## Call Signature
+## Contract Overload
 
 > **ResponseSchema**\<`TContract`\>(`contract`): `MethodDecorator`
+
+응답 스키마를 메서드에 바인딩합니다.
 
 ### Type Parameters
 
 #### TContract
 
-`TContract` *extends* [`RouteContractWithResponse`](/api/protocols-rest/src/type-aliases/routecontractwithresponse/)
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly response: z.ZodType }`
 
 ### Parameters
 
@@ -25,9 +27,11 @@ title: "ResponseSchema"
 
 `MethodDecorator`
 
-## Call Signature
+## Schema Overload
 
 > **ResponseSchema**(`schema`): `MethodDecorator`
+
+응답 스키마를 메서드에 바인딩합니다.
 
 ### Parameters
 

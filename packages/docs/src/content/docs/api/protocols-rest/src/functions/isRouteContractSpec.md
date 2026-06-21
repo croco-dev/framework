@@ -5,7 +5,9 @@ prev: false
 title: "isRouteContractSpec"
 ---
 
-> **isRouteContractSpec**(`value`): `value is AnyRouteContractSpec`
+> **isRouteContractSpec**(`value`): `value is RouteContractSpec`
+
+Route contract decorator overloads use this guard to distinguish contract objects from direct schema arguments at runtime.
 
 ## Parameters
 
@@ -15,4 +17,13 @@ title: "isRouteContractSpec"
 
 ## Returns
 
-`value is AnyRouteContractSpec`
+`value is RouteContractSpec`
+
+## Example
+
+```ts
+if (isRouteContractSpec(value)) {
+  value.method;
+  value.path;
+}
+```

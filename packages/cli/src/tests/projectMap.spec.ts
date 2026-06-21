@@ -1,15 +1,13 @@
+import { describe, expect, it } from "vitest";
 import type { PolicyTable, RuntimeCapabilityName } from "@croco/framework-context";
 import type { FrameworkManifest } from "@croco/framework-routes";
 import type { ContractDiagnostic, ContractGraphSnapshot } from "@croco/protocols-core";
-import { describe, expect, it } from "vitest";
 import {
   createProjectMapManifest,
   runProjectMap,
   stringifyProjectMapManifest,
-  type ProjectMapDirent,
-  type ProjectMapIo,
-  type ProjectMapPackage,
 } from "../commands/projectMap.js";
+import type { ProjectMapDirent, ProjectMapIo, ProjectMapPackage } from "../commands/projectMap.js";
 
 describe("projectMap", () => {
   it("writes a deterministic Project Map manifest snapshot", async () => {

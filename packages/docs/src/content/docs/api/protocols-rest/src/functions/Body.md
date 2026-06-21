@@ -5,7 +5,7 @@ prev: false
 title: "Body"
 ---
 
-## Call Signature
+## Contract Overload
 
 > **Body**\<`TContract`\>(`contract`): `ParameterDecorator`
 
@@ -15,7 +15,7 @@ title: "Body"
 
 #### TContract
 
-`TContract` *extends* [`RouteContractWithBody`](/api/protocols-rest/src/type-aliases/routecontractwithbody/)
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly body: z.ZodType }`
 
 ### Parameters
 
@@ -27,7 +27,7 @@ title: "Body"
 
 `ParameterDecorator`
 
-## Call Signature
+## Schema Overload
 
 > **Body**(`schema?`): `ParameterDecorator`
 

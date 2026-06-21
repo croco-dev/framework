@@ -5,7 +5,7 @@ prev: false
 title: "RouteContractWithResponse"
 ---
 
-> **RouteContractWithResponse** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `object`
+> **RouteContractWithResponse** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly response: z.ZodType }`
 
 ## Type Declaration
 

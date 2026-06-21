@@ -5,7 +5,7 @@ prev: false
 title: "RouteContractWithQuery"
 ---
 
-> **RouteContractWithQuery** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `object`
+> **RouteContractWithQuery** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
 
 ## Type Declaration
 

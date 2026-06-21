@@ -5,7 +5,7 @@ prev: false
 title: "Param"
 ---
 
-## Call Signature
+## Contract Overload
 
 > **Param**\<`TContract`, `Name`\>(`contract`, `name`): `ParameterDecorator`
 
@@ -15,11 +15,11 @@ title: "Param"
 
 #### TContract
 
-`TContract` *extends* [`RouteContractWithParams`](/api/protocols-rest/src/type-aliases/routecontractwithparams/)
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly params: AnyZodObject }`
 
 #### Name
 
-`Name` *extends* `string`
+`Name` *extends* [`RoutePathParamName`](/api/protocols-rest/src/type-aliases/routepathparamname/)\<`TContract`\[`"path"`\]\> & keyof [`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\> & `string`
 
 ### Parameters
 
@@ -35,7 +35,7 @@ title: "Param"
 
 `ParameterDecorator`
 
-## Call Signature
+## Schema Overload
 
 > **Param**(`name`, `schema?`): `ParameterDecorator`
 

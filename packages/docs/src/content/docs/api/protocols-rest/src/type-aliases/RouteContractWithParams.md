@@ -5,7 +5,7 @@ prev: false
 title: "RouteContractWithParams"
 ---
 
-> **RouteContractWithParams** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `object`
+> **RouteContractWithParams** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly params: AnyZodObject }`
 
 ## Type Declaration
 

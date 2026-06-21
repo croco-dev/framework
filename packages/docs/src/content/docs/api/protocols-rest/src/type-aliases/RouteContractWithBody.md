@@ -5,7 +5,7 @@ prev: false
 title: "RouteContractWithBody"
 ---
 
-> **RouteContractWithBody** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `object`
+> **RouteContractWithBody** = [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly body: z.ZodType }`
 
 ## Type Declaration
 

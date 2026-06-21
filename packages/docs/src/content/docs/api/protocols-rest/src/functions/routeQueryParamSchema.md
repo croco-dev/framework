@@ -11,11 +11,11 @@ title: "routeQueryParamSchema"
 
 ### TContract
 
-`TContract` *extends* [`RouteContractWithQuery`](/api/protocols-rest/src/type-aliases/routecontractwithquery/)
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
 
 ### Name
 
-`Name` *extends* `string`
+`Name` *extends* keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
 
 ## Parameters
 
