@@ -238,6 +238,23 @@ const app = createApp({
 
 기존 `unsafeSkipSecurityValidation: true` 플래그도 하위 호환용으로 지원되지만, 새 설정에는 `securityValidation: 'off'` 사용을 권장합니다.
 
+DI graph도 HTTP bootstrap에서 같은 정책으로 검증됩니다. production 기본값은 `enforce`,
+development/test 기본값은 `warn`이며, `Container.validate({ force: true })`를 실행하고
+컨트롤러, guard, interceptor, filter, pipe constructor가 Croco DI에 등록되어 있는지 route
+registration 전에 확인합니다.
+
+```typescript
+const app = createApp({
+  controllers: [UserController],
+  diValidation: "enforce",
+});
+```
+
+마이그레이션 중 아직 컨트롤러나 provider를 명시적으로 등록하지 않았다면 `warn` 또는 `off`를
+선택할 수 있습니다. `warn`은 동일한 diagnostic을 logger warning으로 남긴 뒤 legacy
+`new type()` fallback을 허용하고, `off` 또는 `unsafeSkipDiValidation: true`는 검증과
+fallback 차단을 모두 끕니다. 운영 경로에서는 `enforce`를 권장합니다.
+
 ### Required middleware
 
 | Middleware                  | Export                   | Purpose                                                                        |

@@ -20,6 +20,8 @@ export interface AppConfig {
   middlewares?: MiddlewareFunction[];
   securityValidation?: "enforce" | "warn" | "off";
   unsafeSkipSecurityValidation?: true;
+  diValidation?: "enforce" | "warn" | "off";
+  unsafeSkipDiValidation?: true;
   globalFilters?: FilterProvider[];
   globalGuards?: GuardProvider[];
   globalInterceptors?: InterceptorProvider[];

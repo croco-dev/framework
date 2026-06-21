@@ -28,6 +28,7 @@ export function createCrocoApp() {
 
   return createApp({
     controllers: [UserController],
+    diValidation: "off",
     globalFilters: [HttpExceptionFilter],
     middlewares: [
       securityHeadersMiddleware(),

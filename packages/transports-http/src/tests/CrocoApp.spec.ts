@@ -2,7 +2,13 @@ import "reflect-metadata";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { Container, Context as FrameworkContext, LOGGER_TOKEN } from "@croco/framework-context";
+import {
+  Component,
+  Container,
+  Context as FrameworkContext,
+  type ILogger,
+  LOGGER_TOKEN,
+} from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import {
   type ArgumentMetadata,
@@ -555,6 +561,173 @@ describe("CrocoApp", () => {
     const response = await app.fetch(new Request("http://localhost/api/hello"));
 
     expect(response.status).toBe(200);
+  });
+
+  it("should fail bootstrap when diValidation is enforce and a controller is not registered", () => {
+    const app = createApp({
+      controllers: [TestController],
+      diValidation: "enforce",
+    });
+
+    let error: unknown;
+    try {
+      app.lambdaHandler();
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toMatchObject({
+      code: "transports-http/di-bootstrap-validation",
+    });
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("Provider TestController is not registered");
+  });
+
+  it("should enforce DI validation by default in production", () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousDiValidation = process.env.CROCO_HTTP_DI_VALIDATION;
+    process.env.NODE_ENV = "production";
+    delete process.env.CROCO_HTTP_DI_VALIDATION;
+
+    try {
+      const app = createApp({
+        controllers: [TestController],
+      });
+
+      expect(() => app.lambdaHandler()).toThrow(/Provider TestController is not registered/);
+    } finally {
+      process.env.NODE_ENV = previousNodeEnv;
+      if (previousDiValidation === undefined) {
+        delete process.env.CROCO_HTTP_DI_VALIDATION;
+      } else {
+        process.env.CROCO_HTTP_DI_VALIDATION = previousDiValidation;
+      }
+    }
+  });
+
+  it("should warn and bootstrap when diValidation is warn", async () => {
+    const warn = vi.fn();
+    const logger: ILogger = {
+      debug: () => undefined,
+      info: () => undefined,
+      warn,
+      error: () => undefined,
+      child: () => logger,
+    };
+    Container.set(LOGGER_TOKEN, logger);
+
+    const app = createApp({
+      controllers: [TestController],
+      diValidation: "warn",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Provider TestController is not registered"),
+    );
+  });
+
+  it("should keep the explicit diValidation off migration path silent", async () => {
+    const warn = vi.fn();
+    const logger: ILogger = {
+      debug: () => undefined,
+      info: () => undefined,
+      warn,
+      error: () => undefined,
+      child: () => logger,
+    };
+    Container.set(LOGGER_TOKEN, logger);
+
+    const app = createApp({
+      controllers: [TestController],
+      diValidation: "off",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("should keep the unsafe DI validation escape hatch on the legacy fallback", async () => {
+    const warn = vi.fn();
+    const logger: ILogger = {
+      debug: () => undefined,
+      info: () => undefined,
+      warn,
+      error: () => undefined,
+      child: () => logger,
+    };
+    Container.set(LOGGER_TOKEN, logger);
+
+    const app = createApp({
+      controllers: [TestController],
+      unsafeSkipDiValidation: true,
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("should bootstrap in diValidation enforce when the controller is registered", async () => {
+    Container.set(TestController, new TestController());
+
+    const app = createApp({
+      controllers: [TestController],
+      diValidation: "enforce",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+  });
+
+  it("should fail bootstrap for circular DI graphs when diValidation is enforce", () => {
+    class ServiceA {
+      constructor(_service: ServiceB) {}
+    }
+
+    class ServiceB {
+      constructor(_service: ServiceA) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceA);
+    Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceB);
+    Component({ scope: "singleton" })(ServiceA);
+    Component({ scope: "singleton" })(ServiceB);
+
+    const app = createApp({
+      controllers: [],
+      diValidation: "enforce",
+    });
+
+    expect(() => app.lambdaHandler()).toThrow(/Circular dependency detected/);
+  });
+
+  it("should fail bootstrap for singleton to request scope mismatch when diValidation is enforce", () => {
+    class RequestRepository {}
+
+    class UserService {
+      constructor(_repository: RequestRepository) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [], RequestRepository);
+    Reflect.defineMetadata("design:paramtypes", [RequestRepository], UserService);
+    Component({ scope: "request" })(RequestRepository);
+    Component({ scope: "singleton" })(UserService);
+
+    const app = createApp({
+      controllers: [],
+      diValidation: "enforce",
+    });
+
+    expect(() => app.lambdaHandler()).toThrow(
+      /Singleton-scoped component UserService cannot depend on request-scoped component RequestRepository/,
+    );
   });
 
   it("should extract path params", async () => {

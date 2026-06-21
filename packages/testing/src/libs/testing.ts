@@ -391,6 +391,7 @@ export function createTestingApp(options: TestingAppOptions): CrocoTestingApp {
     createApp({
       ...appConfig,
       controllers: appConfig.controllers as AppConfig["controllers"],
+      diValidation: appConfig.diValidation ?? "off",
       securityValidation: appConfig.securityValidation ?? "off",
     }),
     { baseUrl },

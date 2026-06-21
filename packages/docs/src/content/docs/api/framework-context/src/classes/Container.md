@@ -337,7 +337,13 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ### validate()
 
-> `static` **validate**(): `void`
+> `static` **validate**(`options?`): `void`
+
+#### Parameters
+
+##### options?
+
+[`ContainerValidationOptions`](/api/framework-context/src/type-aliases/containervalidationoptions/) = `{}`
 
 #### Returns
 

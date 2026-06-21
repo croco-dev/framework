@@ -15,6 +15,7 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/dist/**"],
     testTimeout: 10000,
     env: {
+      CROCO_HTTP_DI_VALIDATION: "off",
       CROCO_HTTP_SECURITY_VALIDATION: "off",
     },
   },

@@ -32,6 +32,9 @@ import type {
 } from "./types";
 
 export type TokenIdentifier<T> = Constructor<T> | TypeDIToken<T> | string | symbol;
+export type ContainerValidationOptions = {
+  readonly force?: boolean;
+};
 
 const COMPONENT_METADATA_KEY = Symbol("component:metadata");
 
@@ -163,12 +166,12 @@ export class Container {
     Container.validated = false;
   }
 
-  static validate(): void {
+  static validate(options: ContainerValidationOptions = {}): void {
     if (Container.validated) {
       return;
     }
 
-    if (!Container.isValidationEnabled()) {
+    if (!options.force && !Container.isValidationEnabled()) {
       return;
     }
 
@@ -180,6 +183,7 @@ export class Container {
 
     const graph = Container.buildDependencyGraph(nodes);
     Container.assertNoCircularDependency(nodes, graph);
+    Container.assertNoDependencyGraphDiagnostics(nodes);
 
     Container.validated = true;
   }
@@ -298,6 +302,26 @@ export class Container {
         visit(node);
       }
     }
+  }
+
+  private static assertNoDependencyGraphDiagnostics(nodes: Constructor[]): void {
+    const traces = nodes.map((node) => Container.buildResolutionTrace(node));
+    const diagnostics = Container.createGraphDiagnostics(traces);
+    const errorDiagnostic = diagnostics.find((diagnostic) => diagnostic.severity === "error");
+
+    if (!errorDiagnostic) {
+      return;
+    }
+
+    throw ProblemFactory.internalServerError(errorDiagnostic.code, errorDiagnostic.message, {
+      extensions: {
+        resolution: errorDiagnostic.trace,
+        token: errorDiagnostic.token,
+        tokenId: errorDiagnostic.tokenId,
+        path: errorDiagnostic.path,
+        pathIds: errorDiagnostic.pathIds,
+      },
+    });
   }
 
   private static createGraphProviders(

@@ -6134,6 +6134,11 @@
           "source": "./libs/problems/ContainerResolutionProblem"
         },
         {
+          "name": "ContainerValidationOptions",
+          "exportKind": "named",
+          "source": "./libs/Container"
+        },
+        {
           "name": "DefinePolicyOptions",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy"
