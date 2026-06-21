@@ -4,7 +4,7 @@
 
 React 앱에서 Croco의 SSR 기능을 사용하기 위한 유틸리티 패키지입니다.
 
-이 패키지는 React 앱에서 Vike와 함께 Croco의 SSR 데이터 전송 기능을 사용하기 위한 훅과 설정 함수를 제공합니다.
+이 패키지는 React 앱에서 `@croco/meta-vite`와 함께 Croco의 SSR 데이터 전송 기능을 사용하기 위한 훅과 설정 함수를 제공합니다.
 또한 generated client나 앱별 auth provider가 반환한 세션, 테넌트, 권한, 엔터틀먼트 상태를
 React에서 명시적으로 표현하는 provider-neutral bridge를 제공합니다.
 
@@ -18,10 +18,10 @@ pnpm add @croco/frontend-react
 
 ### 페이지 설정
 
-각 페이지의 `+config.ts`에서 기본 설정을 사용합니다:
+각 페이지의 meta-vite route 또는 generated page config에서 기본 설정을 사용합니다:
 
 ```typescript
-// pages/index/+config.ts
+// pages/index/route.ts
 import { createCrocoPageConfig } from "@croco/frontend-react";
 
 export default createCrocoPageConfig({ ssr: true });
@@ -56,6 +56,38 @@ export default function Page() {
   return <div>{data.message}</div>;
 }
 ```
+
+### meta-vite profile assumptions
+
+`@croco/frontend-react`의 SSR 데이터 훅은 `@croco/meta-vite`가 렌더링한 React 페이지에서
+`PageDataProvider`로 전달된 page context를 읽는 경계만 담당합니다. Route registration,
+`RenderServer`, Vite plugin, Cloudflare Worker/Lambda adapter wiring은 generated profile 또는
+앱의 `@croco/meta-vite` 설정이 소유합니다.
+
+현재 package/runtime evidence는 아래 profile을 기준으로 합니다:
+
+- package test: `pnpm --filter @croco/frontend-react test`
+  - `usePageData`/`usePageMeta`가 React render path에서 page data와 meta를 노출하는지 검증합니다.
+  - `createCrocoPageConfig`의 `mode`가 `@croco/meta-vite` `RenderMode`와 호환되고, route `path`
+    registration을 config helper에 섞지 않는지 검증합니다.
+- generated fullstack smoke: `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke`
+  - `ddd-vike-fullstack` + `--frontend-deploy cloudflare-meta-vite` generated profile에서
+    `@croco/meta-vite` page/API/action/ISR smoke를 실행합니다.
+  - `react-dom/server` + `react-dom/client` + generated DOM harness로 browser hydration을 검증하고,
+    `PageDataProvider`로 전달된 page data가 hydration 후 DOM에 남는지 확인합니다.
+  - stale server markup과 client page data mismatch가 `onRecoverableError`로 드러나는지 검증해,
+    client-side hydration failure를 성공처럼 처리하지 않습니다.
+
+Unsupported states:
+
+- `PageDataProvider` 없이 `usePageData<T>()`를 호출하면 `undefined`를 반환합니다. 앱은 이 상태를
+  성공 data payload로 취급하지 않아야 합니다.
+- 이 패키지는 직접 DOM을 만들거나 `hydrateRoot`를 호출하지 않습니다. Browser hydration bootstrap은
+  generated app entrypoint 또는 앱별 `@croco/meta-vite` runtime wiring에서 소유해야 합니다.
+- `createCrocoPageConfig`의 `path` 옵션은 route registration source of truth가 아닙니다. Route path는
+  `@croco/meta-vite` `defineRoute()` 또는 generated route manifest에서 선언해야 합니다.
+- 검증된 generated profile 밖에서 custom Vite/React adapter를 조합하는 경우, 동일한 hydration
+  mismatch visibility check를 앱 smoke에 추가한 뒤 runtime claim을 확장해야 합니다.
 
 ### Auth / entitlement bridge
 
@@ -144,7 +176,7 @@ export function AppBoundary({ children }: { children: ReactNode }) {
 
 ### `createCrocoPageConfig(options?)`
 
-Vike 페이지 설정의 기본값을 제공합니다.
+meta-vite page config helper의 기본값을 제공합니다.
 
 **옵션:**
 
@@ -154,14 +186,15 @@ Vike 페이지 설정의 기본값을 제공합니다.
 
 ```typescript
 {
-  ssr: boolean;
-  passToClient: readonly[("data", "title", "description")];
+  mode: "ssr" | "ssg" | "isr" | "rsc";
+  head?: () => { title?: string; description?: string };
+  revalidateMs?: number;
 }
 ```
 
 ### `usePageData<T>()`
 
-Vike의 `usePageContext`를 래핑하여 데이터에 타입 안전 접근을 제공합니다.
+`PageDataProvider`로 전달된 SSR page data에 타입 안전 접근을 제공합니다.
 
 **제네릭:**
 

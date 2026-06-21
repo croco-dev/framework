@@ -202,6 +202,7 @@
         "framework-module",
         "framework-preset",
         "framework-routes",
+        "frontend-react",
         "gid-core",
         "governance-core",
         "health-core",
@@ -253,7 +254,6 @@
         "execution-drizzle",
         "frontend-cloudflare",
         "frontend-problems",
-        "frontend-react",
         "frontend-vite",
         "invitation-drizzle",
         "membership-drizzle",
@@ -426,6 +426,9 @@
         "features": [
           "React bindings",
           "meta-vite integration",
+          "browser hydration smoke",
+          "page data hydration flow",
+          "generated meta-vite fullstack smoke",
           "auth gate primitives",
           "tenant and entitlement bridge"
         ]
