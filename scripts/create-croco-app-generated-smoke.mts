@@ -158,6 +158,7 @@ const smokeCases: readonly SmokeCase[] = [
       "--no-git",
     ],
     validations: [
+      { label: "typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
       {
         label: "OpenNext deployment files",
         packagePath: ["apps", "web"],

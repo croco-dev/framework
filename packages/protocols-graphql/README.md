@@ -13,6 +13,8 @@ metadata while transports decide how schemas are executed.
 - Metadata readers for registered resolvers.
 - Guard and interceptor contracts plus default guard/interceptor helpers.
 - GraphQL Problem mapping utilities.
+- Versioned GraphQL contract snapshots and diffs for deterministic SDL and Croco
+  resolver metadata review.
 
 ## Usage
 
@@ -27,6 +29,28 @@ class HealthResolver {
   }
 }
 ```
+
+## Contract Snapshots
+
+Use `createGraphQLContractSnapshot()` after schema compilation to persist the stable
+SDL plus Croco-specific resolver metadata:
+
+```typescript
+import {
+  createGraphQLContractSnapshot,
+  diffGraphQLContractSnapshots,
+  stringifyGraphQLContractSnapshot,
+} from "@croco/protocols-graphql";
+
+const snapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResolver] });
+const diff = diffGraphQLContractSnapshots(baselineSnapshot, snapshot);
+```
+
+Snapshots use `croco.graphql-contract.snapshot.v1` and include root operations,
+resolver DI scope, method roles, guards, interceptors, and declared
+`GraphQLProblemResponse` mappings. Diffs classify GraphQL schema breaking changes
+with `graphql`'s schema comparison utilities and treat resolver metadata changes as
+breaking contract drift.
 
 ## Verification
 

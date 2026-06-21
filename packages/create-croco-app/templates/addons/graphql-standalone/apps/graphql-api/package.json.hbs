@@ -5,12 +5,15 @@
   "type": "commonjs",
   "main": "./src/index.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs --clean",
+    "build": "pnpm contract:check && tsup src/index.ts --format cjs --clean",
+    "contract:check": "tsx src/graphql-contract.ts --check",
+    "contract:snapshot": "tsx src/graphql-contract.ts --write",
     "dev": "tsx watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm contract:check && tsc --noEmit"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",
+    "@croco/protocols-graphql": "workspace:*",
     "@croco/telemetry-sdk-node": "workspace:*",
     "graphql": "^16.0.0",
     "type-graphql": "^2.0.0-rc.3",

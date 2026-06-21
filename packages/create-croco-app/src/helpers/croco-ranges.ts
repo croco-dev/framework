@@ -34,6 +34,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/preset-cloudflare": "^0.0.2",
   "@croco/preset-lambda": "^0.0.2",
   "@croco/protocols-core": "^0.0.2",
+  "@croco/protocols-graphql": "^0.0.3",
   "@croco/protocols-rest": "^0.0.2",
   "@croco/ratelimit-core": "^0.0.2",
   "@croco/repository-core": "^0.0.2",

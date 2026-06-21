@@ -377,7 +377,24 @@ describe("E2E: generate()", () => {
 
       expect(graphqlPackageJson.dependencies?.["@apollo/server"]).toBe("^4.12.2");
       expect(graphqlPackageJson.dependencies?.["@as-integrations/aws-lambda"]).toBeUndefined();
+      expect(graphqlPackageJson.dependencies?.["@croco/protocols-graphql"]).toBe("^0.0.3");
       expect(graphqlPackageJson.dependencies?.["apollo-server"]).toBeUndefined();
+      expect(graphqlPackageJson.scripts?.["contract:check"]).toBe(
+        "tsx src/graphql-contract.ts --check",
+      );
+      expect(graphqlPackageJson.scripts?.["contract:snapshot"]).toBe(
+        "tsx src/graphql-contract.ts --write",
+      );
+      expect(graphqlPackageJson.scripts?.build).toBe(
+        "pnpm contract:check && tsup src/index.ts --format cjs --clean",
+      );
+      expect(graphqlPackageJson.scripts?.typecheck).toBe("pnpm contract:check && tsc --noEmit");
+      expect(
+        existsSync(join(testDir, "apps", "graphql-api", "graphql-contract.snapshot.json")),
+      ).toBe(true);
+      expect(existsSync(join(testDir, "apps", "graphql-api", "src", "graphql-contract.ts"))).toBe(
+        true,
+      );
       assertSourceBareImportsDeclared(join(testDir, "apps", "graphql-api"));
       expect(apiDockerfileContent).toContain("turbo prune @test/graphql-api --docker");
       expect(apiDockerfileContent).toContain("pnpm turbo build --filter=@test/graphql-api");
@@ -538,8 +555,22 @@ describe("E2E: generate()", () => {
     expect(packageJson.dependencies?.["@apollo/server"]).toBe("^4.12.2");
     expect(packageJson.dependencies?.["@as-integrations/aws-lambda"]).toBe("^3.1.0");
     expect(packageJson.dependencies?.["apollo-server"]).toBeUndefined();
+    expect(packageJson.dependencies?.["@croco/protocols-graphql"]).toBe("^0.0.3");
     expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");
     expect(packageJson.dependencies?.["@test/provider-database"]).toBe("workspace:*");
+    expect(packageJson.scripts?.["contract:check"]).toBe("tsx src/graphql-contract.ts --check");
+    expect(packageJson.scripts?.["contract:snapshot"]).toBe("tsx src/graphql-contract.ts --write");
+    expect(packageJson.scripts?.build).toBe(
+      "pnpm contract:check && tsup src/index.ts --format cjs --clean",
+    );
+    expect(packageJson.scripts?.typecheck).toBe("pnpm contract:check && tsc --noEmit");
+    expect(schemaContent).toContain('from "./resolvers/health.resolver.js";');
+    expect(existsSync(join(testDir, "apps", "graphql-api", "graphql-contract.snapshot.json"))).toBe(
+      true,
+    );
+    expect(existsSync(join(testDir, "apps", "graphql-api", "src", "graphql-contract.ts"))).toBe(
+      true,
+    );
     assertSourceBareImportsDeclared(join(testDir, "apps", "graphql-api"));
     assertNoExternalCrocoWorkspaceRanges(testDir);
 
@@ -1103,6 +1134,7 @@ describe("E2E: generate()", () => {
       const packageJson = readPackageJson(join(testDir, "apps", "graphql-api", "package.json"));
 
       expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");
+      expect(packageJson.dependencies?.["@croco/protocols-graphql"]).toBe("^0.0.3");
       expect(packageJson.dependencies?.["@croco/provider-database"]).toBe("workspace:*");
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },

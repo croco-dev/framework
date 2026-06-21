@@ -9,6 +9,12 @@ title: "GraphQLResolverMetadata"
 
 ## Properties
 
+### scope?
+
+> `optional` **scope**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
+
+***
+
 ### target
 
 > **target**: `object`

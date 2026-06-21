@@ -120,6 +120,42 @@ This keeps the drift boundary explicit. If route metadata contains unsupported s
 parameters, multiple body schemas, or unsupported generated-client schema kinds, the graph/codegen path
 fails before publishing artifacts.
 
+## GraphQL SDL Contract Snapshots
+
+GraphQL APIs use a different source of truth. The executable schema comes from code-first
+`type-graphql` resolver metadata, so the review artifact is the compiled SDL plus Croco resolver
+metadata rather than the REST Contract Graph.
+
+Use `createGraphQLContractSnapshot()` after schema compilation:
+
+```typescript no-check
+import {
+  createGraphQLContractSnapshot,
+  diffGraphQLContractSnapshots,
+  stringifyGraphQLContractSnapshot,
+} from "@croco/protocols-graphql";
+
+const schema = await createSchema();
+const snapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResolver] });
+const diff = diffGraphQLContractSnapshots(baselineSnapshot, snapshot);
+```
+
+The snapshot version is `croco.graphql-contract.snapshot.v1`. It records:
+
+- deterministic SDL for the compiled schema,
+- root query, mutation, and subscription operations,
+- resolver class names and Croco DI scope,
+- method-level roles, guards, interceptors, and declared `GraphQLProblemResponse` mappings.
+
+Generated GraphQL apps include `graphql-contract.snapshot.json`, `contract:snapshot`, and
+`contract:check`. CI should run the check path before build/typecheck. Intentional GraphQL schema
+changes update the snapshot with `contract:snapshot`; unintentional breaking SDL drift, resolver
+removal, DI-scope changes, guard/interceptor/role changes, and Problem mapping changes fail the
+contract check.
+
+REST Contract Graph/OpenAPI/RPC and GraphQL SDL snapshots are sibling artifacts. Do not force GraphQL
+through the REST Contract Graph; keep GraphQL review centered on SDL plus resolver metadata.
+
 ## Dependency Rationale
 
 This model does not add a new external schema dependency. Croco already uses Zod for REST validation and

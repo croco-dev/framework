@@ -1,17 +1,10 @@
-import { GraphQLObjectType, GraphQLSchema, GraphQLString } from "graphql";
+import "reflect-metadata";
+import { buildSchema } from "type-graphql";
+import { HealthResolver } from "./resolvers/health.resolver.js";
 
-export async function createSchema(): Promise<GraphQLSchema> {
-  const query = new GraphQLObjectType({
-    name: "Query",
-    fields: {
-      health: {
-        type: GraphQLString,
-        resolve: () => "ok",
-      },
-    },
-  });
-
-  return new GraphQLSchema({
-    query,
+export async function createSchema() {
+  return buildSchema({
+    resolvers: [HealthResolver],
+    validate: false,
   });
 }

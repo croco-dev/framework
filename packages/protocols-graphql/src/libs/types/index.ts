@@ -1,3 +1,5 @@
+import type { Scope } from "@croco/framework-context";
+
 export type { ClassType, MiddlewareFn, ResolverData } from "type-graphql";
 
 export type GraphQLContext = {
@@ -15,6 +17,7 @@ export type ResolverMetadata = {
 };
 
 export type GraphQLResolverMetadata = {
+  scope?: Scope;
   target: object;
 };
 

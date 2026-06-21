@@ -26,7 +26,7 @@ export function GraphQLResolver<T extends object = object>(
       Resolver()(target);
     }
 
-    const metadata: GraphQLResolverMetadata = { target };
+    const metadata: GraphQLResolverMetadata = { scope, target };
     Reflect.defineMetadata(RESOLVER_KEY, metadata, target);
 
     MetadataStorage.define(RESOLVERS_KEY, target, true);

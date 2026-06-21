@@ -20,4 +20,10 @@ export {
   Root,
   Subscription,
 } from "type-graphql";
+export {
+  GraphQLProblemResponse,
+  GraphQLProblemResponses,
+  type GraphQLProblemResponseMetadata,
+  type GraphQLProblemResponseOptions,
+} from "./decorators/GraphQLProblemResponse";
 export { GraphQLResolver, type GraphQLResolverOptions } from "./decorators/GraphQLResolver";
