@@ -6,10 +6,10 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   107 |
+| Public packages                |   108 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    57 |
+| Missing generated API docs     |    58 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -52,6 +52,7 @@ None.
 - `@croco/frontend-react` (`packages/frontend-react`) — legacy baseline
 - `@croco/frontend-vite` (`packages/frontend-vite`) — legacy baseline
 - `@croco/gid-core` (`packages/gid-core`) — legacy baseline
+- `@croco/governance-core` (`packages/governance-core`) — legacy baseline
 - `@croco/health-core` (`packages/health-core`) — legacy baseline
 - `@croco/impersonation-core` (`packages/impersonation-core`) — legacy baseline
 - `@croco/invitation-drizzle` (`packages/invitation-drizzle`) — legacy baseline
@@ -84,7 +85,7 @@ None.
 | Maturity            | Missing API docs |
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
-| 🟡 beta             |               27 |
+| 🟡 beta             |               28 |
 | 🔴 alpha/WIP        |               30 |
 | ⚠️ deprecated       |                0 |
 
@@ -97,7 +98,7 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       23 |
-| Domain       |       28 |
+| Domain       |       29 |
 | Provider     |       26 |
 | Integration  |        5 |
 | Protocol     |        7 |
@@ -108,7 +109,7 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       50 |
+| 🟡 beta             |       51 |
 | 🔴 alpha/WIP        |       34 |
 | ⚠️ deprecated       |        0 |
 

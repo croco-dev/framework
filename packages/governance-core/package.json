@@ -1,0 +1,40 @@
+{
+  "name": "@croco/governance-core",
+  "version": "0.0.0",
+  "description": "Data governance contracts, retention validation, and deterministic Data Map artifacts for Croco resources",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/governance-core"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/problems-core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "4.0.16"
+  }
+}
